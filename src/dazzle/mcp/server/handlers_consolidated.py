@@ -147,6 +147,7 @@ def handle_story(arguments: dict[str, Any]) -> str:
         get_stories_handler,
         propose_stories_from_dsl_handler,
         save_stories_handler,
+        wall_stories_handler,
     )
 
     operation = arguments.get("operation")
@@ -160,6 +161,9 @@ def handle_story(arguments: dict[str, Any]) -> str:
     elif operation == "save":
         return save_stories_handler(project_path, arguments)
     elif operation == "get":
+        # Wall view is a special mode of get
+        if arguments.get("view") == "wall":
+            return wall_stories_handler(project_path, arguments)
         return get_stories_handler(project_path, arguments)
     elif operation == "generate_tests":
         return generate_tests_from_stories_handler(project_path, arguments)
@@ -261,6 +265,7 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
         get_sitespec_handler,
         get_theme_handler,
         review_copy_handler,
+        review_sitespec_handler,
         scaffold_copy_handler,
         scaffold_site_handler,
         scaffold_theme_handler,
@@ -298,6 +303,8 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
         return generate_tokens_handler(project_path, arguments)
     elif operation == "generate_imagery_prompts":
         return generate_imagery_prompts_handler(project_path, arguments)
+    elif operation == "review":
+        return review_sitespec_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown sitespec operation: {operation}"})
 

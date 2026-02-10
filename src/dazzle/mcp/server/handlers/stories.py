@@ -542,6 +542,102 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
+def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Story Wall — founder-friendly board grouped by implementation status.
+
+    Groups stories into three columns based on process coverage:
+      - Working: stories fully covered by implementing processes
+      - Needs polish: stories with partial process coverage
+      - Not started: stories with no implementing process
+
+    Optionally filtered by persona (actor).
+    """
+    from dazzle.core.ir.stories import StoryStatus
+    from dazzle.core.stories_persistence import get_stories_by_status
+
+    from .process import stories_coverage_handler
+
+    actor_filter_str: str | None = args.get("persona")
+
+    try:
+        # Get accepted stories (the founder's approved work)
+        stories = get_stories_by_status(project_root, StoryStatus.ACCEPTED)
+        if not stories:
+            # Fall back to all stories
+            stories = get_stories_by_status(project_root, None)
+
+        # Get coverage data
+        coverage_raw = stories_coverage_handler(project_root, {"limit": 500})
+        coverage_data: dict[str, Any] = json.loads(coverage_raw)
+        coverage_map: dict[str, str] = {}
+        for item in coverage_data.get("stories", []):
+            coverage_map[item.get("story_id", "")] = item.get("status", "uncovered")
+
+        # Filter by persona if requested
+        if actor_filter_str:
+            stories = [
+                s
+                for s in stories
+                if s.actor.lower() == actor_filter_str.lower()
+                or actor_filter_str.lower() in s.actor.lower()
+            ]
+
+        # Collect unique personas for filter UI
+        personas = sorted({s.actor for s in stories if s.actor})
+
+        # Group by coverage status
+        working: list[dict[str, Any]] = []
+        needs_polish: list[dict[str, Any]] = []
+        not_started: list[dict[str, Any]] = []
+
+        for story in stories:
+            summary = _serialize_story_summary(story)
+            cov_status = coverage_map.get(story.story_id, "uncovered")
+            summary["coverage_status"] = cov_status
+            if cov_status == "covered":
+                working.append(summary)
+            elif cov_status == "partial":
+                needs_polish.append(summary)
+            else:
+                not_started.append(summary)
+
+        total = len(stories)
+
+        # Render wall markdown
+        md_lines = ["Story Wall", ""]
+        if actor_filter_str:
+            md_lines.append(f"Filtered by: {actor_filter_str}")
+            md_lines.append("")
+
+        md_lines.append(f"Working ({len(working)})")
+        for s in working:
+            md_lines.append(f"  [ok] {s['title']}  ({s['actor']})")
+        md_lines.append("")
+        md_lines.append(f"Needs polish ({len(needs_polish)})")
+        for s in needs_polish:
+            md_lines.append(f"  [..] {s['title']}  ({s['actor']})")
+        md_lines.append("")
+        md_lines.append(f"Not started ({len(not_started)})")
+        for s in not_started:
+            md_lines.append(f"  [  ] {s['title']}  ({s['actor']})")
+
+        return json.dumps(
+            {
+                "view": "wall",
+                "total": total,
+                "working": working,
+                "needs_polish": needs_polish,
+                "not_started": not_started,
+                "personas": personas,
+                "filtered_by": actor_filter_str,
+                "markdown": "\n".join(md_lines),
+            },
+            indent=2,
+        )
+    except Exception as e:
+        return json.dumps({"error": str(e)}, indent=2)
+
+
 def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate test designs from accepted stories.
 

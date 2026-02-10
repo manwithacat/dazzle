@@ -187,7 +187,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="story",
-            description="Story operations: propose, save, get, generate_tests, coverage",
+            description="Story operations: propose, save, get, generate_tests, coverage. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -232,6 +232,19 @@ def get_consolidated_tools() -> list[Tool]:
                     "include_draft": {
                         "type": "boolean",
                         "description": "Include draft stories (for generate_tests)",
+                    },
+                    "view": {
+                        "type": "string",
+                        "enum": ["wall"],
+                        "description": (
+                            "View mode for get operation. "
+                            "'wall' groups stories by implementation status "
+                            "(working/needs polish/not started)"
+                        ),
+                    },
+                    "persona": {
+                        "type": "string",
+                        "description": "Filter stories by persona/actor name (for get with view=wall)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -391,7 +404,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="sitespec",
-            description="SiteSpec operations: get, validate, scaffold, coherence. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
+            description="SiteSpec operations: get, validate, scaffold, coherence, review. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Use 'review' for page-by-page comparison of spec vs rendering status. Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -405,6 +418,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "scaffold_copy",
                             "review_copy",
                             "coherence",
+                            "review",
                             "get_theme",
                             "scaffold_theme",
                             "validate_theme",

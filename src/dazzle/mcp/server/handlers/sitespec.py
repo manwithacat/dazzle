@@ -506,6 +506,177 @@ def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Failed to validate coherence: {e}"}, indent=2)
 
 
+def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Live Review — page-by-page comparison of spec vs rendering status.
+
+    For each page and section defined in the sitespec, reports:
+    - Whether the section type has a renderer
+    - Whether required content fields are populated
+    - Coherence issues specific to that section
+
+    Returns a structured comparison and a markdown summary.
+    """
+    from dazzle.core.site_coherence import validate_site_coherence
+    from dazzle.core.sitespec_loader import SiteSpecError, load_copy, load_sitespec
+
+    business_context = args.get("business_context")
+
+    try:
+        sitespec = load_sitespec(project_root, use_defaults=True)
+        sitespec_data = sitespec.model_dump()
+        copy_data = load_copy(project_root)
+
+        # Run coherence for issues
+        report = validate_site_coherence(
+            sitespec_data,
+            copy_data=copy_data,
+            project_root=project_root,
+            business_context=business_context,
+        )
+
+        # Known renderers from site_renderer.py
+        known_renderers = {
+            "hero",
+            "features",
+            "feature_grid",
+            "cta",
+            "faq",
+            "stats",
+            "steps",
+            "testimonials",
+            "pricing",
+            "markdown",
+            "card_grid",
+            "split_content",
+            "trust_bar",
+            "value_highlight",
+            "logo_cloud",
+            "comparison",
+        }
+
+        # Required content fields per section type
+        required_fields: dict[str, list[str]] = {
+            "hero": ["headline"],
+            "features": ["items"],
+            "cta": ["headline"],
+            "faq": ["items"],
+            "steps": ["items"],
+            "testimonials": ["items"],
+            "pricing": ["plans"],
+            "card_grid": ["cards"],
+            "split_content": ["headline"],
+            "trust_bar": ["items"],
+            "value_highlight": ["metric"],
+            "logo_cloud": ["logos"],
+            "comparison": ["plans"],
+        }
+
+        # Build issues index by location
+        issues_by_location: dict[str, list[dict[str, str]]] = {}
+        for issue in report.issues:
+            loc = issue.location or "global"
+            issues_by_location.setdefault(loc, []).append(
+                {
+                    "severity": issue.severity.value,
+                    "message": issue.message,
+                    "suggestion": issue.suggestion or "",
+                }
+            )
+
+        # Analyze each page and section
+        pages: list[dict[str, Any]] = []
+        total_sections = 0
+        rendering_sections = 0
+
+        for page in sitespec_data.get("pages", []):
+            page_route = page.get("route", "unknown")
+            page_title = page.get("title", page_route)
+            sections: list[dict[str, Any]] = []
+
+            for section in page.get("sections", []):
+                total_sections += 1
+                sec_type = section.get("type", "unknown")
+                has_renderer = sec_type in known_renderers
+
+                # Check required fields
+                missing_fields: list[str] = []
+                for field_name in required_fields.get(sec_type, []):
+                    val = section.get(field_name)
+                    if not val or (isinstance(val, list) and len(val) == 0):
+                        missing_fields.append(field_name)
+
+                renders = has_renderer and len(missing_fields) == 0
+                if renders:
+                    rendering_sections += 1
+
+                sections.append(
+                    {
+                        "type": sec_type,
+                        "has_renderer": has_renderer,
+                        "missing_fields": missing_fields,
+                        "renders": renders,
+                        "headline": section.get("headline", ""),
+                    }
+                )
+
+            page_issues = issues_by_location.get(page_route, [])
+            pages.append(
+                {
+                    "route": page_route,
+                    "title": page_title,
+                    "sections": sections,
+                    "issue_count": len(page_issues),
+                    "issues": page_issues,
+                }
+            )
+
+        render_pct = (
+            round(rendering_sections / total_sections * 100, 1) if total_sections > 0 else 0
+        )
+
+        # Render markdown
+        md_lines = ["Site Review", ""]
+        md_lines.append(
+            f"Rendering: {rendering_sections}/{total_sections} sections ({render_pct}%)"
+        )
+        md_lines.append("")
+
+        for pg in pages:
+            md_lines.append(f"  {pg['title']} ({pg['route']})")
+            for sec in pg["sections"]:
+                status = "[ok]" if sec["renders"] else "[!!]"
+                label = sec.get("headline") or sec["type"]
+                line = f"    {status} {label}"
+                if not sec["has_renderer"]:
+                    line += " (no renderer)"
+                elif sec["missing_fields"]:
+                    line += f" (missing: {', '.join(sec['missing_fields'])})"
+                md_lines.append(line)
+            if pg["issues"]:
+                for issue in pg["issues"]:
+                    md_lines.append(f"    {issue['severity']}: {issue['message']}")
+            md_lines.append("")
+
+        return json.dumps(
+            {
+                "status": "complete",
+                "total_sections": total_sections,
+                "rendering_sections": rendering_sections,
+                "render_percent": render_pct,
+                "pages": pages,
+                "coherence_score": report.score,
+                "markdown": "\n".join(md_lines),
+            },
+            indent=2,
+        )
+
+    except SiteSpecError as e:
+        return json.dumps({"error": str(e)}, indent=2)
+    except Exception as e:
+        logger.exception("Error in site review")
+        return json.dumps({"error": f"Failed to review site: {e}"}, indent=2)
+
+
 # =============================================================================
 # ThemeSpec Operations (v0.25.0)
 # =============================================================================
