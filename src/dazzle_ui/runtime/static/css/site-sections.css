@@ -128,6 +128,12 @@
   text-align: center;
 }
 
+.dz-section-cta h2 {
+  font-size: var(--dz-font-size-cta-headline, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
 /* =============================================================================
    Steps Section
    ============================================================================= */
@@ -536,6 +542,10 @@
 
   .dz-section h2 {
     font-size: 1.75rem;
+  }
+
+  .dz-section-cta h2 {
+    font-size: 2.25rem;
   }
 
   .dz-cta-group {
