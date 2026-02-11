@@ -658,3 +658,158 @@ def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
         result["reports_count"] = len(list(report_dir.glob("*.json")))
 
     return json.dumps(result, indent=2)
+
+
+# =============================================================================
+# App Coherence Handler
+# =============================================================================
+
+# Gap type → named coherence check + severity weight
+_GAP_TO_CHECK: dict[str, tuple[str, str]] = {
+    "workspace_unreachable": ("workspace_binding", "error"),
+    "surface_inaccessible": ("surface_access", "error"),
+    "story_no_surface": ("story_coverage", "error"),
+    "process_step_no_surface": ("workflow_wiring", "error"),
+    "experience_broken_step": ("experience_integrity", "error"),
+    "experience_dangling_transition": ("experience_integrity", "warning"),
+    "unreachable_experience": ("experience_reachable", "error"),
+    "orphan_surfaces": ("dead_ends", "suggestion"),
+    "cross_entity_gap": ("cross_entity_nav", "warning"),
+    "nav_over_exposed": ("nav_filtering", "error"),
+    "nav_under_exposed": ("nav_filtering", "warning"),
+}
+
+_SEVERITY_WEIGHTS: dict[str, int] = {
+    "error": 20,
+    "warning": 5,
+    "suggestion": 1,
+}
+
+
+def _compute_coherence_score(deductions: int) -> int:
+    """Compute a 0-100 coherence score from accumulated deductions."""
+    return max(0, min(100, 100 - deductions))
+
+
+def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Run persona-by-persona authenticated UX coherence checks.
+
+    Synthesizes headless discovery gaps into named checks with a coherence
+    score per persona, using the same scoring model as sitespec(coherence).
+
+    Args (via args dict):
+        persona: Optional persona ID to check (default: all)
+    """
+    try:
+        from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+        appspec = _load_appspec(project_path)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to load project: {e}"}, indent=2)
+
+    persona_filter = args.get("persona")
+    persona_ids = [persona_filter] if persona_filter else None
+
+    try:
+        report = run_headless_discovery(
+            appspec,
+            persona_ids=persona_ids,
+            include_entity_analysis=False,
+            include_workflow_analysis=False,
+        )
+    except Exception as e:
+        logger.exception("App coherence analysis failed")
+        return json.dumps({"error": f"Analysis failed: {e}"}, indent=2)
+
+    persona_results: list[dict[str, Any]] = []
+
+    for pr in report.persona_reports:
+        # Aggregate gaps into named checks
+        checks: dict[str, dict[str, Any]] = {}
+
+        for gap in pr.gaps:
+            check_name, severity_category = _GAP_TO_CHECK.get(gap.gap_type, ("other", "warning"))
+
+            if check_name not in checks:
+                checks[check_name] = {
+                    "check": check_name,
+                    "status": "pass",
+                    "issues": [],
+                }
+
+            # Escalate status: pass → suggestion → warn → fail
+            current = checks[check_name]["status"]
+            if severity_category == "error" and current != "fail":
+                checks[check_name]["status"] = "fail"
+            elif severity_category == "warning" and current in ("pass", "suggestion"):
+                checks[check_name]["status"] = "warn"
+            elif severity_category == "suggestion" and current == "pass":
+                checks[check_name]["status"] = "suggestion"
+
+            checks[check_name]["issues"].append(
+                {
+                    "gap_type": gap.gap_type,
+                    "severity": gap.severity,
+                    "description": gap.description,
+                }
+            )
+
+        # Compute score
+        total_deductions = 0
+        for check in checks.values():
+            for issue in check["issues"]:
+                gap_type = issue["gap_type"]
+                _, sev_cat = _GAP_TO_CHECK.get(gap_type, ("other", "warning"))
+                total_deductions += _SEVERITY_WEIGHTS.get(sev_cat, 5)
+
+        # Add detail summary to each check
+        for check in checks.values():
+            if check["issues"]:
+                check["detail"] = check["issues"][0]["description"]
+                if len(check["issues"]) > 1:
+                    check["detail"] += f" (+{len(check['issues']) - 1} more)"
+            # Remove raw issues from output to keep it concise
+            del check["issues"]
+
+        # Ensure standard checks appear even when passed
+        for standard_check in [
+            "workspace_binding",
+            "nav_filtering",
+            "experience_reachable",
+            "surface_access",
+            "story_coverage",
+        ]:
+            if standard_check not in checks:
+                checks[standard_check] = {
+                    "check": standard_check,
+                    "status": "pass",
+                }
+
+        score = _compute_coherence_score(total_deductions)
+        persona_results.append(
+            {
+                "persona": pr.persona_id,
+                "coherence_score": score,
+                "workspace": pr.default_workspace,
+                "checks": list(checks.values()),
+                "gap_count": len(pr.gaps),
+            }
+        )
+
+    # Overall score = average of persona scores
+    overall_score = (
+        round(sum(p["coherence_score"] for p in persona_results) / len(persona_results))
+        if persona_results
+        else 100
+    )
+
+    return json.dumps(
+        {
+            "overall_score": overall_score,
+            "personas": persona_results,
+            "skipped_personas": report.skipped_personas,
+            "persona_count": len(persona_results),
+        },
+        indent=2,
+    )

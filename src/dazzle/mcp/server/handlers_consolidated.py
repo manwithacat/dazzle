@@ -1390,6 +1390,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
 def handle_discovery(arguments: dict[str, Any]) -> str:
     """Handle capability discovery operations."""
     from .handlers.discovery import (
+        app_coherence_handler,
         compile_discovery_handler,
         discovery_status_handler,
         emit_discovery_handler,
@@ -1416,6 +1417,8 @@ def handle_discovery(arguments: dict[str, Any]) -> str:
         return discovery_status_handler(project_path, arguments)
     elif operation == "verify_all_stories":
         return verify_all_stories_handler(project_path, arguments)
+    elif operation == "coherence":
+        return app_coherence_handler(project_path, arguments)
     else:
         return json.dumps({"error": f"Unknown discovery operation: {operation}"})
 

@@ -1258,7 +1258,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="discovery",
-            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness), verify_all_stories (batch verify accepted stories against API tests). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
+            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness), verify_all_stories (batch verify accepted stories against API tests), coherence (persona-by-persona authenticated UX coherence score). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -1271,6 +1271,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "emit",
                             "status",
                             "verify_all_stories",
+                            "coherence",
                         ],
                         "description": "Operation to perform",
                     },
