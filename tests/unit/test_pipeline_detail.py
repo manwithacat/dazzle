@@ -7,6 +7,7 @@ import time
 
 from dazzle.mcp.server.handlers.pipeline import (
     _build_pipeline_response,
+    _filter_issues_result,
     _step_has_issues,
 )
 
@@ -17,8 +18,13 @@ class TestStepHasIssues:
     def test_lint_with_errors(self):
         assert _step_has_issues("dsl(lint)", {"errors": ["bad"], "warnings": []}) is True
 
-    def test_lint_with_warnings(self):
-        assert _step_has_issues("dsl(lint)", {"errors": [], "warnings": ["hmm"]}) is True
+    def test_lint_with_warnings_only(self):
+        # Warnings alone are baseline noise — don't expand
+        assert _step_has_issues("dsl(lint)", {"errors": [], "warnings": ["hmm"]}) is False
+
+    def test_lint_with_errors_and_warnings(self):
+        # Errors trigger expansion even when warnings are also present
+        assert _step_has_issues("dsl(lint)", {"errors": ["bad"], "warnings": ["hmm"]}) is True
 
     def test_lint_clean(self):
         assert _step_has_issues("dsl(lint)", {"errors": [], "warnings": []}) is False
@@ -73,6 +79,72 @@ class TestStepHasIssues:
 
     def test_coverage_string_percent(self):
         assert _step_has_issues("story(coverage)", {"coverage_percent": "75%"}) is True
+
+
+class TestFilterIssuesResult:
+    """Tests for _filter_issues_result trimming."""
+
+    def test_story_coverage_keeps_only_partial_and_uncovered(self):
+        result = {
+            "total_stories": 50,
+            "covered": 47,
+            "partial": 2,
+            "uncovered": 1,
+            "coverage_percent": 94.0,
+            "showing": 50,
+            "offset": 0,
+            "has_more": False,
+            "guidance": "Use offset=50 for next page",
+            "stories": [
+                {"story_id": "ST-001", "status": "covered", "title": "Good story"},
+                {"story_id": "ST-002", "status": "partial", "title": "Half done"},
+                {"story_id": "ST-003", "status": "uncovered", "title": "Not started"},
+                {"story_id": "ST-004", "status": "covered", "title": "Another good one"},
+            ],
+        }
+        filtered = _filter_issues_result("story(coverage)", result)
+        assert len(filtered["stories"]) == 2
+        assert filtered["stories"][0]["story_id"] == "ST-002"
+        assert filtered["stories"][1]["story_id"] == "ST-003"
+        # Pagination fields stripped
+        assert "showing" not in filtered
+        assert "offset" not in filtered
+        assert "has_more" not in filtered
+        assert "guidance" not in filtered
+        # Aggregate metrics preserved
+        assert filtered["total_stories"] == 50
+        assert filtered["coverage_percent"] == 94.0
+
+    def test_process_coverage_same_as_story(self):
+        result = {
+            "total_stories": 10,
+            "stories": [
+                {"story_id": "ST-001", "status": "covered"},
+                {"story_id": "ST-002", "status": "partial"},
+            ],
+        }
+        filtered = _filter_issues_result("process(coverage)", result)
+        assert len(filtered["stories"]) == 1
+        assert filtered["stories"][0]["story_id"] == "ST-002"
+
+    def test_composition_audit_strips_markdown(self):
+        result = {
+            "pages": [{"route": "/", "score": 85}],
+            "overall_score": 85,
+            "summary": "1 page audited",
+            "markdown": "# Composition Audit: 85/100\n...",
+        }
+        filtered = _filter_issues_result("composition(audit)", result)
+        assert "markdown" not in filtered
+        assert filtered["overall_score"] == 85
+        assert filtered["pages"] == [{"route": "/", "score": 85}]
+
+    def test_unknown_operation_passes_through(self):
+        result = {"some": "data"}
+        assert _filter_issues_result("dsl(validate)", result) is result
+
+    def test_non_dict_passes_through(self):
+        assert _filter_issues_result("story(coverage)", "not a dict") == "not a dict"
 
 
 class TestBuildPipelineResponse:
