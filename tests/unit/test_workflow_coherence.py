@@ -527,6 +527,7 @@ class TestModeRouting:
 
     def test_unknown_mode_error(self) -> None:
         """Verify that an unknown mode returns an error via the handler."""
+        import asyncio
         import json
         import sys
         from pathlib import Path
@@ -540,9 +541,11 @@ class TestModeRouting:
 
         # Mock _load_appspec since we don't have a real project
         with patch("dazzle.mcp.server.handlers.discovery._load_appspec") as mock_load:
-            result_str = run_discovery_handler(
-                Path("/fake/path"),
-                {"mode": "invalid_mode"},
+            result_str = asyncio.run(
+                run_discovery_handler(
+                    Path("/fake/path"),
+                    {"mode": "invalid_mode"},
+                )
             )
             result = json.loads(result_str)
             assert "error" in result

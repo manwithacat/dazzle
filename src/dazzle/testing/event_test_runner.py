@@ -229,13 +229,17 @@ class EventTestClient:
 
     def _update_entity(self, entity_name: str, entity_id: str, data: dict[str, Any]) -> bool:
         """Update an entity."""
-        endpoint = f"/{entity_name.lower()}s/{entity_id}"
+        from dazzle.core.strings import to_api_plural
+
+        endpoint = f"/{to_api_plural(entity_name)}/{entity_id}"
         resp = self.client.put(f"{self.api_url}{endpoint}", json=data)
         return resp.status_code == 200
 
     def _delete_entity(self, entity_name: str, entity_id: str) -> bool:
         """Delete an entity."""
-        endpoint = f"/{entity_name.lower()}s/{entity_id}"
+        from dazzle.core.strings import to_api_plural
+
+        endpoint = f"/{to_api_plural(entity_name)}/{entity_id}"
         resp = self.client.delete(f"{self.api_url}{endpoint}")
         return resp.status_code in (200, 204)
 
@@ -252,7 +256,9 @@ class EventTestClient:
     def get_entity(self, entity_name: str, entity_id: str) -> Any:
         """Get a specific entity by ID."""
         try:
-            resp = self.client.get(f"{self.api_url}/{entity_name.lower()}s/{entity_id}")
+            from dazzle.core.strings import to_api_plural
+
+            resp = self.client.get(f"{self.api_url}/{to_api_plural(entity_name)}/{entity_id}")
             if resp.status_code == 200:
                 return resp.json()
             return None

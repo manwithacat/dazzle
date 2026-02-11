@@ -432,8 +432,10 @@ class E2ERunner:
                 import urllib.request
 
                 try:
-                    # Runtime API routes are at /{entity}s, not /api/{entity}s
-                    url = f"{self.api_url}/{entity_name.lower()}s"
+                    # Runtime API routes are at /{plural}, not /api/{entity}s
+                    from dazzle.core.strings import to_api_plural
+
+                    url = f"{self.api_url}/{to_api_plural(entity_name)}"
                     with urllib.request.urlopen(url, timeout=5) as response:
                         data = json.loads(response.read().decode())
                         if isinstance(data, list):

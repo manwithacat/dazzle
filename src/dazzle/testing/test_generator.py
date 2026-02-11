@@ -22,6 +22,8 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.strings import to_api_plural
+
 
 @dataclass
 class EntityField:
@@ -237,7 +239,7 @@ class TestGenerator:
                 "steps": [
                     {
                         "action": "navigate_to",
-                        "target": f"/{entity_name.lower()}s",
+                        "target": f"/{to_api_plural(entity_name)}",
                         "rationale": f"Navigate to {entity.label} list",
                     },
                     {

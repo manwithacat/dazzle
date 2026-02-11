@@ -349,17 +349,19 @@ class DazzleClient:
     def _entity_endpoint(self, entity_name: str) -> str:
         """Derive the REST endpoint for an entity name.
 
-        Dazzle uses lowercase-no-separator entity routes:
-        Contact -> /contacts, VATReturn -> /vatreturns
+        Uses to_api_plural for proper English pluralization:
+        Contact -> /contacts, Company -> /companies, Address -> /addresses
         """
-        return f"/{entity_name.lower()}s"
+        from dazzle.core.strings import to_api_plural
+
+        return f"/{to_api_plural(entity_name)}"
 
     def update_entity(
         self, entity_name: str, entity_id: str, data: dict[str, Any]
     ) -> dict[str, Any] | None:
         """Update an entity."""
         try:
-            endpoint = f"/{entity_name.lower()}s/{entity_id}"
+            endpoint = f"{self._entity_endpoint(entity_name)}/{entity_id}"
             resp = self.client.put(
                 f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
             )
