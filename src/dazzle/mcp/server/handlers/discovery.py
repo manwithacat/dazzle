@@ -706,10 +706,17 @@ _SEVERITY_WEIGHTS: dict[str, int] = {
     "suggestion": 1,
 }
 
+_PRIORITY_MULTIPLIERS: dict[str, float] = {
+    "critical": 2.0,
+    "high": 1.5,
+    "medium": 1.0,
+    "low": 0.5,
+}
 
-def _compute_coherence_score(deductions: int) -> int:
+
+def _compute_coherence_score(deductions: float) -> int:
     """Compute a 0-100 coherence score from accumulated deductions."""
-    return max(0, min(100, 100 - deductions))
+    return max(0, min(100, round(100 - deductions)))
 
 
 def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
@@ -773,16 +780,28 @@ def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
                     "gap_type": gap.gap_type,
                     "severity": gap.severity,
                     "description": gap.description,
+                    "surface_name": gap.surface_name or "",
                 }
             )
 
-        # Compute score
-        total_deductions = 0
+        # Compute score with priority weighting
+        # Build surface → priority lookup from appspec
+        surface_priority: dict[str, str] = {}
+        for s in getattr(appspec, "surfaces", []) or []:
+            p = str(getattr(s, "priority", "medium")).lower()
+            surface_priority[s.name] = p
+
+        total_deductions: float = 0
         for check in checks.values():
             for issue in check["issues"]:
                 gap_type = issue["gap_type"]
                 _, sev_cat = _GAP_TO_CHECK.get(gap_type, ("other", "warning"))
-                total_deductions += _SEVERITY_WEIGHTS.get(sev_cat, 5)
+                base_weight = _SEVERITY_WEIGHTS.get(sev_cat, 5)
+                # Apply priority multiplier from the surface if available
+                surface_name = issue.get("surface_name", "")
+                priority = surface_priority.get(surface_name, "medium")
+                multiplier = _PRIORITY_MULTIPLIERS.get(priority, 1.0)
+                total_deductions += base_weight * multiplier
 
         # Add detail summary to each check
         for check in checks.values():

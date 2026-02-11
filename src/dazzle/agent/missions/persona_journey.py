@@ -868,6 +868,17 @@ def _analyze_orphan_surfaces(
                     if surface_ref:
                         referenced.add(surface_ref)
 
+    # Build set of entities that have a list-mode surface.  The framework
+    # auto-generates nav entries for every entity with surfaces, so CRUD siblings
+    # (view/edit/create) are implicitly reachable: nav → list → detail/edit/create.
+    entities_with_list_surface: set[str] = set()
+    for surface in surfaces:
+        mode = str(getattr(surface, "mode", ""))
+        if mode == "list":
+            entity = get_surface_entity(surface)
+            if entity:
+                entities_with_list_surface.add(entity)
+
     # Find orphan surfaces: accessible but not referenced anywhere
     orphan_names: list[str] = []
     for surface in surfaces:
@@ -879,6 +890,13 @@ def _analyze_orphan_surfaces(
         mode = str(getattr(surface, "mode", ""))
         if mode == "list":
             continue
+        # CRUD siblings (view/edit/create) are implicitly reachable when their
+        # entity has a list surface — the framework generates nav → list → detail
+        # drill-down and edit/create links on detail pages automatically.
+        if mode in ("view", "edit", "create"):
+            entity = get_surface_entity(surface)
+            if entity and entity in entities_with_list_surface:
+                continue
         orphan_names.append(surface.name)
 
     if not orphan_names:
@@ -925,6 +943,18 @@ def _analyze_cross_entity_gaps(
             if source:
                 entity_workspaces.setdefault(source, set()).add(ws.name)
 
+    # Build FK adjacency set — if entity A has a ref field pointing to entity B,
+    # the framework auto-links them in list/detail rendering (clickable FK links).
+    fk_pairs: set[tuple[str, str]] = set()
+    domain = getattr(appspec, "domain", None)
+    if domain:
+        for entity in getattr(domain, "entities", []) or []:
+            for field in getattr(entity, "fields", []) or []:
+                ref_target = getattr(field, "ref_target", None)
+                if ref_target:
+                    fk_pairs.add((entity.name, ref_target))
+                    fk_pairs.add((ref_target, entity.name))  # bidirectional
+
     for story in stories:
         entity_names = _get_story_entities(story)
         if len(entity_names) < 2:
@@ -932,7 +962,7 @@ def _analyze_cross_entity_gaps(
 
         story_id = getattr(story, "story_id", None) or getattr(story, "id", "unknown")
 
-        # Check each pair of entities shares a workspace or has KG adjacency
+        # Check each pair of entities shares a workspace, FK, or KG adjacency
         for i, e1 in enumerate(entity_names):
             for e2 in entity_names[i + 1 :]:
                 ws1 = entity_workspaces.get(e1, set())
@@ -940,6 +970,10 @@ def _analyze_cross_entity_gaps(
 
                 if ws1 & ws2:
                     continue  # Shared workspace — OK
+
+                # FK relationship — framework auto-links in list/detail views
+                if (e1, e2) in fk_pairs:
+                    continue
 
                 # Try KG adjacency as fallback
                 if kg_store:
@@ -970,6 +1004,26 @@ def _analyze_cross_entity_gaps(
 # =============================================================================
 # Analysis Pass 9: Navigation Scope Audit
 # =============================================================================
+
+
+def _condition_matches_role(condition: Any, role_name: str) -> bool:
+    """Recursively check if a ConditionExpr tree contains a role_check matching role_name."""
+    if condition is None:
+        return False
+    # Direct role_check match
+    role_check = getattr(condition, "role_check", None)
+    if role_check:
+        rn = getattr(role_check, "role_name", None)
+        if rn and rn == role_name:
+            return True
+    # Recurse into OR/AND branches
+    left = getattr(condition, "left", None)
+    right = getattr(condition, "right", None)
+    if left and _condition_matches_role(left, role_name):
+        return True
+    if right and _condition_matches_role(right, role_name):
+        return True
+    return False
 
 
 def _analyze_navigation_scope(
@@ -1036,6 +1090,9 @@ def _analyze_navigation_scope(
                     variant_entities.add(entity)
 
     # ── Source 3: Policy permission rules ────────────────────────────
+    # Check both persona-explicit PERMIT rules and role-based conditions.
+    # In many projects (including Dazzle archetypes), permissions use
+    # `role(name)` conditions where role names map 1:1 to persona IDs.
     policy_entities: set[str] = set()
     for entity in entities:
         access = getattr(entity, "access", None)
@@ -1044,10 +1101,24 @@ def _analyze_navigation_scope(
         permissions = getattr(access, "permissions", []) or []
         for perm in permissions:
             effect = str(getattr(perm, "effect", ""))
+            if "PERMIT" not in effect.upper():
+                continue
+            # Check persona-explicit rules
             personas = getattr(perm, "personas", []) or []
-            if "PERMIT" in effect.upper() and persona_id in personas:
+            if persona_id in personas:
                 policy_entities.add(entity.name)
                 break
+            # Check role-based condition (role names often match persona IDs)
+            op_kind = str(getattr(perm, "operation", ""))
+            if "list" in op_kind.lower() or "read" in op_kind.lower():
+                condition = getattr(perm, "condition", None)
+                # `authenticated` permissions (no condition) are accessible to all personas
+                if condition is None and getattr(perm, "require_auth", False):
+                    policy_entities.add(entity.name)
+                    break
+                if _condition_matches_role(condition, persona_id):
+                    policy_entities.add(entity.name)
+                    break
 
     # ── Expected entity set ──────────────────────────────────────────
     expected_entities = workspace_entities | variant_entities | policy_entities
@@ -1058,9 +1129,11 @@ def _analyze_navigation_scope(
         return gaps
 
     # ── Over-exposure ────────────────────────────────────────────────
-    # Entities that are NOT in the expected set.  In a runtime that renders all
-    # entities in the nav, these would be shown to the persona unnecessarily.
-    over_exposed = sorted(all_entity_names - expected_entities)
+    # Only flag entities that appear in the persona's accessible workspaces
+    # but the persona lacks read/list permission.  Entities outside the persona's
+    # workspace scope aren't in their primary navigation path and are handled
+    # by route-level access control instead.
+    over_exposed = sorted(workspace_entities - expected_entities)
     if over_exposed:
         gaps.append(
             PersonaJourneyGap(
@@ -1079,7 +1152,16 @@ def _analyze_navigation_scope(
 
     # ── Under-exposure ───────────────────────────────────────────────
     # Entities with policy access but NOT in any workspace region.
-    under_exposed = sorted(policy_entities - workspace_entities)
+    # Exclude entities that have a list surface — the framework auto-generates
+    # entity nav entries for these, so they ARE reachable even without a
+    # workspace region.
+    entities_with_list = set()
+    for surface in surfaces:
+        if str(getattr(surface, "mode", "")) == "list":
+            ent = get_surface_entity(surface)
+            if ent:
+                entities_with_list.add(ent)
+    under_exposed = sorted((policy_entities - workspace_entities) - entities_with_list)
     if under_exposed:
         ws_name = default_ws or "none"
         gaps.append(
