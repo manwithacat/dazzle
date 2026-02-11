@@ -89,6 +89,8 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
                     "dazzle.core.ir.fidelity",
                     "dazzle.core.fidelity_scorer",
                     "dazzle.mcp.server.handlers.fidelity",
+                    "dazzle.agent.missions.persona_journey",
+                    "dazzle.mcp.server.handlers.discovery",
                 ]:
                     if mod_name in _sys.modules:
                         importlib.reload(_sys.modules[mod_name])
