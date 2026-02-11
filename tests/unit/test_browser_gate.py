@@ -269,26 +269,28 @@ class TestConcurrencyBound:
 
         async def use_browser(delay: float) -> None:
             nonlocal peak_active
-            with patch.dict(
-                "sys.modules",
-                {
-                    "playwright": MagicMock(),
-                    "playwright.async_api": pw_mod,
-                },
-            ):
-                async with gate.async_browser() as _browser:
-                    async with lock:
-                        if gate.active_count > peak_active:
-                            peak_active = gate.active_count
-                    await asyncio.sleep(delay)
+            async with gate.async_browser() as _browser:
+                async with lock:
+                    if gate.active_count > peak_active:
+                        peak_active = gate.active_count
+                await asyncio.sleep(delay)
 
-        # Launch 3 tasks with max_concurrent=2
-        tasks = [
-            asyncio.create_task(use_browser(0.1)),
-            asyncio.create_task(use_browser(0.1)),
-            asyncio.create_task(use_browser(0.1)),
-        ]
-        await asyncio.gather(*tasks)
+        # Patch sys.modules at the outer level so all tasks share
+        # the same stable mock — avoids races from per-task patching.
+        with patch.dict(
+            "sys.modules",
+            {
+                "playwright": MagicMock(),
+                "playwright.async_api": pw_mod,
+            },
+        ):
+            # Launch 3 tasks with max_concurrent=2
+            tasks = [
+                asyncio.create_task(use_browser(0.1)),
+                asyncio.create_task(use_browser(0.1)),
+                asyncio.create_task(use_browser(0.1)),
+            ]
+            await asyncio.gather(*tasks)
 
         assert peak_active <= 2
         assert gate.active_count == 0
