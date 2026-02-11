@@ -404,16 +404,29 @@ def watch(
             pass
 
 
+def _resolve_log_path(project_dir: Path, config: dict[str, Any]) -> Path:
+    """Determine log path from config or convention.
+
+    Checks ``[workshop] log`` in dazzle.toml first, falls back to the
+    standard ``.dazzle/mcp-activity.log`` location.
+    """
+    custom = config.get("workshop", {}).get("log")
+    if custom:
+        p = Path(custom)
+        return p if p.is_absolute() else project_dir / p
+    return project_dir / ".dazzle" / "mcp-activity.log"
+
+
 def run_workshop(project_dir: Path) -> None:
     """Entry point: resolve project info, find log, start watch."""
     import tomllib
 
     project_dir = project_dir.resolve()
-    log_path = project_dir / ".dazzle" / "mcp-activity.log"
 
     # Read project info from dazzle.toml
     project_name = project_dir.name
     version = ""
+    config: dict[str, Any] = {}
     toml_path = project_dir / "dazzle.toml"
     if toml_path.exists():
         try:
@@ -424,6 +437,8 @@ def run_workshop(project_dir: Path) -> None:
             version = proj.get("version", "")
         except Exception:
             pass
+
+    log_path = _resolve_log_path(project_dir, config)
 
     from rich.console import Console
 
