@@ -42,7 +42,11 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     stop_on_error = args.get("stop_on_error", False)
     base_url = args.get("base_url")
-    summary = args.get("summary", True)
+    # Adaptive detail levels: metrics (compact), issues (smart default), full
+    detail = args.get("detail", "issues")
+    # Backward compatibility: old summary param
+    if "summary" in args and "detail" not in args:
+        detail = "metrics" if args["summary"] else "full"
 
     pipeline_start = time.monotonic()
     steps: list[dict[str, Any]] = []
@@ -98,7 +102,7 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     result = _run_step(1, "dsl(validate)", validate_dsl, project_path)
     if stop_on_error and result and result["status"] == "error":
-        return _build_pipeline_response(steps, errors, pipeline_start, summary=summary)
+        return _build_pipeline_response(steps, errors, pipeline_start, detail=detail)
 
     # -----------------------------------------------------------------------
     # Step 2: DSL Lint
@@ -216,17 +220,32 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     # Optional Step 12: Run all tests (only if base_url provided)
     # -----------------------------------------------------------------------
     if base_url:
-        from .dsl_test import run_all_dsl_tests_handler
+        from .preflight import check_server_reachable
 
-        _run_step(
-            12,
-            "dsl_test(run_all)",
-            run_all_dsl_tests_handler,
-            project_path,
-            {"base_url": base_url},
-        )
+        preflight_err = check_server_reachable(base_url)
+        if preflight_err:
+            steps.append(
+                {
+                    "step": 12,
+                    "operation": "dsl_test(run_all)",
+                    "status": "error",
+                    "error": json.loads(preflight_err).get("error", "Server not reachable"),
+                    "duration_ms": 0,
+                }
+            )
+            errors.append(f"dsl_test(run_all): Server not reachable at {base_url}")
+        else:
+            from .dsl_test import run_all_dsl_tests_handler
 
-    return _build_pipeline_response(steps, errors, pipeline_start, summary=summary)
+            _run_step(
+                12,
+                "dsl_test(run_all)",
+                run_all_dsl_tests_handler,
+                project_path,
+                {"base_url": base_url},
+            )
+
+    return _build_pipeline_response(steps, errors, pipeline_start, detail=detail)
 
 
 # ---------------------------------------------------------------------------
@@ -533,6 +552,66 @@ def _collect_top_issues(
 
 
 # ---------------------------------------------------------------------------
+# Issue detection — used by 'issues' detail level
+# ---------------------------------------------------------------------------
+
+
+def _step_has_issues(operation: str, result: Any) -> bool:
+    """Check whether a step result contains actionable issues.
+
+    Used by the 'issues' detail level to decide which steps get full expansion.
+    """
+    if not isinstance(result, dict):
+        return False
+
+    # Lint: any errors or warnings
+    if operation == "dsl(lint)":
+        errs = result.get("errors", [])
+        warns = result.get("warnings", [])
+        return bool(errs) or bool(warns)
+
+    # Fidelity: any gaps
+    if operation == "dsl(fidelity)":
+        total_gaps: int = result.get("total_gaps", 0) or 0
+        return total_gaps > 0
+
+    # Composition audit: score < 100
+    if operation == "composition(audit)":
+        score: int = result.get("overall_score", 100) or 100
+        return score < 100
+
+    # Test coverage: below 100%
+    if operation in ("dsl_test(coverage)", "story(coverage)", "process(coverage)"):
+        cov: float | str = result.get("coverage_percent") or result.get("coverage") or 100
+        if isinstance(cov, str):
+            try:
+                cov = float(cov.rstrip("%"))
+            except (ValueError, AttributeError):
+                return False
+        if cov is None:
+            return False
+        return float(cov) < 100
+
+    # Test design gaps: any gaps
+    if operation == "test_design(gaps)":
+        gaps = result.get("gaps", [])
+        return len(gaps) > 0
+
+    # Test run: any failures
+    if operation == "dsl_test(run_all)":
+        failed: int = result.get("failed", 0) or 0
+        return failed > 0
+
+    # Semantics validate: any errors or warnings
+    if operation == "semantics(validate_events)":
+        err_count: int = result.get("error_count", 0) or 0
+        warn_count: int = result.get("warning_count", 0) or 0
+        return err_count > 0 or warn_count > 0
+
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Response builder
 # ---------------------------------------------------------------------------
 
@@ -542,13 +621,14 @@ def _build_pipeline_response(
     errors: list[str],
     start_time: float,
     *,
-    summary: bool = True,
+    detail: str = "issues",
 ) -> str:
     """Build the final pipeline response JSON.
 
-    When summary=True (default), replaces full ``result`` payloads with
-    compact ``metrics`` dicts and appends a ``top_issues`` list.
-    When summary=False, returns the original full-detail format.
+    Detail levels:
+    - ``"metrics"``: compact stats per step + top_issues (~1KB)
+    - ``"issues"``: metrics for clean steps, full results for steps with issues (~5-20KB)
+    - ``"full"``: complete results for every step (~200KB+)
     """
     total_ms = (time.monotonic() - start_time) * 1000
 
@@ -558,7 +638,20 @@ def _build_pipeline_response(
 
     status = "passed" if failed == 0 else "failed"
 
-    if summary:
+    if detail == "full":
+        response: dict[str, Any] = {
+            "status": status,
+            "total_duration_ms": round(total_ms, 1),
+            "summary": {
+                "total_steps": len(steps),
+                "passed": passed,
+                "failed": failed,
+                "skipped": skipped,
+            },
+            "steps": steps,
+        }
+    else:
+        # Both "metrics" and "issues" use summarized steps
         summarized_steps: list[dict[str, Any]] = []
         for step in steps:
             compact: dict[str, Any] = {
@@ -572,15 +665,22 @@ def _build_pipeline_response(
             elif step.get("status") == "skipped":
                 compact["reason"] = step.get("reason")
             else:
+                op = step.get("operation", "")
                 result_data = step.get("result")
-                metrics = _extract_step_metrics(step.get("operation", ""), result_data)
-                if metrics:
-                    compact["metrics"] = metrics
+
+                # "issues" mode: expand steps that have problems
+                if detail == "issues" and _step_has_issues(op, result_data):
+                    compact["result"] = result_data
+                else:
+                    metrics = _extract_step_metrics(op, result_data)
+                    if metrics:
+                        compact["metrics"] = metrics
+
             summarized_steps.append(compact)
 
         top_issues = _collect_top_issues(steps)
 
-        response: dict[str, Any] = {
+        response = {
             "status": status,
             "total_duration_ms": round(total_ms, 1),
             "summary": {
@@ -592,20 +692,15 @@ def _build_pipeline_response(
             "steps": summarized_steps,
             "top_issues": top_issues,
         }
-    else:
-        response = {
-            "status": status,
-            "total_duration_ms": round(total_ms, 1),
-            "summary": {
-                "total_steps": len(steps),
-                "passed": passed,
-                "failed": failed,
-                "skipped": skipped,
-            },
-            "steps": steps,
-        }
 
     if errors:
         response["errors"] = errors
+
+    # _meta block
+    response["_meta"] = {
+        "wall_time_ms": round(total_ms, 1),
+        "steps_executed": len(steps),
+        "detail_level": detail,
+    }
 
     return json.dumps(response, indent=2)

@@ -51,8 +51,9 @@ class TestInspectStylesHandler:
         assert "error" in data
         assert "base_url" in data["error"]
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @pytest.mark.asyncio
-    async def test_requires_selectors(self, tmp_path: Any) -> None:
+    async def test_requires_selectors(self, mock_preflight: Any, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import inspect_styles_handler
 
         result = await inspect_styles_handler(tmp_path, {"base_url": "http://localhost:3000"})
@@ -60,12 +61,15 @@ class TestInspectStylesHandler:
         assert "error" in data
         assert "selectors" in data["error"]
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch(
         "dazzle.core.composition_styles.inspect_computed_styles",
         new_callable=AsyncMock,
     )
     @pytest.mark.asyncio
-    async def test_returns_styles(self, mock_inspect: Any, tmp_path: Any) -> None:
+    async def test_returns_styles(
+        self, mock_inspect: Any, mock_preflight: Any, tmp_path: Any
+    ) -> None:
         from dazzle.mcp.server.handlers.composition import inspect_styles_handler
 
         mock_inspect.return_value = {
@@ -90,12 +94,15 @@ class TestInspectStylesHandler:
         assert data["selectors_not_found"] == []
         assert "2/2" in data["summary"]
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch(
         "dazzle.core.composition_styles.inspect_computed_styles",
         new_callable=AsyncMock,
     )
     @pytest.mark.asyncio
-    async def test_reports_not_found_selectors(self, mock_inspect: Any, tmp_path: Any) -> None:
+    async def test_reports_not_found_selectors(
+        self, mock_inspect: Any, mock_preflight: Any, tmp_path: Any
+    ) -> None:
         from dazzle.mcp.server.handlers.composition import inspect_styles_handler
 
         mock_inspect.return_value = {
@@ -117,12 +124,15 @@ class TestInspectStylesHandler:
         assert "1/2" in data["summary"]
         assert "missing" in data["summary"]
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch(
         "dazzle.core.composition_styles.inspect_computed_styles",
         new_callable=AsyncMock,
     )
     @pytest.mark.asyncio
-    async def test_default_route(self, mock_inspect: Any, tmp_path: Any) -> None:
+    async def test_default_route(
+        self, mock_inspect: Any, mock_preflight: Any, tmp_path: Any
+    ) -> None:
         from dazzle.mcp.server.handlers.composition import inspect_styles_handler
 
         mock_inspect.return_value = {"el": {"display": "block"}}
@@ -147,10 +157,13 @@ class TestInspectStylesHandler:
     async def test_playwright_import_error(self, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import inspect_styles_handler
 
-        with patch(
-            "dazzle.core.composition_styles.inspect_computed_styles",
-            new_callable=AsyncMock,
-            side_effect=ImportError("Playwright not installed"),
+        with (
+            patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None),
+            patch(
+                "dazzle.core.composition_styles.inspect_computed_styles",
+                new_callable=AsyncMock,
+                side_effect=ImportError("Playwright not installed"),
+            ),
         ):
             result = await inspect_styles_handler(
                 tmp_path,
@@ -167,10 +180,13 @@ class TestInspectStylesHandler:
     async def test_navigation_error(self, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import inspect_styles_handler
 
-        with patch(
-            "dazzle.core.composition_styles.inspect_computed_styles",
-            new_callable=AsyncMock,
-            side_effect=RuntimeError("Navigation failed: timeout"),
+        with (
+            patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None),
+            patch(
+                "dazzle.core.composition_styles.inspect_computed_styles",
+                new_callable=AsyncMock,
+                side_effect=RuntimeError("Navigation failed: timeout"),
+            ),
         ):
             result = await inspect_styles_handler(
                 tmp_path,

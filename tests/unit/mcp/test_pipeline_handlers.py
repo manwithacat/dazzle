@@ -450,10 +450,10 @@ class TestBuildPipelineResponse:
             _make_skipped_step(5, "semantics(extract)", "not available"),
         ]
 
-    def test_summary_true_has_metrics_not_result(self) -> None:
+    def test_metrics_detail_has_metrics_not_result(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
-        raw = _build_pipeline_response(steps, [], start, summary=True)
+        raw = _build_pipeline_response(steps, [], start, detail="metrics")
         data = json.loads(raw)
 
         assert "top_issues" in data
@@ -462,10 +462,10 @@ class TestBuildPipelineResponse:
             if step["status"] == "passed":
                 assert "metrics" in step
 
-    def test_summary_false_has_result_not_metrics(self) -> None:
+    def test_full_detail_has_result_not_metrics(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
-        raw = _build_pipeline_response(steps, [], start, summary=False)
+        raw = _build_pipeline_response(steps, [], start, detail="full")
         data = json.loads(raw)
 
         assert "top_issues" not in data
@@ -474,11 +474,11 @@ class TestBuildPipelineResponse:
                 assert "result" in step
                 assert "metrics" not in step
 
-    def test_error_step_preserved_in_summary(self) -> None:
+    def test_error_step_preserved_in_metrics(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
         raw = _build_pipeline_response(
-            steps, ["dsl_test(generate): generator crashed"], start, summary=True
+            steps, ["dsl_test(generate): generator crashed"], start, detail="metrics"
         )
         data = json.loads(raw)
 
@@ -488,10 +488,10 @@ class TestBuildPipelineResponse:
         assert data["status"] == "failed"
         assert "errors" in data
 
-    def test_skipped_step_preserved_in_summary(self) -> None:
+    def test_skipped_step_preserved_in_metrics(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
-        raw = _build_pipeline_response(steps, [], start, summary=True)
+        raw = _build_pipeline_response(steps, [], start, detail="metrics")
         data = json.loads(raw)
 
         skipped = [s for s in data["steps"] if s["status"] == "skipped"]
@@ -501,7 +501,7 @@ class TestBuildPipelineResponse:
     def test_summary_counts(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
-        raw = _build_pipeline_response(steps, [], start, summary=True)
+        raw = _build_pipeline_response(steps, [], start, detail="metrics")
         data = json.loads(raw)
 
         assert data["summary"]["total_steps"] == 5
@@ -509,10 +509,10 @@ class TestBuildPipelineResponse:
         assert data["summary"]["failed"] == 1
         assert data["summary"]["skipped"] == 1
 
-    def test_duration_ms_in_summary(self) -> None:
+    def test_duration_ms_in_metrics(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
-        raw = _build_pipeline_response(steps, [], start, summary=True)
+        raw = _build_pipeline_response(steps, [], start, detail="metrics")
         data = json.loads(raw)
 
         for step in data["steps"]:
@@ -522,22 +522,33 @@ class TestBuildPipelineResponse:
     def test_top_issues_from_lint_and_fidelity(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
-        raw = _build_pipeline_response(steps, [], start, summary=True)
+        raw = _build_pipeline_response(steps, [], start, detail="metrics")
         data = json.loads(raw)
 
         sources = {i["source"] for i in data["top_issues"]}
         assert "lint" in sources
         assert "fidelity" in sources
 
-    def test_summary_is_compact(self) -> None:
+    def test_metrics_is_compact(self) -> None:
         steps = self._sample_steps()
         start = time.monotonic()
-        summary_raw = _build_pipeline_response(steps, [], start, summary=True)
-        full_raw = _build_pipeline_response(steps, [], start, summary=False)
+        metrics_raw = _build_pipeline_response(steps, [], start, detail="metrics")
+        full_raw = _build_pipeline_response(steps, [], start, detail="full")
 
-        # Summary should generally be smaller (no full result payloads)
+        # Metrics should generally be smaller (no full result payloads)
         # Allow margin for top_issues key
-        assert len(summary_raw) <= len(full_raw) + 500
+        assert len(metrics_raw) <= len(full_raw) + 500
+
+    def test_meta_block_present(self) -> None:
+        steps = self._sample_steps()
+        start = time.monotonic()
+        raw = _build_pipeline_response(steps, [], start, detail="issues")
+        data = json.loads(raw)
+
+        assert "_meta" in data
+        assert "wall_time_ms" in data["_meta"]
+        assert data["_meta"]["steps_executed"] == 5
+        assert data["_meta"]["detail_level"] == "issues"
 
 
 # =============================================================================
@@ -624,20 +635,30 @@ class TestPipelineSummaryIntegration:
 
         return json.loads(raw)
 
-    def test_default_summary_mode(self, tmp_path: Path) -> None:
+    def test_default_issues_mode(self, tmp_path: Path) -> None:
         data = self._run_with_mocks(tmp_path, {})
         assert data["status"] == "passed"
         assert "top_issues" in data
-        for step in data["steps"]:
-            assert "result" not in step
+        assert "_meta" in data
+        assert data["_meta"]["detail_level"] == "issues"
 
     def test_full_detail_mode(self, tmp_path: Path) -> None:
-        data = self._run_with_mocks(tmp_path, {"summary": False})
+        data = self._run_with_mocks(tmp_path, {"detail": "full"})
         assert "top_issues" not in data
         passed = [s for s in data["steps"] if s["status"] == "passed"]
         assert all("result" in s for s in passed)
 
-    def test_stop_on_error_with_summary(self, tmp_path: Path) -> None:
+    def test_backward_compat_summary_false(self, tmp_path: Path) -> None:
+        data = self._run_with_mocks(tmp_path, {"summary": False})
+        assert "top_issues" not in data
+        assert data["_meta"]["detail_level"] == "full"
+
+    def test_backward_compat_summary_true(self, tmp_path: Path) -> None:
+        data = self._run_with_mocks(tmp_path, {"summary": True})
+        assert "top_issues" in data
+        assert data["_meta"]["detail_level"] == "metrics"
+
+    def test_stop_on_error_with_issues(self, tmp_path: Path) -> None:
         mock_dsl = MagicMock()
         mock_dsl.validate_dsl.return_value = json.dumps({"error": "parse failure"})
 

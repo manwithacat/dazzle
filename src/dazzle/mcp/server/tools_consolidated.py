@@ -1350,9 +1350,19 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "boolean",
                         "description": "Stop pipeline on first error (default: false, continues collecting results)",
                     },
+                    "detail": {
+                        "type": "string",
+                        "enum": ["metrics", "issues", "full"],
+                        "description": (
+                            "Response detail level (default: 'issues'). "
+                            "'metrics': compact stats per step (~1KB). "
+                            "'issues': metrics for clean steps, full results for steps with problems (~5-20KB). "
+                            "'full': complete results for every step (~200KB+)."
+                        ),
+                    },
                     "summary": {
                         "type": "boolean",
-                        "description": "Return compact metrics instead of full results (default: true). Set false for full detail.",
+                        "description": "[Deprecated — use 'detail' instead] Backward-compat: true→metrics, false→full.",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

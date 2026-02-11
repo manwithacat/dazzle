@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -70,10 +71,17 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
             {"error": "base_url is required for capture (e.g. http://localhost:3000)"}
         )
 
+    from .preflight import check_server_reachable
+
+    preflight_err = check_server_reachable(base_url)
+    if preflight_err:
+        return preflight_err
+
     routes_filter: list[str] | None = args.get("pages")
     viewports: list[str] | None = args.get("viewports")
     output_dir = project_path / ".dazzle" / "composition" / "captures"
 
+    t0 = time.monotonic()
     try:
         sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
 
@@ -92,6 +100,7 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
         total_sections = sum(len(c.sections) for c in captures)
         total_tokens = sum(c.total_tokens_est for c in captures)
 
+        wall_ms = (time.monotonic() - t0) * 1000
         return json.dumps(
             {
                 "captures": captures_data,
@@ -103,6 +112,10 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
                     f"{len(captures)} page/viewport combinations "
                     f"(~{total_tokens:,} tokens)"
                 ),
+                "_meta": {
+                    "wall_time_ms": round(wall_ms, 1),
+                    "sections_captured": total_sections,
+                },
             },
             indent=2,
         )
@@ -155,6 +168,7 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
                 {"error": f"No valid dimensions in focus: {focus}. Valid: {DIMENSIONS}"}
             )
 
+    t0 = time.monotonic()
     try:
         results = evaluate_captures(
             captures,
@@ -162,6 +176,12 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
             token_budget=token_budget,
         )
         report = build_visual_report(results)
+        wall_ms = (time.monotonic() - t0) * 1000
+        report["_meta"] = {
+            "wall_time_ms": round(wall_ms, 1),
+            "tokens_used": report.get("tokens_used", 0),
+            "llm_calls": report.get("llm_calls", len(captures)),
+        }
         return json.dumps(report, indent=2)
     except ImportError as e:
         return json.dumps({"error": str(e)})
@@ -248,6 +268,15 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
     focus: list[str] | None = args.get("focus")
     token_budget: int = args.get("token_budget", 50_000)
 
+    t0 = time.monotonic()
+
+    if base_url:
+        from .preflight import check_server_reachable
+
+        preflight_err = check_server_reachable(base_url)
+        if preflight_err:
+            return preflight_err
+
     # Step 1: DOM audit (always runs)
     try:
         sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
@@ -333,6 +362,7 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
         dom_result, visual_report, dom_score, visual_score, combined_score
     )
 
+    wall_ms = (time.monotonic() - t0) * 1000
     report = {
         "dom_score": dom_score,
         "visual_score": visual_score,
@@ -343,6 +373,11 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
         "tokens_used": visual_report.get("tokens_used", 0) if visual_report else 0,
         "summary": summary,
         "markdown": markdown,
+        "_meta": {
+            "wall_time_ms": round(wall_ms, 1),
+            "tokens_used": visual_report.get("tokens_used", 0) if visual_report else 0,
+            "has_visual_evaluation": visual_score is not None,
+        },
     }
 
     return json.dumps(report, indent=2)
@@ -552,6 +587,12 @@ async def inspect_styles_handler(_project_path: Path, args: dict[str, Any]) -> s
         return json.dumps(
             {"error": "base_url is required for inspect_styles (e.g. http://localhost:3000)"}
         )
+
+    from .preflight import check_server_reachable
+
+    preflight_err = check_server_reachable(base_url)
+    if preflight_err:
+        return preflight_err
 
     route: str = args.get("route", "/")
     selectors: dict[str, str] | None = args.get("selectors")

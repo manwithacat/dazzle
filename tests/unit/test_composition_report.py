@@ -76,6 +76,7 @@ class TestReportCompositionHandler:
         assert data["combined_score"] == 100
         assert "No pages" in data["summary"]
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
     @patch(
@@ -88,6 +89,7 @@ class TestReportCompositionHandler:
         mock_visual: Any,
         mock_audit: Any,
         mock_load: Any,
+        mock_preflight: Any,
         tmp_path: Any,
     ) -> None:
         from dazzle.mcp.server.handlers.composition import (
@@ -130,6 +132,7 @@ class TestReportCompositionHandler:
         assert data["findings_by_severity"]["high"] == 1
         assert data["findings_by_severity"]["medium"] == 2
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
     @patch(
@@ -142,6 +145,7 @@ class TestReportCompositionHandler:
         mock_visual: Any,
         mock_audit: Any,
         mock_load: Any,
+        mock_preflight: Any,
         tmp_path: Any,
     ) -> None:
         from dazzle.mcp.server.handlers.composition import (
@@ -277,6 +281,7 @@ class TestCombinedMarkdown:
 class TestScoreCombination:
     """Test the score weighting logic."""
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
     @patch(
@@ -289,6 +294,7 @@ class TestScoreCombination:
         mock_visual: Any,
         mock_audit: Any,
         mock_load: Any,
+        mock_preflight: Any,
         tmp_path: Any,
     ) -> None:
         from dazzle.mcp.server.handlers.composition import (
@@ -318,6 +324,7 @@ class TestScoreCombination:
         data = json.loads(result)
         assert data["combined_score"] == 100
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @patch("dazzle.core.composition.run_composition_audit")
     @patch(
@@ -330,6 +337,7 @@ class TestScoreCombination:
         mock_visual: Any,
         mock_audit: Any,
         mock_load: Any,
+        mock_preflight: Any,
         tmp_path: Any,
     ) -> None:
         from dazzle.mcp.server.handlers.composition import (

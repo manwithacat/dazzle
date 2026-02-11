@@ -312,6 +312,8 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
     if persona_arg and not persona_ids:
         persona_ids = [persona_arg]
 
+    t0 = time.monotonic()
+
     try:
         appspec = _load_appspec(project_path)
     except Exception as e:
@@ -354,6 +356,7 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
     report_file = save_discovery_report(project_path, transcript_json)
     session_id = report_file.stem
 
+    wall_ms = (time.monotonic() - t0) * 1000
     result: dict[str, Any] = {
         "status": "completed",
         "mode": "headless",
@@ -368,6 +371,11 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
             f"  discovery(operation='compile', session_id='{session_id}')  → proposals\n"
             f"  discovery(operation='emit', session_id='{session_id}')     → DSL code"
         ),
+        "_meta": {
+            "wall_time_ms": round(wall_ms, 1),
+            "personas_analyzed": len(report.persona_reports),
+            "observations_generated": len(observations),
+        },
     }
 
     return json.dumps(result, indent=2)
@@ -456,6 +464,7 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     from dazzle.agent.compiler import NarrativeCompiler
 
     persona = args.get("persona", "user")
+    t0 = time.monotonic()
 
     loaded = _load_report_data(project_path, args.get("session_id"))
     if isinstance(loaded, str):
@@ -492,6 +501,11 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     result: dict[str, Any] = compiler.to_json(proposals)
     result["session_id"] = session_id
     result["report_markdown"] = compiler.report(proposals)
+    wall_ms = (time.monotonic() - t0) * 1000
+    result["_meta"] = {
+        "wall_time_ms": round(wall_ms, 1),
+        "proposals_generated": len(proposals),
+    }
 
     return json.dumps(result, indent=2)
 
@@ -513,6 +527,7 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     persona = args.get("persona", "user")
     proposal_ids = args.get("proposal_ids")
+    t0 = time.monotonic()
 
     loaded = _load_report_data(project_path, args.get("session_id"))
     if isinstance(loaded, str):
@@ -552,6 +567,7 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     results = emitter.emit_batch(proposals, context)
 
     # Build response
+    wall_ms = (time.monotonic() - t0) * 1000
     result: dict[str, Any] = {
         "session_id": session_id,
         "total_proposals": len(proposals),
@@ -559,6 +575,11 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
         "valid_count": sum(1 for r in results if r.valid),
         "results": [r.to_json() for r in results],
         "report_markdown": emitter.emit_report(results),
+        "_meta": {
+            "wall_time_ms": round(wall_ms, 1),
+            "proposals_emitted": len(results),
+            "valid_dsl_count": sum(1 for r in results if r.valid),
+        },
     }
 
     return json.dumps(result, indent=2)

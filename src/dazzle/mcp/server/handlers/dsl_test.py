@@ -33,6 +33,13 @@ def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         base_url = args.get("base_url")
 
+        if base_url:
+            from .preflight import check_server_reachable
+
+            preflight_err = check_server_reachable(base_url)
+            if preflight_err:
+                return preflight_err
+
         # Load all stories
         all_stories = load_stories(project_root)
         story_map = {s.story_id: s for s in all_stories}
@@ -249,6 +256,14 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         from dazzle.testing.unified_runner import UnifiedTestRunner
 
         base_url = args.get("base_url")
+
+        if base_url:
+            from .preflight import check_server_reachable
+
+            preflight_err = check_server_reachable(base_url)
+            if preflight_err:
+                return preflight_err
+
         regenerate = args.get("regenerate", False)
 
         runner = UnifiedTestRunner(project_root, base_url=base_url)
@@ -361,6 +376,14 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         regenerate = args.get("regenerate", False)
         base_url = args.get("base_url")
+
+        if base_url:
+            from .preflight import check_server_reachable
+
+            preflight_err = check_server_reachable(base_url)
+            if preflight_err:
+                return preflight_err
+
         category = args.get("category")
         entity = args.get("entity")
         test_id = args.get("test_id")

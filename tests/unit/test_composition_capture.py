@@ -261,6 +261,7 @@ class TestCaptureCompositionHandler:
         assert "error" in data
         assert "base_url" in data["error"]
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch("dazzle.core.composition_capture.capture_page_sections", new_callable=AsyncMock)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @pytest.mark.asyncio
@@ -268,6 +269,7 @@ class TestCaptureCompositionHandler:
         self,
         mock_load: Any,
         mock_capture: Any,
+        mock_preflight: Any,
         tmp_path: Any,
     ) -> None:
         from dazzle.mcp.server.handlers.composition import (
@@ -295,9 +297,10 @@ class TestCaptureCompositionHandler:
         assert "Captured 2 sections" in data["summary"]
         assert len(data["captures"]) == 1
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @pytest.mark.asyncio
-    async def test_empty_sitespec(self, mock_load: Any, tmp_path: Any) -> None:
+    async def test_empty_sitespec(self, mock_load: Any, mock_preflight: Any, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import (
             capture_composition_handler,
         )
@@ -307,6 +310,7 @@ class TestCaptureCompositionHandler:
         data = json.loads(result)
         assert data["captures"] == []
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None)
     @patch("dazzle.core.composition_capture.capture_page_sections", new_callable=AsyncMock)
     @patch("dazzle.core.sitespec_loader.load_sitespec_with_copy")
     @pytest.mark.asyncio
@@ -314,6 +318,7 @@ class TestCaptureCompositionHandler:
         self,
         mock_load: Any,
         mock_capture: Any,
+        mock_preflight: Any,
         tmp_path: Any,
     ) -> None:
         from dazzle.mcp.server.handlers.composition import (
@@ -343,6 +348,7 @@ class TestCaptureCompositionHandler:
         )
 
         with (
+            patch("dazzle.mcp.server.handlers.preflight.check_server_reachable", return_value=None),
             patch("dazzle.core.sitespec_loader.load_sitespec_with_copy") as mock_load,
             patch(
                 "dazzle.core.composition_capture.capture_page_sections",
