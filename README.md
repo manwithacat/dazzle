@@ -765,40 +765,81 @@ scenario busy_sprint "Busy Sprint":
 
 ## The MCP Tooling Pipeline
 
-Dazzle is not just a runtime — it is also an AI-assisted development environment accessed through MCP (Model Context Protocol) tools. When you use Claude Code with a Dazzle project, you get access to a comprehensive tooling pipeline.
+Dazzle is not just a runtime — it is also an AI-assisted development environment accessed through MCP (Model Context Protocol) tools. When you use Claude Code with a Dazzle project, you get access to **24 tools with 163+ operations** spanning every stage from natural-language spec to visual regression testing.
 
-The pipeline for building and validating an application:
+### 1. Spec to DSL
 
-```
-validate → lint → fidelity → story propose → story save →
-process propose → process save → test generate → test design gaps →
-demo data propose → demo data generate
-```
-
-### Available MCP Tools
+Turn a plain-English idea into validated DSL. `bootstrap` is the entry point for "build me an app" requests; `spec_analyze` breaks a narrative into entities, lifecycles, personas, and business rules; `dsl` validates and inspects the result; `api_pack` wires in external APIs.
 
 | Tool | Operations | Purpose |
 |------|-----------|---------|
-| `dsl` | validate, lint, inspect_entity, inspect_surface, analyze, list_modules, get_spec, fidelity, list_fragments, export_frontend_spec | Parse, validate, and analyze DSL files |
-| `story` | propose, save, get, generate_tests, coverage | Generate and manage user stories from DSL |
-| `process` | propose, save, list, inspect, diagram, coverage, list_runs, get_run | Workflow orchestration with saga patterns |
-| `test_design` | propose_persona, gaps, save, get, coverage_actions, runtime_gaps, auto_populate, improve_coverage | Persona-centric test design and coverage tracking |
-| `dsl_test` | generate, run, coverage, list | Generate and run API tests from DSL |
-| `e2e_test` | check_infra, run, run_agent, coverage, list_flows, tier_guidance | Browser-based E2E testing with Playwright |
-| `demo_data` | propose, save, get, generate | Generate realistic seed data per persona/tenant |
-| `sitespec` | get, validate, scaffold, coherence, get_copy, scaffold_copy, review_copy | Marketing site specification and copy management |
-| `semantics` | extract, validate_events, tenancy, compliance, analytics, extract_guards | Semantic analysis for tenancy, compliance, PII |
-| `graph` | query, dependencies, dependents, neighbourhood, paths, stats, populate, concept, inference, related | Knowledge graph for codebase understanding |
-| `discovery` | run, report, compile, emit, status | Agent-powered capability discovery against running apps |
-| `api_pack` | list, search, get, generate_dsl, env_vars | External API integration packs |
-| `knowledge` | concept, examples, cli_help, workflow, inference, get_spec | DSL knowledge base and pattern lookup |
-| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas, surface_rules, generate_questions, refine_spec | Analyze natural language specs before DSL generation |
-| `bootstrap` | (single operation) | Entry point for "build me an app" requests |
-| `pitch` | scaffold, generate, validate, get, review, update, enrich | Generate investor pitch decks from DSL data |
-| `user_management` | list, create, get, update, reset_password, deactivate, list_sessions, revoke_session | Manage auth users and sessions |
-| `contribution` | templates, create, validate, examples | Package community contributions |
+| `bootstrap` | (single operation) | Entry point — scans for spec files, runs cognition pass, returns a mission briefing |
+| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas, surface_rules, generate_questions, refine_spec | Analyze natural-language specs before DSL generation |
+| `dsl` | validate, lint, inspect_entity, inspect_surface, analyze, list_modules, get_spec, fidelity, list_fragments, export_frontend_spec | Parse, validate, inspect, and score DSL files |
+| `api_pack` | list, search, get, generate_dsl, env_vars, infrastructure | External API integration packs with infra manifests |
 
-This pipeline ensures that your DSL, stories, processes, and tests stay in sync. Change the DSL, re-run validate → lint → fidelity, and the tooling tells you what stories, processes, and tests need updating.
+### 2. Test and Verify
+
+Generate stories, design tests, execute them at three tiers, and seed realistic demo data — all from the DSL.
+
+| Tool | Operations | Purpose |
+|------|-----------|---------|
+| `story` | propose, save, get, generate_tests, coverage | Generate and manage user stories; `get` with `view=wall` shows a founder-friendly board grouped by implementation status |
+| `test_design` | propose_persona, gaps, save, get, coverage_actions, runtime_gaps, save_runtime, auto_populate, improve_coverage | Persona-centric test design with autonomous gap-filling |
+| `dsl_test` | generate, run, run_all, coverage, list, create_sessions, diff_personas, verify_story | API tests — including `verify_story` (check story implementations) and `diff_personas` (compare route behavior across roles) |
+| `e2e_test` | check_infra, run, run_agent, coverage, list_flows, tier_guidance, run_viewport, list_viewport_specs, save_viewport_specs | Browser E2E with Playwright — viewport testing, screenshot capture, visual regression baselines, and `tier_guidance` for test strategy |
+| `demo_data` | propose, save, get, generate | Generate realistic seed data per persona/tenant |
+
+### 3. Analyze and Audit
+
+Deterministic quality checks, agent-powered gap discovery, visual composition analysis, semantic extraction, and RBAC policy verification.
+
+| Tool | Operations | Purpose |
+|------|-----------|---------|
+| `pipeline` | run | Full quality audit in one call — chains validate, lint, fidelity, composition audit, test/story/process coverage, test design gaps, and semantics. Adaptive detail levels (`metrics`/`issues`/`full`) |
+| `discovery` | run, report, compile, emit, status, verify_all_stories, coherence | Agent-powered capability discovery in 4 modes: `persona`, `entity_completeness`, `workflow_coherence`, `headless` (pure DSL/KG analysis without a running app). Includes authenticated UX coherence scoring |
+| `composition` | audit, capture, analyze, report, bootstrap, inspect_styles | Visual hierarchy audit (5-factor attention model), Playwright screenshot capture, Claude vision evaluation, CSS `getComputedStyle()` inspection |
+| `semantics` | extract, validate_events, tenancy, compliance, analytics, extract_guards | Semantic analysis — tenancy isolation, compliance/PII detection, event validation, guard extraction |
+| `policy` | analyze, conflicts, coverage, simulate | RBAC policy analysis — find unprotected entities, detect contradictory rules, generate permission matrices, trace rule evaluation |
+
+### 4. Site and Brand
+
+Manage the public-facing site structure, copy, theme, and imagery — all from spec files.
+
+| Tool | Operations | Purpose |
+|------|-----------|---------|
+| `sitespec` | get, validate, scaffold, coherence, review, get_copy, scaffold_copy, review_copy, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts | Site structure + copy + theme. `coherence` checks if the site feels like a real website; `generate_tokens` produces design tokens; `generate_imagery_prompts` creates image generation prompts |
+
+### 5. Stakeholder and Ops
+
+Founder-facing health reports, investor pitch decks, user/session management, and workflow orchestration.
+
+| Tool | Operations | Purpose |
+|------|-----------|---------|
+| `pulse` | run, radar, persona, timeline, decisions | Founder-ready health report with Launch Readiness score, 6-axis radar, blocker list, and decisions needing input. `persona` shows the app through a specific user's eyes |
+| `pitch` | scaffold, generate, validate, get, review, update, enrich, init_assets | Investor pitch deck generation from `pitchspec.yaml` + DSL data. Outputs PPTX and narrative formats |
+| `user_management` | list, create, get, update, reset_password, deactivate, list_sessions, revoke_session, config | Auth user and session management in SQLite or PostgreSQL |
+| `process` | propose, save, list, inspect, list_runs, get_run, diagram, coverage | Workflow orchestration with saga patterns — Mermaid diagrams, run tracking, coverage analysis |
+
+### 6. Knowledge and Meta
+
+Framework knowledge, codebase graph, community contributions, adaptive user profiling, and server diagnostics.
+
+| Tool | Operations | Purpose |
+|------|-----------|---------|
+| `graph` | query, dependencies, dependents, neighbourhood, paths, stats, populate, concept, inference, related, export, import | Unified knowledge graph — codebase structure, framework concepts, inference patterns, import/export for portability |
+| `knowledge` | concept, examples, cli_help, workflow, inference, get_spec | DSL knowledge base and pattern lookup |
+| `contribution` | templates, create, validate, examples | Package API packs, UI patterns, bug fixes, DSL patterns, and feature requests for sharing |
+| `user_profile` | observe, observe_message, get, reset | Adaptive persona inference — analyzes tool usage and message vocabulary to tailor response detail |
+| `status` | mcp, logs, active_project, telemetry | Server diagnostics — module status, log tailing, telemetry with per-tool stats |
+
+### Autonomous Quality Pipeline
+
+`pipeline run` chains 11 deterministic steps (validate, lint, fidelity, composition audit, test/story/process coverage, test design gaps, semantics) with adaptive output — returning compact metrics for clean steps and full detail only where problems exist. Feed the results into `discovery run` to explore as each persona and find gaps the static checks miss. Then `composition report` adds visual analysis: DOM-level hierarchy audit plus Claude vision evaluation of captured screenshots. An agent can audit structure, logic, access control, and visual rendering without human intervention.
+
+### Agent-Friendly Responses
+
+MCP responses are designed for LLM agents to make cost-aware decisions. The `pipeline` tool supports three detail levels (`metrics` at ~1KB, `issues` at ~5-20KB, `full` at ~200KB+) so agents can start cheap and drill down only where needed. Responses include `_meta` blocks with wall time, token usage, and LLM call counts. Expensive operations like `discovery run` and `composition analyze` perform pre-flight health checks before committing resources.
 
 ### Claude Code Integration
 
@@ -824,13 +865,14 @@ See [MCP Server Guide](docs/architecture/mcp-server.md) for details.
 
 Dazzle includes a mission-driven agent framework that can autonomously explore, test, and analyze running applications.
 
-The agent follows an **observe → decide → act → record** loop and supports multiple mission types:
+The agent follows an **observe → decide → act → record** loop and supports four mission types:
 
 | Mission | Purpose |
 |---------|---------|
 | **Persona Discovery** | Explore a running app as a specific persona, comparing what exists against the DSL spec. Identifies missing CRUD operations, workflow gaps, navigation issues, and UX problems. |
 | **Entity Completeness** | Static CRUD coverage analysis plus targeted verification of missing operations per entity. |
 | **Workflow Coherence** | Validates process/story integrity — checks that step transitions, guards, and compensations are correctly wired. |
+| **Headless** | Pure DSL/KG persona journey analysis without a running app — traces what each persona should be able to do based on the spec alone. |
 
 The agent produces structured observations that feed into two further stages:
 
@@ -841,6 +883,8 @@ The agent produces structured observations that feed into two further stages:
 The full discovery flow via MCP:
 ```
 discovery run → discovery report → discovery compile → discovery emit
+                                                    ↘ discovery coherence (UX scoring)
+                                                    ↘ discovery verify_all_stories (batch verification)
 ```
 
 ---
@@ -851,15 +895,16 @@ Dazzle supports three tiers of testing, each with increasing power and cost:
 
 | Tier | Tool | What It Tests | Speed |
 |------|------|--------------|-------|
-| **Tier 1: DSL Tests** | `dsl_test generate` + `dsl_test run` | API contracts against the running server — CRUD operations, validation rules, state machine transitions, access control | Fast (HTTP calls) |
-| **Tier 2: Playwright** | `test playwright` | UI rendering and interaction — form submission, navigation, DataTable behavior, fragment rendering | Medium (browser automation) |
-| **Tier 3: Agent** | `e2e_test run_agent` | End-to-end user journeys — an LLM agent navigates the app as a persona and validates behavior against stories | Slow (LLM-guided exploration) |
+| **Tier 1: DSL Tests** | `dsl_test generate` + `dsl_test run` | API contracts against the running server — CRUD operations, validation rules, state machine transitions, access control. `verify_story` checks story implementations; `diff_personas` compares route behavior across roles | Fast (HTTP calls) |
+| **Tier 2: Playwright** | `e2e_test run` + `e2e_test run_viewport` | UI rendering and interaction — form submission, navigation, DataTable behavior, fragment rendering. Viewport testing with screenshot capture and visual regression baselines across mobile/desktop | Medium (browser automation) |
+| **Tier 3: Agent** | `e2e_test run_agent` | End-to-end user journeys — an LLM agent navigates the app as a persona and validates behavior against stories. `tier_guidance` recommends the right tier for a given scenario | Slow (LLM-guided exploration) |
 
 Tests are generated from the DSL, not written by hand. The test design system tracks coverage across entities, state machines, personas, workspaces, events, and processes, and proposes new tests to fill gaps.
 
 ```bash
 dazzle test dsl-run              # Tier 1: API tests
 dazzle test playwright           # Tier 2: UI tests
+dazzle test viewport             # Tier 2: Visual regression
 dazzle test agent                # Tier 3: LLM-powered tests
 ```
 
@@ -1056,13 +1101,13 @@ src/
 │   ├── core/                # Parser, IR types, linker, validation
 │   │   ├── ir/              # ~40 modules, ~150+ Pydantic IR types
 │   │   └── dsl_parser_impl/ # Parser mixins for each construct
-│   ├── mcp/                 # MCP server with 18+ tool handlers
+│   ├── mcp/                 # MCP server with 24 tool handlers
 │   │   ├── server/handlers/ # One handler per tool
 │   │   └── knowledge_graph/ # Unified per-project knowledge graph
 │   ├── agent/               # Mission-driven agent framework
-│   │   ├── missions/        # Discovery, entity completeness, workflow coherence
-│   │   ├── compiler.py      # Observations → proposals
-│   │   └── emitter.py       # Proposals → valid DSL
+│   │   ├── missions/        # Persona discovery, entity completeness, workflow coherence, headless
+│   │   ├── compiler.py      # Observations → proposals (narrative compiler)
+│   │   └── emitter.py       # Proposals → valid DSL (with retry + auto-fix)
 │   ├── testing/             # Three-tier test generation and execution
 │   ├── specs/               # OpenAPI and AsyncAPI generators
 │   ├── api_kb/              # API pack definitions (TOML)
