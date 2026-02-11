@@ -120,6 +120,7 @@ from dazzle.cli.deploy import deploy_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
 from dazzle.cli.kg import kg_app  # noqa: E402
+from dazzle.cli.lsp import lsp_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
@@ -144,6 +145,7 @@ app.add_typer(outbox_app, name="outbox")
 app.add_typer(migrate_app, name="process-migrate")
 app.add_typer(pitch_app, name="pitch")
 app.add_typer(kg_app, name="kg")
+app.add_typer(lsp_app, name="lsp")
 app.add_typer(mcp_app, name="mcp")
 
 

@@ -15,7 +15,6 @@
 
 <!-- Downloads & Stats -->
 [![PyPI Downloads](https://img.shields.io/pypi/dm/dazzle.svg)](https://pypi.org/project/dazzle/)
-[![VS Code Extension](https://img.shields.io/visual-studio-marketplace/i/manwithacat.dazzle-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=manwithacat.dazzle-vscode)
 
 <!-- Meta -->
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://manwithacat.github.io/dazzle/)
@@ -958,11 +957,9 @@ brew install manwithacat/tap/dazzle
 # PyPI
 pip install dazzle
 
-# VS Code Extension
-code --install-extension manwithacat.dazzle-vscode
 ```
 
-**Downloads**: [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=manwithacat.dazzle-vscode) · [Homebrew Formula](https://github.com/manwithacat/homebrew-tap)
+**Downloads**: [Homebrew Formula](https://github.com/manwithacat/homebrew-tap)
 
 ### CLI Commands
 
@@ -1005,7 +1002,43 @@ Full Language Server Protocol (LSP) implementation with:
 - Auto-completion
 - Document symbols
 
-Works with VS Code, Neovim, Emacs, and any LSP-compatible editor.
+### Quick Start
+
+```bash
+# Start the LSP server (editors pipe to this via stdio)
+dazzle lsp run
+
+# Verify LSP dependencies are installed
+dazzle lsp check
+
+# Get the path to the bundled TextMate grammar (for syntax highlighting)
+dazzle lsp grammar-path
+```
+
+### Editor Setup
+
+**VS Code** — Add to `.vscode/settings.json`:
+```json
+{
+  "dazzle.lsp.serverCommand": "dazzle lsp run"
+}
+```
+Or use any generic LSP client extension pointing to `dazzle lsp run`.
+
+**Neovim** (nvim-lspconfig):
+```lua
+require('lspconfig').dazzle.setup {
+  cmd = { "dazzle", "lsp", "run" },
+  filetypes = { "dsl", "dazzle" },
+}
+```
+
+**Emacs** (eglot):
+```elisp
+(add-to-list 'eglot-server-programs '(dazzle-mode . ("dazzle" "lsp" "run")))
+```
+
+Works with any editor that supports LSP.
 
 ---
 

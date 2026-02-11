@@ -135,6 +135,12 @@ dazzle specs asyncapi
 
 All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `fieldtest_hub`, `llm_ticket_classifier`, `support_tickets`
 
+## LSP Server
+
+- LSP server: `dazzle lsp run` (diagnostics, hover, completion, go-to-definition)
+- Check deps: `dazzle lsp check`
+- Grammar path: `dazzle lsp grammar-path`
+
 ## MCP Server
 
 The DAZZLE MCP server (`dazzle mcp`) provides context-aware tools:
@@ -152,4 +158,4 @@ Use MCP tools for DSL semantics; this file for codebase conventions.
 - Experiences support basic flows only
 
 ---
-**Version**: 0.21.2 | **Python**: 3.11+ | **Status**: Production Ready
+**Version**: 0.22.0 | **Python**: 3.11+ | **Status**: Production Ready

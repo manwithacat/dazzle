@@ -26,6 +26,16 @@ let lspStatusBarItem: vscode.StatusBarItem | undefined;
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Dazzle DSL extension is now active');
 
+    // Deprecation warning — point users to standalone LSP
+    vscode.window.showWarningMessage(
+        'The DAZZLE VS Code extension is deprecated. Use "dazzle lsp run" with VS Code\'s built-in LSP support instead. See the DAZZLE README for setup instructions.',
+        'Open README'
+    ).then(choice => {
+        if (choice === 'Open README') {
+            vscode.env.openExternal(vscode.Uri.parse('https://github.com/manwithacat/dazzle#ide-support'));
+        }
+    });
+
     // Create LSP status bar item (show loading initially)
     lspStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     lspStatusBarItem.text = '$(loading~spin) Dazzle LSP';

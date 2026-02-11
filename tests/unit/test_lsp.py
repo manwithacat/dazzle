@@ -5,10 +5,17 @@ These tests verify:
 1. Clean module loading (no duplicate imports/warnings)
 2. Proper entry point behavior
 3. Server instantiation
+4. CLI commands (check, grammar-path)
 """
 
 import subprocess
 import sys
+from pathlib import Path
+from unittest.mock import patch
+
+from typer.testing import CliRunner
+
+from dazzle.cli.lsp import lsp_app
 
 
 class TestLspModuleLoading:
@@ -93,3 +100,40 @@ class TestLspServerInstance:
         # Check that the server is a LanguageServer instance with workspace state
         assert hasattr(server, "workspace_root")
         assert hasattr(server, "appspec")
+
+
+runner = CliRunner()
+
+
+class TestLspCli:
+    """Tests for dazzle lsp CLI subcommands."""
+
+    def test_lsp_check_succeeds(self) -> None:
+        """lsp check prints version info when deps are installed."""
+        result = runner.invoke(lsp_app, ["check"])
+        assert result.exit_code == 0
+        assert "pygls:" in result.output
+        assert "lsprotocol:" in result.output
+        assert "All LSP dependencies installed" in result.output
+
+    def test_lsp_check_missing_pygls(self) -> None:
+        """lsp check fails gracefully when pygls is missing."""
+        with patch.dict("sys.modules", {"pygls": None}):
+            result = runner.invoke(lsp_app, ["check"])
+            assert result.exit_code == 1
+
+    def test_lsp_grammar_path_returns_valid_path(self) -> None:
+        """lsp grammar-path prints a path to an existing JSON file."""
+        result = runner.invoke(lsp_app, ["grammar-path"])
+        assert result.exit_code == 0
+        path = Path(result.output.strip())
+        assert path.exists()
+        assert path.suffix == ".json"
+        assert "tmLanguage" in path.name
+
+    def test_lsp_run_missing_deps(self) -> None:
+        """lsp run fails gracefully when LSP deps are missing."""
+        with patch.dict("sys.modules", {"dazzle.lsp": None}):
+            result = runner.invoke(lsp_app, ["run"])
+            assert result.exit_code == 1
+            assert "LSP dependencies not installed" in result.output
