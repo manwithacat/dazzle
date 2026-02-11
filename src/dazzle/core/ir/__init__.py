@@ -459,6 +459,7 @@ from .stories import (
 
 # Surfaces
 from .surfaces import (
+    BusinessPriority,
     Outcome,
     OutcomeKind,
     SurfaceAccessSpec,
@@ -578,6 +579,7 @@ __all__ = [
     "SortSpec",
     "UXSpec",
     # Surfaces
+    "BusinessPriority",
     "SurfaceMode",
     "SurfaceTrigger",
     "OutcomeKind",

@@ -15,6 +15,15 @@ from pydantic import BaseModel, ConfigDict, Field
 from .ux import UXSpec
 
 
+class BusinessPriority(StrEnum):
+    """Business priority for surfaces and experiences."""
+
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class SurfaceMode(StrEnum):
     """Modes that define surface behavior."""
 
@@ -156,5 +165,6 @@ class SurfaceSpec(BaseModel):
     actions: list[SurfaceAction] = Field(default_factory=list)
     ux: UXSpec | None = None  # UX Semantic Layer extension
     access: SurfaceAccessSpec | None = None  # Auth/RBAC access control
+    priority: BusinessPriority = BusinessPriority.MEDIUM
 
     model_config = ConfigDict(frozen=True)

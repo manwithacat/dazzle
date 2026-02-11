@@ -1051,5 +1051,188 @@ surface task_create "Create Task":
         assert element.options == {}
 
 
+class TestBusinessPriority:
+    """Tests for priority: modifier on surfaces and experiences."""
+
+    def test_surface_priority_critical(self):
+        """Surface with priority: critical."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  priority: critical
+  section main:
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.priority.value == "critical"
+
+    def test_surface_priority_low(self):
+        """Surface with priority: low."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  priority: low
+  section main:
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.priority.value == "low"
+
+    def test_surface_priority_defaults_to_medium(self):
+        """Surface without priority defaults to medium."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.priority.value == "medium"
+
+    def test_experience_priority_critical(self):
+        """Experience with priority: critical."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create":
+  uses entity Task
+  mode: create
+  section main:
+    field title "Title"
+
+surface task_done "Done":
+  uses entity Task
+  mode: view
+  section main:
+    field title "Title"
+
+experience task_wizard "Task Wizard":
+  priority: critical
+  start at step intake
+  step intake:
+    kind: surface
+    surface task_create
+    on success -> step finished
+  step finished:
+    kind: surface
+    surface task_done
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        exp = fragment.experiences[0]
+        assert exp.priority.value == "critical"
+
+    def test_experience_priority_defaults_to_medium(self):
+        """Experience without priority defaults to medium."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create":
+  uses entity Task
+  mode: create
+  section main:
+    field title "Title"
+
+experience task_wizard "Task Wizard":
+  start at step intake
+  step intake:
+    kind: surface
+    surface task_create
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        exp = fragment.experiences[0]
+        assert exp.priority.value == "medium"
+
+    def test_experience_priority_with_access(self):
+        """Experience with both access and priority."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_create "Create":
+  uses entity Task
+  mode: create
+  section main:
+    field title "Title"
+
+experience task_wizard "Task Wizard":
+  access: authenticated
+  priority: high
+  start at step intake
+  step intake:
+    kind: surface
+    surface task_create
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        exp = fragment.experiences[0]
+        assert exp.priority.value == "high"
+        assert exp.access is not None
+        assert exp.access.require_auth is True
+
+    def test_all_priority_levels_valid(self):
+        """All four priority levels parse correctly."""
+        from dazzle.core.ir import BusinessPriority
+
+        for level in ("critical", "high", "medium", "low"):
+            dsl = f"""
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  priority: {level}
+  section main:
+    field title "Title"
+"""
+            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+            surface = fragment.surfaces[0]
+            assert surface.priority == BusinessPriority(level)
+
+
 if __name__ == "__main__":
     main()

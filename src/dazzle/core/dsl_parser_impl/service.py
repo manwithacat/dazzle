@@ -407,12 +407,21 @@ class ServiceParserMixin:
         self.expect(TokenType.INDENT)
 
         access_spec = None
+        priority = ir.BusinessPriority.MEDIUM
 
         # access: public | authenticated | persona(name1, name2) (optional, before start)
         if self.match(TokenType.ACCESS):
             self.advance()
             self.expect(TokenType.COLON)
             access_spec = self._parse_surface_access()
+            self.skip_newlines()
+
+        # priority: critical|high|medium|low (optional, before start)
+        if self.match(TokenType.PRIORITY):
+            self.advance()
+            self.expect(TokenType.COLON)
+            priority_token = self.expect_identifier_or_keyword()
+            priority = ir.BusinessPriority(priority_token.value)
             self.skip_newlines()
 
         # start at step StepName
@@ -441,6 +450,7 @@ class ServiceParserMixin:
             start_step=start_step,
             steps=steps,
             access=access_spec,
+            priority=priority,
         )
 
     def parse_experience_step(self) -> ir.ExperienceStep:

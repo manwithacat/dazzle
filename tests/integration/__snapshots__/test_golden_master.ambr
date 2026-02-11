@@ -202,6 +202,7 @@
         'entity_ref': 'Task',
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': 'task_list',
+        'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'sections': list([
           dict({
             'elements': list([
@@ -232,6 +233,7 @@
         'entity_ref': 'Task',
         'mode': <SurfaceMode.VIEW: 'view'>,
         'name': 'task_detail',
+        'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'sections': list([
           dict({
             'elements': list([
@@ -268,6 +270,7 @@
         'entity_ref': 'Task',
         'mode': <SurfaceMode.CREATE: 'create'>,
         'name': 'task_create',
+        'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'sections': list([
           dict({
             'elements': list([
@@ -298,6 +301,7 @@
         'entity_ref': 'Task',
         'mode': <SurfaceMode.EDIT: 'edit'>,
         'name': 'task_edit',
+        'priority': <BusinessPriority.MEDIUM: 'medium'>,
         'sections': list([
           dict({
             'elements': list([

@@ -328,6 +328,7 @@ surface_decl  ::= "surface" SURFACE_NAME STRING? ":" NEWLINE
 surface_body_line
               ::= uses_entity_line
                 | mode_line
+                | priority_line
                 | section_decl
                 | surface_action_decl ;
 
@@ -335,6 +336,8 @@ uses_entity_line
               ::= "uses" "entity" ENTITY_NAME NEWLINE ;
 
 mode_line     ::= "mode" ":" ("view" | "create" | "edit" | "list" | "custom") NEWLINE ;
+
+priority_line ::= "priority" ":" ("critical" | "high" | "medium" | "low") NEWLINE ;
 
 section_decl  ::= "section" SECTION_NAME STRING? ":" NEWLINE
                   INDENT
@@ -496,6 +499,8 @@ filter_expr   ::= "all"
 experience_decl
               ::= "experience" EXPERIENCE_NAME STRING? ":" NEWLINE
                   INDENT
+                    access_line?
+                    priority_line?
                     "start" "at" "step" STEP_NAME NEWLINE
                     experience_step_decl+
                   DEDENT ;

@@ -11,7 +11,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from .surfaces import SurfaceAccessSpec
+from .surfaces import BusinessPriority, SurfaceAccessSpec
 
 
 class StepKind(StrEnum):
@@ -94,6 +94,7 @@ class ExperienceSpec(BaseModel):
     start_step: str
     steps: list[ExperienceStep] = Field(default_factory=list)
     access: SurfaceAccessSpec | None = None
+    priority: BusinessPriority = BusinessPriority.MEDIUM
 
     model_config = ConfigDict(frozen=True)
 

@@ -46,6 +46,7 @@ class SurfaceParserMixin:
 
         entity_ref = None
         mode = ir.SurfaceMode.CUSTOM
+        priority = ir.BusinessPriority.MEDIUM
         sections = []
         actions = []
         ux_spec = None
@@ -70,6 +71,14 @@ class SurfaceParserMixin:
                 self.expect(TokenType.COLON)
                 mode_token = self.expect_identifier_or_keyword()
                 mode = ir.SurfaceMode(mode_token.value)
+                self.skip_newlines()
+
+            # priority: critical|high|medium|low
+            elif self.match(TokenType.PRIORITY):
+                self.advance()
+                self.expect(TokenType.COLON)
+                priority_token = self.expect_identifier_or_keyword()
+                priority = ir.BusinessPriority(priority_token.value)
                 self.skip_newlines()
 
             # access: public | authenticated | persona(name1, name2)
@@ -125,6 +134,7 @@ class SurfaceParserMixin:
             title=title,
             entity_ref=entity_ref,
             mode=mode,
+            priority=priority,
             sections=sections,
             actions=actions,
             ux=ux_spec,
