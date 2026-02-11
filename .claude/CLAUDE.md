@@ -151,6 +151,12 @@ The DAZZLE MCP server (`dazzle mcp`) provides context-aware tools:
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
 
+## PyPI Package
+
+- **Package name**: `dazzle-dsl` (the name `dazzle` is taken on PyPI)
+- **Import name**: `dazzle` (unchanged — PEP 503 normalises the package name)
+- `pip install dazzle-dsl` provides the `dazzle` console command
+
 ## Known Limitations
 
 - Integration actions/syncs use placeholder parsing

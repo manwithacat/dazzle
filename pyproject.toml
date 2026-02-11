@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dazzle"
+name = "dazzle-dsl"
 version = "0.22.0"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
@@ -140,11 +140,12 @@ Repository = "https://github.com/manwithacat/dazzle"
 Issues = "https://github.com/manwithacat/dazzle/issues"
 Changelog = "https://github.com/manwithacat/dazzle/blob/main/CHANGELOG.md"
 
-# NOTE: Console script removed in v0.14.0
-# The Bun CLI is now the primary entry point.
-# Python CLI is still available via: python -m dazzle
-# [project.scripts]
-# dazzle = "dazzle.cli:main"
+# NOTE: The Bun CLI is the primary entry point for Homebrew installs.
+# The console script below provides `dazzle` for pip installs:
+#   pip install dazzle-dsl
+# Import name remains `dazzle` (PEP 503 normalises the package name).
+[project.scripts]
+dazzle = "dazzle.cli:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

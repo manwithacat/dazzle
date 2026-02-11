@@ -3,8 +3,7 @@
 **Human Intent → Structured DSL → Deterministic Code**
 
 <!-- Versions & Compatibility -->
-[![PyPI version](https://img.shields.io/pypi/v/dazzle.svg)](https://pypi.org/project/dazzle/)
-[![Python 3.11+](https://img.shields.io/pypi/pyversions/dazzle.svg)](https://pypi.org/project/dazzle/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![Homebrew](https://img.shields.io/badge/homebrew-manwithacat%2Ftap-orange)](https://github.com/manwithacat/homebrew-tap)
 
 <!-- Build & Quality -->
@@ -12,9 +11,6 @@
 [![codecov](https://codecov.io/gh/manwithacat/dazzle/graph/badge.svg)](https://codecov.io/gh/manwithacat/dazzle)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue.svg)](https://mypy-lang.org/)
-
-<!-- Downloads & Stats -->
-[![PyPI Downloads](https://img.shields.io/pypi/dm/dazzle.svg)](https://pypi.org/project/dazzle/)
 
 <!-- Meta -->
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://manwithacat.github.io/dazzle/)
@@ -87,7 +83,7 @@ This means:
 ```bash
 # Install
 brew install manwithacat/tap/dazzle   # macOS/Linux (auto-registers MCP server)
-# or: pip install dazzle
+# or: pip install dazzle-dsl
 
 # Run the example
 cd examples/simple_task
@@ -847,7 +843,7 @@ MCP responses are designed for LLM agents to make cost-aware decisions. The `pip
 brew install manwithacat/tap/dazzle
 
 # PyPI: Register manually
-pip install dazzle
+pip install dazzle-dsl
 dazzle mcp-setup
 
 # Verify
@@ -999,8 +995,8 @@ The runtime ships with 10 composable HTMX fragments:
 # Homebrew (macOS/Linux) - MCP server auto-registered
 brew install manwithacat/tap/dazzle
 
-# PyPI
-pip install dazzle
+# PyPI (import name remains `dazzle`)
+pip install dazzle-dsl
 
 ```
 
