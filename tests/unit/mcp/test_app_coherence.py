@@ -141,8 +141,12 @@ class TestAppCoherenceHandler:
         ws_check = next(c for c in admin["checks"] if c["check"] == "workspace_binding")
         assert ws_check["status"] == "fail"
 
-    def test_over_exposed_nav_reduces_score(self) -> None:
-        """Extra entities not in workspace cause nav_filtering failure."""
+    def test_out_of_workspace_entities_no_penalty(self) -> None:
+        """Entities outside the persona's workspace don't reduce the score.
+
+        Over-exposure is workspace-scoped: entities outside the persona's workspace
+        are handled by route-level access control and don't affect coherence score.
+        """
         appspec = _make_appspec(
             entities=[_make_entity("Task"), _make_entity("AdminConfig")],
             personas=[_make_persona("customer", default_workspace="main")],
@@ -152,9 +156,7 @@ class TestAppCoherenceHandler:
         )
         result = self._run(appspec)
         customer = result["personas"][0]
-        assert customer["coherence_score"] < 100
-        check_names = [c["check"] for c in customer["checks"]]
-        assert "nav_filtering" in check_names
+        assert customer["coherence_score"] == 100
 
     def test_persona_filter(self) -> None:
         """Only the requested persona is analyzed."""
@@ -210,24 +212,21 @@ class TestAppCoherenceHandler:
     def test_overall_score_is_average(self) -> None:
         """Overall score averages across all personas."""
         appspec = _make_appspec(
-            entities=[_make_entity("Task"), _make_entity("AdminOnly")],
+            entities=[_make_entity("Task")],
             personas=[
+                # admin: has workspace → good score
                 _make_persona("admin", default_workspace="admin_dash"),
-                _make_persona("customer", default_workspace="cust_dash"),
+                # customer: no workspace binding → score < 100
+                _make_persona("customer"),
             ],
             workspaces=[
                 _make_workspace(
                     "admin_dash",
-                    regions=[
-                        _make_region("r1", source="Task"),
-                        _make_region("r2", source="AdminOnly"),
-                    ],
+                    regions=[_make_region("r1", source="Task")],
                 ),
-                _make_workspace("cust_dash", regions=[_make_region("r3", source="Task")]),
             ],
             surfaces=[
                 _make_surface("task_list", entity_ref="Task"),
-                _make_surface("admin_list", entity_ref="AdminOnly"),
             ],
             stories=[
                 _make_story("S1", actor="admin", scope=["Task"]),
@@ -235,9 +234,9 @@ class TestAppCoherenceHandler:
             ],
         )
         result = self._run(appspec)
-        # Admin: all entities covered → 100
-        # Customer: AdminOnly over-exposed → < 100
-        # Overall should be between the two
+        # Admin: workspace bound, entities covered → 100
+        # Customer: no workspace → workspace_binding failure → < 100
+        # Overall should be the average
         admin_score = next(p for p in result["personas"] if p["persona"] == "admin")[
             "coherence_score"
         ]

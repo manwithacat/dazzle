@@ -1153,8 +1153,12 @@ class TestNavigationScope:
         # No gaps — all entities covered by workspace regions
         assert len(gaps) == 0
 
-    def test_over_exposure_flagged(self) -> None:
-        """Entities not in workspace/policy/variant are flagged as over-exposed."""
+    def test_out_of_workspace_entities_not_over_exposed(self) -> None:
+        """Entities outside the persona's workspace are not flagged as over-exposed.
+
+        Over-exposure is scoped to workspace entities only — entities outside the
+        persona's workspace are handled by route-level access control instead.
+        """
         from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
 
         entities = [_make_entity("Task"), _make_entity("AdminConfig"), _make_entity("AuditLog")]
@@ -1171,10 +1175,7 @@ class TestNavigationScope:
         accessible = {"task_list"}
         gaps = _analyze_navigation_scope("customer", persona, appspec, accessible)
         over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
-        assert len(over) == 1
-        assert "AdminConfig" in over[0].description
-        assert "AuditLog" in over[0].description
-        assert over[0].severity == "high"
+        assert len(over) == 0
 
     def test_policy_access_prevents_over_exposure(self) -> None:
         """Entity with policy PERMIT for persona is not flagged as over-exposed."""
@@ -1289,8 +1290,13 @@ class TestNavigationScope:
         assert over_obs.category == "access_gap"
         assert under_obs.category == "navigation_gap"
 
-    def test_many_entities_truncated(self) -> None:
-        """Over-exposure with >10 entities truncates the description."""
+    def test_many_out_of_workspace_entities_not_flagged(self) -> None:
+        """Many entities outside workspace scope are not flagged as over-exposed.
+
+        Under workspace-scoped over-exposure, only entities within the persona's
+        accessible workspaces can be flagged. Entities outside are handled by
+        route-level access control.
+        """
         from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
 
         entities = [_make_entity(f"Entity{i}") for i in range(15)]
@@ -1306,13 +1312,15 @@ class TestNavigationScope:
         )
         gaps = _analyze_navigation_scope("user", persona, appspec, {"s0"})
         over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
-        assert len(over) == 1
-        assert "... and" in over[0].description
-        # related_artefacts capped at 20
-        assert len(over[0].related_artefacts) <= 20
+        assert len(over) == 0
 
     def test_workspace_access_denial_excludes_entities(self) -> None:
-        """Workspace that denies the persona doesn't contribute to expected entities."""
+        """Workspace that denies the persona excludes its entities from over-exposure.
+
+        AdminPanel is in admin_dash which denies customer. Under workspace-scoped
+        over-exposure, AdminPanel is not in customer's workspace_entities and thus
+        not flagged — it's handled by route-level access control.
+        """
         from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
 
         entities = [_make_entity("Task"), _make_entity("AdminPanel")]
@@ -1340,5 +1348,4 @@ class TestNavigationScope:
         )
         gaps = _analyze_navigation_scope("customer", persona, appspec, {"task_list"})
         over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
-        assert len(over) == 1
-        assert "AdminPanel" in over[0].description
+        assert len(over) == 0
