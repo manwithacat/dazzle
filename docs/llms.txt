@@ -15,8 +15,8 @@
 ```bash
 dazzle init my_app        # Create new project
 dazzle validate           # Validate DSL files
-dazzle dnr serve          # Run development server
-dazzle dnr serve --local  # Run without Docker
+dazzle serve              # Run development server (Docker)
+dazzle serve --local      # Run without Docker
 ```
 
 ## Essential Pages
@@ -76,11 +76,12 @@ When working with Dazzle projects, these MCP tools are available:
 
 | Tool | Purpose |
 |------|---------|
-| validate_dsl | Check DSL syntax and semantics |
-| list_modules | List project modules |
-| inspect_entity | Examine entity definition |
-| analyze_patterns | Detect CRUD patterns |
-| lookup_concept | Look up DSL syntax |
+| dsl | DSL operations: validate, inspect_entity, inspect_surface, lint, analyze |
+| knowledge | Concept lookup, examples, workflow guides |
+| story | Story-driven development: propose, save, get, generate_tests |
+| process | Workflow processes: list, inspect, diagram, coverage |
+| pipeline | Full quality audit in one call |
+| pulse | Project health report and launch readiness |
 
 ## File Locations
 

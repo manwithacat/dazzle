@@ -1,24 +1,25 @@
-# DNR Quick Start Guide
+# Quick Start Guide
 
 Get a working application from your Dazzle DSL in under 5 minutes.
 
 ## Prerequisites
 
-- Dazzle 0.4.0+ installed
-- A Dazzle project with `dazzle.toml`
+- Dazzle installed ([Installation Guide](installation.md))
+- PostgreSQL running (local or Docker)
+- A terminal
 
-## Step 1: Check Your Setup
+## Step 1: Create a Project
 
 ```bash
-dazzle info
+dazzle init my_app
+cd my_app
 ```
 
-You should see:
-```
-Dazzle Native Runtime (DNR) Status
-==================================================
-DNR Backend:   ✓ installed
-Dazzle UI:        ✓ installed
+Or start from a built-in example:
+
+```bash
+dazzle init my_app --from simple_task
+cd my_app
 ```
 
 ## Step 2: Validate Your DSL
@@ -29,129 +30,12 @@ dazzle validate
 
 Fix any errors before proceeding.
 
-## Step 3: Generate UI
+## Step 3: Set Up PostgreSQL
 
-### Option A: Single HTML Preview (Fastest)
-
-```bash
-dazzle build-ui --format html -o ./preview
-```
-
-Open `./preview/index.html` in your browser.
-
-### Option B: Vite Project (Recommended)
+Dazzle requires PostgreSQL for data persistence.
 
 ```bash
-dazzle build-ui --format vite -o ./my-app
-cd my-app
-npm install
-npm run dev
-```
-
-Visit `http://localhost:5173`
-
-### Option C: Split JS Files
-
-```bash
-dazzle build-ui --format js -o ./app
-cd app
-python -m http.server 8000
-```
-
-Visit `http://localhost:8000`
-
-## Step 4: Generate API (Optional)
-
-```bash
-dazzle build-api -o ./api
-```
-
-Creates `backend-spec.json` with your API definition.
-
-## Step 5: Run Full Stack Server
-
-If you have FastAPI installed:
-
-```bash
-pip install fastapi uvicorn
-dazzle serve
-```
-
-This starts:
-- UI at `http://localhost:8000/`
-- API at `http://localhost:8000/api/`
-- Docs at `http://localhost:8000/docs`
-
-## Example: Simple Task Manager
-
-Given this DSL:
-
-```dsl
-app simple_task "Simple Task Manager"
-
-module simple_task
-
-entity Task "Task":
-    id: uuid pk
-    title: str(200) required
-    status: str = "pending"
-    created_at: datetime auto_add
-
-surface task_list "Task List" -> Task list:
-    section main:
-        field title
-        field status
-```
-
-Generate and run:
-
-```bash
-dazzle build-ui --format html -o ./task-app
-open ./task-app/index.html
-```
-
-## What Gets Generated
-
-### Vite Project Structure
-
-```
-my-app/
-├── package.json
-├── vite.config.js
-└── src/
-    ├── index.html
-    ├── main.js
-    ├── ui-spec.json
-    └── dnr/
-        ├── signals.js      # Reactive state
-        ├── state.js        # State management
-        ├── dom.js          # DOM utilities
-        ├── bindings.js     # Data binding
-        ├── components.js   # Component system
-        ├── renderer.js     # View rendering
-        ├── theme.js        # Theme engine
-        ├── actions.js      # Action handlers
-        ├── app.js          # App initialization
-        └── index.js        # Entry point
-```
-
-### API Spec Structure
-
-```json
-{
-  "name": "simple_task",
-  "entities": [...],
-  "services": [...],
-  "endpoints": [...]
-}
-```
-
-## Using PostgreSQL
-
-By default, Dazzle uses SQLite for zero-configuration development. To use PostgreSQL instead:
-
-```bash
-# Start a local PostgreSQL instance
+# Start PostgreSQL via Docker (quick option)
 docker run -d --name dazzle-postgres \
   -e POSTGRES_USER=dazzle \
   -e POSTGRES_PASSWORD=dazzle \
@@ -159,18 +43,89 @@ docker run -d --name dazzle-postgres \
   -p 5432:5432 \
   postgres:16
 
-# Install PostgreSQL drivers
-pip install dazzle[postgres]
-
-# Run with PostgreSQL
+# Set the database URL
 export DATABASE_URL=postgresql://dazzle:dazzle@localhost:5432/dazzle
+```
+
+Tables are created automatically on first startup.
+
+## Step 4: Run the Application
+
+```bash
+# Docker mode (default — recommended)
+dazzle serve
+
+# Or run locally without Docker
 dazzle serve --local
 ```
 
-Tables are created automatically on startup. See [Database Configuration](../reference/databases.md) for full details.
+This starts:
+
+- **UI** at `http://localhost:3000`
+- **API** at `http://localhost:8000/api/`
+- **API Docs** at `http://localhost:8000/docs`
+
+## Step 5: Try the API
+
+Create a record via the API:
+
+```bash
+curl -X POST http://localhost:8000/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Learn Dazzle", "status": "open"}'
+```
+
+## Example: Simple Task Manager
+
+Given this DSL in `dsl/app.dsl`:
+
+```dsl
+module simple_task
+app simple_task "Simple Task Manager"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  status: enum[open, in_progress, done] = open
+  created_at: datetime auto_add
+
+surface task_list "Task List" -> Task list:
+  section main:
+    field title "Title"
+    field status "Status"
+```
+
+Validate and run:
+
+```bash
+dazzle validate
+dazzle serve --local
+```
+
+## Development Workflow
+
+```bash
+# Terminal 1: Serve with hot reload
+dazzle serve --local --watch
+
+# Terminal 2: Edit your DSL files
+# Changes are picked up automatically
+```
+
+## Useful Commands
+
+| Command | Purpose |
+|---------|---------|
+| `dazzle validate` | Check DSL for errors |
+| `dazzle lint` | Extended validation with style checks |
+| `dazzle serve` | Start the full-stack app |
+| `dazzle serve --local --watch` | Local mode with hot reload |
+| `dazzle doctor` | Check environment health |
+| `dazzle inspect` | Inspect project structure |
 
 ## Next Steps
 
-- [CLI Reference](../reference/cli.md) - All command options
-- [Architecture](../architecture/overview.md) - How DNR works internally
-- [Architecture](../architecture/overview.md) - Customize your UI
+- [Your First App](first-app.md) — Build a complete task manager step by step
+- [CLI Reference](../reference/cli.md) — All command options
+- [Architecture](../architecture/overview.md) — How Dazzle works internally
+- [MCP Server](../architecture/mcp-server.md) — AI-assisted development with Claude Code

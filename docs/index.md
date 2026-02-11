@@ -76,6 +76,10 @@ graph LR
 | **surface** | UI view of an entity (list, detail, create, edit) |
 | **workspace** | Collection of surfaces with layout |
 | **service** | Custom business logic and operations |
+| **process** | Multi-step workflows with state machines |
+| **story** | Behavioural user stories for test generation |
+| **persona** | User roles with goals and permissions |
+| **ledger** | Double-entry accounting (TigerBeetle) |
 | **integration** | External API connections |
 
 ## Example DSL

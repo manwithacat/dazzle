@@ -1,5 +1,5 @@
 # Dazzle Documentation - Full Export
-# Generated for LLM ingestion
+# WARNING: This file is outdated. Refer to llms.txt or the live docs site instead.
 # Site: https://manwithacat.github.io/dazzle/
 
 ================================================================================

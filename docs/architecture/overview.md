@@ -73,7 +73,7 @@ The runtime generates:
    - Create/Update schemas auto-generated
 
 2. **Services** from ServiceSpec
-   - CRUD operations with in-memory storage
+   - CRUD operations with PostgreSQL persistence
    - Custom operations with handlers
    - Business rule enforcement
 
@@ -218,9 +218,10 @@ ComponentSpec(
 
 ### Backend
 
-- In-memory storage by default (plug in database adapters)
+- PostgreSQL with async drivers (asyncpg)
 - Async route handlers
 - Pydantic validation caching
+- Auto-migration on startup
 
 ### Frontend
 
@@ -231,6 +232,7 @@ ComponentSpec(
 
 ## Future Directions
 
+- **TigerBeetle ledgers**: Double-entry accounting via DSL
 - **Django adapter**: BackendSpec → Django/DRF
 - **React builder**: UISpec → React components
 - **Mobile runtime**: UISpec → React Native / Flutter

@@ -19,7 +19,7 @@ Complete reference for the DAZZLE Domain-Specific Language v0.24.
 | [Experiences](experiences.md) | Multi-step user flows |
 | [Testing](testing.md) | Test design, stories, E2E flows |
 | [Deployment](deployment.md) | AWS infrastructure, TigerBeetle, CDK |
-| [Databases](databases.md) | SQLite and PostgreSQL configuration |
+| [Databases](databases.md) | PostgreSQL configuration and schema management |
 | [CLI](cli.md) | Command-line interface reference |
 | [Grammar](grammar.md) | Formal EBNF grammar specification |
 

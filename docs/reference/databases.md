@@ -1,17 +1,6 @@
 # Database Configuration
 
-Dazzle supports SQLite and PostgreSQL as database backends. SQLite is used by default for development; PostgreSQL is recommended for production.
-
-## Backend Selection
-
-Dazzle selects the database backend based on the `DATABASE_URL` environment variable:
-
-| `DATABASE_URL` | Backend | Notes |
-|----------------|---------|-------|
-| Not set | SQLite | File stored in project directory (`data/app.db`) |
-| `sqlite:///path/to/db` | SQLite | Explicit SQLite path |
-| `postgresql://...` | PostgreSQL | Requires `psycopg` (v3) |
-| `postgres://...` | PostgreSQL | Heroku-style URL, auto-converted to `postgresql://` |
+Dazzle uses PostgreSQL as its database backend. PostgreSQL is required for both development and production.
 
 ## Configuration
 
@@ -36,6 +25,13 @@ When using `dazzle serve` (Docker mode), set the variable in your shell or a `.e
 # .env
 DATABASE_URL=postgresql://user:password@db:5432/myapp
 ```
+
+## URL Formats
+
+| `DATABASE_URL` | Notes |
+|----------------|-------|
+| `postgresql://user:pass@host:5432/db` | Standard format |
+| `postgres://user:pass@host:5432/db` | Heroku-style, auto-converted to `postgresql://` |
 
 ## Local PostgreSQL Setup
 
@@ -69,7 +65,7 @@ dazzle serve --local
 Install the `postgres` extra:
 
 ```bash
-pip install dazzle[postgres]
+pip install dazzle-dsl[postgres]
 ```
 
 This installs `psycopg[binary]` (v3) and `psycopg-pool`.
@@ -80,7 +76,7 @@ Dazzle's authentication system can use a separate database via `AUTH_DATABASE_UR
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `DATABASE_URL` | Application data | SQLite (`data/app.db`) |
+| `DATABASE_URL` | Application data | Required |
 | `AUTH_DATABASE_URL` | Auth users and sessions | Falls back to `DATABASE_URL` |
 
 ```bash
@@ -91,10 +87,10 @@ dazzle serve --local
 
 ## Schema Management
 
-Dazzle automatically creates and migrates database tables on startup. No manual migration step is required.
+Dazzle automatically creates and migrates database tables on startup. No manual migration step is required for development.
 
-- **SQLite → PostgreSQL**: Set `DATABASE_URL` and restart. Tables are created automatically. Existing SQLite data is not migrated — use standard tools (`pgloader`, custom scripts) if you need to transfer data.
 - **Schema changes**: Adding entities or fields to your DSL and restarting the server applies the new schema. Dazzle uses `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ADD COLUMN` for non-destructive migrations.
+- **Production migrations**: Use `dazzle db` commands (Alembic) for controlled schema changes in production.
 
 ## CI / Testing
 
