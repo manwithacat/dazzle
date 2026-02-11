@@ -9,19 +9,22 @@ invocations.  Reads the JSONL activity log and renders:
 
 Usage::
 
-    dazzle workshop -p examples/simple_task
+    dazzle workshop                          # watch current directory
+    dazzle workshop -p examples/simple_task  # watch specific project
+    dazzle workshop --info                   # print log path and exit
 """
 
 from __future__ import annotations
 
 import json
+import sys
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from rich.console import Group
+from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
 from rich.progress_bar import ProgressBar
@@ -38,7 +41,7 @@ from dazzle.mcp.server.activity_log import (
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-MAX_DONE = 20  # completed entries to keep visible
+DEFAULT_TAIL = 20  # completed entries to keep visible
 POLL_INTERVAL = 0.25  # seconds between log reads
 
 
@@ -79,9 +82,15 @@ class WorkshopState:
     completed: list[CompletedTool] = field(default_factory=list)
     total_calls: int = 0
     error_count: int = 0
+    warning_count: int = 0
     start_time: float = field(default_factory=time.monotonic)
+    max_done: int = DEFAULT_TAIL
+    bell: bool = False
     # File-reading cursor
     _file_pos: int = 0
+    # Session tracking for exit summary
+    _fastest: tuple[str, float] | None = None
+    _slowest: tuple[str, float] | None = None
 
     @property
     def done_count(self) -> int:
@@ -111,21 +120,39 @@ class WorkshopState:
         elif etype == TYPE_TOOL_END:
             self.active.pop(key, None)
             success = entry.get("success", True)
+            dur = entry.get("duration_ms")
+            warns = entry.get("warnings", 0)
+
             if not success:
                 self.error_count += 1
+                if self.bell:
+                    sys.stderr.write("\a")
+                    sys.stderr.flush()
+
+            if warns:
+                self.warning_count += warns
+
+            # Track fastest/slowest for session summary
+            if dur is not None:
+                if self._fastest is None or dur < self._fastest[1]:
+                    self._fastest = (key, dur)
+                if self._slowest is None or dur > self._slowest[1]:
+                    self._slowest = (key, dur)
+
             self.completed.append(
                 CompletedTool(
                     tool=tool,
                     operation=operation,
                     ts=ts,
                     success=success,
-                    duration_ms=entry.get("duration_ms"),
+                    duration_ms=dur,
                     error=entry.get("error"),
+                    warnings=warns,
                 )
             )
             # Cap completed list
-            if len(self.completed) > MAX_DONE:
-                self.completed = self.completed[-MAX_DONE:]
+            if len(self.completed) > self.max_done:
+                self.completed = self.completed[-self.max_done :]
 
         elif etype == TYPE_PROGRESS:
             if key in self.active:
@@ -148,6 +175,9 @@ class WorkshopState:
 
         elif etype == TYPE_ERROR:
             self.error_count += 1
+            if self.bell:
+                sys.stderr.write("\a")
+                sys.stderr.flush()
             # Also remove from active if present
             if key in self.active:
                 self.active.pop(key)
@@ -161,8 +191,8 @@ class WorkshopState:
                         error=entry.get("message", "error"),
                     )
                 )
-                if len(self.completed) > MAX_DONE:
-                    self.completed = self.completed[-MAX_DONE:]
+                if len(self.completed) > self.max_done:
+                    self.completed = self.completed[-self.max_done :]
 
 
 # ── File reading ─────────────────────────────────────────────────────────────
@@ -218,7 +248,7 @@ def _format_duration(ms: float | None) -> str:
 
 
 def _format_elapsed(start: float) -> str:
-    """Elapsed since monotonic start."""
+    """Elapsed since monotonic start — ticks live every render."""
     elapsed = time.monotonic() - start
     if elapsed < 60:
         return f"{elapsed:.1f}s"
@@ -256,7 +286,6 @@ def render_workshop(
     header.append(f" \u00b7 {project_name}", style="dim white")
     if version:
         header.append(f" v{version}", style="dim white")
-    # Right-align time
     header.append(f"  {now_str}", style="dim")
 
     # ── Workbench ────────────────────────────────────────────────────────
@@ -269,7 +298,6 @@ def render_workshop(
         for at in state.active.values():
             label = f"{at.tool}.{at.operation}" if at.operation else at.tool
 
-            # Build the row content
             row_icon = Text("\u26cf", style="bold yellow")  # ⛏
             row_main = Text()
             row_main.append(f"{label}  ", style="bold cyan")
@@ -279,7 +307,6 @@ def render_workshop(
                 pct = f"{ratio * 100:.0f}%"
                 counter = f"[{at.progress_current}/{at.progress_total}]"
                 row_main.append("")
-                # Add progress bar as separate renderable in the cell
                 bar = ProgressBar(
                     total=at.progress_total,
                     completed=at.progress_current,
@@ -289,7 +316,8 @@ def render_workshop(
                     finished_style="bar.finished",
                 )
                 row_elapsed = Text(
-                    f"{pct}  {counter}  {_format_elapsed(at.start_time)}", style="dim"
+                    f"{pct}  {counter}  {_format_elapsed(at.start_time)}",
+                    style="dim",
                 )
                 wb_table.add_row(row_icon, Group(row_main, bar), row_elapsed)
             else:
@@ -363,6 +391,9 @@ def render_workshop(
         status.append(" \u00b7 ", style="dim")
         status.append("\u2718 ", style="red")
         status.append(f"{state.error_count} err", style="red")
+    if state.warning_count:
+        status.append(" \u00b7 ", style="dim")
+        status.append(f"\u26a0 {state.warning_count}", style="yellow")
     status.append("  \u2502  ", style="dim")
     status.append(f"{state.total_calls} calls", style="dim")
     status.append("  \u2502  ", style="dim")
@@ -373,6 +404,40 @@ def render_workshop(
     return Group(header, workbench_panel, done_panel, status_panel)
 
 
+# ── Session summary ──────────────────────────────────────────────────────────
+
+
+def print_session_summary(state: WorkshopState, console: Console) -> None:
+    """Print a session summary on exit."""
+    if state.total_calls == 0:
+        return
+
+    elapsed = time.monotonic() - state.start_time
+    if elapsed < 60:
+        dur_str = f"{elapsed:.0f}s"
+    else:
+        mins = int(elapsed // 60)
+        secs = int(elapsed % 60)
+        dur_str = f"{mins}m {secs:02d}s"
+
+    ok = state.total_calls - state.error_count
+    console.print()
+    console.print("[bold]\u2550\u2550\u2550 SESSION COMPLETE \u2550\u2550\u2550[/bold]")
+    console.print(f"  Duration:  {dur_str}")
+    console.print(
+        f"  Tools run: {state.total_calls} "
+        f"([green]{ok} \u2714[/green]"
+        + (f", [red]{state.error_count} \u2718[/red]" if state.error_count else "")
+        + (f", [yellow]\u26a0 {state.warning_count}[/yellow]" if state.warning_count else "")
+        + ")"
+    )
+    if state._fastest:
+        console.print(f"  Fastest:   {state._fastest[0]} ({_format_duration(state._fastest[1])})")
+    if state._slowest and state._slowest != state._fastest:
+        console.print(f"  Slowest:   {state._slowest[0]} ({_format_duration(state._slowest[1])})")
+    console.print()
+
+
 # ── Main loop ────────────────────────────────────────────────────────────────
 
 
@@ -380,18 +445,23 @@ def watch(
     log_path: Path,
     project_name: str = "unknown",
     version: str = "",
+    *,
+    max_done: int = DEFAULT_TAIL,
+    bell: bool = False,
 ) -> None:
     """Run the Rich Live display loop.  Blocks until Ctrl-C."""
-    state = WorkshopState()
+    state = WorkshopState(max_done=max_done, bell=bell)
 
     # Ingest any existing entries so we start with history
     for entry in read_new_entries(log_path, state):
         state.ingest(entry)
 
+    console = Console()
     with Live(
         render_workshop(state, project_name, version),
         refresh_per_second=4,
         screen=False,
+        console=console,
     ) as live:
         try:
             while True:
@@ -402,6 +472,11 @@ def watch(
                 live.update(render_workshop(state, project_name, version))
         except KeyboardInterrupt:
             pass
+
+    print_session_summary(state, console)
+
+
+# ── Config helpers ───────────────────────────────────────────────────────────
 
 
 def _resolve_log_path(project_dir: Path, config: dict[str, Any]) -> Path:
@@ -417,13 +492,10 @@ def _resolve_log_path(project_dir: Path, config: dict[str, Any]) -> Path:
     return project_dir / ".dazzle" / "mcp-activity.log"
 
 
-def run_workshop(project_dir: Path) -> None:
-    """Entry point: resolve project info, find log, start watch."""
+def _load_project_config(project_dir: Path) -> tuple[str, str, dict[str, Any]]:
+    """Read dazzle.toml and return (project_name, version, full_config)."""
     import tomllib
 
-    project_dir = project_dir.resolve()
-
-    # Read project info from dazzle.toml
     project_name = project_dir.name
     version = ""
     config: dict[str, Any] = {}
@@ -437,17 +509,42 @@ def run_workshop(project_dir: Path) -> None:
             version = proj.get("version", "")
         except Exception:
             pass
+    return project_name, version, config
 
+
+# ── Entry points ─────────────────────────────────────────────────────────────
+
+
+def get_log_path(project_dir: Path) -> Path:
+    """Resolve the activity log path for a project.  Public API for --info."""
+    project_dir = project_dir.resolve()
+    _, _, config = _load_project_config(project_dir)
+    return _resolve_log_path(project_dir, config)
+
+
+def run_workshop(
+    project_dir: Path,
+    *,
+    info: bool = False,
+    tail: int = DEFAULT_TAIL,
+    bell: bool = False,
+) -> None:
+    """Entry point: resolve project info, find log, start watch."""
+    project_dir = project_dir.resolve()
+    project_name, version, config = _load_project_config(project_dir)
     log_path = _resolve_log_path(project_dir, config)
 
-    from rich.console import Console
-
     console = Console()
+
+    # --info: just print the log path and exit
+    if info:
+        console.print(str(log_path))
+        return
 
     if not log_path.exists():
         console.print(
             f"[dim]Log not found at[/dim] {log_path}\n"
-            f"[dim]Start the MCP server first, then re-run this command.[/dim]\n"
+            f"[dim]Start the MCP server in another terminal, or use Claude Code.[/dim]\n"
             f"[dim]Creating empty log and waiting...[/dim]"
         )
         log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -457,4 +554,4 @@ def run_workshop(project_dir: Path) -> None:
         f"[bold yellow]\u2692[/bold yellow]  Watching [cyan]{project_name}[/cyan] "
         f"workshop \u2014 [dim]Ctrl-C to exit[/dim]\n"
     )
-    watch(log_path, project_name, version)
+    watch(log_path, project_name, version, max_done=tail, bell=bell)

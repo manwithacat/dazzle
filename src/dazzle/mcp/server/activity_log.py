@@ -479,6 +479,7 @@ def make_tool_end_entry(
     success: bool = True,
     duration_ms: float | None = None,
     error: str | None = None,
+    warnings: int = 0,
 ) -> dict[str, Any]:
     """Create a tool_end log entry."""
     entry: dict[str, Any] = {
@@ -492,6 +493,8 @@ def make_tool_end_entry(
         entry["duration_ms"] = round(duration_ms, 1)
     if error:
         entry["error"] = error
+    if warnings:
+        entry["warnings"] = warnings
     return entry
 
 

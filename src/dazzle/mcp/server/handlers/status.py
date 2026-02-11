@@ -117,6 +117,16 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
     except Exception:
         pass
 
+    # Activity log path — useful for workshop / tail -f
+    try:
+        from ..state import get_activity_log
+
+        alog = get_activity_log()
+        if alog is not None:
+            result["activity_log_path"] = str(alog.path)
+    except Exception:
+        pass
+
     if is_dev_mode():
         result["available_projects"] = list(get_available_projects().keys())
 
