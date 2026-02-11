@@ -51,20 +51,21 @@ async def inspect_computed_styles(
         ImportError: If Playwright is not installed.
     """
     try:
-        from playwright.async_api import async_playwright
+        import playwright  # noqa: F401
     except ImportError:
         raise ImportError(
             "Playwright is required for style inspection. "
             "Install with: pip install playwright && playwright install chromium"
         )
 
+    from dazzle.testing.browser_gate import get_browser_gate
+
     props = properties or DEFAULT_PROPERTIES
     url = base_url.rstrip("/") + route
 
     results: dict[str, dict[str, str] | None] = {}
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+    async with get_browser_gate().async_browser() as browser:
         page = await browser.new_page()
         page.set_default_timeout(15000)
 
@@ -73,7 +74,6 @@ async def inspect_computed_styles(
             await page.wait_for_timeout(1000)
         except Exception as e:
             logger.warning("Failed to navigate to %s: %s", url, e)
-            await browser.close()
             raise RuntimeError(f"Navigation failed: {e}") from e
 
         for label, selector in selectors.items():
@@ -98,7 +98,5 @@ async def inspect_computed_styles(
             except Exception as e:
                 logger.warning("Failed to inspect %s (%s): %s", label, selector, e)
                 results[label] = None
-
-        await browser.close()
 
     return results

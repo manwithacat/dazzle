@@ -391,6 +391,21 @@ def reinit_knowledge_graph(project_root: Path) -> None:
     logger.info(f"Populated KG from DSL for {project_root.name}: {result}")
 
 
+def init_browser_gate(max_concurrent: int | None = None) -> None:
+    """Configure the global Playwright browser gate at server startup.
+
+    Bounds the number of concurrent Chromium instances to prevent memory
+    exhaustion when LLM agents trigger multiple browser operations in parallel.
+    """
+    from dazzle.testing.browser_gate import configure_browser_gate
+
+    configure_browser_gate(max_concurrent=max_concurrent)
+    logger.info(
+        "Browser gate configured (max_concurrent=%s)",
+        max_concurrent or "default",
+    )
+
+
 def refresh_knowledge_graph(root_path: str | None = None) -> dict[str, Any]:
     """
     Refresh the knowledge graph by re-populating from source.

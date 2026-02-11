@@ -156,20 +156,20 @@ async def capture_page_sections(
         ImportError: If Playwright is not installed.
     """
     try:
-        from playwright.async_api import async_playwright
+        import playwright  # noqa: F401
     except ImportError:
         raise ImportError(
             "Playwright is required for composition capture. "
             "Install with: pip install playwright && playwright install chromium"
         )
 
+    from dazzle.testing.browser_gate import get_browser_gate
+
     vp_names = viewports or ["desktop"]
     output_dir.mkdir(parents=True, exist_ok=True)
     results: list[CapturedPage] = []
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-
+    async with get_browser_gate().async_browser() as browser:
         for vp_name in vp_names:
             vp_size = DEFAULT_VIEWPORTS.get(vp_name, DEFAULT_VIEWPORTS["desktop"])
             context = await browser.new_context(
@@ -198,8 +198,6 @@ async def capture_page_sections(
                 results.append(captured)
 
             await context.close()
-
-        await browser.close()
 
     return results
 

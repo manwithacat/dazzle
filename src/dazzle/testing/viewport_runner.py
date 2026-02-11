@@ -198,7 +198,7 @@ class ViewportRunner:
         viewports_to_test = options.viewports or list(VIEWPORT_MATRIX.keys())
 
         try:
-            from playwright.sync_api import sync_playwright
+            import playwright  # noqa: F401
         except ImportError:
             result.error = (
                 "playwright is not installed. "
@@ -207,13 +207,11 @@ class ViewportRunner:
             result.completed_at = datetime.now(UTC)
             return result
 
+        from dazzle.testing.browser_gate import get_browser_gate
+
         try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=options.headless)
-                try:
-                    self._run_matrix(browser, patterns, viewports_to_test, options, result)
-                finally:
-                    browser.close()
+            with get_browser_gate().sync_browser(headless=options.headless) as browser:
+                self._run_matrix(browser, patterns, viewports_to_test, options, result)
         except Exception as exc:
             result.error = str(exc)
 

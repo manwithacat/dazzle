@@ -306,7 +306,7 @@ class E2ERunner:
         Returns:
             E2ERunResult with test outcomes
         """
-        from playwright.sync_api import sync_playwright
+        from dazzle.testing.browser_gate import get_browser_gate
 
         result = E2ERunResult(
             project_name=self.project_path.name,
@@ -454,8 +454,7 @@ class E2ERunner:
             f"http://localhost:{self.api_port}",
         )
 
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=options.headless)
+        with get_browser_gate().sync_browser(headless=options.headless) as browser:
             context = browser.new_context()
             page = context.new_page()
             page.set_default_timeout(options.timeout)
@@ -513,8 +512,6 @@ class E2ERunner:
                     result.failed += 1
 
                 result.flows.append(flow_result)
-
-            browser.close()
 
         result.completed_at = datetime.now()
         return result

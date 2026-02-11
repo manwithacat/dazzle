@@ -103,6 +103,18 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
             except Exception as e:
                 result["reload"] = f"failed: {e}"
 
+    # Browser resource status
+    try:
+        from dazzle.testing.browser_gate import get_browser_gate
+
+        gate = get_browser_gate()
+        result["browser_gate"] = {
+            "max_concurrent": gate.max_concurrent,
+            "active": gate.active_count,
+        }
+    except Exception:
+        pass
+
     if is_dev_mode():
         result["available_projects"] = list(get_available_projects().keys())
 

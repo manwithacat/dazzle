@@ -269,12 +269,13 @@ async def run_agent_tests(
     _load_env_file(project_path)
 
     try:
-        from playwright.async_api import async_playwright
+        import playwright  # noqa: F401
     except ImportError:
         raise RuntimeError(
             "playwright package required. Install with: pip install playwright && playwright install chromium"
         )
 
+    from dazzle.testing.browser_gate import get_browser_gate
     from dazzle.testing.unified_runner import UnifiedTestRunner
 
     runner = UnifiedTestRunner(project_path, base_url=base_url)
@@ -309,8 +310,7 @@ async def run_agent_tests(
         results: list[AgentTestResult] = []
         base_url = runner.ui_url or runner.base_url or f"http://localhost:{runner.ui_port}"
 
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=headless)
+        async with get_browser_gate().async_browser(headless=headless) as browser:
             context = await browser.new_context(viewport={"width": 1280, "height": 720})
             page = await context.new_page()
 
@@ -325,8 +325,6 @@ async def run_agent_tests(
                         await page.evaluate("sessionStorage.clear()")
                     except Exception:
                         pass  # localStorage may not be available on all pages
-
-            await browser.close()
 
         return results
 
