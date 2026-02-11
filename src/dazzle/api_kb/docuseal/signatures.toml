@@ -152,6 +152,27 @@ webhook_submission_completed = "update Contract.status = signed, store document 
 webhook_form_declined = "notify admin, update Contract.status = declined"
 on_bulk_send = "create_submission with multiple submitters for mass signing"
 
+[infrastructure]
+hosting = "both"  # Cloud (api.docuseal.com) or self-hosted Docker
+
+[infrastructure.docker]
+image = "docuseal/docuseal:latest"
+port = 3000
+requires = ["postgres"]
+healthcheck_path = "/health"
+volumes = ["/data"]
+
+[infrastructure.docker.environment]
+DATABASE_URL = "postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{service_name}"
+SECRET_KEY_BASE = "{generated}"
+FORCE_SSL = "false"
+
+[infrastructure.local_env_overrides]
+DOCUSEAL_BASE_URL = "http://localhost:{mapped_port}"
+
+[infrastructure.sandbox]
+available = false
+
 [notes]
 regions = "US: api.docuseal.com, EU: api.docuseal.eu"
 self_hosted = "Self-host via Docker: docker run -p 3000:3000 docuseal/docuseal"

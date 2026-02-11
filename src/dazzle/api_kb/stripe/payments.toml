@@ -139,3 +139,11 @@ payment_intent_succeeded = { description = "Payment completed successfully" }
 payment_intent_payment_failed = { description = "Payment attempt failed" }
 charge_refunded = { description = "Charge was refunded" }
 charge_dispute_created = { description = "Customer disputed a charge" }
+
+[infrastructure]
+hosting = "cloud_only"
+
+[infrastructure.sandbox]
+available = true
+env_prefix = "sk_test_"
+docs = "https://stripe.com/docs/testing"

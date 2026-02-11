@@ -114,6 +114,7 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
         generate_service_dsl_handler,
         get_api_pack_handler,
         get_env_vars_for_packs_handler,
+        infrastructure_handler,
         list_api_packs_handler,
         search_api_packs_handler,
     )
@@ -130,6 +131,11 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
         return generate_service_dsl_handler(arguments)
     elif operation == "env_vars":
         return get_env_vars_for_packs_handler(arguments)
+    elif operation == "infrastructure":
+        project_path = _resolve_project(arguments)
+        if project_path is None:
+            return _project_error()
+        return infrastructure_handler(project_path=project_path, args=arguments)
     else:
         return json.dumps({"error": f"Unknown API pack operation: {operation}"})
 

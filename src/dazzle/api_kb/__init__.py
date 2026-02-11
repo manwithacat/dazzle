@@ -25,8 +25,11 @@ Usage:
 
 from .loader import (
     ApiPack,
+    DockerSpec,
     EnvVarSpec,
+    InfrastructureSpec,
     OperationSpec,
+    SandboxSpec,
     list_packs,
     load_pack,
     search_packs,
@@ -34,8 +37,11 @@ from .loader import (
 
 __all__ = [
     "ApiPack",
+    "DockerSpec",
     "EnvVarSpec",
+    "InfrastructureSpec",
     "OperationSpec",
+    "SandboxSpec",
     "load_pack",
     "list_packs",
     "search_packs",

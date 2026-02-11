@@ -100,6 +100,41 @@ class AuthSpec:
 
 
 @dataclass
+class DockerSpec:
+    """Docker container specification for self-hosted services."""
+
+    image: str
+    port: int = 8080
+    requires: list[str] = field(default_factory=list)
+    environment: dict[str, str] = field(default_factory=dict)
+    healthcheck_path: str | None = None
+    volumes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class SandboxSpec:
+    """Sandbox/test mode specification."""
+
+    available: bool = False
+    env_prefix: str = ""
+    docs: str = ""
+
+
+@dataclass
+class InfrastructureSpec:
+    """Infrastructure provisioning metadata for an API pack.
+
+    Describes how to provision and run the service locally,
+    whether it's cloud-only, self-hosted, or both.
+    """
+
+    hosting: str = "cloud_only"  # cloud_only, self_hosted, both
+    docker: DockerSpec | None = None
+    local_env_overrides: dict[str, str] = field(default_factory=dict)
+    sandbox: SandboxSpec | None = None
+
+
+@dataclass
 class ApiPack:
     """A complete API pack configuration."""
 
@@ -114,6 +149,7 @@ class ApiPack:
     env_vars: list[EnvVarSpec] = field(default_factory=list)
     operations: list[OperationSpec] = field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = field(default_factory=list)
+    infrastructure: InfrastructureSpec | None = None
 
     def generate_env_example(self) -> str:
         """Generate .env.example content for this pack."""
@@ -316,6 +352,38 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
                 )
             )
 
+    # Parse infrastructure
+    infra_data = data.get("infrastructure", {})
+    infrastructure = None
+    if infra_data:
+        docker_data = infra_data.get("docker", {})
+        docker = None
+        if docker_data:
+            docker = DockerSpec(
+                image=docker_data.get("image", ""),
+                port=docker_data.get("port", 8080),
+                requires=docker_data.get("requires", []),
+                environment=docker_data.get("environment", {}),
+                healthcheck_path=docker_data.get("healthcheck_path"),
+                volumes=docker_data.get("volumes", []),
+            )
+
+        sandbox_data = infra_data.get("sandbox", {})
+        sandbox = None
+        if sandbox_data:
+            sandbox = SandboxSpec(
+                available=sandbox_data.get("available", False),
+                env_prefix=sandbox_data.get("env_prefix", ""),
+                docs=sandbox_data.get("docs", ""),
+            )
+
+        infrastructure = InfrastructureSpec(
+            hosting=infra_data.get("hosting", "cloud_only"),
+            docker=docker,
+            local_env_overrides=infra_data.get("local_env_overrides", {}),
+            sandbox=sandbox,
+        )
+
     return ApiPack(
         name=pack_info.get("name", toml_path.stem),
         provider=pack_info.get("provider", ""),
@@ -328,6 +396,7 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
         env_vars=env_vars,
         operations=operations,
         foreign_models=foreign_models,
+        infrastructure=infrastructure,
     )
 
 

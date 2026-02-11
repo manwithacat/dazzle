@@ -148,13 +148,20 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="api_pack",
-            description="API pack operations: list, search, get, generate_dsl, env_vars",
+            description="API pack operations: list, search, get, generate_dsl, env_vars, infrastructure",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["list", "search", "get", "generate_dsl", "env_vars"],
+                        "enum": [
+                            "list",
+                            "search",
+                            "get",
+                            "generate_dsl",
+                            "env_vars",
+                            "infrastructure",
+                        ],
                         "description": "Operation to perform",
                     },
                     "pack_name": {
