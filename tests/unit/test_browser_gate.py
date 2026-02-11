@@ -307,25 +307,27 @@ class TestConcurrencyBound:
 
         def use_browser() -> None:
             nonlocal peak_active
-            with patch.dict(
-                "sys.modules",
-                {
-                    "playwright": MagicMock(),
-                    "playwright.sync_api": pw_mod,
-                },
-            ):
-                with gate.sync_browser() as _browser:
-                    with lock:
-                        if gate.active_count > peak_active:
-                            peak_active = gate.active_count
-                        results.append(time.monotonic())
-                    time.sleep(0.05)
+            with gate.sync_browser() as _browser:
+                with lock:
+                    if gate.active_count > peak_active:
+                        peak_active = gate.active_count
+                    results.append(time.monotonic())
+                time.sleep(0.05)
 
-        threads = [threading.Thread(target=use_browser) for _ in range(3)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
+        # Patch sys.modules at the outer level so all threads share
+        # the same stable mock — avoids races from per-thread patching.
+        with patch.dict(
+            "sys.modules",
+            {
+                "playwright": MagicMock(),
+                "playwright.sync_api": pw_mod,
+            },
+        ):
+            threads = [threading.Thread(target=use_browser) for _ in range(3)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
 
         # With max_concurrent=1, peak should never exceed 1
         assert peak_active <= 1
