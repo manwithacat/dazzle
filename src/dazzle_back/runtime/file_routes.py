@@ -4,15 +4,12 @@ File upload routes for DNR Backend.
 Provides REST endpoints for file upload, download, and management.
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
-if TYPE_CHECKING:
-    from fastapi import FastAPI
+from fastapi import FastAPI
 
-    from .file_storage import FileService
+from .file_storage import FileService
 
 
 def create_file_routes(
