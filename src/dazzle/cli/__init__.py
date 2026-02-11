@@ -78,6 +78,11 @@ app.command(name="layout-plan")(layout_plan_command)
 app.command(name="analyze-spec")(analyze_spec_command)
 app.command(name="example")(example_command)
 
+# Doctor command
+from dazzle.cli.doctor import doctor_command  # noqa: E402
+
+app.command(name="doctor")(doctor_command)
+
 
 # =============================================================================
 # Runtime Commands (formerly under 'dnr' sub-app, now top-level)

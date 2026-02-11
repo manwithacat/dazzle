@@ -140,10 +140,8 @@ Repository = "https://github.com/manwithacat/dazzle"
 Issues = "https://github.com/manwithacat/dazzle/issues"
 Changelog = "https://github.com/manwithacat/dazzle/blob/main/CHANGELOG.md"
 
-# NOTE: The Bun CLI is the primary entry point for Homebrew installs.
-# The console script below provides `dazzle` for pip installs:
-#   pip install dazzle-dsl
-# Import name remains `dazzle` (PEP 503 normalises the package name).
+# Console script entry point for `dazzle` command.
+# Package name on PyPI: dazzle-dsl  |  Import name: dazzle
 [project.scripts]
 dazzle = "dazzle.cli:main"
 

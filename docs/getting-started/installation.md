@@ -4,7 +4,7 @@ This guide covers multiple ways to install DAZZLE on your system.
 
 ## Prerequisites
 
-- **Python 3.11 or higher** (Python 3.12 recommended)
+- **Python 3.12 or higher** (Python 3.12 recommended)
 - **pip** (usually comes with Python)
 - **git** (for installation from source)
 
@@ -12,22 +12,20 @@ This guide covers multiple ways to install DAZZLE on your system.
 
 ### Method 1: Install from PyPI (Recommended)
 
-Once DAZZLE is published to PyPI, you can install it with:
-
 ```bash
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 To install with LLM support (for DSL generation features):
 
 ```bash
-pip install dazzle[llm]
+pip install dazzle-dsl[llm]
 ```
 
 To install for development:
 
 ```bash
-pip install dazzle[dev]
+pip install dazzle-dsl[dev]
 ```
 
 ### Method 2: Install from Source
@@ -46,7 +44,7 @@ pip install -e .
 pip install -e ".[dev,llm]"
 ```
 
-### Method 3: Homebrew (macOS)
+### Method 3: Homebrew (macOS/Linux)
 
 Install via our Homebrew tap:
 
@@ -54,22 +52,7 @@ Install via our Homebrew tap:
 brew install manwithacat/tap/dazzle
 ```
 
-This installs DAZZLE with Python 3.12 in an isolated environment.
-
-**Post-installation** - For LLM features (optional):
-```bash
-# Install LLM providers if needed
-/opt/homebrew/opt/dazzle/libexec/bin/pip install anthropic openai
-```
-
-**VS Code integration**:
-```bash
-# Install the DAZZLE DSL extension
-code --install-extension dazzle.dazzle-dsl
-
-# Set Python path in VS Code settings
-# "dazzle.pythonPath": "/opt/homebrew/opt/dazzle/libexec/bin/python"
-```
+This installs DAZZLE with Python 3.12 in an isolated virtualenv and registers the MCP server with Claude Code automatically.
 
 ### Method 4: Using pipx (Isolated Environment)
 
@@ -81,7 +64,7 @@ python -m pip install --user pipx
 python -m pipx ensurepath
 
 # Install DAZZLE
-pipx install dazzle
+pipx install dazzle-dsl
 
 # Or from source
 pipx install git+https://github.com/manwithacat/dazzle.git
@@ -105,6 +88,9 @@ After installation, verify DAZZLE is working:
 # Check version
 dazzle --version
 
+# Check environment health
+dazzle doctor
+
 # Get help
 dazzle --help
 
@@ -117,7 +103,7 @@ dazzle validate
 ### Update PyPI Installation
 
 ```bash
-pip install --upgrade dazzle
+pip install --upgrade dazzle-dsl
 ```
 
 ### Update Source Installation
@@ -140,7 +126,7 @@ brew upgrade manwithacat/tap/dazzle
 ### Remove PyPI Installation
 
 ```bash
-pip uninstall dazzle
+pip uninstall dazzle-dsl
 ```
 
 ### Remove Homebrew Installation
@@ -157,12 +143,12 @@ If you have multiple Python versions:
 
 ```bash
 # Use specific Python version
-python3.11 -m pip install dazzle
+python3.12 -m pip install dazzle-dsl
 
 # Or create a virtual environment
-python3.11 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 ### Permission Errors
@@ -171,12 +157,12 @@ If you get permission errors:
 
 ```bash
 # Install to user directory
-pip install --user dazzle
+pip install --user dazzle-dsl
 
 # Or use a virtual environment (recommended)
 python -m venv venv
 source venv/bin/activate
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 ### Command Not Found
@@ -197,10 +183,10 @@ If you get import errors:
 
 ```bash
 # Reinstall with all dependencies
-pip install --force-reinstall dazzle
+pip install --force-reinstall dazzle-dsl
 
 # Or install with verbose output to see what's missing
-pip install -v dazzle
+pip install -v dazzle-dsl
 ```
 
 ## Development Installation
@@ -217,30 +203,30 @@ For contributing to DAZZLE, see [Contributing Guide](../contributing/dev-setup.m
 ### macOS
 
 ```bash
-# Install Python 3.11+ via Homebrew
-brew install python@3.11
+# Install Python 3.12 via Homebrew
+brew install python@3.12
 
 # Install DAZZLE
-pip3.11 install dazzle
+pip3 install dazzle-dsl
 ```
 
 ### Linux (Ubuntu/Debian)
 
 ```bash
-# Install Python 3.11+
+# Install Python 3.12+
 sudo apt update
-sudo apt install python3.11 python3.11-venv python3-pip
+sudo apt install python3.12 python3.12-venv python3-pip
 
 # Install DAZZLE
-pip3 install dazzle
+pip3 install dazzle-dsl
 ```
 
 ### Windows
 
 ```powershell
-# Install Python 3.11+ from python.org
+# Install Python 3.12+ from python.org
 # Then install DAZZLE
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 ## Next Steps
@@ -249,7 +235,7 @@ After installation:
 
 1. **Read the Quick Start** in [Documentation](../index.md)
 2. **Try the Examples** in `examples/`
-3. **Set Up IDE Integration** (VSCode extension)
+3. **Set Up IDE Integration** (LSP server: `dazzle lsp run`)
 4. **Join the Community** on GitHub Discussions
 
 ## Getting Help

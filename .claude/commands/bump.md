@@ -16,10 +16,15 @@ Bump the project's semantic version. The user may specify a bump level as an arg
    - `.claude/CLAUDE.md` — the `**Version**: X.Y.Z` line at the bottom
    - `ROADMAP.md` — the `**Current Version**: vX.Y.Z` line near the top
    - `src/dazzle/mcp/semantics_kb/core.toml` — the `version = "..."` line
-   - `cli/package.json` — the `"version": "X.Y.Z"` line
 
    **Do NOT** touch version references in code comments (e.g. `# v0.19.0 HLESS`) or dependency pins (e.g. `aiosqlite>=0.19.0`). Those refer to the version a feature was introduced, not the current project version.
 
-4. **Report** the change: `Bumped version: OLD → NEW` and list the files modified.
+4. **Create a git tag** for the new version:
+   - Run `git tag v{NEW_VERSION}` (e.g. `git tag v0.23.0`).
+   - This is a lightweight tag — no need for `-a` or `-m`.
+   - The tag is local only; `/ship` will push it along with the commit.
+
+5. **Report** the change: `Bumped version: OLD → NEW` and list the files modified.
+   Remind the user: run `/ship` to commit, push, and push the tag (which triggers PyPI + Homebrew releases).
 
 Do NOT commit. The user will run `/ship` separately if they want to commit and push.
