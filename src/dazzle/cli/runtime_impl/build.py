@@ -280,16 +280,21 @@ def migrate_command(
     # Convert to backend spec
     backend_spec = convert_appspec_to_backend(appspec)
 
-    # Resolve database URL
-    if not database_url:
-        database_url = os.environ.get("DATABASE_URL", "")
-    if not database_url:
+    # Resolve database URL: CLI flag → env → dazzle.toml → default
+    from dazzle.core.manifest import _DEFAULT_DATABASE_URL, resolve_database_url
+
+    had_explicit_source = bool(
+        database_url or os.environ.get("DATABASE_URL") or mf.database.url != _DEFAULT_DATABASE_URL
+    )
+    database_url = resolve_database_url(mf, explicit_url=database_url)
+    if not had_explicit_source:
         typer.echo("DATABASE_URL is required for migrations.", err=True)
-        typer.echo("Set it in .env or export before running:", err=True)
+        typer.echo(
+            "Set it in .env, dazzle.toml [database], or export before running:",
+            err=True,
+        )
         typer.echo("  export DATABASE_URL=postgresql://localhost:5432/dazzle_dev", err=True)
         raise typer.Exit(code=1)
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
 
     # Create database backend
     db_manager = PostgresBackend(database_url)

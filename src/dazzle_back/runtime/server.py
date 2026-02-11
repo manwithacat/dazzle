@@ -2047,11 +2047,11 @@ def create_app_factory(
     logger.info(f"Loading Dazzle project from {project_root}")
     manifest = load_manifest(manifest_path)
 
-    # Parse DATABASE_URL (convert Heroku's postgres:// to postgresql://)
-    database_url = os.environ.get("DATABASE_URL", "")
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
-        logger.info("Converted postgres:// to postgresql:// for SQLAlchemy compatibility")
+    # Resolve DATABASE_URL: env → dazzle.toml [database] → default
+    from dazzle.core.manifest import resolve_database_url
+
+    database_url = resolve_database_url(manifest)
+    logger.info(f"Database URL resolved ({len(database_url)} chars)")
 
     # Parse REDIS_URL (Heroku format: redis://h:password@host:port)
     redis_url = os.environ.get("REDIS_URL", "")

@@ -7,7 +7,6 @@ in Dazzle applications. Requires PostgreSQL via DATABASE_URL.
 
 from __future__ import annotations
 
-import os
 import secrets
 import string
 from pathlib import Path
@@ -27,8 +26,10 @@ def _get_auth_store(project_path: Path | None = None) -> Any:
     """
     Get an AuthStore instance for the project.
 
-    Requires DATABASE_URL environment variable (PostgreSQL).
+    Resolves the database URL from dazzle.toml [database] section,
+    DATABASE_URL env var, or falls back to the default.
     """
+    from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle_back.runtime.auth import AuthStore
 
     if project_path is None:
@@ -36,10 +37,12 @@ def _get_auth_store(project_path: Path | None = None) -> Any:
         if not project_path:
             raise ValueError("No active project. Select a project first.")
 
-    database_url = os.environ.get("DATABASE_URL")
-    if not database_url:
-        database_url = "postgresql://localhost:5432/dazzle"
+    manifest = None
+    manifest_path = project_path / "dazzle.toml"
+    if manifest_path.exists():
+        manifest = load_manifest(manifest_path)
 
+    database_url = resolve_database_url(manifest)
     return AuthStore(database_url=database_url)
 
 
@@ -425,17 +428,17 @@ async def list_sessions_handler(
     params: list[Any] = []
 
     if user_id:
-        conditions.append("user_id = ?")
+        conditions.append("user_id = %s")
         params.append(user_id)
 
     if active_only:
         from datetime import UTC, datetime
 
-        conditions.append("expires_at > ?")
+        conditions.append("expires_at > %s")
         params.append(datetime.now(UTC).isoformat())
 
     where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-    query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT ?"
+    query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT %s"
     params.append(limit)
 
     rows = auth_store._execute(query, tuple(params))
@@ -515,14 +518,14 @@ async def get_auth_config_handler(
     auth_store = _get_auth_store(path)
 
     # Get counts
-    user_count = auth_store._execute("SELECT COUNT(*) as count FROM users")
-    active_user_count = auth_store._execute(
-        f"SELECT COUNT(*) as count FROM users WHERE is_active = {auth_store._bool_to_db(True)}"
-    )
     from datetime import UTC, datetime
 
+    user_count = auth_store._execute("SELECT COUNT(*) as count FROM users")
+    active_user_count = auth_store._execute(
+        "SELECT COUNT(*) as count FROM users WHERE is_active = TRUE"
+    )
     session_count = auth_store._execute(
-        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > ?",
+        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > %s",
         (datetime.now(UTC).isoformat(),),
     )
 

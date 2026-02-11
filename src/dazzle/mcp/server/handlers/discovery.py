@@ -192,23 +192,20 @@ def _get_persona_session_info(project_path: Path, persona: str, base_url: str) -
     return {"authenticated": False, "persona": persona}
 
 
-def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
+async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
-    Build and describe a discovery mission (non-executing).
+    Build a discovery mission and execute the agent loop.
 
-    Since the discovery agent requires a live application and an LLM API key,
-    this handler builds the mission configuration and returns it as a structured
-    report. The actual agent execution happens via `dazzle discover` CLI or
-    programmatic API.
+    Requires a running app at base_url and an ANTHROPIC_API_KEY env var.
 
-    Supports three modes:
+    Supports four modes:
     - persona (default): Open-ended persona walkthrough
     - entity_completeness: Static CRUD coverage + targeted verification
     - workflow_coherence: Static process/story integrity + targeted verification
-
-    Returns the mission spec including system prompt, tools, and DSL summary
-    so the caller can inspect or run it.
+    - headless: Pure static analysis — no running app needed
     """
+    import os
+
     mode = args.get("mode", "persona")
     persona = args.get("persona", "admin")
     base_url = args.get("base_url", "http://localhost:3000")
@@ -227,12 +224,26 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     if mode == "headless":
         return run_headless_discovery_handler(project_path, args)
 
+    # --- Preflight checks ---
+
+    # API key is optional — the Anthropic SDK can authenticate via other
+    # mechanisms (e.g. Claude Code subscriptions).  We pass whatever we
+    # find; if auth fails the agent try/except will surface it.
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+    from .preflight import check_server_reachable
+
+    server_error = check_server_reachable(base_url)
+    if server_error is not None:
+        return server_error
+
+    # --- Build mission ---
+
     try:
         appspec = _load_appspec(project_path)
     except Exception as e:
         return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
 
-    # Optionally populate KG for adjacency features
     kg_store = _populate_kg_for_discovery(project_path)
 
     if mode == "persona":
@@ -267,27 +278,104 @@ def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
             token_budget=token_budget,
         )
 
-    result = _build_mission_summary(
-        mission, mode, appspec, kg_store, base_url, persona=persona if mode == "persona" else None
-    )
+    # --- Execute agent loop ---
 
-    # Include persona session info for authenticated discovery
+    progress = args.get("_progress")
+
+    try:
+        import httpx
+
+        from dazzle.agent.core import DazzleAgent
+        from dazzle.agent.executor import HttpExecutor
+        from dazzle.agent.observer import HttpObserver
+
+        # Set up auth cookies for persona mode
+        cookies: dict[str, str] = {}
+        if mode == "persona":
+            session_info = _get_persona_session_info(project_path, persona, base_url)
+            cookies = session_info.get("cookie", {})
+
+        t0 = time.monotonic()
+
+        def _on_step(step_num: int, step: Any) -> None:
+            """Report step progress to the activity log."""
+            if progress is not None:
+                try:
+                    action_type = step.action.type.value if step.action else "unknown"
+                    progress.log_sync(
+                        f"Step {step_num}/{mission.max_steps}: {action_type}"
+                        + (f" → {step.action.target[:40]}" if step.action.target else "")
+                    )
+                except Exception:
+                    pass
+
+        async with httpx.AsyncClient(
+            base_url=base_url,
+            cookies=cookies,
+            follow_redirects=True,
+            timeout=30.0,
+        ) as client:
+            observer = HttpObserver(client, base_url)
+            executor = HttpExecutor(client, base_url, observer=observer)
+            agent = DazzleAgent(observer, executor, api_key=api_key)
+
+            if progress is not None:
+                progress.log_sync(f"Starting {mode} discovery against {base_url}")
+
+            transcript = await agent.run(mission, on_step=_on_step)
+
+        wall_ms = (time.monotonic() - t0) * 1000
+
+    except Exception as e:
+        logger.exception("Discovery agent execution failed")
+        return json.dumps(
+            {
+                "error": f"Agent execution failed: {e}",
+                "hint": "Check that the app is running and ANTHROPIC_API_KEY is valid.",
+            },
+            indent=2,
+        )
+
+    # --- Save report ---
+
+    transcript_json = transcript.to_json()
+    transcript_json["mode"] = mode
     if mode == "persona":
-        session_info = _get_persona_session_info(project_path, persona, base_url)
-        result["session"] = session_info
+        transcript_json["persona"] = persona
 
-    result["instructions"] = (
-        "Mission is ready. To execute, run the discovery agent against a live app:\n"
-        f"  dazzle discover --mode {mode} --url {base_url}"
-        + (f" --persona {persona}" if mode == "persona" else "")
-        + "\n"
-        "Or programmatically:\n"
-        "  from dazzle.agent import DazzleAgent\n"
-        "  from dazzle.agent.observer import HttpObserver\n"
-        "  from dazzle.agent.executor import HttpExecutor\n"
-        "  agent = DazzleAgent(observer, executor)\n"
-        "  transcript = await agent.run(mission)"
-    )
+    report_file = save_discovery_report(project_path, transcript_json)
+    session_id = report_file.stem
+
+    if progress is not None:
+        progress.log_sync(
+            f"Discovery {transcript.outcome}: {len(transcript.steps)} steps, "
+            f"{len(transcript.observations)} observations → {session_id}"
+        )
+
+    result: dict[str, Any] = {
+        "status": transcript.outcome,
+        "mode": mode,
+        "session_id": session_id,
+        "outcome": transcript.outcome,
+        "steps": len(transcript.steps),
+        "observations": len(transcript.observations),
+        "tokens_used": transcript.tokens_used,
+        "summary": transcript.summary(),
+        "instructions": (
+            f"Discovery complete. Use session_id '{session_id}' with:\n"
+            f"  discovery(operation='compile', session_id='{session_id}')  → proposals\n"
+            f"  discovery(operation='emit', session_id='{session_id}')     → DSL code"
+        ),
+        "_meta": {
+            "wall_time_ms": round(wall_ms, 1),
+            "steps_executed": len(transcript.steps),
+            "observations_found": len(transcript.observations),
+            "tokens_used": transcript.tokens_used,
+        },
+    }
+
+    if transcript.error:
+        result["error"] = transcript.error
 
     return json.dumps(result, indent=2)
 

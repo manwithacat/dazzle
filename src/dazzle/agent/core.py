@@ -123,12 +123,17 @@ class DazzleAgent:
                 )
         return self._client
 
-    async def run(self, mission: Mission) -> AgentTranscript:
+    async def run(
+        self,
+        mission: Mission,
+        on_step: Callable[[int, Step], None] | None = None,
+    ) -> AgentTranscript:
         """
         Execute a mission. Returns full transcript.
 
         Args:
             mission: The mission specification
+            on_step: Optional callback invoked after each step with (step_number, step)
 
         Returns:
             AgentTranscript with all steps and observations
@@ -209,6 +214,13 @@ class DazzleAgent:
             )
             self._history.append(step)
             transcript.steps.append(step)
+
+            # Notify caller of progress
+            if on_step is not None:
+                try:
+                    on_step(step_num + 1, step)
+                except Exception:
+                    pass  # Never let callback errors break the agent loop
 
             # 5. Check completion
             if mission.completion_criteria(action, self._history):

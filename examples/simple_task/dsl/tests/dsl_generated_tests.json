@@ -1,7 +1,7 @@
 {
   "version": "2.0",
   "dsl_hash": "873a93063093ae0d",
-  "generated_at": "2026-02-11T17:25:01.755950",
+  "generated_at": "2026-02-11T19:30:59.898108",
   "project_name": "simple_task",
   "coverage": {
     "entities": [
@@ -49,7 +49,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_1755@example.com",
+            "email": "test_59897@example.com",
             "name": "Test name"
           },
           "rationale": "Create valid Team Member"
@@ -78,7 +78,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755582"
+      "created_at": "2026-02-11T19:30:59.897833"
     },
     {
       "test_id": "CRUD_USER_READ",
@@ -92,7 +92,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_1755@example.com",
+            "email": "test_59897@example.com",
             "name": "Test name"
           },
           "rationale": "Seed test data"
@@ -126,7 +126,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755588"
+      "created_at": "2026-02-11T19:30:59.897838"
     },
     {
       "test_id": "VAL_USER_REQUIRED",
@@ -166,7 +166,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755592"
+      "created_at": "2026-02-11T19:30:59.897841"
     },
     {
       "test_id": "VAL_USER_EMAIL_UNIQUE",
@@ -180,7 +180,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_1755@example.com",
+            "email": "test_59897@example.com",
             "name": "Test name"
           },
           "rationale": "Create first entity"
@@ -189,7 +189,7 @@
           "action": "create_expect_error",
           "target": "entity:User",
           "data": {
-            "email": "test_1755@example.com",
+            "email": "test_59897@example.com",
             "name": "Test name"
           },
           "rationale": "Attempt duplicate email"
@@ -218,7 +218,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755605"
+      "created_at": "2026-02-11T19:30:59.897852"
     },
     {
       "test_id": "CRUD_TASK_CREATE",
@@ -260,7 +260,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755613"
+      "created_at": "2026-02-11T19:30:59.897858"
     },
     {
       "test_id": "CRUD_TASK_READ",
@@ -307,7 +307,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755615"
+      "created_at": "2026-02-11T19:30:59.897860"
     },
     {
       "test_id": "VAL_TASK_REQUIRED",
@@ -347,7 +347,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755618"
+      "created_at": "2026-02-11T19:30:59.897863"
     },
     {
       "test_id": "CRUD_TASKCOMMENT_CREATE",
@@ -370,7 +370,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_1755@example.com",
+            "email": "test_59897@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -412,7 +412,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755636"
+      "created_at": "2026-02-11T19:30:59.897878"
     },
     {
       "test_id": "CRUD_TASKCOMMENT_READ",
@@ -435,7 +435,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_1755@example.com",
+            "email": "test_59897@example.com",
             "name": "Test name"
           },
           "store_result": "parent_user",
@@ -482,7 +482,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755638"
+      "created_at": "2026-02-11T19:30:59.897880"
     },
     {
       "test_id": "VAL_TASKCOMMENT_REQUIRED",
@@ -522,7 +522,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755641"
+      "created_at": "2026-02-11T19:30:59.897883"
     },
     {
       "test_id": "SM_TASK_TODO_IN_PROGRESS",
@@ -574,7 +574,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755651"
+      "created_at": "2026-02-11T19:30:59.897890"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_REVIEW",
@@ -626,7 +626,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755656"
+      "created_at": "2026-02-11T19:30:59.897896"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_TODO",
@@ -678,7 +678,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755662"
+      "created_at": "2026-02-11T19:30:59.897900"
     },
     {
       "test_id": "SM_TASK_REVIEW_DONE",
@@ -730,7 +730,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755666"
+      "created_at": "2026-02-11T19:30:59.897905"
     },
     {
       "test_id": "SM_TASK_REVIEW_IN_PROGRESS",
@@ -782,7 +782,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755671"
+      "created_at": "2026-02-11T19:30:59.897910"
     },
     {
       "test_id": "SM_TASK_DONE_TODO",
@@ -834,12 +834,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755676"
+      "created_at": "2026-02-11T19:30:59.897914"
     },
     {
-      "test_id": "SM_TASK_TODO_DONE_INVALID",
-      "title": "Task: todo \u2192 done (invalid)",
-      "description": "Test that invalid transition from todo to done is rejected",
+      "test_id": "SM_TASK_TODO_REVIEW_INVALID",
+      "title": "Task: todo \u2192 review (invalid)",
+      "description": "Test that invalid transition from todo to review is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -857,9 +857,9 @@
           "action": "transition_expect_error",
           "target": "entity:Task",
           "data": {
-            "to_state": "done"
+            "to_state": "review"
           },
-          "rationale": "Attempt invalid transition to done"
+          "rationale": "Attempt invalid transition to review"
         },
         {
           "action": "assert_state",
@@ -872,7 +872,7 @@
         }
       ],
       "expected_outcomes": [
-        "Task: todo \u2192 done (invalid) succeeds"
+        "Task: todo \u2192 review (invalid) succeeds"
       ],
       "entities": [
         "Task"
@@ -886,7 +886,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755684"
+      "created_at": "2026-02-11T19:30:59.897921"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_DONE_INVALID",
@@ -938,7 +938,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755691"
+      "created_at": "2026-02-11T19:30:59.897928"
     },
     {
       "test_id": "SM_TASK_REVIEW_TODO_INVALID",
@@ -990,12 +990,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755697"
+      "created_at": "2026-02-11T19:30:59.897933"
     },
     {
-      "test_id": "SM_TASK_DONE_IN_PROGRESS_INVALID",
-      "title": "Task: done \u2192 in_progress (invalid)",
-      "description": "Test that invalid transition from done to in_progress is rejected",
+      "test_id": "SM_TASK_DONE_REVIEW_INVALID",
+      "title": "Task: done \u2192 review (invalid)",
+      "description": "Test that invalid transition from done to review is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1013,9 +1013,9 @@
           "action": "transition_expect_error",
           "target": "entity:Task",
           "data": {
-            "to_state": "in_progress"
+            "to_state": "review"
           },
-          "rationale": "Attempt invalid transition to in_progress"
+          "rationale": "Attempt invalid transition to review"
         },
         {
           "action": "assert_state",
@@ -1028,7 +1028,7 @@
         }
       ],
       "expected_outcomes": [
-        "Task: done \u2192 in_progress (invalid) succeeds"
+        "Task: done \u2192 review (invalid) succeeds"
       ],
       "entities": [
         "Task"
@@ -1042,7 +1042,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755702"
+      "created_at": "2026-02-11T19:30:59.897939"
     },
     {
       "test_id": "ACL_ADMIN_ACCESS",
@@ -1076,7 +1076,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755706"
+      "created_at": "2026-02-11T19:30:59.897942"
     },
     {
       "test_id": "GOAL_ADMIN_MANAGE_ALL_TASKS",
@@ -1110,7 +1110,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755758"
+      "created_at": "2026-02-11T19:30:59.897948"
     },
     {
       "test_id": "GOAL_ADMIN_CONFIGURE_TEAM_SETTI",
@@ -1144,7 +1144,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755762"
+      "created_at": "2026-02-11T19:30:59.897951"
     },
     {
       "test_id": "GOAL_ADMIN_VIEW_ANALYTICS",
@@ -1178,7 +1178,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755765"
+      "created_at": "2026-02-11T19:30:59.897954"
     },
     {
       "test_id": "ACL_MANAGER_ACCESS",
@@ -1212,7 +1212,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755768"
+      "created_at": "2026-02-11T19:30:59.897956"
     },
     {
       "test_id": "GOAL_MANAGER_ASSIGN_TASKS_TO_TEAM",
@@ -1246,7 +1246,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755771"
+      "created_at": "2026-02-11T19:30:59.897959"
     },
     {
       "test_id": "GOAL_MANAGER_TRACK_TEAM_PROGRESS",
@@ -1280,7 +1280,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755774"
+      "created_at": "2026-02-11T19:30:59.897962"
     },
     {
       "test_id": "GOAL_MANAGER_REVIEW_COMPLETED_WOR",
@@ -1314,7 +1314,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755777"
+      "created_at": "2026-02-11T19:30:59.897964"
     },
     {
       "test_id": "ACL_MEMBER_ACCESS",
@@ -1348,7 +1348,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755779"
+      "created_at": "2026-02-11T19:30:59.897966"
     },
     {
       "test_id": "GOAL_MEMBER_COMPLETE_ASSIGNED_TA",
@@ -1382,7 +1382,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755782"
+      "created_at": "2026-02-11T19:30:59.897969"
     },
     {
       "test_id": "GOAL_MEMBER_UPDATE_TASK_STATUS",
@@ -1416,7 +1416,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755784"
+      "created_at": "2026-02-11T19:30:59.897971"
     },
     {
       "test_id": "GOAL_MEMBER_REQUEST_HELP",
@@ -1450,7 +1450,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755787"
+      "created_at": "2026-02-11T19:30:59.897974"
     },
     {
       "test_id": "WS_TASK_BOARD_NAV",
@@ -1499,7 +1499,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755792"
+      "created_at": "2026-02-11T19:30:59.897978"
     },
     {
       "test_id": "WS_TASK_BOARD_ROUTE",
@@ -1531,7 +1531,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755794"
+      "created_at": "2026-02-11T19:30:59.897980"
     },
     {
       "test_id": "WS_ADMIN_DASHBOARD_NAV",
@@ -1580,7 +1580,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755797"
+      "created_at": "2026-02-11T19:30:59.897982"
     },
     {
       "test_id": "WS_ADMIN_DASHBOARD_ROUTE",
@@ -1612,7 +1612,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755799"
+      "created_at": "2026-02-11T19:30:59.897984"
     },
     {
       "test_id": "WS_TEAM_OVERVIEW_NAV",
@@ -1661,7 +1661,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755801"
+      "created_at": "2026-02-11T19:30:59.897986"
     },
     {
       "test_id": "WS_TEAM_OVERVIEW_ROUTE",
@@ -1693,7 +1693,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755803"
+      "created_at": "2026-02-11T19:30:59.897988"
     },
     {
       "test_id": "WS_MY_WORK_NAV",
@@ -1742,7 +1742,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755805"
+      "created_at": "2026-02-11T19:30:59.897990"
     },
     {
       "test_id": "WS_MY_WORK_ROUTE",
@@ -1774,7 +1774,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755807"
+      "created_at": "2026-02-11T19:30:59.897992"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_TRIGGER",
@@ -1788,7 +1788,7 @@
           "action": "trigger_process",
           "target": "process:task_auto_assignment",
           "data": {
-            "task_id": "432ec31f-a482-4b51-8e89-773cc8491e52"
+            "task_id": "93d5d4e0-5a70-4b67-8c97-41534f8ada5a"
           },
           "rationale": "Start task_auto_assignment process"
         },
@@ -1811,7 +1811,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755843"
+      "created_at": "2026-02-11T19:30:59.898023"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_COMPLETE",
@@ -1825,7 +1825,7 @@
           "action": "trigger_process",
           "target": "process:task_auto_assignment",
           "data": {
-            "task_id": "0fa5f4be-e564-4307-a396-fb390b66bd6e"
+            "task_id": "a7a74c79-2f55-4114-b4f7-3f3ccc9a0ea2"
           },
           "rationale": "Start task_auto_assignment process"
         },
@@ -1856,7 +1856,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755856"
+      "created_at": "2026-02-11T19:30:59.898032"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_FIND_CANDIDATE",
@@ -1893,7 +1893,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755859"
+      "created_at": "2026-02-11T19:30:59.898034"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_NOTIFY_ASSIGNEE",
@@ -1930,7 +1930,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755861"
+      "created_at": "2026-02-11T19:30:59.898036"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_TRIGGER",
@@ -1944,7 +1944,7 @@
           "action": "trigger_process",
           "target": "process:task_escalation",
           "data": {
-            "task_id": "25885027-122b-4c3c-8db5-9e6ab4827fa5"
+            "task_id": "b69b3e25-f97b-4bf2-8629-1e4a73bf7fa7"
           },
           "rationale": "Start task_escalation process"
         },
@@ -1967,7 +1967,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755870"
+      "created_at": "2026-02-11T19:30:59.898043"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_COMPLETE",
@@ -1981,7 +1981,7 @@
           "action": "trigger_process",
           "target": "process:task_escalation",
           "data": {
-            "task_id": "df7cc730-0f26-4a1a-9a13-ce6186cf1935"
+            "task_id": "3f204b73-05b0-40a2-92a1-978a8e335f4c"
           },
           "rationale": "Start task_escalation process"
         },
@@ -2012,7 +2012,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755877"
+      "created_at": "2026-02-11T19:30:59.898050"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_1_NOTIFY",
@@ -2049,7 +2049,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755879"
+      "created_at": "2026-02-11T19:30:59.898052"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_WAIT_FOR_ACTION",
@@ -2086,7 +2086,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755881"
+      "created_at": "2026-02-11T19:30:59.898054"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_2_ESCALATE",
@@ -2123,7 +2123,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755883"
+      "created_at": "2026-02-11T19:30:59.898055"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_TRIGGER",
@@ -2137,7 +2137,7 @@
           "action": "trigger_process",
           "target": "process:urgent_task_approval",
           "data": {
-            "task_id": "9a7ebbc1-a486-4a57-a3a7-e0478232d72b"
+            "task_id": "0edede26-70f5-4495-b92c-9c9e1d079c4d"
           },
           "rationale": "Start urgent_task_approval process"
         },
@@ -2160,7 +2160,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755890"
+      "created_at": "2026-02-11T19:30:59.898063"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_COMPLETE",
@@ -2174,7 +2174,7 @@
           "action": "trigger_process",
           "target": "process:urgent_task_approval",
           "data": {
-            "task_id": "b7467ff1-d3fa-48ca-b06c-b98c4d6b876b"
+            "task_id": "e08babb9-7310-47fc-8954-097aaab31b18"
           },
           "rationale": "Start urgent_task_approval process"
         },
@@ -2205,7 +2205,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755897"
+      "created_at": "2026-02-11T19:30:59.898069"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_STEP_REQUEST_APPROVAL",
@@ -2242,7 +2242,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T17:25:01.755899"
+      "created_at": "2026-02-11T19:30:59.898071"
     }
   ]
 }

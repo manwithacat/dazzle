@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -100,110 +101,129 @@ class TestDiscoveryRegistration:
 
 
 class TestRunDiscovery:
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
-    @patch("dazzle.mcp.server.handlers.discovery._populate_kg_for_discovery")
-    def test_run_returns_mission_spec(
-        self,
-        mock_kg: MagicMock,
-        mock_load: MagicMock,
-        mock_appspec: MagicMock,
-        tmp_project: Path,
+    """Tests for the run operation which now executes the agent loop."""
+
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable")
+    def test_run_proceeds_without_api_key(
+        self, mock_preflight: MagicMock, tmp_project: Path
     ) -> None:
+        """API key is optional — the SDK may authenticate via other means."""
         from dazzle.mcp.server.handlers.discovery import run_discovery_handler
 
-        mock_load.return_value = mock_appspec
-        mock_kg.return_value = None
+        mock_preflight.return_value = None
 
-        result = json.loads(run_discovery_handler(tmp_project, {}))
-        assert result["status"] == "ready"
-        assert result["mission"]["persona"] == "admin"
-        assert result["mission"]["name"] == "discovery:admin"
-
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
-    @patch("dazzle.mcp.server.handlers.discovery._populate_kg_for_discovery")
-    def test_run_with_custom_persona(
-        self,
-        mock_kg: MagicMock,
-        mock_load: MagicMock,
-        mock_appspec: MagicMock,
-        tmp_project: Path,
-    ) -> None:
-        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
-
-        mock_load.return_value = mock_appspec
-        mock_kg.return_value = None
-
-        result = json.loads(run_discovery_handler(tmp_project, {"persona": "viewer"}))
-        assert result["mission"]["persona"] == "viewer"
-        assert result["mission"]["name"] == "discovery:viewer"
-
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
-    @patch("dazzle.mcp.server.handlers.discovery._populate_kg_for_discovery")
-    def test_run_includes_dsl_summary(
-        self,
-        mock_kg: MagicMock,
-        mock_load: MagicMock,
-        mock_appspec: MagicMock,
-        tmp_project: Path,
-    ) -> None:
-        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
-
-        mock_load.return_value = mock_appspec
-        mock_kg.return_value = None
-
-        result = json.loads(run_discovery_handler(tmp_project, {}))
-        assert result["dsl_summary"]["entities"] == 1
-        assert result["dsl_summary"]["surfaces"] == 1
-        assert result["dsl_summary"]["personas"] == 1
-
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
-    @patch("dazzle.mcp.server.handlers.discovery._populate_kg_for_discovery")
-    def test_run_includes_tools(
-        self,
-        mock_kg: MagicMock,
-        mock_load: MagicMock,
-        mock_appspec: MagicMock,
-        tmp_project: Path,
-    ) -> None:
-        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
-
-        mock_load.return_value = mock_appspec
-        mock_kg.return_value = None
-
-        result = json.loads(run_discovery_handler(tmp_project, {}))
-        tool_names = {t["name"] for t in result["mission"]["tools"]}
-        assert tool_names == {"observe_gap", "query_dsl", "check_adjacency", "list_surfaces"}
-
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
-    def test_run_handles_dsl_error(
-        self,
-        mock_load: MagicMock,
-        tmp_project: Path,
-    ) -> None:
-        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
-
-        mock_load.side_effect = Exception("Parse error")
-
-        result = json.loads(run_discovery_handler(tmp_project, {}))
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("dazzle.mcp.server.handlers.discovery._load_appspec") as mock_load,
+        ):
+            mock_load.side_effect = Exception("Parse error")
+            # Should get past the preflight and hit the DSL load error,
+            # NOT an "API key missing" error
+            result = json.loads(asyncio.run(run_discovery_handler(tmp_project, {})))
         assert "error" in result
         assert "Parse error" in result["error"]
 
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable")
+    def test_run_rejects_unreachable_server(
+        self, mock_preflight: MagicMock, tmp_project: Path
+    ) -> None:
+        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
+
+        mock_preflight.return_value = json.dumps({"error": "Server not reachable"})
+
+        result = json.loads(asyncio.run(run_discovery_handler(tmp_project, {})))
+        assert "error" in result
+        assert "not reachable" in result["error"]
+
     @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
-    @patch("dazzle.mcp.server.handlers.discovery._populate_kg_for_discovery")
-    def test_run_with_kg(
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable")
+    def test_run_handles_dsl_error(
         self,
-        mock_kg: MagicMock,
+        mock_preflight: MagicMock,
         mock_load: MagicMock,
+        tmp_project: Path,
+    ) -> None:
+        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
+
+        mock_preflight.return_value = None
+        mock_load.side_effect = Exception("Parse error")
+
+        result = json.loads(asyncio.run(run_discovery_handler(tmp_project, {})))
+        assert "error" in result
+        assert "Parse error" in result["error"]
+
+    @patch("dazzle.mcp.server.handlers.discovery._get_persona_session_info")
+    @patch("dazzle.mcp.server.handlers.discovery._populate_kg_for_discovery")
+    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
+    @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable")
+    def test_run_executes_agent_and_returns_result(
+        self,
+        mock_preflight: MagicMock,
+        mock_load: MagicMock,
+        mock_kg: MagicMock,
+        mock_session: MagicMock,
         mock_appspec: MagicMock,
         tmp_project: Path,
     ) -> None:
         from dazzle.mcp.server.handlers.discovery import run_discovery_handler
 
+        mock_preflight.return_value = None
         mock_load.return_value = mock_appspec
-        mock_kg.return_value = MagicMock()  # KG available
+        mock_kg.return_value = None
+        mock_session.return_value = {"authenticated": False, "persona": "admin"}
 
-        result = json.loads(run_discovery_handler(tmp_project, {}))
-        assert result["kg_available"] is True
+        # Mock the agent run to return a fake transcript
+        fake_transcript = MagicMock()
+        fake_transcript.outcome = "completed"
+        fake_transcript.steps = []
+        fake_transcript.observations = []
+        fake_transcript.tokens_used = 100
+        fake_transcript.error = None
+        fake_transcript.summary.return_value = "Mission: test\nOutcome: completed"
+        fake_transcript.to_json.return_value = {
+            "mission_name": "discovery:admin",
+            "outcome": "completed",
+            "observations": [],
+            "step_count": 0,
+            "steps": [],
+        }
+
+        mock_agent_cls = MagicMock()
+        mock_agent = MagicMock()
+        mock_agent.run = AsyncMock(return_value=fake_transcript)
+        mock_agent_cls.return_value = mock_agent
+
+        with (
+            patch("dazzle.agent.core.DazzleAgent", mock_agent_cls),
+            patch("dazzle.agent.observer.HttpObserver"),
+            patch("dazzle.agent.executor.HttpExecutor"),
+        ):
+            result = json.loads(asyncio.run(run_discovery_handler(tmp_project, {})))
+
+        assert result["status"] == "completed"
+        assert result["outcome"] == "completed"
+        assert "session_id" in result
+        assert result["steps"] == 0
+        assert result["observations"] == 0
+
+    def test_run_invalid_mode(self, tmp_project: Path) -> None:
+        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
+
+        result = json.loads(asyncio.run(run_discovery_handler(tmp_project, {"mode": "invalid"})))
+        assert "error" in result
+        assert "Unknown discovery mode" in result["error"]
+
+    def test_run_headless_delegates(self, tmp_project: Path) -> None:
+        from dazzle.mcp.server.handlers.discovery import run_discovery_handler
+
+        with patch(
+            "dazzle.mcp.server.handlers.discovery.run_headless_discovery_handler"
+        ) as mock_headless:
+            mock_headless.return_value = '{"status": "completed", "mode": "headless"}'
+            result = json.loads(
+                asyncio.run(run_discovery_handler(tmp_project, {"mode": "headless"}))
+            )
+        assert result["mode"] == "headless"
 
 
 # =============================================================================
@@ -461,10 +481,10 @@ class TestConsolidatedDispatch:
         from dazzle.mcp.server.handlers_consolidated import handle_discovery
 
         mock_resolve.return_value = tmp_project
-        mock_run.return_value = '{"status": "ready"}'
+        mock_run.return_value = '{"status": "completed"}'
 
-        result = handle_discovery({"operation": "run"})
-        assert result == '{"status": "ready"}'
+        result = asyncio.run(handle_discovery({"operation": "run"}))
+        assert result == '{"status": "completed"}'
 
     @patch("dazzle.mcp.server.handlers_consolidated._resolve_project")
     def test_dispatch_unknown_operation(
@@ -476,7 +496,7 @@ class TestConsolidatedDispatch:
 
         mock_resolve.return_value = tmp_project
 
-        result = json.loads(handle_discovery({"operation": "invalid"}))
+        result = json.loads(asyncio.run(handle_discovery({"operation": "invalid"})))
         assert "error" in result
         assert "Unknown" in result["error"]
 
@@ -486,5 +506,5 @@ class TestConsolidatedDispatch:
 
         mock_resolve.return_value = None
 
-        result = json.loads(handle_discovery({"operation": "run"}))
+        result = json.loads(asyncio.run(handle_discovery({"operation": "run"})))
         assert "error" in result

@@ -1396,7 +1396,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def handle_discovery(arguments: dict[str, Any]) -> str:
+async def handle_discovery(arguments: dict[str, Any]) -> str:
     """Handle capability discovery operations."""
     from .handlers.discovery import (
         app_coherence_handler,
@@ -1415,7 +1415,7 @@ def handle_discovery(arguments: dict[str, Any]) -> str:
         return _project_error()
 
     if operation == "run":
-        return run_discovery_handler(project_path, arguments)
+        return await run_discovery_handler(project_path, arguments)
     elif operation == "report":
         return get_discovery_report_handler(project_path, arguments)
     elif operation == "compile":

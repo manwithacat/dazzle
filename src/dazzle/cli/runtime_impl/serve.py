@@ -198,6 +198,7 @@ def serve_command(
     project_root = manifest_path.parent
 
     # Load manifest to get auth config and project name
+    mf = None
     dev_config_override_test: bool | None = None
     try:
         mf = load_manifest(manifest_path)
@@ -230,11 +231,10 @@ def serve_command(
         # CLI explicitly set - honor it
         enable_test_mode = test_mode
 
-    # Resolve DATABASE_URL from CLI flag or environment
-    if not database_url:
-        database_url = os.environ.get("DATABASE_URL", "")
-    if database_url.startswith("postgres://"):
-        database_url = database_url.replace("postgres://", "postgresql://", 1)
+    # Resolve DATABASE_URL: CLI flag → env → dazzle.toml → default
+    from dazzle.core.manifest import resolve_database_url
+
+    database_url = resolve_database_url(mf, explicit_url=database_url)
     # Ensure env var is set for subcomponents that read it
     if database_url:
         os.environ["DATABASE_URL"] = database_url

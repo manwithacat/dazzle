@@ -1,3 +1,4 @@
+import os
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -236,6 +237,35 @@ class StackConfig:
 
 
 @dataclass
+class DatabaseConfig:
+    """Database connection configuration.
+
+    Supports direct URLs and environment variable indirection.
+
+    Examples in dazzle.toml:
+
+        # Direct URL (local native)
+        [database]
+        url = "postgresql://localhost:5432/myapp"
+
+        # Docker (non-default port)
+        [database]
+        url = "postgresql://localhost:5433/myapp"
+
+        # Env var indirection (safe to commit)
+        [database]
+        url = "env:DATABASE_URL"
+    """
+
+    url: str = "postgresql://localhost:5432/dazzle"
+
+
+# =============================================================================
+# Dev Configuration (v0.24.0)
+# =============================================================================
+
+
+@dataclass
 class DevConfig:
     """Development mode configuration.
 
@@ -289,6 +319,7 @@ class ProjectManifest:
     shell: ShellConfig = field(default_factory=ShellConfig)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+    database: DatabaseConfig = field(default_factory=DatabaseConfig)
     dev: DevConfig = field(default_factory=DevConfig)
 
 
@@ -436,6 +467,12 @@ def load_manifest(path: Path) -> ProjectManifest:
         audit_enabled=auth_data.get("audit_enabled", True),
     )
 
+    # Parse database config
+    db_data = data.get("database", {})
+    database_config = DatabaseConfig(
+        url=db_data.get("url", "postgresql://localhost:5432/dazzle"),
+    )
+
     # Parse dev config (v0.24.0)
     dev_data = data.get("dev", {})
     dev_config = DevConfig(
@@ -453,5 +490,60 @@ def load_manifest(path: Path) -> ProjectManifest:
         shell=shell_config,
         theme=theme_config,
         auth=auth_config,
+        database=database_config,
         dev=dev_config,
     )
+
+
+_DEFAULT_DATABASE_URL = "postgresql://localhost:5432/dazzle"
+
+
+def resolve_database_url(
+    manifest: ProjectManifest | None = None,
+    *,
+    explicit_url: str = "",
+) -> str:
+    """Resolve the database URL with clear priority.
+
+    Priority:
+        1. explicit_url (CLI ``--database-url`` flag)
+        2. ``DATABASE_URL`` environment variable
+        3. ``dazzle.toml`` ``[database].url`` (supports ``env:VAR_NAME`` indirection)
+        4. Default: ``postgresql://localhost:5432/dazzle``
+
+    The ``env:VAR_NAME`` syntax in the manifest lets users commit a safe pointer
+    (e.g. ``url = "env:DATABASE_URL"``) that resolves at runtime.
+
+    Heroku-style ``postgres://`` URLs are normalised to ``postgresql://``
+    for SQLAlchemy compatibility.
+    """
+    # 1. Explicit CLI flag
+    if explicit_url:
+        return _normalise_postgres_scheme(explicit_url)
+
+    # 2. Environment variable
+    env_url = os.environ.get("DATABASE_URL", "")
+    if env_url:
+        return _normalise_postgres_scheme(env_url)
+
+    # 3. Manifest [database].url
+    if manifest is not None:
+        manifest_url = manifest.database.url
+        if manifest_url.startswith("env:"):
+            var_name = manifest_url[4:]
+            resolved = os.environ.get(var_name, "")
+            if resolved:
+                return _normalise_postgres_scheme(resolved)
+            # env var not set — fall through to default
+        elif manifest_url and manifest_url != _DEFAULT_DATABASE_URL:
+            return _normalise_postgres_scheme(manifest_url)
+
+    # 4. Default
+    return _DEFAULT_DATABASE_URL
+
+
+def _normalise_postgres_scheme(url: str) -> str:
+    """Convert Heroku's ``postgres://`` to ``postgresql://``."""
+    if url.startswith("postgres://"):
+        return "postgresql://" + url[len("postgres://") :]
+    return url

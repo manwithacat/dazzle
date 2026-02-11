@@ -8,10 +8,10 @@ Manage users and sessions directly against the auth database
 from __future__ import annotations
 
 import json
-import os
 import secrets
 import string
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -47,12 +47,21 @@ def auth_callback(
 
 
 def _get_auth_store(database_url: str | None = None) -> Any:
-    """Get an AuthStore instance. Requires PostgreSQL via DATABASE_URL."""
+    """Get an AuthStore instance.
+
+    Resolves URL via: explicit arg → CLI callback → dazzle.toml → env → default.
+    """
+    from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle_back.runtime.auth import AuthStore
 
-    url = database_url or _database_url_override or os.environ.get("DATABASE_URL")
-    if not url:
-        url = "postgresql://localhost:5432/dazzle"
+    explicit = database_url or _database_url_override or ""
+
+    manifest = None
+    manifest_path = Path("dazzle.toml").resolve()
+    if manifest_path.exists():
+        manifest = load_manifest(manifest_path)
+
+    url = resolve_database_url(manifest, explicit_url=explicit)
     return AuthStore(database_url=url)
 
 
@@ -409,15 +418,15 @@ def list_sessions(
     params: list[Any] = []
 
     if user_id_filter:
-        conditions.append("user_id = ?")
+        conditions.append("user_id = %s")
         params.append(user_id_filter)
 
     if not include_expired:
-        conditions.append("expires_at > ?")
+        conditions.append("expires_at > %s")
         params.append(datetime.now(UTC).isoformat())
 
     where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-    query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT ?"
+    query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT %s"
     params.append(limit)
 
     rows = store._execute(query, tuple(params))
@@ -475,13 +484,11 @@ def config(
     user_rows = store._execute("SELECT COUNT(*) as count FROM users")
     total_users = user_rows[0]["count"] if user_rows else 0
 
-    active_rows = store._execute(
-        f"SELECT COUNT(*) as count FROM users WHERE is_active = {store._bool_to_db(True)}"
-    )
+    active_rows = store._execute("SELECT COUNT(*) as count FROM users WHERE is_active = TRUE")
     active_users = active_rows[0]["count"] if active_rows else 0
 
     session_rows = store._execute(
-        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > ?",
+        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > %s",
         (datetime.now(UTC).isoformat(),),
     )
     active_sessions = session_rows[0]["count"] if session_rows else 0
@@ -493,8 +500,8 @@ def config(
         parsed = json.loads(row["roles"]) if row["roles"] else []
         all_roles.update(parsed)
 
-    db_type = "postgresql" if store._use_postgres else "sqlite"
-    db_path = "[PostgreSQL]" if store._use_postgres else str(store.db_path)
+    db_type = "postgresql"
+    db_path = "[PostgreSQL]"
 
     if output_json:
         console.print_json(

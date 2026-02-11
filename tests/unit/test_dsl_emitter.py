@@ -682,13 +682,15 @@ class TestEmitDiscoveryHandler:
 
     def test_consolidated_dispatch_emit(self, tmp_path: Path) -> None:
         """Verify emit operation is routed by consolidated handler."""
+        import asyncio
+
         from dazzle.mcp.server.handlers_consolidated import handle_discovery
 
         with patch("dazzle.mcp.server.handlers_consolidated._resolve_project") as mock_resolve:
             mock_resolve.return_value = tmp_path
             (tmp_path / ".dazzle").mkdir(parents=True, exist_ok=True)
 
-            result = json.loads(handle_discovery({"operation": "emit"}))
+            result = json.loads(asyncio.run(handle_discovery({"operation": "emit"})))
             # Should get "no reports" error, not "unknown operation"
             assert "error" in result
             assert "Unknown" not in result["error"]
