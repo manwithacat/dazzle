@@ -93,6 +93,9 @@ def _user_to_dict(user: Any, include_hash: bool = False) -> dict[str, Any]:
 # =============================================================================
 
 
+_MIN_PASSWORD_LENGTH = 8
+
+
 @auth_app.command(name="create-user")
 def create_user(
     email: Annotated[str, typer.Argument(help="User email address")],
@@ -103,9 +106,13 @@ def create_user(
     superuser: Annotated[
         bool, typer.Option("--superuser", help="Grant superuser privileges")
     ] = False,
+    password: Annotated[
+        str | None,
+        typer.Option("--password", "-p", help="Set an explicit password instead of generating one"),
+    ] = None,
     output_json: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ) -> None:
-    """Create a new user with a generated temporary password."""
+    """Create a new user with a generated or explicit password."""
     store = _get_auth_store()
 
     existing = store.get_user_by_email(email)
@@ -113,12 +120,21 @@ def create_user(
         console.print(f"[red]User with email '{email}' already exists[/red]")
         raise typer.Exit(1)
 
-    temp_password = _generate_temp_password()
+    if password is not None:
+        if len(password) < _MIN_PASSWORD_LENGTH:
+            console.print(f"[red]Password must be at least {_MIN_PASSWORD_LENGTH} characters[/red]")
+            raise typer.Exit(1)
+        chosen_password = password
+        is_explicit = True
+    else:
+        chosen_password = _generate_temp_password()
+        is_explicit = False
+
     role_list = [r.strip() for r in roles.split(",")] if roles else []
 
     user = store.create_user(
         email=email,
-        password=temp_password,
+        password=chosen_password,
         username=name,
         is_superuser=superuser,
         roles=role_list,
@@ -126,7 +142,8 @@ def create_user(
 
     if output_json:
         data = _user_to_dict(user)
-        data["temporary_password"] = temp_password
+        if not is_explicit:
+            data["temporary_password"] = chosen_password
         console.print_json(json.dumps(data))
     else:
         console.print(f"[green]User created:[/green] {user.email} (ID: {user.id})")
@@ -136,8 +153,13 @@ def create_user(
             console.print(f"  Roles: {', '.join(role_list)}")
         if superuser:
             console.print("  Superuser: yes")
-        console.print(f"  [yellow]Temporary password: {temp_password}[/yellow]")
-        console.print("  Share this password securely. The user should change it on first login.")
+        if is_explicit:
+            console.print("  Password: set to provided value")
+        else:
+            console.print(f"  [yellow]Temporary password: {chosen_password}[/yellow]")
+            console.print(
+                "  Share this password securely. The user should change it on first login."
+            )
 
 
 @auth_app.command(name="list-users")
@@ -268,9 +290,13 @@ def update_user(
 @auth_app.command(name="reset-password")
 def reset_password(
     identifier: Annotated[str, typer.Argument(help="User email or UUID")],
+    password: Annotated[
+        str | None,
+        typer.Option("--password", "-p", help="Set an explicit password instead of generating one"),
+    ] = None,
     output_json: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
 ) -> None:
-    """Reset a user's password to a new temporary password."""
+    """Reset a user's password to a new generated or explicit password."""
     store = _get_auth_store()
     user = _resolve_user(store, identifier)
 
@@ -278,26 +304,39 @@ def reset_password(
         console.print(f"[red]User not found: {identifier}[/red]")
         raise typer.Exit(1)
 
-    new_password = _generate_temp_password()
+    if password is not None:
+        if len(password) < _MIN_PASSWORD_LENGTH:
+            console.print(f"[red]Password must be at least {_MIN_PASSWORD_LENGTH} characters[/red]")
+            raise typer.Exit(1)
+        new_password = password
+        is_explicit = True
+    else:
+        new_password = _generate_temp_password()
+        is_explicit = False
+
     store.update_password(user.id, new_password)
     revoked = store.delete_user_sessions(user.id)
 
     if output_json:
-        console.print_json(
-            json.dumps(
-                {
-                    "user_id": str(user.id),
-                    "email": user.email,
-                    "temporary_password": new_password,
-                    "sessions_revoked": revoked,
-                }
-            )
-        )
+        result: dict[str, Any] = {
+            "user_id": str(user.id),
+            "email": user.email,
+            "sessions_revoked": revoked,
+        }
+        if not is_explicit:
+            result["temporary_password"] = new_password
+        console.print_json(json.dumps(result))
     else:
         console.print(f"[green]Password reset for:[/green] {user.email}")
-        console.print(f"  [yellow]New temporary password: {new_password}[/yellow]")
+        if is_explicit:
+            console.print("  Password: set to provided value")
+        else:
+            console.print(f"  [yellow]New temporary password: {new_password}[/yellow]")
         console.print(f"  Sessions revoked: {revoked}")
-        console.print("  Share this password securely. The user should change it on first login.")
+        if not is_explicit:
+            console.print(
+                "  Share this password securely. The user should change it on first login."
+            )
 
 
 @auth_app.command(name="deactivate")

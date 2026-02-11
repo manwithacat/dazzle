@@ -1015,6 +1015,10 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "boolean",
                         "description": "Only active users/sessions (for list, list_sessions; default: true)",
                     },
+                    "password": {
+                        "type": "string",
+                        "description": "Explicit password (for create, reset_password). If omitted, a random password is generated.",
+                    },
                     "session_id": {
                         "type": "string",
                         "description": "Session ID (for revoke_session)",

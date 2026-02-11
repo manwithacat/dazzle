@@ -626,6 +626,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
                 name=arguments.get("name"),
                 roles=arguments.get("roles"),
                 is_superuser=arguments.get("is_superuser", False),
+                password=arguments.get("password"),
                 project_path=pp,
             ),
             indent=2,
@@ -663,7 +664,11 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
         if not user_id:
             return json.dumps({"error": "user_id is required"})
         return json.dumps(
-            await reset_password_handler(user_id=user_id, project_path=pp),
+            await reset_password_handler(
+                user_id=user_id,
+                password=arguments.get("password"),
+                project_path=pp,
+            ),
             indent=2,
         )
     elif operation == "deactivate":

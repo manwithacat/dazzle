@@ -109,24 +109,26 @@ async def list_users_handler(
     }
 
 
+_MIN_PASSWORD_LENGTH = 8
+
+
 async def create_user_handler(
     email: str,
     name: str | None = None,
     roles: list[str] | None = None,
     is_superuser: bool = False,
+    password: str | None = None,
     project_path: str | None = None,
 ) -> dict[str, Any]:
     """
-    Create a new user with a generated temporary password.
-
-    The password is randomly generated and returned only once.
-    Share it securely with the user and instruct them to change it.
+    Create a new user with a generated or explicit password.
 
     Args:
         email: User's email address (must be unique)
         name: User's display name (optional)
         roles: List of roles to assign (e.g., ["admin"], ["manager", "agent"])
         is_superuser: Whether user has superuser privileges
+        password: Explicit password (optional; if omitted a random one is generated)
         project_path: Optional project path override
 
     Returns:
@@ -144,24 +146,41 @@ async def create_user_handler(
             "existing_user_id": str(existing.id),
         }
 
-    # Generate temporary password
-    temp_password = _generate_temp_password()
+    # Determine password
+    if password is not None:
+        if len(password) < _MIN_PASSWORD_LENGTH:
+            return {
+                "success": False,
+                "error": f"Password must be at least {_MIN_PASSWORD_LENGTH} characters",
+            }
+        chosen_password = password
+        is_explicit = True
+    else:
+        chosen_password = _generate_temp_password()
+        is_explicit = False
 
     # Create user
     user = auth_store.create_user(
         email=email,
-        password=temp_password,
+        password=chosen_password,
         username=name,
         is_superuser=is_superuser,
         roles=roles or [],
     )
 
-    return {
+    result: dict[str, Any] = {
         "success": True,
         "user": _user_to_dict(user),
-        "temporary_password": temp_password,
-        "message": "User created. Share the temporary password securely and instruct them to change it on first login.",
     }
+    if is_explicit:
+        result["message"] = "User created with the provided password."
+    else:
+        result["temporary_password"] = chosen_password
+        result["message"] = (
+            "User created. Share the temporary password securely "
+            "and instruct them to change it on first login."
+        )
+    return result
 
 
 async def get_user_handler(
@@ -268,15 +287,18 @@ async def update_user_handler(
 
 async def reset_password_handler(
     user_id: str,
+    password: str | None = None,
     project_path: str | None = None,
 ) -> dict[str, Any]:
     """
-    Reset a user's password to a new temporary password.
+    Reset a user's password to a new generated or explicit password.
 
-    Generates a new random password and invalidates all existing sessions.
+    Generates a new random password (or uses the provided one) and invalidates
+    all existing sessions.
 
     Args:
         user_id: User's UUID
+        password: Explicit password (optional; if omitted a random one is generated)
         project_path: Optional project path override
 
     Returns:
@@ -292,8 +314,18 @@ async def reset_password_handler(
             "error": f"User not found: {user_id}",
         }
 
-    # Generate new password
-    new_password = _generate_temp_password()
+    # Determine password
+    if password is not None:
+        if len(password) < _MIN_PASSWORD_LENGTH:
+            return {
+                "success": False,
+                "error": f"Password must be at least {_MIN_PASSWORD_LENGTH} characters",
+            }
+        new_password = password
+        is_explicit = True
+    else:
+        new_password = _generate_temp_password()
+        is_explicit = False
 
     # Update password
     auth_store.update_password(UUID(user_id), new_password)
@@ -301,14 +333,23 @@ async def reset_password_handler(
     # Revoke all sessions for security
     revoked_count = auth_store.delete_user_sessions(UUID(user_id))
 
-    return {
+    result: dict[str, Any] = {
         "success": True,
         "user_id": user_id,
         "email": user.email,
-        "temporary_password": new_password,
         "sessions_revoked": revoked_count,
-        "message": "Password reset. Share the new password securely. All existing sessions have been revoked.",
     }
+    if is_explicit:
+        result["message"] = (
+            "Password reset to the provided value. All existing sessions have been revoked."
+        )
+    else:
+        result["temporary_password"] = new_password
+        result["message"] = (
+            "Password reset. Share the new password securely. "
+            "All existing sessions have been revoked."
+        )
+    return result
 
 
 async def deactivate_user_handler(
