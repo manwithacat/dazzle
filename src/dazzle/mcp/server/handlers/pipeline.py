@@ -333,13 +333,18 @@ def _extract_test_coverage_metrics(data: dict[str, Any]) -> dict[str, Any]:
 
 def _extract_story_coverage_metrics(data: dict[str, Any]) -> dict[str, Any]:
     """Extract key metrics from story(coverage) or process(coverage) result."""
-    return {
+    metrics: dict[str, Any] = {
         "total_stories": data.get("total_stories", data.get("total", 0)),
         "covered": data.get("covered", 0),
         "partial": data.get("partial", 0),
         "uncovered": data.get("uncovered", 0),
         "coverage_percent": data.get("coverage_percent", data.get("coverage", 0)),
     }
+    # Include effective coverage when available (accounts for irreducible partials)
+    eff = data.get("effective_coverage_percent")
+    if eff is not None:
+        metrics["effective_coverage_percent"] = eff
+    return metrics
 
 
 def _extract_test_design_gaps_metrics(data: dict[str, Any]) -> dict[str, Any]:
@@ -573,11 +578,10 @@ def _step_has_issues(operation: str, result: Any) -> bool:
     if not isinstance(result, dict):
         return False
 
-    # Lint: any errors or warnings
+    # Lint: expand only for errors (warnings are stable baseline noise)
     if operation == "dsl(lint)":
         errs = result.get("errors", [])
-        warns = result.get("warnings", [])
-        return bool(errs) or bool(warns)
+        return bool(errs)
 
     # Fidelity: any gaps
     if operation == "dsl(fidelity)":
@@ -618,6 +622,45 @@ def _step_has_issues(operation: str, result: Any) -> bool:
         return err_count > 0 or warn_count > 0
 
     return False
+
+
+# ---------------------------------------------------------------------------
+# Result filtering — trim expanded results for 'issues' mode
+# ---------------------------------------------------------------------------
+
+
+def _filter_issues_result(operation: str, result: Any) -> Any:
+    """Trim expanded step results to only the actionable parts.
+
+    Called in 'issues' mode before attaching a full result to the response.
+    Reduces token waste by stripping large, repetitive, or redundant fields.
+    """
+    if not isinstance(result, dict):
+        return result
+
+    # Story/process coverage: keep only partial/uncovered stories
+    if operation in ("story(coverage)", "process(coverage)"):
+        stories = result.get("stories", [])
+        if isinstance(stories, list):
+            filtered = [
+                s
+                for s in stories
+                if isinstance(s, dict) and s.get("status") in ("partial", "uncovered")
+            ]
+            result = {**result, "stories": filtered}
+            # Drop pagination fields that no longer apply
+            result.pop("showing", None)
+            result.pop("offset", None)
+            result.pop("has_more", None)
+            result.pop("guidance", None)
+        return result
+
+    # Composition audit: strip markdown (duplicates structured JSON)
+    if operation == "composition(audit)":
+        result = {k: v for k, v in result.items() if k != "markdown"}
+        return result
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -679,7 +722,7 @@ def _build_pipeline_response(
 
                 # "issues" mode: expand steps that have problems
                 if detail == "issues" and _step_has_issues(op, result_data):
-                    compact["result"] = result_data
+                    compact["result"] = _filter_issues_result(op, result_data)
                 else:
                     metrics = _extract_step_metrics(op, result_data)
                     if metrics:
