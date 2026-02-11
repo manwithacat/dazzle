@@ -13,8 +13,9 @@ Analysis passes (per persona):
 3. Story surface coverage — story-implied CRUD has matching accessible surfaces
 4. Process surface wiring — human_task steps reference existing, accessible surfaces
 5. Experience completeness — experience steps/transitions are valid and accessible
-6. Orphan surface detection — surfaces unreachable from workspace regions, experiences, or processes
-7. Cross-entity gaps — multi-entity stories have connected navigation paths
+6. Experience reachability — experiences have entry points from persona's workspace
+7. Orphan surface detection — surfaces unreachable from workspace regions, experiences, or processes
+8. Cross-entity gaps — multi-entity stories have connected navigation paths
 
 Personas with no stories and no default_workspace are skipped (they produce only noise).
 """
@@ -168,6 +169,7 @@ _GAP_TYPE_TO_CATEGORY: dict[str, str] = {
     "process_step_no_surface": "workflow_gap",
     "experience_broken_step": "workflow_gap",
     "experience_dangling_transition": "navigation_gap",
+    "unreachable_experience": "navigation_gap",
     "orphan_surfaces": "navigation_gap",
     "dead_end_surface": "navigation_gap",  # backward compat
     "cross_entity_gap": "navigation_gap",
@@ -698,7 +700,117 @@ def _find_reachable_steps(start: str, steps: list[Any]) -> set[str]:
 
 
 # =============================================================================
-# Analysis Pass 6: Orphan Surface Detection
+# Analysis Pass 6: Experience Reachability
+# =============================================================================
+
+
+def _analyze_experience_reachability(
+    persona_id: str,
+    persona: Any,
+    appspec: Any,
+    accessible_surfaces: set[str],
+) -> list[PersonaJourneyGap]:
+    """Check that experiences relevant to a persona are reachable from their workspace.
+
+    An experience is reachable if its start step's surface (or any surface in the
+    experience) is referenced by a workspace region accessible to the persona.
+    Emits one HIGH gap per unreachable experience.
+    """
+    gaps: list[PersonaJourneyGap] = []
+    experiences = getattr(appspec, "experiences", []) or []
+    surfaces = getattr(appspec, "surfaces", []) or []
+    workspaces = getattr(appspec, "workspaces", []) or []
+
+    if not experiences:
+        return gaps
+
+    # Build set of entities from persona's stories
+    story_entity_names: set[str] = set()
+    for story in _get_persona_stories(persona_id, appspec):
+        story_entity_names.update(_get_story_entities(story))
+
+    # Build set of surfaces reachable from persona's workspace regions
+    default_ws = getattr(persona, "default_workspace", None)
+    workspace_surfaces: set[str] = set()
+    for ws in workspaces:
+        # Only consider persona's own workspace
+        if default_ws and ws.name != default_ws:
+            continue
+        for region in getattr(ws, "regions", []) or []:
+            source = getattr(region, "source", None)
+            if source:
+                for s in surfaces:
+                    if get_surface_entity(s) == source:
+                        workspace_surfaces.add(s.name)
+
+    for exp in experiences:
+        exp_steps = getattr(exp, "steps", []) or []
+
+        # Collect surfaces referenced by this experience
+        exp_surfaces: set[str] = set()
+        for step in exp_steps:
+            step_kind = str(getattr(step, "kind", ""))
+            if step_kind in ("surface", "StepKind.SURFACE"):
+                surface_ref = getattr(step, "surface", None)
+                if surface_ref:
+                    exp_surfaces.add(surface_ref)
+
+        if not exp_surfaces:
+            continue
+
+        # Check if this experience is relevant to the persona (its surfaces
+        # reference entities from the persona's stories)
+        relevant = False
+        for s_name in exp_surfaces:
+            for s in surfaces:
+                if s.name == s_name and get_surface_entity(s) in story_entity_names:
+                    relevant = True
+                    break
+            if relevant:
+                break
+
+        if not relevant:
+            continue
+
+        # Check if ANY experience surface is reachable from workspace regions
+        if exp_surfaces & workspace_surfaces:
+            continue
+
+        # Find start surface for the description
+        start_step = getattr(exp, "start_step", None)
+        start_surface = None
+        if start_step:
+            for step in exp_steps:
+                if getattr(step, "name", "") == start_step:
+                    start_surface = getattr(step, "surface", None)
+                    break
+
+        ws_name = default_ws or "none"
+        gaps.append(
+            PersonaJourneyGap(
+                persona_id=persona_id,
+                gap_type="unreachable_experience",
+                severity="high",
+                description=(
+                    f"Experience '{exp.name}' ({len(exp_steps)} steps, "
+                    f"persona: {persona_id}) has no entry point from "
+                    f"workspace '{ws_name}'"
+                ),
+                experience_name=exp.name,
+                surface_name=start_surface,
+                related_artefacts=[
+                    f"experience:{exp.name}",
+                    f"workspace:{ws_name}",
+                    *(f"surface:{s}" for s in sorted(exp_surfaces)),
+                ],
+            )
+        )
+
+    return gaps
+
+
+# =============================================================================
+# Analysis Pass 7: Orphan Surface Detection
 # =============================================================================
 
 
@@ -786,7 +898,7 @@ def _analyze_orphan_surfaces(
 
 
 # =============================================================================
-# Analysis Pass 7: Cross-Entity Gaps
+# Analysis Pass 8: Cross-Entity Gaps
 # =============================================================================
 
 
@@ -921,12 +1033,13 @@ def run_headless_discovery(
                 "missing_surfaces": missing_surfaces,
             }
 
-        # Run all 7 analysis passes
+        # Run all 8 analysis passes
         pr.gaps.extend(_analyze_workspace_reachability(pid, persona, appspec))
         pr.gaps.extend(_analyze_surface_access(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_story_surface_coverage(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_process_surface_wiring(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_experience_completeness(pid, persona, appspec, accessible))
+        pr.gaps.extend(_analyze_experience_reachability(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_orphan_surfaces(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_cross_entity_gaps(pid, persona, appspec, accessible, kg_store))
 

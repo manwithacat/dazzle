@@ -498,6 +498,230 @@ class TestExperienceCompleteness:
 
 
 # =============================================================================
+# Tests: Experience Reachability
+# =============================================================================
+
+
+class TestExperienceReachability:
+    def test_reachable_experience_no_gap(self) -> None:
+        """Experience whose start surface is in persona's workspace → no gap."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+                _make_surface("onboard_details", mode="create", entity_ref="Company"),
+            ],
+            workspaces=[
+                _make_workspace(
+                    "customer_dash",
+                    regions=[_make_region("onboarding", source="Company")],
+                ),
+            ],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[
+                        _make_exp_step(
+                            "welcome",
+                            surface="onboard_welcome",
+                            transitions=[_make_transition("details")],
+                        ),
+                        _make_exp_step("details", surface="onboard_details"),
+                    ],
+                    start_step="welcome",
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome", "onboard_details"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 0
+
+    def test_unreachable_experience_flagged_high(self) -> None:
+        """Experience with no workspace entry point → HIGH gap."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+                _make_surface("onboard_details", mode="create", entity_ref="Company"),
+                _make_surface("notif_list", mode="list", entity_ref="Notification"),
+            ],
+            workspaces=[
+                _make_workspace(
+                    "customer_dash",
+                    # Only references Notification, NOT Company
+                    regions=[_make_region("notifications", source="Notification")],
+                ),
+            ],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[
+                        _make_exp_step(
+                            "welcome",
+                            surface="onboard_welcome",
+                            transitions=[_make_transition("details")],
+                        ),
+                        _make_exp_step("details", surface="onboard_details"),
+                    ],
+                    start_step="welcome",
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome", "onboard_details", "notif_list"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 1
+        assert gaps[0].gap_type == "unreachable_experience"
+        assert gaps[0].severity == "high"
+        assert gaps[0].experience_name == "client_onboarding"
+        assert "customer_dash" in gaps[0].description
+        assert "2 steps" in gaps[0].description
+
+    def test_experience_for_other_persona_ignored(self) -> None:
+        """Experience referencing entities not in persona's stories → skipped."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        persona = _make_persona("viewer", default_workspace="viewer_dash")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            workspaces=[
+                _make_workspace("viewer_dash", regions=[]),
+            ],
+            # viewer has no stories involving Company
+            stories=[_make_story("S1", actor="viewer", scope=["Task"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome"}
+        gaps = _analyze_experience_reachability("viewer", persona, appspec, accessible)
+        assert len(gaps) == 0
+
+    def test_no_workspace_reports_none(self) -> None:
+        """Persona with no default_workspace → workspace shown as 'none'."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        persona = _make_persona("customer")  # no default_workspace
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 1
+        assert "'none'" in gaps[0].description
+
+    def test_multiple_unreachable_experiences(self) -> None:
+        """Each unreachable experience produces its own gap (not aggregated)."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+                _make_surface("kyc_start", mode="view", entity_ref="Company"),
+            ],
+            workspaces=[
+                _make_workspace("customer_dash", regions=[]),
+            ],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                ),
+                _make_experience(
+                    "kyc_verification",
+                    steps=[_make_exp_step("start", surface="kyc_start")],
+                    start_step="start",
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome", "kyc_start"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 2
+        exp_names = {g.experience_name for g in gaps}
+        assert exp_names == {"client_onboarding", "kyc_verification"}
+
+    def test_related_artefacts_populated(self) -> None:
+        """Gap includes experience, workspace, and surface artefact refs."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            workspaces=[_make_workspace("customer_dash", regions=[])],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 1
+        artefacts = gaps[0].related_artefacts
+        assert "experience:client_onboarding" in artefacts
+        assert "workspace:customer_dash" in artefacts
+        assert "surface:onboard_welcome" in artefacts
+
+    def test_observation_conversion(self) -> None:
+        """unreachable_experience gaps convert to navigation_gap Observations."""
+        from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+        appspec = _make_appspec(
+            entities=[_make_entity("Company")],
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            personas=[_make_persona("customer", default_workspace="customer_dash")],
+            workspaces=[_make_workspace("customer_dash", regions=[])],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                ),
+            ],
+        )
+        report = run_headless_discovery(appspec)
+        observations = report.to_observations()
+        reachability_obs = [
+            o for o in observations if o.metadata.get("gap_type") == "unreachable_experience"
+        ]
+        assert len(reachability_obs) == 1
+        assert reachability_obs[0].category == "navigation_gap"
+        assert reachability_obs[0].severity == "high"
+
+
+# =============================================================================
 # Tests: Orphan Surface Detection
 # =============================================================================
 
