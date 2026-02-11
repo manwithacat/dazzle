@@ -54,11 +54,11 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         else:
             result["active_project"] = None
 
-    # Project version from package metadata
+    # Project version — prefer pyproject.toml (editable), fall back to metadata
     try:
-        from importlib.metadata import version as pkg_version
+        from dazzle._version import get_version
 
-        result["version"] = pkg_version("dazzle")
+        result["version"] = get_version()
     except Exception:
         result["version"] = "unknown"
 

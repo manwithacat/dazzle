@@ -59,9 +59,9 @@ logger = logging.getLogger("dazzle.mcp")
 
 # Create the MCP server instance
 try:
-    from importlib.metadata import version as _pkg_version
+    from dazzle._version import get_version
 
-    _dazzle_version: str | None = _pkg_version("dazzle")
+    _dazzle_version: str | None = get_version()
 except Exception:
     _dazzle_version = None
 

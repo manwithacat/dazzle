@@ -13,6 +13,6 @@ def get_version() -> str:
         if match := re.search(r'^version\s*=\s*["\']([^"\']+)["\']', content, re.MULTILINE):
             return match.group(1)
     try:
-        return _metadata_version("dazzle")
+        return _metadata_version("dazzle-dsl")
     except Exception:
         return "0.0.0"

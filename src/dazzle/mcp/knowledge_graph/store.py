@@ -1370,8 +1370,8 @@ class KnowledgeGraph:
 def _get_dazzle_version() -> str:
     """Get the current Dazzle version string."""
     try:
-        from importlib.metadata import version
+        from dazzle._version import get_version
 
-        return version("dazzle")
+        return get_version()
     except Exception:
         return "unknown"
