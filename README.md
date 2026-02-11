@@ -954,7 +954,7 @@ dazzle fidelity --surface orders # Score a single surface
 
 ## Why HTMX, Not React
 
-DAZZLE's frontend is server-rendered HTML with HTMX and Alpine.js. This is a deliberate architectural choice, not a limitation.
+DAZZLE's frontend is server-rendered HTML using HTMX. This is a deliberate architectural choice, not a limitation.
 
 **React's strengths are for humans.** React's component model is designed around how human developers think: compositional UI building blocks, a rich ecosystem of community packages, and a mental model (declarative state → view) that maps well to how people reason about interfaces.
 
