@@ -248,6 +248,25 @@ class TestStoriesCoverage:
         for story in data["stories"]:
             assert story["status"] == "uncovered"
 
+    def test_coverage_sorts_actionable_first(
+        self, mock_app_spec_with_coverage: MagicMock, tmp_path: Path
+    ) -> None:
+        """Test that uncovered/partial stories appear before covered ones."""
+        from dazzle.mcp.server.handlers.process import stories_coverage_handler
+
+        with patch(
+            "dazzle.mcp.server.handlers.process._load_app_spec",
+            return_value=mock_app_spec_with_coverage,
+        ):
+            result = stories_coverage_handler(tmp_path, {})
+            data = json.loads(result)
+
+        stories = data["stories"]
+        assert len(stories) == 2
+        # Uncovered story should sort before covered
+        assert stories[0]["status"] == "uncovered"
+        assert stories[1]["status"] == "covered"
+
     def test_coverage_excludes_rejected_stories(self, tmp_path: Path) -> None:
         """Test that rejected stories are excluded from coverage calculations."""
         from dazzle.mcp.server.handlers.process import stories_coverage_handler

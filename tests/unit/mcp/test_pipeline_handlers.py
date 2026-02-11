@@ -87,8 +87,36 @@ class TestExtractStepMetrics:
         }
         m = _extract_step_metrics("dsl(fidelity)", data)
         assert m["overall_fidelity"] == 0.85
-        assert m["surfaces_scored"] == 2
+        assert m["surfaces_with_gaps"] == 2
         assert m["total_gaps"] == 3
+
+    def test_composition_audit_metrics(self) -> None:
+        data = {
+            "overall_score": 75,
+            "pages": [
+                {
+                    "route": "/",
+                    "score": 75,
+                    "violations_count": {"high": 1, "medium": 2, "low": 0},
+                },
+                {
+                    "route": "/about",
+                    "score": 90,
+                    "violations_count": {"high": 0, "medium": 1, "low": 0},
+                },
+            ],
+        }
+        m = _extract_step_metrics("composition(audit)", data)
+        assert m["overall_score"] == 75
+        assert m["pages_audited"] == 2
+        assert m["violations"] == {"high": 1, "medium": 3, "low": 0}
+
+    def test_composition_audit_no_pages(self) -> None:
+        data = {"overall_score": 100, "pages": []}
+        m = _extract_step_metrics("composition(audit)", data)
+        assert m["overall_score"] == 100
+        assert m["pages_audited"] == 0
+        assert m["violations"] == {}
 
     def test_test_generate_metrics(self) -> None:
         data = {
@@ -140,9 +168,21 @@ class TestExtractStepMetrics:
         assert m["gaps_by_severity"] == {"critical": 2, "minor": 1}
 
     def test_semantics_extract_metrics(self) -> None:
-        data = {"entity_count": 5, "command_count": 3, "event_count": 8}
+        data = {
+            "entity_count": 5,
+            "command_count": 3,
+            "event_count": 8,
+            "tenancy_signal_count": 2,
+            "compliance_signal_count": 5,
+        }
         m = _extract_step_metrics("semantics(extract)", data)
-        assert m == {"entity_count": 5, "command_count": 3, "event_count": 8}
+        assert m == {
+            "entity_count": 5,
+            "command_count": 3,
+            "event_count": 8,
+            "tenancy_signal_count": 2,
+            "compliance_signal_count": 5,
+        }
 
     def test_semantics_validate_metrics(self) -> None:
         data = {"valid": True, "error_count": 0, "warning_count": 2}
@@ -208,6 +248,38 @@ class TestCollectTopIssues:
         issues = _collect_top_issues(steps)
         assert len(issues) == 1
         assert issues[0]["severity"] == "warning"
+
+    def test_collects_composition_violations(self) -> None:
+        steps = [
+            {
+                "operation": "composition(audit)",
+                "status": "passed",
+                "result": {
+                    "pages": [
+                        {
+                            "route": "/",
+                            "page_violations": [
+                                {"severity": "high", "message": "Missing hero section"},
+                            ],
+                            "sections": [
+                                {
+                                    "type": "hero",
+                                    "violations": [
+                                        {"severity": "medium", "message": "CTA weight too low"},
+                                    ],
+                                },
+                            ],
+                        },
+                    ]
+                },
+            },
+        ]
+        issues = _collect_top_issues(steps)
+        assert len(issues) == 2
+        assert all(i["source"] == "composition" for i in issues)
+        severities = {i["severity"] for i in issues}
+        assert "high" in severities
+        assert "medium" in severities
 
     def test_collects_fidelity_recommendations(self) -> None:
         steps = [
@@ -502,6 +574,15 @@ class TestPipelineSummaryIntegration:
             }
         )
 
+        mock_composition = MagicMock()
+        mock_composition.audit_composition_handler.return_value = json.dumps(
+            {
+                "pages": [{"route": "/", "score": 100, "violations_count": {}}],
+                "overall_score": 100,
+                "summary": "1 page audited",
+            }
+        )
+
         mock_dsl_test = MagicMock()
         mock_dsl_test.generate_dsl_tests_handler.return_value = json.dumps(
             {"tests": [], "total_tests": 0}
@@ -529,6 +610,7 @@ class TestPipelineSummaryIntegration:
         handler_mods = {
             "dazzle.mcp.server.handlers.dsl": mock_dsl,
             "dazzle.mcp.server.handlers.fidelity": mock_fidelity,
+            "dazzle.mcp.server.handlers.composition": mock_composition,
             "dazzle.mcp.server.handlers.dsl_test": mock_dsl_test,
             "dazzle.mcp.server.handlers.process": mock_process,
             "dazzle.mcp.server.handlers.test_design": mock_test_design,

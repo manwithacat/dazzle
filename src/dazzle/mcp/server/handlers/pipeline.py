@@ -28,13 +28,14 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
       1. dsl(validate)
       2. dsl(lint)
       3. dsl(fidelity)
-      4. dsl_test(generate)
-      5. dsl_test(coverage)
-      6. story(coverage)
-      7. process(coverage)
-      8. test_design(gaps)
-      9. semantics(extract)
-     10. semantics(validate_events)
+      4. composition(audit)
+      5. dsl_test(generate)
+      6. dsl_test(coverage)
+      7. story(coverage)
+      8. process(coverage)
+      9. test_design(gaps)
+     10. semantics(extract)
+     11. semantics(validate_events)
 
     Each step runs regardless of prior failures (unless stop_on_error=True).
     Returns a structured JSON report with per-step results and overall summary.
@@ -111,15 +112,22 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     # -----------------------------------------------------------------------
     from .fidelity import score_fidelity_handler
 
-    _run_step(3, "dsl(fidelity)", score_fidelity_handler, project_path, {})
+    _run_step(3, "dsl(fidelity)", score_fidelity_handler, project_path, {"gaps_only": True})
 
     # -----------------------------------------------------------------------
-    # Step 4: Test Generation
+    # Step 4: Composition Audit
+    # -----------------------------------------------------------------------
+    from .composition import audit_composition_handler
+
+    _run_step(4, "composition(audit)", audit_composition_handler, project_path, {})
+
+    # -----------------------------------------------------------------------
+    # Step 5: Test Generation
     # -----------------------------------------------------------------------
     from .dsl_test import generate_dsl_tests_handler
 
     _run_step(
-        4,
+        5,
         "dsl_test(generate)",
         generate_dsl_tests_handler,
         project_path,
@@ -127,24 +135,24 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
     # -----------------------------------------------------------------------
-    # Step 5: Test Coverage
+    # Step 6: Test Coverage
     # -----------------------------------------------------------------------
     from .dsl_test import get_dsl_test_coverage_handler
 
-    _run_step(5, "dsl_test(coverage)", get_dsl_test_coverage_handler, project_path, {})
+    _run_step(6, "dsl_test(coverage)", get_dsl_test_coverage_handler, project_path, {})
 
     # -----------------------------------------------------------------------
-    # Step 6: Story Coverage
+    # Step 7: Story Coverage
     # -----------------------------------------------------------------------
     from .process import stories_coverage_handler
 
-    _run_step(6, "story(coverage)", stories_coverage_handler, project_path, {})
+    _run_step(7, "story(coverage)", stories_coverage_handler, project_path, {})
 
     # -----------------------------------------------------------------------
-    # Step 7: Process Coverage
+    # Step 8: Process Coverage
     # -----------------------------------------------------------------------
     _run_step(
-        7,
+        8,
         "process(coverage)",
         stories_coverage_handler,
         project_path,
@@ -152,29 +160,29 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
     # -----------------------------------------------------------------------
-    # Step 8: Test Design Gaps
+    # Step 9: Test Design Gaps
     # -----------------------------------------------------------------------
     from .test_design import get_test_gaps_handler
 
-    _run_step(8, "test_design(gaps)", get_test_gaps_handler, project_path, {})
+    _run_step(9, "test_design(gaps)", get_test_gaps_handler, project_path, {})
 
     # -----------------------------------------------------------------------
-    # Step 9: Semantics Extract
+    # Step 10: Semantics Extract
     # -----------------------------------------------------------------------
     try:
         from dazzle.mcp.event_first_tools import handle_extract_semantics
 
         _run_step(
-            9,
+            10,
             "semantics(extract)",
             handle_extract_semantics,
-            {},
+            {"compact": True},
             project_path,
         )
     except ImportError:
         steps.append(
             {
-                "step": 9,
+                "step": 10,
                 "operation": "semantics(extract)",
                 "status": "skipped",
                 "reason": "event_first_tools not available",
@@ -182,13 +190,13 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
         )
 
     # -----------------------------------------------------------------------
-    # Step 10: Semantics Validate Events
+    # Step 11: Semantics Validate Events
     # -----------------------------------------------------------------------
     try:
         from dazzle.mcp.event_first_tools import handle_validate_events
 
         _run_step(
-            10,
+            11,
             "semantics(validate_events)",
             handle_validate_events,
             {},
@@ -197,7 +205,7 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     except ImportError:
         steps.append(
             {
-                "step": 10,
+                "step": 11,
                 "operation": "semantics(validate_events)",
                 "status": "skipped",
                 "reason": "event_first_tools not available",
@@ -205,13 +213,13 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
         )
 
     # -----------------------------------------------------------------------
-    # Optional Step 11: Run all tests (only if base_url provided)
+    # Optional Step 12: Run all tests (only if base_url provided)
     # -----------------------------------------------------------------------
     if base_url:
         from .dsl_test import run_all_dsl_tests_handler
 
         _run_step(
-            11,
+            12,
             "dsl_test(run_all)",
             run_all_dsl_tests_handler,
             project_path,
@@ -253,7 +261,23 @@ def _extract_fidelity_metrics(data: dict[str, Any]) -> dict[str, Any]:
         "overall_fidelity": data.get("overall_fidelity"),
         "total_gaps": data.get("total_gaps", 0),
         "story_coverage": data.get("story_coverage"),
-        "surfaces_scored": len(surfaces),
+        "surfaces_with_gaps": len(surfaces),
+    }
+
+
+def _extract_composition_audit_metrics(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract key metrics from composition(audit) result."""
+    pages = data.get("pages", [])
+    total_violations: dict[str, int] = {}
+    for page in pages if isinstance(pages, list) else []:
+        if not isinstance(page, dict):
+            continue
+        for sev, count in page.get("violations_count", {}).items():
+            total_violations[sev] = total_violations.get(sev, 0) + count
+    return {
+        "overall_score": data.get("overall_score", 100),
+        "pages_audited": len(pages) if isinstance(pages, list) else 0,
+        "violations": total_violations,
     }
 
 
@@ -310,6 +334,12 @@ def _extract_semantics_extract_metrics(data: dict[str, Any]) -> dict[str, Any]:
         "entity_count": data.get("entity_count", len(data.get("entities", []))),
         "command_count": data.get("command_count", len(data.get("commands", []))),
         "event_count": data.get("event_count", len(data.get("events", []))),
+        "tenancy_signal_count": data.get(
+            "tenancy_signal_count", len(data.get("tenancy_signals", []))
+        ),
+        "compliance_signal_count": data.get(
+            "compliance_signal_count", len(data.get("compliance_signals", []))
+        ),
     }
 
 
@@ -348,6 +378,7 @@ _METRICS_EXTRACTORS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "dsl(validate)": _extract_validate_metrics,
     "dsl(lint)": _extract_lint_metrics,
     "dsl(fidelity)": _extract_fidelity_metrics,
+    "composition(audit)": _extract_composition_audit_metrics,
     "dsl_test(generate)": _extract_test_generate_metrics,
     "dsl_test(coverage)": _extract_test_coverage_metrics,
     "story(coverage)": _extract_story_coverage_metrics,
@@ -421,6 +452,44 @@ def _collect_top_issues(
                         "message": warn if isinstance(warn, str) else str(warn),
                     }
                 )
+
+        # Composition audit violations
+        if op == "composition(audit)":
+            for page in result.get("pages", []) if isinstance(result.get("pages"), list) else []:
+                if not isinstance(page, dict):
+                    continue
+                route = page.get("route", "/")
+                # Page-level violations
+                for v in (
+                    page.get("page_violations", [])
+                    if isinstance(page.get("page_violations"), list)
+                    else []
+                ):
+                    if isinstance(v, dict):
+                        issues.append(
+                            {
+                                "source": "composition",
+                                "severity": v.get("severity", "minor"),
+                                "message": f"{route}: {v.get('message', str(v))}",
+                            }
+                        )
+                # Section-level violations
+                for sec in (
+                    page.get("sections", []) if isinstance(page.get("sections"), list) else []
+                ):
+                    if not isinstance(sec, dict):
+                        continue
+                    for v in (
+                        sec.get("violations", []) if isinstance(sec.get("violations"), list) else []
+                    ):
+                        if isinstance(v, dict):
+                            issues.append(
+                                {
+                                    "source": "composition",
+                                    "severity": v.get("severity", "minor"),
+                                    "message": f"{route}: {v.get('message', str(v))}",
+                                }
+                            )
 
         # Fidelity recommendations
         if op == "dsl(fidelity)":

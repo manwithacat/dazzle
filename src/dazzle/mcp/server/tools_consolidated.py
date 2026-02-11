@@ -1317,8 +1317,8 @@ def get_consolidated_tools() -> list[Tool]:
             name="pipeline",
             description=(
                 "Full deterministic quality audit in a single call. "
-                "Chains: validate → lint → fidelity → test_generate → test_coverage → "
-                "story_coverage → process_coverage → test_design_gaps → semantics. "
+                "Chains: validate → lint → fidelity → composition_audit → test_generate → "
+                "test_coverage → story_coverage → process_coverage → test_design_gaps → semantics. "
                 "If base_url is provided, also runs all API tests. "
                 "Returns structured JSON with per-step results and overall summary."
             ),

@@ -27,6 +27,106 @@ logger = logging.getLogger("dazzle.mcp.event_first")
 
 
 # ============================================================================
+# Compliance Signal Matching Helpers
+# ============================================================================
+
+# Entity names whose fields are unlikely to be personal data.
+_SYSTEM_ENTITY_PREFIXES = (
+    "audit",
+    "log",
+    "event",
+    "metric",
+    "config",
+    "setting",
+    "migration",
+    "job",
+    "queue",
+    "cache",
+    "session",
+    "webhook",
+)
+
+# Field-name prefixes/suffixes that neutralize a PII pattern.
+# e.g. "ip_address" is technical, "entity_name" is a label.
+_NEUTRALIZING_CONTEXTS: dict[str, set[str]] = {
+    "address": {"ip", "mac", "memory", "wallet", "contract", "api", "endpoint", "url"},
+    "name": {
+        "entity",
+        "table",
+        "column",
+        "field",
+        "module",
+        "class",
+        "file",
+        "service",
+        "rule",
+        "package",
+        "tenant",
+        "display",
+        "code",
+        "type",
+        "method",
+        "host",
+        "queue",
+        "event",
+        "action",
+        "metric",
+        "config",
+        "status",
+        "process",
+        "workflow",
+        "template",
+        "schema",
+    },
+    "card": {"score", "dash", "report"},
+    "balance": {"load", "check"},
+}
+
+
+def _match_compliance_pattern(
+    field_name: str,
+    entity_name: str,
+    pattern: str,
+    base_confidence: float,
+) -> float | None:
+    """Check if a field matches a compliance pattern with context awareness.
+
+    Returns adjusted confidence, or None if the match is rejected.
+
+    Uses word-boundary matching (splits on ``_``) and applies
+    entity-level and field-context heuristics to reduce false positives.
+    """
+    segments = field_name.lower().split("_")
+
+    # Word-boundary check: pattern must appear as a complete segment
+    if pattern not in segments:
+        # Also check for multi-word patterns (e.g. "social_security")
+        if "_" in pattern:
+            if pattern not in field_name.lower():
+                return None
+        else:
+            return None
+
+    # Check for neutralizing context in sibling segments
+    neutralizers = _NEUTRALIZING_CONTEXTS.get(pattern)
+    if neutralizers:
+        other_segments = {s for s in segments if s != pattern}
+        if other_segments & neutralizers:
+            return None
+
+    # Lower confidence for system/audit entities
+    entity_lower = entity_name.lower()
+    if any(entity_lower.startswith(prefix) for prefix in _SYSTEM_ENTITY_PREFIXES):
+        base_confidence *= 0.4  # Significant reduction
+
+    # Threshold: skip very low confidence signals
+    if base_confidence < 0.3:
+        return None
+
+    return round(base_confidence, 2)
+
+
+# ============================================================================
 # Semantic Extraction Tools
 # ============================================================================
 
@@ -176,35 +276,51 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
                 }
             )
 
-    # Infer compliance from field names
-    pii_patterns = ["email", "phone", "ssn", "address", "name", "dob", "birth"]
-    financial_patterns = ["amount", "total", "price", "cost", "balance", "payment"]
+    # Infer compliance from field names (context-aware matching)
+    pii_patterns = {
+        "email": 0.95,
+        "phone": 0.9,
+        "ssn": 0.99,
+        "address": 0.85,
+        "name": 0.7,
+        "dob": 0.9,
+        "birth": 0.85,
+    }
+    financial_patterns = {
+        "amount": 0.8,
+        "total": 0.75,
+        "price": 0.8,
+        "cost": 0.75,
+        "balance": 0.85,
+        "payment": 0.9,
+    }
 
     for entity in appspec.domain.entities:
         for f in entity.fields:
-            field_lower = f.name.lower()
-            for pattern in pii_patterns:
-                if pattern in field_lower:
+            for pattern, base_conf in pii_patterns.items():
+                conf = _match_compliance_pattern(f.name, entity.name, pattern, base_conf)
+                if conf is not None:
                     result.compliance_signals.append(
                         {
                             "type": "inferred_pii",
                             "entity": entity.name,
                             "field": f.name,
                             "pattern": pattern,
-                            "confidence": 0.8,
+                            "confidence": conf,
                         }
                     )
                     break
 
-            for pattern in financial_patterns:
-                if pattern in field_lower:
+            for pattern, base_conf in financial_patterns.items():
+                conf = _match_compliance_pattern(f.name, entity.name, pattern, base_conf)
+                if conf is not None:
                     result.compliance_signals.append(
                         {
                             "type": "inferred_financial",
                             "entity": entity.name,
                             "field": f.name,
                             "pattern": pattern,
-                            "confidence": 0.8,
+                            "confidence": conf,
                         }
                     )
                     break
@@ -686,38 +802,39 @@ def infer_compliance_requirements(appspec: ir.AppSpec) -> dict[str, Any]:
 
     for entity in appspec.domain.entities:
         for f in entity.fields:
-            field_lower = f.name.lower()
-
-            for pattern, confidence in pii_patterns.items():
-                if pattern in field_lower:
+            for pattern, base_conf in pii_patterns.items():
+                conf = _match_compliance_pattern(f.name, entity.name, pattern, base_conf)
+                if conf is not None:
                     pii_fields.append(
                         {
                             "entity": entity.name,
                             "field": f.name,
                             "pattern": pattern,
-                            "confidence": confidence,
+                            "confidence": conf,
                         }
                     )
 
-            for pattern, confidence in financial_patterns.items():
-                if pattern in field_lower:
+            for pattern, base_conf in financial_patterns.items():
+                conf = _match_compliance_pattern(f.name, entity.name, pattern, base_conf)
+                if conf is not None:
                     financial_fields.append(
                         {
                             "entity": entity.name,
                             "field": f.name,
                             "pattern": pattern,
-                            "confidence": confidence,
+                            "confidence": conf,
                         }
                     )
 
-            for pattern, confidence in health_patterns.items():
-                if pattern in field_lower:
+            for pattern, base_conf in health_patterns.items():
+                conf = _match_compliance_pattern(f.name, entity.name, pattern, base_conf)
+                if conf is not None:
                     health_fields.append(
                         {
                             "entity": entity.name,
                             "field": f.name,
                             "pattern": pattern,
-                            "confidence": confidence,
+                            "confidence": conf,
                         }
                     )
 
@@ -956,7 +1073,11 @@ def get_feedback_store() -> FeedbackStore:
 
 
 def handle_extract_semantics(args: dict[str, Any], project_path: Path) -> str:
-    """Handle extract_semantics tool call."""
+    """Handle extract_semantics tool call.
+
+    When ``compact=True`` (used by the pipeline), returns only counts
+    and signal summaries instead of full entity/command/event schemas.
+    """
     try:
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
@@ -964,6 +1085,20 @@ def handle_extract_semantics(args: dict[str, Any], project_path: Path) -> str:
         appspec = build_appspec(modules, manifest.project_root)
 
         extraction = extract_semantics(appspec)
+
+        compact = args.get("compact", False)
+        if compact:
+            return json.dumps(
+                {
+                    "entity_count": len(extraction.entities),
+                    "command_count": len(extraction.commands),
+                    "event_count": len(extraction.events),
+                    "projection_count": len(extraction.projections),
+                    "tenancy_signal_count": len(extraction.tenancy_signals),
+                    "compliance_signal_count": len(extraction.compliance_signals),
+                },
+                indent=2,
+            )
 
         return json.dumps(
             {

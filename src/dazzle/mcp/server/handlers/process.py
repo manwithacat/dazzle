@@ -318,6 +318,10 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         if status_filter != "all":
             coverage_results = [r for r in coverage_results if r.status == status_filter]
 
+        # Sort so actionable items (uncovered, partial) appear first
+        _status_priority = {"uncovered": 0, "partial": 1, "covered": 2}
+        coverage_results.sort(key=lambda r: _status_priority.get(r.status, 9))
+
         # Apply pagination
         limit = args.get("limit", 50)
         offset = args.get("offset", 0)
