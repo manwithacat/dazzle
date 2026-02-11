@@ -90,6 +90,16 @@ def create_page_routes(
                     if auth_ctx and auth_ctx.user:
                         ctx.user_email = auth_ctx.user.email or ""
                         ctx.user_name = auth_ctx.user.username or ""
+                        # Persona-aware nav filtering: match user roles against
+                        # per-persona nav variants compiled from workspace access.
+                        roles = getattr(auth_ctx.user, "roles", None) or []
+                        ctx.user_roles = list(roles)
+                        if ctx.nav_by_persona and roles:
+                            for role in roles:
+                                persona_nav = ctx.nav_by_persona.get(role)
+                                if persona_nav is not None:
+                                    ctx.nav_items = persona_nav
+                                    break
                 except Exception:
                     pass
 

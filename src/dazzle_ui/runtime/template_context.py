@@ -144,6 +144,7 @@ class PageContext(BaseModel):
     layout: str = "app_shell"  # app_shell or single_column
     template: str = "components/filterable_table.html"
     nav_items: list[NavItemContext] = Field(default_factory=list)
+    nav_by_persona: dict[str, list[NavItemContext]] = Field(default_factory=dict)
     current_route: str = "/"
     design_tokens: dict[str, str] = Field(default_factory=dict)
     theme_css: str = ""
@@ -160,6 +161,7 @@ class PageContext(BaseModel):
     is_authenticated: bool = False
     user_email: str = ""
     user_name: str = ""
+    user_roles: list[str] = Field(default_factory=list)
 
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)

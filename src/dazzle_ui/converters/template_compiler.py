@@ -530,16 +530,42 @@ def compile_appspec_to_templates(
     contexts: dict[str, PageContext] = {}
     domain = appspec.domain
 
-    # Build nav items from workspaces
+    # Build nav items from workspaces — both a flat list (all workspaces)
+    # and per-persona variants using workspace access declarations.
     nav_items: list[NavItemContext] = []
+    nav_by_persona: dict[str, list[NavItemContext]] = {}
     for ws in appspec.workspaces:
         route = f"{app_prefix}/workspaces/{ws.name}"
-        nav_items.append(
-            NavItemContext(
-                label=ws.title or ws.name.replace("_", " ").title(),
-                route=route,
-            )
+        item = NavItemContext(
+            label=ws.title or ws.name.replace("_", " ").title(),
+            route=route,
         )
+        nav_items.append(item)
+
+        # Build per-persona nav: workspace access declarations determine
+        # which personas can see each workspace in the nav sidebar.
+        ws_access = getattr(ws, "access", None)
+        if ws_access:
+            allow = getattr(ws_access, "allow_personas", None) or []
+            deny = getattr(ws_access, "deny_personas", None) or []
+            level = str(getattr(ws_access, "level", ""))
+            if allow and "persona" in level.lower():
+                # Only add to allowed personas
+                for persona_id in allow:
+                    nav_by_persona.setdefault(persona_id, []).append(item)
+                continue
+            if deny:
+                # Add to all personas except denied ones
+                for p in getattr(appspec, "personas", []) or []:
+                    pid = getattr(p, "name", None) or getattr(p, "id", "")
+                    if pid and pid not in deny:
+                        nav_by_persona.setdefault(pid, []).append(item)
+                continue
+        # No access restriction — add to all personas
+        for p in getattr(appspec, "personas", []) or []:
+            pid = getattr(p, "name", None) or getattr(p, "id", "")
+            if pid:
+                nav_by_persona.setdefault(pid, []).append(item)
 
     for surface in appspec.surfaces:
         entity: ir.EntitySpec | None = None
@@ -549,6 +575,7 @@ def compile_appspec_to_templates(
         ctx = compile_surface_to_context(surface, entity, app_prefix=app_prefix)
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
+        ctx.nav_by_persona = nav_by_persona
         ctx.view_name = surface.name
 
         # Determine the route for this surface
@@ -574,6 +601,7 @@ def compile_appspec_to_templates(
         root_ctx = compile_surface_to_context(first_list, entity, app_prefix=app_prefix)
         root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         root_ctx.nav_items = nav_items
+        root_ctx.nav_by_persona = nav_by_persona
         root_ctx.view_name = first_list.name
         root_ctx.current_route = "/"
         contexts["/"] = root_ctx
