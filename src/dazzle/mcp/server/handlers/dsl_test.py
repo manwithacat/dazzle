@@ -10,6 +10,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
+
 logger = logging.getLogger("dazzle.mcp")
 
 
@@ -255,18 +258,22 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     try:
         from dazzle.testing.unified_runner import UnifiedTestRunner
 
+        progress: ProgressContext = args.get("_progress") or _noop_progress()
         base_url = args.get("base_url")
 
         if base_url:
             from .preflight import check_server_reachable
 
+            progress.log_sync("Checking server reachability...")
             preflight_err = check_server_reachable(base_url)
             if preflight_err:
                 return preflight_err
 
         regenerate = args.get("regenerate", False)
 
+        progress.log_sync("Generating tests from DSL...")
         runner = UnifiedTestRunner(project_root, base_url=base_url)
+        progress.log_sync("Running all tests...")
         result = runner.run_all(generate=True, force_generate=regenerate)
 
         # Build structured response optimized for LLM consumption
@@ -374,12 +381,14 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     try:
         from dazzle.testing.unified_runner import UnifiedTestRunner
 
+        progress: ProgressContext = args.get("_progress") or _noop_progress()
         regenerate = args.get("regenerate", False)
         base_url = args.get("base_url")
 
         if base_url:
             from .preflight import check_server_reachable
 
+            progress.log_sync("Checking server reachability...")
             preflight_err = check_server_reachable(base_url)
             if preflight_err:
                 return preflight_err
@@ -388,6 +397,11 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         entity = args.get("entity")
         test_id = args.get("test_id")
         persona = args.get("persona")
+
+        filters = [f for f in [category, entity, test_id, persona] if f]
+        progress.log_sync(
+            f"Running tests{' (filtered: ' + ', '.join(filters) + ')' if filters else ''}..."
+        )
 
         # Create runner and run all tests
         runner = UnifiedTestRunner(project_root, base_url=base_url)

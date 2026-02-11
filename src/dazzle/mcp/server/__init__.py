@@ -84,12 +84,21 @@ async def list_tools_handler() -> list[Tool]:
 async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
     """Execute a DAZZLE tool."""
     try:
-        session = server.request_context.session
+        ctx = server.request_context
+        session = ctx.session
     except LookupError:
+        ctx = None
         session = None
 
+    # Extract progress token from request metadata (client may send one)
+    progress_token = None
+    if ctx is not None and ctx.meta is not None:
+        progress_token = getattr(ctx.meta, "progressToken", None)
+
     # Try consolidated tools first
-    result = await dispatch_consolidated_tool(name, arguments or {}, session=session)
+    result = await dispatch_consolidated_tool(
+        name, arguments or {}, session=session, progress_token=progress_token
+    )
     if result is not None:
         return [TextContent(type="text", text=result)]
 

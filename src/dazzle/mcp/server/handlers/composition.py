@@ -19,6 +19,9 @@ import time
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
+
 logger = logging.getLogger(__name__)
 
 
@@ -262,12 +265,15 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
     from dazzle.core.composition import run_composition_audit
     from dazzle.core.sitespec_loader import load_sitespec_with_copy
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     base_url: str | None = args.get("base_url")
     routes_filter: list[str] | None = args.get("pages")
     viewports: list[str] | None = args.get("viewports")
     focus: list[str] | None = args.get("focus")
     token_budget: int = args.get("token_budget", 50_000)
 
+    total_phases = 4 if base_url else 2
     t0 = time.monotonic()
 
     if base_url:
@@ -278,6 +284,7 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
             return preflight_err
 
     # Step 1: DOM audit (always runs)
+    await progress.advance(1, total_phases, "Loading sitespec")
     try:
         sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
     except Exception as e:
@@ -295,6 +302,7 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
             }
         )
 
+    await progress.advance(2, total_phases, "DOM audit")
     try:
         dom_result = run_composition_audit(sitespec, routes_filter=routes_filter)
     except Exception as e:
@@ -308,6 +316,7 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
     visual_score: int | None = None
 
     if base_url:
+        await progress.advance(3, total_phases, "Playwright capture + visual analysis")
         try:
             visual_report = await _run_visual_pipeline(
                 project_path=project_path,
@@ -323,7 +332,8 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
             logger.warning("Visual pipeline failed, report will use DOM-only: %s", e)
             visual_report = {"error": str(e)}
 
-    # Step 3: Combine scores
+    # Combine scores
+    await progress.advance(total_phases, total_phases, "Building report")
     if visual_score is not None:
         # Weighted average: DOM 40%, Visual 60% (visual catches rendering bugs)
         combined_score = int(dom_score * 0.4 + visual_score * 0.6)

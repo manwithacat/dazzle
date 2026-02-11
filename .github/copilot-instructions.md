@@ -11,7 +11,6 @@ DAZZLE is a DSL-first application framework that transforms declarative specific
 - **Backend Generators**: Code generators in `src/dazzle/stacks/`
 - **Language Server**: LSP implementation in `src/dazzle/lsp/`
 - **CLI**: Command-line interface in `src/dazzle/cli/`
-- **VS Code Extension**: TypeScript extension in `extensions/vscode/`
 
 ## Code Style Requirements
 
@@ -21,11 +20,6 @@ DAZZLE is a DSL-first application framework that transforms declarative specific
 - Use Google-style docstrings for public APIs
 - Prefer `pathlib.Path` over `os.path`
 - Use dataclasses or Pydantic models for structured data
-
-### TypeScript (VS Code Extension)
-- Use strict TypeScript settings
-- Prefer async/await over callbacks
-- Document public APIs with JSDoc
 
 ## Testing Requirements
 
@@ -117,7 +111,6 @@ When assigned an issue, follow this investigation process:
 
 When running commands, use:
 - Python virtual environment: `.venv/`
-- Node modules: `extensions/vscode/node_modules/`
 
 ## Security Considerations
 

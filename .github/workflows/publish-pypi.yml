@@ -42,8 +42,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          sparse-checkout: examples/simple_task/dsl
-          sparse-checkout-cone-mode: false
+          sparse-checkout: examples/simple_task
+          sparse-checkout-cone-mode: true
 
       - name: Set up Python
         uses: actions/setup-python@v5

@@ -21,6 +21,9 @@ import time
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
+
 logger = logging.getLogger("dazzle.mcp.handlers.pulse")
 
 
@@ -41,16 +44,23 @@ def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     Returns JSON with both structured metrics and a markdown narrative.
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     business_context = args.get("business_context")
 
     t0 = time.monotonic()
 
     # Collect raw data from each source (failures are captured, not raised)
+    progress.advance_sync(1, 6, "Running quality pipeline")
     pipeline_data = _collect_pipeline(project_path)
+    progress.advance_sync(2, 6, "Checking story coverage")
     stories_data = _collect_stories(project_path)
+    progress.advance_sync(3, 6, "Site coherence check")
     coherence_data = _collect_coherence(project_path, business_context)
+    progress.advance_sync(4, 6, "Policy coverage")
     policy_data = _collect_policy(project_path)
+    progress.advance_sync(5, 6, "Compliance analysis")
     compliance_data = _collect_compliance(project_path)
+    progress.advance_sync(6, 6, "Building health report")
 
     # Derive project name from validate step
     project_name = _extract_project_name(pipeline_data, project_path)

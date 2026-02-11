@@ -19,6 +19,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 ## 3. Push
 
 - Run `git push` to push the current branch to origin.
+- If any local tags exist that haven't been pushed (e.g. from `/bump`), also run `git push origin --tags` to push them. This triggers release workflows (PyPI, Homebrew).
 - If the push is rejected (e.g. non-fast-forward), do NOT force-push. Inform the user and stop.
 
 ## 4. Final verification

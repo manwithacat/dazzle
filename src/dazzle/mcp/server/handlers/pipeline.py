@@ -18,6 +18,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
+
 logger = logging.getLogger("dazzle.mcp.handlers.pipeline")
 
 
@@ -40,6 +43,8 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     Each step runs regardless of prior failures (unless stop_on_error=True).
     Returns a structured JSON report with per-step results and overall summary.
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     stop_on_error = args.get("stop_on_error", False)
     base_url = args.get("base_url")
     # Adaptive detail levels: metrics (compact), issues (smart default), full
@@ -47,6 +52,8 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     # Backward compatibility: old summary param
     if "summary" in args and "detail" not in args:
         detail = "metrics" if args["summary"] else "full"
+
+    total_steps = 12 if base_url else 11
 
     pipeline_start = time.monotonic()
     steps: list[dict[str, Any]] = []
@@ -60,6 +67,8 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
         **func_kwargs: Any,
     ) -> dict[str, Any] | None:
         """Execute a single pipeline step and record the result."""
+        progress.advance_sync(step_num, total_steps, name)
+
         t0 = time.monotonic()
         step_result: dict[str, Any] = {
             "step": step_num,

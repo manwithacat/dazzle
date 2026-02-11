@@ -1583,6 +1583,7 @@ async def dispatch_consolidated_tool(
     name: str,
     arguments: dict[str, Any],
     session: Any = None,
+    progress_token: str | int | None = None,
 ) -> str | None:
     """
     Dispatch a consolidated tool call.
@@ -1596,6 +1597,7 @@ async def dispatch_consolidated_tool(
         name: Tool name.
         arguments: Tool arguments.
         session: Optional MCP ServerSession for roots-based project resolution.
+        progress_token: Optional MCP progress token for sending progress updates.
     """
     import inspect
 
@@ -1612,6 +1614,12 @@ async def dispatch_consolidated_tool(
                 arguments = {**arguments, "_resolved_project_path": resolved}
             except Exception:
                 pass  # Fall through to sync resolution
+
+        # Build progress context for long-running operations
+        from .progress import ProgressContext
+
+        progress = ProgressContext(session=session, progress_token=progress_token)
+        arguments = {**arguments, "_progress": progress}
 
         t0 = time.monotonic()
         call_ok = True

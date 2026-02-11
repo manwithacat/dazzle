@@ -50,16 +50,6 @@ We welcome all kinds of contributions:
    pytest
    ```
 
-6. **Set Up VSCode Extension** (optional)
-   ```bash
-   cd extensions/vscode
-   npm install
-   npm run compile
-
-   # Create symlink for local development
-   ln -s $(pwd) ~/.vscode/extensions/dazzle-dsl-0.4.0
-   ```
-
 ### Making Your First Contribution
 
 1. **Pick an Issue**: Browse [open issues](https://github.com/manwithacat/dazzle/issues) or create a new one

@@ -3,7 +3,7 @@
 # Usage: make <target>
 # Run 'make help' to see all available targets
 
-.PHONY: help install dev-install lint format type-check security test test-fast test-integration test-all coverage clean build vscode-build examples ci pre-commit
+.PHONY: help install dev-install lint format type-check security test test-fast test-integration test-all coverage clean build examples ci pre-commit
 
 # Default target
 help:
@@ -29,7 +29,6 @@ help:
 	@echo ""
 	@echo "Build:"
 	@echo "  build            Build Python package (sdist + wheel)"
-	@echo "  vscode-build     Build VS Code extension"
 	@echo "  examples         Validate and build example projects"
 	@echo ""
 	@echo "CI/CD:"
@@ -80,7 +79,7 @@ security:
 	pip-audit --strict --desc on || true
 
 spell:
-	codespell --skip '*.json,*.vsix,package-lock.json,*.min.js' --ignore-words-list 'doubleclick' src/ tests/ docs/ examples/
+	codespell --skip '*.json,*.min.js' --ignore-words-list 'doubleclick' src/ tests/ docs/ examples/
 
 # =============================================================================
 # Testing
@@ -112,11 +111,6 @@ build:
 	twine check dist/*
 	@echo ""
 	@echo "Build artifacts in dist/"
-
-vscode-build:
-	cd extensions/vscode && npm ci && npm run compile && npm run package
-	@echo ""
-	@echo "VS Code extension: extensions/vscode/*.vsix"
 
 examples:
 	@echo "=== Validating Example Projects ==="
@@ -151,7 +145,6 @@ clean:
 	rm -rf build/ dist/ *.egg-info
 	rm -rf .pytest_cache/ .mypy_cache/ .ruff_cache/
 	rm -rf htmlcov/ .coverage coverage.xml
-	rm -rf extensions/vscode/out/ extensions/vscode/*.vsix
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	@echo "Cleaned build artifacts"
 
