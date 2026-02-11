@@ -13,10 +13,6 @@
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue.svg)](https://mypy-lang.org/)
 
-<!-- Downloads & Stats -->
-[![PyPI Downloads](https://img.shields.io/pypi/dm/dazzle.svg)](https://pypi.org/project/dazzle/)
-[![VS Code Extension](https://img.shields.io/visual-studio-marketplace/i/manwithacat.dazzle-vscode?label=VS%20Code%20installs)](https://marketplace.visualstudio.com/items?itemName=manwithacat.dazzle-vscode)
-
 <!-- Meta -->
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://manwithacat.github.io/dazzle/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
