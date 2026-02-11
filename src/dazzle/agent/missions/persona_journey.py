@@ -16,6 +16,7 @@ Analysis passes (per persona):
 6. Experience reachability — experiences have entry points from persona's workspace
 7. Orphan surface detection — surfaces unreachable from workspace regions, experiences, or processes
 8. Cross-entity gaps — multi-entity stories have connected navigation paths
+9. Navigation scope — persona sees only entities they should (workspace + policy + persona_variants)
 
 Personas with no stories and no default_workspace are skipped (they produce only noise).
 """
@@ -173,6 +174,8 @@ _GAP_TYPE_TO_CATEGORY: dict[str, str] = {
     "orphan_surfaces": "navigation_gap",
     "dead_end_surface": "navigation_gap",  # backward compat
     "cross_entity_gap": "navigation_gap",
+    "nav_over_exposed": "access_gap",
+    "nav_under_exposed": "navigation_gap",
 }
 
 
@@ -965,6 +968,146 @@ def _analyze_cross_entity_gaps(
 
 
 # =============================================================================
+# Analysis Pass 9: Navigation Scope Audit
+# =============================================================================
+
+
+def _analyze_navigation_scope(
+    persona_id: str,
+    persona: Any,
+    appspec: Any,
+    accessible_surfaces: set[str],
+) -> list[PersonaJourneyGap]:
+    """Audit which entities should appear in a persona's navigation.
+
+    Cross-references three data sources to build the **expected** entity set:
+    1. Workspace regions — ``region.source`` entity names in the persona's workspace
+    2. Surface persona_variants — surfaces with a variant for this persona → entities
+    3. Policy permission rules — entities with explicit ``PERMIT`` rules for this persona
+
+    Then compares against the full entity list to flag:
+    - **Over-exposure** (HIGH): entities visible to everyone but this persona has no
+      workspace region, no surface variant, and no policy access.
+    - **Under-exposure** (MEDIUM): entities with policy access that aren't reachable
+      from the persona's workspace.
+    """
+    gaps: list[PersonaJourneyGap] = []
+    domain = getattr(appspec, "domain", None)
+    entities = getattr(domain, "entities", []) or [] if domain else []
+    surfaces = getattr(appspec, "surfaces", []) or []
+    workspaces = getattr(appspec, "workspaces", []) or []
+
+    if not entities:
+        return gaps
+
+    all_entity_names = {e.name for e in entities}
+
+    # ── Source 1: Workspace regions ──────────────────────────────────
+    workspace_entities: set[str] = set()
+    default_ws = getattr(persona, "default_workspace", None)
+    for ws in workspaces:
+        if default_ws and ws.name != default_ws:
+            continue
+        # Also include workspaces the persona is allowed into
+        ws_access = getattr(ws, "access", None)
+        if ws_access:
+            allow = getattr(ws_access, "allow_personas", None) or []
+            deny = getattr(ws_access, "deny_personas", None) or []
+            if persona_id in deny:
+                continue
+            if allow and persona_id not in allow:
+                continue
+        for region in getattr(ws, "regions", []) or []:
+            source = getattr(region, "source", None)
+            if source and source in all_entity_names:
+                workspace_entities.add(source)
+
+    # ── Source 2: Surface persona_variants ───────────────────────────
+    variant_entities: set[str] = set()
+    for surface in surfaces:
+        ux = getattr(surface, "ux", None)
+        if not ux:
+            continue
+        variants = getattr(ux, "persona_variants", []) or []
+        for variant in variants:
+            if getattr(variant, "persona", None) == persona_id:
+                entity = get_surface_entity(surface)
+                if entity and entity in all_entity_names:
+                    variant_entities.add(entity)
+
+    # ── Source 3: Policy permission rules ────────────────────────────
+    policy_entities: set[str] = set()
+    for entity in entities:
+        access = getattr(entity, "access", None)
+        if not access:
+            continue
+        permissions = getattr(access, "permissions", []) or []
+        for perm in permissions:
+            effect = str(getattr(perm, "effect", ""))
+            personas = getattr(perm, "personas", []) or []
+            if "PERMIT" in effect.upper() and persona_id in personas:
+                policy_entities.add(entity.name)
+                break
+
+    # ── Expected entity set ──────────────────────────────────────────
+    expected_entities = workspace_entities | variant_entities | policy_entities
+
+    # If persona has no workspace AND no policy AND no variants, skip audit —
+    # the workspace_unreachable pass already flags this.
+    if not expected_entities and not default_ws:
+        return gaps
+
+    # ── Over-exposure ────────────────────────────────────────────────
+    # Entities that are NOT in the expected set.  In a runtime that renders all
+    # entities in the nav, these would be shown to the persona unnecessarily.
+    over_exposed = sorted(all_entity_names - expected_entities)
+    if over_exposed:
+        gaps.append(
+            PersonaJourneyGap(
+                persona_id=persona_id,
+                gap_type="nav_over_exposed",
+                severity="high",
+                description=(
+                    f"Persona '{persona_id}' would see {len(over_exposed)} entity(ies) "
+                    f"in navigation that they have no workspace region, persona_variant, "
+                    f"or policy access for: {', '.join(over_exposed[:10])}"
+                    + (f" ... and {len(over_exposed) - 10} more" if len(over_exposed) > 10 else "")
+                ),
+                related_artefacts=[f"entity:{e}" for e in over_exposed[:20]],
+            )
+        )
+
+    # ── Under-exposure ───────────────────────────────────────────────
+    # Entities with policy access but NOT in any workspace region.
+    under_exposed = sorted(policy_entities - workspace_entities)
+    if under_exposed:
+        ws_name = default_ws or "none"
+        gaps.append(
+            PersonaJourneyGap(
+                persona_id=persona_id,
+                gap_type="nav_under_exposed",
+                severity="medium",
+                description=(
+                    f"Persona '{persona_id}' has policy access to {len(under_exposed)} "
+                    f"entity(ies) not reachable from workspace '{ws_name}': "
+                    f"{', '.join(under_exposed[:10])}"
+                    + (
+                        f" ... and {len(under_exposed) - 10} more"
+                        if len(under_exposed) > 10
+                        else ""
+                    )
+                ),
+                related_artefacts=[
+                    f"workspace:{ws_name}",
+                    *(f"entity:{e}" for e in under_exposed[:20]),
+                ],
+            )
+        )
+
+    return gaps
+
+
+# =============================================================================
 # Entry Point
 # =============================================================================
 
@@ -1033,7 +1176,7 @@ def run_headless_discovery(
                 "missing_surfaces": missing_surfaces,
             }
 
-        # Run all 8 analysis passes
+        # Run all 9 analysis passes
         pr.gaps.extend(_analyze_workspace_reachability(pid, persona, appspec))
         pr.gaps.extend(_analyze_surface_access(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_story_surface_coverage(pid, persona, appspec, accessible))
@@ -1042,6 +1185,7 @@ def run_headless_discovery(
         pr.gaps.extend(_analyze_experience_reachability(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_orphan_surfaces(pid, persona, appspec, accessible))
         pr.gaps.extend(_analyze_cross_entity_gaps(pid, persona, appspec, accessible, kg_store))
+        pr.gaps.extend(_analyze_navigation_scope(pid, persona, appspec, accessible))
 
         report.persona_reports.append(pr)
 

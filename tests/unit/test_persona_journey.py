@@ -1055,3 +1055,290 @@ class TestRunHeadlessDiscovery:
         summary = report.to_summary()
         assert "Headless Discovery Report" in summary
         assert "admin" in summary
+
+
+# =============================================================================
+# Pass 9: Navigation Scope Audit
+# =============================================================================
+
+
+def _make_entity_with_access(
+    name: str,
+    permissions: list[Any] | None = None,
+) -> SimpleNamespace:
+    """Entity with access control spec for policy-based nav scope tests."""
+    access = None
+    if permissions:
+        access = SimpleNamespace(
+            visibility=[],
+            permissions=permissions,
+        )
+    return SimpleNamespace(
+        name=name,
+        title=name,
+        fields=[],
+        state_machine=None,
+        access=access,
+    )
+
+
+def _make_permission(
+    operation: str = "read",
+    personas: list[str] | None = None,
+    effect: str = "PERMIT",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        operation=operation,
+        personas=personas or [],
+        effect=effect,
+        require_auth=True,
+        condition=None,
+    )
+
+
+def _make_surface_with_ux(
+    name: str,
+    entity_ref: str | None = None,
+    mode: str = "list",
+    persona_variants: list[Any] | None = None,
+    access: Any | None = None,
+) -> SimpleNamespace:
+    """Surface with UX block containing persona_variants."""
+    ux = None
+    if persona_variants:
+        ux = SimpleNamespace(persona_variants=persona_variants)
+    return SimpleNamespace(
+        name=name,
+        title=name,
+        mode=mode,
+        entity_ref=entity_ref,
+        entity=entity_ref,
+        sections=[],
+        actions=[],
+        access=access,
+        ux=ux,
+    )
+
+
+def _make_persona_variant(persona: str) -> SimpleNamespace:
+    return SimpleNamespace(persona=persona)
+
+
+class TestNavigationScope:
+    """Tests for _analyze_navigation_scope (Pass 9)."""
+
+    def test_no_over_exposure_when_workspace_covers_all(self) -> None:
+        """If the persona's workspace regions reference all entities, no over-exposure."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        entities = [_make_entity("Task"), _make_entity("Note")]
+        surfaces = [
+            _make_surface("task_list", entity_ref="Task"),
+            _make_surface("note_list", entity_ref="Note"),
+        ]
+        ws = _make_workspace(
+            "main",
+            regions=[_make_region("r1", source="Task"), _make_region("r2", source="Note")],
+        )
+        persona = _make_persona("admin", default_workspace="main")
+        appspec = _make_appspec(
+            entities=entities,
+            surfaces=surfaces,
+            personas=[persona],
+            workspaces=[ws],
+            stories=[_make_story("S1", actor="admin", scope=["Task"])],
+        )
+        accessible = {"task_list", "note_list"}
+        gaps = _analyze_navigation_scope("admin", persona, appspec, accessible)
+        # No gaps — all entities covered by workspace regions
+        assert len(gaps) == 0
+
+    def test_over_exposure_flagged(self) -> None:
+        """Entities not in workspace/policy/variant are flagged as over-exposed."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        entities = [_make_entity("Task"), _make_entity("AdminConfig"), _make_entity("AuditLog")]
+        surfaces = [_make_surface("task_list", entity_ref="Task")]
+        ws = _make_workspace("main", regions=[_make_region("r1", source="Task")])
+        persona = _make_persona("customer", default_workspace="main")
+        appspec = _make_appspec(
+            entities=entities,
+            surfaces=surfaces,
+            personas=[persona],
+            workspaces=[ws],
+            stories=[_make_story("S1", actor="customer", scope=["Task"])],
+        )
+        accessible = {"task_list"}
+        gaps = _analyze_navigation_scope("customer", persona, appspec, accessible)
+        over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
+        assert len(over) == 1
+        assert "AdminConfig" in over[0].description
+        assert "AuditLog" in over[0].description
+        assert over[0].severity == "high"
+
+    def test_policy_access_prevents_over_exposure(self) -> None:
+        """Entity with policy PERMIT for persona is not flagged as over-exposed."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        perm = _make_permission(operation="read", personas=["customer"], effect="PERMIT")
+        entities = [
+            _make_entity("Task"),
+            _make_entity_with_access("Document", permissions=[perm]),
+        ]
+        surfaces = [_make_surface("task_list", entity_ref="Task")]
+        ws = _make_workspace("main", regions=[_make_region("r1", source="Task")])
+        persona = _make_persona("customer", default_workspace="main")
+        appspec = _make_appspec(
+            entities=entities,
+            surfaces=surfaces,
+            personas=[persona],
+            workspaces=[ws],
+            stories=[_make_story("S1", actor="customer", scope=["Task"])],
+        )
+        accessible = {"task_list"}
+        gaps = _analyze_navigation_scope("customer", persona, appspec, accessible)
+        over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
+        # Document has policy access → not over-exposed
+        assert len(over) == 0
+
+    def test_persona_variant_prevents_over_exposure(self) -> None:
+        """Entity reachable via surface persona_variant is not flagged."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        entities = [_make_entity("Task"), _make_entity("Report")]
+        surfaces = [
+            _make_surface("task_list", entity_ref="Task"),
+            _make_surface_with_ux(
+                "report_view",
+                entity_ref="Report",
+                persona_variants=[_make_persona_variant("analyst")],
+            ),
+        ]
+        ws = _make_workspace("main", regions=[_make_region("r1", source="Task")])
+        persona = _make_persona("analyst", default_workspace="main")
+        appspec = _make_appspec(
+            entities=entities,
+            surfaces=surfaces,
+            personas=[persona],
+            workspaces=[ws],
+            stories=[_make_story("S1", actor="analyst", scope=["Task"])],
+        )
+        accessible = {"task_list", "report_view"}
+        gaps = _analyze_navigation_scope("analyst", persona, appspec, accessible)
+        over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
+        assert len(over) == 0
+
+    def test_under_exposure_flagged(self) -> None:
+        """Entity with policy access but not in workspace is under-exposed."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        perm = _make_permission(operation="read", personas=["customer"], effect="PERMIT")
+        entities = [
+            _make_entity("Task"),
+            _make_entity_with_access("Notification", permissions=[perm]),
+        ]
+        surfaces = [_make_surface("task_list", entity_ref="Task")]
+        ws = _make_workspace("main", regions=[_make_region("r1", source="Task")])
+        persona = _make_persona("customer", default_workspace="main")
+        appspec = _make_appspec(
+            entities=entities,
+            surfaces=surfaces,
+            personas=[persona],
+            workspaces=[ws],
+            stories=[_make_story("S1", actor="customer", scope=["Task"])],
+        )
+        accessible = {"task_list"}
+        gaps = _analyze_navigation_scope("customer", persona, appspec, accessible)
+        under = [g for g in gaps if g.gap_type == "nav_under_exposed"]
+        assert len(under) == 1
+        assert "Notification" in under[0].description
+        assert under[0].severity == "medium"
+
+    def test_no_gaps_when_no_workspace_and_no_stories(self) -> None:
+        """Persona with no workspace and no stories produces no nav scope gaps."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        entities = [_make_entity("Task")]
+        persona = _make_persona("ghost")
+        appspec = _make_appspec(
+            entities=entities,
+            personas=[persona],
+            stories=[],
+        )
+        gaps = _analyze_navigation_scope("ghost", persona, appspec, set())
+        assert len(gaps) == 0
+
+    def test_observation_conversion(self) -> None:
+        """Nav scope gaps convert to the correct Observation categories."""
+        from dazzle.agent.missions.persona_journey import PersonaJourneyGap, _gap_to_observation
+
+        over_gap = PersonaJourneyGap(
+            persona_id="customer",
+            gap_type="nav_over_exposed",
+            severity="high",
+            description="test over",
+        )
+        under_gap = PersonaJourneyGap(
+            persona_id="customer",
+            gap_type="nav_under_exposed",
+            severity="medium",
+            description="test under",
+        )
+        over_obs = _gap_to_observation(over_gap)
+        under_obs = _gap_to_observation(under_gap)
+        assert over_obs.category == "access_gap"
+        assert under_obs.category == "navigation_gap"
+
+    def test_many_entities_truncated(self) -> None:
+        """Over-exposure with >10 entities truncates the description."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        entities = [_make_entity(f"Entity{i}") for i in range(15)]
+        surfaces = [_make_surface("s0", entity_ref="Entity0")]
+        ws = _make_workspace("main", regions=[_make_region("r0", source="Entity0")])
+        persona = _make_persona("user", default_workspace="main")
+        appspec = _make_appspec(
+            entities=entities,
+            surfaces=surfaces,
+            personas=[persona],
+            workspaces=[ws],
+            stories=[_make_story("S1", actor="user", scope=["Entity0"])],
+        )
+        gaps = _analyze_navigation_scope("user", persona, appspec, {"s0"})
+        over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
+        assert len(over) == 1
+        assert "... and" in over[0].description
+        # related_artefacts capped at 20
+        assert len(over[0].related_artefacts) <= 20
+
+    def test_workspace_access_denial_excludes_entities(self) -> None:
+        """Workspace that denies the persona doesn't contribute to expected entities."""
+        from dazzle.agent.missions.persona_journey import _analyze_navigation_scope
+
+        entities = [_make_entity("Task"), _make_entity("AdminPanel")]
+        surfaces = [
+            _make_surface("task_list", entity_ref="Task"),
+            _make_surface("admin_list", entity_ref="AdminPanel"),
+        ]
+        # Admin workspace denies customer
+        admin_ws = _make_workspace(
+            "admin_dash",
+            regions=[_make_region("r1", source="AdminPanel")],
+            access=_make_access(deny_personas=["customer"]),
+        )
+        cust_ws = _make_workspace(
+            "customer_dash",
+            regions=[_make_region("r2", source="Task")],
+        )
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            entities=entities,
+            surfaces=surfaces,
+            personas=[persona],
+            workspaces=[admin_ws, cust_ws],
+            stories=[_make_story("S1", actor="customer", scope=["Task"])],
+        )
+        gaps = _analyze_navigation_scope("customer", persona, appspec, {"task_list"})
+        over = [g for g in gaps if g.gap_type == "nav_over_exposed"]
+        assert len(over) == 1
+        assert "AdminPanel" in over[0].description
