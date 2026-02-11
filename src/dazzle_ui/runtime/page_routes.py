@@ -225,4 +225,77 @@ def create_page_routes(
         handler = _make_page_handler(route_path, ctx, view_name=getattr(ctx, "view_name", None))
         router.get(fastapi_path, response_class=HTMLResponse)(handler)
 
+    # Register workspace routes — workspaces use their own template, not the
+    # surface page template, so they get separate handlers.
+    workspaces = getattr(appspec, "workspaces", []) or []
+    if workspaces:
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        # Build nav items for workspace pages (same logic as template_compiler)
+        ws_nav_items = []
+        for ws in workspaces:
+            ws_nav_items.append(
+                {
+                    "label": ws.title or ws.name.replace("_", " ").title(),
+                    "route": f"{app_prefix}/workspaces/{ws.name}",
+                    "allow_personas": list(ws.access.allow_personas)
+                    if getattr(ws, "access", None)
+                    else [],
+                }
+            )
+        ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
+
+        for workspace in workspaces:
+            ws_ctx = build_workspace_context(workspace, appspec)
+            _ws_ctx = ws_ctx
+            _ws_route = f"{app_prefix}/workspaces/{workspace.name}"
+
+            def _make_workspace_handler(
+                ws_context: Any = _ws_ctx,
+                ws_route: str = _ws_route,
+            ) -> Any:
+                async def workspace_handler(request: Request) -> HTMLResponse:
+                    from dazzle_ui.runtime.template_renderer import render_fragment
+
+                    # Inject auth context if available
+                    visible_nav = list(ws_nav_items)
+                    is_authenticated = False
+                    user_email = ""
+                    user_name = ""
+
+                    if get_auth_context is not None:
+                        try:
+                            auth_ctx = get_auth_context(request)
+                            if auth_ctx and auth_ctx.is_authenticated:
+                                is_authenticated = True
+                                user_email = auth_ctx.user.email if auth_ctx.user else ""
+                                user_name = auth_ctx.user.username if auth_ctx.user else ""
+                                user_roles = list(getattr(auth_ctx.user, "roles", None) or [])
+                                # Filter nav by persona access
+                                visible_nav = [
+                                    {"label": item["label"], "route": item["route"]}
+                                    for item in ws_nav_items
+                                    if not item["allow_personas"]
+                                    or any(r in item["allow_personas"] for r in user_roles)
+                                ]
+                        except Exception:
+                            pass
+
+                    html = render_fragment(
+                        "workspace/workspace.html",
+                        workspace=ws_context,
+                        nav_items=visible_nav,
+                        app_name=ws_app_name,
+                        current_route=ws_route,
+                        is_authenticated=is_authenticated,
+                        user_email=user_email,
+                        user_name=user_name,
+                    )
+                    return HTMLResponse(content=html)
+
+                return workspace_handler
+
+            handler = _make_workspace_handler(_ws_ctx, _ws_route)
+            router.get(f"/workspaces/{workspace.name}", response_class=HTMLResponse)(handler)
+
     return router
