@@ -402,7 +402,7 @@ def handle_process(arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def handle_dsl_test(arguments: dict[str, Any]) -> str:
+async def handle_dsl_test(arguments: dict[str, Any]) -> str:
     """Handle consolidated DSL test operations."""
     from .handlers.dsl_test import (
         create_sessions_handler,
@@ -432,9 +432,9 @@ def handle_dsl_test(arguments: dict[str, Any]) -> str:
     elif operation == "list":
         return list_dsl_tests_handler(project_path, arguments)
     elif operation == "create_sessions":
-        return create_sessions_handler(project_path, arguments)
+        return await create_sessions_handler(project_path, arguments)
     elif operation == "diff_personas":
-        return diff_personas_handler(project_path, arguments)
+        return await diff_personas_handler(project_path, arguments)
     elif operation == "verify_story":
         return verify_story_handler(project_path, arguments)
     else:

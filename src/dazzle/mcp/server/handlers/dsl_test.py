@@ -479,10 +479,8 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Failed to run tests: {e}"}, indent=2)
 
 
-def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
+async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create authenticated sessions for all DSL-defined personas."""
-    import asyncio
-
     try:
         from dazzle.core.project import load_project
         from dazzle.testing.session_manager import SessionManager
@@ -492,7 +490,7 @@ def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         appspec = load_project(project_root)
         manager = SessionManager(project_root, base_url=base_url)
-        manifest = asyncio.run(manager.create_all_sessions(appspec, force=force))
+        manifest = await manager.create_all_sessions(appspec, force=force)
 
         return json.dumps(
             {
@@ -520,10 +518,8 @@ def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Failed to create sessions: {e}"}, indent=2)
 
 
-def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
+async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Compare route responses across personas."""
-    import asyncio
-
     try:
         from dazzle.testing.session_manager import SessionManager
 
@@ -541,10 +537,10 @@ def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
         manager = SessionManager(project_root, base_url=base_url)
 
         if route:
-            result = asyncio.run(manager.diff_route(route, persona_ids))
+            result = await manager.diff_route(route, persona_ids)
             return json.dumps(result, indent=2)
         else:
-            results = asyncio.run(manager.diff_routes(routes or [], persona_ids))
+            results = await manager.diff_routes(routes or [], persona_ids)
             return json.dumps({"diffs": results}, indent=2)
 
     except ImportError as e:

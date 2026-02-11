@@ -495,21 +495,21 @@ class TestClientFactory:
 
 
 class TestDslTestHandlers:
-    def test_create_sessions_handler(self, tmp_path: Path) -> None:
+    async def test_create_sessions_handler(self, tmp_path: Path) -> None:
         """Test the MCP create_sessions handler."""
         from dazzle.mcp.server.handlers.dsl_test import create_sessions_handler
 
         # Will fail because no server is running, but should not crash
-        result_str = create_sessions_handler(tmp_path, {"base_url": "http://localhost:99999"})
+        result_str = await create_sessions_handler(tmp_path, {"base_url": "http://localhost:99999"})
         result = json.loads(result_str)
         # Should return an error about failing to load project or connect
         assert "error" in result
 
-    def test_diff_personas_handler_no_route(self, tmp_path: Path) -> None:
+    async def test_diff_personas_handler_no_route(self, tmp_path: Path) -> None:
         """Test diff_personas_handler requires a route."""
         from dazzle.mcp.server.handlers.dsl_test import diff_personas_handler
 
-        result_str = diff_personas_handler(tmp_path, {"base_url": "http://localhost:8000"})
+        result_str = await diff_personas_handler(tmp_path, {"base_url": "http://localhost:8000"})
         result = json.loads(result_str)
         assert "error" in result
         assert "route" in result["error"]

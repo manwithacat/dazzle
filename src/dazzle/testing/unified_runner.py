@@ -333,7 +333,19 @@ class UnifiedTestRunner:
             print(f"  Creating session for persona '{persona}'...")
             import asyncio
 
-            asyncio.run(manager.create_session(persona))
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+
+            if loop is not None:
+                # Already in an async context (e.g. MCP handler) — schedule as task
+                import concurrent.futures
+
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    pool.submit(asyncio.run, manager.create_session(persona)).result()
+            else:
+                asyncio.run(manager.create_session(persona))
             print(f"  Session created for '{persona}'")
 
     def run_crud_tests(
