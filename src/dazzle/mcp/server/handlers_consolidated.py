@@ -526,6 +526,7 @@ def handle_status(arguments: dict[str, Any]) -> str:
     """Handle consolidated status operations."""
     from .handlers.project import get_active_project_info
     from .handlers.status import (
+        get_activity_handler,
         get_dnr_logs_handler,
         get_mcp_status_handler,
         get_telemetry_handler,
@@ -542,6 +543,8 @@ def handle_status(arguments: dict[str, Any]) -> str:
         return get_active_project_info(resolved_path=resolved)
     elif operation == "telemetry":
         return get_telemetry_handler(arguments)
+    elif operation == "activity":
+        return get_activity_handler(arguments)
     else:
         return json.dumps({"error": f"Unknown status operation: {operation}"})
 
@@ -1615,11 +1618,30 @@ async def dispatch_consolidated_tool(
             except Exception:
                 pass  # Fall through to sync resolution
 
-        # Build progress context for long-running operations
+        # Get activity log for progress context and tool lifecycle entries
+        from .state import get_activity_log
+
+        activity_log = get_activity_log()
+
+        operation = arguments.get("operation")
+
+        # Build progress context with activity log attached
         from .progress import ProgressContext
 
-        progress = ProgressContext(session=session, progress_token=progress_token)
+        progress = ProgressContext(
+            session=session,
+            progress_token=progress_token,
+            activity_log=activity_log,
+            tool_name=name,
+            operation=operation,
+        )
         arguments = {**arguments, "_progress": progress}
+
+        # Write tool_start entry
+        if activity_log is not None:
+            from .activity_log import make_tool_start_entry
+
+            activity_log.append(make_tool_start_entry(name, operation))
 
         t0 = time.monotonic()
         call_ok = True
@@ -1639,6 +1661,24 @@ async def dispatch_consolidated_tool(
             raise
         finally:
             duration_ms = (time.monotonic() - t0) * 1000
+
+            # Write tool_end entry to activity log
+            if activity_log is not None:
+                try:
+                    from .activity_log import make_tool_end_entry
+
+                    activity_log.append(
+                        make_tool_end_entry(
+                            name,
+                            operation,
+                            success=call_ok,
+                            duration_ms=duration_ms,
+                            error=call_error,
+                        )
+                    )
+                except Exception:
+                    pass  # Never fail the tool call due to activity logging
+
             try:
                 from .state import get_knowledge_graph
 

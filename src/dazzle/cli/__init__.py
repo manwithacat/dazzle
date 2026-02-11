@@ -83,6 +83,11 @@ from dazzle.cli.doctor import doctor_command  # noqa: E402
 
 app.command(name="doctor")(doctor_command)
 
+# Workshop command
+from dazzle.cli.workshop import workshop_command  # noqa: E402
+
+app.command(name="workshop")(workshop_command)
+
 
 # =============================================================================
 # Runtime Commands (formerly under 'dnr' sub-app, now top-level)

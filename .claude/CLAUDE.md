@@ -21,9 +21,14 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | Directory | Purpose |
 |-----------|---------|
 | `src/dazzle/core/` | Parser, IR, linker, validation |
-| `src/dazzle_back/` | FastAPI runtime |
-| `src/dazzle_ui/` | JavaScript UI runtime |
+| `src/dazzle/agent/` | Generic mission-driven agent framework |
+| `src/dazzle/mcp/` | MCP server, knowledge graph, semantics KB |
+| `src/dazzle/cli/` | CLI commands (`dazzle serve`, `dazzle mcp`, etc.) |
+| `src/dazzle/lsp/` | LSP server (diagnostics, hover, completion) |
 | `src/dazzle/specs/` | OpenAPI and AsyncAPI specification generators |
+| `src/dazzle/testing/` | Test infrastructure (agent E2E wrapper, browser gate) |
+| `src/dazzle_back/` | FastAPI runtime (API, auth, channels, events) |
+| `src/dazzle_ui/` | UI runtime — Python/Jinja2 templates rendered server-side, static JS/CSS assets |
 
 ## LLM-First Style Guide
 
@@ -35,15 +40,10 @@ This is an LLM-first codebase. Optimize for clarity and predictability over clev
 - **Explicit dependencies** - no hidden globals or singletons
 - Avoid metaprogramming, monkey-patching, runtime code generation
 
-### JavaScript (Dazzle UI)
-- **Vanilla JS with JSDoc and `@ts-check`** - TypeScript checker without build step
-- **All exported functions must have JSDoc** param/return types
-- UI runtime is server-rendered via Python templates in `src/dazzle_ui/runtime/`
-
 ### General
 - Prefer explicit over magic
 - Keep functions small and single-purpose
-- Data shapes in dedicated files (models.py, types at top of JS files)
+- Data shapes in dedicated files (`models.py`)
 - Never edit auto-generated files (marked with `# AUTO-GENERATED`)
 
 ## Commands
@@ -87,7 +87,7 @@ surface task_list "Tasks":
 
 **Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`
 
-### TigerBeetle Ledgers (v0.24)
+### TigerBeetle Ledgers
 
 ```dsl
 ledger CustomerWallet "Customer Wallet":
@@ -133,7 +133,7 @@ dazzle specs asyncapi
 
 ## Examples
 
-All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `fieldtest_hub`, `llm_ticket_classifier`, `support_tickets`
+All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `fieldtest_hub`, `llm_ticket_classifier`, `support_tickets`, `rbac_validation`
 
 ## LSP Server
 
@@ -143,13 +143,41 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 
 ## MCP Server
 
-The DAZZLE MCP server (`dazzle mcp`) provides context-aware tools:
-- `dsl` (validate, inspect_entity, inspect_surface, lint, analyze)
-- `knowledge` (concept, examples, workflow, inference)
-- `story`, `process`, `demo_data`, `test_design`
-- `sitespec`, `semantics`, `graph`, `bootstrap`, `spec_analyze`
+The DAZZLE MCP server (`dazzle mcp`) provides 23 consolidated tools:
+
+| Tool | Operations |
+|------|-----------|
+| `dsl` | validate, inspect_entity, inspect_surface, lint, analyze, fidelity, export_frontend_spec |
+| `story` | propose, save, get, generate_tests, coverage |
+| `process` | propose, save, list, inspect, diagram, coverage |
+| `test_design` | propose_persona, gaps, save, get, auto_populate, improve_coverage |
+| `dsl_test` | generate, run, run_all, coverage, verify_story, diff_personas |
+| `e2e_test` | check_infra, run, run_agent, coverage, run_viewport |
+| `discovery` | run, report, compile, emit, status, verify_all_stories, coherence |
+| `pipeline` | run (full deterministic quality audit in one call) |
+| `graph` | query, dependencies, neighbourhood, concept, inference, export, import |
+| `status` | mcp, logs, telemetry, activity |
+| `knowledge` | concept, examples, workflow, inference |
+| `sitespec` | get, validate, scaffold, coherence, review, themes |
+| `semantics` | extract, validate_events, tenancy, compliance, analytics |
+| `composition` | audit, capture, analyze, report, inspect_styles |
+| `policy` | analyze, conflicts, coverage, simulate |
+| `pulse` | run, radar, persona, timeline, decisions |
+| `pitch` | scaffold, generate, validate, review, enrich |
+| `bootstrap` | entry point for "build me an app" requests |
+| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas |
+| `demo_data` | propose, save, get, generate |
+| `api_pack` | list, search, get, generate_dsl |
+| `contribution` | templates, create, validate, examples |
+| `user_management` | list, create, get, update, deactivate |
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
+
+## Activity Log
+
+The MCP server writes a JSONL activity log to `{project}/.dazzle/mcp-activity.log` capturing tool invocations and progress. Useful for debugging long operations:
+- `tail -f .dazzle/mcp-activity.log` in a separate terminal
+- `status activity` MCP operation for cursor-based polling
 
 ## PyPI Package
 
@@ -157,11 +185,5 @@ Use MCP tools for DSL semantics; this file for codebase conventions.
 - **Import name**: `dazzle` (unchanged — PEP 503 normalises the package name)
 - `pip install dazzle-dsl` provides the `dazzle` console command
 
-## Known Limitations
-
-- Integration actions/syncs use placeholder parsing
-- No export declarations (planned v2.0)
-- Experiences support basic flows only
-
 ---
-**Version**: 0.23.0 | **Python**: 3.11+ | **Status**: Production Ready
+**Version**: 0.24.0 | **Python**: 3.12+ | **Status**: Production Ready

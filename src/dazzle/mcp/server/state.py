@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from mcp.server.session import ServerSession
 
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
+    from dazzle.mcp.server.activity_log import ActivityLog
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -34,6 +35,9 @@ _available_projects: dict[str, Path] = {}  # project_name -> project_path
 # Knowledge graph state
 _knowledge_graph: KnowledgeGraph | None = None
 _graph_db_path: Path | None = None
+
+# Activity log state
+_activity_log: ActivityLog | None = None
 
 
 def set_project_root(path: Path) -> None:
@@ -389,6 +393,48 @@ def reinit_knowledge_graph(project_root: Path) -> None:
     handlers = KnowledgeGraphHandlers(_knowledge_graph)
     result = handlers.handle_populate_from_appspec(project_path=str(project_root))
     logger.info(f"Populated KG from DSL for {project_root.name}: {result}")
+
+
+# ============================================================================
+# Activity Log Management
+# ============================================================================
+
+
+def init_activity_log(root: Path) -> None:
+    """Initialize the activity log for the server.
+
+    Creates a fresh log at ``{root}/.dazzle/mcp-activity.log``,
+    clearing any stale entries from a previous session.
+    """
+    global _activity_log
+
+    from dazzle.mcp.server.activity_log import ActivityLog
+
+    log_path = root / ".dazzle" / "mcp-activity.log"
+    _activity_log = ActivityLog(log_path)
+    _activity_log.clear()  # Fresh log per server session
+    logger.info("Activity log initialized at: %s", log_path)
+
+
+def get_activity_log() -> ActivityLog | None:
+    """Get the activity log instance."""
+    return _activity_log
+
+
+def reinit_activity_log(project_root: Path) -> None:
+    """Re-initialize the activity log for a new project.
+
+    Called when switching projects to point the log at the new
+    project's ``.dazzle/`` directory.
+    """
+    global _activity_log
+
+    from dazzle.mcp.server.activity_log import ActivityLog
+
+    log_path = project_root / ".dazzle" / "mcp-activity.log"
+    _activity_log = ActivityLog(log_path)
+    _activity_log.clear()
+    logger.info("Activity log re-initialized at: %s", log_path)
 
 
 def init_browser_gate(max_concurrent: int | None = None) -> None:

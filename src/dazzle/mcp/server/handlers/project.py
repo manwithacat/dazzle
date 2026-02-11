@@ -176,6 +176,14 @@ def select_project(args: dict[str, Any]) -> str:
     except Exception as e:
         logger.warning(f"Failed to reinit knowledge graph for {project_name}: {e}")
 
+    # Re-initialize activity log for the new project
+    try:
+        from ..state import reinit_activity_log
+
+        reinit_activity_log(project_path)
+    except Exception as e:
+        logger.warning(f"Failed to reinit activity log for {project_name}: {e}")
+
     # Return info about the selected project
     result: dict[str, Any] = {
         "status": "selected",

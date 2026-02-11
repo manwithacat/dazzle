@@ -530,6 +530,11 @@ async def run_server(project_root: Path | None = None) -> None:
     else:
         logger.info("Running in NORMAL MODE")
 
+    # Initialize activity log (before KG so tool calls during init are captured)
+    from .state import init_activity_log
+
+    init_activity_log(get_project_root())
+
     # Initialize knowledge graph
     init_knowledge_graph(get_project_root())
     logger.info("Knowledge graph initialized")

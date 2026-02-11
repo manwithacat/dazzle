@@ -153,6 +153,53 @@ def get_telemetry_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
+def get_activity_handler(args: dict[str, Any]) -> str:
+    """Read recent MCP activity log entries.
+
+    Returns a structured response with entries, cursor for polling,
+    and a human-readable formatted summary.
+
+    Parameters:
+        cursor_seq: int — sequence number to read after (0 = from start)
+        cursor_epoch: int — epoch counter for staleness detection
+        count: int — max entries to return (default 20)
+        format: str — "structured" (default) or "formatted" (markdown)
+    """
+    from ..state import get_activity_log
+
+    activity_log = get_activity_log()
+    if activity_log is None:
+        return json.dumps({"error": "Activity log not initialized"})
+
+    cursor_seq = args.get("cursor_seq", 0)
+    cursor_epoch = args.get("cursor_epoch", 0)
+    count = args.get("count", 20)
+    fmt = args.get("format", "structured")
+
+    data = activity_log.read_since(
+        cursor_seq=cursor_seq,
+        cursor_epoch=cursor_epoch,
+        count=count,
+    )
+
+    if fmt == "formatted":
+        # Return rich markdown summary for display
+        from ..activity_log import ActivityLog as _AL
+
+        formatted = _AL.format_summary(data, color=False)
+        result: dict[str, Any] = {
+            "formatted": formatted,
+            "cursor": data["cursor"],
+            "has_more": data["has_more"],
+        }
+        if data.get("active_tool"):
+            result["active_tool"] = data["active_tool"]
+        return json.dumps(result, indent=2)
+
+    # Structured mode — full data
+    return json.dumps(data, indent=2)
+
+
 def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     """Get DNR runtime logs for debugging."""
     from pathlib import Path

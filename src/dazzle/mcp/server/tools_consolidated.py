@@ -768,13 +768,13 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="status",
-            description="Status operations: mcp, logs, active_project, telemetry",
+            description="Status operations: mcp, logs, active_project, telemetry, activity. Use 'activity' to see real-time MCP tool invocations and progress — supports cursor-based polling for watcher agents.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["mcp", "logs", "active_project", "telemetry"],
+                        "enum": ["mcp", "logs", "active_project", "telemetry", "activity"],
                         "description": "Operation to perform",
                     },
                     "reload": {
@@ -783,7 +783,7 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "count": {
                         "type": "integer",
-                        "description": "Number of entries (for logs, telemetry)",
+                        "description": "Number of entries (for logs, telemetry, activity)",
                     },
                     "level": {
                         "type": "string",
@@ -805,6 +805,19 @@ def get_consolidated_tools() -> list[Tool]:
                     "stats_only": {
                         "type": "boolean",
                         "description": "Only return aggregate stats, no individual invocations (for telemetry)",
+                    },
+                    "cursor_seq": {
+                        "type": "integer",
+                        "description": "Sequence number to read after (for activity, 0 = from start)",
+                    },
+                    "cursor_epoch": {
+                        "type": "integer",
+                        "description": "Epoch counter for staleness detection (for activity, 0 = initial)",
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["structured", "formatted"],
+                        "description": "Response format (for activity): 'structured' (JSON, default) or 'formatted' (human-readable text)",
                     },
                 },
                 "required": ["operation"],
