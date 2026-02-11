@@ -4,18 +4,29 @@ Iterative GitHub issue resolver. Run continuously: triage, implement, ship, repe
 
 ### Step 1: Triage
 
-- Run `gh issue list --state open --limit 50` to get all open issues.
+- Run `gh issue list --state open --limit 50 --json number,title,labels,author` to get all open issues with author info.
 - Run `gh issue list --state closed --limit 20 --search "sort:updated-desc"` to check recently closed.
 - For each **open** issue, check if the fix has already been committed: `git log --oneline --all --grep="#<number>"`.
 - If a commit exists that resolves an issue:
   1. Read the issue body with `gh issue view <number>`.
   2. Post a comment summarising what was implemented and which commit(s) resolve it.
   3. Close the issue: `gh issue close <number>`.
-- Display a summary table of remaining open issues: number, title, labels.
+- Display a summary table of remaining open issues: number, title, labels, **author**.
+
+### Author routing
+
+Issues are handled differently based on who filed them:
+
+- **`manwithacat` issues** → full cycle: investigate, implement, ship, close.
+- **Third-party issues** (any other author) → analyse and comment only:
+  1. Read the full issue with `gh issue view <number>`.
+  2. Search the codebase to understand the request or reproduce the bug.
+  3. Post a comment with your analysis: root cause (bugs), feasibility assessment (features), relevant code paths, and suggested approach. Do NOT implement, commit, or close.
+  4. Skip to the next issue.
 
 ### Step 2: Prioritise and pick
 
-- From remaining open issues, choose the best next issue based on:
+- From remaining open **`manwithacat`** issues, choose the best next issue based on:
   - **Priority labels** (bug > enhancement > feature)
   - **Dependencies** (issues that unblock others first)
   - **Complexity** (prefer smaller, well-scoped issues completable in one session)

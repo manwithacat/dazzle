@@ -1,8 +1,8 @@
 {
   "name": "dazzle-dsl",
   "displayName": "DAZZLE DSL",
-  "description": "Language support for DAZZLE DSL - DSL-first application development with 50x faster CLI",
-  "version": "0.14.0",
+  "description": "[DEPRECATED] Language support for DAZZLE DSL — use 'dazzle lsp' instead. See https://github.com/manwithacat/dazzle#ide-support",
+  "version": "0.15.0",
   "publisher": "dazzle",
   "repository": {
     "type": "git",

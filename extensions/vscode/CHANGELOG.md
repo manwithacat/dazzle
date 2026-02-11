@@ -2,6 +2,12 @@
 
 All notable changes to the "dazzle-dsl" extension will be documented in this file.
 
+## [0.15.0] - 2026-02-11
+
+### Deprecated
+- **Extension deprecated** — The DAZZLE VS Code extension is now deprecated in favor of the standalone LSP server. Use `dazzle lsp run` with any LSP-compatible editor. See the [IDE Support](https://github.com/manwithacat/dazzle#ide-support) section in the README for setup instructions.
+- A deprecation warning is shown on extension activation directing users to the new setup.
+
 ## [0.8.0] - 2024-12-10
 
 ### Major Changes

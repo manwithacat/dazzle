@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle"
-version = "0.21.2"
+version = "0.22.0"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -157,6 +157,7 @@ namespaces = false
 [tool.setuptools.package-data]
 dazzle = ["py.typed"]
 "dazzle.examples" = ["**/*"]
+"dazzle.lsp" = ["grammars/*.json"]
 # Dazzle UI templates (Jinja2 HTML templates for site pages, components, etc.)
 # Note: templates/ is a data directory, not a Python package, so include from parent
 "dazzle_ui" = ["templates/**/*.html", "templates/**/*.css", "templates/**/*.js"]
