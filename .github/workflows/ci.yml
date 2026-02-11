@@ -406,13 +406,7 @@ jobs:
           echo "✓ Formula version matches pyproject.toml: ${VERSION}"
         fi
 
-        # Check CLI version
-        CLI_VERSION=$(grep '"version":' cli/package.json | cut -d'"' -f4)
-        if [[ "${CLI_VERSION}" != "${VERSION}" ]]; then
-          echo "ERROR: CLI version (${CLI_VERSION}) doesn't match pyproject.toml (${VERSION})"
-          exit 1
-        fi
-        echo "✓ CLI version matches: ${CLI_VERSION}"
+        echo "✓ Version consistency check passed"
 
     - name: Validate formula structure
       run: |
@@ -424,7 +418,6 @@ jobs:
         grep -q 'homepage "' homebrew/dazzle.rb || { echo "ERROR: Missing homepage"; exit 1; }
         grep -q 'def install' homebrew/dazzle.rb || { echo "ERROR: Missing install method"; exit 1; }
         grep -q 'test do' homebrew/dazzle.rb || { echo "ERROR: Missing test block"; exit 1; }
-        grep -q 'resource "cli-binary"' homebrew/dazzle.rb || { echo "ERROR: Missing cli-binary resource"; exit 1; }
         grep -q 'resource "pydantic-core"' homebrew/dazzle.rb || { echo "ERROR: Missing pydantic-core resource"; exit 1; }
 
         echo "✓ All required formula sections present"

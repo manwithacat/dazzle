@@ -16,13 +16,19 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - End the commit message with: `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`
 - Use a HEREDOC to pass the message to `git commit -m`.
 
-## 3. Push
+## 3. Tag (if version was bumped)
+
+- Check if `pyproject.toml` was modified in this commit by running `git diff HEAD~1 HEAD -- pyproject.toml`.
+- If the `version = "X.Y.Z"` line changed, extract the new version and create a lightweight tag: `git tag vX.Y.Z`.
+- The tag MUST be created AFTER the commit so it points to the correct commit (not the parent).
+
+## 4. Push
 
 - Run `git push` to push the current branch to origin.
-- If any local tags exist that haven't been pushed (e.g. from `/bump`), also run `git push origin --tags` to push them. This triggers release workflows (PyPI, Homebrew).
+- If a tag was created in step 3, also run `git push origin --tags` to push it. This triggers release workflows (PyPI, Homebrew).
 - If the push is rejected (e.g. non-fast-forward), do NOT force-push. Inform the user and stop.
 
-## 4. Final verification
+## 5. Final verification
 
 - Run `git status` one last time to confirm the worktree is clean.
 - Report the final state: commit SHA, branch, and worktree status.
