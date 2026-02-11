@@ -1618,10 +1618,16 @@ async def dispatch_consolidated_tool(
             except Exception:
                 pass  # Fall through to sync resolution
 
-        # Get activity log for progress context and tool lifecycle entries
-        from .state import get_activity_log
+        # Ensure activity log points at the resolved project (roots may differ)
+        from .state import get_activity_log, reinit_activity_log
 
+        resolved_path = arguments.get("_resolved_project_path")
         activity_log = get_activity_log()
+        if resolved_path is not None and activity_log is not None:
+            expected = resolved_path / ".dazzle" / "mcp-activity.log"
+            if activity_log.path != expected:
+                reinit_activity_log(resolved_path)
+                activity_log = get_activity_log()
 
         operation = arguments.get("operation")
 
