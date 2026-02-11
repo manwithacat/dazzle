@@ -294,6 +294,8 @@ def build_project_json(
         generate_docker_compose,
         generate_dockerfile,
         generate_env_template,
+        generate_local_compose,
+        generate_local_run_script,
         generate_production_main,
         generate_requirements,
     )
@@ -358,6 +360,18 @@ def build_project_json(
             compose = generate_docker_compose(app_name)
             (output_path / "docker-compose.yml").write_text(compose)
             files_generated.append("docker-compose.yml")
+
+            local_compose = generate_local_compose(app_name)
+            (output_path / "docker-compose.local.yml").write_text(local_compose)
+            files_generated.append("docker-compose.local.yml")
+
+            scripts_dir = output_path / "scripts"
+            scripts_dir.mkdir(exist_ok=True)
+            run_script = generate_local_run_script(app_name)
+            run_script_path = scripts_dir / "run_local.sh"
+            run_script_path.write_text(run_script)
+            run_script_path.chmod(0o755)
+            files_generated.append("scripts/run_local.sh")
 
             env = generate_env_template(app_name)
             (output_path / ".env.example").write_text(env)

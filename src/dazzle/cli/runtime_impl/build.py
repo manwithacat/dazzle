@@ -21,6 +21,8 @@ from .docker import (
     generate_docker_compose,
     generate_dockerfile,
     generate_env_template,
+    generate_local_compose,
+    generate_local_run_script,
     generate_production_main,
     generate_requirements,
 )
@@ -489,6 +491,20 @@ def build_command(
         compose = generate_docker_compose(appspec.name)
         (output_dir / "docker-compose.yml").write_text(compose)
         typer.echo("  ✓ docker-compose.yml")
+
+        # Local backing services (Postgres + Redis)
+        local_compose = generate_local_compose(appspec.name)
+        (output_dir / "docker-compose.local.yml").write_text(local_compose)
+        typer.echo("  ✓ docker-compose.local.yml (Postgres + Redis)")
+
+        # Local dev run script
+        scripts_dir = output_dir / "scripts"
+        scripts_dir.mkdir(exist_ok=True)
+        run_script = generate_local_run_script(appspec.name)
+        run_script_path = scripts_dir / "run_local.sh"
+        run_script_path.write_text(run_script)
+        run_script_path.chmod(0o755)
+        typer.echo("  ✓ scripts/run_local.sh")
     else:
         typer.echo("\n[4/5] Skipping Dockerfile (--no-docker)")
 
@@ -505,10 +521,15 @@ def build_command(
     typer.echo("\n" + "=" * 50)
     typer.echo(f"Production bundle ready: {output_dir}")
     typer.echo("=" * 50)
-    typer.echo("\nTo deploy with Docker:")
-    typer.echo(f"  cd {output_dir}")
-    typer.echo("  cp .env.example .env  # Edit configuration")
-    typer.echo("  docker compose up --build")
+    if docker:
+        typer.echo("\nLocal development (production-grade):")
+        typer.echo(f"  cd {output_dir}")
+        typer.echo("  cp .env.example .env  # Edit configuration")
+        typer.echo("  docker compose -f docker-compose.local.yml up -d  # Start Postgres + Redis")
+        typer.echo("  ./scripts/run_local.sh --reload  # Start dev server")
+        typer.echo("\nTo deploy with Docker:")
+        typer.echo(f"  cd {output_dir}")
+        typer.echo("  docker compose up --build")
     typer.echo("\nTo deploy without Docker:")
     typer.echo(f"  cd {output_dir}")
     typer.echo("  pip install -r requirements.txt")
