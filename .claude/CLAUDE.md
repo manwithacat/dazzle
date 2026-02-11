@@ -173,11 +173,25 @@ The DAZZLE MCP server (`dazzle mcp`) provides 23 consolidated tools:
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
 
-## Activity Log
+## Workshop
 
-The MCP server writes a JSONL activity log to `{project}/.dazzle/mcp-activity.log` capturing tool invocations and progress. Useful for debugging long operations:
-- `tail -f .dazzle/mcp-activity.log` in a separate terminal
-- `status activity` MCP operation for cursor-based polling
+Run `dazzle workshop` in your project directory to watch MCP activity in a live terminal display. It shows active tools with progress bars, completed calls with timing, and a running tally of errors and warnings. Open it in a second terminal while Claude Code works on your app.
+
+```bash
+dazzle workshop                    # watch current directory
+dazzle workshop --bell             # ring terminal bell on errors
+dazzle workshop --tail 50          # show more history
+dazzle workshop --info             # print log path (for scripting)
+```
+
+The log location defaults to `.dazzle/mcp-activity.log` and can be overridden in `dazzle.toml`:
+
+```toml
+[workshop]
+log = ".dazzle/mcp-activity.log"   # default
+```
+
+The `status activity` MCP operation provides the same data for programmatic polling.
 
 ## PyPI Package
 
