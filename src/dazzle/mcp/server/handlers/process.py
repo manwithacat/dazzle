@@ -17,6 +17,8 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
@@ -89,6 +91,7 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         processes: List of process dicts (ProcessSpec-compatible)
         overwrite: If True, replace processes with matching names (default: False)
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
         from dazzle.core.ir.process import ProcessSpec
         from dazzle.core.process_persistence import add_processes
@@ -99,6 +102,7 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         overwrite = args.get("overwrite", False)
 
+        progress.log_sync("Validating processes...")
         # Validate and parse processes
         parsed: list[ProcessSpec] = []
         errors: list[str] = []
@@ -113,6 +117,7 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         if errors:
             return json.dumps({"error": "Validation failed", "details": errors})
 
+        progress.log_sync("Validating story and entity references...")
         # Validate story references exist
         app_spec = _load_app_spec(project_root)
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
@@ -138,6 +143,7 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
                         f"unknown entity '{proc.trigger.entity_name}'"
                     )
 
+        progress.log_sync(f"Saving {len(parsed)} processes...")
         # Save
         all_processes = add_processes(project_root, parsed, overwrite=overwrite)
 
@@ -211,7 +217,9 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         limit: Max stories to return (default: 50)
         offset: Number of stories to skip (default: 0)
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Loading app spec for coverage analysis...")
         app_spec = _load_app_spec(project_root)
 
         # Use lightweight index when stories aren't in the AppSpec
@@ -274,6 +282,9 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
                 filtered_items.append(item)
         items = filtered_items
 
+        progress.log_sync(
+            f"Analyzing coverage for {len(items)} stories against {len(processes)} processes..."
+        )
         for item in items:
             if used_index:
                 sid = item["story_id"]
@@ -312,6 +323,9 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         total = len(items)
         coverage_percent = (covered_count / total * 100) if total > 0 else 0.0
+        progress.log_sync(
+            f"Coverage: {covered_count} covered, {partial_count} partial, {uncovered_count} uncovered"
+        )
 
         # Apply status filter
         status_filter = args.get("status_filter", "all")
@@ -583,7 +597,9 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     that guide the agent in composing processes, rather than generating
     ready-made DSL stubs.
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Loading app spec and stories...")
         app_spec = _load_app_spec(project_root)
         story_ids = args.get("story_ids")
 
@@ -631,6 +647,7 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
                 }
             )
 
+        progress.log_sync(f"Clustering {len(target_stories)} stories into workflows...")
         # Cluster stories into workflows and build design briefs
         proposals = _cluster_stories_into_workflows(target_stories, app_spec)
 
@@ -1140,7 +1157,9 @@ async def _list_runs_async(project_root: Path, args: dict[str, Any]) -> str:
     """Async implementation for listing process runs."""
     from dazzle.core.process.adapter import ProcessStatus
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Loading process runs...")
         adapter = _get_process_adapter(project_root)
         await adapter.initialize()
 
@@ -1195,7 +1214,9 @@ async def list_process_runs_handler(project_root: Path, args: dict[str, Any]) ->
 
 async def _get_run_async(project_root: Path, args: dict[str, Any]) -> str:
     """Async implementation for getting a process run."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Fetching process run details...")
         adapter = _get_process_adapter(project_root)
         await adapter.initialize()
 
@@ -1254,12 +1275,14 @@ async def get_process_run_handler(project_root: Path, args: dict[str, Any]) -> s
 
 def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a process definition."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     process_name = args.get("process_name") if args else None
 
     if not process_name:
         return json.dumps({"error": "process_name is required"})
 
     try:
+        progress.log_sync(f"Inspecting process '{process_name}'...")
         app_spec = _load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
@@ -1411,7 +1434,9 @@ def _format_step(step: ProcessStepSpec) -> dict[str, Any]:
 
 def list_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     """List all processes in the project."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Loading processes...")
         app_spec = _load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
@@ -1466,6 +1491,7 @@ def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str
     - Parallel step groupings
     - Compensation handlers (optional)
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     process_name = args.get("process_name") if args else None
     include_compensations = args.get("include_compensations", False) if args else False
     diagram_type = args.get("type", "flowchart") if args else "flowchart"
@@ -1474,6 +1500,7 @@ def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str
         return json.dumps({"error": "process_name is required"})
 
     try:
+        progress.log_sync(f"Generating {diagram_type} diagram for '{process_name}'...")
         app_spec = _load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []

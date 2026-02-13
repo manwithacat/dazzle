@@ -11,6 +11,8 @@ from typing import Any
 
 from dazzle.mcp.semantics import get_mcp_version
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
 from ..state import (
     get_active_project,
     get_active_project_path,
@@ -22,6 +24,8 @@ from ..state import (
 
 def get_mcp_status_handler(args: dict[str, Any]) -> str:
     """Get MCP server status and optionally reload modules."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Gathering MCP status...")
     from pathlib import Path
 
     from dazzle.core.manifest import load_manifest
@@ -135,6 +139,8 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
 
 def get_telemetry_handler(args: dict[str, Any]) -> str:
     """Get MCP tool call telemetry data."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Loading telemetry...")
     from ..state import get_knowledge_graph
 
     graph = get_knowledge_graph()
@@ -174,6 +180,8 @@ def get_activity_handler(args: dict[str, Any]) -> str:
         count: int — max entries to return (default 20)
         format: str — "structured" (default) or "formatted" (markdown)
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Reading activity log...")
     from ..state import get_activity_log, get_activity_store
 
     activity_store = get_activity_store()
@@ -243,6 +251,8 @@ def get_activity_handler(args: dict[str, Any]) -> str:
 
 def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     """Get DNR runtime logs for debugging."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Reading DNR logs...")
     from pathlib import Path
 
     count = args.get("count", 50)

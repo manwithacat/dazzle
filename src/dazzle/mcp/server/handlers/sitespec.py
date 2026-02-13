@@ -10,6 +10,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
+
 logger = logging.getLogger("dazzle.mcp")
 
 
@@ -21,9 +24,11 @@ def get_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         sitespec_exists,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     use_defaults = args.get("use_defaults", True)
 
     try:
+        progress.log_sync("Loading sitespec...")
         sitespec = load_sitespec(project_root, use_defaults=use_defaults)
 
         # Convert to dict for JSON serialization
@@ -120,9 +125,11 @@ def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         validate_sitespec,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     check_content_files = args.get("check_content_files", True)
 
     try:
+        progress.log_sync("Validating sitespec...")
         sitespec = load_sitespec(project_root, use_defaults=True)
 
         # Try to load AppSpec for DSL route awareness
@@ -173,10 +180,12 @@ def scaffold_site_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create default site structure with templates."""
     from dazzle.core.sitespec_loader import scaffold_site as do_scaffold_site
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     product_name = args.get("product_name", "My App")
     overwrite = args.get("overwrite", False)
 
     try:
+        progress.log_sync("Scaffolding sitespec...")
         result = do_scaffold_site(project_root, product_name, overwrite=overwrite)
 
         created_files: list[str] = []
@@ -229,7 +238,10 @@ def get_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
     from dazzle.core.sitespec_loader import copy_file_exists, get_copy_file_path, load_copy
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Loading copy...")
         copy_path = get_copy_file_path(project_root)
         exists = copy_file_exists(project_root)
 
@@ -309,10 +321,12 @@ def scaffold_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
         scaffold_copy_file,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     product_name = args.get("product_name", "My App")
     overwrite = args.get("overwrite", False)
 
     try:
+        progress.log_sync("Scaffolding copy...")
         copy_path = get_copy_file_path(project_root)
         existed = copy_file_exists(project_root)
 
@@ -369,7 +383,10 @@ def review_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.copy_parser import load_copy_file
     from dazzle.core.sitespec_loader import copy_file_exists, get_copy_file_path
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Reviewing copy...")
         if not copy_file_exists(project_root):
             return json.dumps(
                 {
@@ -466,9 +483,11 @@ def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
         load_sitespec,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     business_context = args.get("business_context")
 
     try:
+        progress.log_sync("Validating site coherence...")
         # Load sitespec
         sitespec = load_sitespec(project_root, use_defaults=True)
         sitespec_data = sitespec.model_dump()
@@ -519,9 +538,11 @@ def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.site_coherence import validate_site_coherence
     from dazzle.core.sitespec_loader import SiteSpecError, load_copy, load_sitespec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     business_context = args.get("business_context")
 
     try:
+        progress.log_sync("Reviewing sitespec...")
         sitespec = load_sitespec(project_root, use_defaults=True)
         sitespec_data = sitespec.model_dump()
         copy_data = load_copy(project_root)
@@ -690,9 +711,11 @@ def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         themespec_exists,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     use_defaults = args.get("use_defaults", True)
 
     try:
+        progress.log_sync("Loading themespec...")
         themespec = load_themespec(project_root, use_defaults=use_defaults)
 
         result = {
@@ -758,6 +781,8 @@ def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create a default themespec.yaml file."""
     from dazzle.core.themespec_loader import scaffold_themespec, themespec_exists
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Scaffolding themespec...")
     brand_hue = args.get("brand_hue", 260.0)
     brand_chroma = args.get("brand_chroma", 0.15)
     product_name = args.get("product_name", "My App")
@@ -824,7 +849,10 @@ def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         validate_themespec,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Validating themespec...")
         themespec = load_themespec(project_root, use_defaults=True)
         result = validate_themespec(themespec, project_root)
 
@@ -851,7 +879,10 @@ def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.dtcg_export import export_dtcg_file, generate_dtcg_tokens
     from dazzle.core.themespec_loader import ThemeSpecError, load_themespec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Generating design tokens...")
         themespec = load_themespec(project_root, use_defaults=True)
         tokens = generate_dtcg_tokens(themespec)
 
@@ -894,7 +925,10 @@ def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -
     from dazzle.core.imagery_prompts import generate_imagery_prompts
     from dazzle.core.themespec_loader import ThemeSpecError, load_themespec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Generating imagery prompts...")
         themespec = load_themespec(project_root, use_defaults=True)
 
         # Try to load sitespec for section context

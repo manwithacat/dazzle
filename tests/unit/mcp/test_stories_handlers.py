@@ -22,6 +22,9 @@ def _import_stories():
     mock_state.get_project_path = MagicMock(return_value=None)
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
     sys.modules["dazzle.mcp.server.state"] = mock_state
+    sys.modules.setdefault("dazzle.mcp", MagicMock(pytest_plugins=[]))
+    sys.modules.setdefault("dazzle.mcp.server", MagicMock(pytest_plugins=[]))
+    sys.modules.setdefault("dazzle.mcp.server.progress", MagicMock(pytest_plugins=[]))
 
     module_path = (
         Path(__file__).parent.parent.parent.parent

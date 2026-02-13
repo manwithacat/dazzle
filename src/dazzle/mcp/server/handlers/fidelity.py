@@ -7,6 +7,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
+
 logger = logging.getLogger("dazzle.mcp")
 
 
@@ -20,6 +23,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     Returns:
         JSON string with fidelity report.
     """
+    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
     try:
         from dazzle.core.fidelity_scorer import score_appspec_fidelity
     except ImportError:
@@ -32,6 +36,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     from dazzle.core.parser import parse_modules
 
     try:
+        progress.log_sync("Loading project DSL...")
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
@@ -40,6 +45,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
         return json.dumps({"error": f"Failed to parse/link DSL: {e}"})
 
     # Validate DSL before proceeding
+    progress.log_sync("Linting DSL...")
     from dazzle.core.lint import lint_appspec
 
     lint_errors, lint_warnings = lint_appspec(appspec)
@@ -64,11 +70,13 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
         )
 
     try:
+        progress.log_sync("Compiling templates...")
         page_contexts = compile_appspec_to_templates(appspec)
     except Exception as e:
         return json.dumps({"error": f"Failed to compile templates: {e}"})
 
     # Render each page and build surface_name → HTML mapping
+    progress.log_sync(f"Rendering {len(page_contexts)} pages...")
     rendered_pages: dict[str, str] = {}
     render_failure_details: list[dict[str, str]] = []
     for _route, ctx in page_contexts.items():
@@ -91,6 +99,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             }
         )
 
+    progress.log_sync("Scoring fidelity...")
     surface_filter = arguments.get("surface_filter")
     report = score_appspec_fidelity(appspec, rendered_pages, surface_filter, str(project_path))
 

@@ -15,6 +15,8 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
 
 if TYPE_CHECKING:
     from dazzle.core.ir.stories import StorySpec
@@ -252,7 +254,9 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     Default: returns compact summaries of all entities and surfaces.
     With entity_names/surface_names: returns full details for those items only.
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Loading DSL specification...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -323,7 +327,9 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.stories_persistence import get_next_story_id
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Parsing DSL and building app spec...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -352,6 +358,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
         if app_spec.personas:
             default_actor = app_spec.personas[0].label or app_spec.personas[0].id
 
+        progress.log_sync("Generating stories from entities...")
         # Generate stories from entities
         for entity in app_spec.domain.entities:
             if filter_entities and entity.name not in filter_entities:
@@ -426,6 +433,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
         # (which would force full content through context twice)
         from dazzle.core.stories_persistence import add_stories
 
+        progress.log_sync(f"Saving {len(stories)} draft stories...")
         add_stories(project_root, stories, overwrite=False)
 
         # Return summaries only — the LLM just generated these and knows
@@ -448,6 +456,7 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.stories_persistence import add_stories, get_stories_file
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     stories_data = args.get("stories", [])
     overwrite = args.get("overwrite", False)
 
@@ -455,6 +464,7 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": "No stories provided"})
 
     try:
+        progress.log_sync("Validating stories...")
         # Convert to StorySpec objects with validation
         stories: list[StorySpec] = []
         for s in stories_data:
@@ -475,6 +485,7 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
             )
             stories.append(story)
 
+        progress.log_sync(f"Saving {len(stories)} stories...")
         # Save stories
         all_stories = add_stories(project_root, stories, overwrite=overwrite)
         stories_file = get_stories_file(project_root)
@@ -503,10 +514,12 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.ir.stories import StoryStatus
     from dazzle.core.stories_persistence import get_stories_by_status, get_stories_file
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     status_filter = args.get("status_filter", "all")
     story_ids = args.get("story_ids")
 
     try:
+        progress.log_sync("Loading stories...")
         status = None
         if status_filter != "all":
             status = StoryStatus(status_filter)
@@ -557,15 +570,18 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     from .process import stories_coverage_handler
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     actor_filter_str: str | None = args.get("persona")
 
     try:
+        progress.log_sync("Loading stories for wall view...")
         # Get accepted stories (the founder's approved work)
         stories = get_stories_by_status(project_root, StoryStatus.ACCEPTED)
         if not stories:
             # Fall back to all stories
             stories = get_stories_by_status(project_root, None)
 
+        progress.log_sync("Calculating coverage data...")
         # Get coverage data
         coverage_raw = stories_coverage_handler(project_root, {"limit": 500})
         coverage_data: dict[str, Any] = json.loads(coverage_raw)
@@ -603,6 +619,7 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         total = len(stories)
 
+        progress.log_sync("Rendering story wall...")
         # Render wall markdown
         md_lines = ["Story Wall", ""]
         if actor_filter_str:
@@ -655,10 +672,12 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
     )
     from dazzle.core.stories_persistence import get_stories_by_status
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     story_ids = args.get("story_ids")
     include_draft = args.get("include_draft", False)
 
     try:
+        progress.log_sync("Loading stories for test generation...")
         # Get stories to convert
         stories = get_stories_by_status(project_root, StoryStatus.ACCEPTED)
 
@@ -831,12 +850,14 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
                 status=TestDesignStatus.PROPOSED,
             )
 
+        progress.log_sync(f"Converting {len(stories)} stories to test designs...")
         # Convert all stories to test designs
         test_designs = [story_to_test_design(s, i) for i, s in enumerate(stories)]
 
         # Auto-save generated test designs to avoid a separate save round-trip
         from dazzle.testing.test_design_persistence import add_test_designs
 
+        progress.log_sync("Saving test designs...")
         add_test_designs(project_root, test_designs, overwrite=False)
 
         # Return summaries only to reduce context usage

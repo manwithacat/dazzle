@@ -17,6 +17,8 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.mcp.runtime_tools import set_backend_spec
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
 from ..state import (
     get_active_project,
     get_available_projects,
@@ -136,6 +138,8 @@ def load_backend_spec_for_project(project_path: Path) -> bool:
 
 def select_project(args: dict[str, Any]) -> str:
     """Select an example project to work with."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Selecting project...")
     if not is_dev_mode():
         return json.dumps(
             {

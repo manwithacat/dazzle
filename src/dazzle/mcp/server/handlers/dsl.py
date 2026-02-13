@@ -18,14 +18,19 @@ from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
 from ..state import get_active_project, is_dev_mode
 
 
-def validate_dsl(project_root: Path) -> str:
+def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Validate DSL files in the project."""
+    progress: ProgressContext = (args.get("_progress") if args else None) or _noop_progress()
     try:
+        progress.log_sync("Loading project DSL...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
+        progress.log_sync("Parsing and validating DSL...")
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
@@ -50,9 +55,11 @@ def validate_dsl(project_root: Path) -> str:
         )
 
 
-def list_modules(project_root: Path) -> str:
+def list_modules(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """List all modules in the project."""
+    progress: ProgressContext = (args.get("_progress") if args else None) or _noop_progress()
     try:
+        progress.log_sync("Listing project modules...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         parsed_modules = parse_modules(dsl_files)
@@ -71,11 +78,13 @@ def list_modules(project_root: Path) -> str:
 
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect an entity definition."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     entity_name = args.get("entity_name") or args.get("name")
     if not entity_name:
         return json.dumps({"error": "entity_name required"})
 
     try:
+        progress.log_sync(f"Inspecting entity '{entity_name}'...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -108,11 +117,13 @@ def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
 
 def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a surface definition."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     surface_name = args.get("surface_name") or args.get("name")
     if not surface_name:
         return json.dumps({"error": "surface_name required"})
 
     try:
+        progress.log_sync(f"Inspecting surface '{surface_name}'...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -145,15 +156,19 @@ def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-def analyze_patterns(project_root: Path) -> str:
+def analyze_patterns(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Analyze the project for patterns."""
+    progress: ProgressContext = (args.get("_progress") if args else None) or _noop_progress()
     try:
+        progress.log_sync("Loading project DSL...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
+        progress.log_sync("Detecting CRUD patterns...")
         crud_patterns = detect_crud_patterns(app_spec)
+        progress.log_sync("Detecting integration patterns...")
         integration_patterns = detect_integration_patterns(app_spec)
 
         crud_list = [
@@ -201,13 +216,16 @@ def analyze_patterns(project_root: Path) -> str:
 
 def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Export a framework-agnostic frontend specification from DSL."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     try:
+        progress.log_sync("Loading project DSL...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
         # Load sitespec (optional)
+        progress.log_sync("Loading sitespec...")
         sitespec = None
         try:
             from dazzle.core.sitespec_loader import load_sitespec
@@ -217,6 +235,7 @@ def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> st
             pass
 
         # Load stories (optional)
+        progress.log_sync("Loading stories...")
         stories = []
         try:
             from dazzle.core.stories_persistence import load_stories
@@ -226,6 +245,7 @@ def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> st
             pass
 
         # Load test designs (optional)
+        progress.log_sync("Loading test designs...")
         test_designs = []
         try:
             from dazzle.testing.test_design_persistence import load_test_designs
@@ -240,6 +260,7 @@ def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> st
         sections = args.get("sections")
         entities = args.get("entities")
 
+        progress.log_sync("Exporting frontend spec...")
         result = export_frontend_spec(
             app_spec, sitespec, stories, test_designs, fmt, sections, entities
         )
@@ -250,14 +271,17 @@ def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> st
 
 def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     """Run linting on the project."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     extended = args.get("extended", False)
 
     try:
+        progress.log_sync("Loading project DSL...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
+        progress.log_sync("Running lint checks...")
         errors, warnings = lint_appspec(app_spec, extended=extended)
 
         return json.dumps(
@@ -280,18 +304,22 @@ def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
     """
     from dazzle.mcp.event_first_tools import infer_compliance_requirements
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     extended = args.get("extended", False)
 
     try:
+        progress.log_sync("Loading project DSL...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
         app_spec = build_appspec(modules, manifest.project_root)
 
         # Run lint
+        progress.log_sync("Running lint checks...")
         lint_errors, lint_warnings = lint_appspec(app_spec, extended=extended)
 
         # Run compliance inference
+        progress.log_sync("Inferring compliance requirements...")
         compliance = infer_compliance_requirements(app_spec)
 
         # Build unified issue map keyed by entity.field (or just message for global)
@@ -370,6 +398,7 @@ def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
             )
 
         # Build cross-reference summary for issues flagged by multiple tools
+        progress.log_sync("Cross-referencing findings...")
         multi_source_issues = [i for i in issues.values() if len(i["sources"]) > 1]
 
         # Sort by severity then by key

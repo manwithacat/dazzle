@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
 from ..state import get_project_path
 
 
@@ -95,6 +97,8 @@ async def list_users_handler(
     Returns:
         List of users with id, email, username, roles, is_active, created_at
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Listing users...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
@@ -137,6 +141,8 @@ async def create_user_handler(
     Returns:
         Created user details including the temporary password (shown only once)
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Creating user...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
@@ -202,6 +208,8 @@ async def get_user_handler(
     Returns:
         User details including active sessions count
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Getting user...")
     if not user_id and not email:
         return {"error": "Must provide either user_id or email"}
 
@@ -252,6 +260,8 @@ async def update_user_handler(
     Returns:
         Updated user details
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Updating user...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
@@ -307,6 +317,8 @@ async def reset_password_handler(
     Returns:
         New temporary password (shown only once) and session revocation count
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Resetting password...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
@@ -372,6 +384,8 @@ async def deactivate_user_handler(
     Returns:
         Deactivation confirmation and session revocation count
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Deactivating user...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
@@ -421,6 +435,8 @@ async def list_sessions_handler(
     Returns:
         List of sessions with user info
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Listing sessions...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
@@ -480,6 +496,8 @@ async def revoke_session_handler(
     Returns:
         Revocation confirmation
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Revoking session...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
@@ -514,6 +532,8 @@ async def get_auth_config_handler(
     Returns:
         Auth configuration including database type, user count, session count
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Loading auth config...")
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 

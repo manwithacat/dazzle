@@ -12,6 +12,8 @@ import shutil
 from pathlib import Path
 from typing import Any
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
 from ..state import get_active_project_path, get_project_root
 
 logger = logging.getLogger("dazzle.mcp.testing")
@@ -27,6 +29,8 @@ def check_test_infrastructure_handler() -> str:
     Returns:
         JSON with infrastructure status and setup instructions
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Checking test infrastructure...")
     result: dict[str, Any] = {
         "ready": True,
         "components": {},
@@ -177,6 +181,8 @@ def run_e2e_tests_handler(
     Returns:
         JSON string with test results
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Running E2E tests...")
     try:
         # Resolve project path
         root: Path
@@ -277,6 +283,8 @@ def get_e2e_test_coverage_handler(
     Returns:
         JSON string with coverage report
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Analyzing E2E test coverage...")
     try:
         # Resolve project path
         root: Path
@@ -386,6 +394,8 @@ def list_e2e_flows_handler(
     Returns:
         JSON string with flow list
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Listing E2E test flows...")
     try:
         # Resolve project path
         root: Path
@@ -492,6 +502,8 @@ async def run_agent_e2e_tests_handler(
         - results: list of test results with steps and reasoning
         - duration_seconds: total execution time
     """
+    progress: ProgressContext = _noop_progress()
+    progress.log_sync("Running agent E2E tests...")
     try:
         # Resolve project path
         root: Path
@@ -585,6 +597,8 @@ async def run_agent_e2e_tests_handler(
 
 def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
     """Provide guidance on which test tier to use for a scenario."""
+    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress.log_sync("Analyzing test tier...")
     scenario = arguments.get("scenario", "").lower()
 
     # Keywords that suggest Tier 3 (agent) testing

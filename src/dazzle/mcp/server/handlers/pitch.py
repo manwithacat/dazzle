@@ -9,6 +9,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
+
 logger = logging.getLogger(__name__)
 
 # Sections that make a pitch deck investor-ready
@@ -151,9 +154,11 @@ def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Scaffold a pitchspec.yaml file."""
     from dazzle.pitch.loader import scaffold_pitchspec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     overwrite = args.get("overwrite", False)
 
     try:
+        progress.log_sync("Scaffolding pitchspec...")
         result = scaffold_pitchspec(project_root, overwrite=overwrite)
 
         if result:
@@ -192,9 +197,11 @@ def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.pitch.extractor import extract_pitch_context
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     fmt = args.get("format", "pptx")
 
     try:
+        progress.log_sync("Loading pitchspec...")
         spec = load_pitchspec(project_root)
     except PitchSpecError as e:
         return json.dumps(
@@ -205,6 +212,7 @@ def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
             indent=2,
         )
 
+    progress.log_sync("Generating pitch...")
     ctx = extract_pitch_context(project_root, spec)
     results: list[dict[str, Any]] = []
     all_warnings: list[str] = []
@@ -277,7 +285,10 @@ def validate_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate the pitchspec.yaml."""
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec, validate_pitchspec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Validating pitchspec...")
         spec = load_pitchspec(project_root)
     except PitchSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
@@ -319,7 +330,10 @@ def get_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get the current pitchspec."""
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec, pitchspec_exists
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Loading pitchspec...")
         spec = load_pitchspec(project_root)
         data = spec.model_dump(mode="json", exclude_none=True)
         missing = _get_missing_sections(spec)
@@ -356,7 +370,10 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze pitch content quality and suggest improvements."""
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Reviewing pitch quality...")
         spec = load_pitchspec(project_root)
     except PitchSpecError as e:
         return json.dumps(
@@ -553,6 +570,8 @@ def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Merge a patch into pitchspec.yaml."""
     from dazzle.pitch.loader import PitchSpecError, merge_pitchspec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Updating pitchspec...")
     patch = args.get("patch")
     if not patch or not isinstance(patch, dict):
         return json.dumps({"error": "patch parameter is required and must be a dict"}, indent=2)
@@ -588,6 +607,9 @@ def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze pitchspec + DSL context and return structured enrichment tasks."""
     from dazzle.pitch.extractor import extract_pitch_context
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec, pitchspec_exists
+
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Enriching pitch...")
 
     if not pitchspec_exists(project_root):
         return json.dumps(
@@ -761,6 +783,9 @@ def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
 def init_assets_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create pitch_assets/ directory structure."""
     from dazzle.pitch.loader import ensure_pitch_assets
+
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Initializing pitch assets...")
 
     try:
         assets_dir = ensure_pitch_assets(project_root)

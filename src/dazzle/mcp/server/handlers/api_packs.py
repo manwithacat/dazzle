@@ -9,11 +9,16 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
+
 
 def list_api_packs_handler(args: dict[str, Any]) -> str:
     """List all available API packs."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     from dazzle.api_kb import list_packs
 
+    progress.log_sync("Listing API packs...")
     packs = list_packs()
 
     return json.dumps(
@@ -36,8 +41,10 @@ def list_api_packs_handler(args: dict[str, Any]) -> str:
 
 def search_api_packs_handler(args: dict[str, Any]) -> str:
     """Search for API packs by category, provider, or query."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     from dazzle.api_kb import search_packs
 
+    progress.log_sync("Searching API packs...")
     category = args.get("category")
     provider = args.get("provider")
     query = args.get("query")
@@ -69,9 +76,12 @@ def search_api_packs_handler(args: dict[str, Any]) -> str:
 
 def get_api_pack_handler(args: dict[str, Any]) -> str:
     """Get full details of an API pack."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     from dazzle.api_kb import load_pack
 
     pack_name = args.get("pack_name")
+    if pack_name:
+        progress.log_sync(f"Loading API pack '{pack_name}'...")
     if not pack_name:
         return json.dumps({"error": "pack_name parameter required"})
 
@@ -154,8 +164,10 @@ def _serialize_infrastructure(infra: Any) -> dict[str, Any] | None:
 
 def generate_service_dsl_handler(args: dict[str, Any]) -> str:
     """Generate DSL service and foreign_model blocks from an API pack."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
     from dazzle.api_kb import load_pack
 
+    progress.log_sync("Generating DSL from API pack...")
     pack_name = args.get("pack_name")
     if not pack_name:
         return json.dumps({"error": "pack_name parameter required"})
@@ -190,6 +202,8 @@ def generate_service_dsl_handler(args: dict[str, Any]) -> str:
 
 def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
     """Discover infrastructure requirements for services declared in DSL."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Discovering infrastructure requirements...")
     from pathlib import Path
 
     from dazzle.api_kb import load_pack
@@ -260,6 +274,8 @@ def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
 
 def get_env_vars_for_packs_handler(args: dict[str, Any]) -> str:
     """Get .env.example content for specified packs or all packs."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Generating env vars...")
     from dazzle.api_kb.loader import generate_env_example
 
     pack_names = args.get("pack_names")

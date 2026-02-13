@@ -41,6 +41,14 @@ def _import_modules():
     for k in _mocked:
         sys.modules[k] = MagicMock(pytest_plugins=[])
 
+    # Mock the progress module that contribution.py now imports
+    progress_mock = MagicMock()
+    _noop_ctx = MagicMock()
+    _noop_ctx.log_sync = MagicMock()
+    progress_mock.ProgressContext = type(_noop_ctx)
+    progress_mock.noop = MagicMock(return_value=_noop_ctx)
+    sys.modules["dazzle.mcp.server.progress"] = progress_mock
+
     # Mock the github_issues module that contribution.py imports lazily
     github_issues_mock = MagicMock()
     github_issues_mock.gh_auth_guidance = MagicMock(
@@ -53,6 +61,7 @@ def _import_modules():
     dazzle_mcp_mock = MagicMock()
     dazzle_mcp_mock.server = MagicMock()
     dazzle_mcp_mock.server.github_issues = github_issues_mock
+    dazzle_mcp_mock.server.progress = progress_mock
     sys.modules["dazzle.mcp"] = dazzle_mcp_mock
 
     # Get path to contribution.py

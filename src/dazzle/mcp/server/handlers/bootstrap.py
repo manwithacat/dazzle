@@ -12,6 +12,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ..progress import ProgressContext
+from ..progress import noop as _noop_progress
 from .spec_analyze import handle_spec_analyze
 
 logger = logging.getLogger(__name__)
@@ -35,10 +37,12 @@ def handle_bootstrap(arguments: dict[str, Any], project_path: Path | None = None
 
     Scans for spec files, runs cognition pass, returns mission briefing.
     """
+    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
     # Determine working directory
     work_dir = project_path or Path.cwd()
 
     # Phase 1: Find or create spec
+    progress.log_sync("Scanning for spec files...")
     spec_text, spec_source = _find_spec(work_dir, arguments)
 
     if not spec_text:
@@ -67,6 +71,7 @@ def handle_bootstrap(arguments: dict[str, Any], project_path: Path | None = None
 
     # Phase 2: Run cognition pass
     # spec_source is always set when spec_text is set
+    progress.log_sync("Running cognition pass...")
     return _run_cognition_pass(spec_text, spec_source or "unknown")
 
 

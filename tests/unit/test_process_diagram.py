@@ -39,7 +39,15 @@ def _import_module():
         return
 
     # Mock the MCP server packages to prevent import errors
-    _mocked = ["mcp", "mcp.server", "mcp.server.fastmcp", "dazzle.mcp.server.handlers"]
+    _mocked = [
+        "mcp",
+        "mcp.server",
+        "mcp.server.fastmcp",
+        "dazzle.mcp",
+        "dazzle.mcp.server",
+        "dazzle.mcp.server.handlers",
+        "dazzle.mcp.server.progress",
+    ]
     _orig = {k: sys.modules.get(k) for k in _mocked}
     for k in _mocked:
         sys.modules[k] = MagicMock(pytest_plugins=[])

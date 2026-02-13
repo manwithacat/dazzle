@@ -15,6 +15,8 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -59,7 +61,10 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
     )
     from dazzle.testing.test_design_persistence import get_next_test_design_id
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Proposing persona tests...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -282,7 +287,10 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.testing.test_design_persistence import load_test_designs
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Analyzing test gaps...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -304,6 +312,7 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
         gaps: list[TestGap] = []
 
         # Check for untested entities (no custom test designs)
+        progress.log_sync("Checking entity coverage...")
         all_entities = {e.name for e in app_spec.domain.entities}
         untested_entities = all_entities - existing_entities
 
@@ -327,6 +336,7 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
                 )
 
         # Check for untested persona goals
+        progress.log_sync("Checking persona coverage...")
         for persona in app_spec.personas:
             if persona.id not in existing_personas:
                 gaps.append(
@@ -379,6 +389,7 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
                         )
 
         # Check for untested surfaces
+        progress.log_sync("Checking surface coverage...")
         tested_surfaces: set[str] = set()
         for design in existing_designs:
             tested_surfaces.update(design.surfaces)
@@ -488,6 +499,8 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
     from dazzle.testing.test_design_persistence import add_test_designs, get_dsl_tests_dir
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     designs_data = args.get("designs", [])
     overwrite = args.get("overwrite", False)
 
@@ -495,6 +508,7 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": "No designs provided"})
 
     try:
+        progress.log_sync("Saving test designs...")
         # Convert dict data to TestDesignSpec objects
         designs: list[TestDesignSpec] = []
         for d in designs_data:
@@ -567,10 +581,13 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
         get_test_designs_by_status,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     status_filter = args.get("status_filter")
     test_ids = args.get("test_ids")
 
     try:
+        progress.log_sync("Retrieving test designs...")
         status = (
             TestDesignStatus(status_filter) if status_filter and status_filter != "all" else None
         )
@@ -648,10 +665,13 @@ def get_coverage_actions_handler(project_root: Path, args: dict[str, Any]) -> st
     from dazzle.testing.test_design_persistence import load_test_designs
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     max_actions = args.get("max_actions", 5)
     focus = args.get("focus", "all")
 
     try:
+        progress.log_sync("Building coverage action list...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -915,8 +935,12 @@ def get_runtime_coverage_gaps_handler(project_root: Path, args: dict[str, Any]) 
     This reads the actual runtime coverage from test execution and identifies
     specific gaps that need test coverage.
     """
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     max_actions = args.get("max_actions", 5)
     coverage_path = args.get("coverage_report_path")
+
+    progress.log_sync("Analyzing runtime coverage gaps...")
 
     # Find coverage report
     if coverage_path:
@@ -1153,11 +1177,14 @@ def _generate_view_steps(entity_name: str, view: str) -> list[dict[str, Any]]:
 
 def save_runtime_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save runtime coverage report to dsl/tests/ for future analysis."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     coverage_data = args.get("coverage_data")
 
     if not coverage_data:
         return json.dumps({"error": "coverage_data is required"}, indent=2)
 
+    progress.log_sync("Saving runtime coverage report...")
     # Save to dsl/tests/runtime_coverage.json
     tests_dir = project_root / "dsl" / "tests"
     tests_dir.mkdir(parents=True, exist_ok=True)

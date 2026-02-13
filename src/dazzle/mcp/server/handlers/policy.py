@@ -27,6 +27,8 @@ from dazzle.core.ir.domain import (
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
 
 logger = logging.getLogger("dazzle.mcp.policy")
 
@@ -36,12 +38,14 @@ ALL_OPS = list(PermissionKind)
 
 def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
     """Handle policy analysis operations."""
+    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
     operation = arguments.get("operation")
     entity_names: list[str] | None = arguments.get("entity_names")
     persona: str | None = arguments.get("persona")
     operation_kind: str | None = arguments.get("operation_kind")
 
     try:
+        progress.log_sync("Loading DSL...")
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
@@ -50,16 +54,20 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
         return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
 
     if operation == "analyze":
+        progress.log_sync("Analyzing policy...")
         return json.dumps(_analyze(appspec, entity_names), indent=2)
     elif operation == "conflicts":
+        progress.log_sync("Detecting policy conflicts...")
         return json.dumps(_find_conflicts(appspec, entity_names), indent=2)
     elif operation == "coverage":
+        progress.log_sync("Building coverage matrix...")
         return json.dumps(_coverage_matrix(appspec, entity_names), indent=2)
     elif operation == "simulate":
         if not persona or not entity_names or not operation_kind:
             return json.dumps(
                 {"error": ("simulate requires persona, entity_names (single), and operation_kind")}
             )
+        progress.log_sync("Simulating access...")
         return json.dumps(
             _simulate(appspec, entity_names[0], persona, operation_kind),
             indent=2,

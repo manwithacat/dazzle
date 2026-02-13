@@ -72,15 +72,15 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
         return _project_error()
 
     if operation == "validate":
-        return validate_dsl(project_path)
+        return validate_dsl(project_path, arguments)
     elif operation == "list_modules":
-        return list_modules(project_path)
+        return list_modules(project_path, arguments)
     elif operation == "inspect_entity":
         return inspect_entity(project_path, arguments)
     elif operation == "inspect_surface":
         return inspect_surface(project_path, arguments)
     elif operation == "analyze":
-        return analyze_patterns(project_path)
+        return analyze_patterns(project_path, arguments)
     elif operation == "lint":
         return lint_project(project_path, arguments)
     elif operation == "issues":
@@ -605,8 +605,12 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
         revoke_session_handler,
         update_user_handler,
     )
+    from .progress import ProgressContext
+    from .progress import noop as _noop_progress
 
+    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
     operation = arguments.get("operation")
+    progress.log_sync(f"User management: {operation}...")
     project_path = _resolve_project(arguments)
 
     if project_path is None:

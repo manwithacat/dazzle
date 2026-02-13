@@ -14,6 +14,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
+
 
 def _get_dazzle_version() -> str:
     """Get the current Dazzle version."""
@@ -79,6 +82,8 @@ GITHUB_ISSUE_BASE = "https://github.com/manwithacat/dazzle/issues/new"
 
 def templates_handler(args: dict[str, Any]) -> str:
     """List available contribution templates."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Loading contribution templates...")
     return json.dumps(
         {
             "templates": CONTRIBUTION_TYPES,
@@ -91,6 +96,8 @@ def templates_handler(args: dict[str, Any]) -> str:
 
 def create_handler(args: dict[str, Any]) -> str:
     """Create a contribution package."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Creating contribution package...")
     contrib_type = args.get("type")
     title = args.get("title", "Untitled Contribution")
     description = args.get("description", "")
@@ -156,6 +163,8 @@ def create_handler(args: dict[str, Any]) -> str:
 
 def validate_handler(args: dict[str, Any]) -> str:
     """Validate a contribution package."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Validating contribution...")
     contrib_type = args.get("type")
     content = args.get("content", {})
 
@@ -193,6 +202,8 @@ def validate_handler(args: dict[str, Any]) -> str:
 
 def examples_handler(args: dict[str, Any]) -> str:
     """Show example contributions."""
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Loading example contributions...")
     contrib_type = args.get("type", "api_pack")
 
     examples = {

@@ -34,6 +34,8 @@ def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     from dazzle.core.composition import run_composition_audit
     from dazzle.core.sitespec_loader import load_sitespec_with_copy
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Running composition audit...")
     routes_filter: list[str] | None = args.get("pages")
 
     try:
@@ -68,6 +70,8 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
     from dazzle.core.composition_capture import capture_page_sections
     from dazzle.core.sitespec_loader import load_sitespec_with_copy
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Capturing composition screenshots...")
     base_url: str | None = args.get("base_url")
     if not base_url:
         return json.dumps(
@@ -143,6 +147,8 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
         evaluate_captures,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress.log_sync("Analyzing composition screenshots...")
     focus: list[str] | None = args.get("focus")
     token_budget: int = args.get("token_budget", 50_000)
     captures_dir = project_path / ".dazzle" / "composition" / "captures"

@@ -14,6 +14,8 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.mcp.server.progress import ProgressContext
+from dazzle.mcp.server.progress import noop as _noop_progress
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -134,6 +136,8 @@ def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> 
         TenantBlueprint,
     )
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     domain_description = args.get("domain_description", "")
     tenant_count = args.get("tenant_count", 2)
     filter_entities = args.get("entities")  # v0.14.2: Optional entity filter for chunking
@@ -143,6 +147,7 @@ def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> 
     quick_mode = args.get("quick_mode", False)  # v0.14.2: Minimal demo data generation
 
     try:
+        progress.log_sync("Analyzing DSL for demo data...")
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
@@ -343,6 +348,8 @@ def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str
     from dazzle.core.demo_blueprint_persistence import load_blueprint, save_blueprint
     from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     blueprint_data = args.get("blueprint")
     merge_entities = args.get("merge", False)  # v0.14.2: Merge with existing blueprint
     validate_coverage = args.get("validate", True)  # v0.14.2: Validate against DSL
@@ -351,6 +358,7 @@ def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str
         return json.dumps({"error": "blueprint parameter required"})
 
     try:
+        progress.log_sync("Saving demo data blueprint...")
         # Validate and create blueprint
         new_blueprint = DemoDataBlueprint.model_validate(blueprint_data)
         warnings: list[str] = []
@@ -445,7 +453,10 @@ def get_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load the current Demo Data Blueprint."""
     from dazzle.core.demo_blueprint_persistence import get_blueprint_file, load_blueprint
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     try:
+        progress.log_sync("Loading demo data blueprint...")
         blueprint = load_blueprint(project_root)
         blueprint_file = get_blueprint_file(project_root)
 
@@ -475,11 +486,14 @@ def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.demo_blueprint_persistence import load_blueprint
     from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
 
+    progress: ProgressContext = args.get("_progress") or _noop_progress()
+
     output_format = args.get("format", "csv")
     output_dir = args.get("output_dir", "demo_data")
     filter_entities = args.get("entities")
 
     try:
+        progress.log_sync("Generating demo data...")
         blueprint = load_blueprint(project_root)
         if blueprint is None:
             return json.dumps(
