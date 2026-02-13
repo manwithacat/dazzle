@@ -1234,5 +1234,637 @@ surface task_list "Tasks":
             assert surface.priority == BusinessPriority(level)
 
 
+class TestEnumParsing:
+    """Tests for shared enum DSL parsing (v0.25.0)."""
+
+    def test_basic_enum(self):
+        """Test basic shared enum with title and values."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+enum OrderStatus "Order Status":
+  draft "Draft"
+  pending_review "Pending Review"
+  approved "Approved"
+  rejected "Rejected"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.enums) == 1
+        e = fragment.enums[0]
+        assert e.name == "OrderStatus"
+        assert e.title == "Order Status"
+        assert len(e.values) == 4
+        assert e.values[0].name == "draft"
+        assert e.values[0].title == "Draft"
+        assert e.values[3].name == "rejected"
+        assert e.values[3].title == "Rejected"
+
+    def test_enum_without_title(self):
+        """Test shared enum without a display title."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+enum Priority:
+  low
+  medium
+  high
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.enums) == 1
+        e = fragment.enums[0]
+        assert e.name == "Priority"
+        assert e.title is None
+        assert len(e.values) == 3
+        assert e.values[0].name == "low"
+        assert e.values[0].title is None
+
+    def test_enum_values_without_titles(self):
+        """Test enum values can omit display titles."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+enum Color "Color Choices":
+  red
+  green
+  blue
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        e = fragment.enums[0]
+        assert len(e.values) == 3
+        assert all(v.title is None for v in e.values)
+        assert [v.name for v in e.values] == ["red", "green", "blue"]
+
+    def test_multiple_enums(self):
+        """Test parsing multiple enum blocks."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+enum Status "Status":
+  active "Active"
+  inactive "Inactive"
+
+enum Priority "Priority":
+  low "Low"
+  high "High"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.enums) == 2
+        assert fragment.enums[0].name == "Status"
+        assert fragment.enums[1].name == "Priority"
+
+
+class TestViewParsing:
+    """Tests for view DSL parsing (v0.25.0)."""
+
+    def test_basic_view(self):
+        """Test basic view with source, group_by, and aggregate fields."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  amount: decimal(10,2) required
+
+view OrderSummary "Order Summary":
+  source: Order
+  group_by: [status]
+  fields:
+    total_amount: sum(amount)
+    order_count: count()
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.views) == 1
+        v = fragment.views[0]
+        assert v.name == "OrderSummary"
+        assert v.title == "Order Summary"
+        assert v.source_entity == "Order"
+        assert v.group_by == ["status"]
+        assert len(v.fields) == 2
+        assert v.fields[0].name == "total_amount"
+        assert v.fields[0].expression is not None
+        assert v.fields[1].name == "order_count"
+
+    def test_view_with_filter(self):
+        """Test view with filter condition."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[draft,completed]=draft
+  amount: decimal(10,2) required
+
+view CompletedOrders "Completed Orders":
+  source: Order
+  filter: status = completed
+  fields:
+    total: sum(amount)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        v = fragment.views[0]
+        assert v.filter_condition is not None
+        assert v.source_entity == "Order"
+
+    def test_view_with_function_group_by(self):
+        """Test view with function call in group_by: month(created_at)."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  created_at: datetime auto_add
+  amount: decimal(10,2) required
+
+view MonthlySales "Monthly Sales":
+  source: Order
+  group_by: [customer, month(created_at)]
+  fields:
+    total: sum(amount)
+    count: count()
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        v = fragment.views[0]
+        assert v.group_by == ["customer", "month(created_at)"]
+
+    def test_view_with_typed_fields(self):
+        """Test view fields that have explicit types instead of aggregates."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  amount: decimal(10,2) required
+
+view OrderReport "Order Report":
+  source: Order
+  fields:
+    label: str(200)
+    total: sum(amount)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        v = fragment.views[0]
+        assert len(v.fields) == 2
+        # str type field
+        assert v.fields[0].name == "label"
+        assert v.fields[0].field_type is not None
+        assert v.fields[0].expression is None
+        # aggregate field
+        assert v.fields[1].name == "total"
+        assert v.fields[1].expression is not None
+        assert v.fields[1].field_type is None
+
+    def test_view_without_title(self):
+        """Test view without display title."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  amount: decimal(10,2) required
+
+view QuickReport:
+  source: Order
+  fields:
+    total: sum(amount)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        v = fragment.views[0]
+        assert v.name == "QuickReport"
+        assert v.title is None
+
+
+class TestWebhookParsing:
+    """Tests for webhook DSL parsing (v0.25.0)."""
+
+    def test_basic_webhook(self):
+        """Test full webhook with all sub-blocks."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[pending,shipped]=pending
+
+webhook OrderNotification "Order Status Webhook":
+  entity: Order
+  events: [created, updated, deleted]
+  url: config("ORDER_WEBHOOK_URL")
+  auth:
+    method: hmac_sha256
+    secret: config("WEBHOOK_SECRET")
+  payload:
+    include: [id, status, total, customer.name]
+    format: json
+  retry:
+    max_attempts: 3
+    backoff: exponential
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.webhooks) == 1
+        wh = fragment.webhooks[0]
+        assert wh.name == "OrderNotification"
+        assert wh.title == "Order Status Webhook"
+        assert wh.entity == "Order"
+        assert len(wh.events) == 3
+
+        # Auth
+        assert wh.auth is not None
+        assert wh.auth.method.value == "hmac_sha256"
+        assert wh.auth.secret_ref == 'config("WEBHOOK_SECRET")'
+
+        # Payload
+        assert wh.payload is not None
+        assert wh.payload.include_fields == ["id", "status", "total", "customer.name"]
+        assert wh.payload.format == "json"
+
+        # Retry
+        assert wh.retry is not None
+        assert wh.retry.max_attempts == 3
+        assert wh.retry.backoff == "exponential"
+
+    def test_webhook_minimal(self):
+        """Test webhook with only required fields."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+webhook TaskHook:
+  entity: Task
+  events: [created]
+  url: config("TASK_HOOK_URL")
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        wh = fragment.webhooks[0]
+        assert wh.name == "TaskHook"
+        assert wh.title is None
+        assert wh.entity == "Task"
+        assert len(wh.events) == 1
+        assert wh.auth is None
+        assert wh.payload is None
+        assert wh.retry is None
+
+    def test_webhook_events_parsing(self):
+        """Test webhook events are parsed correctly as enums."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Item "Item":
+  id: uuid pk
+
+webhook ItemEvents "Item Events":
+  entity: Item
+  events: [created, updated]
+  url: config("ITEM_URL")
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        from dazzle.core.ir import WebhookEvent
+
+        wh = fragment.webhooks[0]
+        assert wh.events[0] == WebhookEvent.CREATED
+        assert wh.events[1] == WebhookEvent.UPDATED
+
+
+class TestApprovalParsing:
+    """Tests for approval DSL parsing (v0.25.0)."""
+
+    def test_full_approval(self):
+        """Test full approval with all sub-blocks."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity PurchaseOrder "Purchase Order":
+  id: uuid pk
+  status: enum[draft,pending_approval,approved,rejected]=draft
+  amount: decimal(10,2) required
+
+approval PurchaseApproval "Purchase Order Approval":
+  entity: PurchaseOrder
+  trigger: status -> pending_approval
+  approver_role: finance_manager
+  quorum: 1
+  threshold: amount > 1000
+  escalation:
+    after: 48 hours
+    to: finance_director
+  auto_approve:
+    when: amount <= 100
+  outcomes:
+    approved -> approved
+    rejected -> rejected
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.approvals) == 1
+        ap = fragment.approvals[0]
+        assert ap.name == "PurchaseApproval"
+        assert ap.title == "Purchase Order Approval"
+        assert ap.entity == "PurchaseOrder"
+        assert ap.trigger_field == "status"
+        assert ap.trigger_value == "pending_approval"
+        assert ap.approver_role == "finance_manager"
+        assert ap.quorum == 1
+
+        # Threshold condition
+        assert ap.threshold is not None
+
+        # Escalation
+        assert ap.escalation is not None
+        assert ap.escalation.after_value == 48
+        assert ap.escalation.after_unit == "hours"
+        assert ap.escalation.to_role == "finance_director"
+
+        # Auto approve
+        assert ap.auto_approve is not None
+
+        # Outcomes
+        assert len(ap.outcomes) == 2
+        assert ap.outcomes[0].decision == "approved"
+        assert ap.outcomes[0].target_status == "approved"
+        assert ap.outcomes[1].decision == "rejected"
+        assert ap.outcomes[1].target_status == "rejected"
+
+    def test_approval_minimal(self):
+        """Test approval with only basic fields."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Document "Document":
+  id: uuid pk
+  status: enum[draft,pending,approved]=draft
+
+approval DocApproval:
+  entity: Document
+  trigger: status -> pending
+  approver_role: manager
+  outcomes:
+    approved -> approved
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        ap = fragment.approvals[0]
+        assert ap.name == "DocApproval"
+        assert ap.title is None
+        assert ap.entity == "Document"
+        assert ap.escalation is None
+        assert ap.auto_approve is None
+        assert ap.threshold is None
+        assert len(ap.outcomes) == 1
+
+    def test_approval_quorum(self):
+        """Test approval with custom quorum."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Contract "Contract":
+  id: uuid pk
+  status: enum[draft,review,approved]=draft
+
+approval ContractReview "Contract Review":
+  entity: Contract
+  trigger: status -> review
+  approver_role: legal_team
+  quorum: 3
+  outcomes:
+    approved -> approved
+    rejected -> draft
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        ap = fragment.approvals[0]
+        assert ap.quorum == 3
+
+
+class TestSLAParsing:
+    """Tests for SLA DSL parsing (v0.25.0)."""
+
+    def test_full_sla(self):
+        """Test full SLA with all sub-blocks."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity SupportTicket "Support Ticket":
+  id: uuid pk
+  status: enum[open,on_hold,resolved]=open
+  escalated: bool=false
+
+sla TicketResponse "Ticket Response SLA":
+  entity: SupportTicket
+  starts_when: status -> open
+  pauses_when: status = on_hold
+  completes_when: status -> resolved
+  tiers:
+    warning: 4 hours
+    breach: 8 hours
+    critical: 24 hours
+  business_hours:
+    schedule: "Mon-Fri 09:00-17:00"
+    timezone: "Europe/London"
+  on_breach:
+    notify: support_lead
+    set: escalated = true
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.slas) == 1
+        sla = fragment.slas[0]
+        assert sla.name == "TicketResponse"
+        assert sla.title == "Ticket Response SLA"
+        assert sla.entity == "SupportTicket"
+
+        # Conditions
+        assert sla.starts_when is not None
+        assert sla.starts_when.field == "status"
+        assert sla.starts_when.operator == "->"
+        assert sla.starts_when.value == "open"
+
+        assert sla.pauses_when is not None
+        assert sla.pauses_when.operator == "="
+        assert sla.pauses_when.value == "on_hold"
+
+        assert sla.completes_when is not None
+        assert sla.completes_when.operator == "->"
+        assert sla.completes_when.value == "resolved"
+
+        # Tiers
+        assert len(sla.tiers) == 3
+        assert sla.tiers[0].name == "warning"
+        assert sla.tiers[0].duration_value == 4
+        assert sla.tiers[0].duration_unit == "hours"
+        assert sla.tiers[1].name == "breach"
+        assert sla.tiers[1].duration_value == 8
+        assert sla.tiers[2].name == "critical"
+        assert sla.tiers[2].duration_value == 24
+
+        # Business hours
+        assert sla.business_hours is not None
+        assert sla.business_hours.schedule == "Mon-Fri 09:00-17:00"
+        assert sla.business_hours.timezone == "Europe/London"
+
+        # Breach action
+        assert sla.on_breach is not None
+        assert sla.on_breach.notify_role == "support_lead"
+        assert len(sla.on_breach.field_assignments) == 1
+        assert sla.on_breach.field_assignments[0].field_path == "escalated"
+        assert sla.on_breach.field_assignments[0].value == "true"
+
+    def test_sla_minimal(self):
+        """Test SLA with only basic fields."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+  status: enum[open,done]=open
+
+sla TaskCompletion:
+  entity: Task
+  starts_when: status -> open
+  completes_when: status -> done
+  tiers:
+    warning: 2 hours
+    breach: 4 hours
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        sla = fragment.slas[0]
+        assert sla.name == "TaskCompletion"
+        assert sla.title is None
+        assert sla.pauses_when is None
+        assert sla.business_hours is None
+        assert sla.on_breach is None
+        assert len(sla.tiers) == 2
+
+    def test_sla_tiers_with_different_units(self):
+        """Test SLA tiers with various time units."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Alert "Alert":
+  id: uuid pk
+  status: enum[open,ack,resolved]=open
+
+sla AlertResponse "Alert Response":
+  entity: Alert
+  starts_when: status -> open
+  completes_when: status -> ack
+  tiers:
+    immediate: 15 minutes
+    warning: 1 hours
+    breach: 2 days
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        sla = fragment.slas[0]
+        assert sla.tiers[0].duration_value == 15
+        assert sla.tiers[0].duration_unit == "minutes"
+        assert sla.tiers[1].duration_unit == "hours"
+        assert sla.tiers[2].duration_value == 2
+        assert sla.tiers[2].duration_unit == "days"
+
+
+class TestV025AllConstructs:
+    """Integration tests for all v0.25.0 constructs together."""
+
+    def test_all_five_constructs_in_one_module(self):
+        """All five new constructs parse correctly in a single module."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[draft,pending,approved,shipped]=draft
+  amount: decimal(10,2) required
+  escalated: bool=false
+
+enum OrderStatus "Order Status":
+  draft "Draft"
+  pending "Pending"
+  approved "Approved"
+  shipped "Shipped"
+
+view OrderDashboard "Order Dashboard":
+  source: Order
+  group_by: [status]
+  fields:
+    total_amount: sum(amount)
+    order_count: count()
+
+webhook OrderWebhook "Order Webhook":
+  entity: Order
+  events: [created, updated]
+  url: config("ORDER_HOOK_URL")
+  retry:
+    max_attempts: 5
+    backoff: exponential
+
+approval OrderApproval "Order Approval":
+  entity: Order
+  trigger: status -> pending
+  approver_role: manager
+  quorum: 1
+  outcomes:
+    approved -> approved
+    rejected -> draft
+
+sla OrderFulfillment "Order Fulfillment SLA":
+  entity: Order
+  starts_when: status -> approved
+  completes_when: status -> shipped
+  tiers:
+    warning: 24 hours
+    breach: 48 hours
+  on_breach:
+    notify: ops_lead
+    set: escalated = true
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        assert len(fragment.entities) == 1
+        assert len(fragment.enums) == 1
+        assert len(fragment.views) == 1
+        assert len(fragment.webhooks) == 1
+        assert len(fragment.approvals) == 1
+        assert len(fragment.slas) == 1
+
+        assert fragment.enums[0].name == "OrderStatus"
+        assert fragment.views[0].name == "OrderDashboard"
+        assert fragment.webhooks[0].name == "OrderWebhook"
+        assert fragment.approvals[0].name == "OrderApproval"
+        assert fragment.slas[0].name == "OrderFulfillment"
+
+
 if __name__ == "__main__":
     main()

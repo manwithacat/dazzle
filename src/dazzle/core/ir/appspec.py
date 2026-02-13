@@ -11,9 +11,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
 from .domain import DomainSpec, EntitySpec
 from .e2e import FixtureSpec, FlowPriority, FlowSpec
+from .enums import EnumSpec
 from .eventing import (
     EventModelSpec,
     ProjectionSpec,
@@ -59,9 +61,12 @@ from .process import (
 from .scenarios import ScenarioSpec
 from .security import SecurityConfig
 from .services import APISpec, DomainServiceSpec
+from .sla import SLASpec
 from .stories import StorySpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
+from .views import ViewSpec
+from .webhooks import WebhookSpec
 from .workspaces import WorkspaceSpec
 
 
@@ -143,6 +148,16 @@ class AppSpec(BaseModel):
     # Ledgers (v0.24.0 TigerBeetle Integration)
     ledgers: list[LedgerSpec] = Field(default_factory=list)
     transactions: list[TransactionSpec] = Field(default_factory=list)
+    # Shared Enums (v0.25.0)
+    enums: list[EnumSpec] = Field(default_factory=list)
+    # Views (v0.25.0)
+    views: list[ViewSpec] = Field(default_factory=list)
+    # Webhooks (v0.25.0)
+    webhooks: list[WebhookSpec] = Field(default_factory=list)
+    # Approvals (v0.25.0)
+    approvals: list[ApprovalSpec] = Field(default_factory=list)
+    # SLAs (v0.25.0)
+    slas: list[SLASpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -375,6 +390,51 @@ class AppSpec(BaseModel):
     def get_ledgers_by_currency(self, currency: str) -> list[LedgerSpec]:
         """Get all ledgers with a specific currency."""
         return [ledger for ledger in self.ledgers if ledger.currency == currency]
+
+    # Enum getters (v0.25.0)
+
+    def get_enum(self, name: str) -> EnumSpec | None:
+        """Get shared enum by name."""
+        for enum in self.enums:
+            if enum.name == name:
+                return enum
+        return None
+
+    # View getters (v0.25.0)
+
+    def get_view(self, name: str) -> ViewSpec | None:
+        """Get view by name."""
+        for view in self.views:
+            if view.name == name:
+                return view
+        return None
+
+    # Webhook getters (v0.25.0)
+
+    def get_webhook(self, name: str) -> WebhookSpec | None:
+        """Get webhook by name."""
+        for webhook in self.webhooks:
+            if webhook.name == name:
+                return webhook
+        return None
+
+    # Approval getters (v0.25.0)
+
+    def get_approval(self, name: str) -> ApprovalSpec | None:
+        """Get approval by name."""
+        for approval in self.approvals:
+            if approval.name == name:
+                return approval
+        return None
+
+    # SLA getters (v0.25.0)
+
+    def get_sla(self, name: str) -> SLASpec | None:
+        """Get SLA by name."""
+        for sla in self.slas:
+            if sla.name == name:
+                return sla
+        return None
 
     @property
     def type_catalog(self) -> dict[str, list[FieldType]]:

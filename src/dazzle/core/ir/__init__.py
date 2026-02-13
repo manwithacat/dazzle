@@ -11,6 +11,12 @@ All types are re-exported from this package for backward compatibility.
 # Archetypes (v0.7.1, v0.10.3)
 # Fields
 # App Specification
+# Approvals (v0.25.0)
+from .approvals import (
+    ApprovalEscalationSpec,
+    ApprovalOutcomeSpec,
+    ApprovalSpec,
+)
 from .appspec import (
     AppSpec,
 )
@@ -106,6 +112,12 @@ from .email import (
     NormalizedMailEvent,
     RawMailEvent,
     get_email_stream_definitions,
+)
+
+# Shared Enums (v0.25.0)
+from .enums import (
+    EnumSpec,
+    EnumValueSpec,
 )
 
 # Eventing (v0.18.0 Event-First Architecture)
@@ -437,6 +449,15 @@ from .sitespec import (
     create_default_sitespec,
 )
 
+# SLA (v0.25.0)
+from .sla import (
+    BusinessHoursSpec,
+    SLABreachActionSpec,
+    SLAConditionSpec,
+    SLASpec,
+    SLATierSpec,
+)
+
 # State Machines (v0.7.0)
 from .state_machine import (
     AutoTransitionSpec,
@@ -525,6 +546,22 @@ from .ux import (
     SignalLevel,
     SortSpec,
     UXSpec,
+)
+
+# Views (v0.25.0)
+from .views import (
+    ViewFieldSpec,
+    ViewSpec,
+)
+
+# Webhooks (v0.25.0)
+from .webhooks import (
+    WebhookAuthMethod,
+    WebhookAuthSpec,
+    WebhookEvent,
+    WebhookPayloadSpec,
+    WebhookRetrySpec,
+    WebhookSpec,
 )
 
 # Workspaces
@@ -888,6 +925,29 @@ __all__ = [
     "TypographyRatioPreset",
     "TypographySpec",
     "VisualTreatment",
+    # Shared Enums (v0.25.0)
+    "EnumSpec",
+    "EnumValueSpec",
+    # Views (v0.25.0)
+    "ViewFieldSpec",
+    "ViewSpec",
+    # Webhooks (v0.25.0)
+    "WebhookAuthMethod",
+    "WebhookAuthSpec",
+    "WebhookEvent",
+    "WebhookPayloadSpec",
+    "WebhookRetrySpec",
+    "WebhookSpec",
+    # Approvals (v0.25.0)
+    "ApprovalEscalationSpec",
+    "ApprovalOutcomeSpec",
+    "ApprovalSpec",
+    # SLA (v0.25.0)
+    "BusinessHoursSpec",
+    "SLABreachActionSpec",
+    "SLAConditionSpec",
+    "SLASpec",
+    "SLATierSpec",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",
     "AuthPageMode",

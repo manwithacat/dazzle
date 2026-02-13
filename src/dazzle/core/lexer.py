@@ -224,6 +224,18 @@ class TokenType(Enum):
     TRIGGER = "trigger"
     UNLESS = "unless"
 
+    # v0.25.0 Top-Level Construct Keywords
+    ENUM = "enum"
+    WEBHOOK = "webhook"
+    APPROVAL = "approval"
+    SLA = "sla"
+    # VIEW already defined in Flow/E2E Test Keywords
+    # Sub-keywords for v0.25.0 constructs (events, payload, include, secret,
+    # method, approver_role, quorum, threshold, escalation, auto_approve,
+    # starts_when, pauses_when, completes_when, tiers, business_hours,
+    # on_breach, notify) are parsed as identifiers to avoid conflicts
+    # with existing DSL usage.
+
     # v0.24.0 TigerBeetle Ledger Keywords
     LEDGER = "ledger"
     TRANSACTION = "transaction"

@@ -85,7 +85,7 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `view`, `webhook`, `approval`, `sla`
 
 ### TigerBeetle Ledgers
 
@@ -200,4 +200,4 @@ The `status activity` MCP operation provides the same data for programmatic poll
 - `pip install dazzle-dsl` provides the `dazzle` console command
 
 ---
-**Version**: 0.24.1 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.25.0 | **Python**: 3.12+ | **Status**: Production Ready

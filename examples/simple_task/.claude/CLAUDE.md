@@ -133,6 +133,53 @@ surface task_list "Tasks":
 - `auto_update` - Update on save
 - `=value` - Default value
 
+### Shared Enums (v0.25.0)
+```dsl
+enum Priority "Priority":
+  low "Low"
+  medium "Medium"
+  high "High"
+```
+
+### Views (v0.25.0)
+```dsl
+view TaskSummary "Task Summary":
+  source: Task
+  group_by: [status]
+  fields:
+    task_count: count()
+```
+
+### Webhooks (v0.25.0)
+```dsl
+webhook TaskNotify "Task Webhook":
+  entity: Task
+  events: [created, updated]
+  url: config("WEBHOOK_URL")
+```
+
+### Approvals (v0.25.0)
+```dsl
+approval TaskApproval "Task Approval":
+  entity: Task
+  trigger: status -> pending
+  approver_role: manager
+  outcomes:
+    approved -> approved
+    rejected -> rejected
+```
+
+### SLAs (v0.25.0)
+```dsl
+sla TaskSLA "Task SLA":
+  entity: Task
+  starts_when: status -> open
+  completes_when: status -> done
+  tiers:
+    warning: 4 hours
+    breach: 8 hours
+```
+
 ### Reserved Keywords
 Some words are reserved and cannot be used as enum values:
 - Use `add/modify/remove` instead of `create/update/delete`

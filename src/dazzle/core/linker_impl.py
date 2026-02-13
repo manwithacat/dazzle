@@ -38,6 +38,11 @@ class SymbolTable:
     schedules: dict[str, ir.ScheduleSpec] = field(default_factory=dict)  # v0.23.0
     ledgers: dict[str, ir.LedgerSpec] = field(default_factory=dict)  # v0.24.0
     transactions: dict[str, ir.TransactionSpec] = field(default_factory=dict)  # v0.24.0
+    enums: dict[str, ir.EnumSpec] = field(default_factory=dict)  # v0.25.0
+    views: dict[str, ir.ViewSpec] = field(default_factory=dict)  # v0.25.0
+    webhooks: dict[str, ir.WebhookSpec] = field(default_factory=dict)  # v0.25.0
+    approvals: dict[str, ir.ApprovalSpec] = field(default_factory=dict)  # v0.25.0
+    slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
@@ -252,6 +257,61 @@ class SymbolTable:
         self.transactions[transaction.name] = transaction
         self.symbol_sources[transaction.name] = module_name
 
+    def add_enum(self, enum: ir.EnumSpec, module_name: str) -> None:
+        """Add shared enum to symbol table, checking for duplicates (v0.25.0)."""
+        if enum.name in self.enums:
+            existing_module = self.symbol_sources.get(enum.name, "unknown")
+            raise LinkError(
+                f"Duplicate enum '{enum.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.enums[enum.name] = enum
+        self.symbol_sources[enum.name] = module_name
+
+    def add_view(self, view: ir.ViewSpec, module_name: str) -> None:
+        """Add view to symbol table, checking for duplicates (v0.25.0)."""
+        if view.name in self.views:
+            existing_module = self.symbol_sources.get(view.name, "unknown")
+            raise LinkError(
+                f"Duplicate view '{view.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.views[view.name] = view
+        self.symbol_sources[view.name] = module_name
+
+    def add_webhook(self, webhook: ir.WebhookSpec, module_name: str) -> None:
+        """Add webhook to symbol table, checking for duplicates (v0.25.0)."""
+        if webhook.name in self.webhooks:
+            existing_module = self.symbol_sources.get(webhook.name, "unknown")
+            raise LinkError(
+                f"Duplicate webhook '{webhook.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.webhooks[webhook.name] = webhook
+        self.symbol_sources[webhook.name] = module_name
+
+    def add_approval(self, approval: ir.ApprovalSpec, module_name: str) -> None:
+        """Add approval to symbol table, checking for duplicates (v0.25.0)."""
+        if approval.name in self.approvals:
+            existing_module = self.symbol_sources.get(approval.name, "unknown")
+            raise LinkError(
+                f"Duplicate approval '{approval.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.approvals[approval.name] = approval
+        self.symbol_sources[approval.name] = module_name
+
+    def add_sla(self, sla: ir.SLASpec, module_name: str) -> None:
+        """Add SLA to symbol table, checking for duplicates (v0.25.0)."""
+        if sla.name in self.slas:
+            existing_module = self.symbol_sources.get(sla.name, "unknown")
+            raise LinkError(
+                f"Duplicate SLA '{sla.name}' defined in modules "
+                f"'{existing_module}' and '{module_name}'"
+            )
+        self.slas[sla.name] = sla
+        self.symbol_sources[sla.name] = module_name
+
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
@@ -414,6 +474,26 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add transactions (v0.24.0)
         for transaction in module.fragment.transactions:
             symbols.add_transaction(transaction, module.name)
+
+        # Add enums (v0.25.0)
+        for enum in module.fragment.enums:
+            symbols.add_enum(enum, module.name)
+
+        # Add views (v0.25.0)
+        for view in module.fragment.views:
+            symbols.add_view(view, module.name)
+
+        # Add webhooks (v0.25.0)
+        for webhook in module.fragment.webhooks:
+            symbols.add_webhook(webhook, module.name)
+
+        # Add approvals (v0.25.0)
+        for approval in module.fragment.approvals:
+            symbols.add_approval(approval, module.name)
+
+        # Add SLAs (v0.25.0)
+        for sla in module.fragment.slas:
+            symbols.add_sla(sla, module.name)
 
     return symbols
 
@@ -959,4 +1039,9 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         schedules=list(symbols.schedules.values()),  # v0.23.0
         ledgers=list(symbols.ledgers.values()),  # v0.24.0
         transactions=list(symbols.transactions.values()),  # v0.24.0
+        enums=list(symbols.enums.values()),  # v0.25.0
+        views=list(symbols.views.values()),  # v0.25.0
+        webhooks=list(symbols.webhooks.values()),  # v0.25.0
+        approvals=list(symbols.approvals.values()),  # v0.25.0
+        slas=list(symbols.slas.values()),  # v0.25.0
     )

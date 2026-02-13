@@ -19,9 +19,11 @@ from pathlib import Path
 
 from .. import ir
 from ..lexer import tokenize
+from .approval import ApprovalParserMixin
 from .base import BaseParser
 from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
+from .enum import EnumParserMixin
 from .eventing import EventingParserMixin
 from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
@@ -33,11 +35,14 @@ from .messaging import MessagingParserMixin
 from .process import ProcessParserMixin
 from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
+from .sla import SLAParserMixin
 from .story import StoryParserMixin
 from .surface import SurfaceParserMixin
 from .test import TestParserMixin
 from .types import TypeParserMixin
 from .ux import UXParserMixin
+from .view import ViewParserMixin
+from .webhook import WebhookParserMixin
 from .workspace import WorkspaceParserMixin
 
 
@@ -62,6 +67,11 @@ class Parser(
     LLMParserMixin,
     ProcessParserMixin,
     LedgerParserMixin,
+    EnumParserMixin,
+    ViewParserMixin,
+    WebhookParserMixin,
+    ApprovalParserMixin,
+    SLAParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -1186,6 +1196,60 @@ class Parser(
                     transactions=[*fragment.transactions, transaction],
                 )
 
+            # v0.25.0 Shared Enums
+            elif self.match(TokenType.ENUM):
+                enum_spec = self.parse_enum()
+                fragment = ir.ModuleFragment(
+                    **{
+                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                        "enums": [*fragment.enums, enum_spec],
+                    }
+                )
+
+            # v0.25.0 Views (VIEW token already exists for e2e flows,
+            # but top-level 'view' followed by identifier = view construct)
+            elif self.match(TokenType.VIEW) and self.peek_token().type in (
+                TokenType.IDENTIFIER,
+                TokenType.STRING,
+            ):
+                view_spec = self.parse_view()
+                fragment = ir.ModuleFragment(
+                    **{
+                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                        "views": [*fragment.views, view_spec],
+                    }
+                )
+
+            # v0.25.0 Webhooks
+            elif self.match(TokenType.WEBHOOK):
+                webhook_spec = self.parse_webhook()
+                fragment = ir.ModuleFragment(
+                    **{
+                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                        "webhooks": [*fragment.webhooks, webhook_spec],
+                    }
+                )
+
+            # v0.25.0 Approvals
+            elif self.match(TokenType.APPROVAL):
+                approval_spec = self.parse_approval()
+                fragment = ir.ModuleFragment(
+                    **{
+                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                        "approvals": [*fragment.approvals, approval_spec],
+                    }
+                )
+
+            # v0.25.0 SLAs
+            elif self.match(TokenType.SLA):
+                sla_spec = self.parse_sla()
+                fragment = ir.ModuleFragment(
+                    **{
+                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                        "slas": [*fragment.slas, sla_spec],
+                    }
+                )
+
             else:
                 token = self.current_token()
                 if token.type == TokenType.EOF:
@@ -1243,4 +1307,9 @@ __all__ = [
     "HLESSParserMixin",
     "ProcessParserMixin",
     "LedgerParserMixin",
+    "EnumParserMixin",
+    "ViewParserMixin",
+    "WebhookParserMixin",
+    "ApprovalParserMixin",
+    "SLAParserMixin",
 ]

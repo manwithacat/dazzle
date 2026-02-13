@@ -129,6 +129,11 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         schedules=merged_fragment.schedules,  # v0.23.0 Process Workflows
         ledgers=merged_fragment.ledgers,  # v0.24.0 TigerBeetle Ledgers
         transactions=merged_fragment.transactions,  # v0.24.0 TigerBeetle Ledgers
+        enums=merged_fragment.enums,  # v0.25.0 Shared Enums
+        views=merged_fragment.views,  # v0.25.0 Views
+        webhooks=merged_fragment.webhooks,  # v0.25.0 Webhooks
+        approvals=merged_fragment.approvals,  # v0.25.0 Approvals
+        slas=merged_fragment.slas,  # v0.25.0 SLAs
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,

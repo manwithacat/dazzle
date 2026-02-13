@@ -12,9 +12,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .approvals import ApprovalSpec
 from .archetype import ArchetypeSpec
 from .domain import EntitySpec
 from .e2e import FixtureSpec, FlowSpec
+from .enums import EnumSpec
 from .eventing import (
     EventModelSpec,
     ProjectionSpec,
@@ -56,9 +58,12 @@ from .process import (
 )
 from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
+from .sla import SLASpec
 from .stories import StorySpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
+from .views import ViewSpec
+from .webhooks import WebhookSpec
 from .workspaces import WorkspaceSpec
 
 
@@ -156,6 +161,16 @@ class ModuleFragment(BaseModel):
     # TigerBeetle Ledgers (v0.24.0)
     ledgers: list[LedgerSpec] = Field(default_factory=list)
     transactions: list[TransactionSpec] = Field(default_factory=list)
+    # Shared Enums (v0.25.0)
+    enums: list[EnumSpec] = Field(default_factory=list)
+    # Views (v0.25.0)
+    views: list[ViewSpec] = Field(default_factory=list)
+    # Webhooks (v0.25.0)
+    webhooks: list[WebhookSpec] = Field(default_factory=list)
+    # Approvals (v0.25.0)
+    approvals: list[ApprovalSpec] = Field(default_factory=list)
+    # SLAs (v0.25.0)
+    slas: list[SLASpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
