@@ -468,7 +468,7 @@ def list_e2e_flows_handler(
         )
 
 
-def run_agent_e2e_tests_handler(
+async def run_agent_e2e_tests_handler(
     project_path: str | None = None,
     test_id: str | None = None,
     headless: bool = True,
@@ -492,8 +492,6 @@ def run_agent_e2e_tests_handler(
         - results: list of test results with steps and reasoning
         - duration_seconds: total execution time
     """
-    import asyncio
-
     try:
         # Resolve project path
         root: Path
@@ -521,13 +519,11 @@ def run_agent_e2e_tests_handler(
         test_ids = [test_id] if test_id else None
 
         # Run tests
-        results = asyncio.run(
-            run_agent_tests(
-                project_path=root,
-                test_ids=test_ids,
-                headless=headless,
-                model=model,
-            )
+        results = await run_agent_tests(
+            project_path=root,
+            test_ids=test_ids,
+            headless=headless,
+            model=model,
         )
 
         if not results:

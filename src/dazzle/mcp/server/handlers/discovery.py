@@ -161,7 +161,9 @@ def _build_mission_summary(
     return result
 
 
-def _get_persona_session_info(project_path: Path, persona: str, base_url: str) -> dict[str, Any]:
+async def _get_persona_session_info(
+    project_path: Path, persona: str, base_url: str
+) -> dict[str, Any]:
     """Load or create a persona session, returning session metadata for the response."""
     try:
         from dazzle.testing.session_manager import SessionManager
@@ -176,9 +178,7 @@ def _get_persona_session_info(project_path: Path, persona: str, base_url: str) -
                 "cookie": {"dazzle_session": session.session_token},
             }
         # Try to create a session
-        import asyncio
-
-        asyncio.run(manager.create_session(persona))
+        await manager.create_session(persona)
         session = manager.load_session(persona)
         if session and session.session_token:
             return {
@@ -292,7 +292,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
         # Set up auth cookies for persona mode
         cookies: dict[str, str] = {}
         if mode == "persona":
-            session_info = _get_persona_session_info(project_path, persona, base_url)
+            session_info = await _get_persona_session_info(project_path, persona, base_url)
             cookies = session_info.get("cookie", {})
 
         t0 = time.monotonic()

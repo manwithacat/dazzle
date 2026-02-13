@@ -618,11 +618,12 @@ class TestProcessRunHandlers:
         assert "error" in data
         assert "not found" in data["error"]
 
-    def test_get_run_no_id(self, tmp_path: Path) -> None:
+    @pytest.mark.asyncio
+    async def test_get_run_no_id(self, tmp_path: Path) -> None:
         """Test getting run without providing ID."""
         from dazzle.mcp.server.handlers.process import get_process_run_handler
 
-        result = get_process_run_handler(tmp_path, {})
+        result = await get_process_run_handler(tmp_path, {})
         data = json.loads(result)
 
         assert "error" in data

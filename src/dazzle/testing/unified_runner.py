@@ -339,11 +339,15 @@ class UnifiedTestRunner:
                 loop = None
 
             if loop is not None:
-                # Already in an async context (e.g. MCP handler) — schedule as task
+                # Already in an async context (e.g. MCP handler) — run in a
+                # separate thread with its own event loop to avoid nesting.
                 import concurrent.futures
 
+                def _create_in_thread() -> None:
+                    asyncio.run(manager.create_session(persona))
+
                 with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    pool.submit(asyncio.run, manager.create_session(persona)).result()
+                    pool.submit(_create_in_thread).result()
             else:
                 asyncio.run(manager.create_session(persona))
             print(f"  Session created for '{persona}'")

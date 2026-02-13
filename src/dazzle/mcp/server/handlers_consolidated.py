@@ -358,7 +358,7 @@ def handle_semantics(arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def handle_process(arguments: dict[str, Any]) -> str:
+async def handle_process(arguments: dict[str, Any]) -> str:
     """Handle consolidated process operations."""
     from .handlers.process import (
         get_process_diagram_handler,
@@ -386,9 +386,9 @@ def handle_process(arguments: dict[str, Any]) -> str:
     elif operation == "inspect":
         return inspect_process_handler(project_path, arguments)
     elif operation == "list_runs":
-        return list_process_runs_handler(project_path, arguments)
+        return await list_process_runs_handler(project_path, arguments)
     elif operation == "get_run":
-        return get_process_run_handler(project_path, arguments)
+        return await get_process_run_handler(project_path, arguments)
     elif operation == "diagram":
         return get_process_diagram_handler(project_path, arguments)
     elif operation == "coverage":
@@ -446,7 +446,7 @@ async def handle_dsl_test(arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def handle_e2e_test(arguments: dict[str, Any]) -> str:
+async def handle_e2e_test(arguments: dict[str, Any]) -> str:
     """Handle consolidated E2E test operations."""
     from .handlers.testing import (
         check_test_infrastructure_handler,
@@ -478,7 +478,7 @@ def handle_e2e_test(arguments: dict[str, Any]) -> str:
             headless=arguments.get("headless", True),
         )
     elif operation == "run_agent":
-        return run_agent_e2e_tests_handler(
+        return await run_agent_e2e_tests_handler(
             project_path=str(project_path),
             test_id=arguments.get("test_id"),
             headless=arguments.get("headless", True),

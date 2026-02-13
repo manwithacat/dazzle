@@ -1185,12 +1185,10 @@ async def _list_runs_async(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-def list_process_runs_handler(project_root: Path, args: dict[str, Any]) -> str:
+async def list_process_runs_handler(project_root: Path, args: dict[str, Any]) -> str:
     """List process runs with optional filters."""
-    import asyncio
-
     try:
-        return asyncio.run(_list_runs_async(project_root, args))
+        return await _list_runs_async(project_root, args)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 
@@ -1237,16 +1235,14 @@ async def _get_run_async(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-def get_process_run_handler(project_root: Path, args: dict[str, Any]) -> str:
+async def get_process_run_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get detailed information about a specific process run."""
-    import asyncio
-
     run_id = args.get("run_id") if args else None
     if not run_id:
         return json.dumps({"error": "run_id is required"})
 
     try:
-        return asyncio.run(_get_run_async(project_root, args))
+        return await _get_run_async(project_root, args)
     except Exception as e:
         return json.dumps({"error": str(e)}, indent=2)
 
