@@ -11,6 +11,8 @@ Iterative GitHub issue resolver. Run continuously: triage, implement, ship, repe
   1. Read the issue body with `gh issue view <number>`.
   2. Post a comment summarising what was implemented and which commit(s) resolve it.
   3. Close the issue: `gh issue close <number>`.
+  4. Remove the `needs-triage` label if present: `gh issue edit <number> --remove-label "needs-triage"`.
+- Clean up stale labels: run `gh issue list --state closed --label "needs-triage" --limit 50 --json number` and remove the label from each: `gh issue edit <number> --remove-label "needs-triage"`.
 - Display a summary table of remaining open issues: number, title, labels, **author**.
 
 ### Author routing
@@ -36,6 +38,7 @@ Issues are handled differently based on who filed them:
 ### Step 3: Investigate
 
 - Read the full issue with `gh issue view <number>`.
+- Remove the `needs-triage` label now that the issue is being investigated: `gh issue edit <number> --remove-label "needs-triage"`.
 - Search the codebase for relevant files using Grep/Glob.
 - Read the key files that would need to change.
 - Determine: root cause (bugs) or design approach (features), files to modify, scope (small/medium/large).
@@ -64,6 +67,7 @@ Issues are handled differently based on who filed them:
 
 - Post a comment on the issue summarising what was done.
 - Close the issue: `gh issue close <number>`.
+- Remove the `needs-triage` label if still present: `gh issue edit <number> --remove-label "needs-triage"`.
 
 ### Step 8: Loop back
 
