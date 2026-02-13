@@ -51,7 +51,7 @@ class MetricsEmitter:
         stream_key: str = "dazzle:metrics:stream",
         buffer_size: int = 100,
         flush_interval: float = 1.0,
-        max_stream_len: int = 100000,
+        max_stream_len: int = 10000,
     ):
         """
         Initialize the metrics emitter.
@@ -222,7 +222,8 @@ def get_emitter() -> MetricsEmitter | None:
     if _emitter is None:
         redis_url = os.environ.get("REDIS_URL")
         if redis_url:
-            _emitter = MetricsEmitter(redis_url)
+            max_len = int(os.environ.get("DAZZLE_METRICS_MAXLEN", "10000"))
+            _emitter = MetricsEmitter(redis_url, max_stream_len=max_len)
             atexit.register(_emitter.shutdown)
         else:
             logger.debug("REDIS_URL not set, metrics disabled")

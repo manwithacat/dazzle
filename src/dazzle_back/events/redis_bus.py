@@ -63,7 +63,7 @@ class RedisConfig:
     url: str
     """Redis connection URL (REDIS_URL)."""
 
-    max_stream_length: int = 100000
+    max_stream_length: int = 10000
     """Maximum entries per stream (XTRIM MAXLEN ~)."""
 
     consumer_timeout_ms: int = 300000

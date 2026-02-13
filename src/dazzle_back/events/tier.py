@@ -82,7 +82,7 @@ class TierConfig:
     redis_url: str | None = None
     """Redis connection URL. Defaults to REDIS_URL env var."""
 
-    redis_max_stream_length: int = 100000
+    redis_max_stream_length: int = 10000
     """Maximum entries per Redis stream."""
 
     # Kafka config
