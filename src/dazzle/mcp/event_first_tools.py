@@ -281,10 +281,17 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
         "email": 0.95,
         "phone": 0.9,
         "ssn": 0.99,
+        "social_security": 0.99,
         "address": 0.85,
         "name": 0.7,
         "dob": 0.9,
         "birth": 0.85,
+        # UK government identifiers
+        "ni_number": 0.99,
+        "nino": 0.99,
+        "national_insurance": 0.99,
+        "utr": 0.95,
+        "unique_taxpayer_reference": 0.95,
     }
     financial_patterns = {
         "amount": 0.8,
@@ -293,6 +300,7 @@ def extract_semantics(appspec: ir.AppSpec) -> SemanticExtraction:
         "cost": 0.75,
         "balance": 0.85,
         "payment": 0.9,
+        "sort_code": 0.9,
     }
 
     for entity in appspec.domain.entities:
@@ -775,6 +783,12 @@ def infer_compliance_requirements(appspec: ir.AppSpec) -> dict[str, Any]:
         "birth": 0.85,
         "passport": 0.95,
         "driver_license": 0.95,
+        # UK government identifiers
+        "ni_number": 0.99,
+        "nino": 0.99,
+        "national_insurance": 0.99,
+        "utr": 0.95,
+        "unique_taxpayer_reference": 0.95,
     }
 
     financial_patterns = {
@@ -789,6 +803,7 @@ def infer_compliance_requirements(appspec: ir.AppSpec) -> dict[str, Any]:
         "account_number": 0.95,
         "card": 0.9,
         "iban": 0.95,
+        "sort_code": 0.9,
     }
 
     health_patterns = {
