@@ -3,6 +3,8 @@
   dict({
     'apis': list([
     ]),
+    'approvals': list([
+    ]),
     'archetypes': list([
     ]),
     'assets': list([
@@ -145,6 +147,8 @@
     ]),
     'e2e_flows': list([
     ]),
+    'enums': list([
+    ]),
     'event_model': None,
     'experiences': list([
     ]),
@@ -188,6 +192,8 @@
       'require_auth_by_default': False,
       'tenant_isolation': False,
     }),
+    'slas': list([
+    ]),
     'stories': list([
     ]),
     'streams': list([
@@ -342,6 +348,10 @@
     ]),
     'ux': None,
     'version': '0.1.0',
+    'views': list([
+    ]),
+    'webhooks': list([
+    ]),
     'workspaces': list([
     ]),
   })

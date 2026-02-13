@@ -226,10 +226,15 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
 
     # --- Preflight checks ---
 
-    # API key is optional — the Anthropic SDK can authenticate via other
-    # mechanisms (e.g. Claude Code subscriptions).  We pass whatever we
-    # find; if auth fails the agent try/except will surface it.
+    # API key is optional — when running inside an MCP host (e.g. Claude Code)
+    # we can fall back to MCP sampling for LLM completions.
     api_key = os.environ.get("ANTHROPIC_API_KEY")
+
+    # Extract MCP session from progress context for sampling fallback
+    mcp_session = None
+    progress_ctx = args.get("_progress")
+    if progress_ctx is not None:
+        mcp_session = getattr(progress_ctx, "session", None)
 
     from .preflight import check_server_reachable
 
@@ -317,7 +322,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
         ) as client:
             observer = HttpObserver(client, base_url)
             executor = HttpExecutor(client, base_url, observer=observer)
-            agent = DazzleAgent(observer, executor, api_key=api_key)
+            agent = DazzleAgent(observer, executor, api_key=api_key, mcp_session=mcp_session)
 
             if progress is not None:
                 progress.log_sync(f"Starting {mode} discovery against {base_url}")
@@ -331,7 +336,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
         return json.dumps(
             {
                 "error": f"Agent execution failed: {e}",
-                "hint": "Check that the app is running and ANTHROPIC_API_KEY is valid.",
+                "hint": "Check that the app is running. LLM auth requires either ANTHROPIC_API_KEY or an MCP host that supports sampling.",
             },
             indent=2,
         )

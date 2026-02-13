@@ -98,11 +98,13 @@ class DazzleAgent:
         executor: Executor,
         model: str | None = None,
         api_key: str | None = None,
+        mcp_session: Any = None,
     ):
         self._observer = observer
         self._executor = executor
         self._model = model or self.DEFAULT_MODEL
         self._api_key = api_key
+        self._mcp_session = mcp_session
         self._client: Any = None
         self._history: list[Step] = []
         self._tokens_used = 0
@@ -256,6 +258,20 @@ class DazzleAgent:
         # Build prompt text for transcript (without image data)
         prompt_text = f"## System\n{system_prompt[:500]}...\n\n{state.to_prompt()}"
 
+        if self._mcp_session is not None:
+            response_text, tokens = await self._decide_via_sampling(system_prompt, messages)
+        else:
+            response_text, tokens = self._decide_via_anthropic(system_prompt, messages)
+
+        action = self._parse_action(response_text, tool_registry)
+        return action, prompt_text, response_text, tokens
+
+    def _decide_via_anthropic(
+        self,
+        system_prompt: str,
+        messages: list[dict[str, Any]],
+    ) -> tuple[str, int]:
+        """Request a completion via the Anthropic SDK (direct API key)."""
         client = self._get_client()
         response = client.messages.create(
             model=self._model,
@@ -264,15 +280,59 @@ class DazzleAgent:
             messages=messages,
         )
 
-        # Track token usage
         tokens = 0
         if hasattr(response, "usage"):
             tokens = (response.usage.input_tokens or 0) + (response.usage.output_tokens or 0)
 
         response_text = response.content[0].text.strip()
-        action = self._parse_action(response_text, tool_registry)
+        return response_text, tokens
 
-        return action, prompt_text, response_text, tokens
+    async def _decide_via_sampling(
+        self,
+        system_prompt: str,
+        messages: list[dict[str, Any]],
+    ) -> tuple[str, int]:
+        """Request a completion via MCP sampling (host-provided LLM).
+
+        This is used when running inside an MCP server (e.g. Claude Code)
+        where no API key is available. The host client provides completions
+        through the MCP sampling protocol.
+        """
+        from mcp.types import SamplingMessage, TextContent
+
+        sampling_messages: list[SamplingMessage] = []
+        for msg in messages:
+            content = msg["content"]
+            if isinstance(content, str):
+                text = content
+            elif isinstance(content, list):
+                # Extract text parts, skip images (MCP sampling is text-only)
+                text_parts = [p["text"] for p in content if p.get("type") == "text"]
+                text = "\n".join(text_parts)
+            else:
+                text = str(content)
+
+            sampling_messages.append(
+                SamplingMessage(
+                    role=msg["role"],
+                    content=TextContent(type="text", text=text),
+                )
+            )
+
+        result = await self._mcp_session.create_message(
+            messages=sampling_messages,
+            max_tokens=800,
+            system_prompt=system_prompt,
+        )
+
+        # Extract text from the response
+        if hasattr(result.content, "text"):
+            response_text = result.content.text.strip()
+        else:
+            response_text = str(result.content).strip()
+
+        # MCP sampling doesn't report token usage
+        return response_text, 0
 
     def _build_system_prompt(
         self,
