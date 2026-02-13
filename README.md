@@ -1,6 +1,6 @@
 # DAZZLE
 
-**Human Intent → Structured DSL → Deterministic Code**
+**Human Intent → Structured DSL → Deterministic Code → Frontier AI Cognition**
 
 <!-- Versions & Compatibility -->
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
