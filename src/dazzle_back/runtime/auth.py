@@ -4,14 +4,12 @@ Authentication runtime for DNR Backend (PostgreSQL-only).
 Provides session-based authentication with cookie management.
 """
 
-from __future__ import annotations
-
 import hashlib
 import secrets
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,19 +26,21 @@ except ImportError:
 
 # FastAPI is optional - import for type hints and runtime
 try:
+    from fastapi import APIRouter
     from fastapi import Request as FastAPIRequest
+    from fastapi.responses import JSONResponse
+    from starlette.responses import Response
 
     FASTAPI_AVAILABLE = True
 except ImportError:
-    FastAPIRequest = None  # type: ignore
+    APIRouter = None  # type: ignore[assignment,misc]
+    FastAPIRequest = None  # type: ignore[assignment,misc]
+    JSONResponse = None  # type: ignore[assignment,misc]
+    Response = None  # type: ignore[assignment,misc]
     FASTAPI_AVAILABLE = False
 
-if TYPE_CHECKING:
-    from fastapi import APIRouter
-
-    from dazzle_back.runtime.jwt_auth import JWTService
-    from dazzle_back.runtime.token_store import TokenStore
-
+from dazzle_back.runtime.jwt_auth import JWTService
+from dazzle_back.runtime.token_store import TokenStore
 
 # =============================================================================
 # User Model
@@ -737,9 +737,7 @@ def create_auth_routes(
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for auth routes")
 
-    from fastapi import APIRouter, HTTPException
-    from fastapi.responses import JSONResponse
-    from starlette.responses import Response
+    from fastapi import HTTPException
 
     router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -1105,7 +1103,7 @@ def create_jwt_auth_routes(
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for auth routes")
 
-    from fastapi import APIRouter, HTTPException
+    from fastapi import HTTPException
     from fastapi.security import OAuth2PasswordRequestForm
 
     from dazzle_back.runtime.jwt_auth import TokenResponse

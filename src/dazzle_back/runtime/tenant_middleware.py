@@ -5,14 +5,11 @@ Extracts tenant ID from requests and sets it in the request context.
 Works with TenantDatabaseManager to route requests to the correct database.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from fastapi import FastAPI
-
+from fastapi import FastAPI
+from starlette.responses import JSONResponse
 
 # =============================================================================
 # Tenant Header Configuration
@@ -146,7 +143,6 @@ def apply_tenant_middleware(
         allow_missing_tenant: If True, allow requests without tenant ID
         auto_provision: If True, auto-provision new tenants
     """
-    from starlette.responses import JSONResponse
 
     def on_tenant_not_found(tenant_id: str) -> JSONResponse | None:
         """Handle missing tenant."""

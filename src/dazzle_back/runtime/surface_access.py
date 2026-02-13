@@ -7,16 +7,12 @@ Enforces access control based on SurfaceAccessSpec:
 - Unauthenticated user handling (401 for API, redirect for UI)
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from fastapi import Request
-    from fastapi.responses import JSONResponse, RedirectResponse
-
+from fastapi import Request
+from fastapi.responses import JSONResponse, RedirectResponse
 
 # =============================================================================
 # Access Control Exceptions
@@ -65,7 +61,7 @@ class SurfaceAccessConfig:
     redirect_unauthenticated: str = "/"
 
     @classmethod
-    def from_spec(cls, spec: Any) -> SurfaceAccessConfig:
+    def from_spec(cls, spec: Any) -> "SurfaceAccessConfig":
         """
         Create from SurfaceAccessSpec.
 
@@ -265,7 +261,6 @@ def create_access_denied_handler() -> Callable[..., Any]:
     Returns:
         FastAPI exception handler function
     """
-    from fastapi.responses import JSONResponse, RedirectResponse
 
     async def handle_access_denied(
         request: Request,
