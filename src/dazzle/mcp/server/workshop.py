@@ -76,7 +76,7 @@ class CompletedTool:
 
 @dataclass
 class WorkshopState:
-    """Mutable display state built from JSONL entries."""
+    """Mutable display state built from activity entries."""
 
     active: dict[str, ActiveTool] = field(default_factory=dict)
     completed: list[CompletedTool] = field(default_factory=list)
@@ -86,8 +86,10 @@ class WorkshopState:
     start_time: float = field(default_factory=time.monotonic)
     max_done: int = DEFAULT_TAIL
     bell: bool = False
-    # File-reading cursor
+    # File-reading cursor (JSONL fallback)
     _file_pos: int = 0
+    # SQLite cursor
+    _last_event_id: int = 0
     # Session tracking for exit summary
     _fastest: tuple[str, float] | None = None
     _slowest: tuple[str, float] | None = None
@@ -224,6 +226,85 @@ def read_new_entries(log_path: Path, state: WorkshopState) -> list[dict[str, Any
     except OSError:
         pass
     return entries
+
+
+def read_new_entries_db(db_path: Path, state: WorkshopState) -> list[dict[str, Any]]:
+    """Read new activity events from the SQLite database.
+
+    Uses cursor-based polling via ``_last_event_id``.
+    Returns entries as dicts compatible with ``WorkshopState.ingest()``.
+    """
+    if not db_path.exists():
+        return []
+
+    entries: list[dict[str, Any]] = []
+    try:
+        import sqlite3
+
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                "SELECT * FROM activity_events WHERE id > ? ORDER BY id ASC LIMIT 200",
+                (state._last_event_id,),
+            ).fetchall()
+            for row in rows:
+                entry = _db_row_to_entry(dict(row))
+                entries.append(entry)
+                state._last_event_id = row["id"]
+        finally:
+            conn.close()
+    except Exception:
+        pass
+    return entries
+
+
+def _db_row_to_entry(row: dict[str, Any]) -> dict[str, Any]:
+    """Convert a DB row dict to the entry format expected by WorkshopState.ingest()."""
+    entry: dict[str, Any] = {
+        "type": row["event_type"],
+        "tool": row["tool"],
+        "ts": row.get("ts", ""),
+    }
+    if row.get("operation"):
+        entry["operation"] = row["operation"]
+    if row.get("success") is not None:
+        entry["success"] = bool(row["success"])
+    if row.get("duration_ms") is not None:
+        entry["duration_ms"] = row["duration_ms"]
+    if row.get("error"):
+        entry["error"] = row["error"]
+    if row.get("warnings"):
+        entry["warnings"] = row["warnings"]
+    if row.get("progress_current") is not None:
+        entry["current"] = row["progress_current"]
+    if row.get("progress_total") is not None:
+        entry["total"] = row["progress_total"]
+    if row.get("message"):
+        entry["message"] = row["message"]
+    if row.get("level"):
+        entry["level"] = row["level"]
+    return entry
+
+
+def _detect_db_path(project_dir: Path) -> Path | None:
+    """Return the KG database path if it contains activity_events."""
+    db_path = project_dir / ".dazzle" / "knowledge_graph.db"
+    if not db_path.exists():
+        return None
+    try:
+        import sqlite3
+
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
+        try:
+            conn.execute("SELECT 1 FROM activity_events LIMIT 0")
+            return db_path
+        except sqlite3.OperationalError:
+            return None
+        finally:
+            conn.close()
+    except Exception:
+        return None
 
 
 # ── Rendering ────────────────────────────────────────────────────────────────
@@ -448,13 +529,23 @@ def watch(
     *,
     max_done: int = DEFAULT_TAIL,
     bell: bool = False,
+    db_path: Path | None = None,
 ) -> None:
-    """Run the Rich Live display loop.  Blocks until Ctrl-C."""
+    """Run the Rich Live display loop.  Blocks until Ctrl-C.
+
+    If *db_path* is provided, reads from SQLite; otherwise falls back to JSONL.
+    """
     state = WorkshopState(max_done=max_done, bell=bell)
 
+    use_db = db_path is not None
+
     # Ingest any existing entries so we start with history
-    for entry in read_new_entries(log_path, state):
-        state.ingest(entry)
+    if use_db:
+        for entry in read_new_entries_db(db_path, state):  # type: ignore[arg-type]
+            state.ingest(entry)
+    else:
+        for entry in read_new_entries(log_path, state):
+            state.ingest(entry)
 
     console = Console()
     with Live(
@@ -466,7 +557,10 @@ def watch(
         try:
             while True:
                 time.sleep(POLL_INTERVAL)
-                new = read_new_entries(log_path, state)
+                if use_db:
+                    new = read_new_entries_db(db_path, state)  # type: ignore[arg-type]
+                else:
+                    new = read_new_entries(log_path, state)
                 for entry in new:
                     state.ingest(entry)
                 live.update(render_workshop(state, project_name, version))
@@ -541,7 +635,10 @@ def run_workshop(
         console.print(str(log_path))
         return
 
-    if not log_path.exists():
+    # Prefer SQLite backend if available
+    db_path = _detect_db_path(project_dir)
+
+    if db_path is None and not log_path.exists():
         console.print(
             f"[dim]Log not found at[/dim] {log_path}\n"
             f"[dim]Start the MCP server in another terminal, or use Claude Code.[/dim]\n"
@@ -550,8 +647,9 @@ def run_workshop(
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.touch()
 
+    backend = "SQLite" if db_path else "JSONL"
     console.print(
         f"[bold yellow]\u2692[/bold yellow]  Watching [cyan]{project_name}[/cyan] "
-        f"workshop \u2014 [dim]Ctrl-C to exit[/dim]\n"
+        f"workshop [dim]({backend})[/dim] \u2014 [dim]Ctrl-C to exit[/dim]\n"
     )
-    watch(log_path, project_name, version, max_done=tail, bell=bell)
+    watch(log_path, project_name, version, max_done=tail, bell=bell, db_path=db_path)

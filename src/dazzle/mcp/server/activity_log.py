@@ -21,7 +21,10 @@ import threading
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import IO, Any
+from typing import IO, TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dazzle.mcp.knowledge_graph import KnowledgeGraph
 
 logger = logging.getLogger("dazzle.mcp.activity")
 
@@ -539,3 +542,69 @@ def make_error_entry(
     if operation:
         entry["operation"] = operation
     return entry
+
+
+# ── SQLite-backed ActivityStore ────────────────────────────────────────────
+
+
+class ActivityStore:
+    """SQLite-backed activity store wrapping KnowledgeGraph activity methods.
+
+    Provides the same conceptual API as :class:`ActivityLog` but stores
+    events in the ``activity_events`` table inside the KG database.
+
+    Thread-safe (SQLite WAL mode + connection-per-call in the KG store).
+    """
+
+    def __init__(self, graph: KnowledgeGraph, session_id: str) -> None:
+        self._graph = graph
+        self._session_id = session_id
+
+    @property
+    def session_id(self) -> str:
+        return self._session_id
+
+    def log_event(
+        self,
+        event_type: str,
+        tool: str,
+        operation: str | None = None,
+        *,
+        success: bool | None = None,
+        duration_ms: float | None = None,
+        error: str | None = None,
+        warnings: int = 0,
+        progress_current: int | None = None,
+        progress_total: int | None = None,
+        message: str | None = None,
+        level: str = "info",
+        context_json: str | None = None,
+    ) -> int:
+        """Log an activity event. Returns the event id."""
+        return self._graph.log_activity_event(
+            self._session_id,
+            event_type,
+            tool,
+            operation,
+            success=success,
+            duration_ms=duration_ms,
+            error=error,
+            warnings=warnings,
+            progress_current=progress_current,
+            progress_total=progress_total,
+            message=message,
+            level=level,
+            context_json=context_json,
+        )
+
+    def read_since(self, since_id: int = 0, limit: int = 100) -> list[dict[str, Any]]:
+        """Read events after the given cursor id."""
+        return self._graph.get_activity_events(
+            since_id=since_id,
+            session_id=self._session_id,
+            limit=limit,
+        )
+
+    def end_session(self) -> None:
+        """Mark the current session as ended."""
+        self._graph.end_activity_session(self._session_id)

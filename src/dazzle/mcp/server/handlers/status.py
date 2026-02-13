@@ -166,25 +166,57 @@ def get_telemetry_handler(args: dict[str, Any]) -> str:
 def get_activity_handler(args: dict[str, Any]) -> str:
     """Read recent MCP activity log entries.
 
-    Returns a structured response with entries, cursor for polling,
-    and a human-readable formatted summary.
+    Prefers SQLite-backed ActivityStore when available, falls back to JSONL.
 
     Parameters:
-        cursor_seq: int — sequence number to read after (0 = from start)
-        cursor_epoch: int — epoch counter for staleness detection
+        cursor_seq: int — sequence number / event id to read after (0 = from start)
+        cursor_epoch: int — epoch counter for staleness detection (JSONL only)
         count: int — max entries to return (default 20)
         format: str — "structured" (default) or "formatted" (markdown)
     """
-    from ..state import get_activity_log
+    from ..state import get_activity_log, get_activity_store
 
+    activity_store = get_activity_store()
+    count = args.get("count", 20)
+    fmt = args.get("format", "structured")
+
+    # Prefer SQLite store
+    if activity_store is not None:
+        since_id = args.get("cursor_seq", 0)
+        events = activity_store.read_since(since_id=since_id, limit=count)
+        last_id = events[-1]["id"] if events else since_id
+
+        # Convert DB rows to the entry format used by formatting
+        from dazzle.mcp.server.workshop import _db_row_to_entry
+
+        entries = [_db_row_to_entry(e) for e in events]
+
+        data: dict[str, Any] = {
+            "entries": entries,
+            "cursor": {"seq": last_id, "epoch": 0},
+            "has_more": len(events) == count,
+            "stale": False,
+            "active_tool": None,
+            "backend": "sqlite",
+        }
+
+        if fmt == "formatted":
+            from ..activity_log import ActivityLog as _AL
+
+            formatted = _AL.format_summary(data, color=False)
+            return json.dumps(
+                {"formatted": formatted, "cursor": data["cursor"], "has_more": data["has_more"]},
+                indent=2,
+            )
+        return json.dumps(data, indent=2)
+
+    # Fallback to JSONL
     activity_log = get_activity_log()
     if activity_log is None:
         return json.dumps({"error": "Activity log not initialized"})
 
     cursor_seq = args.get("cursor_seq", 0)
     cursor_epoch = args.get("cursor_epoch", 0)
-    count = args.get("count", 20)
-    fmt = args.get("format", "structured")
 
     data = activity_log.read_since(
         cursor_seq=cursor_seq,
@@ -193,7 +225,6 @@ def get_activity_handler(args: dict[str, Any]) -> str:
     )
 
     if fmt == "formatted":
-        # Return rich markdown summary for display
         from ..activity_log import ActivityLog as _AL
 
         formatted = _AL.format_summary(data, color=False)

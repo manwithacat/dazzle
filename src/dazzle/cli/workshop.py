@@ -28,8 +28,23 @@ def workshop_command(
         "--bell",
         help="Ring terminal bell on errors.",
     ),
+    explore: bool = typer.Option(
+        False,
+        "--explore",
+        help="Open the Activity Explorer web UI instead of the TUI.",
+    ),
+    port: int = typer.Option(
+        8877,
+        "--port",
+        help="Port for the Activity Explorer HTTP server (used with --explore).",
+    ),
 ) -> None:
     """Watch MCP activity in a live workshop view."""
-    from dazzle.mcp.server.workshop import run_workshop
+    if explore:
+        from dazzle.mcp.server.explorer import run_explorer
 
-    run_workshop(project_dir, info=info, tail=tail, bell=bell)
+        run_explorer(Path(project_dir).resolve(), port=port)
+    else:
+        from dazzle.mcp.server.workshop import run_workshop
+
+        run_workshop(project_dir, info=info, tail=tail, bell=bell)

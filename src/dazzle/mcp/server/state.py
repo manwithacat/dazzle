@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from mcp.server.session import ServerSession
 
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
-    from dazzle.mcp.server.activity_log import ActivityLog
+    from dazzle.mcp.server.activity_log import ActivityLog, ActivityStore
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -38,6 +38,7 @@ _graph_db_path: Path | None = None
 
 # Activity log state
 _activity_log: ActivityLog | None = None
+_activity_store: ActivityStore | None = None
 
 
 def set_project_root(path: Path) -> None:
@@ -405,8 +406,9 @@ def init_activity_log(root: Path) -> None:
 
     Creates a fresh log at ``{root}/.dazzle/mcp-activity.log``,
     clearing any stale entries from a previous session.
+    Also initializes the SQLite-backed ActivityStore if the KG is available.
     """
-    global _activity_log
+    global _activity_log, _activity_store
 
     from dazzle.mcp.server.activity_log import ActivityLog
 
@@ -415,10 +417,51 @@ def init_activity_log(root: Path) -> None:
     _activity_log.clear()  # Fresh log per server session
     logger.info("Activity log initialized at: %s", log_path)
 
+    # Also init the SQLite-backed activity store
+    _init_activity_store(root)
+
+
+def _init_activity_store(root: Path) -> None:
+    """Initialize the SQLite-backed activity store from the KG."""
+    global _activity_store
+
+    graph = _knowledge_graph
+    if graph is None:
+        logger.debug("KG not available, skipping ActivityStore init")
+        return
+
+    from dazzle.mcp.server.activity_log import ActivityStore
+
+    try:
+        project_name = root.name
+        version: str | None = None
+        try:
+            from dazzle._version import get_version
+
+            version = get_version()
+        except Exception:
+            pass
+
+        session_id = graph.start_activity_session(
+            project_name=project_name,
+            project_path=str(root),
+            version=version,
+        )
+        _activity_store = ActivityStore(graph, session_id)
+        logger.info("Activity store initialized (session %s)", session_id[:8])
+    except Exception:
+        logger.debug("Failed to init ActivityStore", exc_info=True)
+        _activity_store = None
+
 
 def get_activity_log() -> ActivityLog | None:
     """Get the activity log instance."""
     return _activity_log
+
+
+def get_activity_store() -> ActivityStore | None:
+    """Get the SQLite-backed activity store instance."""
+    return _activity_store
 
 
 def reinit_activity_log(project_root: Path) -> None:
@@ -427,7 +470,7 @@ def reinit_activity_log(project_root: Path) -> None:
     Called when switching projects to point the log at the new
     project's ``.dazzle/`` directory.
     """
-    global _activity_log
+    global _activity_log, _activity_store
 
     from dazzle.mcp.server.activity_log import ActivityLog
 
@@ -435,6 +478,14 @@ def reinit_activity_log(project_root: Path) -> None:
     _activity_log = ActivityLog(log_path)
     _activity_log.clear()
     logger.info("Activity log re-initialized at: %s", log_path)
+
+    # End previous session if any, start new one
+    if _activity_store is not None:
+        try:
+            _activity_store.end_session()
+        except Exception:
+            pass
+    _init_activity_store(project_root)
 
 
 def init_browser_gate(max_concurrent: int | None = None) -> None:

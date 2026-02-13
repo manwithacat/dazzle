@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -230,6 +231,38 @@ class KnowledgeGraph:
                 );
                 CREATE INDEX IF NOT EXISTS idx_tool_inv_name ON tool_invocations(tool_name);
                 CREATE INDEX IF NOT EXISTS idx_tool_inv_created ON tool_invocations(created_at);
+
+                CREATE TABLE IF NOT EXISTS activity_sessions (
+                    id TEXT PRIMARY KEY,
+                    project_name TEXT,
+                    project_path TEXT,
+                    dazzle_version TEXT,
+                    started_at REAL NOT NULL,
+                    ended_at REAL
+                );
+
+                CREATE TABLE IF NOT EXISTS activity_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    tool TEXT NOT NULL,
+                    operation TEXT,
+                    ts TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    success INTEGER,
+                    duration_ms REAL,
+                    error TEXT,
+                    warnings INTEGER DEFAULT 0,
+                    progress_current INTEGER,
+                    progress_total INTEGER,
+                    message TEXT,
+                    level TEXT DEFAULT 'info',
+                    context_json TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_ae_session ON activity_events(session_id);
+                CREATE INDEX IF NOT EXISTS idx_ae_type ON activity_events(event_type);
+                CREATE INDEX IF NOT EXISTS idx_ae_created ON activity_events(created_at);
+                CREATE INDEX IF NOT EXISTS idx_ae_tool ON activity_events(tool);
             """
             )
             conn.commit()
@@ -1363,6 +1396,213 @@ class KnowledgeGraph:
                 for row in rows
             ]
             return {"total_calls": total, "by_tool": by_tool}
+        finally:
+            self._close_connection(conn)
+
+    # =========================================================================
+    # Activity Event Stream
+    # =========================================================================
+
+    def start_activity_session(
+        self,
+        project_name: str | None = None,
+        project_path: str | None = None,
+        version: str | None = None,
+    ) -> str:
+        """Start a new activity session. Returns the session_id (UUID)."""
+        session_id = str(uuid.uuid4())
+        now = time.time()
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                """
+                INSERT INTO activity_sessions
+                    (id, project_name, project_path, dazzle_version, started_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (session_id, project_name, project_path, version, now),
+            )
+            conn.commit()
+        finally:
+            self._close_connection(conn)
+        return session_id
+
+    def end_activity_session(self, session_id: str) -> None:
+        """Mark an activity session as ended."""
+        conn = self._get_connection()
+        try:
+            conn.execute(
+                "UPDATE activity_sessions SET ended_at = ? WHERE id = ?",
+                (time.time(), session_id),
+            )
+            conn.commit()
+        finally:
+            self._close_connection(conn)
+
+    def log_activity_event(
+        self,
+        session_id: str,
+        event_type: str,
+        tool: str,
+        operation: str | None = None,
+        *,
+        success: bool | None = None,
+        duration_ms: float | None = None,
+        error: str | None = None,
+        warnings: int = 0,
+        progress_current: int | None = None,
+        progress_total: int | None = None,
+        message: str | None = None,
+        level: str = "info",
+        context_json: str | None = None,
+    ) -> int:
+        """Log an activity event. Returns the event id."""
+        now = time.time()
+        ts = datetime.now(UTC).isoformat(timespec="milliseconds")
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(
+                """
+                INSERT INTO activity_events
+                    (session_id, event_type, tool, operation, ts, created_at,
+                     success, duration_ms, error, warnings,
+                     progress_current, progress_total, message, level, context_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    event_type,
+                    tool,
+                    operation,
+                    ts,
+                    now,
+                    (1 if success else 0) if success is not None else None,
+                    duration_ms,
+                    error,
+                    warnings,
+                    progress_current,
+                    progress_total,
+                    message,
+                    level,
+                    context_json,
+                ),
+            )
+            conn.commit()
+            return cursor.lastrowid or 0
+        finally:
+            self._close_connection(conn)
+
+    def get_activity_events(
+        self,
+        since_id: int = 0,
+        session_id: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """Cursor-based polling for activity events.
+
+        Returns events with id > since_id, ordered by id ASC.
+        """
+        conditions = ["id > ?"]
+        params: list[Any] = [since_id]
+
+        if session_id:
+            conditions.append("session_id = ?")
+            params.append(session_id)
+
+        params.append(limit)
+        where = " AND ".join(conditions)
+
+        conn = self._get_connection()
+        try:
+            rows = conn.execute(
+                f"SELECT * FROM activity_events WHERE {where} ORDER BY id ASC LIMIT ?",
+                params,
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            self._close_connection(conn)
+
+    def get_activity_sessions(self, limit: int = 20) -> list[dict[str, Any]]:
+        """List recent activity sessions, newest first."""
+        conn = self._get_connection()
+        try:
+            rows = conn.execute(
+                "SELECT * FROM activity_sessions ORDER BY started_at DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            self._close_connection(conn)
+
+    def get_activity_stats(self, session_id: str | None = None) -> dict[str, Any]:
+        """Aggregate activity statistics, optionally filtered by session."""
+        where = ""
+        params: list[Any] = []
+        if session_id:
+            where = "WHERE session_id = ?"
+            params = [session_id]
+
+        conn = self._get_connection()
+        try:
+            total = conn.execute(
+                f"SELECT COUNT(*) FROM activity_events {where}", params
+            ).fetchone()[0]
+
+            tool_end_where = (
+                f"WHERE event_type = 'tool_end'{' AND session_id = ?' if session_id else ''}"
+            )
+            tool_end_params = [session_id] if session_id else []
+
+            success_count = conn.execute(
+                f"SELECT COUNT(*) FROM activity_events {tool_end_where} AND success = 1",
+                tool_end_params,
+            ).fetchone()[0]
+
+            error_count = conn.execute(
+                f"SELECT COUNT(*) FROM activity_events {tool_end_where} AND success = 0",
+                tool_end_params,
+            ).fetchone()[0]
+
+            by_tool_rows = conn.execute(
+                f"""
+                SELECT
+                    tool,
+                    COUNT(*) AS call_count,
+                    SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) AS error_count,
+                    AVG(duration_ms) AS avg_duration_ms,
+                    MAX(duration_ms) AS max_duration_ms
+                FROM activity_events
+                {tool_end_where}
+                GROUP BY tool
+                ORDER BY call_count DESC
+                """,
+                tool_end_params,
+            ).fetchall()
+
+            by_tool = [
+                {
+                    "tool": row["tool"],
+                    "call_count": row["call_count"],
+                    "error_count": row["error_count"],
+                    "avg_duration_ms": round(row["avg_duration_ms"], 2)
+                    if row["avg_duration_ms"]
+                    else None,
+                    "max_duration_ms": round(row["max_duration_ms"], 2)
+                    if row["max_duration_ms"]
+                    else None,
+                }
+                for row in by_tool_rows
+            ]
+
+            return {
+                "total_events": total,
+                "tool_calls_ok": success_count,
+                "tool_calls_error": error_count,
+                "success_rate": round(success_count / (success_count + error_count) * 100, 1)
+                if (success_count + error_count) > 0
+                else None,
+                "by_tool": by_tool,
+            }
         finally:
             self._close_connection(conn)
 
