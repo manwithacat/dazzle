@@ -12,6 +12,14 @@ Explore complete DAZZLE applications demonstrating various features and complexi
 | [Ops Dashboard](ops-dashboard.md) | Intermediate+ | Personas, dashboards, engine hints |
 | [FieldTest Hub](fieldtest-hub.md) | Advanced | Persona scoping, attention signals, multi-workspace |
 
+### Additional Examples
+
+| Example | Key Features |
+|---------|--------------|
+| `pra` | Experiences, wizards, multi-step flows |
+| `llm_ticket_classifier` | LLM integration, ticket classification |
+| `rbac_validation` | Role-based access control, permissions |
+
 ## Learning Path
 
 ```

@@ -224,20 +224,15 @@ surface contact_edit           → components/form_edit.html
 
 ```html
 <script src="https://unpkg.com/htmx.org@2.0.3"></script>
-<script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
 <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 ```
 
-### Alpine.js Scope (Limited)
+### Vanilla JS Scope (Limited)
 
-Alpine manages **UI state only**: dropdown open/close, modal visibility, accordion state.
+Vanilla JS manages **UI state only**: dropdown open/close, modal visibility, accordion state.
 
-Alpine does **NOT** manage: form data, API responses, selection state.
-
-```
-x-data    x-show    x-bind (:)    @click    @click.away
-```
+JS does **NOT** manage: form data, API responses, selection state. HTMX handles all server communication.
 
 ---
 

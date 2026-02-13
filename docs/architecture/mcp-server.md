@@ -18,7 +18,7 @@ dazzle mcp check
 
 ## Consolidated Tools
 
-The MCP server provides **18 consolidated tools** (down from 66 original tools). Each tool uses an `operation` parameter to select the action, reducing token overhead while preserving discoverability.
+The MCP server provides **24 consolidated tools** (down from 66 original tools), plus 4 dev-mode project management tools. Each tool uses an `operation` parameter to select the action, reducing token overhead while preserving discoverability.
 
 ### dsl
 
@@ -241,17 +241,77 @@ Visual composition analysis.
 | `bootstrap` | Generate reference library for evaluation |
 | `inspect_styles` | Extract computed CSS styles |
 
-### Additional Tools
+### bootstrap
 
-| Tool | Purpose |
-|------|---------|
-| `bootstrap` | Entry point for "build me an app" requests |
-| `spec_analyze` | Analyze narrative specs before DSL generation |
-| `policy` | RBAC access control analysis |
-| `user_management` | Manage auth users and sessions |
-| `pitch` | Generate investor pitch decks |
-| `contribution` | Package contributions for sharing |
-| `user_profile` | Adaptive persona inference |
+Entry point for "build me an app" requests.
+
+| Operation | Purpose |
+|-----------|---------|
+| (default) | Scaffold a new app from a natural language description |
+
+### spec_analyze
+
+Analyze narrative specs before DSL generation.
+
+| Operation | Purpose |
+|-----------|---------|
+| `discover_entities` | Extract entities from a narrative spec |
+| `identify_lifecycles` | Find state machines and workflows |
+| `extract_personas` | Identify user personas from descriptions |
+
+### policy
+
+RBAC access control analysis.
+
+| Operation | Purpose |
+|-----------|---------|
+| `analyze` | Analyze access rules across surfaces |
+| `conflicts` | Detect conflicting permissions |
+| `coverage` | Measure RBAC coverage gaps |
+| `simulate` | Simulate access for a persona/route |
+
+### pitch
+
+Generate investor pitch materials from DSL.
+
+| Operation | Purpose |
+|-----------|---------|
+| `scaffold` | Create pitch structure |
+| `generate` | Generate pitch deck content |
+| `validate` | Validate pitch completeness |
+| `review` | Review and improve pitch |
+| `enrich` | Enrich with market data |
+
+### contribution
+
+Package contributions for sharing.
+
+| Operation | Purpose |
+|-----------|---------|
+| `templates` | List available contribution templates |
+| `create` | Create a contribution package |
+| `validate` | Validate contribution format |
+| `examples` | Browse example contributions |
+
+### user_management
+
+Manage auth users and sessions.
+
+| Operation | Purpose |
+|-----------|---------|
+| `list` | List users |
+| `create` | Create a user |
+| `get` | Get user details |
+| `update` | Update user properties |
+| `deactivate` | Soft-delete a user |
+
+### user_profile
+
+Adaptive persona inference.
+
+| Operation | Purpose |
+|-----------|---------|
+| (default) | Infer the current user's persona from context |
 
 ## Usage Examples
 
@@ -320,7 +380,7 @@ The MCP server uses consolidated handlers for maintainability:
 ```
 src/dazzle/mcp/server/
 ├── __init__.py                  # Server setup and routing
-├── tools_consolidated.py        # Tool definitions (18 consolidated tools)
+├── tools_consolidated.py        # Tool definitions (24 consolidated + 4 dev-mode)
 ├── handlers_consolidated.py     # Dispatch: operation → handler function
 ├── handlers/
 │   ├── dsl.py                   # DSL parsing, entity/surface inspection
@@ -338,9 +398,14 @@ src/dazzle/mcp/server/
 │   ├── pipeline.py              # Quality audit pipeline
 │   ├── pulse.py                 # Project health reports
 │   ├── composition.py           # Visual composition analysis
+│   ├── policy.py                # RBAC access control analysis
+│   ├── status.py                # MCP/DNR status and activity
 │   └── ...
 ├── state.py                     # Project state management
-└── progress.py                  # Progress reporting
+├── progress.py                  # Progress reporting
+├── activity_log.py              # Activity logging (JSONL + SQLite)
+├── workshop.py                  # Workshop TUI (Rich Live display)
+└── explorer.py                  # Activity Explorer HTTP server
 ```
 
 ## Troubleshooting

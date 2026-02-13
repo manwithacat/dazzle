@@ -14,7 +14,7 @@ graph TD
     Runtime --> Back[DNR Backend]
     Runtime --> UI[Dazzle UI]
     Back --> API[FastAPI App]
-    UI --> JS[JavaScript Runtime]
+    UI --> JS[HTMX Templates]
 ```
 
 ## Stage 1: Parsing
@@ -132,7 +132,7 @@ Produces:
 | Link | AppSpec[] | Linked AppSpec |
 | Validate | AppSpec | Validated AppSpec |
 | Backend | AppSpec | BackendSpec → FastAPI |
-| UI | AppSpec | UISpec → JavaScript |
+| UI | AppSpec | UISpec → HTMX Templates |
 
 ## Error Handling
 

@@ -6,7 +6,7 @@
 ## Quick Facts
 
 - **What**: DSL-first toolkit for building apps from specifications
-- **Language**: Python 3.11+, HTMX/Jinja2 templates, Alpine.js
+- **Language**: Python 3.12+, HTMX/Jinja2 templates, vanilla JS
 - **Repository**: https://github.com/manwithacat/dazzle
 - **Docs Site**: https://manwithacat.github.io/dazzle/
 
@@ -72,16 +72,34 @@ workspace dashboard "Dashboard":
 
 ## MCP Tools
 
-When working with Dazzle projects, these MCP tools are available:
+When working with Dazzle projects, 24 consolidated MCP tools are available:
 
 | Tool | Purpose |
 |------|---------|
-| dsl | DSL operations: validate, inspect_entity, inspect_surface, lint, analyze |
-| knowledge | Concept lookup, examples, workflow guides |
-| story | Story-driven development: propose, save, get, generate_tests |
-| process | Workflow processes: list, inspect, diagram, coverage |
-| pipeline | Full quality audit in one call |
-| pulse | Project health report and launch readiness |
+| dsl | DSL operations: validate, inspect_entity, inspect_surface, lint, analyze, fidelity |
+| knowledge | Concept lookup, examples, workflow guides, inference |
+| story | Story-driven development: propose, save, get, generate_tests, coverage |
+| process | Workflow processes: propose, save, list, inspect, diagram, coverage |
+| test_design | UX test coverage: propose_persona, gaps, save, auto_populate |
+| dsl_test | API test generation: generate, run, run_all, coverage, verify_story |
+| e2e_test | E2E testing: check_infra, run, run_agent, coverage, run_viewport |
+| discovery | Capability discovery: run, report, compile, emit, status, coherence |
+| pipeline | Full deterministic quality audit in one call |
+| pulse | Project health report: run, radar, persona, timeline, decisions |
+| graph | Knowledge graph: query, dependencies, neighbourhood, concept, inference |
+| sitespec | Site specification: get, validate, scaffold, coherence, themes |
+| semantics | Event-first analysis: extract, validate_events, tenancy, compliance |
+| composition | Visual composition: audit, capture, analyze, report, inspect_styles |
+| policy | RBAC analysis: analyze, conflicts, coverage, simulate |
+| demo_data | Demo data: propose, save, get, generate |
+| api_pack | External APIs: list, search, get, generate_dsl |
+| bootstrap | Entry point for "build me an app" requests |
+| spec_analyze | Analyze narrative specs: discover_entities, identify_lifecycles |
+| pitch | Investor pitch materials: scaffold, generate, validate, review |
+| contribution | Package contributions: templates, create, validate, examples |
+| user_management | Manage auth users: list, create, get, update, deactivate |
+| user_profile | Adaptive persona inference |
+| status | MCP status: mcp, logs, telemetry, activity |
 
 ## File Locations
 

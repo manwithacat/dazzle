@@ -4,7 +4,7 @@ Comprehensive guide to testing in the DAZZLE codebase.
 
 ## Overview
 
-DAZZLE has a multi-layered test infrastructure with **1,300+ test functions** across **68+ test files**. Tests are organized by scope (unit, integration, E2E) and execution context (local, pre-commit, CI).
+DAZZLE has a multi-layered test infrastructure with **5,000+ test functions** across **100+ test files**. Tests are organized by scope (unit, integration, E2E) and execution context (local, pre-commit, CI).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -294,7 +294,7 @@ Runs on push to main/develop and pull requests:
 
 | Job | Runs | Description |
 |-----|------|-------------|
-| `python-tests` | All PRs | Unit tests (Python 3.11, 3.12) |
+| `python-tests` | All PRs | Unit tests (Python 3.12) |
 | `lint` | All PRs | Ruff, Bandit, DSL validation |
 | `js-lint` | All PRs | ESLint |
 | `js-test` | All PRs | Vitest |
@@ -510,4 +510,4 @@ class TestMyExample:
 
 ---
 
-*Last updated: December 2024*
+*Last updated: February 2026*

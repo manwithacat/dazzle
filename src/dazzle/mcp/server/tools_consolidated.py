@@ -6,7 +6,7 @@ tools with enum-based operations. Each operation is explicitly listed in the
 schema, preserving discoverability for LLMs.
 
 Consolidation strategy:
-- 66 original tools → 18 consolidated tools
+- 66 original tools → 24 consolidated tools (+ 4 dev-mode project tools)
 - Knowledge tools (5) → MCP Resources (no schema overhead)
 - CRUD patterns unified: list/get/inspect → single tool with operation enum
 
@@ -66,7 +66,7 @@ PROJECT_PATH_SCHEMA = {
 
 def get_consolidated_tools() -> list[Tool]:
     """
-    Get consolidated tools (18 tools replacing 66 original tools).
+    Get consolidated tools (24 tools replacing 66 original tools).
 
     Each tool uses an 'operation' enum to specify the action, preserving
     discoverability while reducing schema overhead.

@@ -59,6 +59,11 @@ nav:
       - UX Layer: reference/ux.md
       - Scenarios: reference/scenarios.md
       - Experiences: reference/experiences.md
+      - Runtime Capabilities: reference/runtime-capabilities.md
+      - HTMX Templates: reference/htmx-templates.md
+      - Testing: reference/testing.md
+      - Databases: reference/databases.md
+      - Deployment: reference/deployment.md
       - CLI: reference/cli.md
       - Grammar: reference/grammar.md
   - Examples:

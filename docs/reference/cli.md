@@ -84,6 +84,13 @@ Complete reference for the `dazzle` command-line interface.
 | `dazzle vocab` | Manage app-local vocabulary (macros, aliases, patterns) |
 | `dazzle stubs` | Manage domain service stubs |
 
+### Monitoring
+
+| Command | Description |
+|---------|-------------|
+| `dazzle workshop` | Watch MCP activity in a live terminal display |
+| `dazzle workshop --explore` | Launch Activity Explorer in the browser |
+
 ### Tooling
 
 | Command | Description |
@@ -303,6 +310,37 @@ dazzle db COMMAND [OPTIONS]
 | `downgrade` | Rollback migrations |
 | `current` | Show current revision |
 | `history` | Show migration history |
+
+---
+
+### dazzle workshop
+
+Watch MCP activity in a live terminal display, or launch the Activity Explorer UI.
+
+```bash
+dazzle workshop [OPTIONS]
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--bell` | | Ring terminal bell on errors |
+| `--tail` | `30` | Number of history entries to show |
+| `--info` | | Print log path and exit |
+| `--explore` | | Launch Activity Explorer in the browser |
+| `--port` | `8877` | Port for Activity Explorer HTTP server |
+
+```bash
+# Watch MCP activity in a TUI
+dazzle workshop
+
+# Launch Activity Explorer in the browser
+dazzle workshop --explore
+
+# Custom port
+dazzle workshop --explore --port 9999
+```
+
+The workshop reads from the SQLite activity store in the knowledge graph database. Falls back to JSONL (`.dazzle/mcp-activity.log`) for older sessions.
 
 ---
 

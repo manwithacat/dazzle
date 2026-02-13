@@ -12,14 +12,14 @@ Welcome to Dazzle! This section will help you install Dazzle and build your firs
 
 ## Prerequisites
 
-- Python 3.11 or higher
+- Python 3.12 or higher
 - A terminal / command line
 
 ## Fastest Path
 
 ```bash
 # Install
-pip install dazzle
+pip install dazzle-dsl
 
 # Run an example
 cd examples/simple_task

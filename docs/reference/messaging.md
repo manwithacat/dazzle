@@ -1,6 +1,6 @@
 # Messaging
 
-DAZZLE v0.9 introduces a comprehensive messaging system for email, queues, and notifications.
+DAZZLE includes a comprehensive messaging system for email, queues, and notifications.
 
 ## Overview
 

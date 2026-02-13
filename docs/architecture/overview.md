@@ -89,8 +89,8 @@ The runtime generates:
 **Why server-rendered templates over client-side JS**:
 - Server is the single source of truth — no client/server state sync
 - HTMX declarative attributes replace custom JavaScript
-- Alpine.js handles ephemeral UI state (toggles, selections, transitions)
-- Zero build toolchain — three CDN script tags, no node_modules
+- Vanilla JS handles ephemeral UI state (toggles, modals, transitions)
+- Zero build toolchain — two CDN script tags, no node_modules
 - LLM-friendly — templates are plain HTML with predictable attributes
 
 ### Template Pipeline
@@ -111,7 +111,7 @@ HTMX swaps partial HTML from server
 |-----------|------|
 | **HTMX** | Declarative server interactions (`hx-get`, `hx-post`, `hx-swap`) |
 | **DaisyUI** | Tailwind CSS component library for consistent styling |
-| **Alpine.js** | Lightweight client-side state (`x-data`, `x-show`, `x-transition`) |
+| **Vanilla JS** | Lightweight client-side state (modals, toggles, transitions) |
 | **Jinja2** | Server-side template rendering |
 
 ### Template Structure
@@ -120,7 +120,6 @@ HTMX swaps partial HTML from server
 templates/
 ├── layouts/             # Page shells (app_shell, single_column)
 ├── components/          # Full-page components (filterable_table, form, detail_view)
-│   └── alpine/          # Alpine.js interactive components (slide_over, confirm_dialog)
 ├── fragments/           # Partial HTML for HTMX swaps (table_rows, inline_edit, bulk_actions)
 └── macros/              # Reusable Jinja2 macros
 ```
@@ -152,9 +151,9 @@ The browser swaps the fragment into the target element — no full page reload.
 | Pattern | Technology | Fragment |
 |---------|-----------|----------|
 | **Search with debounce** | HTMX `hx-trigger="keyup changed delay:300ms"` | `search_input.html` |
-| **Inline editing** | HTMX `hx-put` + Alpine toggle state | `inline_edit.html` |
-| **Bulk actions** | Alpine `x-data="{ selected: [] }"` + HTMX submit | `bulk_actions.html` |
-| **Slide-over detail** | Alpine `x-transition` + HTMX content load | `slide_over.html` |
+| **Inline editing** | HTMX `hx-put` + JS toggle state | `inline_edit.html` |
+| **Bulk actions** | JS selection state + HTMX submit | `bulk_actions.html` |
+| **Slide-over detail** | CSS transitions + HTMX content load | `slide_over.html` |
 | **Form submission** | HTMX `hx-post` with validation fragments | `form.html` + `form_errors.html` |
 | **Pagination** | HTMX `hx-get` with page parameter | `table_pagination.html` |
 
@@ -232,7 +231,5 @@ ComponentSpec(
 
 ## Future Directions
 
-- **TigerBeetle ledgers**: Double-entry accounting via DSL
-- **React builder**: UISpec → React components
 - **Mobile runtime**: UISpec → React Native / Flutter
 - **WebSocket support**: Real-time updates in specs

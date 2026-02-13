@@ -17,6 +17,8 @@ Complete reference for the DAZZLE Domain-Specific Language v0.24.
 | [UX Layer](ux.md) | UX semantic layer, attention signals, persona variants |
 | [Scenarios](scenarios.md) | Personas, scenarios, demo fixtures |
 | [Experiences](experiences.md) | Multi-step user flows |
+| [Runtime Capabilities](runtime-capabilities.md) | What the runtime renders for each DSL construct |
+| [HTMX Templates](htmx-templates.md) | HTMX template spec for LLM agents |
 | [Testing](testing.md) | Test design, stories, E2E flows |
 | [Deployment](deployment.md) | AWS infrastructure, TigerBeetle, CDK |
 | [Databases](databases.md) | PostgreSQL configuration and schema management |
@@ -60,7 +62,7 @@ module app entity surface workspace service integration experience
 persona scenario demo message channel asset document template
 field section action mode uses ref has_many has_one belongs_to embeds
 required optional pk unique auto_add auto_update
-str text int decimal bool date datetime uuid email enum
+str text int decimal bool date datetime uuid email enum json
 filter sort limit display aggregate source empty group_by
 when on send receive create update delete
 ux attention for scope purpose show hide focus defaults
@@ -68,5 +70,7 @@ ledger transaction transfer debit credit amount
 account_code ledger_id account_type currency flags
 sync_to idempotency_key validation execution priority
 asset liability equity revenue expense
+process schedule step transition trigger
+foreign_model use archetype
 true false null
 ```

@@ -216,10 +216,10 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Dazzle
-        run: pip install dazzle
+        run: pip install dazzle-dsl
 
       - name: Generate Infrastructure
         run: dazzle deploy generate

@@ -24,7 +24,7 @@ This guide covers multiple ways to install DAZZLE on your system.
 
 ## Prerequisites
 
-- **Python 3.11 or higher** (Python 3.12 recommended)
+- **Python 3.12 or higher**
 - **pip** (usually comes with Python)
 - **git** (for installation from source)
 
@@ -35,19 +35,19 @@ This guide covers multiple ways to install DAZZLE on your system.
 Once DAZZLE is published to PyPI, you can install it with:
 
 ```bash
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 To install with LLM support (for DSL generation features):
 
 ```bash
-pip install dazzle[llm]
+pip install dazzle-dsl[llm]
 ```
 
 To install for development:
 
 ```bash
-pip install dazzle[dev]
+pip install dazzle-dsl[dev]
 ```
 
 ### Method 2: Install from Source
@@ -177,12 +177,12 @@ If you have multiple Python versions:
 
 ```bash
 # Use specific Python version
-python3.11 -m pip install dazzle
+python3.12 -m pip install dazzle-dsl
 
 # Or create a virtual environment
-python3.11 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 ### Permission Errors
@@ -191,12 +191,12 @@ If you get permission errors:
 
 ```bash
 # Install to user directory
-pip install --user dazzle
+pip install --user dazzle-dsl
 
 # Or use a virtual environment (recommended)
 python -m venv venv
 source venv/bin/activate
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 ### Command Not Found
@@ -237,30 +237,30 @@ For contributing to DAZZLE, see [CONTRIBUTING.md](../CONTRIBUTING.md) for detail
 ### macOS
 
 ```bash
-# Install Python 3.11+ via Homebrew
-brew install python@3.11
+# Install Python 3.12+ via Homebrew
+brew install python@3.12
 
 # Install DAZZLE
-pip3.11 install dazzle
+pip3.12 install dazzle-dsl
 ```
 
 ### Linux (Ubuntu/Debian)
 
 ```bash
-# Install Python 3.11+
+# Install Python 3.12+
 sudo apt update
-sudo apt install python3.11 python3.11-venv python3-pip
+sudo apt install python3.12 python3.12-venv python3-pip
 
 # Install DAZZLE
-pip3 install dazzle
+pip3 install dazzle-dsl
 ```
 
 ### Windows
 
 ```powershell
-# Install Python 3.11+ from python.org
+# Install Python 3.12+ from python.org
 # Then install DAZZLE
-pip install dazzle
+pip install dazzle-dsl
 ```
 
 ## Next Steps
@@ -3095,8 +3095,8 @@ The runtime generates:
 **Why server-rendered templates over client-side JS**:
 - Server is the single source of truth — no client/server state sync
 - HTMX declarative attributes replace custom JavaScript
-- Alpine.js handles ephemeral UI state (toggles, selections, transitions)
-- Zero build toolchain — three CDN script tags, no node_modules
+- Vanilla JS handles ephemeral UI state (toggles, selections, transitions)
+- Zero build toolchain — two CDN script tags, no node_modules
 - LLM-friendly — templates are plain HTML with predictable attributes
 
 ### Template Pipeline
@@ -3117,7 +3117,7 @@ HTMX swaps partial HTML from server
 |-----------|------|
 | HTMX | Declarative server interactions (hx-get, hx-post, hx-swap) |
 | DaisyUI | Tailwind CSS component library for consistent styling |
-| Alpine.js | Lightweight client-side state (x-data, x-show, x-transition) |
+| Vanilla JS | Lightweight client-side state (modals, toggles, transitions) |
 | Jinja2 | Server-side template rendering |
 
 ### Template Structure
@@ -3126,7 +3126,6 @@ HTMX swaps partial HTML from server
 templates/
 ├── layouts/             # Page shells (app_shell, single_column)
 ├── components/          # Full-page components (filterable_table, form, detail_view)
-│   └── alpine/          # Alpine.js interactive components (slide_over, confirm_dialog)
 ├── fragments/           # Partial HTML for HTMX swaps (table_rows, inline_edit, bulk_actions)
 └── macros/              # Reusable Jinja2 macros
 ```
@@ -3136,9 +3135,9 @@ templates/
 | Pattern | Technology | Fragment |
 |---------|-----------|----------|
 | Search with debounce | HTMX hx-trigger="keyup changed delay:300ms" | search_input.html |
-| Inline editing | HTMX hx-put + Alpine toggle state | inline_edit.html |
-| Bulk actions | Alpine x-data="{ selected: [] }" + HTMX submit | bulk_actions.html |
-| Slide-over detail | Alpine x-transition + HTMX content load | slide_over.html |
+| Inline editing | HTMX hx-put + JS toggle state | inline_edit.html |
+| Bulk actions | JS selection state + HTMX submit | bulk_actions.html |
+| Slide-over detail | CSS transitions + HTMX content load | slide_over.html |
 | Form submission | HTMX hx-post with validation fragments | form.html + form_errors.html |
 | Pagination | HTMX hx-get with page parameter | table_pagination.html |
 

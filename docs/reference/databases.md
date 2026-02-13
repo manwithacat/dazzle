@@ -17,6 +17,17 @@ dazzle serve
 dazzle serve --database-url postgresql://user:password@localhost:5432/myapp
 ```
 
+### dazzle.toml
+
+Configure the database URL in your project manifest:
+
+```toml
+[database]
+url = "postgresql://user:password@localhost:5432/myapp"
+# Or use env var indirection:
+# url = "env:DATABASE_URL"
+```
+
 ### Docker Compose
 
 When using `dazzle serve` (Docker mode), set the variable in your shell or a `.env` file:

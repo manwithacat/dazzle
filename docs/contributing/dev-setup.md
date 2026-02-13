@@ -4,7 +4,7 @@ Set up a local development environment for contributing to Dazzle.
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.12+
 - Node.js 18+ (for JavaScript tests)
 - Git
 

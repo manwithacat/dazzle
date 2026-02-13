@@ -16,7 +16,7 @@ Guide to extending Dazzle with new functionality.
 
 ### 1. Update the Grammar
 
-Edit `docs/v0.9/DAZZLE_DSL_GRAMMAR.ebnf`:
+Update the grammar reference in `docs/reference/grammar.md` (auto-generated from parser via `grammar_gen.py`):
 
 ```ebnf
 my_construct = "my_keyword", identifier, ":", block ;
