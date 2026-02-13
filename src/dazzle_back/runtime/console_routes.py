@@ -13,11 +13,9 @@ Route prefix: /_console/ (full pages) + /_console/partials/ (HTMX fragments)
 Auth: Reuses OpsSessionManager cookie-based sessions from ops_routes.
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 try:
     from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response
@@ -27,11 +25,10 @@ try:
 except ImportError:
     FASTAPI_AVAILABLE = False
 
-if TYPE_CHECKING:
-    from jinja2 import Environment
+from jinja2 import Environment
 
-    from dazzle_back.runtime.health_aggregator import HealthAggregator
-    from dazzle_back.runtime.ops_database import OpsDatabase
+from dazzle_back.runtime.health_aggregator import HealthAggregator
+from dazzle_back.runtime.ops_database import OpsDatabase
 
 logger = logging.getLogger("dazzle.console")
 

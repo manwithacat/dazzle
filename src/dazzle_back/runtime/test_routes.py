@@ -7,9 +7,7 @@ and capturing database snapshots.
 These endpoints are only available when test mode is enabled.
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 try:
     from fastapi import APIRouter, HTTPException
@@ -22,10 +20,8 @@ except ImportError:
 
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
-    from dazzle_back.specs.entity import EntitySpec
-
+from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
+from dazzle_back.specs.entity import EntitySpec
 
 # =============================================================================
 # Request/Response Models

@@ -4,8 +4,6 @@ Provides search and select endpoints that proxy to configured external
 API sources and return rendered HTML fragments.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

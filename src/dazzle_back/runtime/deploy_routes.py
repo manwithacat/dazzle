@@ -5,10 +5,8 @@ Wraps deploy.runner, deploy.preflight, deploy.config for the console UI.
 Includes preflight, generate, deploy actions and rollback.
 """
 
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 try:
     from fastapi import APIRouter, Request
@@ -17,9 +15,6 @@ try:
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
-
-if TYPE_CHECKING:
-    pass  # Types used via Any for flexibility
 
 logger = logging.getLogger("dazzle.deploy_routes")
 

@@ -5,9 +5,7 @@ Admin-only endpoints for querying access control audit trail.
 Mounted at /api/_audit/*.
 """
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 try:
     from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,9 +18,8 @@ except ImportError:
     HTTPException = None  # type: ignore[misc, assignment]
     Query = None  # type: ignore[assignment]
 
-if TYPE_CHECKING:
-    from dazzle_back.runtime.audit_log import AuditLogger
-    from dazzle_back.runtime.auth import AuthContext
+from dazzle_back.runtime.audit_log import AuditLogger
+from dazzle_back.runtime.auth import AuthContext
 
 
 def create_audit_routes(

@@ -12,11 +12,9 @@ Authentication is separate from app auth - uses ops_database credentials.
 Routes are prefixed with /_ops/ and require ops authentication.
 """
 
-from __future__ import annotations
-
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -29,13 +27,11 @@ except ImportError:
     APIRouter = None  # type: ignore
     HTTPException = None  # type: ignore
 
-if TYPE_CHECKING:
-    from dazzle_back.metrics.system_collector import SystemMetricsCollector
-    from dazzle_back.runtime.health_aggregator import HealthAggregator
-    from dazzle_back.runtime.ops_database import OpsDatabase
-    from dazzle_back.runtime.ops_simulator import OpsSimulator
-    from dazzle_back.runtime.sse_stream import SSEStreamManager
-
+from dazzle_back.metrics.system_collector import SystemMetricsCollector
+from dazzle_back.runtime.health_aggregator import HealthAggregator
+from dazzle_back.runtime.ops_database import OpsDatabase
+from dazzle_back.runtime.ops_simulator import OpsSimulator
+from dazzle_back.runtime.sse_stream import SSEStreamManager
 
 # =============================================================================
 # Request/Response Models

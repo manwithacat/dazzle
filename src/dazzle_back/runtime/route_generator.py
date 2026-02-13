@@ -4,11 +4,9 @@ Route generator - generates FastAPI routes from EndpointSpec.
 This module creates FastAPI routers and routes from backend specifications.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -16,10 +14,6 @@ from pydantic import BaseModel
 from dazzle.core.strings import to_api_plural
 from dazzle_back.specs.endpoint import EndpointSpec, HttpMethod
 from dazzle_back.specs.service import OperationKind, ServiceSpec
-
-# Type checking imports
-if TYPE_CHECKING:
-    from fastapi import APIRouter
 
 # FastAPI is optional - only import if available
 try:
@@ -41,6 +35,10 @@ except ImportError:
     HTMLResponse = None  # type: ignore
     JSONResponse = None  # type: ignore
     AuthContext = None  # type: ignore
+
+# Expose APIRouter name for return-type annotations (the real class is
+# imported as _APIRouter to allow a None fallback when FastAPI is absent).
+APIRouter = _APIRouter
 
 
 def _is_htmx_request(request: Any) -> bool:

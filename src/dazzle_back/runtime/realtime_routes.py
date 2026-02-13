@@ -4,15 +4,11 @@ WebSocket routes for DNR real-time features.
 Provides the WebSocket endpoint and message handlers.
 """
 
-from __future__ import annotations
+from typing import Any
 
-from typing import TYPE_CHECKING, Any
+from fastapi import FastAPI
 
-if TYPE_CHECKING:
-    from fastapi import FastAPI, WebSocket
-
-    from dazzle_back.runtime.auth import AuthStore
-
+from dazzle_back.runtime.auth import AuthStore
 from dazzle_back.runtime.event_bus import EntityEventBus, create_event_bus
 from dazzle_back.runtime.presence_tracker import (
     PresenceTracker,
