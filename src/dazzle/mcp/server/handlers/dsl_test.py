@@ -273,8 +273,13 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         progress.log_sync("Generating tests from DSL...")
         runner = UnifiedTestRunner(project_root, base_url=base_url)
+
         progress.log_sync("Running all tests...")
-        result = runner.run_all(generate=True, force_generate=regenerate)
+        result = runner.run_all(
+            generate=True,
+            force_generate=regenerate,
+            on_progress=lambda msg: progress.log_sync(msg),
+        )
 
         # Build structured response optimized for LLM consumption
         summary = result.get_summary()
@@ -412,6 +417,7 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
             entity=entity,
             test_id=test_id,
             persona=persona,
+            on_progress=lambda msg: progress.log_sync(msg),
         )
 
         # Return summary + individual test results for LLM agents

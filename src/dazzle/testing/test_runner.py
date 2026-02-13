@@ -19,6 +19,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -676,7 +677,10 @@ class TestRunner:
         return result
 
     def run_tests_from_designs(
-        self, designs: list[dict[str, Any]], skip_e2e: bool = True
+        self,
+        designs: list[dict[str, Any]],
+        skip_e2e: bool = True,
+        on_progress: Callable[[str], None] | None = None,
     ) -> TestRunResult:
         """Run tests from a provided list of designs (used by unified runner).
 
@@ -741,7 +745,8 @@ class TestRunner:
             return result
 
         # Run each test
-        for design in designs:
+        total = len(designs)
+        for idx, design in enumerate(designs, 1):
             test_result = self.run_single_test(design)
             result.tests.append(test_result)
 
@@ -752,7 +757,10 @@ class TestRunner:
                 TestResult.SKIPPED: "○",
                 TestResult.ERROR: "!",
             }[test_result.result]
-            print(f"    {status_icon} {design['test_id']}: {design['title']}")
+            msg = f"{status_icon} [{idx}/{total}] {design['test_id']}: {design['title']}"
+            print(f"    {msg}")
+            if on_progress is not None:
+                on_progress(msg)
 
         # Cleanup
         self.client.close()

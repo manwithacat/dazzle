@@ -21,6 +21,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -359,6 +360,7 @@ class UnifiedTestRunner:
         entity: str | None = None,
         test_id: str | None = None,
         persona: str | None = None,
+        on_progress: Callable[[str], None] | None = None,
     ) -> TestRunResult:
         """Run CRUD and state machine tests."""
 
@@ -400,9 +402,10 @@ class UnifiedTestRunner:
         # Filter to accepted tests
         accepted = [d for d in all_designs if d.get("status") == "accepted"]
 
-        print(f"  Running {len(accepted)} CRUD/state machine tests...")
+        _log = on_progress or (lambda _msg: None)
+        _log(f"Executing {len(accepted)} CRUD/state-machine tests...")
 
-        result = runner.run_tests_from_designs(accepted)
+        result = runner.run_tests_from_designs(accepted, on_progress=on_progress)
         return result
 
     def run_event_tests(self) -> EventTestRunResult | None:
@@ -437,8 +440,10 @@ class UnifiedTestRunner:
         entity: str | None = None,
         test_id: str | None = None,
         persona: str | None = None,
+        on_progress: Callable[[str], None] | None = None,
     ) -> UnifiedTestResult:
         """Run all tests."""
+        _log = on_progress or (lambda _msg: None)
         result = UnifiedTestResult(
             project_name=self.project_path.name,
             started_at=datetime.now(),
@@ -447,9 +452,11 @@ class UnifiedTestRunner:
         try:
             # Generate tests if requested
             if generate:
+                _log("Generating test designs from DSL...")
                 suite = self.generate_tests(force=force_generate)
                 result.dsl_hash = suite.dsl_hash
                 result.tests_generated = len(suite.designs)
+                _log(f"Generated {len(suite.designs)} test designs (hash: {suite.dsl_hash[:8]})")
             else:
                 suite = (
                     self._load_cached_suite()
@@ -466,22 +473,46 @@ class UnifiedTestRunner:
 
             # Start server only if no external URL provided
             if not self.base_url:
+                _log("Starting local server...")
                 if not self.start_server():
                     print("  ERROR: Failed to start server")
                     result.completed_at = datetime.now()
                     return result
+            else:
+                _log(f"Using external server: {self.base_url}")
 
             # Authenticate as persona if requested
             if persona:
+                _log(f"Authenticating as persona '{persona}'...")
                 self._authenticate_persona(persona)
 
             # Run CRUD tests
+            _log("Running CRUD / state-machine tests...")
             result.crud_result = self.run_crud_tests(
-                suite, category=category, entity=entity, test_id=test_id, persona=persona
+                suite,
+                category=category,
+                entity=entity,
+                test_id=test_id,
+                persona=persona,
+                on_progress=on_progress,
             )
+            crud_count = len(result.crud_result.tests) if result.crud_result else 0
+            crud_passed = (
+                sum(1 for t in result.crud_result.tests if t.result.value == "passed")
+                if result.crud_result
+                else 0
+            )
+            _log(f"CRUD tests: {crud_passed}/{crud_count} passed")
 
             # Run event tests
+            _log("Running event flow tests...")
             result.event_result = self.run_event_tests()
+            if result.event_result:
+                evt_count = len(result.event_result.tests)
+                evt_passed = sum(1 for t in result.event_result.tests if t.result.value == "passed")
+                _log(f"Event tests: {evt_passed}/{evt_count} passed")
+            else:
+                _log("No event tests to run")
 
         finally:
             # Stop server only if we started it
