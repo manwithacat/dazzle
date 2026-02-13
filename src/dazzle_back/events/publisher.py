@@ -206,6 +206,7 @@ class OutboxPublisher:
 
     async def _run_loop(self) -> None:
         """Main publisher loop."""
+        consecutive_errors = 0
         while self._running:
             try:
                 processed = await self._process_batch()
@@ -217,16 +218,76 @@ class OutboxPublisher:
                     # Processed events, immediately check for more
                     self._stats.batches_processed += 1
 
+                # Reset error counter on success
+                consecutive_errors = 0
+
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.exception(
-                    "Error in publisher loop",
-                    extra={"publisher_id": self._config.publisher_id},
-                )
+                consecutive_errors += 1
                 self._stats.last_error = str(e)
                 self._stats.last_error_at = datetime.now(UTC)
-                await asyncio.sleep(self._config.backoff_base)
+
+                # Log at full level for first failure, then reduce noise
+                if consecutive_errors == 1:
+                    logger.warning(
+                        "Error in publisher loop",
+                        extra={"publisher_id": self._config.publisher_id},
+                        exc_info=True,
+                    )
+                elif consecutive_errors % 30 == 0:
+                    logger.warning(
+                        "Publisher loop still failing (%d consecutive errors): %s",
+                        consecutive_errors,
+                        e,
+                        extra={"publisher_id": self._config.publisher_id},
+                    )
+
+                # Try to recover the connection from failed transaction state
+                await self._try_rollback()
+
+                # Reconnect after repeated failures (stale/broken connection)
+                if consecutive_errors >= 5:
+                    await self._reconnect()
+
+                # Exponential backoff: 1s → 2s → 4s → ... → max
+                backoff = min(
+                    self._config.backoff_base * (2 ** (consecutive_errors - 1)),
+                    self._config.backoff_max,
+                )
+                await asyncio.sleep(backoff)
+
+    async def _try_rollback(self) -> None:
+        """Attempt to rollback a failed transaction to recover the connection."""
+        if not self._conn:
+            return
+        try:
+            await self._conn.rollback()
+        except Exception:
+            # Connection may be broken — _reconnect will handle it
+            pass
+
+    async def _reconnect(self) -> None:
+        """Close the current connection and open a fresh one."""
+        if self._conn:
+            try:
+                await self._conn.close()
+            except Exception:
+                pass
+            self._conn = None
+
+        try:
+            self._conn = await self._connect_fn()
+            logger.info(
+                "Publisher reconnected to database",
+                extra={"publisher_id": self._config.publisher_id},
+            )
+        except Exception:
+            logger.warning(
+                "Publisher failed to reconnect",
+                extra={"publisher_id": self._config.publisher_id},
+                exc_info=True,
+            )
 
     async def _process_batch(self) -> int:
         """
