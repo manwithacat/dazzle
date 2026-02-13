@@ -646,4 +646,9 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.USER_DATA,
     TokenType.TENANT_SCOPED,
     TokenType.METADATA_MAPPING,
+    # v0.25.0 Top-Level Construct Keywords
+    TokenType.ENUM,
+    TokenType.WEBHOOK,
+    TokenType.APPROVAL,
+    TokenType.SLA,
 )

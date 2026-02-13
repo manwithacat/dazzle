@@ -20,14 +20,10 @@
   dict({
     'diagnostics': list([
       dict({
-        'column': 23,
+        'column': 16,
         'error_type': 'ParseError',
-        'line': 3,
-        'message': '''
-          'enum' is a reserved keyword and cannot be used as an identifier.
-            Try a different name like 'enum_value' or 'enum_field'.
-            See docs/DSL_RESERVED_KEYWORDS.md for the full list of reserved keywords.
-        ''',
+        'line': 9,
+        'message': 'Expected [, got IDENTIFIER',
         'severity': 'error',
       }),
     ]),

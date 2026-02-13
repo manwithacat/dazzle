@@ -161,6 +161,43 @@ entity ClientContact "Client Contact":
         assert contacts_field.type.via_entity == "ClientContact"
 
 
+class TestV025KeywordsAsIdentifiers:
+    """Tests that v0.25.0 keywords can be used as enum values and identifiers."""
+
+    def test_webhook_as_enum_value(self):
+        """v0.25.0 keywords (webhook, approval, sla) usable as enum values."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Event "Event":
+  id: uuid pk
+  actor_type: enum[system, user, webhook] = system
+  source: enum[manual, approval, sla] = manual
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+
+        event = fragment.entities[0]
+        actor_field = next(f for f in event.fields if f.name == "actor_type")
+        assert "webhook" in actor_field.type.enum_values
+
+        source_field = next(f for f in event.fields if f.name == "source")
+        assert "approval" in source_field.type.enum_values
+        assert "sla" in source_field.type.enum_values
+
+    def test_enum_keyword_in_module_name(self):
+        """The 'enum' keyword can appear in module names."""
+        dsl = """
+module test.enum.types
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+"""
+        module_name, _, _, _, _, _ = parse_dsl(dsl, Path("test.dsl"))
+        assert module_name == "test.enum.types"
+
+
 class TestWorkspaceDisplayModes:
     """Tests for workspace display mode parsing (v0.9.5)."""
 
