@@ -100,6 +100,15 @@ class Parser(
         """
         from ..lexer import TokenType
 
+        def _updated(frag: ir.ModuleFragment, **overrides: object) -> ir.ModuleFragment:
+            """Create a new fragment copying all fields, with overrides applied."""
+            return ir.ModuleFragment(
+                **{
+                    **{f: getattr(frag, f) for f in ir.ModuleFragment.model_fields},
+                    **overrides,
+                }
+            )
+
         fragment = ir.ModuleFragment()
 
         self.skip_newlines()
@@ -110,449 +119,87 @@ class Parser(
             # v0.7.1: Check for archetype declaration
             if self.match(TokenType.ARCHETYPE):
                 archetype = self.parse_archetype()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes + [archetype],
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, archetypes=[*fragment.archetypes, archetype])
 
             elif self.match(TokenType.ENTITY):
                 entity = self.parse_entity()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities + [entity],
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, entities=[*fragment.entities, entity])
 
             elif self.match(TokenType.SURFACE):
                 surface = self.parse_surface()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces + [surface],
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, surfaces=[*fragment.surfaces, surface])
 
             elif self.match(TokenType.EXPERIENCE):
                 experience = self.parse_experience()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences + [experience],
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, experiences=[*fragment.experiences, experience])
 
             elif self.match(TokenType.SERVICE):
                 service = self.parse_service()
                 # Route to apis or domain_services based on type
                 if isinstance(service, ir.DomainServiceSpec):
-                    fragment = ir.ModuleFragment(
-                        archetypes=fragment.archetypes,
-                        entities=fragment.entities,
-                        surfaces=fragment.surfaces,
-                        workspaces=fragment.workspaces,
-                        experiences=fragment.experiences,
-                        apis=fragment.apis,
-                        domain_services=fragment.domain_services + [service],
-                        foreign_models=fragment.foreign_models,
-                        integrations=fragment.integrations,
-                        tests=fragment.tests,
-                        e2e_flows=fragment.e2e_flows,
-                        fixtures=fragment.fixtures,
-                        personas=fragment.personas,
-                        scenarios=fragment.scenarios,
-                        stories=fragment.stories,
-                        processes=fragment.processes,
-                        schedules=fragment.schedules,
+                    fragment = _updated(
+                        fragment,
+                        domain_services=[*fragment.domain_services, service],
                     )
                 else:
-                    fragment = ir.ModuleFragment(
-                        archetypes=fragment.archetypes,
-                        entities=fragment.entities,
-                        surfaces=fragment.surfaces,
-                        workspaces=fragment.workspaces,
-                        experiences=fragment.experiences,
-                        apis=fragment.apis + [service],
-                        domain_services=fragment.domain_services,
-                        foreign_models=fragment.foreign_models,
-                        integrations=fragment.integrations,
-                        tests=fragment.tests,
-                        e2e_flows=fragment.e2e_flows,
-                        fixtures=fragment.fixtures,
-                        personas=fragment.personas,
-                        scenarios=fragment.scenarios,
-                        stories=fragment.stories,
-                        processes=fragment.processes,
-                        schedules=fragment.schedules,
-                    )
+                    fragment = _updated(fragment, apis=[*fragment.apis, service])
 
             elif self.match(TokenType.FOREIGN_MODEL):
                 foreign_model = self.parse_foreign_model()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models + [foreign_model],
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
+                fragment = _updated(
+                    fragment, foreign_models=[*fragment.foreign_models, foreign_model]
                 )
 
             elif self.match(TokenType.INTEGRATION):
                 integration = self.parse_integration()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations + [integration],
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, integrations=[*fragment.integrations, integration])
 
             elif self.match(TokenType.TEST):
                 test = self.parse_test()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests + [test],
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, tests=[*fragment.tests, test])
 
             elif self.match(TokenType.WORKSPACE):
                 workspace = self.parse_workspace()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces + [workspace],
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, workspaces=[*fragment.workspaces, workspace])
 
             elif self.match(TokenType.FLOW):
                 flow = self.parse_flow()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows + [flow],
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, e2e_flows=[*fragment.e2e_flows, flow])
 
             elif self.match(TokenType.PERSONA):
                 persona = self.parse_persona()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas + [persona],
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, personas=[*fragment.personas, persona])
 
             elif self.match(TokenType.SCENARIO):
                 scenario = self.parse_scenario()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios + [scenario],
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, scenarios=[*fragment.scenarios, scenario])
 
             # v0.22.0 Stories DSL
             elif self.match(TokenType.STORY):
                 self.advance()  # consume 'story' token
                 story = self.parse_story()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    stories=fragment.stories + [story],
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, stories=[*fragment.stories, story])
 
             # v0.9.0 Messaging Channels
             elif self.match(TokenType.MESSAGE):
                 message = self.parse_message()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages + [message],
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, messages=[*fragment.messages, message])
 
             elif self.match(TokenType.CHANNEL):
                 channel = self.parse_channel()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels + [channel],
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, channels=[*fragment.channels, channel])
 
             elif self.match(TokenType.ASSET):
                 asset = self.parse_asset()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets + [asset],
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, assets=[*fragment.assets, asset])
 
             elif self.match(TokenType.DOCUMENT):
                 document = self.parse_document()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents + [document],
-                    templates=fragment.templates,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, documents=[*fragment.documents, document])
 
             elif self.match(TokenType.TEMPLATE):
                 template = self.parse_template()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates + [template],
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, templates=[*fragment.templates, template])
 
             elif self.match(TokenType.DEMO):
                 demo_fixtures = self.parse_demo()
@@ -568,24 +215,9 @@ class Parser(
                         seed_data_path=last_scenario.seed_data_path,
                         demo_fixtures=list(last_scenario.demo_fixtures) + demo_fixtures,
                     )
-                    fragment = ir.ModuleFragment(
-                        archetypes=fragment.archetypes,
-                        entities=fragment.entities,
-                        surfaces=fragment.surfaces,
-                        workspaces=fragment.workspaces,
-                        experiences=fragment.experiences,
-                        apis=fragment.apis,
-                        domain_services=fragment.domain_services,
-                        foreign_models=fragment.foreign_models,
-                        integrations=fragment.integrations,
-                        tests=fragment.tests,
-                        e2e_flows=fragment.e2e_flows,
-                        fixtures=fragment.fixtures,
-                        personas=fragment.personas,
-                        scenarios=fragment.scenarios[:-1] + [updated_scenario],
-                        stories=fragment.stories,
-                        processes=fragment.processes,
-                        schedules=fragment.schedules,
+                    fragment = _updated(
+                        fragment,
+                        scenarios=[*fragment.scenarios[:-1], updated_scenario],
                     )
                 else:
                     # Create a default scenario for standalone demo blocks
@@ -595,616 +227,82 @@ class Parser(
                         description="Default demo scenario",
                         demo_fixtures=demo_fixtures,
                     )
-                    fragment = ir.ModuleFragment(
-                        archetypes=fragment.archetypes,
-                        entities=fragment.entities,
-                        surfaces=fragment.surfaces,
-                        workspaces=fragment.workspaces,
-                        experiences=fragment.experiences,
-                        apis=fragment.apis,
-                        domain_services=fragment.domain_services,
-                        foreign_models=fragment.foreign_models,
-                        integrations=fragment.integrations,
-                        tests=fragment.tests,
-                        e2e_flows=fragment.e2e_flows,
-                        fixtures=fragment.fixtures,
-                        personas=fragment.personas,
-                        scenarios=[default_scenario],
-                        stories=fragment.stories,
-                        processes=fragment.processes,
-                        schedules=fragment.schedules,
-                    )
+                    fragment = _updated(fragment, scenarios=[default_scenario])
 
             # v0.18.0 Event-First Architecture
             elif self.match(TokenType.EVENT_MODEL):
                 event_model = self.parse_event_model()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, event_model=event_model)
 
             elif self.match(TokenType.SUBSCRIBE):
                 subscription = self.parse_subscribe()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions + [subscription],
-                    projections=fragment.projections,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, subscriptions=[*fragment.subscriptions, subscription])
 
             elif self.match(TokenType.PROJECT):
                 projection = self.parse_projection()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections + [projection],
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, projections=[*fragment.projections, projection])
 
             # v0.19.0 HLESS - High-Level Event Semantics
             elif self.match(TokenType.STREAM):
                 stream = self.parse_stream()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams + [stream],
-                    hless_pragma=fragment.hless_pragma,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, streams=[*fragment.streams, stream])
 
             elif self.match(TokenType.HLESS):
                 hless_pragma = self.parse_hless_pragma()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=hless_pragma,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, hless_pragma=hless_pragma)
 
             # v0.18.0 Governance sections (Issue #25)
             elif self.match(TokenType.POLICIES):
                 policies = self.parse_policies()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, policies=policies)
 
             elif self.match(TokenType.TENANCY):
                 tenancy = self.parse_tenancy()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, tenancy=tenancy)
 
             elif self.match(TokenType.INTERFACES):
                 interfaces = self.parse_interfaces()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=interfaces,
-                    data_products=fragment.data_products,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, interfaces=interfaces)
 
             elif self.match(TokenType.DATA_PRODUCTS):
                 data_products = self.parse_data_products()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=data_products,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, data_products=data_products)
 
             # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
             elif self.match(TokenType.LLM_MODEL):
                 llm_model = self.parse_llm_model()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    llm_config=fragment.llm_config,
-                    llm_models=[*fragment.llm_models, llm_model],
-                    llm_intents=fragment.llm_intents,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, llm_models=[*fragment.llm_models, llm_model])
 
             elif self.match(TokenType.LLM_CONFIG):
                 llm_config = self.parse_llm_config()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    llm_config=llm_config,
-                    llm_models=fragment.llm_models,
-                    llm_intents=fragment.llm_intents,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, llm_config=llm_config)
 
             elif self.match(TokenType.LLM_INTENT):
                 llm_intent = self.parse_llm_intent()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    llm_config=fragment.llm_config,
-                    llm_models=fragment.llm_models,
-                    llm_intents=[*fragment.llm_intents, llm_intent],
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, llm_intents=[*fragment.llm_intents, llm_intent])
 
             # v0.23.0 Process Workflows
             elif self.match(TokenType.PROCESS):
                 process = self.parse_process()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    llm_config=fragment.llm_config,
-                    llm_models=fragment.llm_models,
-                    llm_intents=fragment.llm_intents,
-                    stories=fragment.stories,
-                    processes=[*fragment.processes, process],
-                    schedules=fragment.schedules,
-                )
+                fragment = _updated(fragment, processes=[*fragment.processes, process])
 
             elif self.match(TokenType.SCHEDULE):
                 schedule = self.parse_schedule()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    llm_config=fragment.llm_config,
-                    llm_models=fragment.llm_models,
-                    llm_intents=fragment.llm_intents,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=[*fragment.schedules, schedule],
-                )
+                fragment = _updated(fragment, schedules=[*fragment.schedules, schedule])
 
             # v0.24.0 TigerBeetle Ledgers
             elif self.match(TokenType.LEDGER):
                 ledger = self.parse_ledger()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    llm_config=fragment.llm_config,
-                    llm_models=fragment.llm_models,
-                    llm_intents=fragment.llm_intents,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                    ledgers=[*fragment.ledgers, ledger],
-                    transactions=fragment.transactions,
-                )
+                fragment = _updated(fragment, ledgers=[*fragment.ledgers, ledger])
 
             elif self.match(TokenType.TRANSACTION):
                 transaction = self.parse_transaction()
-                fragment = ir.ModuleFragment(
-                    archetypes=fragment.archetypes,
-                    entities=fragment.entities,
-                    surfaces=fragment.surfaces,
-                    workspaces=fragment.workspaces,
-                    experiences=fragment.experiences,
-                    apis=fragment.apis,
-                    domain_services=fragment.domain_services,
-                    foreign_models=fragment.foreign_models,
-                    integrations=fragment.integrations,
-                    tests=fragment.tests,
-                    e2e_flows=fragment.e2e_flows,
-                    fixtures=fragment.fixtures,
-                    personas=fragment.personas,
-                    scenarios=fragment.scenarios,
-                    messages=fragment.messages,
-                    channels=fragment.channels,
-                    assets=fragment.assets,
-                    documents=fragment.documents,
-                    templates=fragment.templates,
-                    event_model=fragment.event_model,
-                    subscriptions=fragment.subscriptions,
-                    projections=fragment.projections,
-                    streams=fragment.streams,
-                    hless_pragma=fragment.hless_pragma,
-                    policies=fragment.policies,
-                    tenancy=fragment.tenancy,
-                    interfaces=fragment.interfaces,
-                    data_products=fragment.data_products,
-                    llm_config=fragment.llm_config,
-                    llm_models=fragment.llm_models,
-                    llm_intents=fragment.llm_intents,
-                    stories=fragment.stories,
-                    processes=fragment.processes,
-                    schedules=fragment.schedules,
-                    ledgers=fragment.ledgers,
-                    transactions=[*fragment.transactions, transaction],
-                )
+                fragment = _updated(fragment, transactions=[*fragment.transactions, transaction])
 
             # v0.25.0 Shared Enums
             elif self.match(TokenType.ENUM):
                 enum_spec = self.parse_enum()
-                fragment = ir.ModuleFragment(
-                    **{
-                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                        "enums": [*fragment.enums, enum_spec],
-                    }
-                )
+                fragment = _updated(fragment, enums=[*fragment.enums, enum_spec])
 
             # v0.25.0 Views (VIEW token already exists for e2e flows,
             # but top-level 'view' followed by identifier = view construct)
@@ -1213,42 +311,22 @@ class Parser(
                 TokenType.STRING,
             ):
                 view_spec = self.parse_view()
-                fragment = ir.ModuleFragment(
-                    **{
-                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                        "views": [*fragment.views, view_spec],
-                    }
-                )
+                fragment = _updated(fragment, views=[*fragment.views, view_spec])
 
             # v0.25.0 Webhooks
             elif self.match(TokenType.WEBHOOK):
                 webhook_spec = self.parse_webhook()
-                fragment = ir.ModuleFragment(
-                    **{
-                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                        "webhooks": [*fragment.webhooks, webhook_spec],
-                    }
-                )
+                fragment = _updated(fragment, webhooks=[*fragment.webhooks, webhook_spec])
 
             # v0.25.0 Approvals
             elif self.match(TokenType.APPROVAL):
                 approval_spec = self.parse_approval()
-                fragment = ir.ModuleFragment(
-                    **{
-                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                        "approvals": [*fragment.approvals, approval_spec],
-                    }
-                )
+                fragment = _updated(fragment, approvals=[*fragment.approvals, approval_spec])
 
             # v0.25.0 SLAs
             elif self.match(TokenType.SLA):
                 sla_spec = self.parse_sla()
-                fragment = ir.ModuleFragment(
-                    **{
-                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
-                        "slas": [*fragment.slas, sla_spec],
-                    }
-                )
+                fragment = _updated(fragment, slas=[*fragment.slas, sla_spec])
 
             else:
                 token = self.current_token()

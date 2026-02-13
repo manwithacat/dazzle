@@ -2029,5 +2029,160 @@ sla TaskResolution "Task Resolution SLA":
         assert fragment.slas[0].entity == "Task"
 
 
+class TestV025FieldPreservationAcrossDispatchers:
+    """Regression tests for #222 root cause: pre-v0.25.0 dispatchers dropping new fields."""
+
+    def test_sla_survives_scenario_dispatch(self):
+        """SLA parsed before scenario must be preserved in final fragment."""
+        dsl = """
+module test_preserve
+app test_app "Test":
+  version: "1.0"
+
+entity Foo "Foo":
+  id: uuid pk
+  status: enum[a, b] = a
+  transitions:
+    a -> b
+
+sla FooSLA "Foo SLA":
+  entity: Foo
+  starts_when: status -> b
+  completes_when: status -> a
+  tiers:
+    warning: 1 hours
+
+persona admin "Admin":
+  description: "Admin user"
+
+scenario test_scenario "Test":
+  description: "Test scenario"
+  for persona admin:
+    start_route: "/"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.slas) == 1, f"SLA dropped: got {len(fragment.slas)} SLAs"
+        assert fragment.slas[0].name == "FooSLA"
+        assert len(fragment.scenarios) == 1
+
+    def test_enum_survives_entity_dispatch(self):
+        """Enum parsed before entity must be preserved."""
+        dsl = """
+module test_enum_preserve
+app test_app "Test":
+  version: "1.0"
+
+enum Status "Status":
+  active "Active"
+  inactive "Inactive"
+
+entity Foo "Foo":
+  id: uuid pk
+  name: str(200)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.enums) == 1, f"Enum dropped: got {len(fragment.enums)} enums"
+        assert fragment.enums[0].name == "Status"
+        assert len(fragment.entities) == 1
+
+    def test_all_v025_survive_mixed_dispatch(self):
+        """All v0.25.0 constructs survive interleaved with pre-v0.25.0 constructs."""
+        dsl = """
+module test_mixed
+app test_app "Test":
+  version: "1.0"
+
+enum Priority "Priority":
+  low "Low"
+  high "High"
+
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, done] = open
+  transitions:
+    open -> done
+
+view TaskSummary "Summary":
+  source: Task
+  fields:
+    count: count()
+
+webhook TaskHook "Hook":
+  entity: Task
+  events: [created]
+  url: "https://example.com"
+
+approval TaskApproval "Approval":
+  entity: Task
+  approver_role: admin
+  quorum: 1
+  outcomes:
+    approved -> done
+
+sla TaskSLA "SLA":
+  entity: Task
+  starts_when: status -> open
+  completes_when: status -> done
+  tiers:
+    warning: 4 hours
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field status "Status"
+
+persona admin "Admin":
+  description: "Admin user"
+
+scenario smoke_test "Demo":
+  description: "Demo"
+  for persona admin:
+    start_route: "/"
+
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.enums) == 1, f"Enums dropped: {len(fragment.enums)}"
+        assert len(fragment.views) == 1, f"Views dropped: {len(fragment.views)}"
+        assert len(fragment.webhooks) == 1, f"Webhooks dropped: {len(fragment.webhooks)}"
+        assert len(fragment.approvals) == 1, f"Approvals dropped: {len(fragment.approvals)}"
+        assert len(fragment.slas) == 1, f"SLAs dropped: {len(fragment.slas)}"
+        assert len(fragment.entities) == 1
+        assert len(fragment.surfaces) == 1
+        assert len(fragment.personas) == 1
+        assert len(fragment.scenarios) == 1
+
+    def test_v025_fields_survive_process_dispatch(self):
+        """v0.25.0 fields survive process dispatch."""
+        dsl = """
+module test_process
+app test_app "Test":
+  version: "1.0"
+
+entity Ticket "Ticket":
+  id: uuid pk
+  status: enum[open, closed] = open
+  transitions:
+    open -> closed
+
+sla TicketSLA "Ticket SLA":
+  entity: Ticket
+  starts_when: status -> open
+  completes_when: status -> closed
+  tiers:
+    breach: 8 hours
+
+process TicketFlow "Ticket Flow":
+  entity: Ticket
+  trigger: entity Ticket created
+  steps:
+    step open_ticket "Open":
+      set: status = open
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.slas) == 1, f"SLA dropped after process: {len(fragment.slas)}"
+        assert len(fragment.processes) == 1
+
+
 if __name__ == "__main__":
     main()
