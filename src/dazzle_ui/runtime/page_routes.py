@@ -9,8 +9,6 @@ Each workspace+surface combination gets a GET route that:
 4. Returns an HTMLResponse
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -19,7 +17,7 @@ if TYPE_CHECKING:
 
 try:
     from fastapi import APIRouter, Request
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -114,11 +112,7 @@ def create_page_routes(
                     check_surface_access(ac, user, is_api_request=False)
                 except SurfaceAccessDenied as e:
                     if e.is_auth_required and e.redirect_url:
-                        from fastapi.responses import RedirectResponse
-
                         return RedirectResponse(url=e.redirect_url, status_code=302)
-                    from fastapi.responses import JSONResponse
-
                     return JSONResponse(
                         status_code=403,
                         content={"detail": e.reason},

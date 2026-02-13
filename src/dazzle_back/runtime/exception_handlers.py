@@ -11,14 +11,11 @@ HTMX-aware: when HX-Request header is present, validation errors return
 rendered HTML fragments with HX-Retarget instead of raw JSON.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from fastapi import FastAPI
-    from fastapi.responses import Response
+from fastapi import FastAPI
+from fastapi.responses import Response
 
 
 def register_exception_handlers(app: FastAPI) -> None:

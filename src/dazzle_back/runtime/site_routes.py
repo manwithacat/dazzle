@@ -8,14 +8,12 @@ Generates FastAPI routes from SiteSpec to serve:
 - Site configuration API (/_site/config, /_site/nav)
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from fastapi import APIRouter
+from fastapi import APIRouter
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 logger = logging.getLogger("dazzle.site_routes")
 
@@ -34,7 +32,7 @@ def create_site_routes(
     Returns:
         FastAPI router with site routes
     """
-    from fastapi import APIRouter, HTTPException
+    from fastapi import HTTPException
 
     router = APIRouter(tags=["Site"])
 
@@ -280,9 +278,6 @@ def create_site_page_routes(
     Returns:
         FastAPI router with HTML page routes
     """
-    from fastapi import APIRouter
-    from fastapi.responses import HTMLResponse, Response
-
     from dazzle_ui.runtime.css_loader import get_bundled_css
     from dazzle_ui.runtime.site_renderer import get_site_js, render_site_page_html
 
@@ -383,8 +378,6 @@ def create_site_404_handler(
     Returns:
         An async exception handler suitable for ``app.add_exception_handler(404, ...)``.
     """
-    from fastapi.responses import HTMLResponse, JSONResponse
-
     from dazzle_ui.runtime.site_renderer import render_404_page_html
 
     async def handle_404(request: Any, exc: Any) -> HTMLResponse | JSONResponse:
@@ -419,9 +412,6 @@ def create_auth_page_routes(
     Returns:
         FastAPI router with auth page routes
     """
-    from fastapi import APIRouter
-    from fastapi.responses import HTMLResponse
-
     from dazzle_ui.runtime.site_renderer import (
         render_auth_page_html,
         render_forgot_password_page_html,
