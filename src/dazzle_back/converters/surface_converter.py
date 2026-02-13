@@ -221,15 +221,15 @@ def convert_surface_to_endpoint(
         DNR BackendSpec endpoint specification
     """
     entity = surface.entity_ref or "items"
-    entity_lower = entity.lower()
+    plural = to_api_plural(entity)
 
     # Generate path based on mode
     if surface.mode == ir.SurfaceMode.LIST:
-        path = f"/{entity_lower}s"
+        path = f"/{plural}"
     elif surface.mode == ir.SurfaceMode.CREATE:
-        path = f"/{entity_lower}s"
+        path = f"/{plural}"
     elif surface.mode in (ir.SurfaceMode.VIEW, ir.SurfaceMode.EDIT):
-        path = f"/{entity_lower}s/{{id}}"
+        path = f"/{plural}/{{id}}"
     else:
         path = f"/{surface.name.replace('_', '-')}"
 
@@ -299,6 +299,7 @@ def convert_surfaces_to_services(
     # This enables CRUD delete operations on entity tables
     for entity_name, delete_require_roles in entities_with_list.items():
         entity_lower = entity_name.lower()
+        entity_plural = to_api_plural(entity_name)
 
         # Create delete service
         delete_service = ServiceSpec(
@@ -319,7 +320,7 @@ def convert_surfaces_to_services(
             name=f"delete_{entity_lower}_endpoint",
             service=f"delete_{entity_lower}",
             method=HttpMethod.DELETE,
-            path=f"/{entity_lower}s/{{id}}",
+            path=f"/{entity_plural}/{{id}}",
             description=f"Delete {entity_name}",
             tags=[entity_name],
             require_roles=delete_require_roles,
