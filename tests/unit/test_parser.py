@@ -1903,5 +1903,131 @@ sla OrderFulfillment "Order Fulfillment SLA":
         assert fragment.slas[0].name == "OrderFulfillment"
 
 
+class TestV025EntityKeywordInBlocks:
+    """Regression tests for #222: entity keyword inside construct blocks."""
+
+    def test_sla_entity_property_parses(self):
+        """entity: inside SLA block must not be captured by top-level entity dispatch."""
+        dsl = """
+module test.sla
+app test_app "Test"
+
+entity CustomerDueDiligence "CDD":
+  id: uuid pk
+  cdd_status: enum[complete, pending, requires_refresh]
+
+sla CDDReview "CDD Periodic Review":
+  entity: CustomerDueDiligence
+  starts_when: cdd_status -> complete
+  completes_when: cdd_status -> complete
+  tiers:
+    warning: 30 days
+    breach: 7 days
+    critical: 1 days
+  business_hours:
+    schedule: "Mon-Fri 09:00-17:00"
+    timezone: "Europe/London"
+  on_breach:
+    notify: manager
+    set: cdd_status = requires_refresh
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.slas) == 1
+        sla = fragment.slas[0]
+        assert sla.name == "CDDReview"
+        assert sla.entity == "CustomerDueDiligence"
+        assert len(sla.tiers) == 3
+        assert sla.business_hours is not None
+        assert sla.business_hours.timezone == "Europe/London"
+        assert sla.on_breach is not None
+        assert sla.on_breach.notify_role == "manager"
+
+    def test_approval_entity_property_parses(self):
+        """entity: inside approval block must parse correctly."""
+        dsl = """
+module test.approval
+app test_app "Test"
+
+entity PurchaseOrder "PO":
+  id: uuid pk
+  status: enum[draft, pending_approval, approved, rejected]
+  amount: int
+
+approval PurchaseApproval "Purchase Approval":
+  entity: PurchaseOrder
+  trigger: status -> pending_approval
+  approver_role: finance_manager
+  quorum: 2
+  outcomes:
+    approved -> approved
+    rejected -> rejected
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.approvals) == 1
+        approval = fragment.approvals[0]
+        assert approval.entity == "PurchaseOrder"
+        assert approval.approver_role == "finance_manager"
+        assert approval.quorum == 2
+
+    def test_webhook_entity_property_parses(self):
+        """entity: inside webhook block must parse correctly."""
+        dsl = """
+module test.webhook
+app test_app "Test"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[open, closed]
+
+webhook OrderNotify "Order Webhook":
+  entity: Order
+  events: [created, updated, deleted]
+  url: "https://example.com/hook"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.webhooks) == 1
+        assert fragment.webhooks[0].entity == "Order"
+
+    def test_all_v025_entity_properties_in_one_module(self):
+        """All v0.25.0 constructs with entity: property in a single module."""
+        dsl = """
+module test.combined
+app test_app "Test"
+
+entity Task "Task":
+  id: uuid pk
+  status: enum[open, in_progress, done]
+  priority: int
+
+webhook TaskAlert "Task Alert":
+  entity: Task
+  events: [created]
+  url: "https://hooks.example.com/tasks"
+
+approval TaskApproval "Task Approval":
+  entity: Task
+  approver_role: lead
+  quorum: 1
+  outcomes:
+    approved -> in_progress
+    rejected -> open
+
+sla TaskResolution "Task Resolution SLA":
+  entity: Task
+  starts_when: status -> open
+  completes_when: status -> done
+  tiers:
+    warning: 8 hours
+    breach: 24 hours
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert len(fragment.webhooks) == 1
+        assert len(fragment.approvals) == 1
+        assert len(fragment.slas) == 1
+        assert fragment.webhooks[0].entity == "Task"
+        assert fragment.approvals[0].entity == "Task"
+        assert fragment.slas[0].entity == "Task"
+
+
 if __name__ == "__main__":
     main()
