@@ -10,10 +10,9 @@ Each workspace+surface combination gets a GET route that:
 """
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from dazzle.core import ir
+from dazzle.core import ir
 
 try:
     from fastapi import APIRouter, Request
