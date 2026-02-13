@@ -1,113 +1,319 @@
-# DSL Grammar Specification
+"""
+Grammar documentation generator for the DAZZLE DSL.
 
-Formal EBNF grammar for DAZZLE DSL v0.24.1.
+Introspects the parser source code (mixin docstrings, lexer keywords,
+IR field types) to produce an authoritative EBNF grammar specification.
 
-> **Auto-generated** from parser source code by `grammar_gen.py`. Do not edit manually; run `dazzle grammar` to regenerate.
+Usage:
+    python -m dazzle.core.grammar_gen           # print to stdout
+    dazzle grammar                              # write docs/reference/grammar.md
+"""
 
-## Overview
+from __future__ import annotations
 
-This grammar defines the complete syntax for the DAZZLE Domain-Specific Language. The DSL supports the following construct categories:
+import importlib
+import inspect
+import re
+import textwrap
+from pathlib import Path
 
-- **Core**: Field Types and Modifiers, Entity and Archetype Definitions, State Machines, Invariants, Access Rules and Governance, Example Data
-- **Surface**: Surface Definitions, UX Semantic Layer, Workspace Definitions, Experience Definitions
-- **Workflow**: Story Definitions, Process Workflows and Schedules
-- **Integration**: Service Definitions, Foreign Model Definitions, Integration Definitions
-- **Testing**: E2E Test Flows, API Contract Tests, Scenario and Demo Data
-- **Eventing**: Messaging Channels, Event-First Architecture, HLESS Event Semantics
-- **Financial**: TigerBeetle Ledgers and Transactions
-- **Governance**: Governance Sections
-- **LLM**: LLM Jobs
+from dazzle.core.ir.fields import FieldTypeKind
 
-## Anti-Turing Enforcement
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
 
-DAZZLE intentionally limits computational expressiveness to ensure:
+_PARSER_IMPL_DIR = Path(__file__).parent / "dsl_parser_impl"
 
-- Aggregate functions only in computed expressions
-- `AGGREGATE_FN` explicitly enumerates allowed functions
-- Turing-complete logic lives in service stubs (not DSL)
+# Ordered list of parser mixin modules and their section metadata.
+# (module_name, section_title, category)
+_MIXIN_SECTIONS: list[tuple[str, str, str]] = [
+    ("base", "Top-level Declarations", "Core"),
+    ("types", "Field Types and Modifiers", "Core"),
+    ("conditions", "Condition Expressions", "Core"),
+    ("entity", "Entity and Archetype Definitions", "Core"),
+    ("surface", "Surface Definitions", "Surface"),
+    ("ux", "UX Semantic Layer", "Surface"),
+    ("workspace", "Workspace Definitions", "Surface"),
+    ("service", "Service Definitions", "Integration"),
+    ("integration", "Integration Definitions", "Integration"),
+    ("flow", "E2E Test Flows", "Testing"),
+    ("test", "API Contract Tests", "Testing"),
+    ("scenario", "Scenario and Demo Data", "Testing"),
+    ("story", "Story Definitions", "Workflow"),
+    ("process", "Process Workflows", "Workflow"),
+    ("messaging", "Messaging Channels", "Eventing"),
+    ("eventing", "Event-First Architecture", "Eventing"),
+    ("hless", "HLESS Event Semantics", "Eventing"),
+    ("ledger", "TigerBeetle Ledgers and Transactions", "Financial"),
+    ("governance", "Governance Sections", "Governance"),
+    ("llm", "LLM Jobs", "LLM"),
+]
 
-## Keyword Inventory
+# Categories in presentation order.
+_CATEGORY_ORDER = [
+    "Core",
+    "Surface",
+    "Workflow",
+    "Integration",
+    "Testing",
+    "Eventing",
+    "Financial",
+    "Governance",
+    "LLM",
+]
 
-**Keywords**: `module`, `use`, `as`, `app`, `entity`, `surface`, `experience`, `service`, `foreign_model`, `integration`, `from`, `uses`, `mode`, `section`, `field`, `action`, `step`, `kind`, `start`, `at`, `on`, `when`, `call`, `with`, `map`, `response`, `into`, `match`, `sync`, `schedule`, `spec`, `auth_profile`, `owner`, `key`, `constraint`, `unique`, `index`, `url`, `inline`, `submitted`
 
-**Integration Keywords**: `operation`, `mapping`, `rules`, `scheduled`, `event_driven`, `foreign`
+# ---------------------------------------------------------------------------
+# Helpers — introspection
+# ---------------------------------------------------------------------------
 
-**Test DSL Keywords**: `test`, `setup`, `data`, `expect`, `status`, `created`, `filter`, `search`, `order_by`, `count`, `error_message`, `first`, `last`, `query`, `create`, `update`, `delete`, `get`, `true`, `false`
 
-**Access Control Keywords**: `anonymous`, `permissions`, `access`, `read`, `write`, `permit`, `forbid`, `audit`
+def get_version() -> str:
+    """Read version from pyproject.toml."""
+    import tomllib
 
-**UX Semantic Layer Keywords**: `ux`, `purpose`, `show`, `sort`, `empty`, `attention`, `critical`, `warning`, `notice`, `info`, `message`, `for`, `scope`, `hide`, `show_aggregate`, `action_primary`, `read_only`, `all`, `workspace`, `source`, `limit`, `display`, `aggregate`, `list`, `grid`, `timeline`, `detail`
+    toml_path = Path(__file__).resolve().parents[3] / "pyproject.toml"
+    with open(toml_path, "rb") as f:
+        data = tomllib.load(f)
+    return str(data["project"]["version"])
 
-**Additional v0.2 keywords**: `defaults`, `focus`, `group_by`, `where`
 
-**v0.3.1 keywords**: `engine_hint`, `stage`
+def _load_mixin_module(name: str) -> object:
+    """Import a parser mixin module by short name."""
+    return importlib.import_module(f"dazzle.core.dsl_parser_impl.{name}")
 
-**v0.5.0 Domain Service Keywords**: `input`, `output`, `guarantees`, `stub`
 
-**v0.7.0 State Machine Keywords**: `transitions`, `requires`, `auto`, `after`, `role`, `manual`, `days`, `hours`, `minutes`
+def get_mixin_docstring(mod_name: str) -> str:
+    """Return the module-level docstring for a parser mixin."""
+    mod = _load_mixin_module(mod_name)
+    return inspect.getdoc(mod) or ""
 
-**v0.10.2 Date Arithmetic Keywords**: `today`, `now`, `weeks`, `months`, `years`
 
-**Computed Field Keywords**: `computed`, `sum`, `avg`, `min`, `max`, `days_until`, `days_since`
+def get_mixin_class_names() -> dict[str, str]:
+    """Return mapping of module name -> class name for every mixin."""
+    result: dict[str, str] = {}
+    for mod_name, _, _ in _MIXIN_SECTIONS:
+        mod = _load_mixin_module(mod_name)
+        for name, _obj in inspect.getmembers(mod, inspect.isclass):
+            if name.endswith("Mixin") or name == "BaseParser":
+                result[mod_name] = name
+                break
+    return result
 
-**Invariant Keywords**: `invariant`, `code`
 
-**v0.9.5 App Config Keywords**: `description`, `multi_tenant`, `audit_trail`, `security_profile`
+def extract_dsl_examples(mod_name: str) -> list[str]:
+    """Extract DSL code blocks from a module docstring."""
+    docstring = get_mixin_docstring(mod_name)
+    blocks: list[str] = []
 
-**v0.9.5 Field Type Keywords**: `money`, `file`, `via`
+    # Find indented code blocks after "DSL syntax" or "DSL Syntax" lines
+    in_block = False
+    current_block: list[str] = []
+    for line in docstring.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("dsl syntax"):
+            in_block = True
+            continue
+        if in_block:
+            if stripped == "" and current_block:
+                # End of indented block on blank line after content
+                pass
+            elif line.startswith("    ") or line.startswith("\t"):
+                current_block.append(line)
+            elif stripped and current_block:
+                # Non-indented line after content = end of block
+                blocks.append(textwrap.dedent("\n".join(current_block)).strip())
+                current_block = []
+                in_block = False
+            elif not stripped and not current_block:
+                # Blank line before content starts
+                continue
+            else:
+                in_block = False
 
-**v0.7.1 LLM Cognition Keywords**: `intent`, `examples`, `domain`, `patterns`, `extends`, `archetype`, `has_many`, `has_one`, `embeds`, `belongs_to`, `cascade`, `restrict`, `nullify`, `readonly`, `deny`, `scenarios`, `given`, `then`
+    if current_block:
+        blocks.append(textwrap.dedent("\n".join(current_block)).strip())
 
-**Persona & Scenario Keywords**: `scenario`, `demo`, `persona`, `goals`, `proficiency`, `seed_script`, `start_route`
+    return blocks
 
-**v0.22.0 Story DSL Keywords**: `story`, `actor`, `trigger`, `unless`
 
-**v0.24.0 TigerBeetle Ledger Keywords**: `ledger`, `transaction`, `transfer`, `debit`, `credit`, `amount`, `account_code`, `ledger_id`, `account_type`, `currency`, `flags`, `sync_to`, `idempotency_key`, `validation`, `execution`, `priority`, `pending_id`, `user_data`, `tenant_scoped`, `metadata_mapping`
+# ---------------------------------------------------------------------------
+# Helpers — keyword inventory
+# ---------------------------------------------------------------------------
 
-**v0.23.0 Process Workflow Keywords**: `process`, `implements`, `parallel`, `compensations`, `compensate`, `on_success`, `on_failure`, `on_any_failure`, `overlap`, `catch_up`, `goto`, `subprocess`, `human_task`, `assignee`, `assignee_role`, `interval`, `timezone`, `sets`, `confirm`, `inputs`, `condition`, `on_true`, `on_false`
 
-**v0.18.0 Event-First Architecture Keywords**: `event_model`, `publish`, `subscribe`, `project`, `topic`, `retention`
+def get_keyword_groups() -> dict[str, list[str]]:
+    """
+    Extract keywords from TokenType, grouped by version/feature comment blocks.
 
-**v0.18.0 Governance Keywords (Issue #25)**: `policies`, `tenancy`, `interfaces`, `data_products`, `classify`, `erasure`, `data_product`
+    Returns a dict of group_label -> list[keyword_value].
+    """
+    source_path = Path(__file__).parent / "lexer.py"
+    source = source_path.read_text()
 
-**v0.19.0 HLESS (High-Level Event Semantics) Keywords**: `FACT`, `OBSERVATION`, `DERIVATION`
+    groups: dict[str, list[str]] = {}
+    current_group = "Core Keywords"
+    # Pattern for comment headers like "# v0.7.0 State Machine Keywords"
+    header_re = re.compile(r"^\s*#\s*(.+?)\s*$")
+    # Pattern for enum member assignment like ENTITY = "entity"
+    member_re = re.compile(r'^\s+([A-Z_]+)\s*=\s*"([^"]+)"')
 
-**Stream specification keywords**: `partition_key`, `ordering_scope`, `idempotency`, `outcomes`, `derives_from`, `emits`, `side_effects`, `allowed`, `schema`, `note`, `t_event`, `t_log`, `t_process`, `hless`, `strict`, `warn`, `off`, `llm_model`, `llm_config`, `llm_intent`, `tier`, `max_tokens`, `model_id`, `artifact_store`, `logging`, `log_prompts`, `log_completions`, `redact_pii`, `rate_limits`, `default_model`, `prompt`, `output_schema`, `timeout`, `retry`, `pii`, `max_attempts`, `backoff`, `initial_delay_ms`, `max_delay_ms`, `scan`
+    in_enum = False
+    for line in source.splitlines():
+        if "class TokenType" in line:
+            in_enum = True
+            continue
+        if in_enum and line.strip() and not line.startswith(" ") and not line.startswith("\t"):
+            if not line.strip().startswith("#") and not line.strip().startswith("class"):
+                break
 
-**v0.9.0 Messaging Channel Keywords**: `channel`, `send`, `receive`, `provider`, `config`, `provider_config`, `delivery_mode`, `outbox`, `direct`, `throttle`, `per_recipient`, `per_entity`, `per_channel`, `window`, `max_messages`, `on_exceed`, `drop`, `log`, `queue`, `stream`, `email`, `asset`, `document`, `template`, `subject`, `body`, `html_body`, `attachments`, `asset_ref`, `document_ref`, `entity_arg`, `filename`, `for_entity`, `format`, `layout`, `path`, `changed`, `to`, `succeeded`, `failed`, `every`, `cron`, `upsert`, `regex`
+        if not in_enum:
+            continue
 
-**Flow/E2E Test Keywords (v0.3.2)**: `flow`, `steps`, `navigate`, `click`, `fill`, `wait`, `snapshot`, `preconditions`, `authenticated`, `public`, `user_role`, `fixtures`, `view`, `entity_exists`, `entity_not_exists`, `validation_error`, `visible`, `not_visible`, `text_contains`, `redirects_to`, `field_value`, `tags`, `in`, `not`, `is`, `and`, `or`, `asc`, `desc`
+        header_match = header_re.match(line)
+        if header_match:
+            label = header_match.group(1).strip()
+            # Only treat as a group header if it's a proper section
+            # header.  Lexer headers follow patterns like:
+            #   "# Keywords"
+            #   "# Integration Keywords"
+            #   "# v0.7.0 State Machine Keywords"
+            #   "# Literals"
+            # Skip inline notes and explanatory comments.
+            if label.startswith("Note:") or label.startswith("Words "):
+                continue
+            is_section = bool(
+                re.search(r"[Kk]eywords(\s*\(.*\))?\s*$", label)
+                or re.search(r"[Ll]iterals\s*$", label)
+            )
+            if not is_section:
+                continue
+            current_group = label
+            continue
 
-## Field Types
+        member_match = member_re.match(line)
+        if member_match:
+            _member_name = member_match.group(1)
+            value = member_match.group(2)
+            # Skip non-keyword tokens (operators, special tokens, all-caps values)
+            if value in (
+                "IDENTIFIER",
+                "STRING",
+                "NUMBER",
+                "DURATION_LITERAL",
+                "NEWLINE",
+                "INDENT",
+                "DEDENT",
+                "EOF",
+            ):
+                continue
+            if value in (
+                "==",
+                "!=",
+                ">",
+                "<",
+                ">=",
+                "<=",
+                ":",
+                "->",
+                "<-",
+                "<->",
+                ",",
+                "(",
+                ")",
+                "[",
+                "]",
+                "=",
+                ".",
+                "/",
+                "?",
+                "+",
+                "-",
+                "*",
+                "%",
+            ):
+                continue
+            # Skip all-caps non-keyword values (FACT, OBSERVATION, etc. are valid keywords)
+            groups.setdefault(current_group, []).append(value)
 
-All field types supported by the DSL (from `FieldTypeKind` enum):
+    return groups
 
-- `str`
-- `text`
-- `int`
-- `decimal`
-- `bool`
-- `date`
-- `datetime`
-- `uuid`
-- `enum`
-- `ref`
-- `email`
-- `json`
-- `money`
-- `file`
-- `url`
-- `timezone`
-- `has_many`
-- `has_one`
-- `embeds`
-- `belongs_to`
 
-## Full Grammar
+# ---------------------------------------------------------------------------
+# Helpers — type_spec production rule
+# ---------------------------------------------------------------------------
 
-```ebnf
+
+def build_type_spec_rule() -> str:
+    """Generate the type_spec EBNF production from FieldTypeKind enum."""
+    scalar_types = []
+    ref_types = []
+
+    for kind in FieldTypeKind:
+        if kind in (FieldTypeKind.ENUM, FieldTypeKind.REF):
+            continue
+        if kind in (
+            FieldTypeKind.HAS_MANY,
+            FieldTypeKind.HAS_ONE,
+            FieldTypeKind.EMBEDS,
+            FieldTypeKind.BELONGS_TO,
+        ):
+            ref_types.append(kind.value)
+            continue
+        scalar_types.append(kind.value)
+
+    lines = [
+        "type_spec     ::= scalar_type",
+        "                | enum_type",
+        "                | reference_type ;",
+        "",
+        "(* Scalar types — generated from FieldTypeKind enum *)",
+    ]
+
+    # Build scalar_type with parameterised types
+    scalar_lines = []
+    for st in scalar_types:
+        if st == "str":
+            scalar_lines.append('"str" "(" NUMBER ")"')
+        elif st == "decimal":
+            scalar_lines.append('"decimal" "(" NUMBER "," NUMBER ")"')
+        elif st == "money":
+            scalar_lines.append('"money" ( "(" CURRENCY_CODE ")" )?')
+        else:
+            scalar_lines.append(f'"{st}"')
+
+    lines.append(f"scalar_type   ::= {scalar_lines[0]}")
+    for sl in scalar_lines[1:]:
+        lines.append(f"                | {sl}")
+    lines[-1] += " ;"
+    lines.append("")
+
+    lines.append('enum_type     ::= "enum" "[" IDENT ("," IDENT)* "]" ;')
+    lines.append("")
+
+    # Reference types
+    ref_lines = ['"ref" ENTITY_NAME delete_behavior?']
+    for rt in ref_types:
+        ref_lines.append(f'"{rt}" ENTITY_NAME delete_behavior?')
+    lines.append(f"reference_type ::= {ref_lines[0]}")
+    for rl in ref_lines[1:]:
+        lines.append(f"                 | {rl}")
+    lines[-1] += " ;"
+
+    lines.append("")
+    lines.append('delete_behavior ::= "cascade" | "restrict" | "nullify" | "readonly" ;')
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Main assembly
+# ---------------------------------------------------------------------------
+
+_EBNF_HEADER = """\
 (*
-  DAZZLE DSL v0.24.1 -- EBNF Grammar
+  DAZZLE DSL v{version} -- EBNF Grammar
   ======================================
   Auto-generated by grammar_gen.py from parser source code.
   Do not edit manually; run `dazzle grammar` to regenerate.
@@ -117,19 +323,23 @@ All field types supported by the DSL (from `FieldTypeKind` enum):
   - AGGREGATE_FN explicitly enumerates allowed functions
   - Turing-complete logic lives in service stubs (not DSL)
 *)
+"""
 
+_IDENTIFIERS_SECTION = """\
 (* =============================================================================
    Identifiers and Literals
    ============================================================================= *)
 
 IDENT         ::= /[A-Za-z_][A-Za-z0-9_]*/ ;
-STRING        ::= '"' /[^\"]*/ '"' ;
-NUMBER        ::= /[0-9]+(\.[0-9]+)?/ ;
+STRING        ::= '"' /[^\\"]*/ '"' ;
+NUMBER        ::= /[0-9]+(\\.[0-9]+)?/ ;
 BOOLEAN       ::= "true" | "false" ;
-NEWLINE       ::= /[\r\n]+/ ;
+NEWLINE       ::= /[\\r\\n]+/ ;
 INDENT        ::= (* indentation increase *) ;
 DEDENT        ::= (* indentation decrease *) ;
+"""
 
+_TOP_LEVEL_RULES = """\
 (* =============================================================================
    Top-level Structure
    ============================================================================= *)
@@ -191,46 +401,19 @@ statement     ::= entity_decl
                 | use_decl
                 | comment ;
 
-comment       ::= "#" /[^\n]*/ NEWLINE ;
+comment       ::= "#" /[^\\n]*/ NEWLINE ;
+"""
 
-(* =============================================================================
-   Field Types and Modifiers
-   ============================================================================= *)
 
-type_spec     ::= scalar_type
-                | enum_type
-                | reference_type ;
+def _section_separator(title: str) -> str:
+    """Generate an EBNF section comment."""
+    bar = "=" * 77
+    return f"(* {bar}\n   {title}\n   {bar} *)\n"
 
-(* Scalar types — generated from FieldTypeKind enum *)
-scalar_type   ::= "str" "(" NUMBER ")"
-                | "text"
-                | "int"
-                | "decimal" "(" NUMBER "," NUMBER ")"
-                | "bool"
-                | "date"
-                | "datetime"
-                | "uuid"
-                | "email"
-                | "json"
-                | "money" ( "(" CURRENCY_CODE ")" )?
-                | "file"
-                | "url"
-                | "timezone" ;
 
-enum_type     ::= "enum" "[" IDENT ("," IDENT)* "]" ;
-
-reference_type ::= "ref" ENTITY_NAME delete_behavior?
-                 | "has_many" ENTITY_NAME delete_behavior?
-                 | "has_one" ENTITY_NAME delete_behavior?
-                 | "embeds" ENTITY_NAME delete_behavior?
-                 | "belongs_to" ENTITY_NAME delete_behavior? ;
-
-delete_behavior ::= "cascade" | "restrict" | "nullify" | "readonly" ;
-
-(* =============================================================================
-   Entity and Archetype Definitions
-   ============================================================================= *)
-
+def _build_entity_section() -> str:
+    """Generate entity and archetype grammar rules."""
+    return """\
 archetype_decl ::= "archetype" IDENT STRING? ":" NEWLINE
                    INDENT
                      field_line+
@@ -288,11 +471,11 @@ AGGREGATE_FN  ::= "count" | "sum" | "avg" | "max" | "min"
                 | "days_until" | "days_since" ;
 
 aggregate_call ::= AGGREGATE_FN "(" field_path ")" ;
+"""
 
-(* =============================================================================
-   State Machines
-   ============================================================================= *)
 
+def _build_state_machine_section() -> str:
+    return """\
 transitions_block ::= "transitions" ":" NEWLINE
                       INDENT
                         transition_rule+
@@ -313,11 +496,11 @@ transition_constraint
                 | "manual" ;
 
 time_unit     ::= "minutes" | "hours" | "days" ;
+"""
 
-(* =============================================================================
-   Invariants
-   ============================================================================= *)
 
+def _build_invariant_section() -> str:
+    return """\
 invariant_line ::= "invariant" ":" invariant_expr invariant_meta? NEWLINE ;
 
 invariant_expr ::= invariant_comparison
@@ -345,11 +528,11 @@ invariant_meta ::= NEWLINE INDENT
                      ("message" ":" STRING NEWLINE)?
                      ("code" ":" IDENT NEWLINE)?
                    DEDENT ;
+"""
 
-(* =============================================================================
-   Access Rules and Governance
-   ============================================================================= *)
 
+def _build_access_section() -> str:
+    return """\
 access_block  ::= "access" ":" NEWLINE
                   INDENT
                     access_rule+
@@ -408,11 +591,11 @@ value         ::= STRING | NUMBER | IDENT | "[" value ("," value)* "]" ;
 
 operator      ::= "=" | "!=" | ">" | "<" | ">=" | "<="
                 | "in" | "not" "in" | "is" | "is" "not" ;
+"""
 
-(* =============================================================================
-   Example Data
-   ============================================================================= *)
 
+def _build_examples_section() -> str:
+    return """\
 examples_block ::= "examples" ":" NEWLINE
                    INDENT
                      example_entry+
@@ -421,11 +604,11 @@ examples_block ::= "examples" ":" NEWLINE
 example_entry ::= "-" key_value_list NEWLINE ;
 
 key_value_list ::= IDENT ":" literal ("," IDENT ":" literal)* ;
+"""
 
-(* =============================================================================
-   Surface Definitions
-   ============================================================================= *)
 
+def _build_surface_section() -> str:
+    return """\
 surface_decl  ::= "surface" IDENT STRING? ":" NEWLINE
                   INDENT
                     surface_body_line+
@@ -462,11 +645,11 @@ surface_trigger
 outcome       ::= "surface" IDENT
                 | "experience" IDENT ("step" IDENT)?
                 | "integration" IDENT "action" IDENT ;
+"""
 
-(* =============================================================================
-   UX Semantic Layer
-   ============================================================================= *)
 
+def _build_ux_section() -> str:
+    return """\
 ux_block      ::= "ux" ":" NEWLINE
                   INDENT
                     ux_directive+
@@ -510,11 +693,11 @@ persona_directive
                 | "read_only" ":" BOOLEAN NEWLINE ;
 
 scope_expr    ::= "all" | comparison (("and" | "or") comparison)* ;
+"""
 
-(* =============================================================================
-   Workspace Definitions
-   ============================================================================= *)
 
+def _build_workspace_section() -> str:
+    return """\
 workspace_decl ::= "workspace" IDENT STRING? ":" NEWLINE
                    INDENT
                      ("purpose" ":" STRING NEWLINE)?
@@ -545,11 +728,11 @@ metric_line   ::= IDENT ":" aggregate_expr NEWLINE ;
 aggregate_expr ::= aggregate_call | NUMBER | aggregate_expr ("+" | "-" | "*" | "/") aggregate_expr ;
 
 filter_expr   ::= "all" | comparison (("and" | "or") comparison)* ;
+"""
 
-(* =============================================================================
-   Experience Definitions
-   ============================================================================= *)
 
+def _build_experience_section() -> str:
+    return """\
 experience_decl
               ::= "experience" IDENT STRING? ":" NEWLINE
                   INDENT
@@ -573,11 +756,204 @@ step_kind_body
 
 step_transition
               ::= "on" ("success" | "failure") "->" "step" IDENT NEWLINE ;
+"""
 
-(* =============================================================================
-   Story Definitions
-   ============================================================================= *)
 
+def _build_service_section() -> str:
+    return """\
+service_decl  ::= "service" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    service_body_line+
+                  DEDENT ;
+
+service_body_line
+              ::= "spec" ":" ("url" STRING | "inline" STRING) NEWLINE
+                | "auth_profile" ":" AUTH_KIND auth_option* NEWLINE
+                | "owner" ":" STRING NEWLINE ;
+
+AUTH_KIND     ::= "oauth2_legacy" | "oauth2_pkce" | "jwt_static"
+                | "api_key_header" | "api_key_query" | "none" ;
+
+auth_option   ::= IDENT "=" literal ;
+
+domain_service_decl
+              ::= "service" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    "kind" ":" ("domain_logic" | "validation" | "integration" | "workflow") NEWLINE
+                    service_io_block?
+                    service_io_block?
+                    guarantees_block?
+                    ("stub" ":" ("python" | "typescript") NEWLINE)?
+                  DEDENT ;
+
+service_io_block
+              ::= ("input" | "output") ":" NEWLINE
+                  INDENT
+                    (IDENT ":" type_spec field_modifier* NEWLINE)+
+                  DEDENT ;
+
+guarantees_block
+              ::= "guarantees" ":" NEWLINE
+                  INDENT
+                    ("-" STRING NEWLINE)+
+                  DEDENT ;
+"""
+
+
+def _build_foreign_model_section() -> str:
+    return """\
+foreign_model_decl
+              ::= "foreign_model" IDENT "from" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    foreign_model_line+
+                  DEDENT ;
+
+foreign_model_line
+              ::= "key" ":" IDENT ("," IDENT)* NEWLINE
+                | "constraint" ("read_only" | "event_driven" | "batch_import") (IDENT "=" literal)* NEWLINE
+                | "field" IDENT ":" type_spec field_modifier* NEWLINE ;
+"""
+
+
+def _build_integration_section() -> str:
+    return """\
+integration_decl
+              ::= "integration" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    integration_body+
+                  DEDENT ;
+
+integration_body
+              ::= "uses" "service" IDENT ("," IDENT)* NEWLINE
+                | "uses" "foreign_model" IDENT ("," IDENT)* NEWLINE
+                | integration_action_decl
+                | sync_decl ;
+
+integration_action_decl
+              ::= "action" IDENT ":" NEWLINE
+                  INDENT
+                    "when" "surface" IDENT "submitted" NEWLINE
+                    "call" IDENT "." IDENT "with" ":" NEWLINE
+                    INDENT mapping_rule+ DEDENT
+                    ("map" "response" IDENT "->" "entity" IDENT ":" NEWLINE
+                    INDENT mapping_rule+ DEDENT)?
+                  DEDENT ;
+
+mapping_rule  ::= IDENT "<-" (field_path | literal) NEWLINE ;
+
+sync_decl     ::= "sync" IDENT ":" NEWLINE
+                  INDENT
+                    "mode" ":" ("scheduled" | "event_driven") NEWLINE
+                    ("schedule" ":" STRING NEWLINE)?
+                    "from" IDENT "." IDENT "as" IDENT NEWLINE
+                    "into" "entity" IDENT NEWLINE
+                    ("match" "on" ":" NEWLINE INDENT
+                      (IDENT "<->" IDENT NEWLINE)+ DEDENT)?
+                  DEDENT ;
+"""
+
+
+def _build_flow_section() -> str:
+    return """\
+flow_decl     ::= "flow" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    ("priority" ":" ("critical" | "high" | "medium" | "low") NEWLINE)?
+                    ("tags" ":" IDENT ("," IDENT)* NEWLINE)?
+                    preconditions_block?
+                    ("steps" ":" NEWLINE INDENT flow_step+ DEDENT)?
+                    flow_step*
+                  DEDENT ;
+
+preconditions_block
+              ::= "preconditions" ":" NEWLINE
+                  INDENT
+                    precondition_line+
+                  DEDENT ;
+
+precondition_line
+              ::= "authenticated" ":" BOOLEAN NEWLINE
+                | "user_role" ":" IDENT NEWLINE
+                | "fixtures" ":" NEWLINE INDENT fixture_line+ DEDENT ;
+
+fixture_line  ::= IDENT ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT ;
+
+flow_step     ::= step_action target assertion* NEWLINE ;
+
+step_action   ::= "navigate" | "fill" | "click" | "wait" | "assert" | "snapshot" ;
+
+target        ::= "view" ":" IDENT
+                | "field" ":" IDENT "." IDENT
+                | "action" ":" IDENT "." IDENT
+                | "element" ":" STRING ;
+
+assertion     ::= "expect" assertion_check ;
+
+assertion_check
+              ::= "visible" | "hidden" | "enabled" | "disabled"
+                | "text" "=" STRING
+                | "value" "=" literal
+                | "count" "=" NUMBER
+                | "entity_exists" IDENT
+                | "entity_not_exists" IDENT
+                | "redirects_to" IDENT ;
+"""
+
+
+def _build_test_section() -> str:
+    return """\
+test_decl     ::= "test" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    ("setup" ":" NEWLINE INDENT setup_line+ DEDENT)?
+                    test_step+
+                  DEDENT ;
+
+setup_line    ::= IDENT ":" NEWLINE
+                  INDENT
+                    (IDENT ":" literal NEWLINE)+
+                  DEDENT ;
+
+test_step     ::= ("create" | "update" | "delete" | "get" | "query") IDENT ("with" ":" NEWLINE
+                  INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
+                  ("expect" ":" NEWLINE INDENT expect_line+ DEDENT)? NEWLINE ;
+
+expect_line   ::= "status" ":" NUMBER NEWLINE
+                | "count" ":" NUMBER NEWLINE
+                | "error_message" ":" STRING NEWLINE
+                | IDENT ":" literal NEWLINE ;
+"""
+
+
+def _build_scenario_section() -> str:
+    return """\
+persona_decl  ::= "persona" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    ("description" ":" STRING NEWLINE)?
+                    ("goals" ":" NEWLINE INDENT ("-" STRING NEWLINE)+ DEDENT)?
+                    ("proficiency" ":" IDENT NEWLINE)?
+                  DEDENT ;
+
+scenario_decl ::= "scenario" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    ("description" ":" STRING NEWLINE)?
+                    ("personas" ":" NEWLINE INDENT persona_entry+ DEDENT)?
+                    ("seed_script" ":" STRING NEWLINE)?
+                  DEDENT ;
+
+persona_entry ::= IDENT ":" NEWLINE
+                  INDENT
+                    ("start_route" ":" STRING NEWLINE)?
+                    ("goals" ":" NEWLINE INDENT ("-" STRING NEWLINE)+ DEDENT)?
+                  DEDENT ;
+
+demo_decl     ::= "demo" IDENT ":" NEWLINE
+                  INDENT
+                    (IDENT ":" literal NEWLINE)+
+                  DEDENT ;
+"""
+
+
+def _build_story_section() -> str:
+    return """\
 story_decl    ::= "story" IDENT STRING? ":" NEWLINE
                   INDENT
                     ("actor" ":" IDENT NEWLINE)?
@@ -602,11 +978,11 @@ unless_block  ::= "unless" ":" NEWLINE
                   INDENT
                     ("-" STRING NEWLINE)+
                   DEDENT ;
+"""
 
-(* =============================================================================
-   Process Workflows and Schedules
-   ============================================================================= *)
 
+def _build_process_section() -> str:
+    return """\
 process_decl  ::= "process" IDENT STRING? ":" NEWLINE
                   INDENT
                     ("implements" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
@@ -686,204 +1062,11 @@ schedule_decl ::= "schedule" IDENT STRING? ":" NEWLINE
                     ("overlap" ":" IDENT NEWLINE)?
                     ("catch_up" ":" BOOLEAN NEWLINE)?
                   DEDENT ;
+"""
 
-(* =============================================================================
-   Service Definitions
-   ============================================================================= *)
 
-service_decl  ::= "service" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    service_body_line+
-                  DEDENT ;
-
-service_body_line
-              ::= "spec" ":" ("url" STRING | "inline" STRING) NEWLINE
-                | "auth_profile" ":" AUTH_KIND auth_option* NEWLINE
-                | "owner" ":" STRING NEWLINE ;
-
-AUTH_KIND     ::= "oauth2_legacy" | "oauth2_pkce" | "jwt_static"
-                | "api_key_header" | "api_key_query" | "none" ;
-
-auth_option   ::= IDENT "=" literal ;
-
-domain_service_decl
-              ::= "service" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    "kind" ":" ("domain_logic" | "validation" | "integration" | "workflow") NEWLINE
-                    service_io_block?
-                    service_io_block?
-                    guarantees_block?
-                    ("stub" ":" ("python" | "typescript") NEWLINE)?
-                  DEDENT ;
-
-service_io_block
-              ::= ("input" | "output") ":" NEWLINE
-                  INDENT
-                    (IDENT ":" type_spec field_modifier* NEWLINE)+
-                  DEDENT ;
-
-guarantees_block
-              ::= "guarantees" ":" NEWLINE
-                  INDENT
-                    ("-" STRING NEWLINE)+
-                  DEDENT ;
-
-(* =============================================================================
-   Foreign Model Definitions
-   ============================================================================= *)
-
-foreign_model_decl
-              ::= "foreign_model" IDENT "from" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    foreign_model_line+
-                  DEDENT ;
-
-foreign_model_line
-              ::= "key" ":" IDENT ("," IDENT)* NEWLINE
-                | "constraint" ("read_only" | "event_driven" | "batch_import") (IDENT "=" literal)* NEWLINE
-                | "field" IDENT ":" type_spec field_modifier* NEWLINE ;
-
-(* =============================================================================
-   Integration Definitions
-   ============================================================================= *)
-
-integration_decl
-              ::= "integration" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    integration_body+
-                  DEDENT ;
-
-integration_body
-              ::= "uses" "service" IDENT ("," IDENT)* NEWLINE
-                | "uses" "foreign_model" IDENT ("," IDENT)* NEWLINE
-                | integration_action_decl
-                | sync_decl ;
-
-integration_action_decl
-              ::= "action" IDENT ":" NEWLINE
-                  INDENT
-                    "when" "surface" IDENT "submitted" NEWLINE
-                    "call" IDENT "." IDENT "with" ":" NEWLINE
-                    INDENT mapping_rule+ DEDENT
-                    ("map" "response" IDENT "->" "entity" IDENT ":" NEWLINE
-                    INDENT mapping_rule+ DEDENT)?
-                  DEDENT ;
-
-mapping_rule  ::= IDENT "<-" (field_path | literal) NEWLINE ;
-
-sync_decl     ::= "sync" IDENT ":" NEWLINE
-                  INDENT
-                    "mode" ":" ("scheduled" | "event_driven") NEWLINE
-                    ("schedule" ":" STRING NEWLINE)?
-                    "from" IDENT "." IDENT "as" IDENT NEWLINE
-                    "into" "entity" IDENT NEWLINE
-                    ("match" "on" ":" NEWLINE INDENT
-                      (IDENT "<->" IDENT NEWLINE)+ DEDENT)?
-                  DEDENT ;
-
-(* =============================================================================
-   E2E Test Flows
-   ============================================================================= *)
-
-flow_decl     ::= "flow" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("priority" ":" ("critical" | "high" | "medium" | "low") NEWLINE)?
-                    ("tags" ":" IDENT ("," IDENT)* NEWLINE)?
-                    preconditions_block?
-                    ("steps" ":" NEWLINE INDENT flow_step+ DEDENT)?
-                    flow_step*
-                  DEDENT ;
-
-preconditions_block
-              ::= "preconditions" ":" NEWLINE
-                  INDENT
-                    precondition_line+
-                  DEDENT ;
-
-precondition_line
-              ::= "authenticated" ":" BOOLEAN NEWLINE
-                | "user_role" ":" IDENT NEWLINE
-                | "fixtures" ":" NEWLINE INDENT fixture_line+ DEDENT ;
-
-fixture_line  ::= IDENT ":" NEWLINE INDENT (IDENT ":" literal NEWLINE)+ DEDENT ;
-
-flow_step     ::= step_action target assertion* NEWLINE ;
-
-step_action   ::= "navigate" | "fill" | "click" | "wait" | "assert" | "snapshot" ;
-
-target        ::= "view" ":" IDENT
-                | "field" ":" IDENT "." IDENT
-                | "action" ":" IDENT "." IDENT
-                | "element" ":" STRING ;
-
-assertion     ::= "expect" assertion_check ;
-
-assertion_check
-              ::= "visible" | "hidden" | "enabled" | "disabled"
-                | "text" "=" STRING
-                | "value" "=" literal
-                | "count" "=" NUMBER
-                | "entity_exists" IDENT
-                | "entity_not_exists" IDENT
-                | "redirects_to" IDENT ;
-
-(* =============================================================================
-   API Contract Tests
-   ============================================================================= *)
-
-test_decl     ::= "test" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("setup" ":" NEWLINE INDENT setup_line+ DEDENT)?
-                    test_step+
-                  DEDENT ;
-
-setup_line    ::= IDENT ":" NEWLINE
-                  INDENT
-                    (IDENT ":" literal NEWLINE)+
-                  DEDENT ;
-
-test_step     ::= ("create" | "update" | "delete" | "get" | "query") IDENT ("with" ":" NEWLINE
-                  INDENT (IDENT ":" literal NEWLINE)+ DEDENT)?
-                  ("expect" ":" NEWLINE INDENT expect_line+ DEDENT)? NEWLINE ;
-
-expect_line   ::= "status" ":" NUMBER NEWLINE
-                | "count" ":" NUMBER NEWLINE
-                | "error_message" ":" STRING NEWLINE
-                | IDENT ":" literal NEWLINE ;
-
-(* =============================================================================
-   Scenario and Demo Data
-   ============================================================================= *)
-
-persona_decl  ::= "persona" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("description" ":" STRING NEWLINE)?
-                    ("goals" ":" NEWLINE INDENT ("-" STRING NEWLINE)+ DEDENT)?
-                    ("proficiency" ":" IDENT NEWLINE)?
-                  DEDENT ;
-
-scenario_decl ::= "scenario" IDENT STRING? ":" NEWLINE
-                  INDENT
-                    ("description" ":" STRING NEWLINE)?
-                    ("personas" ":" NEWLINE INDENT persona_entry+ DEDENT)?
-                    ("seed_script" ":" STRING NEWLINE)?
-                  DEDENT ;
-
-persona_entry ::= IDENT ":" NEWLINE
-                  INDENT
-                    ("start_route" ":" STRING NEWLINE)?
-                    ("goals" ":" NEWLINE INDENT ("-" STRING NEWLINE)+ DEDENT)?
-                  DEDENT ;
-
-demo_decl     ::= "demo" IDENT ":" NEWLINE
-                  INDENT
-                    (IDENT ":" literal NEWLINE)+
-                  DEDENT ;
-
-(* =============================================================================
-   Messaging Channels
-   ============================================================================= *)
-
+def _build_messaging_section() -> str:
+    return """\
 message_decl  ::= "message" IDENT STRING? ":" NEWLINE
                   INDENT
                     ("channel" ":" IDENT NEWLINE)?
@@ -936,11 +1119,11 @@ template_decl ::= "template" IDENT STRING? ":" NEWLINE
                     ("body" ":" STRING NEWLINE)?
                     ("html_body" ":" STRING NEWLINE)?
                   DEDENT ;
+"""
 
-(* =============================================================================
-   Event-First Architecture
-   ============================================================================= *)
 
+def _build_eventing_section() -> str:
+    return """\
 event_model_decl
               ::= "event_model" ":" NEWLINE
                   INDENT
@@ -985,11 +1168,11 @@ publish_directive
                     ("when" ":" trigger_when NEWLINE)?
                     (IDENT ":" (field_path | literal) NEWLINE)*
                   DEDENT)? NEWLINE ;
+"""
 
-(* =============================================================================
-   HLESS Event Semantics
-   ============================================================================= *)
 
+def _build_hless_section() -> str:
+    return """\
 stream_decl   ::= "stream" IDENT ":" NEWLINE
                   INDENT
                     ("kind" ":" ("INTENT" | "FACT" | "OBSERVATION" | "DERIVATION") NEWLINE)?
@@ -1007,11 +1190,11 @@ stream_decl   ::= "stream" IDENT ":" NEWLINE
                   DEDENT ;
 
 hless_pragma  ::= "hless" ":" ("strict" | "warn" | "off") NEWLINE ;
+"""
 
-(* =============================================================================
-   TigerBeetle Ledgers and Transactions
-   ============================================================================= *)
 
+def _build_ledger_section() -> str:
+    return """\
 ledger_decl   ::= "ledger" IDENT STRING? ":" NEWLINE
                   INDENT
                     ledger_body_line+
@@ -1091,11 +1274,11 @@ validation_block
                   INDENT
                     ("-" (field_path | STRING) NEWLINE)+
                   DEDENT ;
+"""
 
-(* =============================================================================
-   Governance Sections
-   ============================================================================= *)
 
+def _build_governance_section() -> str:
+    return """\
 policies_decl ::= "policies" ":" NEWLINE
                   INDENT
                     policy_line+
@@ -1127,11 +1310,11 @@ data_product_def
                   INDENT
                     (IDENT ":" (STRING | IDENT | BOOLEAN) NEWLINE)*
                   DEDENT ;
+"""
 
-(* =============================================================================
-   LLM Jobs
-   ============================================================================= *)
 
+def _build_llm_section() -> str:
+    return """\
 llm_model_decl
               ::= "llm_model" IDENT STRING? ":" NEWLINE
                   INDENT
@@ -1171,13 +1354,64 @@ llm_intent_decl
 pii_config    ::= ("scan" ":" BOOLEAN NEWLINE)?
                   ("action" ":" IDENT NEWLINE)?
                   ("fields" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)? ;
+"""
 
-```
 
-## DSL Examples
+# Mapping from category -> list of (section_title, grammar_builder_fn)
+_GRAMMAR_SECTIONS: dict[str, list[tuple[str | None, object]]] = {
+    "Core": [
+        (None, lambda: _IDENTIFIERS_SECTION),
+        (None, lambda: _TOP_LEVEL_RULES),
+        ("Field Types and Modifiers", build_type_spec_rule),
+        ("Entity and Archetype Definitions", _build_entity_section),
+        ("State Machines", _build_state_machine_section),
+        ("Invariants", _build_invariant_section),
+        ("Access Rules and Governance", _build_access_section),
+        ("Example Data", _build_examples_section),
+    ],
+    "Surface": [
+        ("Surface Definitions", _build_surface_section),
+        ("UX Semantic Layer", _build_ux_section),
+        ("Workspace Definitions", _build_workspace_section),
+        ("Experience Definitions", _build_experience_section),
+    ],
+    "Workflow": [
+        ("Story Definitions", _build_story_section),
+        ("Process Workflows and Schedules", _build_process_section),
+    ],
+    "Integration": [
+        ("Service Definitions", _build_service_section),
+        ("Foreign Model Definitions", _build_foreign_model_section),
+        ("Integration Definitions", _build_integration_section),
+    ],
+    "Testing": [
+        ("E2E Test Flows", _build_flow_section),
+        ("API Contract Tests", _build_test_section),
+        ("Scenario and Demo Data", _build_scenario_section),
+    ],
+    "Eventing": [
+        ("Messaging Channels", _build_messaging_section),
+        ("Event-First Architecture", _build_eventing_section),
+        ("HLESS Event Semantics", _build_hless_section),
+    ],
+    "Financial": [
+        ("TigerBeetle Ledgers and Transactions", _build_ledger_section),
+    ],
+    "Governance": [
+        ("Governance Sections", _build_governance_section),
+    ],
+    "LLM": [
+        ("LLM Jobs", _build_llm_section),
+    ],
+}
 
-### Core
 
+# ---------------------------------------------------------------------------
+# DSL examples for each category
+# ---------------------------------------------------------------------------
+
+_CATEGORY_EXAMPLES: dict[str, str] = {
+    "Core": """\
 ```dsl
 module my_app
 app todo "Todo App":
@@ -1216,9 +1450,8 @@ entity Task "Task":
   examples:
     - title: "Write docs", completed: false, status: open
 ```
-
-### Surface
-
+""",
+    "Surface": """\
 ```dsl
 surface task_list "Tasks":
   uses entity Task
@@ -1259,9 +1492,8 @@ workspace dashboard "Dashboard":
     limit: 10
     display: list
 ```
-
-### Workflow
-
+""",
+    "Workflow": """\
 ```dsl
 story ST-001 "User completes task":
   actor: StaffUser
@@ -1303,9 +1535,8 @@ schedule daily_report "Daily Report":
   cron: "0 9 * * *"
   timezone: "Europe/London"
 ```
-
-### Integration
-
+""",
+    "Integration": """\
 ```dsl
 service companies_house "Companies House API":
   spec: url "https://api.company-information.service.gov.uk"
@@ -1342,9 +1573,8 @@ integration ch_integration "CH Integration":
       name <- company_name
       reg_number <- company_number
 ```
-
-### Testing
-
+""",
+    "Testing": """\
 ```dsl
 flow happy_path_task "Create and complete a task":
   priority: critical
@@ -1373,9 +1603,8 @@ test create_task "Create Task API":
   expect:
     status: 201
 ```
-
-### Eventing
-
+""",
+    "Eventing": """\
 ```dsl
 event_model:
   topic orders:
@@ -1409,9 +1638,8 @@ stream order_placement_requests:
   partition_key: customer_id
   idempotency: order_id
 ```
-
-### Financial
-
+""",
+    "Financial": """\
 ```dsl
 ledger CustomerWallet "Customer Wallet":
   intent: "Track customer prepaid balances"
@@ -1435,9 +1663,8 @@ transaction RecordPayment "Record Payment":
 
   idempotency_key: payment.id
 ```
-
-### Governance
-
+""",
+    "Governance": """\
 ```dsl
 policies:
   classify Customer.email as PII_DIRECT
@@ -1447,9 +1674,8 @@ policies:
 tenancy:
   mode: shared_schema
 ```
-
-### LLM
-
+""",
+    "LLM": """\
 ```dsl
 llm_model gpt4 "GPT-4":
   tier: premium
@@ -1477,30 +1703,134 @@ llm_intent classify_ticket "Classify Support Ticket":
     max_attempts: 3
     backoff: exponential
 ```
+""",
+}
 
-## Parser Mixin Coverage
 
-The grammar above is derived from these parser mixin modules:
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
-| Module | Class | Category |
-|--------|-------|----------|
-| `base.py` | `BaseParser` | Core |
-| `types.py` | `TypeParserMixin` | Core |
-| `conditions.py` | `ConditionParserMixin` | Core |
-| `entity.py` | `EntityParserMixin` | Core |
-| `surface.py` | `SurfaceParserMixin` | Surface |
-| `ux.py` | `UXParserMixin` | Surface |
-| `workspace.py` | `WorkspaceParserMixin` | Surface |
-| `service.py` | `ServiceParserMixin` | Integration |
-| `integration.py` | `IntegrationParserMixin` | Integration |
-| `flow.py` | `FlowParserMixin` | Testing |
-| `test.py` | `TestParserMixin` | Testing |
-| `scenario.py` | `ScenarioParserMixin` | Testing |
-| `story.py` | `StoryParserMixin` | Workflow |
-| `process.py` | `ProcessParserMixin` | Workflow |
-| `messaging.py` | `MessagingParserMixin` | Eventing |
-| `eventing.py` | `EventingParserMixin` | Eventing |
-| `hless.py` | `HLESSParserMixin` | Eventing |
-| `ledger.py` | `LedgerParserMixin` | Financial |
-| `governance.py` | `GovernanceParserMixin` | Governance |
-| `llm.py` | `LLMParserMixin` | LLM |
+
+def generate_grammar() -> str:
+    """
+    Generate the full grammar markdown document.
+
+    Returns:
+        Complete markdown content for docs/reference/grammar.md
+    """
+    version = get_version()
+    parts: list[str] = []
+
+    # Header
+    parts.append("# DSL Grammar Specification\n")
+    parts.append(f"Formal EBNF grammar for DAZZLE DSL v{version}.\n")
+    parts.append(
+        "> **Auto-generated** from parser source code by `grammar_gen.py`. "
+        "Do not edit manually; run `dazzle grammar` to regenerate.\n"
+    )
+
+    # Overview
+    parts.append("## Overview\n")
+    parts.append(
+        "This grammar defines the complete syntax for the DAZZLE Domain-Specific Language. "
+        "The DSL supports the following construct categories:\n"
+    )
+    for cat in _CATEGORY_ORDER:
+        sections = _GRAMMAR_SECTIONS.get(cat, [])
+        section_names = ", ".join(title for title, _ in sections if title)
+        parts.append(f"- **{cat}**: {section_names}")
+    parts.append("")
+
+    # Anti-Turing note
+    parts.append("## Anti-Turing Enforcement\n")
+    parts.append("DAZZLE intentionally limits computational expressiveness to ensure:\n")
+    parts.append("- Aggregate functions only in computed expressions")
+    parts.append("- `AGGREGATE_FN` explicitly enumerates allowed functions")
+    parts.append("- Turing-complete logic lives in service stubs (not DSL)\n")
+
+    # Keyword inventory
+    parts.append("## Keyword Inventory\n")
+    keyword_groups = get_keyword_groups()
+    for group, keywords in keyword_groups.items():
+        parts.append(f"**{group}**: `{'`, `'.join(keywords)}`\n")
+
+    # Field types
+    parts.append("## Field Types\n")
+    parts.append("All field types supported by the DSL (from `FieldTypeKind` enum):\n")
+    for kind in FieldTypeKind:
+        parts.append(f"- `{kind.value}`")
+    parts.append("")
+
+    # Full grammar
+    parts.append("## Full Grammar\n")
+    parts.append("```ebnf")
+    parts.append(_EBNF_HEADER.format(version=version).rstrip())
+    parts.append("")
+
+    for cat in _CATEGORY_ORDER:
+        sections = _GRAMMAR_SECTIONS.get(cat, [])
+        for title, builder in sections:
+            if title:
+                parts.append(_section_separator(title))
+            content = str(builder() if callable(builder) else builder)
+            parts.append(content.rstrip())
+            parts.append("")
+
+    parts.append("```\n")
+
+    # DSL examples by category
+    parts.append("## DSL Examples\n")
+    for cat in _CATEGORY_ORDER:
+        example = _CATEGORY_EXAMPLES.get(cat)
+        if example:
+            parts.append(f"### {cat}\n")
+            parts.append(example.rstrip())
+            parts.append("")
+
+    # Parser mixin coverage
+    parts.append("## Parser Mixin Coverage\n")
+    parts.append("The grammar above is derived from these parser mixin modules:\n")
+    parts.append("| Module | Class | Category |")
+    parts.append("|--------|-------|----------|")
+    class_names = get_mixin_class_names()
+    for mod_name, _title, category in _MIXIN_SECTIONS:
+        cls_name = class_names.get(mod_name, "-")
+        parts.append(f"| `{mod_name}.py` | `{cls_name}` | {category} |")
+    parts.append("")
+
+    return "\n".join(parts) + "\n"
+
+
+def write_grammar(output_path: Path | None = None) -> Path:
+    """
+    Generate and write the grammar markdown file.
+
+    Args:
+        output_path: Path to write to; defaults to docs/reference/grammar.md
+
+    Returns:
+        Path to the written file
+    """
+    if output_path is None:
+        project_root = Path(__file__).resolve().parents[3]
+        output_path = project_root / "docs" / "reference" / "grammar.md"
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    content = generate_grammar()
+    output_path.write_text(content)
+    return output_path
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    import sys
+
+    if "--write" in sys.argv:
+        path = write_grammar()
+        print(f"Wrote grammar to {path}")
+    else:
+        print(generate_grammar())

@@ -34,7 +34,7 @@ Specifications are structured for:
 ### 3. Framework-Agnostic
 
 Backend and frontend frameworks are outputs, not inputs:
-- FastAPI is one possible backend (Django planned)
+- FastAPI is the current backend
 - Pure JS is the frontend (React optional)
 
 ## Backend Architecture (DNR-Back)
@@ -233,7 +233,6 @@ ComponentSpec(
 ## Future Directions
 
 - **TigerBeetle ledgers**: Double-entry accounting via DSL
-- **Django adapter**: BackendSpec → Django/DRF
 - **React builder**: UISpec → React components
 - **Mobile runtime**: UISpec → React Native / Flutter
 - **WebSocket support**: Real-time updates in specs
