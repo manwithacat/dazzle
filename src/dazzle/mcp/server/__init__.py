@@ -387,7 +387,7 @@ async def get_prompt(name: str, arguments: dict[str, str] | None = None) -> str:
 4. Suggest specific improvements with examples"""
 
     elif name == "code_review":
-        stack = args.get("stack", "django_micro_modular")
+        stack = args.get("stack", "docker")
         return f"""Please review the generated code for stack: {stack}
 
 1. Use the build tool to generate code if not already built

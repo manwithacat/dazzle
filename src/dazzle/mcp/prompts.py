@@ -37,7 +37,7 @@ def create_prompts() -> list[dict[str, Any]]:
             "arguments": [
                 {
                     "name": "stack",
-                    "description": "Stack to review (docker, base). Legacy stacks (django_micro_modular, etc.) are deprecated.",
+                    "description": "Stack to review (docker, base).",
                     "required": True,
                 }
             ],

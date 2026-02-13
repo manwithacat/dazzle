@@ -14,7 +14,7 @@ class BaseAdapter(ABC):
     """
     Abstract base adapter for E2E testing.
 
-    Stack-specific adapters (DNR, Django, Express, etc.) implement
+    Stack-specific adapters (DNR, Express, etc.) implement
     this interface to provide test infrastructure.
     """
 

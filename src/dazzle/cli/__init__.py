@@ -22,6 +22,7 @@ This package contains the main CLI application and modularized sub-commands:
 
 import os
 import sys
+from pathlib import Path
 
 import typer
 
@@ -87,6 +88,34 @@ app.command(name="doctor")(doctor_command)
 from dazzle.cli.workshop import workshop_command  # noqa: E402
 
 app.command(name="workshop")(workshop_command)
+
+
+# Grammar command
+def grammar_command(
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="Output file path (defaults to docs/reference/grammar.md)",
+    ),
+    stdout: bool = typer.Option(
+        False,
+        "--stdout",
+        help="Print to stdout instead of writing a file",
+    ),
+) -> None:
+    """Regenerate the DSL grammar reference from parser source code."""
+    from dazzle.core.grammar_gen import generate_grammar, write_grammar
+
+    if stdout:
+        typer.echo(generate_grammar())
+    else:
+        out_path = output if output else None
+        path = write_grammar(out_path)
+        typer.echo(f"Grammar written to {path}")
+
+
+app.command(name="grammar")(grammar_command)
 
 
 # =============================================================================

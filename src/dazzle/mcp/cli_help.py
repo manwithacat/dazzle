@@ -241,7 +241,6 @@ CLI_COMMANDS: dict[str, dict[str, Any]] = {
         "notes": [
             "Dazzle runtime is preferred for development",
             "Code generation is for custom deployments",
-            "Legacy stacks (django_micro, express_micro) are deprecated",
         ],
     },
     # =========================================================================

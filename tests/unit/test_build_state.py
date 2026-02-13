@@ -161,7 +161,7 @@ class TestBuildState:
         """Test roundtrip conversion to/from dict."""
         original = BuildState(
             timestamp="2024-01-01T00:00:00Z",
-            backend="django",
+            backend="dnr",
             output_dir="/output",
             dsl_file_hashes={"a.dsl": "x", "b.dsl": "y"},
             appspec_snapshot={"key": "value"},
@@ -382,7 +382,7 @@ class TestStatePersistence:
 
         save_state(
             project_root=tmp_path,
-            backend="django",
+            backend="dnr",
             output_dir=output_dir,
             dsl_files=[],
             appspec=simple_appspec,

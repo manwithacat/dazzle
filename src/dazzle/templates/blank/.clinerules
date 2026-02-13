@@ -52,14 +52,14 @@ git push
 git pull
 
 # Development server operations
-cd build/django_micro_modular && python manage.py runserver
-cd build/express_micro && npm start
+dazzle serve
+dazzle serve --local
 cd build/* && docker-compose up
 
 # Testing commands
 pytest
 pytest tests/
-python manage.py test
+dazzle test run
 npm test
 
 # Directory navigation
@@ -183,9 +183,7 @@ cat **/*.md
 cat **/*.txt
 
 # Stack-specific build commands
-python manage.py migrate
-python manage.py createsuperuser --noinput
-python manage.py collectstatic --noinput
+dazzle serve --test-mode
 npm run build
 npm run dev
 yarn build
@@ -210,9 +208,6 @@ tail -50 build/**/*.py
 tail -50 build/**/*.js
 
 # Database migrations and management
-python manage.py makemigrations
-python manage.py migrate
-python manage.py showmigrations
 alembic upgrade head
 alembic revision --autogenerate
 
@@ -280,10 +275,10 @@ md5sum *.dsl
 
 # Time tracking for performance
 time dazzle build
-time python manage.py test
+time dazzle test run
 
 # Background job management
-nohup python manage.py runserver &
+nohup dazzle serve &
 jobs
 fg
 bg
@@ -306,11 +301,9 @@ ab -n 100 -c 10 http://localhost:8000/
 wrk http://localhost:8000/
 
 # Schema inspection
-python manage.py inspectdb
-python manage.py sqlmigrate * *
+sqlite3 *.db ".schema"
 
 # Cache clearing
-python manage.py clear_cache
 redis-cli FLUSHALL
 memcached-tool localhost:11211 flush_all
 
@@ -329,16 +322,15 @@ radon mi dsl/
 complexity dsl/
 
 # Memory profiling
-python -m memory_profiler manage.py runserver
 node --inspect server.js
 
 # API documentation generation
-python manage.py generateschema
+dazzle specs openapi
 swagger-cli validate openapi.yaml
 
 # Hot reload for development
 nodemon server.js
-watchmedo auto-restart --patterns="*.py" python manage.py runserver
+watchmedo auto-restart --patterns="*.py" dazzle serve --local
 
 # END OF RULES
 # These rules provide Claude with appropriate permissions for Dazzle development

@@ -46,13 +46,12 @@ This regenerates all code from the DSL. Generated artifacts live in `build/`.
 
 ### 3. Run the application
 ```bash
+# Recommended:
+dazzle serve
+
 # If using Docker stack:
 cd build/docker
 docker compose up
-
-# If using Django directly:
-cd build/django_api
-python manage.py runserver
 ```
 
 ### 4. Test
@@ -82,8 +81,7 @@ pytest  # (if tests are generated or added)
 ├── dsl/                    # DSL source files (EDIT THESE)
 ├── dazzle.toml            # Project manifest (EDIT THIS)
 ├── build/                 # Generated artifacts (REGENERATE, DON'T EDIT)
-│   ├── django_api/        # Backend API (if using Django)
-│   ├── frontend/          # Frontend app (if using Next.js)
+│   ├── docker/            # Docker Compose setup
 │   └── infra_*/           # Infrastructure configs
 ├── LLM_CONTEXT.md         # This file
 ├── .llm/                  # Extended LLM documentation
@@ -103,7 +101,7 @@ pytest  # (if tests are generated or added)
 
 **Error: "Backend 'xyz' not found"**
 - Your stack requires a backend that isn't available
-- **Solution**: Use explicit backends: `dazzle build --backends django_api,openapi`
+- **Solution**: Use explicit backends: `dazzle build --backends openapi,docker`
 - Or change the stack in `dazzle.toml` to a compatible one
 
 **Validation Errors**
@@ -169,16 +167,13 @@ The Dazzle Runtime uses server-rendered HTMX templates:
 
 ### 4. Backends
 Backends generate concrete artifacts from AppSpec:
-- `django_api` → Django REST Framework
-- `nextjs_frontend` → Next.js app with TypeScript
 - `openapi` → OpenAPI 3.0 specification
 - `docker` → Docker Compose setup
 - `terraform` → Terraform infrastructure
 
 ### 5. Stacks
 Stacks are preset combinations of backends:
-- `django_next` → Django + Next.js + Docker
-- `api_only` → Django API + OpenAPI + Docker
+- `api_only` → OpenAPI + Docker
 - Custom stacks can be defined in `dazzle.toml`
 
 ### 6. Project Manifest (dazzle.toml)
@@ -264,15 +259,6 @@ surface user_list "User List":
 
 ## Backend Output
 
-### Django Backend (django_api)
-Generates:
-- `models.py` → Django models from entities
-- `serializers.py` → DRF serializers
-- `views.py` → DRF viewsets from surfaces
-- `urls.py` → URL routing
-- `settings.py` → Django configuration
-- `migrations/` → Database migrations
-
 ### OpenAPI Backend (openapi)
 Generates:
 - `openapi.yaml` → Complete API specification
@@ -305,7 +291,7 @@ entity Order "Order":
 In `dazzle.toml`:
 ```toml
 [stack]
-name = "django_next"  # or "api_only", or custom
+name = "api_only"  # or custom
 ```
 
 ## Troubleshooting
@@ -325,7 +311,7 @@ dazzle build --force             # Force full rebuild
 ### Viewing Generated Code
 ```bash
 ls build/
-cat build/django_api/api/models.py
+cat build/docker/compose.yaml
 ```
 
 ## Best Practices
@@ -429,7 +415,7 @@ When helping with this project:
 - `dazzle build --diff`
 - `git status`, `git diff`
 - `ls`, `cat`
-- `python manage.py check` (if Django)
+- `dazzle validate`
 
 ⚠️ Require confirmation:
 - `dazzle build --force` (overwrites everything)
@@ -456,7 +442,7 @@ dazzle build --force  # Full rebuild
 
 When testing:
 ```bash
-cd build/django_api && python manage.py runserver  # If Django
+dazzle serve                                 # Recommended
 cd build/docker && docker compose up         # If Docker
 ```
 
@@ -548,7 +534,7 @@ When suggesting code:
 ### What This Repo Contains
 
 Business logic is in **DSL files**, not framework code. Generated code implements
-the DSL specification using selected backends (Django, Next.js, etc.).
+the DSL specification using selected backends (FastAPI, Docker, etc.).
 
 Don't suggest:
 - Duplicating entity definitions in code
@@ -577,10 +563,10 @@ Then run: dazzle build
 
 **Bad response**:
 ```
-Edit build/django_api/models.py:
+Edit build/docker/app/models.py:
 
-class User(models.Model):
-    phone = models.CharField(max_length=20)
+class User(BaseModel):
+    phone: str = Field(max_length=20)
 ```
 
 (This will be overwritten on next build!)
