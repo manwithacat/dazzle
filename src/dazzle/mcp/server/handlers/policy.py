@@ -167,7 +167,11 @@ def _personas_overlap(rule_a: PermissionRule, rule_b: PermissionRule) -> bool:
 
 
 def _coverage_matrix(appspec: Any, entity_names: list[str] | None) -> dict[str, Any]:
-    """Build a permission matrix: persona x entity x operation -> allow/deny/unset."""
+    """Build a permission matrix: persona x entity x operation -> allow/deny/unset.
+
+    Returns a compact nested structure: entity -> persona -> {op: decision}
+    instead of a flat list, to avoid output explosion on large projects.
+    """
     entities = _filter_entities(appspec, entity_names)
 
     # Collect all persona IDs
@@ -179,30 +183,36 @@ def _coverage_matrix(appspec: Any, entity_names: list[str] | None) -> dict[str, 
     if not persona_ids:
         persona_ids = ["anonymous"]
 
-    matrix: list[dict[str, Any]] = []
+    # Build nested matrix: entity -> persona -> {op: decision}
+    matrix: dict[str, dict[str, dict[str, str]]] = {}
+    allow_count = 0
+    deny_count = 0
+    unset_count = 0
 
     for entity in entities:
+        entity_row: dict[str, dict[str, str]] = {}
         for persona_id in persona_ids:
+            ops_row: dict[str, str] = {}
             for op in ALL_OPS:
                 decision = _evaluate_rules(entity, persona_id, op)
-                matrix.append(
-                    {
-                        "persona": persona_id,
-                        "entity": entity.name,
-                        "operation": op.value,
-                        "decision": decision,
-                    }
-                )
+                ops_row[op.value] = decision
+                if decision == "allow":
+                    allow_count += 1
+                elif decision == "deny":
+                    deny_count += 1
+                else:
+                    unset_count += 1
+            entity_row[persona_id] = ops_row
+        matrix[entity.name] = entity_row
 
-    # Build a summary
-    allow_count = sum(1 for m in matrix if m["decision"] == "allow")
-    deny_count = sum(1 for m in matrix if m["decision"] == "deny")
-    unset_count = sum(1 for m in matrix if m["decision"] == "default-deny")
+    total = allow_count + deny_count + unset_count
 
     return {
         "matrix": matrix,
+        "personas": persona_ids,
+        "operations": [op.value for op in ALL_OPS],
         "summary": {
-            "total_combinations": len(matrix),
+            "total_combinations": total,
             "allow": allow_count,
             "explicit_deny": deny_count,
             "default_deny": unset_count,

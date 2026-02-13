@@ -358,16 +358,15 @@ class TestCoverageMatrix:
         result = _coverage_matrix(appspec, None)
         assert result["summary"]["total_combinations"] == len(PermissionKind)
         # READ should be allowed, others default-deny
-        read_entry = next(m for m in result["matrix"] if m["operation"] == "read")
-        assert read_entry["decision"] == "allow"
-        create_entry = next(m for m in result["matrix"] if m["operation"] == "create")
-        assert create_entry["decision"] == "default-deny"
+        assert result["matrix"]["Task"]["admin"]["read"] == "allow"
+        assert result["matrix"]["Task"]["admin"]["create"] == "default-deny"
 
     def test_no_personas_uses_anonymous(self) -> None:
         entities = [_entity("Task")]
         appspec = _appspec(entities, persona_ids=[])
         result = _coverage_matrix(appspec, None)
-        assert result["matrix"][0]["persona"] == "anonymous"
+        assert "anonymous" in result["personas"]
+        assert "anonymous" in result["matrix"]["Task"]
 
     def test_multiple_personas(self) -> None:
         entities = [
@@ -382,20 +381,11 @@ class TestCoverageMatrix:
         appspec = _appspec(entities, persona_ids=["admin", "intern", "viewer"])
         result = _coverage_matrix(appspec, None)
         # admin DELETE = allow
-        admin_del = next(
-            m for m in result["matrix"] if m["persona"] == "admin" and m["operation"] == "delete"
-        )
-        assert admin_del["decision"] == "allow"
+        assert result["matrix"]["Task"]["admin"]["delete"] == "allow"
         # intern DELETE = deny
-        intern_del = next(
-            m for m in result["matrix"] if m["persona"] == "intern" and m["operation"] == "delete"
-        )
-        assert intern_del["decision"] == "deny"
+        assert result["matrix"]["Task"]["intern"]["delete"] == "deny"
         # viewer DELETE = default-deny
-        viewer_del = next(
-            m for m in result["matrix"] if m["persona"] == "viewer" and m["operation"] == "delete"
-        )
-        assert viewer_del["decision"] == "default-deny"
+        assert result["matrix"]["Task"]["viewer"]["delete"] == "default-deny"
 
 
 # =============================================================================
@@ -631,12 +621,5 @@ class TestCoverageWithConditions:
         appspec = _appspec(entities, persona_ids=["admin", "viewer"])
         result = _coverage_matrix(appspec, None)
 
-        admin_read = next(
-            m for m in result["matrix"] if m["persona"] == "admin" and m["operation"] == "read"
-        )
-        assert admin_read["decision"] == "allow"
-
-        viewer_read = next(
-            m for m in result["matrix"] if m["persona"] == "viewer" and m["operation"] == "read"
-        )
-        assert viewer_read["decision"] == "default-deny"
+        assert result["matrix"]["Task"]["admin"]["read"] == "allow"
+        assert result["matrix"]["Task"]["viewer"]["read"] == "default-deny"
