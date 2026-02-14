@@ -278,6 +278,172 @@ def did_close(ls: DazzleLanguageServer, params: DidCloseTextDocumentParams) -> N
     _publish_diagnostics(ls, params.text_document.uri, [])
 
 
+def _build_name_index(appspec: ir.AppSpec) -> dict[str, tuple[str, Any]]:
+    """Build a name → (construct_type, spec) index from AppSpec.
+
+    This enables O(1) lookup for hover and completion across all construct types.
+    """
+    index: dict[str, tuple[str, Any]] = {}
+
+    for entity in appspec.domain.entities:
+        index[entity.name] = ("entity", entity)
+    for surface in appspec.surfaces:
+        index[surface.name] = ("surface", surface)
+    for workspace in appspec.workspaces:
+        index[workspace.name] = ("workspace", workspace)
+    for experience in appspec.experiences:
+        index[experience.name] = ("experience", experience)
+    for service in appspec.domain_services:
+        index[service.name] = ("service", service)
+    for fm in appspec.foreign_models:
+        index[fm.name] = ("foreign_model", fm)
+    for integration in appspec.integrations:
+        index[integration.name] = ("integration", integration)
+    for view in appspec.views:
+        index[view.name] = ("view", view)
+    for enum in appspec.enums:
+        index[enum.name] = ("enum", enum)
+    for process in appspec.processes:
+        index[process.name] = ("process", process)
+    for story in appspec.stories:
+        # Stories use story_id as the identifier
+        sid = getattr(story, "story_id", None) or getattr(story, "name", None)
+        if sid:
+            index[sid] = ("story", story)
+    for persona in appspec.personas:
+        pid = getattr(persona, "id", None) or getattr(persona, "name", None)
+        if pid:
+            index[pid] = ("persona", persona)
+    for scenario in appspec.scenarios:
+        sid = getattr(scenario, "id", None) or getattr(scenario, "name", None)
+        if sid:
+            index[sid] = ("scenario", scenario)
+    for ledger in appspec.ledgers:
+        index[ledger.name] = ("ledger", ledger)
+    for transaction in appspec.transactions:
+        index[transaction.name] = ("transaction", transaction)
+    for schedule in appspec.schedules:
+        index[schedule.name] = ("schedule", schedule)
+    for webhook in appspec.webhooks:
+        index[webhook.name] = ("webhook", webhook)
+    for approval in appspec.approvals:
+        index[approval.name] = ("approval", approval)
+    for sla in appspec.slas:
+        index[sla.name] = ("sla", sla)
+    for island in appspec.islands:
+        index[island.name] = ("island", island)
+    for channel in appspec.channels:
+        index[channel.name] = ("channel", channel)
+    for llm_model in appspec.llm_models:
+        index[llm_model.name] = ("llm_model", llm_model)
+    for llm_intent in appspec.llm_intents:
+        index[llm_intent.name] = ("llm_intent", llm_intent)
+    for archetype in appspec.archetypes:
+        index[archetype.name] = ("archetype", archetype)
+
+    return index
+
+
+def _format_generic_hover(construct_type: str, spec: Any) -> str:
+    """Format a generic hover for any named construct."""
+    name = getattr(spec, "name", None) or getattr(spec, "id", "unknown")
+    title = getattr(spec, "title", None) or getattr(spec, "description", None)
+
+    lines = [f"**{construct_type}** `{name}`"]
+    if title:
+        lines.append(f"_{title}_")
+    lines.append("")
+
+    # Show key properties based on construct type
+    if construct_type == "view":
+        source = getattr(spec, "source_entity", None)
+        if source:
+            lines.append(f"**Source entity:** `{source}`")
+        fields = getattr(spec, "fields", None)
+        if fields:
+            lines.append(f"**Fields:** {len(fields)}")
+    elif construct_type == "enum":
+        values = getattr(spec, "values", None)
+        if values:
+            preview = ", ".join(getattr(v, "name", str(v)) for v in values[:6])
+            if len(values) > 6:
+                preview += ", ..."
+            lines.append(f"**Values:** {preview}")
+    elif construct_type == "process":
+        states = getattr(spec, "states", None)
+        if states:
+            state_names = [s if isinstance(s, str) else getattr(s, "name", str(s)) for s in states]
+            lines.append(f"**States:** {', '.join(state_names[:6])}")
+        implements = getattr(spec, "implements", None)
+        if implements:
+            lines.append(f"**Implements:** {', '.join(implements)}")
+    elif construct_type == "story":
+        actor = getattr(spec, "actor", None)
+        if actor:
+            lines.append(f"**Actor:** {actor}")
+        steps = getattr(spec, "steps", None)
+        if steps:
+            lines.append(f"**Steps:** {len(steps)}")
+    elif construct_type == "persona":
+        goals = getattr(spec, "goals", None)
+        if goals:
+            lines.append(f"**Goals:** {', '.join(goals[:3])}")
+        proficiency = getattr(spec, "proficiency", None)
+        if proficiency:
+            lines.append(f"**Proficiency:** {proficiency}")
+    elif construct_type == "ledger":
+        account_type = getattr(spec, "account_type", None)
+        currency = getattr(spec, "currency", None)
+        if account_type:
+            lines.append(f"**Account type:** {account_type}")
+        if currency:
+            lines.append(f"**Currency:** {currency}")
+    elif construct_type == "transaction":
+        execution = getattr(spec, "execution", None)
+        transfers = getattr(spec, "transfers", None)
+        if execution:
+            lines.append(f"**Execution:** {execution}")
+        if transfers:
+            lines.append(f"**Transfers:** {len(transfers)}")
+    elif construct_type == "webhook":
+        events = getattr(spec, "events", None)
+        if events:
+            lines.append(f"**Events:** {', '.join(events[:4])}")
+    elif construct_type == "approval":
+        approver_role = getattr(spec, "approver_role", None)
+        if approver_role:
+            lines.append(f"**Approver role:** {approver_role}")
+    elif construct_type == "sla":
+        threshold = getattr(spec, "threshold", None)
+        if threshold:
+            lines.append(f"**Threshold:** {threshold}")
+    elif construct_type == "island":
+        framework = getattr(spec, "framework", None)
+        if framework:
+            lines.append(f"**Framework:** {framework}")
+    elif construct_type == "workspace":
+        stages = getattr(spec, "stages", None)
+        if stages:
+            lines.append(f"**Stages:** {len(stages)}")
+    elif construct_type == "experience":
+        steps = getattr(spec, "steps", None)
+        if steps:
+            lines.append(f"**Steps:** {len(steps)}")
+    elif construct_type in ("service", "integration"):
+        kind = getattr(spec, "kind", None)
+        if kind:
+            lines.append(f"**Kind:** {kind}")
+    elif construct_type == "schedule":
+        cron = getattr(spec, "cron", None)
+        interval = getattr(spec, "interval", None)
+        if cron:
+            lines.append(f"**Cron:** `{cron}`")
+        if interval:
+            lines.append(f"**Interval:** {interval}")
+
+    return "\n".join(lines)
+
+
 @server.feature(TEXT_DOCUMENT_HOVER)
 def hover(ls: DazzleLanguageServer, params: HoverParams) -> Hover | None:
     """Provide hover information."""
@@ -291,19 +457,23 @@ def hover(ls: DazzleLanguageServer, params: HoverParams) -> Hover | None:
     if not word:
         return None
 
-    # Look up entity
-    for entity in ls.appspec.domain.entities:
-        if entity.name == word:
-            content = _format_entity_hover(entity)
-            return Hover(contents=MarkupContent(kind=MarkupKind.Markdown, value=content))
+    # Build name index for O(1) lookup
+    index = _build_name_index(ls.appspec)
+    match = index.get(word)
+    if not match:
+        return None
 
-    # Look up surface
-    for surface in ls.appspec.surfaces:
-        if surface.name == word:
-            content = _format_surface_hover(surface)
-            return Hover(contents=MarkupContent(kind=MarkupKind.Markdown, value=content))
+    construct_type, spec = match
 
-    return None
+    # Use rich formatters for entity and surface, generic for others
+    if construct_type == "entity":
+        content = _format_entity_hover(spec)
+    elif construct_type == "surface":
+        content = _format_surface_hover(spec)
+    else:
+        content = _format_generic_hover(construct_type, spec)
+
+    return Hover(contents=MarkupContent(kind=MarkupKind.Markdown, value=content))
 
 
 @server.feature(TEXT_DOCUMENT_DEFINITION)
@@ -318,7 +488,7 @@ def definition(ls: DazzleLanguageServer, params: DefinitionParams) -> Location |
     if not word:
         return None
 
-    # Search for entity/surface definition in DSL files
+    # Search for construct definition in DSL files
     manifest_path = ls.workspace_root / "dazzle.toml"
     try:
         mf = load_manifest(manifest_path)
@@ -342,25 +512,44 @@ def completion(ls: DazzleLanguageServer, params: CompletionParams) -> Completion
 
     items: list[CompletionItem] = []
 
-    # Add entity names
-    for entity in ls.appspec.domain.entities:
-        items.append(
-            CompletionItem(
-                label=entity.name,
-                kind=CompletionItemKind.Class,
-                detail="Entity",
-                documentation=entity.title or entity.name,
-            )
-        )
+    # Add all named constructs from the name index
+    _COMPLETION_KIND_MAP: dict[str, CompletionItemKind] = {
+        "entity": CompletionItemKind.Class,
+        "surface": CompletionItemKind.Interface,
+        "view": CompletionItemKind.TypeParameter,
+        "enum": CompletionItemKind.Enum,
+        "workspace": CompletionItemKind.Module,
+        "experience": CompletionItemKind.Function,
+        "process": CompletionItemKind.Event,
+        "story": CompletionItemKind.Struct,
+        "persona": CompletionItemKind.Reference,
+        "scenario": CompletionItemKind.Struct,
+        "service": CompletionItemKind.Method,
+        "integration": CompletionItemKind.Interface,
+        "foreign_model": CompletionItemKind.Class,
+        "ledger": CompletionItemKind.Class,
+        "transaction": CompletionItemKind.Function,
+        "schedule": CompletionItemKind.Event,
+        "webhook": CompletionItemKind.Event,
+        "approval": CompletionItemKind.Operator,
+        "sla": CompletionItemKind.Constant,
+        "island": CompletionItemKind.Module,
+        "channel": CompletionItemKind.Event,
+        "llm_model": CompletionItemKind.Variable,
+        "llm_intent": CompletionItemKind.Function,
+        "archetype": CompletionItemKind.Class,
+        "policy": CompletionItemKind.Property,
+    }
 
-    # Add surface names
-    for surface in ls.appspec.surfaces:
+    index = _build_name_index(ls.appspec)
+    for name, (construct_type, spec) in index.items():
+        title = getattr(spec, "title", None) or getattr(spec, "description", None)
         items.append(
             CompletionItem(
-                label=surface.name,
-                kind=CompletionItemKind.Interface,
-                detail="Surface",
-                documentation=surface.title or surface.name,
+                label=name,
+                kind=_COMPLETION_KIND_MAP.get(construct_type, CompletionItemKind.Text),
+                detail=construct_type.replace("_", " ").title(),
+                documentation=title or name,
             )
         )
 
@@ -1057,18 +1246,25 @@ def _format_surface_hover(surface: Any) -> str:
 
 
 def _find_definition_in_file(file_path: Path, word: str) -> Location | None:
-    """Find definition of word in a DSL file."""
+    """Find definition of word in a DSL file.
+
+    Searches for any construct declaration matching the word using the full
+    set of DSL keywords (entity, surface, view, process, ledger, etc.).
+    """
     try:
         content = file_path.read_text()
         lines = content.split("\n")
 
         for line_no, line in enumerate(lines):
-            # Look for entity/surface definition
-            if f"entity {word} " in line or f"surface {word} " in line:
+            m = _CONSTRUCT_RE.match(line)
+            if m and m.group(3) == word:
+                keyword = m.group(2)
+                # Position selection on the name, not the keyword
+                name_start = len(m.group(1)) + len(keyword) + 1
                 uri = file_path.as_uri()
                 range_ = Range(
-                    start=Position(line=line_no, character=0),
-                    end=Position(line=line_no, character=len(line)),
+                    start=Position(line=line_no, character=name_start),
+                    end=Position(line=line_no, character=name_start + len(word)),
                 )
                 return Location(uri=uri, range=range_)
     except Exception as e:
