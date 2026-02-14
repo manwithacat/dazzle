@@ -23,6 +23,8 @@ from lsprotocol.types import (
     CompletionList,
     CompletionParams,
     DefinitionParams,
+    Diagnostic,
+    DiagnosticSeverity,
     DidChangeTextDocumentParams,
     DidCloseTextDocumentParams,
     DidOpenTextDocumentParams,
@@ -36,12 +38,14 @@ from lsprotocol.types import (
     MarkupContent,
     MarkupKind,
     Position,
+    PublishDiagnosticsParams,
     Range,
     SymbolKind,
 )
 from pygls.lsp.server import LanguageServer
 
 from dazzle.core import ir
+from dazzle.core.errors import DazzleError, LinkError, ParseError, ValidationError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
@@ -90,6 +94,77 @@ def _find_project_root(start_path: Path) -> Path | None:
     return None
 
 
+def _make_diagnostic(
+    message: str,
+    line: int = 0,
+    col: int = 0,
+    severity: DiagnosticSeverity = DiagnosticSeverity.Error,
+    source: str = "dazzle",
+) -> Diagnostic:
+    """Create an LSP Diagnostic at the given location."""
+    # LSP lines/cols are 0-indexed; our errors are 1-indexed
+    lsp_line = max(0, line - 1)
+    lsp_col = max(0, col - 1)
+    return Diagnostic(
+        range=Range(
+            start=Position(line=lsp_line, character=lsp_col),
+            end=Position(line=lsp_line, character=lsp_col + 1),
+        ),
+        message=message,
+        severity=severity,
+        source=source,
+    )
+
+
+def _diagnostics_from_error(error: DazzleError) -> dict[str, list[Diagnostic]]:
+    """Extract diagnostics grouped by file URI from a DazzleError."""
+    severity = DiagnosticSeverity.Error
+    if isinstance(error, (LinkError, ValidationError)):
+        severity = DiagnosticSeverity.Warning
+
+    result: dict[str, list[Diagnostic]] = {}
+
+    if error.context and error.context.file:
+        uri = error.context.file.as_uri()
+        diag = _make_diagnostic(
+            message=error.message,
+            line=error.context.line,
+            col=error.context.column,
+            severity=severity,
+        )
+        result.setdefault(uri, []).append(diag)
+    else:
+        # No file context — try to extract file:line from the message text
+        # or attach to a fallback URI
+        diag = _make_diagnostic(message=error.message, severity=severity)
+        result.setdefault("__fallback__", []).append(diag)
+
+    return result
+
+
+def _publish_diagnostics(ls: DazzleLanguageServer, uri: str, diagnostics: list[Diagnostic]) -> None:
+    """Publish diagnostics to the client for a single file."""
+    ls.text_document_publish_diagnostics(PublishDiagnosticsParams(uri=uri, diagnostics=diagnostics))
+
+
+def _publish_file_diagnostics(
+    ls: DazzleLanguageServer,
+    file_diagnostics: dict[str, list[Diagnostic]],
+    all_uris: set[str],
+) -> None:
+    """Publish diagnostics for all tracked files, clearing those without errors."""
+    # Publish errors for files that have them
+    for uri, diags in file_diagnostics.items():
+        if uri == "__fallback__":
+            continue
+        all_uris.discard(uri)
+        _publish_diagnostics(ls, uri, diags)
+
+    # Clear diagnostics for files that parsed successfully
+    for uri in all_uris:
+        _publish_diagnostics(ls, uri, [])
+
+
 def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> None:
     """Load DAZZLE project and build AppSpec.
 
@@ -114,11 +189,47 @@ def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> No
     try:
         mf = load_manifest(manifest_path)
         dsl_files = discover_dsl_files(project_root, mf)
+
+        # Track all DSL file URIs so we can clear diagnostics on success
+        all_uris = {f.resolve().as_uri() for f in dsl_files}
+
         modules = parse_modules(dsl_files)
         ls.appspec = build_appspec(modules, mf.project_root)
         logger.info(
             f"Loaded project from {project_root} with {len(ls.appspec.domain.entities)} entities"
         )
+
+        # Publish link warnings if any
+        warnings = ls.appspec.metadata.get("link_warnings", [])
+        file_diagnostics: dict[str, list[Diagnostic]] = {}
+        if warnings and file_path:
+            uri = file_path.resolve().as_uri()
+            for msg in warnings:
+                diag = _make_diagnostic(
+                    message=msg,
+                    severity=DiagnosticSeverity.Information,
+                )
+                file_diagnostics.setdefault(uri, []).append(diag)
+
+        # Clear diagnostics on all DSL files (project is valid)
+        _publish_file_diagnostics(ls, file_diagnostics, all_uris)
+
+    except (ParseError, LinkError, ValidationError) as e:
+        logger.error(f"Project error: {e}")
+        ls.appspec = None
+
+        # Publish diagnostics for the error
+        file_diagnostics = _diagnostics_from_error(e)
+
+        # If the error has no file context, attach to the triggering file
+        fallback_diags = file_diagnostics.pop("__fallback__", [])
+        if fallback_diags and file_path:
+            uri = file_path.resolve().as_uri()
+            file_diagnostics.setdefault(uri, []).extend(fallback_diags)
+
+        for uri, diags in file_diagnostics.items():
+            _publish_diagnostics(ls, uri, diags)
+
     except Exception as e:
         logger.error(f"Error loading project: {e}")
         ls.appspec = None
@@ -162,6 +273,8 @@ def did_save(ls: DazzleLanguageServer, params: DidSaveTextDocumentParams) -> Non
 def did_close(ls: DazzleLanguageServer, params: DidCloseTextDocumentParams) -> None:
     """Handle document close."""
     logger.info(f"Closed: {params.text_document.uri}")
+    # Clear diagnostics for the closed file
+    _publish_diagnostics(ls, params.text_document.uri, [])
 
 
 @server.feature(TEXT_DOCUMENT_HOVER)
