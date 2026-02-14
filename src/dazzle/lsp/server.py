@@ -5,6 +5,7 @@ Provides IDE features by analyzing DAZZLE DSL files and using the DAZZLE IR.
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -401,59 +402,204 @@ def completion(ls: DazzleLanguageServer, params: CompletionParams) -> Completion
     return CompletionList(is_incomplete=False, items=items)
 
 
+# All DSL construct keywords that start a named block: keyword name "Title":
+_CONSTRUCT_KEYWORDS = (
+    "entity|surface|experience|service|workspace|archetype|flow|integration|"
+    "foreign_model|view|enum|process|story|persona|scenario|ledger|transaction|"
+    "schedule|webhook|approval|sla|policy|island|channel|event_model|"
+    "llm_model|llm_config|llm_intent"
+)
+
+# Regex: keyword  name  optional("Title")  colon
+_CONSTRUCT_RE = re.compile(
+    rf"^(\s*)({_CONSTRUCT_KEYWORDS})\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\"([^\"]*)\")?\s*:"
+)
+
+# Regex for child elements (fields, sections, actions, steps, states, etc.)
+_CHILD_RE = re.compile(
+    r"^(\s+)(?:(field|section|action|step|state|transfer|transition|tier)\s+)"
+    r"([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\"([^\"]*)\")?"
+)
+
+# Regex for entity field declarations: indented  name: type
+_FIELD_RE = re.compile(r"^(\s+)([a-zA-Z_][a-zA-Z0-9_]*)\s*:")
+
+# Map construct keyword to SymbolKind
+_CONSTRUCT_SYMBOL_KIND: dict[str, SymbolKind] = {
+    "entity": SymbolKind.Class,
+    "surface": SymbolKind.Interface,
+    "workspace": SymbolKind.Module,
+    "experience": SymbolKind.Function,
+    "service": SymbolKind.Method,
+    "process": SymbolKind.Event,
+    "story": SymbolKind.Struct,
+    "persona": SymbolKind.Object,
+    "scenario": SymbolKind.Struct,
+    "view": SymbolKind.TypeParameter,
+    "enum": SymbolKind.Enum,
+    "ledger": SymbolKind.Class,
+    "transaction": SymbolKind.Function,
+    "schedule": SymbolKind.Event,
+    "webhook": SymbolKind.Event,
+    "approval": SymbolKind.Operator,
+    "sla": SymbolKind.Constant,
+    "policy": SymbolKind.Key,
+    "island": SymbolKind.Package,
+    "integration": SymbolKind.Interface,
+    "foreign_model": SymbolKind.Class,
+    "archetype": SymbolKind.Class,
+    "flow": SymbolKind.Function,
+    "channel": SymbolKind.Event,
+    "event_model": SymbolKind.Event,
+    "llm_model": SymbolKind.Variable,
+    "llm_config": SymbolKind.Variable,
+    "llm_intent": SymbolKind.Function,
+}
+
+# Map child keyword to SymbolKind
+_CHILD_SYMBOL_KIND: dict[str, SymbolKind] = {
+    "field": SymbolKind.Field,
+    "section": SymbolKind.Namespace,
+    "action": SymbolKind.Method,
+    "step": SymbolKind.Function,
+    "state": SymbolKind.EnumMember,
+    "transfer": SymbolKind.Function,
+    "transition": SymbolKind.Operator,
+    "tier": SymbolKind.Constant,
+}
+
+
+def _scan_document_symbols(text: str) -> list[DocumentSymbol]:
+    """Scan document text to extract symbols with correct positions.
+
+    This scans line-by-line using regex to find construct declarations and
+    their children, using indentation to determine parent-child relationships.
+    """
+    lines = text.split("\n")
+    symbols: list[DocumentSymbol] = []
+    current_construct: DocumentSymbol | None = None
+
+    for line_no, line in enumerate(lines):
+        # Check for top-level construct declaration
+        m = _CONSTRUCT_RE.match(line)
+        if m:
+            indent_str, keyword, name, title = m.groups()
+
+            # Finish previous construct's range
+            if current_construct is not None:
+                _close_symbol_range(current_construct, line_no - 1, lines)
+
+            sym_kind = _CONSTRUCT_SYMBOL_KIND.get(keyword, SymbolKind.Variable)
+            sel_start = len(indent_str) + len(keyword) + 1  # after "keyword "
+            sel_end = sel_start + len(name)
+
+            sym = DocumentSymbol(
+                name=name,
+                kind=sym_kind,
+                range=Range(
+                    start=Position(line=line_no, character=0),
+                    end=Position(line=line_no, character=len(line)),
+                ),
+                selection_range=Range(
+                    start=Position(line=line_no, character=sel_start),
+                    end=Position(line=line_no, character=sel_end),
+                ),
+                detail=f"{keyword}" + (f" — {title}" if title else ""),
+                children=[],
+            )
+
+            symbols.append(sym)
+            current_construct = sym
+            continue
+
+        # If we're inside a construct, look for children
+        if current_construct is not None:
+            # Check for named children (field, section, action, step, state, etc.)
+            cm = _CHILD_RE.match(line)
+            if cm:
+                child_indent, child_keyword, child_name, child_title = cm.groups()
+                child_kind = _CHILD_SYMBOL_KIND.get(child_keyword, SymbolKind.Field)
+                sel_start = len(child_indent) + len(child_keyword) + 1
+                sel_end = sel_start + len(child_name)
+
+                child_sym = DocumentSymbol(
+                    name=child_name,
+                    kind=child_kind,
+                    range=Range(
+                        start=Position(line=line_no, character=0),
+                        end=Position(line=line_no, character=len(line)),
+                    ),
+                    selection_range=Range(
+                        start=Position(line=line_no, character=sel_start),
+                        end=Position(line=line_no, character=sel_end),
+                    ),
+                    detail=child_keyword + (f" — {child_title}" if child_title else ""),
+                )
+                children = list(current_construct.children or [])
+                children.append(child_sym)
+                current_construct.children = children
+                continue
+
+            # For entities, also detect field declarations (name: type)
+            if current_construct.kind == SymbolKind.Class:
+                fm = _FIELD_RE.match(line)
+                if fm:
+                    field_indent, field_name = fm.groups()
+                    # Skip keywords that look like fields but aren't
+                    if field_name not in (
+                        "id",
+                        "index",
+                        "constraint",
+                        "invariant",
+                        "mode",
+                        "uses",
+                        "source",
+                        "intent",
+                        "domain",
+                        "patterns",
+                        "extends",
+                        "access",
+                    ):
+                        sel_start = len(field_indent)
+                        sel_end = sel_start + len(field_name)
+                        field_sym = DocumentSymbol(
+                            name=field_name,
+                            kind=SymbolKind.Field,
+                            range=Range(
+                                start=Position(line=line_no, character=0),
+                                end=Position(line=line_no, character=len(line)),
+                            ),
+                            selection_range=Range(
+                                start=Position(line=line_no, character=sel_start),
+                                end=Position(line=line_no, character=sel_end),
+                            ),
+                            detail="",
+                        )
+                        children = list(current_construct.children or [])
+                        children.append(field_sym)
+                        current_construct.children = children
+
+    # Close the last construct
+    if current_construct is not None:
+        _close_symbol_range(current_construct, len(lines) - 1, lines)
+
+    return symbols
+
+
+def _close_symbol_range(symbol: DocumentSymbol, end_line: int, lines: list[str]) -> None:
+    """Update a symbol's range to extend to end_line."""
+    end_char = len(lines[end_line]) if end_line < len(lines) else 0
+    symbol.range = Range(
+        start=symbol.range.start,
+        end=Position(line=end_line, character=end_char),
+    )
+
+
 @server.feature(TEXT_DOCUMENT_DOCUMENT_SYMBOL)
 def document_symbol(ls: DazzleLanguageServer, params: DocumentSymbolParams) -> list[DocumentSymbol]:
     """Provide document symbols for outline view."""
-    if not ls.appspec:
-        return []
-
-    symbols: list[DocumentSymbol] = []
-
-    # Add entities
-    for entity in ls.appspec.domain.entities:
-        # Create range (we don't have exact positions, so use dummy range)
-        range_ = Range(start=Position(line=0, character=0), end=Position(line=0, character=0))
-
-        entity_symbol = DocumentSymbol(
-            name=entity.name,
-            kind=SymbolKind.Class,
-            range=range_,
-            selection_range=range_,
-            detail=entity.title or "",
-        )
-
-        # Add fields as children
-        children = []
-        for field in entity.fields:
-            field_range = Range(
-                start=Position(line=0, character=0), end=Position(line=0, character=0)
-            )
-            field_symbol = DocumentSymbol(
-                name=field.name,
-                kind=SymbolKind.Field,
-                range=field_range,
-                selection_range=field_range,
-                detail=str(field.type.kind.value),
-            )
-            children.append(field_symbol)
-
-        entity_symbol.children = children
-        symbols.append(entity_symbol)
-
-    # Add surfaces
-    for surface in ls.appspec.surfaces:
-        range_ = Range(start=Position(line=0, character=0), end=Position(line=0, character=0))
-
-        surface_symbol = DocumentSymbol(
-            name=surface.name,
-            kind=SymbolKind.Interface,
-            range=range_,
-            selection_range=range_,
-            detail=surface.title or "",
-        )
-        symbols.append(surface_symbol)
-
-    return symbols
+    document = ls.workspace.get_text_document(params.text_document.uri)
+    return _scan_document_symbols(document.source)
 
 
 # Helper functions
