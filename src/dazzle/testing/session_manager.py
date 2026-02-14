@@ -389,9 +389,34 @@ class SessionManager:
         persona_id: str,
         role: str,
     ) -> PersonaSession | None:
-        """Try authenticating via /auth/login."""
-        email = f"{persona_id}@test.local"
-        password = f"{persona_id}pass123"  # nosec B105 - test-only credential
+        """Try authenticating via /auth/login.
+
+        Uses credentials from (in priority order):
+        1. DAZZLE_TEST_EMAIL / DAZZLE_TEST_PASSWORD environment variables
+        2. .dazzle/test_credentials.json file
+        3. Generated test credentials ({persona_id}@test.local / {persona_id}pass123)
+        """
+        import os
+
+        email = os.environ.get("DAZZLE_TEST_EMAIL")
+        password = os.environ.get("DAZZLE_TEST_PASSWORD")
+
+        if not email or not password:
+            # Try credentials file
+            creds_path = self.project_path / ".dazzle" / "test_credentials.json"
+            if creds_path.exists():
+                try:
+                    creds = json.loads(creds_path.read_text())
+                    email = email or creds.get("email")
+                    password = password or creds.get("password")
+                except Exception:
+                    pass
+
+        if not email or not password:
+            # Fall back to generated test credentials
+            email = f"{persona_id}@test.local"
+            password = f"{persona_id}pass123"  # nosec B105 - test-only credential
+
         try:
             resp = await client.post(
                 f"{self.base_url}/auth/login",

@@ -492,10 +492,14 @@ class UnifiedTestRunner:
             else:
                 _log(f"Using external server: {self.base_url}")
 
-            # Authenticate as persona if requested
+            # Authenticate as persona if requested, or auto-authenticate
+            # when targeting an external server (remote servers require auth)
             if persona:
                 _log(f"Authenticating as persona '{persona}'...")
                 self._authenticate_persona(persona)
+            elif self.base_url:
+                _log("Auto-authenticating for remote server...")
+                self._authenticate_persona("admin")
 
             # Run CRUD tests
             _log("Running CRUD / state-machine tests...")

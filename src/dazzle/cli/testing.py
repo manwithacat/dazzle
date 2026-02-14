@@ -4,6 +4,7 @@ Semantic E2E testing CLI commands.
 Commands for generating and running E2E tests for Dazzle applications.
 """
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -1417,6 +1418,16 @@ def dsl_run(
         "-b",
         help="Base URL of a running server (local or remote). Skips auto-starting a local server.",
     ),
+    email: str = typer.Option(
+        None,
+        "--email",
+        help="Test user email for remote server auth. Overrides DAZZLE_TEST_EMAIL.",
+    ),
+    password: str = typer.Option(
+        None,
+        "--password",
+        help="Test user password for remote server auth. Overrides DAZZLE_TEST_PASSWORD.",
+    ),
     format: str = typer.Option(
         "table",
         "--format",
@@ -1445,6 +1456,7 @@ def dsl_run(
         dazzle test dsl-run --timeout 120      # Allow 2 min for server startup
         dazzle test dsl-run --format json      # JSON output for CI
         dazzle test dsl-run --base-url https://staging.example.com  # Remote server
+        dazzle test dsl-run -b https://staging.example.com --email user@example.com --password secret
     """
     import json
 
@@ -1462,6 +1474,12 @@ def dsl_run(
         raise typer.Exit(code=1)
 
     json_mode = format == "json"
+
+    # Forward --email / --password to environment for SessionManager + DazzleClient
+    if email:
+        os.environ["DAZZLE_TEST_EMAIL"] = email
+    if password:
+        os.environ["DAZZLE_TEST_PASSWORD"] = password
 
     # Preflight check for remote servers
     if base_url:

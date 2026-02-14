@@ -547,7 +547,7 @@ class DSLTestGenerator:
 
         # Determine the route for this workspace
         # Workspaces typically have routes like /workspace_name or derive from their name
-        workspace_route = f"/{workspace.name.replace('_', '-')}"
+        workspace_route = f"/app/workspaces/{workspace.name}"
 
         # Tier 1 Playwright navigation test - scripted, no LLM needed
         tests.append(

@@ -1007,7 +1007,7 @@ class TestRunner:
                 if target.startswith("workspace:"):
                     workspace_name = target.replace("workspace:", "")
                     # Get the route path from step data
-                    route = data.get("route", f"/app/{workspace_name}")
+                    route = data.get("route", f"/app/workspaces/{workspace_name}")
                     try:
                         # Check if UI route responds
                         resp = self.client.client.get(
