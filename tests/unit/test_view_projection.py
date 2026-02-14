@@ -313,3 +313,89 @@ class TestListHandlerProjection:
         request = MockRequest()
         await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
         assert service.last_kwargs.get("select_fields") is None
+
+
+# ---------------------------------------------------------------------------
+# Auto-include (N+1 prevention) tests
+# ---------------------------------------------------------------------------
+
+
+class TestAutoInclude:
+    """create_list_handler passes auto_include through for eager loading."""
+
+    @pytest.mark.asyncio
+    async def test_auto_include_passed_to_service(self) -> None:
+        """Verify auto_include is passed through as include to service.execute()."""
+
+        class MockService:
+            def __init__(self) -> None:
+                self.last_kwargs: dict = {}
+
+            async def execute(self, **kwargs: object) -> dict:
+                self.last_kwargs = kwargs
+                return {"items": [], "total": 0, "page": 1, "page_size": 20}
+
+        class MockRequest:
+            query_params: dict = {}
+
+            class headers:
+                @staticmethod
+                def get(key: str, default: str = "") -> str:
+                    return ""
+
+            class state:
+                pass
+
+        try:
+            from dazzle_back.runtime.route_generator import create_list_handler
+        except ImportError:
+            pytest.skip("FastAPI not available")
+
+        service = MockService()
+        handler = create_list_handler(
+            service,
+            auto_include=["assigned_to", "completed_by", "created_by"],
+        )
+
+        request = MockRequest()
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+        assert service.last_kwargs.get("include") == [
+            "assigned_to",
+            "completed_by",
+            "created_by",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_no_auto_include_by_default(self) -> None:
+        """Without auto_include, None is passed."""
+
+        class MockService:
+            def __init__(self) -> None:
+                self.last_kwargs: dict = {}
+
+            async def execute(self, **kwargs: object) -> dict:
+                self.last_kwargs = kwargs
+                return {"items": [], "total": 0, "page": 1, "page_size": 20}
+
+        class MockRequest:
+            query_params: dict = {}
+
+            class headers:
+                @staticmethod
+                def get(key: str, default: str = "") -> str:
+                    return ""
+
+            class state:
+                pass
+
+        try:
+            from dazzle_back.runtime.route_generator import create_list_handler
+        except ImportError:
+            pytest.skip("FastAPI not available")
+
+        service = MockService()
+        handler = create_list_handler(service)
+
+        request = MockRequest()
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+        assert service.last_kwargs.get("include") is None

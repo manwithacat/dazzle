@@ -147,6 +147,8 @@ class ServerConfig:
 
     # View-based list projections (v0.26.0) — entity_name -> [field_names]
     entity_list_projections: dict[str, list[str]] = field(default_factory=dict)
+    # Auto-eager-load ref relations (v0.26.0) — entity_name -> [relation_names]
+    entity_auto_includes: dict[str, list[str]] = field(default_factory=dict)
 
 
 # Runtime import
@@ -284,6 +286,8 @@ class DNRBackendApp:
         self._enable_console = config.enable_console
         # View-based list projections (v0.26.0)
         self._entity_list_projections: dict[str, list[str]] = config.entity_list_projections
+        # Auto-eager-load ref relations (v0.26.0)
+        self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
@@ -1502,6 +1506,7 @@ class DNRBackendApp:
             audit_logger=audit_logger,
             cedar_access_specs=cedar_access_specs,
             entity_list_projections=self._entity_list_projections,
+            entity_auto_includes=self._entity_auto_includes,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,
@@ -2145,6 +2150,13 @@ def create_app_factory(
                     fields.insert(0, "id")
                 entity_list_projections[surface.entity_ref] = fields
 
+    # Auto-detect ref fields for eager loading (prevents N+1 queries)
+    entity_auto_includes: dict[str, list[str]] = {}
+    for entity in backend_spec.entities:
+        ref_names = [f.name for f in entity.fields if f.type.kind == "ref" and f.type.ref_entity]
+        if ref_names:
+            entity_auto_includes[entity.name] = ref_names
+
     # Build server config
     config = ServerConfig(
         database_url=database_url if database_url else None,
@@ -2163,6 +2175,7 @@ def create_app_factory(
         process_adapter_class=resolved_adapter_class,
         enable_console=enable_dev_mode,
         entity_list_projections=entity_list_projections,
+        entity_auto_includes=entity_auto_includes,
     )
 
     # Build and return the FastAPI app
