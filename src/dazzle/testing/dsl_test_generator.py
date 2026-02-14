@@ -295,10 +295,12 @@ class DSLTestGenerator:
 
         # Get required references for this entity
         required_refs = self._get_required_refs(entity)
-        related_entities = [entity.name] + [ref[1] for ref in required_refs]
 
-        # Build setup steps for parent entities
+        # Build setup steps for parent entities (recursive — includes transitive deps)
         setup_steps = self._generate_parent_setup_steps(required_refs)
+        related_entities = [entity.name] + [
+            step["target"].removeprefix("entity:") for step in setup_steps
+        ]
 
         # Generate entity data with ref placeholders
         entity_data = self._generate_entity_data_with_refs(entity, required_refs)
@@ -403,17 +405,18 @@ class DSLTestGenerator:
                     title=f"Validate {uf.name} uniqueness for {entity.title or entity.name}",
                     description=f"Test that duplicate {uf.name} values are rejected",
                     trigger="api_call",
-                    steps=[
+                    steps=setup_steps
+                    + [
                         {
                             "action": "create",
                             "target": f"entity:{entity.name}",
-                            "data": self._generate_entity_data(entity),
+                            "data": entity_data,
                             "rationale": "Create first entity",
                         },
                         {
                             "action": "create_expect_error",
                             "target": f"entity:{entity.name}",
-                            "data": self._generate_entity_data(entity),  # Same data
+                            "data": entity_data,  # Same data — should trigger unique violation
                             "rationale": f"Attempt duplicate {uf.name}",
                         },
                         {
@@ -423,7 +426,7 @@ class DSLTestGenerator:
                             "rationale": "Verify unique constraint enforced",
                         },
                     ],
-                    entities=[entity.name],
+                    entities=related_entities,
                     tags=["validation", "unique", "generated", "dsl-derived"],
                 )
             )
@@ -443,6 +446,14 @@ class DSLTestGenerator:
 
         state_field = sm.status_field or "status"
 
+        # Build parent setup (recursive — handles transitive FK chains)
+        required_refs = self._get_required_refs(entity)
+        setup_steps = self._generate_parent_setup_steps(required_refs)
+        entity_data = self._generate_entity_data_with_refs(entity, required_refs)
+        related_entities = [entity.name] + [
+            step["target"].removeprefix("entity:") for step in setup_steps
+        ]
+
         # Valid transitions
         for trans in sm.transitions:
             tests.append(
@@ -451,12 +462,13 @@ class DSLTestGenerator:
                     title=f"{entity.title or entity.name}: {trans.from_state} → {trans.to_state}",
                     description=f"Test valid transition from {trans.from_state} to {trans.to_state}",
                     trigger="state_change",
-                    steps=[
+                    steps=setup_steps
+                    + [
                         {
                             "action": "create",
                             "target": f"entity:{entity.name}",
                             "data": {
-                                **self._generate_entity_data(entity),
+                                **entity_data,
                                 state_field: trans.from_state,
                             },
                             "rationale": f"Create entity in {trans.from_state} state",
@@ -474,7 +486,7 @@ class DSLTestGenerator:
                             "rationale": "Verify new state",
                         },
                     ],
-                    entities=[entity.name],
+                    entities=related_entities,
                     tags=["state_machine", "transition", "generated", "dsl-derived"],
                 )
             )
@@ -491,11 +503,12 @@ class DSLTestGenerator:
                         title=f"{entity.title or entity.name}: {state} → {invalid_state} (invalid)",
                         description=f"Test that invalid transition from {state} to {invalid_state} is rejected",
                         trigger="state_change",
-                        steps=[
+                        steps=setup_steps
+                        + [
                             {
                                 "action": "create",
                                 "target": f"entity:{entity.name}",
-                                "data": {**self._generate_entity_data(entity), state_field: state},
+                                "data": {**entity_data, state_field: state},
                                 "rationale": f"Create entity in {state} state",
                             },
                             {
@@ -511,7 +524,7 @@ class DSLTestGenerator:
                                 "rationale": "Verify state unchanged",
                             },
                         ],
-                        entities=[entity.name],
+                        entities=related_entities,
                         tags=["state_machine", "invalid_transition", "generated", "dsl-derived"],
                     )
                 )
@@ -876,33 +889,55 @@ class DSLTestGenerator:
     ) -> list[dict[str, Any]]:
         """Generate setup steps that create parent entities for required refs.
 
-        For each required ref, we:
-        1. Create the parent entity
-        2. Store its ID for later use in the child entity
+        Recursively creates ancestor entities for transitive FK chains
+        (e.g. A → B → C creates C first, then B with ref to C, then A with ref to B).
+        Circular dependencies are detected and skipped.
 
         Args:
             required_refs: List of (field_name, target_entity, pk_field) tuples
 
         Returns:
-            List of step dictionaries for creating parent entities
+            List of step dictionaries for creating parent entities in dependency order
         """
-        steps = []
-        for field_name, target_entity, _pk_field in required_refs:
-            if target_entity not in self._entity_map:
-                continue
+        steps: list[dict[str, Any]] = []
+        created: set[str] = set()
+        visiting: set[str] = set()
 
-            parent = self._entity_map[target_entity]
+        def _create_ancestors(entity_name: str) -> None:
+            if entity_name in created or entity_name not in self._entity_map:
+                return
+            if entity_name in visiting:
+                # Circular dependency — skip to avoid infinite recursion
+                return
+
+            visiting.add(entity_name)
+            parent = self._entity_map[entity_name]
+            parent_refs = self._get_required_refs(parent)
+
+            # Recursively create this parent's own dependencies first
+            for _fn, target, _pk in parent_refs:
+                _create_ancestors(target)
+
+            # Now create this entity — all its ancestors already exist
             parent_data = self._generate_entity_data(parent)
+            for fn, target, pk in parent_refs:
+                if target in created:
+                    parent_data[fn] = f"$ref:parent_{target.lower()}.{pk}"
 
             steps.append(
                 {
                     "action": "create",
-                    "target": f"entity:{target_entity}",
+                    "target": f"entity:{entity_name}",
                     "data": parent_data,
-                    "store_result": f"parent_{target_entity.lower()}",
-                    "rationale": f"Create parent {parent.title or target_entity} for ref field '{field_name}'",
+                    "store_result": f"parent_{entity_name.lower()}",
+                    "rationale": f"Create parent {parent.title or entity_name}",
                 }
             )
+            created.add(entity_name)
+            visiting.discard(entity_name)
+
+        for _fn, target_entity, _pk in required_refs:
+            _create_ancestors(target_entity)
 
         return steps
 
