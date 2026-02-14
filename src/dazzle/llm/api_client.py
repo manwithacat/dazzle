@@ -159,6 +159,23 @@ class LLMAPIClient:
             except ImportError:
                 raise ImportError("OpenAI SDK not installed. Install with: pip install openai")
 
+    def complete(self, system_prompt: str, user_prompt: str) -> str:
+        """General-purpose LLM completion.
+
+        Args:
+            system_prompt: System instruction for the LLM.
+            user_prompt: User message / content to process.
+
+        Returns:
+            The LLM's response text.
+        """
+        if self._use_cli_fallback:
+            return _call_claude_cli(user_prompt, system_prompt)
+        elif self.provider == LLMProvider.ANTHROPIC:
+            return self._call_anthropic(system_prompt, user_prompt)
+        else:
+            return self._call_openai(system_prompt, user_prompt)
+
     def analyze_spec(
         self, spec_content: str, spec_path: str, system_prompt: str | None = None
     ) -> dict[str, Any]:

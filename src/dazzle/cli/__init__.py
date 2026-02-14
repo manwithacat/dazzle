@@ -158,6 +158,7 @@ from dazzle.cli.composition import composition_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.deploy import deploy_app  # noqa: E402
 from dazzle.cli.discovery import discovery_app  # noqa: E402
+from dazzle.cli.docs import docs_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
 from dazzle.cli.kg import kg_app  # noqa: E402
@@ -178,6 +179,7 @@ app.add_typer(auth_app, name="auth")
 app.add_typer(composition_app, name="composition")
 app.add_typer(db_app, name="db")
 app.add_typer(discovery_app, name="discovery")
+app.add_typer(docs_app, name="docs")
 app.add_typer(vocab_app, name="vocab")
 app.add_typer(stubs_app, name="stubs")
 app.add_typer(story_app, name="story")
