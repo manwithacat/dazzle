@@ -530,14 +530,17 @@ async def run_server(project_root: Path | None = None) -> None:
     else:
         logger.info("Running in NORMAL MODE")
 
-    # Initialize activity log (before KG so tool calls during init are captured)
+    # Initialize knowledge graph first — needed by ActivityStore (SQLite backend)
+    init_knowledge_graph(get_project_root())
+    logger.info("Knowledge graph initialized")
+
+    # Initialize activity log (JSONL + SQLite store).
+    # Must run AFTER init_knowledge_graph so init_activity_store can
+    # attach to the KG.  Without this ordering the SQLite store stays None
+    # and `dazzle workshop` (which prefers SQLite) shows perpetual idle.
     from .state import init_activity_log
 
     init_activity_log(get_project_root())
-
-    # Initialize knowledge graph
-    init_knowledge_graph(get_project_root())
-    logger.info("Knowledge graph initialized")
 
     logger.info("Starting DAZZLE MCP server...")
     try:

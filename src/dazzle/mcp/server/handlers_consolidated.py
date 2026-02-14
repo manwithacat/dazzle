@@ -1634,6 +1634,17 @@ async def dispatch_consolidated_tool(
                 activity_log = get_activity_log()
 
         activity_store = get_activity_store()
+
+        # Lazy init: if KG is available but store was never created (e.g. init
+        # ordering edge case), try to create it now so SQLite logging works.
+        if activity_store is None:
+            from .state import get_project_root, init_activity_store
+
+            root = resolved_path if isinstance(resolved_path, Path) else get_project_root()
+            if root is not None:
+                init_activity_store(root)
+                activity_store = get_activity_store()
+
         operation = arguments.get("operation")
 
         # Build progress context with activity log attached

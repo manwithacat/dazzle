@@ -418,10 +418,10 @@ def init_activity_log(root: Path) -> None:
     logger.info("Activity log initialized at: %s", log_path)
 
     # Also init the SQLite-backed activity store
-    _init_activity_store(root)
+    init_activity_store(root)
 
 
-def _init_activity_store(root: Path) -> None:
+def init_activity_store(root: Path) -> None:
     """Initialize the SQLite-backed activity store from the KG."""
     global _activity_store
 
@@ -485,7 +485,7 @@ def reinit_activity_log(project_root: Path) -> None:
             _activity_store.end_session()
         except Exception:
             pass
-    _init_activity_store(project_root)
+    init_activity_store(project_root)
 
 
 def init_browser_gate(max_concurrent: int | None = None) -> None:
