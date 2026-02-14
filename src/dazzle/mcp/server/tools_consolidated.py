@@ -1556,6 +1556,77 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Sentinel (SaaS failure-mode detection)
+        # =====================================================================
+        Tool(
+            name="sentinel",
+            description=(
+                "Sentinel operations: scan (run failure-mode detection against DSL), "
+                "findings (get findings from latest/specific scan), "
+                "suppress (mark finding as false positive), "
+                "status (available agents and last scan), "
+                "history (list recent scans). "
+                "Deterministic static analysis of the IR — no source code scanning."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "scan",
+                            "findings",
+                            "suppress",
+                            "status",
+                            "history",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "agents": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Agent IDs to run (for scan). Options: DI, AA, MT, BL. Default: all.",
+                    },
+                    "severity_threshold": {
+                        "type": "string",
+                        "enum": ["critical", "high", "medium", "low", "info"],
+                        "description": "Minimum severity to include (for scan/findings). Default: info.",
+                    },
+                    "detail": {
+                        "type": "string",
+                        "enum": ["metrics", "issues", "full"],
+                        "description": "Response detail level (for scan). Default: issues.",
+                    },
+                    "agent": {
+                        "type": "string",
+                        "description": "Filter findings by agent ID (for findings).",
+                    },
+                    "severity": {
+                        "type": "string",
+                        "description": "Filter findings by severity (for findings).",
+                    },
+                    "scan_id": {
+                        "type": "string",
+                        "description": "Specific scan ID (for findings).",
+                    },
+                    "finding_id": {
+                        "type": "string",
+                        "description": "Finding ID to suppress (for suppress).",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Reason for suppression (for suppress).",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max scans to return (for history). Default: 10.",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

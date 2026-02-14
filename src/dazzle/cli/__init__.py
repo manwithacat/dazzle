@@ -166,6 +166,7 @@ from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
+from dazzle.cli.sentinel import sentinel_app  # noqa: E402
 from dazzle.cli.specs import specs_app  # noqa: E402
 from dazzle.cli.story import story_app  # noqa: E402
 from dazzle.cli.stubs import stubs_app  # noqa: E402
@@ -192,6 +193,7 @@ app.add_typer(pitch_app, name="pitch")
 app.add_typer(kg_app, name="kg")
 app.add_typer(lsp_app, name="lsp")
 app.add_typer(mcp_app, name="mcp")
+app.add_typer(sentinel_app, name="sentinel")
 
 
 # =============================================================================

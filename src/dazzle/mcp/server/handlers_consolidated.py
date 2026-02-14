@@ -1554,6 +1554,41 @@ async def handle_composition(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Sentinel Handler
+# =============================================================================
+
+
+def handle_sentinel(arguments: dict[str, Any]) -> str:
+    """Handle sentinel operations."""
+    from .handlers.sentinel import (
+        findings_handler,
+        history_handler,
+        scan_handler,
+        status_handler,
+        suppress_handler,
+    )
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    if operation == "scan":
+        return scan_handler(project_path, arguments)
+    elif operation == "findings":
+        return findings_handler(project_path, arguments)
+    elif operation == "suppress":
+        return suppress_handler(project_path, arguments)
+    elif operation == "status":
+        return status_handler(project_path, arguments)
+    elif operation == "history":
+        return history_handler(project_path, arguments)
+    else:
+        return json.dumps({"error": f"Unknown sentinel operation: {operation}"})
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1583,6 +1618,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "policy": handle_policy,
     "pulse": handle_pulse,
     "composition": handle_composition,
+    "sentinel": handle_sentinel,
 }
 
 
