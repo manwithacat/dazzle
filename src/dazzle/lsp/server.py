@@ -504,95 +504,323 @@ def definition(ls: DazzleLanguageServer, params: DefinitionParams) -> Location |
     return None
 
 
+def _detect_completion_context(text: str, line: int, character: int) -> str:
+    """Detect the completion context from cursor position.
+
+    Returns a context string:
+      "top_level" — at column 0, suggest construct keywords
+      "mode_value" — after "mode:", suggest mode values
+      "ref_target" — after "ref" or "uses entity", suggest entity names
+      "source_target" — after "source:", suggest view names
+      "transition_target" — after "->", suggest surface/experience names
+      "entity_block" — inside an entity, suggest field types + modifiers
+      "surface_block" — inside a surface, suggest surface sub-keywords
+      "process_block" — inside a process, suggest process sub-keywords
+      "global" — fallback: all names + types + modifiers
+    """
+    lines = text.split("\n")
+    if line >= len(lines):
+        return "global"
+
+    current_line = lines[line]
+    prefix = current_line[:character]
+    prefix_stripped = prefix.strip()
+
+    # Check current line patterns first
+    if re.search(r"\bmode\s*:\s*$", prefix):
+        return "mode_value"
+    if re.search(r"\bref\s+$", prefix):
+        return "ref_target"
+    if re.search(r"\buses\s+entity\s+$", prefix):
+        return "ref_target"
+    if re.search(r"\bsource\s*:\s*$", prefix):
+        return "source_target"
+    if re.search(r"->\s*$", prefix):
+        return "transition_target"
+
+    # Check indentation level — column 0 means top-level
+    indent = len(current_line) - len(current_line.lstrip())
+    if indent == 0 and not prefix_stripped:
+        return "top_level"
+
+    # Look at enclosing construct to determine block context
+    if indent > 0:
+        for i in range(line - 1, -1, -1):
+            prev = lines[i]
+            m = _CONSTRUCT_RE.match(prev)
+            if m:
+                keyword = m.group(2)
+                if keyword == "entity":
+                    return "entity_block"
+                elif keyword == "surface":
+                    return "surface_block"
+                elif keyword == "process":
+                    return "process_block"
+                else:
+                    return "global"
+
+    return "global"
+
+
+_FIELD_TYPES = [
+    "uuid",
+    "str",
+    "int",
+    "float",
+    "bool",
+    "date",
+    "datetime",
+    "time",
+    "text",
+    "json",
+    "ref",
+    "enum",
+    "money",
+    "file",
+    "email",
+    "decimal",
+    "computed",
+]
+
+_FIELD_MODIFIERS = [
+    "required",
+    "unique",
+    "pk",
+    "optional",
+    "auto_add",
+    "auto_update",
+    "readonly",
+    "index",
+]
+
+_CONSTRUCT_KEYWORDS = [
+    "entity",
+    "surface",
+    "workspace",
+    "experience",
+    "service",
+    "integration",
+    "foreign_model",
+    "view",
+    "enum",
+    "process",
+    "story",
+    "persona",
+    "scenario",
+    "ledger",
+    "transaction",
+    "schedule",
+    "webhook",
+    "approval",
+    "sla",
+    "policy",
+    "island",
+    "channel",
+    "archetype",
+    "flow",
+]
+
+_MODE_VALUES = ["list", "view", "create", "edit", "delete", "custom"]
+
+_SURFACE_SUBKEYWORDS = [
+    "section",
+    "action",
+    "field",
+    "mode",
+    "uses",
+    "source",
+    "filter",
+    "sort",
+    "display",
+    "search",
+    "empty",
+]
+
+_PROCESS_SUBKEYWORDS = [
+    "state",
+    "transition",
+    "step",
+    "trigger",
+    "guard",
+    "parallel",
+    "subprocess",
+    "human_task",
+    "compensate",
+    "on_success",
+    "on_failure",
+]
+
+
 @server.feature(TEXT_DOCUMENT_COMPLETION)
 def completion(ls: DazzleLanguageServer, params: CompletionParams) -> CompletionList | None:
-    """Provide completion suggestions."""
+    """Provide context-aware completion suggestions."""
     if not ls.appspec:
         return None
 
+    document = ls.workspace.get_text_document(params.text_document.uri)
+    ctx = _detect_completion_context(
+        document.source, params.position.line, params.position.character
+    )
+
     items: list[CompletionItem] = []
-
-    # Add all named constructs from the name index
-    _COMPLETION_KIND_MAP: dict[str, CompletionItemKind] = {
-        "entity": CompletionItemKind.Class,
-        "surface": CompletionItemKind.Interface,
-        "view": CompletionItemKind.TypeParameter,
-        "enum": CompletionItemKind.Enum,
-        "workspace": CompletionItemKind.Module,
-        "experience": CompletionItemKind.Function,
-        "process": CompletionItemKind.Event,
-        "story": CompletionItemKind.Struct,
-        "persona": CompletionItemKind.Reference,
-        "scenario": CompletionItemKind.Struct,
-        "service": CompletionItemKind.Method,
-        "integration": CompletionItemKind.Interface,
-        "foreign_model": CompletionItemKind.Class,
-        "ledger": CompletionItemKind.Class,
-        "transaction": CompletionItemKind.Function,
-        "schedule": CompletionItemKind.Event,
-        "webhook": CompletionItemKind.Event,
-        "approval": CompletionItemKind.Operator,
-        "sla": CompletionItemKind.Constant,
-        "island": CompletionItemKind.Module,
-        "channel": CompletionItemKind.Event,
-        "llm_model": CompletionItemKind.Variable,
-        "llm_intent": CompletionItemKind.Function,
-        "archetype": CompletionItemKind.Class,
-        "policy": CompletionItemKind.Property,
-    }
-
     index = _build_name_index(ls.appspec)
-    for name, (construct_type, spec) in index.items():
-        title = getattr(spec, "title", None) or getattr(spec, "description", None)
-        items.append(
-            CompletionItem(
-                label=name,
-                kind=_COMPLETION_KIND_MAP.get(construct_type, CompletionItemKind.Text),
-                detail=construct_type.replace("_", " ").title(),
-                documentation=title or name,
-            )
-        )
 
-    # Add common field types
-    field_types = [
-        "uuid",
-        "str",
-        "int",
-        "float",
-        "bool",
-        "date",
-        "datetime",
-        "time",
-        "text",
-        "json",
-        "ref",
-        "enum",
-    ]
-    for ft in field_types:
-        items.append(
-            CompletionItem(
-                label=ft,
-                kind=CompletionItemKind.Keyword,
-                detail="Field type",
+    if ctx == "top_level":
+        # Suggest construct keywords
+        for kw in _CONSTRUCT_KEYWORDS:
+            items.append(
+                CompletionItem(
+                    label=kw,
+                    kind=CompletionItemKind.Keyword,
+                    detail="Construct",
+                )
             )
-        )
 
-    # Add common modifiers
-    modifiers = ["required", "unique", "pk", "auto_add", "auto_update"]
-    for mod in modifiers:
-        items.append(
-            CompletionItem(
-                label=mod,
-                kind=CompletionItemKind.Keyword,
-                detail="Modifier",
+    elif ctx == "mode_value":
+        for mode in _MODE_VALUES:
+            items.append(
+                CompletionItem(
+                    label=mode,
+                    kind=CompletionItemKind.EnumMember,
+                    detail="Mode",
+                )
             )
-        )
+
+    elif ctx == "ref_target":
+        # Only entity names
+        for name, (ctype, spec) in index.items():
+            if ctype == "entity":
+                items.append(
+                    CompletionItem(
+                        label=name,
+                        kind=CompletionItemKind.Class,
+                        detail="Entity",
+                        documentation=getattr(spec, "title", name),
+                    )
+                )
+
+    elif ctx == "source_target":
+        # Only view names
+        for name, (ctype, spec) in index.items():
+            if ctype == "view":
+                items.append(
+                    CompletionItem(
+                        label=name,
+                        kind=CompletionItemKind.TypeParameter,
+                        detail="View",
+                        documentation=getattr(spec, "title", name),
+                    )
+                )
+
+    elif ctx == "transition_target":
+        # Suggest surface and experience names
+        for name, (ctype, spec) in index.items():
+            if ctype in ("surface", "experience"):
+                items.append(
+                    CompletionItem(
+                        label=name,
+                        kind=CompletionItemKind.Interface
+                        if ctype == "surface"
+                        else CompletionItemKind.Function,
+                        detail=ctype.title(),
+                        documentation=getattr(spec, "title", name),
+                    )
+                )
+
+    elif ctx == "entity_block":
+        # Field types + modifiers + entity names (for ref)
+        for ft in _FIELD_TYPES:
+            items.append(
+                CompletionItem(
+                    label=ft,
+                    kind=CompletionItemKind.Keyword,
+                    detail="Field type",
+                )
+            )
+        for mod in _FIELD_MODIFIERS:
+            items.append(
+                CompletionItem(
+                    label=mod,
+                    kind=CompletionItemKind.Keyword,
+                    detail="Modifier",
+                )
+            )
+        # Entity names for ref targets
+        for name, (ctype, _) in index.items():
+            if ctype == "entity":
+                items.append(
+                    CompletionItem(
+                        label=name,
+                        kind=CompletionItemKind.Class,
+                        detail="Entity (ref target)",
+                    )
+                )
+
+    elif ctx == "surface_block":
+        for kw in _SURFACE_SUBKEYWORDS:
+            items.append(
+                CompletionItem(
+                    label=kw,
+                    kind=CompletionItemKind.Keyword,
+                    detail="Surface keyword",
+                )
+            )
+        # Entity names for "uses entity"
+        for name, (ctype, spec) in index.items():
+            if ctype in ("entity", "view", "surface", "experience"):
+                items.append(
+                    CompletionItem(
+                        label=name,
+                        kind=CompletionItemKind.Class,
+                        detail=ctype.title(),
+                        documentation=getattr(spec, "title", name),
+                    )
+                )
+
+    elif ctx == "process_block":
+        for kw in _PROCESS_SUBKEYWORDS:
+            items.append(
+                CompletionItem(
+                    label=kw,
+                    kind=CompletionItemKind.Keyword,
+                    detail="Process keyword",
+                )
+            )
+
+    else:
+        # Global fallback — all names + types + modifiers
+        for name, (ctype, spec) in index.items():
+            title = getattr(spec, "title", None) or getattr(spec, "description", None)
+            items.append(
+                CompletionItem(
+                    label=name,
+                    kind=CompletionItemKind.Text,
+                    detail=ctype.replace("_", " ").title(),
+                    documentation=title or name,
+                )
+            )
+        for ft in _FIELD_TYPES:
+            items.append(
+                CompletionItem(
+                    label=ft,
+                    kind=CompletionItemKind.Keyword,
+                    detail="Field type",
+                )
+            )
+        for mod in _FIELD_MODIFIERS:
+            items.append(
+                CompletionItem(
+                    label=mod,
+                    kind=CompletionItemKind.Keyword,
+                    detail="Modifier",
+                )
+            )
 
     return CompletionList(is_incomplete=False, items=items)
 
 
 # All DSL construct keywords that start a named block: keyword name "Title":
-_CONSTRUCT_KEYWORDS = (
+_CONSTRUCT_KW_PATTERN = (
     "entity|surface|experience|service|workspace|archetype|flow|integration|"
     "foreign_model|view|enum|process|story|persona|scenario|ledger|transaction|"
     "schedule|webhook|approval|sla|policy|island|channel|event_model|"
@@ -601,7 +829,7 @@ _CONSTRUCT_KEYWORDS = (
 
 # Regex: keyword  name  optional("Title")  colon
 _CONSTRUCT_RE = re.compile(
-    rf"^(\s*)({_CONSTRUCT_KEYWORDS})\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\"([^\"]*)\")?\s*:"
+    rf"^(\s*)({_CONSTRUCT_KW_PATTERN})\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*(?:\"([^\"]*)\")?\s*:"
 )
 
 # Regex for child elements (fields, sections, actions, steps, states, etc.)
