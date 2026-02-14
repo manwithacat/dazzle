@@ -145,6 +145,9 @@ class ServerConfig:
     # Founder Console (v0.26.0)
     enable_console: bool = True  # Enable /_console/ founder control plane
 
+    # View-based list projections (v0.26.0) — entity_name -> [field_names]
+    entity_list_projections: dict[str, list[str]] = field(default_factory=dict)
+
 
 # Runtime import
 try:
@@ -279,6 +282,8 @@ class DNRBackendApp:
         self._fragment_sources: dict[str, dict[str, Any]] = config.fragment_sources
         # Founder Console (v0.26.0)
         self._enable_console = config.enable_console
+        # View-based list projections (v0.26.0)
+        self._entity_list_projections: dict[str, list[str]] = config.entity_list_projections
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging."""
@@ -1496,6 +1501,7 @@ class DNRBackendApp:
             auth_store=self._auth_store,
             audit_logger=audit_logger,
             cedar_access_specs=cedar_access_specs,
+            entity_list_projections=self._entity_list_projections,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,
@@ -2126,6 +2132,19 @@ def create_app_factory(
                 logger.warning("TemporalAdapter requested but not available (install temporalio)")
         # Default: None means LiteProcessAdapter will be used
 
+    # Compute view-based list projections from DSL surfaces
+    entity_list_projections: dict[str, list[str]] = {}
+    views_by_name = {v.name: v for v in appspec.views}
+    for surface in appspec.surfaces:
+        if surface.view_ref and surface.entity_ref:
+            view = views_by_name.get(surface.view_ref)
+            if view and view.fields:
+                fields = [f.name for f in view.fields]
+                # Always include 'id' for detail links
+                if "id" not in fields:
+                    fields.insert(0, "id")
+                entity_list_projections[surface.entity_ref] = fields
+
     # Build server config
     config = ServerConfig(
         database_url=database_url if database_url else None,
@@ -2143,6 +2162,7 @@ def create_app_factory(
         enable_processes=enable_processes,
         process_adapter_class=resolved_adapter_class,
         enable_console=enable_dev_mode,
+        entity_list_projections=entity_list_projections,
     )
 
     # Build and return the FastAPI app

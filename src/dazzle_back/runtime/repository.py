@@ -421,6 +421,7 @@ class Repository(Generic[T]):
         sort: str | list[str] | None = None,
         include: list[str] | None = None,
         search: str | None = None,
+        select_fields: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         List entities with pagination, filtering, sorting, and relation loading.
@@ -446,6 +447,8 @@ class Repository(Generic[T]):
 
         # Build query using QueryBuilder
         builder = QueryBuilder(table_name=self.table_name, placeholder_style=self.db.placeholder)
+        if select_fields:
+            builder.select_fields = list(select_fields)
         builder.set_pagination(page, page_size)
 
         if filters:

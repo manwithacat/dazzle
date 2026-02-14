@@ -45,6 +45,7 @@ class SurfaceParserMixin:
         self.expect(TokenType.INDENT)
 
         entity_ref = None
+        view_ref = None
         mode = ir.SurfaceMode.CUSTOM
         priority = ir.BusinessPriority.MEDIUM
         sections = []
@@ -71,6 +72,13 @@ class SurfaceParserMixin:
                 self.expect(TokenType.COLON)
                 mode_token = self.expect_identifier_or_keyword()
                 mode = ir.SurfaceMode(mode_token.value)
+                self.skip_newlines()
+
+            # source: ViewName (view reference for field projection)
+            elif self.match(TokenType.SOURCE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                view_ref = self.expect(TokenType.IDENTIFIER).value
                 self.skip_newlines()
 
             # priority: critical|high|medium|low
@@ -133,6 +141,7 @@ class SurfaceParserMixin:
             name=name,
             title=title,
             entity_ref=entity_ref,
+            view_ref=view_ref,
             mode=mode,
             priority=priority,
             sections=sections,

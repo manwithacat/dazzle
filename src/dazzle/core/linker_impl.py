@@ -838,6 +838,25 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                 f"Surface '{surface_name}' references unknown entity '{surface.entity_ref}'"
             )
 
+        # Check view reference (for list field projection)
+        if surface.view_ref:
+            if surface.view_ref not in symbols.views:
+                errors.append(
+                    f"Surface '{surface_name}' references unknown view '{surface.view_ref}'"
+                )
+            else:
+                view = symbols.views[surface.view_ref]
+                if (
+                    surface.entity_ref
+                    and view.source_entity
+                    and view.source_entity != surface.entity_ref
+                ):
+                    errors.append(
+                        f"Surface '{surface_name}' references view '{surface.view_ref}' "
+                        f"whose source entity '{view.source_entity}' does not match "
+                        f"surface entity '{surface.entity_ref}'"
+                    )
+
         # Check action outcomes
         for action in surface.actions:
             outcome = action.outcome

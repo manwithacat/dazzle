@@ -115,6 +115,7 @@ def create_list_handler(
     access_spec: dict[str, Any] | None = None,
     optional_auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
+    select_fields: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -124,6 +125,7 @@ def create_list_handler(
         access_spec: Access control specification for this entity
         optional_auth_dep: FastAPI dependency for optional auth (returns AuthContext)
         require_auth_by_default: If True, require authentication when no access_spec is defined
+        select_fields: Optional field projection for SQL queries
     """
 
     if optional_auth_dep is not None:
@@ -158,6 +160,7 @@ def create_list_handler(
                 sort,
                 dir,
                 search,
+                select_fields=select_fields,
             )
 
         _auth_handler.__annotations__ = {
@@ -191,6 +194,7 @@ def create_list_handler(
             sort,
             dir,
             search,
+            select_fields=select_fields,
         )
 
     _noauth_handler.__annotations__ = {
@@ -216,6 +220,7 @@ async def _list_handler_body(
     sort: str | None,
     dir: str,
     search: str | None,
+    select_fields: list[str] | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -248,6 +253,7 @@ async def _list_handler_body(
         filters=merged_filters,
         sort=sort_list,
         search=search,
+        select_fields=select_fields,
     )
 
     # Apply post-filtering if needed (for OR conditions)
@@ -883,6 +889,7 @@ class RouteGenerator:
         auth_store: Any | None = None,
         audit_logger: Any | None = None,
         cedar_access_specs: dict[str, Any] | None = None,
+        entity_list_projections: dict[str, list[str]] | None = None,
     ):
         """
         Initialize the route generator.
@@ -898,6 +905,7 @@ class RouteGenerator:
             auth_store: AuthStore instance for creating per-route role-based dependencies
             audit_logger: Optional AuditLogger for recording access decisions
             cedar_access_specs: Optional dict of entity_name -> EntityAccessSpec for Cedar evaluation
+            entity_list_projections: Optional dict mapping entity names to projected field lists
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -912,6 +920,7 @@ class RouteGenerator:
         self.auth_store = auth_store
         self.audit_logger = audit_logger
         self.cedar_access_specs = cedar_access_specs or {}
+        self.entity_list_projections = entity_list_projections or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -1000,12 +1009,15 @@ class RouteGenerator:
         ) or operation_kind == OperationKind.LIST:
             # Get access spec for this entity
             access_spec = self.entity_access_specs.get(entity_name or "")
+            # Get field projection for this entity (from view-backed list surfaces)
+            projection = self.entity_list_projections.get(entity_name or "")
             handler = create_list_handler(
                 service,
                 model,
                 access_spec=access_spec,
                 optional_auth_dep=self.optional_auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
+                select_fields=projection,
             )
             self._add_route(endpoint, handler, response_model=None)
 

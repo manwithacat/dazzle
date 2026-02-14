@@ -378,6 +378,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         filters: dict[str, Any] | None = None,
         sort: list[str] | None = None,
         search: str | None = None,
+        select_fields: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         List entities with pagination and filtering.
@@ -388,12 +389,15 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             filters: Optional filter criteria
             sort: Optional sort fields (prefix with '-' for descending)
             search: Optional full-text search query
+            select_fields: Optional field projection (SELECT only these columns)
 
         Returns:
             Dictionary with items, total, page, and page_size
         """
         if self._repository:
-            return await self._repository.list(page, page_size, filters, sort=sort, search=search)
+            return await self._repository.list(
+                page, page_size, filters, sort=sort, search=search, select_fields=select_fields
+            )
 
         # Fallback to in-memory
         items = list(self._store.values())

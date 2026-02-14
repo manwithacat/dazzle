@@ -160,6 +160,7 @@ class SurfaceSpec(BaseModel):
     name: str
     title: str | None = None
     entity_ref: str | None = None
+    view_ref: str | None = None  # Optional view for list field projection
     mode: SurfaceMode
     sections: list[SurfaceSection] = Field(default_factory=list)
     actions: list[SurfaceAction] = Field(default_factory=list)
