@@ -64,6 +64,8 @@ nav:
       - Testing: reference/testing.md
       - Databases: reference/databases.md
       - Deployment: reference/deployment.md
+      - Islands: reference/islands.md
+      - Workshop: reference/workshop.md
       - CLI: reference/cli.md
       - Grammar: reference/grammar.md
   - Examples:
