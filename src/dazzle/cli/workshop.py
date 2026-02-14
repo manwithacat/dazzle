@@ -1,5 +1,6 @@
 """Workshop CLI command — live TUI for MCP activity."""
 
+import logging
 from pathlib import Path
 
 import typer
@@ -40,11 +41,19 @@ def workshop_command(
     ),
 ) -> None:
     """Watch MCP activity in a live workshop view."""
+    # Suppress logging before importing MCP modules — the server __init__
+    # calls logging.basicConfig(level=DEBUG) which floods stderr with handler
+    # registration noise.  The workshop only reads log files / SQLite; it
+    # doesn't need server-level logging.
+    logging.disable(logging.CRITICAL)
+
     if explore:
         from dazzle.mcp.server.explorer import run_explorer
 
+        logging.disable(logging.NOTSET)
         run_explorer(Path(project_dir).resolve(), port=port)
     else:
         from dazzle.mcp.server.workshop import run_workshop
 
+        logging.disable(logging.NOTSET)
         run_workshop(project_dir, info=info, tail=tail, bell=bell)

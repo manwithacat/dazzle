@@ -356,6 +356,7 @@ def render_workshop(
     state: WorkshopState,
     project_name: str,
     version: str,
+    backend: str = "",
 ) -> Group:
     """Build the full workshop renderable."""
     now_str = datetime.now(UTC).strftime("%H:%M:%S")
@@ -367,7 +368,10 @@ def render_workshop(
     header.append(f" \u00b7 {project_name}", style="dim white")
     if version:
         header.append(f" v{version}", style="dim white")
+    if backend:
+        header.append(f" ({backend})", style="dim")
     header.append(f"  {now_str}", style="dim")
+    header.append("  \u2502  Ctrl-C to exit", style="dim")
 
     # ── Workbench ────────────────────────────────────────────────────────
     wb_table = Table.grid(padding=(0, 1))
@@ -538,6 +542,7 @@ def watch(
     state = WorkshopState(max_done=max_done, bell=bell)
 
     use_db = db_path is not None
+    backend = "SQLite" if use_db else "JSONL"
 
     # Ingest any existing entries so we start with history
     if use_db:
@@ -549,7 +554,7 @@ def watch(
 
     console = Console()
     with Live(
-        render_workshop(state, project_name, version),
+        render_workshop(state, project_name, version, backend),
         refresh_per_second=4,
         screen=False,
         console=console,
@@ -563,7 +568,7 @@ def watch(
                     new = read_new_entries(log_path, state)
                 for entry in new:
                     state.ingest(entry)
-                live.update(render_workshop(state, project_name, version))
+                live.update(render_workshop(state, project_name, version, backend))
         except KeyboardInterrupt:
             pass
 
@@ -639,17 +644,9 @@ def run_workshop(
     db_path = _detect_db_path(project_dir)
 
     if db_path is None and not log_path.exists():
-        console.print(
-            f"[dim]Log not found at[/dim] {log_path}\n"
-            f"[dim]Start the MCP server in another terminal, or use Claude Code.[/dim]\n"
-            f"[dim]Creating empty log and waiting...[/dim]"
-        )
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.touch()
 
-    backend = "SQLite" if db_path else "JSONL"
-    console.print(
-        f"[bold yellow]\u2692[/bold yellow]  Watching [cyan]{project_name}[/cyan] "
-        f"workshop [dim]({backend})[/dim] \u2014 [dim]Ctrl-C to exit[/dim]\n"
-    )
+    # Clear screen and jump straight into the TUI
+    console.clear()
     watch(log_path, project_name, version, max_done=tail, bell=bell, db_path=db_path)
