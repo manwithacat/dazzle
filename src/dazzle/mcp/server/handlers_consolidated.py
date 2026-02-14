@@ -1622,17 +1622,9 @@ async def dispatch_consolidated_tool(
             except Exception:
                 pass  # Fall through to sync resolution
 
-        # Ensure activity log points at the resolved project (roots may differ)
-        from .state import get_activity_log, get_activity_store, reinit_activity_log
+        from .state import get_activity_store
 
         resolved_path = arguments.get("_resolved_project_path")
-        activity_log = get_activity_log()
-        if resolved_path is not None and activity_log is not None:
-            expected = resolved_path / ".dazzle" / "mcp-activity.log"
-            if activity_log.path != expected:
-                reinit_activity_log(resolved_path)
-                activity_log = get_activity_log()
-
         activity_store = get_activity_store()
 
         # Lazy init: if KG is available but store was never created (e.g. init
@@ -1647,24 +1639,19 @@ async def dispatch_consolidated_tool(
 
         operation = arguments.get("operation")
 
-        # Build progress context with activity log attached
+        # Build progress context with activity store attached
         from .progress import ProgressContext
 
         progress = ProgressContext(
             session=session,
             progress_token=progress_token,
-            activity_log=activity_log,
             activity_store=activity_store,
             tool_name=name,
             operation=operation,
         )
         arguments = {**arguments, "_progress": progress}
 
-        # Write tool_start entry (both JSONL and SQLite)
-        if activity_log is not None:
-            from .activity_log import make_tool_start_entry
-
-            activity_log.append(make_tool_start_entry(name, operation))
+        # Write tool_start entry to SQLite
         if activity_store is not None:
             try:
                 activity_store.log_event("tool_start", name, operation)
@@ -1689,23 +1676,6 @@ async def dispatch_consolidated_tool(
             raise
         finally:
             duration_ms = (time.monotonic() - t0) * 1000
-
-            # Write tool_end entry to JSONL activity log
-            if activity_log is not None:
-                try:
-                    from .activity_log import make_tool_end_entry
-
-                    activity_log.append(
-                        make_tool_end_entry(
-                            name,
-                            operation,
-                            success=call_ok,
-                            duration_ms=duration_ms,
-                            error=call_error,
-                        )
-                    )
-                except Exception:
-                    pass  # Never fail the tool call due to activity logging
 
             # Write tool_end entry to SQLite activity store
             if activity_store is not None:

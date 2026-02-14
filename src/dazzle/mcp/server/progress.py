@@ -25,7 +25,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .activity_log import ActivityLog, ActivityStore
+    from .activity_log import ActivityStore
 
 logger = logging.getLogger("dazzle.mcp.progress")
 
@@ -37,9 +37,9 @@ class ProgressContext:
     (textual status updates). Falls back gracefully if the session or token
     is unavailable.
 
-    When an :class:`ActivityLog` is attached, every ``log()`` and
-    ``advance()`` call also appends a structured entry to the JSONL
-    activity log — the *reliable* channel that survives even when the
+    When an :class:`ActivityStore` is attached, every ``log()`` and
+    ``advance()`` call also appends a structured event to the SQLite
+    activity store — the *reliable* channel that survives even when the
     MCP client drops notifications.
     """
 
@@ -48,7 +48,6 @@ class ProgressContext:
         session: Any = None,
         progress_token: str | int | None = None,
         *,
-        activity_log: ActivityLog | None = None,
         activity_store: ActivityStore | None = None,
         tool_name: str | None = None,
         operation: str | None = None,
@@ -56,7 +55,6 @@ class ProgressContext:
         self._session = session
         self._progress_token = progress_token
         self._step = 0
-        self._activity_log = activity_log
         self._activity_store = activity_store
         self._tool_name = tool_name
         self._operation = operation
@@ -177,21 +175,7 @@ class ProgressContext:
     # --------------------------------------------------------------------- #
 
     def _write_log_entry(self, message: str, *, level: str = "info") -> None:
-        """Append a log entry to the activity log and store if attached."""
-        if self._activity_log is not None:
-            try:
-                from .activity_log import make_progress_entry
-
-                entry = make_progress_entry(
-                    tool=self._tool_name or "",
-                    message=message,
-                    operation=self._operation,
-                    level=level,
-                )
-                self._activity_log.append(entry)
-            except Exception:
-                pass  # Never fail the handler due to activity logging
-
+        """Append a log entry to the SQLite activity store if attached."""
         if self._activity_store is not None:
             try:
                 self._activity_store.log_event(
@@ -202,25 +186,10 @@ class ProgressContext:
                     level=level,
                 )
             except Exception:
-                pass
-
-    def _write_progress_entry(self, current: int, total: int, message: str | None) -> None:
-        """Append a progress entry to the activity log and store if attached."""
-        if self._activity_log is not None:
-            try:
-                from .activity_log import make_progress_entry
-
-                entry = make_progress_entry(
-                    tool=self._tool_name or "",
-                    message=message or "",
-                    operation=self._operation,
-                    current=current,
-                    total=total,
-                )
-                self._activity_log.append(entry)
-            except Exception:
                 pass  # Never fail the handler due to activity logging
 
+    def _write_progress_entry(self, current: int, total: int, message: str | None) -> None:
+        """Append a progress entry to the SQLite activity store if attached."""
         if self._activity_store is not None:
             try:
                 self._activity_store.log_event(
@@ -232,7 +201,7 @@ class ProgressContext:
                     message=message or "",
                 )
             except Exception:
-                pass
+                pass  # Never fail the handler due to activity logging
 
     # --------------------------------------------------------------------- #
     # Internal async helpers (for sync wrappers to fire-and-forget)

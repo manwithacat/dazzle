@@ -408,101 +408,129 @@ class TestFormatting:
 # ── ProgressContext integration ─────────────────────────────────────────────
 
 
+@pytest.fixture()
+def _activity_store_for_progress():
+    """ActivityStore backed by an in-memory KG for ProgressContext tests."""
+    from dazzle.mcp.knowledge_graph import KnowledgeGraph
+    from dazzle.mcp.server.activity_log import ActivityStore
+
+    graph = KnowledgeGraph(":memory:")
+    session_id = graph.start_activity_session(
+        project_name="test_project",
+        project_path="/tmp/test",
+        version="0.1.0",
+    )
+    return ActivityStore(graph, session_id)
+
+
 class TestProgressContextIntegration:
-    def test_log_writes_to_activity_log(self, activity_log):
-        """ProgressContext.log_sync should write to the attached activity log."""
+    def test_log_writes_to_sqlite(self, _activity_store_for_progress):
+        """ProgressContext.log_sync should write to the attached activity store."""
         from dazzle.mcp.server.progress import ProgressContext
 
         ctx = ProgressContext(
             session=None,
-            activity_log=activity_log,
+            activity_store=_activity_store_for_progress,
             tool_name="test_tool",
             operation="test_op",
         )
         ctx.log_sync("hello from sync")
 
-        result = activity_log.read_since(cursor_seq=0)
-        assert len(result["entries"]) == 1
-        assert result["entries"][0]["message"] == "hello from sync"
-        assert result["entries"][0]["tool"] == "test_tool"
+        events = _activity_store_for_progress.read_since(since_id=0)
+        assert len(events) == 1
+        assert events[0]["message"] == "hello from sync"
+        assert events[0]["tool"] == "test_tool"
 
-    def test_advance_sync_writes_progress(self, activity_log):
+    def test_advance_sync_writes_progress(self, _activity_store_for_progress):
         """ProgressContext.advance_sync should write a progress entry."""
         from dazzle.mcp.server.progress import ProgressContext
 
         ctx = ProgressContext(
             session=None,
-            activity_log=activity_log,
+            activity_store=_activity_store_for_progress,
             tool_name="pipeline",
             operation="run",
         )
         ctx.advance_sync(3, 10, "Step 3")
 
-        result = activity_log.read_since(cursor_seq=0)
-        assert len(result["entries"]) == 1
-        entry = result["entries"][0]
-        assert entry["type"] == "progress"
-        assert entry["current"] == 3
-        assert entry["total"] == 10
+        events = _activity_store_for_progress.read_since(since_id=0)
+        assert len(events) == 1
+        assert events[0]["event_type"] == "progress"
+        assert events[0]["progress_current"] == 3
+        assert events[0]["progress_total"] == 10
 
     @pytest.mark.asyncio
-    async def test_async_log_writes_to_activity_log(self, activity_log):
-        """ProgressContext.log should write to the attached activity log."""
+    async def test_async_log_writes_to_sqlite(self, _activity_store_for_progress):
+        """ProgressContext.log should write to the attached activity store."""
         from dazzle.mcp.server.progress import ProgressContext
 
         ctx = ProgressContext(
             session=None,
-            activity_log=activity_log,
+            activity_store=_activity_store_for_progress,
             tool_name="dsl",
             operation="validate",
         )
         await ctx.log("parsing modules")
 
-        result = activity_log.read_since(cursor_seq=0)
-        assert len(result["entries"]) == 1
-        assert result["entries"][0]["message"] == "parsing modules"
+        events = _activity_store_for_progress.read_since(since_id=0)
+        assert len(events) == 1
+        assert events[0]["message"] == "parsing modules"
 
     @pytest.mark.asyncio
-    async def test_async_advance_writes_progress(self, activity_log):
+    async def test_async_advance_writes_progress(self, _activity_store_for_progress):
         """ProgressContext.advance should write a structured progress entry."""
         from dazzle.mcp.server.progress import ProgressContext
 
         ctx = ProgressContext(
             session=None,
-            activity_log=activity_log,
+            activity_store=_activity_store_for_progress,
             tool_name="pipeline",
             operation="run",
         )
         await ctx.advance(5, 12, "Fidelity check")
 
-        result = activity_log.read_since(cursor_seq=0)
-        assert len(result["entries"]) == 1
-        entry = result["entries"][0]
-        assert entry["type"] == "progress"
-        assert entry["current"] == 5
-        assert entry["total"] == 12
+        events = _activity_store_for_progress.read_since(since_id=0)
+        assert len(events) == 1
+        assert events[0]["event_type"] == "progress"
+        assert events[0]["progress_current"] == 5
+        assert events[0]["progress_total"] == 12
 
 
 # ── Status handler integration ──────────────────────────────────────────────
 
 
 class TestStatusHandler:
-    def test_get_activity_handler_structured(self, activity_log, monkeypatch):
+    def test_get_activity_handler_structured(self, monkeypatch):
+        from dazzle.mcp.knowledge_graph import KnowledgeGraph
+        from dazzle.mcp.server.activity_log import ActivityStore
         from dazzle.mcp.server.handlers import status as status_mod
 
-        monkeypatch.setattr("dazzle.mcp.server.state._activity_log", activity_log)
+        graph = KnowledgeGraph(":memory:")
+        session_id = graph.start_activity_session(
+            project_name="test", project_path="/tmp/test", version="0.1.0"
+        )
+        store = ActivityStore(graph, session_id)
+        monkeypatch.setattr("dazzle.mcp.server.state._activity_store", store)
 
-        activity_log.append({"type": "tool_start", "tool": "dsl", "operation": "validate"})
-        activity_log.append({"type": "tool_end", "tool": "dsl", "success": True, "duration_ms": 50})
+        store.log_event("tool_start", "dsl", "validate")
+        store.log_event("tool_end", "dsl", "validate", success=True, duration_ms=50)
 
         result = json.loads(status_mod.get_activity_handler({"count": 10}))
         assert len(result["entries"]) == 2
         assert "cursor" in result
 
-    def test_get_activity_handler_formatted(self, activity_log, monkeypatch):
-        monkeypatch.setattr("dazzle.mcp.server.state._activity_log", activity_log)
+    def test_get_activity_handler_formatted(self, monkeypatch):
+        from dazzle.mcp.knowledge_graph import KnowledgeGraph
+        from dazzle.mcp.server.activity_log import ActivityStore
 
-        activity_log.append({"type": "tool_start", "tool": "pipeline", "operation": "run"})
+        graph = KnowledgeGraph(":memory:")
+        session_id = graph.start_activity_session(
+            project_name="test", project_path="/tmp/test", version="0.1.0"
+        )
+        store = ActivityStore(graph, session_id)
+        monkeypatch.setattr("dazzle.mcp.server.state._activity_store", store)
+
+        store.log_event("tool_start", "pipeline", "run")
 
         from dazzle.mcp.server.handlers.status import get_activity_handler
 

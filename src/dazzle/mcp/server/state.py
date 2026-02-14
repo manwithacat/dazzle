@@ -464,30 +464,6 @@ def get_activity_store() -> ActivityStore | None:
     return _activity_store
 
 
-def reinit_activity_log(project_root: Path) -> None:
-    """Re-initialize the activity log for a new project.
-
-    Called when switching projects to point the log at the new
-    project's ``.dazzle/`` directory.
-    """
-    global _activity_log, _activity_store
-
-    from dazzle.mcp.server.activity_log import ActivityLog
-
-    log_path = project_root / ".dazzle" / "mcp-activity.log"
-    _activity_log = ActivityLog(log_path)
-    _activity_log.clear()
-    logger.info("Activity log re-initialized at: %s", log_path)
-
-    # End previous session if any, start new one
-    if _activity_store is not None:
-        try:
-            _activity_store.end_session()
-        except Exception:
-            pass
-    init_activity_store(project_root)
-
-
 def init_browser_gate(max_concurrent: int | None = None) -> None:
     """Configure the global Playwright browser gate at server startup.
 

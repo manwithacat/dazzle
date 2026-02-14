@@ -33,14 +33,6 @@ def activity_store(graph):
     return ActivityStore(graph, session_id)
 
 
-@pytest.fixture()
-def activity_log(tmp_path):
-    """JSONL-based ActivityLog writing to a temp file."""
-    from dazzle.mcp.server.activity_log import ActivityLog
-
-    return ActivityLog(tmp_path / "mcp-activity.log")
-
-
 # ── dispatch_consolidated_tool writes to SQLite ─────────────────────────────
 
 
@@ -48,12 +40,11 @@ class TestDispatchWritesToSqlite:
     """End-to-end: dispatch -> handler -> SQLite events."""
 
     @pytest.mark.asyncio
-    async def test_tool_start_and_end_in_sqlite(self, activity_store, activity_log):
+    async def test_tool_start_and_end_in_sqlite(self, activity_store):
         """A successful tool call produces tool_start + tool_end in SQLite."""
         from dazzle.mcp.server.handlers_consolidated import dispatch_consolidated_tool
 
         with (
-            patch("dazzle.mcp.server.state.get_activity_log", return_value=activity_log),
             patch("dazzle.mcp.server.state.get_activity_store", return_value=activity_store),
         ):
             result = await dispatch_consolidated_tool(
@@ -80,33 +71,11 @@ class TestDispatchWritesToSqlite:
         assert end_events[0]["operation"] == "mcp"
 
     @pytest.mark.asyncio
-    async def test_tool_start_and_end_in_jsonl(self, activity_store, activity_log):
-        """A tool call also writes to the JSONL log."""
-        from dazzle.mcp.server.handlers_consolidated import dispatch_consolidated_tool
-
-        with (
-            patch("dazzle.mcp.server.state.get_activity_log", return_value=activity_log),
-            patch("dazzle.mcp.server.state.get_activity_store", return_value=activity_store),
-        ):
-            await dispatch_consolidated_tool(
-                "status",
-                {"operation": "mcp"},
-            )
-
-        data = activity_log.read_since(cursor_seq=0)
-        entries = data["entries"]
-        types = [e["type"] for e in entries]
-
-        assert "tool_start" in types
-        assert "tool_end" in types
-
-    @pytest.mark.asyncio
-    async def test_progress_events_reach_sqlite(self, activity_store, activity_log):
+    async def test_progress_events_reach_sqlite(self, activity_store):
         """Handler progress.log_sync() calls produce log events in SQLite."""
         from dazzle.mcp.server.handlers_consolidated import dispatch_consolidated_tool
 
         with (
-            patch("dazzle.mcp.server.state.get_activity_log", return_value=activity_log),
             patch("dazzle.mcp.server.state.get_activity_store", return_value=activity_store),
         ):
             # status.mcp handler calls progress.log_sync("Loading MCP status...")
@@ -121,7 +90,7 @@ class TestDispatchWritesToSqlite:
         assert len(log_events) >= 1, "Expected at least one progress log event in SQLite"
 
     @pytest.mark.asyncio
-    async def test_failed_handler_records_error(self, activity_store, activity_log):
+    async def test_failed_handler_records_error(self, activity_store):
         """A handler that raises should produce a tool_end with success=0."""
         from dazzle.mcp.server.handlers_consolidated import (
             CONSOLIDATED_TOOL_HANDLERS,
@@ -135,7 +104,6 @@ class TestDispatchWritesToSqlite:
         CONSOLIDATED_TOOL_HANDLERS["_test_boom"] = _boom
         try:
             with (
-                patch("dazzle.mcp.server.state.get_activity_log", return_value=activity_log),
                 patch("dazzle.mcp.server.state.get_activity_store", return_value=activity_store),
             ):
                 with pytest.raises(RuntimeError, match="test explosion"):
@@ -157,7 +125,7 @@ class TestLazyActivityStoreInit:
     """When activity_store is None at dispatch time, lazy init should recover."""
 
     @pytest.mark.asyncio
-    async def test_lazy_init_creates_store(self, activity_log, tmp_path):
+    async def test_lazy_init_creates_store(self, tmp_path):
         """If get_activity_store() returns None, dispatch lazily initializes it."""
         from dazzle.mcp.server.handlers_consolidated import dispatch_consolidated_tool
 
@@ -165,7 +133,6 @@ class TestLazyActivityStoreInit:
         project_root.mkdir()
 
         with (
-            patch("dazzle.mcp.server.state.get_activity_log", return_value=activity_log),
             patch("dazzle.mcp.server.state.get_activity_store", return_value=None),
             patch("dazzle.mcp.server.state.get_project_root", return_value=project_root),
             patch("dazzle.mcp.server.state.init_activity_store") as mock_init,
@@ -180,29 +147,23 @@ class TestLazyActivityStoreInit:
         mock_init.assert_called_once_with(project_root)
 
 
-# ── ProgressContext writes to both backends ─────────────────────────────────
+# ── ProgressContext writes to SQLite ────────────────────────────────────────
 
 
-class TestProgressContextDualWrite:
-    """ProgressContext should write to both JSONL and SQLite simultaneously."""
+class TestProgressContextSqlite:
+    """ProgressContext should write to the SQLite activity store."""
 
-    def test_log_sync_writes_both(self, activity_log, activity_store):
-        """log_sync() writes to both JSONL and SQLite."""
+    def test_log_sync_writes_to_sqlite(self, activity_store):
+        """log_sync() writes to SQLite."""
         from dazzle.mcp.server.progress import ProgressContext
 
         ctx = ProgressContext(
             session=None,
-            activity_log=activity_log,
             activity_store=activity_store,
             tool_name="dsl_test",
             operation="run_all",
         )
         ctx.log_sync("Running all tests...")
-
-        # Check JSONL
-        jsonl_data = activity_log.read_since(cursor_seq=0)
-        assert len(jsonl_data["entries"]) == 1
-        assert jsonl_data["entries"][0]["message"] == "Running all tests..."
 
         # Check SQLite
         sqlite_events = activity_store.read_since(since_id=0)
@@ -211,24 +172,17 @@ class TestProgressContextDualWrite:
         assert sqlite_events[0]["tool"] == "dsl_test"
         assert sqlite_events[0]["operation"] == "run_all"
 
-    def test_advance_sync_writes_both(self, activity_log, activity_store):
-        """advance_sync() writes progress to both JSONL and SQLite."""
+    def test_advance_sync_writes_to_sqlite(self, activity_store):
+        """advance_sync() writes progress to SQLite."""
         from dazzle.mcp.server.progress import ProgressContext
 
         ctx = ProgressContext(
             session=None,
-            activity_log=activity_log,
             activity_store=activity_store,
             tool_name="dsl_test",
             operation="run_all",
         )
         ctx.advance_sync(5, 20, "Test 5 of 20")
-
-        # Check JSONL
-        jsonl_data = activity_log.read_since(cursor_seq=0)
-        assert len(jsonl_data["entries"]) == 1
-        assert jsonl_data["entries"][0]["current"] == 5
-        assert jsonl_data["entries"][0]["total"] == 20
 
         # Check SQLite
         sqlite_events = activity_store.read_since(since_id=0)
@@ -236,15 +190,14 @@ class TestProgressContextDualWrite:
         assert sqlite_events[0]["progress_current"] == 5
         assert sqlite_events[0]["progress_total"] == 20
 
-    def test_noop_context_writes_nothing(self, activity_log, activity_store):
+    def test_noop_context_writes_nothing(self, activity_store):
         """noop() context should not write to any backend."""
         from dazzle.mcp.server.progress import noop
 
         ctx = noop()
         ctx.log_sync("This should go nowhere")
 
-        # Neither backend should have entries
-        assert len(activity_log.read_since(cursor_seq=0)["entries"]) == 0
+        # Backend should have no entries
         assert len(activity_store.read_since(since_id=0)) == 0
 
 

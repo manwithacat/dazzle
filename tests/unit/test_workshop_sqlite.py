@@ -40,37 +40,6 @@ def db_path(tmp_path: Path) -> Path:
     return db
 
 
-@pytest.fixture()
-def log_path(tmp_path: Path) -> Path:
-    """Create a JSONL activity log."""
-    import json
-
-    log = tmp_path / ".dazzle" / "mcp-activity.log"
-    log.parent.mkdir(parents=True, exist_ok=True)
-    entries = [
-        {
-            "type": "tool_start",
-            "tool": "pipeline",
-            "operation": "run",
-            "seq": 1,
-            "epoch": 0,
-            "ts": "2026-02-13T10:00:00.000+00:00",
-        },
-        {
-            "type": "tool_end",
-            "tool": "pipeline",
-            "operation": "run",
-            "success": True,
-            "duration_ms": 100,
-            "seq": 2,
-            "epoch": 0,
-            "ts": "2026-02-13T10:00:00.100+00:00",
-        },
-    ]
-    log.write_text("\n".join(json.dumps(e) for e in entries) + "\n")
-    return log
-
-
 # ── read_new_entries_db ──────────────────────────────────────────────────────
 
 
@@ -224,19 +193,3 @@ class TestIngestFromSqlite:
         assert state.total_calls == 2  # Two tool_start events
         assert state.error_count == 1  # One failed tool_end
         assert len(state.completed) == 2  # Two tool_end events
-
-
-# ── Fallback behaviour ───────────────────────────────────────────────────────
-
-
-class TestFallback:
-    def test_jsonl_still_works(self, log_path):
-        from dazzle.mcp.server.workshop import WorkshopState, read_new_entries
-
-        state = WorkshopState()
-        entries = read_new_entries(log_path, state)
-        assert len(entries) == 2
-        for entry in entries:
-            state.ingest(entry)
-        assert state.total_calls == 1
-        assert len(state.completed) == 1

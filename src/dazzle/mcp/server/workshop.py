@@ -1,7 +1,7 @@
-"""Dazzle Workshop — Rich Live TUI for the MCP activity log.
+"""Dazzle Workshop — Rich Live TUI for the MCP activity store.
 
 Presents a gamified, Dwarf-Fortress-inspired "workshop" view of MCP tool
-invocations.  Reads the JSONL activity log and renders:
+invocations.  Reads the SQLite activity store and renders:
 
   - **Workbench**: active tools with progress bars and elapsed time
   - **Done**: scrolling list of completed tool calls
@@ -16,7 +16,6 @@ Usage::
 
 from __future__ import annotations
 
-import json
 import sys
 import time
 from dataclasses import dataclass, field
@@ -86,8 +85,6 @@ class WorkshopState:
     start_time: float = field(default_factory=time.monotonic)
     max_done: int = DEFAULT_TAIL
     bell: bool = False
-    # File-reading cursor (JSONL fallback)
-    _file_pos: int = 0
     # SQLite cursor
     _last_event_id: int = 0
     # Session tracking for exit summary
@@ -197,35 +194,7 @@ class WorkshopState:
                     self.completed = self.completed[-self.max_done :]
 
 
-# ── File reading ─────────────────────────────────────────────────────────────
-
-
-def read_new_entries(log_path: Path, state: WorkshopState) -> list[dict[str, Any]]:
-    """Read new JSONL lines since last position, handling truncation."""
-    if not log_path.exists():
-        return []
-
-    entries: list[dict[str, Any]] = []
-    try:
-        file_size = log_path.stat().st_size
-        # Detect truncation
-        if file_size < state._file_pos:
-            state._file_pos = 0
-
-        with open(log_path, encoding="utf-8") as f:
-            f.seek(state._file_pos)
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entries.append(json.loads(line))
-                except json.JSONDecodeError:
-                    continue
-            state._file_pos = f.tell()
-    except OSError:
-        pass
-    return entries
+# ── SQLite reading ───────────────────────────────────────────────────────────
 
 
 def read_new_entries_db(db_path: Path, state: WorkshopState) -> list[dict[str, Any]]:
@@ -527,30 +496,23 @@ def print_session_summary(state: WorkshopState, console: Console) -> None:
 
 
 def watch(
-    log_path: Path,
+    db_path: Path,
     project_name: str = "unknown",
     version: str = "",
     *,
     max_done: int = DEFAULT_TAIL,
     bell: bool = False,
-    db_path: Path | None = None,
 ) -> None:
     """Run the Rich Live display loop.  Blocks until Ctrl-C.
 
-    If *db_path* is provided, reads from SQLite; otherwise falls back to JSONL.
+    Reads activity events from the SQLite database at *db_path*.
     """
     state = WorkshopState(max_done=max_done, bell=bell)
-
-    use_db = db_path is not None
-    backend = "SQLite" if use_db else "JSONL"
+    backend = "SQLite"
 
     # Ingest any existing entries so we start with history
-    if use_db:
-        for entry in read_new_entries_db(db_path, state):  # type: ignore[arg-type]
-            state.ingest(entry)
-    else:
-        for entry in read_new_entries(log_path, state):
-            state.ingest(entry)
+    for entry in read_new_entries_db(db_path, state):
+        state.ingest(entry)
 
     console = Console()
     with Live(
@@ -562,10 +524,7 @@ def watch(
         try:
             while True:
                 time.sleep(POLL_INTERVAL)
-                if use_db:
-                    new = read_new_entries_db(db_path, state)  # type: ignore[arg-type]
-                else:
-                    new = read_new_entries(log_path, state)
+                new = read_new_entries_db(db_path, state)
                 for entry in new:
                     state.ingest(entry)
                 live.update(render_workshop(state, project_name, version, backend))
@@ -631,22 +590,25 @@ def run_workshop(
     """Entry point: resolve project info, find log, start watch."""
     project_dir = project_dir.resolve()
     project_name, version, config = _load_project_config(project_dir)
-    log_path = _resolve_log_path(project_dir, config)
 
     console = Console()
 
     # --info: just print the log path and exit
     if info:
+        log_path = _resolve_log_path(project_dir, config)
         console.print(str(log_path))
         return
 
-    # Prefer SQLite backend if available
+    # Require SQLite backend
     db_path = _detect_db_path(project_dir)
-
-    if db_path is None and not log_path.exists():
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        log_path.touch()
+    if db_path is None:
+        console.print(
+            "[red bold]Error:[/red bold] No activity database found.\n"
+            "Run the MCP server first so it creates the SQLite activity store.\n"
+            f"Expected: {project_dir / '.dazzle' / 'knowledge_graph.db'}"
+        )
+        raise SystemExit(1)
 
     # Clear screen and jump straight into the TUI
     console.clear()
-    watch(log_path, project_name, version, max_done=tail, bell=bell, db_path=db_path)
+    watch(db_path, project_name, version, max_done=tail, bell=bell)
