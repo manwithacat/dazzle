@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -20,6 +21,28 @@ from dazzle.docs_update.updater import (
 )
 
 logger = logging.getLogger(__name__)
+
+_JSON_FENCE_RE = re.compile(r"```(?:json)?\s*\n(.*?)```", re.DOTALL)
+
+
+def _extract_json(raw: str) -> str:
+    """Extract JSON from an LLM response that may contain surrounding text or fences."""
+    raw = raw.strip()
+
+    # Try to find a fenced code block containing JSON
+    m = _JSON_FENCE_RE.search(raw)
+    if m:
+        return m.group(1).strip()
+
+    # Try to find a raw JSON array or object
+    for start_char, end_char in [("[", "]"), ("{", "}")]:
+        start = raw.find(start_char)
+        end = raw.rfind(end_char)
+        if start != -1 and end > start:
+            return raw[start : end + 1]
+
+    return raw
+
 
 # ---------------------------------------------------------------------------
 # Phase 1: classify issues
@@ -88,13 +111,7 @@ def classify_issues(
     prompt = _build_classify_prompt(issues)
     raw = llm_complete(_CLASSIFY_SYSTEM, prompt)
 
-    # Strip markdown fences if present
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-    if raw.endswith("```"):
-        raw = raw[: raw.rfind("```")]
-    raw = raw.strip()
+    raw = _extract_json(raw)
 
     try:
         classifications = json.loads(raw)
@@ -244,12 +261,7 @@ def _patch_changelog(
         logger.warning("LLM polish failed for CHANGELOG, using deterministic entries")
         polished = entries
 
-    # Strip markdown fences if present
-    if polished.startswith("```"):
-        polished = polished.split("\n", 1)[1] if "\n" in polished else polished[3:]
-    if polished.endswith("```"):
-        polished = polished[: polished.rfind("```")]
-    polished = polished.strip()
+    polished = _extract_json(polished) if polished.lstrip().startswith("```") else polished.strip()
 
     proposed = insert_after_header(content, "## [Unreleased]", "\n" + polished + "\n")
 
@@ -293,12 +305,7 @@ def _patch_readme(
         logger.warning("LLM failed for README patches")
         return []
 
-    # Strip markdown fences
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-    if raw.endswith("```"):
-        raw = raw[: raw.rfind("```")]
-    raw = raw.strip()
+    raw = _extract_json(raw)
 
     try:
         updates = json.loads(raw)
@@ -368,11 +375,7 @@ def _patch_mkdocs(
         logger.warning("LLM failed for mkdocs patches")
         return []
 
-    if raw.startswith("```"):
-        raw = raw.split("\n", 1)[1] if "\n" in raw else raw[3:]
-    if raw.endswith("```"):
-        raw = raw[: raw.rfind("```")]
-    raw = raw.strip()
+    raw = _extract_json(raw)
 
     try:
         page_updates = json.loads(raw)
@@ -404,11 +407,7 @@ def _patch_mkdocs(
             logger.warning("LLM failed for mkdocs page %s", page_path)
             continue
 
-        if proposed.startswith("```"):
-            proposed = proposed.split("\n", 1)[1] if "\n" in proposed else proposed[3:]
-        if proposed.endswith("```"):
-            proposed = proposed[: proposed.rfind("```")]
-        proposed = proposed.strip()
+        proposed = _extract_json(proposed) if "```" in proposed else proposed.strip()
 
         if proposed and proposed != original.strip():
             patches.append(
