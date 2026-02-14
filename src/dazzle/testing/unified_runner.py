@@ -537,6 +537,7 @@ class UnifiedTestRunner:
             elif self.base_url:
                 _log("Auto-authenticating for remote server...")
                 self._authenticate_persona("admin")
+                persona = "admin"
 
             # Run CRUD tests
             _log("Running CRUD / state-machine tests...")

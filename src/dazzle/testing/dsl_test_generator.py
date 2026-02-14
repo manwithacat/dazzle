@@ -35,6 +35,60 @@ from dazzle.core.ir.workspaces import WorkspaceSpec
 from dazzle.core.project import load_project
 
 
+def _invariant_required_fields(entity: EntitySpec) -> list[str]:
+    """Extract field names that must be populated to satisfy OR-clause invariants.
+
+    For invariants like ``uprn != null or canonical_text != null``, returns
+    the first field from each OR clause so that at least one is non-null.
+    """
+    from dazzle.core.ir.invariant import LogicalExpr
+
+    fields: list[str] = []
+    for inv in entity.invariants:
+        expr = inv.expression
+        # Match: field != null OR field != null
+        if isinstance(expr, LogicalExpr) and expr.operator.value == "or":
+            field_name = _extract_not_null_field(expr.left)
+            if field_name:
+                fields.append(field_name)
+    return fields
+
+
+def _extract_not_null_field(expr: Any) -> str | None:
+    """Extract the field name from a ``field != null`` comparison."""
+    from dazzle.core.ir.invariant import ComparisonExpr, InvariantFieldRef, InvariantLiteral
+
+    if not isinstance(expr, ComparisonExpr):
+        return None
+    if expr.operator.value in ("!=", "is not"):
+        left, right = expr.left, expr.right
+        if (
+            isinstance(left, InvariantFieldRef)
+            and isinstance(right, InvariantLiteral)
+            and right.value is None
+        ):
+            return left.path[0] if left.path else None
+        if (
+            isinstance(right, InvariantFieldRef)
+            and isinstance(left, InvariantLiteral)
+            and left.value is None
+        ):
+            return right.path[0] if right.path else None
+    return None
+
+
+def _entity_has_forbid_create(entity: EntitySpec) -> bool:
+    """Check whether all create operations are forbidden for this entity."""
+    if not entity.access or not entity.access.permissions:
+        return False
+    from dazzle.core.ir.domain import PolicyEffect
+
+    for perm in entity.access.permissions:
+        if perm.operation.value == "create" and perm.effect == PolicyEffect.FORBID:
+            return True
+    return False
+
+
 @dataclass
 class TestCoverage:
     """Tracks test coverage for the DSL."""
@@ -187,6 +241,8 @@ class DSLTestGenerator:
 
         # Entity tests (CRUD + validation)
         for entity in self.appspec.domain.entities:
+            if _entity_has_forbid_create(entity):
+                continue  # Skip CRUD tests for entities where create is forbidden
             designs.extend(self._generate_entity_tests(entity))
             self.coverage.entities_covered.add(entity.name)
 
@@ -805,6 +861,14 @@ class DSLTestGenerator:
 
             data[fld.name] = self._generate_field_value(fld, timestamp)
 
+        # Satisfy invariant OR clauses that require at least one optional field
+        # e.g. invariant: uprn != null or canonical_text != null
+        for field_name in _invariant_required_fields(entity):
+            if field_name not in data:
+                inv_field = next((f for f in entity.fields if f.name == field_name), None)
+                if inv_field and inv_field.type.kind != FieldTypeKind.REF:
+                    data[field_name] = self._generate_field_value(inv_field, timestamp)
+
         return data
 
     def _generate_parent_setup_steps(
@@ -872,7 +936,15 @@ class DSLTestGenerator:
 
         type_kind = field.type.kind
         name = field.name.lower()
-        suffix = f"_{unique_suffix}" if field.is_unique else ""
+        # Use timestamp-based suffixes for unique fields to avoid collisions
+        # across test runs (e.g. on staging servers without DB resets)
+        if field.is_unique:
+            import time
+
+            ts = int(time.time() * 1000) % 1_000_000
+            suffix = f"_{ts}_{unique_suffix}"
+        else:
+            suffix = ""
 
         # Enum handling
         if type_kind == FieldTypeKind.ENUM:
@@ -892,7 +964,15 @@ class DSLTestGenerator:
         if type_kind == FieldTypeKind.UUID:
             return str(uuid_module.uuid4())
         elif type_kind == FieldTypeKind.STR:
-            return f"Test {field.name}{suffix}"
+            value = f"Test {field.name}{suffix}"
+            max_len = field.type.max_length
+            if max_len and len(value) > max_len:
+                # Truncate but keep suffix for uniqueness
+                if suffix and max_len >= len(suffix) + 1:
+                    value = value[: max_len - len(suffix)] + suffix
+                else:
+                    value = value[:max_len]
+            return value
         elif type_kind == FieldTypeKind.TEXT:
             return f"Test description for {field.name}{suffix}"
         elif type_kind == FieldTypeKind.INT:
