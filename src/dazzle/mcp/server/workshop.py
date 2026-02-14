@@ -73,6 +73,7 @@ class CompletedTool:
     error: str | None = None
     warnings: int = 0
     source: str = "mcp"
+    context_json: str | None = None
 
 
 @dataclass
@@ -152,6 +153,7 @@ class WorkshopState:
                     error=entry.get("error"),
                     warnings=warns,
                     source=source,
+                    context_json=entry.get("context_json"),
                 )
             )
             # Cap completed list
@@ -261,6 +263,8 @@ def _db_row_to_entry(row: dict[str, Any]) -> dict[str, Any]:
         entry["level"] = row["level"]
     if row.get("source"):
         entry["source"] = row["source"]
+    if row.get("context_json"):
+        entry["context_json"] = row["context_json"]
     return entry
 
 
@@ -294,6 +298,39 @@ def _format_ts(ts_raw: str) -> str:
         return dt.strftime("%H:%M:%S")
     except (ValueError, AttributeError):
         return ts_raw[:8] if ts_raw else "??:??:??"
+
+
+def _format_result_annotation(ct: CompletedTool) -> Text:
+    """Build a Rich Text annotation from context_json (e.g. test results)."""
+    if not ct.context_json:
+        extra = Text()
+        if ct.warnings:
+            extra.append(f"\u26a0 {ct.warnings}", style="yellow")
+        return extra
+
+    import json
+
+    try:
+        ctx = json.loads(ct.context_json)
+    except (json.JSONDecodeError, TypeError):
+        return Text()
+
+    passed = ctx.get("passed")
+    total = ctx.get("total")
+    failed = ctx.get("failed", 0)
+    if passed is not None and total is not None:
+        txt = Text()
+        txt.append("[")
+        if failed == 0:
+            txt.append(f"{passed}/{total} PASS", style="bold green")
+        elif passed / max(total, 1) >= 0.8:
+            txt.append(f"{passed}/{total} PASS", style="bold yellow")
+        else:
+            txt.append(f"{passed}/{total} PASS", style="bold red")
+        txt.append("]")
+        return txt
+
+    return Text()
 
 
 def _format_duration(ms: float | None) -> str:
@@ -424,16 +461,14 @@ def render_workshop(
                 icon = Text("\u2714", style="green")  # ✔
                 tool_text = Text(label)
                 dur = Text(_format_duration(ct.duration_ms), style="dim")
-                extra = Text()
-                if ct.warnings:
-                    extra.append(f"\u26a0 {ct.warnings}", style="yellow")
+                extra = _format_result_annotation(ct)
                 done_table.add_row(ts, icon, tool_text, dur, extra)
             else:
                 icon = Text("\u2718", style="bold red")  # ✘
                 tool_text = Text(label, style="red")
                 dur = Text(_format_duration(ct.duration_ms), style="dim")
-                err = Text(ct.error or "failed", style="red dim")
-                done_table.add_row(ts, icon, tool_text, dur, err)
+                extra = _format_result_annotation(ct) or Text(ct.error or "failed", style="red dim")
+                done_table.add_row(ts, icon, tool_text, dur, extra)
     else:
         empty = Text("  No completed calls yet.", style="dim italic")
         done_table.add_row(Text(""), Text(""), empty, Text(""), Text(""))

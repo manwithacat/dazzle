@@ -1505,11 +1505,26 @@ def dsl_run(
     try:
         from dazzle.cli.activity import cli_activity
 
-        with cli_activity(root, "dsl_test", "run_all"):
+        with cli_activity(root, "dsl_test", "run_all") as progress:
             runner = UnifiedTestRunner(root, server_timeout=timeout, base_url=base_url)
 
+            def _on_progress(msg: str) -> None:
+                progress.log_sync(msg)
+
             # Run all tests
-            result = runner.run_all(generate=True, force_generate=regenerate)
+            result = runner.run_all(
+                generate=True, force_generate=regenerate, on_progress=_on_progress
+            )
+
+            # Annotate activity event with test results
+            summary = result.get_summary()
+            progress.result_context = {
+                "passed": summary["passed"],
+                "failed": summary["failed"],
+                "total": summary["total_tests"],
+                "skipped": summary.get("skipped", 0),
+                "success_rate": round(summary["success_rate"], 1),
+            }
 
         if json_mode:
             typer.echo(json.dumps(result.to_dict(), indent=2))

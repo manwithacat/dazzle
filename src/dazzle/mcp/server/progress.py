@@ -60,6 +60,7 @@ class ProgressContext:
         self._tool_name = tool_name
         self._operation = operation
         self._source = source
+        self.result_context: dict[str, Any] = {}
 
     @property
     def available(self) -> bool:

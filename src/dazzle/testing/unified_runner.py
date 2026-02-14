@@ -63,7 +63,7 @@ class UnifiedTestResult:
     tests_from_cache: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        d: dict[str, Any] = {
             "project_name": self.project_name,
             "started_at": self.started_at.isoformat(),
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
@@ -73,7 +73,44 @@ class UnifiedTestResult:
             "tests_generated": self.tests_generated,
             "tests_from_cache": self.tests_from_cache,
             "summary": self.get_summary(),
+            "by_category": self._category_breakdown(),
+            "failures": self._failure_details(),
         }
+        return d
+
+    def _category_breakdown(self) -> dict[str, dict[str, int]]:
+        """Per-category pass/fail counts derived from test_id prefixes."""
+        cats: dict[str, dict[str, int]] = {}
+        if self.crud_result:
+            for t in self.crud_result.tests:
+                prefix = t.test_id.split("_")[0] if "_" in t.test_id else "OTHER"
+                bucket = cats.setdefault(prefix, {"passed": 0, "failed": 0, "skipped": 0})
+                bucket[t.result.value] = bucket.get(t.result.value, 0) + 1
+        if self.event_result:
+            for et in self.event_result.tests:
+                bucket = cats.setdefault("EVENT", {"passed": 0, "failed": 0, "skipped": 0})
+                bucket[et.result.value] = bucket.get(et.result.value, 0) + 1
+        return cats
+
+    def _failure_details(self, limit: int = 50) -> list[dict[str, str]]:
+        """First N failures with test_id and error message."""
+        failures: list[dict[str, str]] = []
+        if self.crud_result:
+            for t in self.crud_result.tests:
+                if t.result.value != "failed":
+                    continue
+                failures.append({"id": t.test_id, "error": t.error_message or ""})
+                if len(failures) >= limit:
+                    return failures
+        if self.event_result:
+            for et in self.event_result.tests:
+                if et.result.value != "failed":
+                    continue
+                failures.append({"id": et.test_id, "error": et.error_message or ""})
+
+                if len(failures) >= limit:
+                    return failures
+        return failures
 
     def get_summary(self) -> dict[str, Any]:
         total_tests = 0

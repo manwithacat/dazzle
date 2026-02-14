@@ -40,6 +40,11 @@ def cli_activity(
     creates a :class:`ProgressContext` with ``source="cli"``, and bookends
     the wrapped block with ``tool_start`` / ``tool_end`` events.
 
+    The yielded :class:`ProgressContext` has a ``result_context`` dict that
+    callers can populate before the block exits.  The dict is serialised as
+    ``context_json`` on the ``tool_end`` event so the workshop can display
+    structured result annotations (e.g. test pass/fail counts).
+
     Args:
         root: Project root directory (must contain ``dazzle.toml``).
         tool: Consolidated tool name (e.g. ``"pipeline"``).
@@ -101,6 +106,16 @@ def cli_activity(
     finally:
         duration_ms = (time.monotonic() - t0) * 1000
 
+        # Serialise result_context if populated
+        ctx_json: str | None = None
+        if progress.result_context:
+            import json
+
+            try:
+                ctx_json = json.dumps(progress.result_context)
+            except Exception:
+                pass
+
         if activity_store is not None:
             try:
                 activity_store.log_event(
@@ -110,6 +125,7 @@ def cli_activity(
                     success=call_ok,
                     duration_ms=duration_ms,
                     error=call_error,
+                    context_json=ctx_json,
                     source="cli",
                 )
             except Exception:
