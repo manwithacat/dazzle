@@ -244,6 +244,33 @@ def run_unified_server(
         except ImportError as e:
             print(f"[Dazzle] Warning: Page routes not available: {e}")
 
+    # ---- Mount island API routes ----
+    if appspec and getattr(appspec, "islands", None):
+        try:
+            from dazzle_back.runtime.island_routes import create_island_routes
+
+            _island_auth_dep = None
+            _island_opt_auth_dep = None
+            if builder.auth_store:
+                from dazzle_back.runtime.auth import (
+                    create_auth_dependency,
+                    create_optional_auth_dependency,
+                )
+
+                _island_auth_dep = create_auth_dependency(builder.auth_store)
+                _island_opt_auth_dep = create_optional_auth_dependency(builder.auth_store)
+
+            island_router = create_island_routes(
+                islands=appspec.islands,
+                services=builder.services,
+                auth_dep=_island_auth_dep,
+                optional_auth_dep=_island_opt_auth_dep,
+            )
+            app.include_router(island_router)
+            print(f"[Dazzle] Islands:  {len(appspec.islands)} mounted at /api/islands")
+        except ImportError:
+            pass
+
     # ---- Print startup info ----
     base_url = f"http://{host}:{port}"
     docs_url = f"{base_url}/docs"

@@ -136,6 +136,16 @@ class DetailContext(BaseModel):
     status_field: str = "status"
 
 
+class IslandContext(BaseModel):
+    """Context for rendering a UI island mount point."""
+
+    name: str
+    src: str
+    props_json: str  # pre-serialized JSON
+    api_base: str
+    fallback: str | None = None
+
+
 class PageContext(BaseModel):
     """Top-level page context passed to templates."""
 
@@ -153,6 +163,9 @@ class PageContext(BaseModel):
     table: TableContext | None = None
     form: FormContext | None = None
     detail: DetailContext | None = None
+
+    # UI islands available on this page
+    islands: list[IslandContext] = Field(default_factory=list)
 
     # Semantic identifier for the current view (surface name)
     view_name: str = ""

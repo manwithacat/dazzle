@@ -29,6 +29,7 @@ from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
 from .hless import HLESSParserMixin
 from .integration import IntegrationParserMixin
+from .island import IslandParserMixin
 from .ledger import LedgerParserMixin
 from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
@@ -72,6 +73,7 @@ class Parser(
     WebhookParserMixin,
     ApprovalParserMixin,
     SLAParserMixin,
+    IslandParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -328,6 +330,11 @@ class Parser(
                 sla_spec = self.parse_sla()
                 fragment = _updated(fragment, slas=[*fragment.slas, sla_spec])
 
+            # UI Islands
+            elif self.match(TokenType.ISLAND):
+                island_spec = self.parse_island()
+                fragment = _updated(fragment, islands=[*fragment.islands, island_spec])
+
             else:
                 token = self.current_token()
                 if token.type == TokenType.EOF:
@@ -390,4 +397,5 @@ __all__ = [
     "WebhookParserMixin",
     "ApprovalParserMixin",
     "SLAParserMixin",
+    "IslandParserMixin",
 ]

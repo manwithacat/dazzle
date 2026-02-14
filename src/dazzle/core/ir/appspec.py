@@ -36,6 +36,7 @@ from .hless import (
     StreamSpec,
 )
 from .integrations import IntegrationSpec
+from .islands import IslandSpec
 from .layout import UXLayouts
 from .ledgers import (
     LedgerSpec,
@@ -158,6 +159,8 @@ class AppSpec(BaseModel):
     approvals: list[ApprovalSpec] = Field(default_factory=list)
     # SLAs (v0.25.0)
     slas: list[SLASpec] = Field(default_factory=list)
+    # Islands (UI Islands)
+    islands: list[IslandSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -434,6 +437,15 @@ class AppSpec(BaseModel):
         for sla in self.slas:
             if sla.name == name:
                 return sla
+        return None
+
+    # Island getters
+
+    def get_island(self, name: str) -> IslandSpec | None:
+        """Get island by name."""
+        for island in self.islands:
+            if island.name == name:
+                return island
         return None
 
     @property

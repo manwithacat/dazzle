@@ -229,6 +229,7 @@ class TokenType(Enum):
     WEBHOOK = "webhook"
     APPROVAL = "approval"
     SLA = "sla"
+    ISLAND = "island"
     # VIEW already defined in Flow/E2E Test Keywords
     # Sub-keywords for v0.25.0 constructs (events, payload, include, secret,
     # method, approver_role, quorum, threshold, escalation, auto_approve,

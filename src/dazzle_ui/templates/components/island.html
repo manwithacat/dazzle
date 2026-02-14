@@ -1,0 +1,11 @@
+<div data-island="{{ island.name }}"
+     data-island-src="{{ island.src }}"
+     data-island-props='{{ island.props_json }}'
+     data-island-api-base="{{ island.api_base }}"
+     class="dz-island">
+  {% if island.fallback %}
+  {{ island.fallback }}
+  {% else %}
+  <div class="skeleton h-32 w-full"></div>
+  {% endif %}
+</div>

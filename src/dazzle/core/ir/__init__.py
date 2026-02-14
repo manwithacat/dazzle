@@ -246,6 +246,13 @@ from .invariant import (
     LogicalOperator as InvariantLogicalOperator,
 )
 
+# Islands (UI Islands)
+from .islands import (
+    IslandEventSpec,
+    IslandPropSpec,
+    IslandSpec,
+)
+
 # Layout Engine
 from .layout import (
     AttentionSignalKind,
@@ -948,6 +955,10 @@ __all__ = [
     "SLAConditionSpec",
     "SLASpec",
     "SLATierSpec",
+    # Islands (UI Islands)
+    "IslandEventSpec",
+    "IslandPropSpec",
+    "IslandSpec",
     # SiteSpec (v0.16.0 Public Site Shell)
     "AuthEntrySpec",
     "AuthPageMode",

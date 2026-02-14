@@ -134,6 +134,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         webhooks=merged_fragment.webhooks,  # v0.25.0 Webhooks
         approvals=merged_fragment.approvals,  # v0.25.0 Approvals
         slas=merged_fragment.slas,  # v0.25.0 SLAs
+        islands=merged_fragment.islands,  # UI Islands
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,

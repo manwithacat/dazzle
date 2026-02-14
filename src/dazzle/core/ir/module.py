@@ -35,6 +35,7 @@ from .hless import (
     StreamSpec,
 )
 from .integrations import IntegrationSpec
+from .islands import IslandSpec
 from .ledgers import (
     LedgerSpec,
     TransactionSpec,
@@ -171,6 +172,8 @@ class ModuleFragment(BaseModel):
     approvals: list[ApprovalSpec] = Field(default_factory=list)
     # SLAs (v0.25.0)
     slas: list[SLASpec] = Field(default_factory=list)
+    # Islands (UI Islands)
+    islands: list[IslandSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
