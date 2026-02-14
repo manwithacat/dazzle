@@ -579,6 +579,7 @@ class ActivityStore:
         message: str | None = None,
         level: str = "info",
         context_json: str | None = None,
+        source: str = "mcp",
     ) -> int:
         """Log an activity event. Returns the event id."""
         return self._graph.log_activity_event(
@@ -595,6 +596,7 @@ class ActivityStore:
             message=message,
             level=level,
             context_json=context_json,
+            source=source,
         )
 
     def read_since(self, since_id: int = 0, limit: int = 100) -> list[dict[str, Any]]:

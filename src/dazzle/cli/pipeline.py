@@ -74,7 +74,11 @@ def pipeline_run(
         args["base_url"] = base_url
 
     try:
-        raw = run_pipeline_handler(root, args)
+        from dazzle.cli.activity import cli_activity
+
+        with cli_activity(root, "pipeline", "run") as progress:
+            args["_progress"] = progress
+            raw = run_pipeline_handler(root, args)
         data = json.loads(raw)
     except Exception as e:
         typer.echo(f"Pipeline error: {e}", err=True)

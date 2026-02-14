@@ -93,13 +93,17 @@ def specs_openapi(
     from dazzle.specs import generate_openapi, openapi_to_json, openapi_to_yaml
 
     project_path = project_dir.resolve()
-    spec = _load_appspec(project_path)
-    openapi = generate_openapi(spec)
 
-    if format.lower() == "json":
-        content = openapi_to_json(openapi)
-    else:
-        content = openapi_to_yaml(openapi)
+    from dazzle.cli.activity import cli_activity
+
+    with cli_activity(project_path, "specs", "openapi"):
+        spec = _load_appspec(project_path)
+        openapi = generate_openapi(spec)
+
+        if format.lower() == "json":
+            content = openapi_to_json(openapi)
+        else:
+            content = openapi_to_yaml(openapi)
 
     if output:
         output.write_text(content)
@@ -143,21 +147,25 @@ def specs_asyncapi(
     from dazzle.specs import asyncapi_to_json, asyncapi_to_yaml, generate_asyncapi
 
     project_path = project_dir.resolve()
-    spec = _load_appspec(project_path)
 
-    if not spec.event_model and not spec.streams:
-        typer.echo(
-            "Warning: No event_model or HLESS streams defined in DSL. "
-            "AsyncAPI will only contain entity schemas.",
-            err=True,
-        )
+    from dazzle.cli.activity import cli_activity
 
-    asyncapi = generate_asyncapi(spec)
+    with cli_activity(project_path, "specs", "asyncapi"):
+        spec = _load_appspec(project_path)
 
-    if format.lower() == "json":
-        content = asyncapi_to_json(asyncapi)
-    else:
-        content = asyncapi_to_yaml(asyncapi)
+        if not spec.event_model and not spec.streams:
+            typer.echo(
+                "Warning: No event_model or HLESS streams defined in DSL. "
+                "AsyncAPI will only contain entity schemas.",
+                err=True,
+            )
+
+        asyncapi = generate_asyncapi(spec)
+
+        if format.lower() == "json":
+            content = asyncapi_to_json(asyncapi)
+        else:
+            content = asyncapi_to_yaml(asyncapi)
 
     if output:
         output.write_text(content)

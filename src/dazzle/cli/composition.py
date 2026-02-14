@@ -59,7 +59,11 @@ def composition_audit(
         args["pages"] = [p.strip() for p in pages.split(",")]
 
     try:
-        raw = audit_composition_handler(root, args)
+        from dazzle.cli.activity import cli_activity
+
+        with cli_activity(root, "composition", "audit") as progress:
+            args["_progress"] = progress
+            raw = audit_composition_handler(root, args)
         data = json.loads(raw)
     except Exception as e:
         typer.echo(f"Composition audit error: {e}", err=True)
@@ -134,7 +138,11 @@ def composition_report(
         args["viewports"] = [v.strip() for v in viewports.split(",")]
 
     try:
-        raw = asyncio.run(report_composition_handler(root, args))
+        from dazzle.cli.activity import cli_activity
+
+        with cli_activity(root, "composition", "report") as progress:
+            args["_progress"] = progress
+            raw = asyncio.run(report_composition_handler(root, args))
         data = json.loads(raw)
     except Exception as e:
         typer.echo(f"Composition report error: {e}", err=True)

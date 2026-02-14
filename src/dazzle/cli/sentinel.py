@@ -40,7 +40,11 @@ def sentinel_scan(
         args["agents"] = agent
 
     try:
-        raw = scan_handler(root, args)
+        from dazzle.cli.activity import cli_activity
+
+        with cli_activity(root, "sentinel", "scan") as progress:
+            args["_progress"] = progress
+            raw = scan_handler(root, args)
         data = json.loads(raw)
     except Exception as e:
         typer.echo(f"Error: {e}", err=True)
@@ -107,7 +111,11 @@ def sentinel_findings(
     if agent:
         args["agent"] = agent
 
-    raw = findings_handler(root, args)
+    from dazzle.cli.activity import cli_activity
+
+    with cli_activity(root, "sentinel", "findings") as progress:
+        args["_progress"] = progress
+        raw = findings_handler(root, args)
     data = json.loads(raw)
 
     if format_ == "json":

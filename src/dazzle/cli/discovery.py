@@ -58,7 +58,11 @@ def discovery_coherence(
         args["persona"] = persona
 
     try:
-        raw = app_coherence_handler(root, args)
+        from dazzle.cli.activity import cli_activity
+
+        with cli_activity(root, "discovery", "coherence") as progress:
+            args["_progress"] = progress
+            raw = app_coherence_handler(root, args)
         data = json.loads(raw)
     except Exception as e:
         typer.echo(f"Coherence analysis error: {e}", err=True)

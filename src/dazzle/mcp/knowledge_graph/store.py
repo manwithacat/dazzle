@@ -266,6 +266,13 @@ class KnowledgeGraph:
             """
             )
             conn.commit()
+
+            # Migration: add source column if missing (existing rows default to 'mcp')
+            try:
+                conn.execute("ALTER TABLE activity_events ADD COLUMN source TEXT DEFAULT 'mcp'")
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass  # Column already exists — no-op
         finally:
             self._close_connection(conn)
 
@@ -1455,6 +1462,7 @@ class KnowledgeGraph:
         message: str | None = None,
         level: str = "info",
         context_json: str | None = None,
+        source: str = "mcp",
     ) -> int:
         """Log an activity event. Returns the event id."""
         now = time.time()
@@ -1466,8 +1474,9 @@ class KnowledgeGraph:
                 INSERT INTO activity_events
                     (session_id, event_type, tool, operation, ts, created_at,
                      success, duration_ms, error, warnings,
-                     progress_current, progress_total, message, level, context_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     progress_current, progress_total, message, level, context_json,
+                     source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_id,
@@ -1485,6 +1494,7 @@ class KnowledgeGraph:
                     message,
                     level,
                     context_json,
+                    source,
                 ),
             )
             conn.commit()

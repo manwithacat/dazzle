@@ -1272,7 +1272,10 @@ def dsl_generate(
     typer.echo(f"Generating tests from DSL in {root}...")
 
     try:
-        test_suite = generate_tests_from_dsl(root)
+        from dazzle.cli.activity import cli_activity
+
+        with cli_activity(root, "dsl_test", "generate"):
+            test_suite = generate_tests_from_dsl(root)
     except Exception as e:
         typer.echo(f"Error generating tests: {e}", err=True)
         raise typer.Exit(code=1)
@@ -1455,10 +1458,13 @@ def dsl_run(
         typer.echo()
 
     try:
-        runner = UnifiedTestRunner(root, server_timeout=timeout)
+        from dazzle.cli.activity import cli_activity
 
-        # Run all tests
-        result = runner.run_all(generate=True, force_generate=regenerate)
+        with cli_activity(root, "dsl_test", "run_all"):
+            runner = UnifiedTestRunner(root, server_timeout=timeout)
+
+            # Run all tests
+            result = runner.run_all(generate=True, force_generate=regenerate)
 
         if json_mode:
             typer.echo(json.dumps(result.to_dict(), indent=2))
@@ -1550,7 +1556,10 @@ def dsl_coverage(
         raise typer.Exit(code=1)
 
     try:
-        test_suite = generate_tests_from_dsl(root)
+        from dazzle.cli.activity import cli_activity
+
+        with cli_activity(root, "dsl_test", "coverage"):
+            test_suite = generate_tests_from_dsl(root)
     except Exception as e:
         typer.echo(f"Error generating tests: {e}", err=True)
         raise typer.Exit(code=1)

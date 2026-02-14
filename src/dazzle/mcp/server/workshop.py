@@ -58,6 +58,7 @@ class ActiveTool:
     progress_current: int | None = None
     progress_total: int | None = None
     status_message: str | None = None
+    source: str = "mcp"
 
 
 @dataclass
@@ -71,6 +72,7 @@ class CompletedTool:
     duration_ms: float | None
     error: str | None = None
     warnings: int = 0
+    source: str = "mcp"
 
 
 @dataclass
@@ -105,6 +107,7 @@ class WorkshopState:
         tool = entry.get("tool", "")
         operation = entry.get("operation")
         ts = entry.get("ts", "")
+        source = entry.get("source", "mcp")
         key = f"{tool}.{operation}" if operation else tool
 
         if etype == TYPE_TOOL_START:
@@ -114,6 +117,7 @@ class WorkshopState:
                 operation=operation,
                 start_time=time.monotonic(),
                 ts=ts,
+                source=source,
             )
 
         elif etype == TYPE_TOOL_END:
@@ -147,6 +151,7 @@ class WorkshopState:
                     duration_ms=dur,
                     error=entry.get("error"),
                     warnings=warns,
+                    source=source,
                 )
             )
             # Cap completed list
@@ -188,6 +193,7 @@ class WorkshopState:
                         success=False,
                         duration_ms=None,
                         error=entry.get("message", "error"),
+                        source=source,
                     )
                 )
                 if len(self.completed) > self.max_done:
@@ -253,6 +259,8 @@ def _db_row_to_entry(row: dict[str, Any]) -> dict[str, Any]:
         entry["message"] = row["message"]
     if row.get("level"):
         entry["level"] = row["level"]
+    if row.get("source"):
+        entry["source"] = row["source"]
     return entry
 
 
@@ -351,6 +359,8 @@ def render_workshop(
     if state.active:
         for at in state.active.values():
             label = f"{at.tool}.{at.operation}" if at.operation else at.tool
+            if at.source == "cli":
+                label = f"CLI {label}"
 
             row_icon = Text("\u26cf", style="bold yellow")  # ⛏
             row_main = Text()
@@ -407,6 +417,8 @@ def render_workshop(
         for ct in state.completed:
             ts = Text(_format_ts(ct.ts), style="dim")
             label = f"{ct.tool}.{ct.operation}" if ct.operation else ct.tool
+            if ct.source == "cli":
+                label = f"CLI {label}"
 
             if ct.success:
                 icon = Text("\u2714", style="green")  # ✔

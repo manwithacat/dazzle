@@ -51,6 +51,7 @@ class ProgressContext:
         activity_store: ActivityStore | None = None,
         tool_name: str | None = None,
         operation: str | None = None,
+        source: str = "mcp",
     ) -> None:
         self._session = session
         self._progress_token = progress_token
@@ -58,6 +59,7 @@ class ProgressContext:
         self._activity_store = activity_store
         self._tool_name = tool_name
         self._operation = operation
+        self._source = source
 
     @property
     def available(self) -> bool:
@@ -184,6 +186,7 @@ class ProgressContext:
                     self._operation,
                     message=message,
                     level=level,
+                    source=self._source,
                 )
             except Exception:
                 pass  # Never fail the handler due to activity logging
@@ -199,6 +202,7 @@ class ProgressContext:
                     progress_current=current,
                     progress_total=total,
                     message=message or "",
+                    source=self._source,
                 )
             except Exception:
                 pass  # Never fail the handler due to activity logging
