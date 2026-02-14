@@ -35,11 +35,11 @@
         },
         {
           "name": "keyword.declaration.dazzle",
-          "match": "\\b(app|entity|surface|experience|service|foreign_model|integration|workspace|archetype|flow)\\b"
+          "match": "\\b(app|entity|surface|experience|service|foreign_model|integration|workspace|archetype|flow|view|enum|process|story|persona|scenario|ledger|transaction|schedule|webhook|approval|sla|policy|island|channel|event_model|llm_model|llm_config|llm_intent)\\b"
         },
         {
           "name": "keyword.other.block.dazzle",
-          "match": "\\b(section|action|step|field|constraint|key|mode|sync|call|map|with|spec|auth_profile|transitions|invariant|access|examples|ux|input|output|guarantees|stub)\\b"
+          "match": "\\b(section|action|step|field|constraint|key|mode|sync|call|map|with|spec|auth_profile|transitions|invariant|access|examples|ux|input|output|guarantees|stub|state|transition|trigger|guard|transfer|debit|credit|amount|source|fields|group_by|account_code|ledger_id|account_type|currency|flags|execution|idempotency_key|sync_to|compensations|compensate|parallel|subprocess|human_task|publish|subscribe|topic|retention|prompt|tier|scan)\\b"
         },
         {
           "name": "keyword.other.metadata.dazzle",
@@ -59,7 +59,7 @@
         },
         {
           "name": "keyword.other.transition.dazzle",
-          "match": "\\b(requires|role|auto|after|manual|minutes|hours|days)\\b"
+          "match": "\\b(requires|role|auto|after|manual|minutes|hours|days|weeks|months|years|goto|on_success|on_failure|on_any_failure|condition|on_true|on_false|catch_up|overlap)\\b"
         },
         {
           "name": "keyword.operator.logical.dazzle",
@@ -78,8 +78,16 @@
           "match": "\\b(domain_logic|validation|workflow|python|typescript|scheduled|event_driven)\\b"
         },
         {
+          "name": "constant.language.account-type.dazzle",
+          "match": "\\b(asset|liability|equity|revenue|expense)\\b"
+        },
+        {
+          "name": "keyword.other.hless.dazzle",
+          "match": "\\b(hless|FACT|OBSERVATION|DERIVATION|INTENT|partition_key|ordering_scope|idempotency|outcomes|t_event|t_log|t_process|strict|warn|off)\\b"
+        },
+        {
           "name": "keyword.control.event.dazzle",
-          "match": "\\b(submitted|success|failure|start|at)\\b"
+          "match": "\\b(submitted|success|failure|start|at|publish|subscribe|emit|emits|derives_from|side_effects)\\b"
         }
       ]
     },
@@ -109,7 +117,7 @@
     "entity-declaration": {
       "patterns": [
         {
-          "match": "\\b(entity|surface|experience|service|workspace|archetype|flow|integration|foreign_model)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\"[^\"]*\")?\\s*:",
+          "match": "\\b(entity|surface|experience|service|workspace|archetype|flow|integration|foreign_model|view|enum|process|story|persona|scenario|ledger|transaction|schedule|webhook|approval|sla|policy|island|channel|event_model|llm_model|llm_config|llm_intent)\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(\"[^\"]*\")?\\s*:",
           "captures": {
             "1": { "name": "keyword.declaration.dazzle" },
             "2": { "name": "entity.name.type.class.dazzle" },
@@ -135,7 +143,7 @@
           }
         },
         {
-          "match": "\\b(kind)\\s*:\\s*(surface|process|integration|domain_logic|validation|workflow)",
+          "match": "\\b(kind)\\s*:\\s*(surface|process|integration|domain_logic|validation|workflow|event_driven|scheduled)",
           "captures": {
             "1": { "name": "keyword.other.metadata.dazzle" },
             "2": { "name": "constant.language.kind.dazzle" }
@@ -202,7 +210,7 @@
       "patterns": [
         {
           "name": "support.type.primitive.dazzle",
-          "match": "\\b(uuid|str|int|float|bool|date|datetime|time|text|json|decimal|email)\\b"
+          "match": "\\b(uuid|str|int|float|bool|date|datetime|time|text|json|decimal|email|money|file|computed)\\b"
         },
         {
           "match": "\\b(ref|has_many|has_one|belongs_to|embeds)\\s+([A-Z][a-zA-Z0-9_]*)",
