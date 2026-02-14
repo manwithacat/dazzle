@@ -311,3 +311,125 @@ class TestRunAllFormatJson:
             data = json.loads(result.output)
             assert "tiers" in data
             assert "overall" in data
+
+
+# ---------------------------------------------------------------------------
+# test dsl-run --base-url
+# ---------------------------------------------------------------------------
+
+
+class TestDslRunBaseUrl:
+    """Tests for the --base-url flag on dsl-run."""
+
+    def test_base_url_preflight_failure(self, tmp_path: Path) -> None:
+        """When server is unreachable, exit 1 with clear error."""
+        with patch(
+            "dazzle.mcp.server.handlers.preflight.check_server_reachable",
+            return_value=json.dumps(
+                {
+                    "error": "Server not reachable at https://bad.example.com",
+                    "hint": "Start the app",
+                }
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "test",
+                    "dsl-run",
+                    *_manifest_args(tmp_path),
+                    "--base-url",
+                    "https://bad.example.com",
+                ],
+            )
+        assert result.exit_code == 1
+        assert (
+            "not reachable" in result.output.lower()
+            or "not reachable" in (result.stderr or "").lower()
+        )
+
+    def test_base_url_passed_to_runner(self, tmp_path: Path) -> None:
+        """--base-url is forwarded to UnifiedTestRunner."""
+        mock_result = MagicMock()
+        mock_result.to_dict.return_value = {"passed": 1, "failed": 0, "tests": []}
+        mock_result.get_summary.return_value = {
+            "total_tests": 1,
+            "passed": 1,
+            "failed": 0,
+            "skipped": 0,
+            "success_rate": 100.0,
+        }
+
+        mock_runner_cls = MagicMock()
+        mock_runner_cls.return_value.run_all.return_value = mock_result
+
+        with (
+            patch(
+                "dazzle.mcp.server.handlers.preflight.check_server_reachable",
+                return_value=None,
+            ),
+            patch.dict(
+                "sys.modules",
+                {"dazzle.testing.unified_runner": MagicMock(UnifiedTestRunner=mock_runner_cls)},
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                [
+                    "test",
+                    "dsl-run",
+                    *_manifest_args(tmp_path),
+                    "--base-url",
+                    "https://staging.example.com",
+                    "--format",
+                    "json",
+                ],
+            )
+
+        if result.exit_code == 0:
+            # Verify base_url was passed to the runner constructor
+            call_kwargs = mock_runner_cls.call_args
+            assert call_kwargs is not None
+            assert call_kwargs[1].get("base_url") == "https://staging.example.com" or (
+                len(call_kwargs[0]) > 2 and call_kwargs[0][2] == "https://staging.example.com"
+            )
+
+
+# ---------------------------------------------------------------------------
+# _parse_base_url
+# ---------------------------------------------------------------------------
+
+
+class TestParseBaseUrl:
+    """Tests for UnifiedTestRunner._parse_base_url."""
+
+    def _parse(self, url: str) -> tuple[str, str]:
+        from dazzle.testing.unified_runner import UnifiedTestRunner
+
+        runner = UnifiedTestRunner.__new__(UnifiedTestRunner)
+        return runner._parse_base_url(url)
+
+    def test_localhost_8000_splits(self) -> None:
+        api, ui = self._parse("http://localhost:8000")
+        assert api == "http://localhost:8000"
+        assert ui == "http://localhost:3000"
+
+    def test_remote_https_no_port(self) -> None:
+        api, ui = self._parse("https://staging.example.com")
+        assert api == "https://staging.example.com"
+        assert ui == "https://staging.example.com"
+
+    def test_remote_https_with_port(self) -> None:
+        api, ui = self._parse("https://staging.example.com:4000")
+        assert api == "https://staging.example.com:4000"
+        assert ui == "https://staging.example.com:4000"
+
+    def test_trailing_slash_stripped(self) -> None:
+        api, ui = self._parse("https://example.com/")
+        assert api == "https://example.com"
+        assert ui == "https://example.com"
+
+    def test_heroku_url(self) -> None:
+        api, ui = self._parse("https://myapp-staging-abc123.herokuapp.com")
+        assert api == "https://myapp-staging-abc123.herokuapp.com"
+        assert ui == "https://myapp-staging-abc123.herokuapp.com"

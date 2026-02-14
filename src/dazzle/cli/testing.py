@@ -1411,6 +1411,12 @@ def dsl_run(
         "-t",
         help="Server startup timeout in seconds (increase for large projects)",
     ),
+    base_url: str = typer.Option(
+        None,
+        "--base-url",
+        "-b",
+        help="Base URL of a running server (local or remote). Skips auto-starting a local server.",
+    ),
     format: str = typer.Option(
         "table",
         "--format",
@@ -1429,12 +1435,16 @@ def dsl_run(
 
     Tests are auto-generated and cached for performance. No browser required.
 
+    By default, starts a local server automatically. Use --base-url to target
+    a remote deployment instead.
+
     Examples:
-        dazzle test dsl-run                    # Run all tests
+        dazzle test dsl-run                    # Run all tests (local server)
         dazzle test dsl-run --regenerate       # Regenerate and run
         dazzle test dsl-run -o results.json    # Save results to file
         dazzle test dsl-run --timeout 120      # Allow 2 min for server startup
         dazzle test dsl-run --format json      # JSON output for CI
+        dazzle test dsl-run --base-url https://staging.example.com  # Remote server
     """
     import json
 
@@ -1453,15 +1463,32 @@ def dsl_run(
 
     json_mode = format == "json"
 
+    # Preflight check for remote servers
+    if base_url:
+        from dazzle.mcp.server.handlers.preflight import check_server_reachable
+
+        if not json_mode:
+            typer.echo(f"Checking server at {base_url}...")
+        preflight_err = check_server_reachable(base_url)
+        if preflight_err:
+            err_data = json.loads(preflight_err)
+            typer.echo(f"Server not reachable: {err_data.get('error', base_url)}", err=True)
+            if err_data.get("hint"):
+                typer.echo(f"Hint: {err_data['hint']}", err=True)
+            raise typer.Exit(code=1)
+
     if not json_mode:
-        typer.echo(f"Running DSL tests for project at {root}...")
+        if base_url:
+            typer.echo(f"Running DSL tests against {base_url}...")
+        else:
+            typer.echo(f"Running DSL tests for project at {root}...")
         typer.echo()
 
     try:
         from dazzle.cli.activity import cli_activity
 
         with cli_activity(root, "dsl_test", "run_all"):
-            runner = UnifiedTestRunner(root, server_timeout=timeout)
+            runner = UnifiedTestRunner(root, server_timeout=timeout, base_url=base_url)
 
             # Run all tests
             result = runner.run_all(generate=True, force_generate=regenerate)

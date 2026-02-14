@@ -140,15 +140,26 @@ class UnifiedTestRunner:
     def _parse_base_url(self, base_url: str) -> tuple[str, str]:
         """Parse base_url into (api_url, ui_url).
 
-        Assumes API at base_url, UI at same host port 3000 (or same port if not 8000).
+        For local dev (explicit port 8000), assumes UI on port 3000.
+        For remote/production URLs (no port or non-8000 port), assumes
+        API and UI are on the same origin.
         """
         from urllib.parse import urlparse
 
         url = base_url.rstrip("/")
         parsed = urlparse(url)
         api_url = url
-        ui_port = 3000 if parsed.port == 8000 else (parsed.port or 80)
-        ui_url = f"{parsed.scheme}://{parsed.hostname}:{ui_port}"
+
+        if parsed.port == 8000:
+            # Local dev: API on 8000, UI on 3000
+            ui_url = f"{parsed.scheme}://{parsed.hostname}:3000"
+        elif parsed.port is not None:
+            # Explicit non-8000 port: same origin for both
+            ui_url = url
+        else:
+            # No explicit port (remote deploy): same origin for both
+            ui_url = url
+
         return api_url, ui_url
 
     def generate_tests(self, force: bool = False) -> GeneratedTestSuite:
