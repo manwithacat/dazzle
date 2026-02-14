@@ -1408,6 +1408,12 @@ def dsl_run(
         "-t",
         help="Server startup timeout in seconds (increase for large projects)",
     ),
+    format: str = typer.Option(
+        "table",
+        "--format",
+        "-f",
+        help="Output format: table (default) or json",
+    ),
 ) -> None:
     """
     [Tier 1] Run API-based tests against a DNR server.
@@ -1425,6 +1431,7 @@ def dsl_run(
         dazzle test dsl-run --regenerate       # Regenerate and run
         dazzle test dsl-run -o results.json    # Save results to file
         dazzle test dsl-run --timeout 120      # Allow 2 min for server startup
+        dazzle test dsl-run --format json      # JSON output for CI
     """
     import json
 
@@ -1441,8 +1448,11 @@ def dsl_run(
         typer.echo(f"No dazzle.toml found in {root}", err=True)
         raise typer.Exit(code=1)
 
-    typer.echo(f"Running DSL tests for project at {root}...")
-    typer.echo()
+    json_mode = format == "json"
+
+    if not json_mode:
+        typer.echo(f"Running DSL tests for project at {root}...")
+        typer.echo()
 
     try:
         runner = UnifiedTestRunner(root, server_timeout=timeout)
@@ -1450,40 +1460,47 @@ def dsl_run(
         # Run all tests
         result = runner.run_all(generate=True, force_generate=regenerate)
 
-        # Show results
-        summary = result.get_summary()
-        summary["total_tests"]
-        passed = summary["passed"]
-        failed = summary["failed"]
-        skipped = summary.get("skipped", 0)
-        pass_rate = summary["success_rate"]
-        runnable = passed + failed
-
-        typer.echo()
-        if skipped > 0:
-            typer.secho(
-                f"Results: {passed}/{runnable} passed ({pass_rate:.1f}%), {skipped} skipped",
-                bold=True,
-            )
+        if json_mode:
+            typer.echo(json.dumps(result.to_dict(), indent=2))
         else:
-            typer.secho(f"Results: {passed}/{runnable} passed ({pass_rate:.1f}%)", bold=True)
+            # Show results
+            summary = result.get_summary()
+            summary["total_tests"]
+            passed = summary["passed"]
+            failed = summary["failed"]
+            skipped = summary.get("skipped", 0)
+            pass_rate = summary["success_rate"]
+            runnable = passed + failed
 
-        if failed == 0:
-            typer.secho("All tests passed!", fg=typer.colors.GREEN)
-        else:
-            typer.secho(f"{failed} tests failed", fg=typer.colors.RED)
+            typer.echo()
+            if skipped > 0:
+                typer.secho(
+                    f"Results: {passed}/{runnable} passed ({pass_rate:.1f}%), {skipped} skipped",
+                    bold=True,
+                )
+            else:
+                typer.secho(f"Results: {passed}/{runnable} passed ({pass_rate:.1f}%)", bold=True)
+
+            if failed == 0:
+                typer.secho("All tests passed!", fg=typer.colors.GREEN)
+            else:
+                typer.secho(f"{failed} tests failed", fg=typer.colors.RED)
 
         # Output results to file
         if output:
             output_path = Path(output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(json.dumps(result.to_dict(), indent=2))
-            typer.echo(f"Results saved to {output_path}")
+            if not json_mode:
+                typer.echo(f"Results saved to {output_path}")
 
         # Exit with error code if any failures
-        if failed > 0:
+        summary = result.get_summary()
+        if summary["failed"] > 0:
             raise typer.Exit(code=1)
 
+    except typer.Exit:
+        raise
     except Exception as e:
         typer.echo(f"Error running tests: {e}", err=True)
         raise typer.Exit(code=1)
@@ -2093,6 +2110,12 @@ def test_run_all(
     headless: bool = typer.Option(True, "--headless/--headed"),
     output: str = typer.Option(None, "--output", "-o", help="Output JSON file for results"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
+    format: str = typer.Option(
+        "table",
+        "--format",
+        "-f",
+        help="Output format: table (default) or json",
+    ),
 ) -> None:
     """
     Run tests across all tiers (unified test runner).
@@ -2108,6 +2131,7 @@ def test_run_all(
         dazzle test run-all --tier 2           # Run Tier 2 only (Playwright)
         dazzle test run-all --tier 3           # Run Tier 3 only (Agent)
         dazzle test run-all --headed           # Show browser for Tier 2/3
+        dazzle test run-all --format json      # JSON output for CI
     """
     import json
 
@@ -2118,11 +2142,13 @@ def test_run_all(
         typer.echo(f"No dazzle.toml found in {root}", err=True)
         raise typer.Exit(code=1)
 
+    json_mode = format == "json"
     results: dict[str, Any] = {"tiers": {}, "overall": {"passed": 0, "failed": 0}}
 
     # Tier 1: API tests
     if tier is None or tier == 1:
-        typer.secho("Tier 1: Running API tests...", bold=True)
+        if not json_mode:
+            typer.secho("Tier 1: Running API tests...", bold=True)
         try:
             from dazzle.testing.unified_runner import UnifiedTestRunner
 
@@ -2140,19 +2166,23 @@ def test_run_all(
             results["overall"]["passed"] += passed
             results["overall"]["failed"] += failed
 
-            color = typer.colors.GREEN if failed == 0 else typer.colors.RED
-            typer.secho(f"  Tier 1: {passed}/{passed + failed} passed", fg=color)
+            if not json_mode:
+                color = typer.colors.GREEN if failed == 0 else typer.colors.RED
+                typer.secho(f"  Tier 1: {passed}/{passed + failed} passed", fg=color)
 
         except ImportError:
-            typer.echo("  Tier 1: Skipped (unified_runner not available)", err=True)
+            if not json_mode:
+                typer.echo("  Tier 1: Skipped (unified_runner not available)", err=True)
         except Exception as e:
-            typer.echo(f"  Tier 1: Error - {e}", err=True)
+            if not json_mode:
+                typer.echo(f"  Tier 1: Error - {e}", err=True)
             results["tiers"]["tier1"] = {"error": str(e)}
 
     # Tier 2: Playwright tests
     if tier is None or tier == 2:
-        typer.echo()
-        typer.secho("Tier 2: Running Playwright tests...", bold=True)
+        if not json_mode:
+            typer.echo()
+            typer.secho("Tier 2: Running Playwright tests...", bold=True)
         try:
             from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
 
@@ -2174,22 +2204,27 @@ def test_run_all(
                 results["overall"]["passed"] += passed
                 results["overall"]["failed"] += failed
 
-                color = typer.colors.GREEN if failed == 0 else typer.colors.RED
-                typer.secho(f"  Tier 2: {passed}/{passed + failed} passed", fg=color)
+                if not json_mode:
+                    color = typer.colors.GREEN if failed == 0 else typer.colors.RED
+                    typer.secho(f"  Tier 2: {passed}/{passed + failed} passed", fg=color)
             else:
-                typer.echo("  Tier 2: Skipped (Playwright not available)", err=True)
+                if not json_mode:
+                    typer.echo("  Tier 2: Skipped (Playwright not available)", err=True)
                 results["tiers"]["tier2"] = {"skipped": True}
 
         except ImportError:
-            typer.echo("  Tier 2: Skipped (e2e_runner not available)", err=True)
+            if not json_mode:
+                typer.echo("  Tier 2: Skipped (e2e_runner not available)", err=True)
         except Exception as e:
-            typer.echo(f"  Tier 2: Error - {e}", err=True)
+            if not json_mode:
+                typer.echo(f"  Tier 2: Error - {e}", err=True)
             results["tiers"]["tier2"] = {"error": str(e)}
 
     # Tier 3: Agent tests
     if tier is None or tier == 3:
-        typer.echo()
-        typer.secho("Tier 3: Running LLM agent tests...", bold=True)
+        if not json_mode:
+            typer.echo()
+            typer.secho("Tier 3: Running LLM agent tests...", bold=True)
         try:
             import asyncio
 
@@ -2214,41 +2249,51 @@ def test_run_all(
             results["overall"]["passed"] += passed
             results["overall"]["failed"] += failed
 
-            color = typer.colors.GREEN if failed == 0 else typer.colors.RED
-            typer.secho(f"  Tier 3: {passed}/{len(test_results)} passed", fg=color)
+            if not json_mode:
+                color = typer.colors.GREEN if failed == 0 else typer.colors.RED
+                typer.secho(f"  Tier 3: {passed}/{len(test_results)} passed", fg=color)
 
         except ImportError as e:
-            typer.echo(f"  Tier 3: Skipped ({e})", err=True)
+            if not json_mode:
+                typer.echo(f"  Tier 3: Skipped ({e})", err=True)
             results["tiers"]["tier3"] = {"skipped": True}
         except Exception as e:
-            typer.echo(f"  Tier 3: Error - {e}", err=True)
+            if not json_mode:
+                typer.echo(f"  Tier 3: Error - {e}", err=True)
             results["tiers"]["tier3"] = {"error": str(e)}
 
-    # Summary
-    typer.echo()
-    total_passed = results["overall"]["passed"]
-    total_failed = results["overall"]["failed"]
-    total = total_passed + total_failed
-
-    if total_failed == 0 and total > 0:
-        typer.secho(f"All tests passed: {total_passed}/{total}", fg=typer.colors.GREEN, bold=True)
-    elif total > 0:
-        typer.secho(
-            f"Results: {total_passed}/{total} passed, {total_failed} failed",
-            fg=typer.colors.RED,
-            bold=True,
-        )
+    if json_mode:
+        typer.echo(json.dumps(results, indent=2))
     else:
-        typer.echo("No tests were run.")
+        # Summary
+        typer.echo()
+        total_passed = results["overall"]["passed"]
+        total_failed = results["overall"]["failed"]
+        total = total_passed + total_failed
+
+        if total_failed == 0 and total > 0:
+            typer.secho(
+                f"All tests passed: {total_passed}/{total}", fg=typer.colors.GREEN, bold=True
+            )
+        elif total > 0:
+            typer.secho(
+                f"Results: {total_passed}/{total} passed, {total_failed} failed",
+                fg=typer.colors.RED,
+                bold=True,
+            )
+        else:
+            typer.echo("No tests were run.")
 
     # Output to file
     if output:
         output_path = Path(output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(results, indent=2))
-        typer.echo(f"Results saved to {output_path}")
+        if not json_mode:
+            typer.echo(f"Results saved to {output_path}")
 
     # Exit with error if failures
+    total_failed = results["overall"]["failed"]
     if total_failed > 0:
         raise typer.Exit(code=1)
 
