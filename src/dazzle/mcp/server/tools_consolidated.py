@@ -1383,6 +1383,50 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # Nightly (parallel quality runner)
+        # =====================================================================
+        Tool(
+            name="nightly",
+            description=(
+                "Parallel quality runner — same steps as pipeline but fans out "
+                "independent steps using a thread pool for faster wall-clock time. "
+                "Operations: run. Returns structured JSON identical to pipeline."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["run"],
+                        "description": "Operation to perform",
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Server URL — if provided, also runs dsl_test(run_all)",
+                    },
+                    "stop_on_error": {
+                        "type": "boolean",
+                        "description": "Stop on first error (default: false)",
+                    },
+                    "workers": {
+                        "type": "integer",
+                        "description": "Max parallel workers (default: 4)",
+                    },
+                    "detail": {
+                        "type": "string",
+                        "enum": ["metrics", "issues", "full"],
+                        "description": (
+                            "Response detail level (default: 'issues'). "
+                            "'metrics': compact. 'issues': expand steps with problems. "
+                            "'full': complete results."
+                        ),
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Policy Analysis (RBAC access control)
         # =====================================================================
         Tool(

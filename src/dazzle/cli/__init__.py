@@ -164,6 +164,7 @@ from dazzle.cli.kg import kg_app  # noqa: E402
 from dazzle.cli.lsp import lsp_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.migrate import migrate_app  # noqa: E402
+from dazzle.cli.nightly import nightly_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
 from dazzle.cli.sentinel import sentinel_app  # noqa: E402
@@ -188,6 +189,7 @@ app.add_typer(events_app, name="events")
 app.add_typer(dlq_app, name="dlq")
 app.add_typer(outbox_app, name="outbox")
 app.add_typer(migrate_app, name="process-migrate")
+app.add_typer(nightly_app, name="nightly")
 app.add_typer(pipeline_app, name="pipeline")
 app.add_typer(pitch_app, name="pitch")
 app.add_typer(kg_app, name="kg")

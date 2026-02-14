@@ -1486,6 +1486,27 @@ def handle_pipeline(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Nightly Handler
+# =============================================================================
+
+
+def handle_nightly(arguments: dict[str, Any]) -> str:
+    """Handle nightly parallel quality operations."""
+    from .handlers.nightly import run_nightly_handler
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    if operation == "run":
+        return run_nightly_handler(project_path, arguments)
+    else:
+        return json.dumps({"error": f"Unknown nightly operation: {operation}"})
+
+
+# =============================================================================
 # Pulse (founder-ready health report)
 # =============================================================================
 
@@ -1613,6 +1634,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
     "discovery": handle_discovery,
+    "nightly": handle_nightly,
     "pipeline": handle_pipeline,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
