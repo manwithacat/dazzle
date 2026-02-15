@@ -170,6 +170,7 @@ def make_appspec(
     llm_models: list | None = None,
     llm_intents: list | None = None,
     event_model: object | None = None,
+    views: list | None = None,
 ) -> Any:
     """Build a duck-typed AppSpec-like object for sentinel agent testing.
 
@@ -214,8 +215,15 @@ def make_appspec(
     spec.llm_intents = llm_intents or []
     spec.event_model = event_model
 
+    # Views (v0.25.0)
+    view_list = views or []
+    view_map = {v.name: v for v in view_list}
+    spec.views = view_list
+
     # Implement get_entity(name) for agents that look up entities
     spec.get_entity = lambda name, m=entity_map: m.get(name)
+    # Implement get_view(name) for agents that look up views
+    spec.get_view = lambda name, m=view_map: m.get(name)
 
     return spec
 

@@ -9,6 +9,7 @@ import pytest
 from dazzle.core.ir import FieldTypeKind
 from dazzle.core.ir.ledgers import TransactionExecution
 from dazzle.core.ir.process import OverlapPolicy
+from dazzle.core.ir.views import ViewFieldSpec, ViewSpec
 from dazzle.sentinel.agents.performance_resource import PerformanceResourceAgent
 from dazzle.sentinel.models import AgentId, Severity
 
@@ -40,7 +41,8 @@ class TestPR01NPlusOneListSurface:
         surface.entity_ref = entity_ref
         return surface
 
-    def test_flags_entity_with_3_ref_fields(self, agent: PerformanceResourceAgent) -> None:
+    def test_ref_only_entity_not_flagged(self, agent: PerformanceResourceAgent) -> None:
+        """ref fields get auto-eager-load — no N+1 risk."""
         entity = make_entity(
             "Order",
             [
@@ -52,21 +54,18 @@ class TestPR01NPlusOneListSurface:
         )
         surface = self._list_surface("order_list", "Order")
         appspec = make_appspec([entity], surfaces=[surface])
-        findings = agent.n_plus_1_list_surface(appspec)
-        assert len(findings) == 1
-        assert findings[0].heuristic_id == "PR-01"
-        assert findings[0].severity == Severity.HIGH
-        assert "order_list" in findings[0].title
-        assert "Order" in findings[0].title
+        # All 3 relationships are ref → auto-eager-loaded → no findings
+        assert agent.n_plus_1_list_surface(appspec) == []
 
-    def test_flags_entity_with_has_many_and_has_one(self, agent: PerformanceResourceAgent) -> None:
+    def test_flags_entity_with_3_has_many(self, agent: PerformanceResourceAgent) -> None:
+        """has_many fields are NOT auto-eager-loaded — N+1 risk remains."""
         entity = make_entity(
             "Order",
             [
                 pk_field(),
-                ref_field("customer", "Customer"),
                 make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
-                make_field("invoice", FieldTypeKind.HAS_ONE, ref_entity="Invoice"),
+                make_field("payments", FieldTypeKind.HAS_MANY, ref_entity="Payment"),
+                make_field("notes", FieldTypeKind.HAS_MANY, ref_entity="Note"),
             ],
         )
         surface = self._list_surface("order_list", "Order")
@@ -74,6 +73,26 @@ class TestPR01NPlusOneListSurface:
         findings = agent.n_plus_1_list_surface(appspec)
         assert len(findings) == 1
         assert findings[0].heuristic_id == "PR-01"
+        assert findings[0].severity == Severity.HIGH
+        assert "order_list" in findings[0].title
+
+    def test_mixed_refs_and_has_many_only_counts_non_ref(
+        self, agent: PerformanceResourceAgent
+    ) -> None:
+        """ref fields are excluded, only has_many/has_one count toward threshold."""
+        entity = make_entity(
+            "Order",
+            [
+                pk_field(),
+                ref_field("customer", "Customer"),  # auto-eager-loaded, excluded
+                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
+                make_field("invoice", FieldTypeKind.HAS_ONE, ref_entity="Invoice"),
+            ],
+        )
+        surface = self._list_surface("order_list", "Order")
+        appspec = make_appspec([entity], surfaces=[surface])
+        # Only 2 non-ref relationship fields (< threshold 3)
+        assert agent.n_plus_1_list_surface(appspec) == []
 
     def test_passes_entity_with_fewer_than_3_refs(self, agent: PerformanceResourceAgent) -> None:
         entity = make_entity(
@@ -123,6 +142,24 @@ class TestPR01NPlusOneListSurface:
         surface = self._list_surface("order_list", "NonExistent")
         appspec = make_appspec(surfaces=[surface])
         assert agent.n_plus_1_list_surface(appspec) == []
+
+    def test_flags_3_has_many_even_with_refs(self, agent: PerformanceResourceAgent) -> None:
+        """Entity with both ref and has_many — only has_many count."""
+        entity = make_entity(
+            "Order",
+            [
+                pk_field(),
+                ref_field("customer", "Customer"),  # auto-eager-loaded
+                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
+                make_field("payments", FieldTypeKind.HAS_MANY, ref_entity="Payment"),
+                make_field("notes", FieldTypeKind.HAS_MANY, ref_entity="Note"),
+            ],
+        )
+        surface = self._list_surface("order_list", "Order")
+        appspec = make_appspec([entity], surfaces=[surface])
+        # 3 has_many fields → above threshold → flagged
+        findings = agent.n_plus_1_list_surface(appspec)
+        assert len(findings) == 1
 
 
 # =============================================================================
@@ -341,6 +378,47 @@ class TestPR05LargeEntityListSurface:
         appspec = make_appspec(surfaces=[surface])
         assert agent.large_entity_list_surface(appspec) == []
 
+    def test_view_projection_reduces_field_count(self, agent: PerformanceResourceAgent) -> None:
+        """Surface with view_ref uses view's field count, not entity's."""
+        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(20)]
+        entity = make_entity("Contact", fields)  # 21 fields
+        surface = self._list_surface("contact_list", "Contact")
+        surface.view_ref = "ContactSummary"
+        view = ViewSpec(
+            name="ContactSummary",
+            source_entity="Contact",
+            fields=[
+                ViewFieldSpec(name="id"),
+                ViewFieldSpec(name="name"),
+                ViewFieldSpec(name="email"),
+            ],
+        )
+        appspec = make_appspec([entity], surfaces=[surface], views=[view])
+        # View has 3 fields (< 10 threshold) → no finding
+        assert agent.large_entity_list_surface(appspec) == []
+
+    def test_view_ref_with_no_matching_view_falls_back_to_entity(
+        self, agent: PerformanceResourceAgent
+    ) -> None:
+        """If view_ref references a nonexistent view, fall back to entity fields."""
+        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(10)]
+        entity = make_entity("BigEntity", fields)  # 11 fields
+        surface = self._list_surface("big_list", "BigEntity")
+        surface.view_ref = "NonExistentView"
+        appspec = make_appspec([entity], surfaces=[surface])
+        findings = agent.large_entity_list_surface(appspec)
+        assert len(findings) == 1  # Falls back to entity's 11 fields
+
+    def test_view_ref_none_uses_entity_fields(self, agent: PerformanceResourceAgent) -> None:
+        """Surface without view_ref uses entity field count as before."""
+        fields = [pk_field()] + [str_field(f"field_{i}") for i in range(10)]
+        entity = make_entity("BigEntity", fields)  # 11 fields
+        surface = self._list_surface("big_list", "BigEntity")
+        surface.view_ref = None
+        appspec = make_appspec([entity], surfaces=[surface])
+        findings = agent.large_entity_list_surface(appspec)
+        assert len(findings) == 1
+
 
 # =============================================================================
 # PR-06  Synchronous transaction execution
@@ -544,14 +622,16 @@ class TestPerformanceResourceAgentRun:
         self, agent: PerformanceResourceAgent
     ) -> None:
         """An appspec triggering multiple heuristics produces combined findings."""
-        # Entity with ref (triggers PR-02) on a list surface with many refs (triggers PR-01)
+        # Entity with has_many relationships (triggers PR-01, N+1 risk)
+        # plus ref fields (triggers PR-02, no index)
         entity = make_entity(
             "Order",
             [
                 pk_field(),
                 ref_field("customer", "Customer"),
-                ref_field("product", "Product"),
-                ref_field("warehouse", "Warehouse"),
+                make_field("items", FieldTypeKind.HAS_MANY, ref_entity="OrderItem"),
+                make_field("payments", FieldTypeKind.HAS_MANY, ref_entity="Payment"),
+                make_field("notes", FieldTypeKind.HAS_MANY, ref_entity="Note"),
             ],
         )
         surface = MagicMock()
@@ -572,7 +652,7 @@ class TestPerformanceResourceAgentRun:
         result = agent.run(appspec)
         assert result.errors == []
         heuristic_ids = {f.heuristic_id for f in result.findings}
-        assert "PR-01" in heuristic_ids  # N+1 risk
+        assert "PR-01" in heuristic_ids  # N+1 risk (has_many fields)
         assert "PR-02" in heuristic_ids  # ref without index
         assert "PR-06" in heuristic_ids  # sync transaction
 

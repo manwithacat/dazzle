@@ -48,7 +48,12 @@ class PerformanceResourceAgent(DetectionAgent):
         title="N+1 risk on list surface",
     )
     def n_plus_1_list_surface(self, appspec: AppSpec) -> list[Finding]:
-        """Flag list surfaces backed by entities with many relationship fields."""
+        """Flag list surfaces backed by entities with many relationship fields.
+
+        ``ref`` fields are excluded from the count because the runtime
+        auto-detects them at compile time and adds eager loading.  Only
+        ``has_many`` and ``has_one`` relationships still carry N+1 risk.
+        """
         findings: list[Finding] = []
         for surface in appspec.surfaces:
             if getattr(surface, "mode", None) is None:
@@ -62,7 +67,13 @@ class PerformanceResourceAgent(DetectionAgent):
             entity = appspec.get_entity(entity_name)
             if entity is None:
                 continue
-            rel_fields = [f for f in entity.fields if f.type.kind.value in _RELATIONSHIP_KINDS]
+            # Only count relationship fields NOT covered by auto-eager-load.
+            # ref fields get auto-included at compile time; has_many/has_one do not.
+            rel_fields = [
+                f
+                for f in entity.fields
+                if f.type.kind.value in _RELATIONSHIP_KINDS and f.type.kind.value != "ref"
+            ]
             if len(rel_fields) < _N_PLUS_1_THRESHOLD:
                 continue
             field_names = [f.name for f in rel_fields]
@@ -272,7 +283,12 @@ class PerformanceResourceAgent(DetectionAgent):
         title="Large entity in list surface",
     )
     def large_entity_list_surface(self, appspec: AppSpec) -> list[Finding]:
-        """Flag list surfaces backed by entities with many fields."""
+        """Flag list surfaces backed by entities with many fields.
+
+        When a surface uses ``view_ref`` (a projection view), the runtime
+        only SELECTs the view's columns — so we count view fields instead
+        of entity fields.
+        """
         findings: list[Finding] = []
         for surface in appspec.surfaces:
             if getattr(surface, "mode", None) is None:
@@ -286,7 +302,19 @@ class PerformanceResourceAgent(DetectionAgent):
             entity = appspec.get_entity(entity_name)
             if entity is None:
                 continue
-            field_count = len(entity.fields)
+
+            # If the surface has a view_ref, use the view's field count
+            # instead of the entity's — the runtime projects only those columns.
+            view_ref = getattr(surface, "view_ref", None)
+            if view_ref:
+                view = appspec.get_view(view_ref)
+                if view is not None:
+                    field_count = len(view.fields)
+                else:
+                    field_count = len(entity.fields)
+            else:
+                field_count = len(entity.fields)
+
             if field_count < _LARGE_ENTITY_FIELDS:
                 continue
             findings.append(
