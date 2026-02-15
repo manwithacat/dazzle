@@ -217,7 +217,7 @@ def get_jinja_env() -> Environment:
     return _env
 
 
-def render_page(context: PageContext) -> str:
+def render_page(context: PageContext, *, partial: bool = False) -> str:
     """
     Render a full page from a PageContext.
 
@@ -227,6 +227,8 @@ def render_page(context: PageContext) -> str:
 
     Args:
         context: Page context with all data needed for rendering.
+        partial: When True, injects ``_htmx_partial=True`` into template
+            variables so ``base.html`` omits the ``<html><head>`` wrapper.
 
     Returns:
         Rendered HTML string.
@@ -242,6 +244,8 @@ def render_page(context: PageContext) -> str:
 
     # Build template variables from context
     template_vars = context.model_dump()
+    if partial:
+        template_vars["_htmx_partial"] = True
 
     # Render the content template first (standalone fragment)
     content_template = env.get_template(context.template)

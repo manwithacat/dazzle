@@ -121,13 +121,33 @@ def create_console_routes(
     # Helper: render template
     # -------------------------------------------------------------------------
 
-    def render(template_name: str, context: dict[str, Any] | None = None) -> HTMLResponse:
-        """Render a Jinja2 template to HTMLResponse."""
-        ctx = {
+    def render(
+        template_name: str,
+        context: dict[str, Any] | None = None,
+        *,
+        request: Request | None = None,
+    ) -> HTMLResponse:
+        """Render a Jinja2 template to HTMLResponse.
+
+        When *request* is provided and it carries HTMX headers, the
+        ``_htmx_partial`` template variable is set so ``base.html``
+        omits the ``<html><head>`` wrapper for boosted navigations.
+        """
+        ctx: dict[str, Any] = {
             "nav_items": NAV_ITEMS,
             "app_name": "Dazzle Console",
             **(context or {}),
         }
+        if request is not None:
+            from dazzle_back.runtime.htmx_response import HtmxDetails
+
+            htmx = HtmxDetails.from_request(request)
+            if htmx.is_htmx and not htmx.is_history_restore:
+                ctx["_htmx_partial"] = True
+            if htmx.current_url:
+                from urllib.parse import urlparse
+
+                ctx["current_route"] = urlparse(htmx.current_url).path
         template = jinja_env.get_template(template_name)
         html = template.render(**ctx)
         return HTMLResponse(content=html)
@@ -206,6 +226,7 @@ def create_console_routes(
 
     @router.get("/", response_model=None)
     async def dashboard(
+        request: Request,
         user: str | None = Depends(get_optional_user),
     ) -> Response:
         """Main dashboard page."""
@@ -222,6 +243,7 @@ def create_console_routes(
                 "username": user,
                 "app_summary": app_summary,
             },
+            request=request,
         )
 
     @router.get("/partials/health-cards", response_class=HTMLResponse)
@@ -243,6 +265,7 @@ def create_console_routes(
 
     @router.get("/app-map", response_model=None)
     async def app_map(
+        request: Request,
         user: str | None = Depends(get_optional_user),
     ) -> Response:
         """App map page showing entities, surfaces, integrations."""
@@ -254,6 +277,7 @@ def create_console_routes(
                 "current_route": "/_console/app-map",
                 "username": user,
             },
+            request=request,
         )
 
     @router.get("/partials/entities", response_class=HTMLResponse)
@@ -286,6 +310,7 @@ def create_console_routes(
 
     @router.get("/changes", response_model=None)
     async def changes_page(
+        request: Request,
         user: str | None = Depends(get_optional_user),
     ) -> Response:
         """Spec versioning and change tracking page."""
@@ -297,6 +322,7 @@ def create_console_routes(
                 "current_route": "/_console/changes",
                 "username": user,
             },
+            request=request,
         )
 
     @router.get("/partials/version-timeline", response_class=HTMLResponse)
@@ -337,6 +363,7 @@ def create_console_routes(
 
     @router.get("/deploy", response_model=None)
     async def deploy_page(
+        request: Request,
         user: str | None = Depends(get_optional_user),
     ) -> Response:
         """Deployment pipeline page."""
@@ -348,6 +375,7 @@ def create_console_routes(
                 "current_route": "/_console/deploy",
                 "username": user,
             },
+            request=request,
         )
 
     @router.get("/partials/deploy-history", response_class=HTMLResponse)
@@ -366,6 +394,7 @@ def create_console_routes(
 
     @router.get("/performance", response_model=None)
     async def performance_page(
+        request: Request,
         user: str | None = Depends(get_optional_user),
     ) -> Response:
         """Performance monitoring page."""
@@ -377,6 +406,7 @@ def create_console_routes(
                 "current_route": "/_console/performance",
                 "username": user,
             },
+            request=request,
         )
 
     @router.get("/partials/api-perf", response_class=HTMLResponse)

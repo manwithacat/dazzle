@@ -38,7 +38,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     from fastapi.responses import JSONResponse as _JSONResponse
     from pydantic import ValidationError
 
-    from dazzle_back.runtime.htmx_response import is_htmx_request, json_or_htmx_error
+    from dazzle_back.runtime.htmx_response import HtmxDetails, json_or_htmx_error
     from dazzle_back.runtime.invariant_evaluator import InvariantViolationError
     from dazzle_back.runtime.repository import ConstraintViolationError
     from dazzle_back.runtime.state_machine import TransitionError
@@ -48,7 +48,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: ConstraintViolationError
     ) -> Response:
         """Convert database constraint violations to 422 Unprocessable Entity."""
-        if is_htmx_request(request):
+        if HtmxDetails.from_request(request).is_htmx:
             return json_or_htmx_error(
                 request,
                 [{"loc": [exc.field] if exc.field else [], "msg": str(exc)}],
@@ -66,7 +66,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(TransitionError)
     async def transition_error_handler(request: Request, exc: TransitionError) -> Response:
         """Convert state machine errors to 422 Unprocessable Entity."""
-        if is_htmx_request(request):
+        if HtmxDetails.from_request(request).is_htmx:
             return json_or_htmx_error(
                 request,
                 [{"loc": [], "msg": str(exc)}],
@@ -80,7 +80,7 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(InvariantViolationError)
     async def invariant_error_handler(request: Request, exc: InvariantViolationError) -> Response:
         """Convert invariant violations to 422 Unprocessable Entity."""
-        if is_htmx_request(request):
+        if HtmxDetails.from_request(request).is_htmx:
             return json_or_htmx_error(
                 request,
                 [{"loc": [], "msg": str(exc)}],

@@ -8,9 +8,50 @@ for server→client event coordination (triggers, retarget, reswap, redirect).
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import Any
 
 from fastapi.responses import HTMLResponse, JSONResponse
+
+
+@dataclass(frozen=True, slots=True)
+class HtmxDetails:
+    """Parsed HTMX request headers — single source of truth.
+
+    Parses all 8 HX-* request headers sent by htmx:
+    https://htmx.org/reference/#request_headers
+    """
+
+    is_htmx: bool = False
+    is_boosted: bool = False
+    current_url: str = ""
+    is_history_restore: bool = False
+    prompt: str = ""
+    target: str = ""
+    trigger_id: str = ""
+    trigger_name: str = ""
+
+    @classmethod
+    def from_request(cls, request: Any) -> HtmxDetails:
+        """Construct from a Starlette/FastAPI request."""
+        if not hasattr(request, "headers"):
+            return cls()
+        h = request.headers
+        return cls(
+            is_htmx=h.get("HX-Request") == "true",
+            is_boosted=h.get("HX-Boosted") == "true",
+            current_url=h.get("HX-Current-URL", ""),
+            is_history_restore=h.get("HX-History-Restore-Request") == "true",
+            prompt=h.get("HX-Prompt", ""),
+            target=h.get("HX-Target", ""),
+            trigger_id=h.get("HX-Trigger", ""),
+            trigger_name=h.get("HX-Trigger-Name", ""),
+        )
+
+    @property
+    def wants_partial(self) -> bool:
+        """Boosted navigation that is NOT a history restore → body-only."""
+        return self.is_boosted and not self.is_history_restore
 
 
 def htmx_response(
@@ -81,9 +122,7 @@ def htmx_trigger_headers(
 
 def is_htmx_request(request: Any) -> bool:
     """Check if the incoming request is from HTMX."""
-    if not hasattr(request, "headers"):
-        return False
-    return bool(request.headers.get("HX-Request") == "true")
+    return HtmxDetails.from_request(request).is_htmx
 
 
 def htmx_error_response(

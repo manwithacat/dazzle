@@ -208,7 +208,20 @@ def create_page_routes(
                     if k.startswith("filter[") and k.endswith("]") and v
                 }
 
-            html = render_page(ctx)
+            from dazzle_back.runtime.htmx_response import HtmxDetails
+
+            htmx = HtmxDetails.from_request(request)
+
+            # Boosted navigations: update nav highlighting from the actual URL
+            if htmx.current_url:
+                from urllib.parse import urlparse
+
+                ctx.current_route = urlparse(htmx.current_url).path
+
+            # Any HTMX request can receive body-only HTML — the client
+            # extracts <body> content anyway.  History-restore is the one
+            # exception: the browser needs a full document for cache misses.
+            html = render_page(ctx, partial=htmx.is_htmx and not htmx.is_history_restore)
             return HTMLResponse(content=html)
 
         return page_handler
@@ -290,15 +303,26 @@ def create_page_routes(
                                 content={"detail": "Access denied: insufficient role"},
                             )
 
+                    from dazzle_back.runtime.htmx_response import HtmxDetails
+
+                    htmx = HtmxDetails.from_request(request)
+
+                    effective_route = ws_route
+                    if htmx.current_url:
+                        from urllib.parse import urlparse
+
+                        effective_route = urlparse(htmx.current_url).path
+
                     html = render_fragment(
                         "workspace/workspace.html",
                         workspace=ws_context,
                         nav_items=visible_nav,
                         app_name=ws_app_name,
-                        current_route=ws_route,
+                        current_route=effective_route,
                         is_authenticated=is_authenticated,
                         user_email=user_email,
                         user_name=user_name,
+                        _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
                     )
                     return HTMLResponse(content=html)
 

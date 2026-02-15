@@ -43,11 +43,15 @@ APIRouter = _APIRouter
 
 def _is_htmx_request(request: Any) -> bool:
     """Check if this is an HTMX request that wants HTML fragments."""
-    if not hasattr(request, "headers"):
-        return False
-    return bool(
-        request.headers.get("HX-Request") == "true" or request.headers.get("Accept") == "text/html"
-    )
+    from dazzle_back.runtime.htmx_response import HtmxDetails
+
+    htmx = HtmxDetails.from_request(request)
+    if htmx.is_htmx:
+        return True
+    # Fallback: Accept header for non-HTMX HTML clients
+    if hasattr(request, "headers"):
+        return bool(request.headers.get("Accept") == "text/html")
+    return False
 
 
 def _with_htmx_triggers(
@@ -276,34 +280,48 @@ async def _list_handler_body(
     # HTMX content negotiation: return HTML fragment for HX-Request
     if _is_htmx_request(request):
         try:
+            from dazzle_back.runtime.htmx_response import HtmxDetails
             from dazzle_ui.runtime.template_renderer import render_fragment
+
+            htmx = HtmxDetails.from_request(request)
+
+            # Derive table_id from HX-Target (e.g. "dt-tasks-body" → "dt-tasks")
+            table_id = "dt-table"
+            if htmx.target and htmx.target.endswith("-body"):
+                table_id = htmx.target.removesuffix("-body")
 
             items = result.get("items", []) if isinstance(result, dict) else []
             # Convert Pydantic models to dicts
             if items and hasattr(items[0], "model_dump"):
                 items = [item.model_dump() for item in items]
-            # Render table rows fragment with sort/filter state
-            html = render_fragment(
-                "fragments/table_rows.html",
-                table={
-                    "rows": items,
-                    "columns": request.state.htmx_columns
-                    if hasattr(request.state, "htmx_columns")
-                    else [],
-                    "detail_url_template": getattr(request.state, "htmx_detail_url", None),
-                    "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
-                    "api_endpoint": str(request.url.path),
-                    "sort_field": sort or "",
-                    "sort_dir": dir,
-                    "filter_values": filters,
-                    "page": page,
-                    "page_size": page_size,
-                    "total": result.get("total", 0) if isinstance(result, dict) else 0,
-                    "empty_message": getattr(
-                        request.state, "htmx_empty_message", "No items found."
-                    ),
-                },
-            )
+
+            total = result.get("total", 0) if isinstance(result, dict) else 0
+            table_dict = {
+                "rows": items,
+                "columns": request.state.htmx_columns
+                if hasattr(request.state, "htmx_columns")
+                else [],
+                "detail_url_template": getattr(request.state, "htmx_detail_url", None),
+                "entity_name": getattr(request.state, "htmx_entity_name", "Item"),
+                "api_endpoint": str(request.url.path),
+                "table_id": table_id,
+                "sort_field": sort or "",
+                "sort_dir": dir,
+                "filter_values": filters,
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+                "empty_message": getattr(request.state, "htmx_empty_message", "No items found."),
+            }
+
+            # Render table rows
+            html = render_fragment("fragments/table_rows.html", table=table_dict)
+
+            # Append OOB pagination so buttons stay in sync after
+            # sort/filter/search/page changes
+            pagination_html = render_fragment("fragments/table_pagination.html", table=table_dict)
+            html += f'<div id="{table_id}-pagination" hx-swap-oob="true">{pagination_html}</div>'
+
             return HTMLResponse(content=html)
         except ImportError:
             pass  # Template renderer not available, fall through to JSON

@@ -1,3 +1,4 @@
+{% if not _htmx_partial | default(false) %}
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
@@ -53,6 +54,7 @@
 
   {% block head_extra %}{% endblock %}
 </head>
+{% endif %}
 <body class="min-h-screen bg-base-200" style="font-family: var(--font-sans)" hx-boost="true" hx-ext="morph">
   {% block body %}
   {% endblock %}
@@ -62,4 +64,6 @@
 
   {% block scripts_extra %}{% endblock %}
 </body>
+{% if not _htmx_partial | default(false) %}
 </html>
+{% endif %}

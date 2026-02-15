@@ -104,8 +104,10 @@
     </table>
   </div>
 
-  {# Pagination #}
-  {% include 'fragments/table_pagination.html' %}
+  {# Pagination — wrapper has stable ID for OOB swap updates #}
+  <div id="{{ table.table_id or 'dt-table' }}-pagination">
+    {% include 'fragments/table_pagination.html' %}
+  </div>
 
   {# Slide-over panel for detail views #}
   {% if table.slide_over %}
