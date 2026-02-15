@@ -222,8 +222,21 @@ class TestUrlPrefixConsistency:
         assert list_ctx.nav_items
         assert list_ctx.nav_items[0].route == "/app/workspaces/main"
 
-    def test_root_route_preserved(self) -> None:
+    def test_root_route_skipped_when_workspaces_exist(self) -> None:
+        """When workspaces exist, "/" is not registered as a fallback surface."""
         contexts = compile_appspec_to_templates(_make_appspec(), app_prefix="/app")
+        assert "/" not in contexts
+
+    def test_root_route_preserved_without_workspaces(self) -> None:
+        """Without workspaces, "/" fallback to first list surface is kept."""
+        appspec = AppSpec(
+            name="simple_app",
+            title="Simple App",
+            domain=DomainSpec(entities=[_task_entity()]),
+            surfaces=[_list_surface(), _create_surface()],
+            workspaces=[],
+        )
+        contexts = compile_appspec_to_templates(appspec, app_prefix="/app")
         assert "/" in contexts
 
     def test_no_prefix_when_not_specified(self) -> None:

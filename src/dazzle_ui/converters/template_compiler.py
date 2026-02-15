@@ -591,19 +591,22 @@ def compile_appspec_to_templates(
         route = route_map.get(surface.mode, f"/{surface.name}")
         contexts[route] = ctx
 
-    # If we have a list surface, also register it at "/" for the primary entity
-    list_surfaces = [s for s in appspec.surfaces if s.mode == SurfaceMode.LIST]
-    if list_surfaces and "/" not in contexts:
-        first_list = list_surfaces[0]
-        entity = None
-        if domain and first_list.entity_ref:
-            entity = domain.get_entity(first_list.entity_ref)
-        root_ctx = compile_surface_to_context(first_list, entity, app_prefix=app_prefix)
-        root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
-        root_ctx.nav_items = nav_items
-        root_ctx.nav_by_persona = nav_by_persona
-        root_ctx.view_name = first_list.name
-        root_ctx.current_route = "/"
-        contexts["/"] = root_ctx
+    # Register a "/" fallback only for simple apps (no workspaces).
+    # When workspaces exist, the page router adds a redirect to the first
+    # workspace instead — see create_page_routes() in page_routes.py.
+    if not appspec.workspaces:
+        list_surfaces = [s for s in appspec.surfaces if s.mode == SurfaceMode.LIST]
+        if list_surfaces and "/" not in contexts:
+            first_list = list_surfaces[0]
+            entity = None
+            if domain and first_list.entity_ref:
+                entity = domain.get_entity(first_list.entity_ref)
+            root_ctx = compile_surface_to_context(first_list, entity, app_prefix=app_prefix)
+            root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
+            root_ctx.nav_items = nav_items
+            root_ctx.nav_by_persona = nav_by_persona
+            root_ctx.view_name = first_list.name
+            root_ctx.current_route = "/"
+            contexts["/"] = root_ctx
 
     return contexts

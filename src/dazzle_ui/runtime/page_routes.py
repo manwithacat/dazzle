@@ -331,4 +331,14 @@ def create_page_routes(
             handler = _make_workspace_handler(_ws_ctx, _ws_route)
             router.get(f"/workspaces/{workspace.name}", response_class=HTMLResponse)(handler)
 
+        # When workspaces exist and "/" is not already registered as a page,
+        # add a redirect so users landing at the app root reach a real page.
+        if "/" not in page_contexts:
+            first_ws_route = f"{app_prefix}/workspaces/{workspaces[0].name}"
+
+            async def root_redirect(request: Request) -> Response:
+                return RedirectResponse(url=first_ws_route, status_code=302)
+
+            router.get("/", response_class=HTMLResponse)(root_redirect)
+
     return router
