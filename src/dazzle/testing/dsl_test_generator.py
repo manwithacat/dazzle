@@ -1082,7 +1082,7 @@ class DSLTestGenerator:
         """Generate valid test data for an entity."""
         from dazzle.core.ir.fields import FieldTypeKind
 
-        data = {}
+        data: dict[str, Any] = {}
         timestamp = int(datetime.now().timestamp() * 1000) % 100000
 
         for fld in entity.fields:
@@ -1095,6 +1095,13 @@ class DSLTestGenerator:
             if fld.type.kind == FieldTypeKind.REF:
                 continue  # Skip refs for now - handled by _generate_entity_data_with_refs
 
+            # Money fields expand to two storage columns: {name}_minor, {name}_currency
+            if fld.type.kind == FieldTypeKind.MONEY:
+                currency = fld.type.currency_code or "USD"
+                data[f"{fld.name}_minor"] = 10000
+                data[f"{fld.name}_currency"] = currency
+                continue
+
             data[fld.name] = self._generate_field_value(fld, timestamp)
 
         # Satisfy invariant OR clauses that require at least one optional field
@@ -1103,7 +1110,12 @@ class DSLTestGenerator:
             if field_name not in data:
                 inv_field = next((f for f in entity.fields if f.name == field_name), None)
                 if inv_field and inv_field.type.kind != FieldTypeKind.REF:
-                    data[field_name] = self._generate_field_value(inv_field, timestamp)
+                    if inv_field.type.kind == FieldTypeKind.MONEY:
+                        currency = inv_field.type.currency_code or "USD"
+                        data[f"{field_name}_minor"] = 10000
+                        data[f"{field_name}_currency"] = currency
+                    else:
+                        data[field_name] = self._generate_field_value(inv_field, timestamp)
 
         return data
 
@@ -1194,13 +1206,10 @@ class DSLTestGenerator:
 
         type_kind = field.type.kind
         name = field.name.lower()
-        # Use timestamp-based suffixes for unique fields to avoid collisions
-        # across test runs (e.g. on staging servers without DB resets)
+        # Use random suffixes for unique fields to avoid collisions across
+        # test runs (e.g. on staging servers without DB resets)
         if field.is_unique:
-            import time
-
-            ts = int(time.time() * 1000) % 1_000_000
-            suffix = f"_{ts}_{unique_suffix}"
+            suffix = f"_{uuid_module.uuid4().hex[:8]}"
         else:
             suffix = ""
 
@@ -1248,9 +1257,11 @@ class DSLTestGenerator:
         elif type_kind == FieldTypeKind.FILE:
             return f"test_file{suffix}.txt"
         elif type_kind == FieldTypeKind.MONEY:
-            # Money fields expand to _minor + _currency per #131
+            # Money fields expand to {name}_minor + {name}_currency storage
+            # columns. Prefer handling at _generate_entity_data level; this
+            # fallback uses the flat key convention for standalone callers.
             currency = field.type.currency_code or "USD"
-            return {"_minor": 10000, "_currency": currency}
+            return {f"{field.name}_minor": 10000, f"{field.name}_currency": currency}
         elif type_kind == FieldTypeKind.JSON:
             return {"key": f"value{suffix}"}
         else:
