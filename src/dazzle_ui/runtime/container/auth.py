@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel
 
 # Auth data stores (simple in-memory)
@@ -155,13 +155,17 @@ def register_auth_routes(app: FastAPI) -> None:
         return response
 
     @app.post("/auth/logout", tags=["Authentication"], summary="Logout")
-    async def auth_logout(request: Request) -> JSONResponse:
+    async def auth_logout(request: Request) -> Response:
         """Logout and invalidate session."""
         session_token = request.cookies.get("dazzle_session")
         if session_token and session_token in AUTH_SESSIONS:
             del AUTH_SESSIONS[session_token]
 
-        response = JSONResponse({"message": "Logout successful"})
+        accept = request.headers.get("accept", "")
+        if "text/html" in accept or "application/xhtml" in accept:
+            response: Response = RedirectResponse(url="/", status_code=302)
+        else:
+            response = JSONResponse({"message": "Logout successful"})
         response.delete_cookie("dazzle_session")
         return response
 

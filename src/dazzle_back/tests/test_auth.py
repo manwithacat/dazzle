@@ -580,6 +580,66 @@ class TestAuthRoutes:
 
         assert response.status_code == 200
 
+    def test_logout_browser_redirect(self, app: Any) -> None:
+        """Browser logout (Accept: text/html) returns 302 redirect to /."""
+        _, client, auth_store = app
+
+        auth_store.create_user(email="logout_browser@example.com", password="pass")
+        login_response = client.post(
+            "/auth/login",
+            json={"email": "logout_browser@example.com", "password": "pass"},
+        )
+
+        response = client.post(
+            "/auth/logout",
+            cookies=login_response.cookies,
+            headers={"Accept": "text/html"},
+            follow_redirects=False,
+        )
+
+        assert response.status_code == 302
+        assert response.headers["location"] == "/"
+
+    def test_logout_api_json(self, app: Any) -> None:
+        """API logout (Accept: application/json) returns 200 with JSON."""
+        _, client, auth_store = app
+
+        auth_store.create_user(email="logout_api@example.com", password="pass")
+        login_response = client.post(
+            "/auth/login",
+            json={"email": "logout_api@example.com", "password": "pass"},
+        )
+
+        response = client.post(
+            "/auth/logout",
+            cookies=login_response.cookies,
+            headers={"Accept": "application/json"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["message"] == "Logout successful"
+
+    def test_logout_cookie_cleared(self, app: Any) -> None:
+        """Logout clears the dazzle_session cookie regardless of Accept header."""
+        _, client, auth_store = app
+
+        auth_store.create_user(email="logout_cookie@example.com", password="pass")
+        login_response = client.post(
+            "/auth/login",
+            json={"email": "logout_cookie@example.com", "password": "pass"},
+        )
+
+        response = client.post(
+            "/auth/logout",
+            cookies=login_response.cookies,
+            headers={"Accept": "text/html"},
+            follow_redirects=False,
+        )
+
+        # Cookie should be deleted (set with max-age=0 or expires in past)
+        set_cookie = response.headers.get("set-cookie", "")
+        assert "dazzle_session" in set_cookie
+
     def test_get_me_authenticated(self, app: Any) -> None:
         """Test getting current user when authenticated."""
         _, client, auth_store = app
