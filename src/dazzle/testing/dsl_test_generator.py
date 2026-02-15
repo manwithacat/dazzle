@@ -100,6 +100,7 @@ class TestCoverage:
     workspaces_covered: set[str] = field(default_factory=set)
     events_covered: set[str] = field(default_factory=set)
     processes_covered: set[str] = field(default_factory=set)
+    auth_personas_covered: set[str] = field(default_factory=set)
     # Total counts
     entities_total: int = 0
     state_machines_total: int = 0
@@ -107,6 +108,7 @@ class TestCoverage:
     workspaces_total: int = 0
     events_total: int = 0
     processes_total: int = 0
+    auth_personas_total: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -122,6 +124,8 @@ class TestCoverage:
             "events_total": self.events_total,
             "processes": sorted(self.processes_covered),
             "processes_total": self.processes_total,
+            "auth_personas": sorted(self.auth_personas_covered),
+            "auth_personas_total": self.auth_personas_total,
         }
 
 
@@ -257,6 +261,13 @@ class DSLTestGenerator:
             for persona in self.appspec.personas:
                 designs.extend(self._generate_persona_tests(persona))
                 self.coverage.personas_covered.add(persona.id)
+
+        # Auth lifecycle tests (login, session, logout per persona)
+        if self.appspec.personas:
+            self.coverage.auth_personas_total = len(self.appspec.personas)
+            for persona in self.appspec.personas:
+                designs.extend(self._generate_auth_lifecycle_tests(persona))
+                self.coverage.auth_personas_covered.add(persona.id)
 
         # Workspace tests
         if self.appspec.workspaces:
@@ -590,6 +601,218 @@ class DSLTestGenerator:
                         tags=["persona", "goal", "generated", "dsl-derived"],
                     )
                 )
+
+        return tests
+
+    # =========================================================================
+    # Auth Lifecycle Tests
+    # =========================================================================
+
+    def _generate_auth_lifecycle_tests(self, persona: PersonaSpec) -> list[dict[str, Any]]:
+        """Generate auth lifecycle tests (login, session, logout) for a persona."""
+        tests = []
+        persona_id = persona.id
+        persona_label = persona.label or persona_id
+
+        # AUTH_LOGIN_VALID — successful login
+        tests.append(
+            self._create_test(
+                test_id=f"AUTH_LOGIN_VALID_{persona_id.upper()}",
+                title=f"Login as {persona_label} with valid credentials",
+                description=f"Test that {persona_label} can log in with correct credentials",
+                trigger="api_call",
+                persona=persona_id,
+                steps=[
+                    {
+                        "action": "post",
+                        "target": "/auth/login",
+                        "data": {
+                            "email": f"{persona_id}@example.com",
+                            "password": "valid_password",
+                        },
+                        "rationale": f"Login as {persona_label}",
+                    },
+                    {
+                        "action": "assert_status",
+                        "target": "last_response",
+                        "data": {"status": 200},
+                        "rationale": "Verify login succeeded",
+                    },
+                    {
+                        "action": "assert_cookie_set",
+                        "target": "last_response",
+                        "data": {"cookie": "dazzle_session"},
+                        "rationale": "Verify session cookie is set",
+                    },
+                ],
+                tags=["auth", "login", "generated", "dsl-derived"],
+            )
+        )
+
+        # AUTH_LOGIN_INVALID_PASSWORD — wrong password rejected
+        tests.append(
+            self._create_test(
+                test_id=f"AUTH_LOGIN_INVALID_{persona_id.upper()}",
+                title=f"Reject invalid password for {persona_label}",
+                description=f"Test that {persona_label} cannot log in with wrong password",
+                trigger="api_call",
+                persona=persona_id,
+                steps=[
+                    {
+                        "action": "post",
+                        "target": "/auth/login",
+                        "data": {
+                            "email": f"{persona_id}@example.com",
+                            "password": "wrong_password",
+                        },
+                        "rationale": f"Attempt login as {persona_label} with wrong password",
+                    },
+                    {
+                        "action": "assert_status",
+                        "target": "last_response",
+                        "data": {"status": 401},
+                        "rationale": "Verify login rejected",
+                    },
+                    {
+                        "action": "assert_no_cookie",
+                        "target": "last_response",
+                        "data": {"cookie": "dazzle_session"},
+                        "rationale": "Verify no session cookie is set",
+                    },
+                ],
+                tags=["auth", "login", "negative", "generated", "dsl-derived"],
+            )
+        )
+
+        # AUTH_REDIRECT — post-login redirect to persona's default_route
+        redirect_route = persona.default_route or "/app"
+        tests.append(
+            self._create_test(
+                test_id=f"AUTH_REDIRECT_{persona_id.upper()}",
+                title=f"{persona_label} redirects to {redirect_route} after login",
+                description=(
+                    f"Test that {persona_label} is directed to "
+                    f"{redirect_route} after successful login"
+                ),
+                trigger="api_call",
+                persona=persona_id,
+                steps=[
+                    {
+                        "action": "post",
+                        "target": "/auth/login",
+                        "data": {
+                            "email": f"{persona_id}@example.com",
+                            "password": "valid_password",
+                        },
+                        "rationale": f"Login as {persona_label}",
+                    },
+                    {
+                        "action": "assert_redirect_url",
+                        "target": "last_response",
+                        "data": {"redirect_url": redirect_route},
+                        "rationale": f"Verify redirect to {redirect_route}",
+                    },
+                ],
+                tags=["auth", "redirect", "generated", "dsl-derived"],
+            )
+        )
+
+        # AUTH_SESSION_VALID — authenticated request succeeds
+        tests.append(
+            self._create_test(
+                test_id=f"AUTH_SESSION_VALID_{persona_id.upper()}",
+                title=f"Authenticated request succeeds for {persona_label}",
+                description=f"Test that requests with a valid session cookie succeed for {persona_label}",
+                trigger="api_call",
+                persona=persona_id,
+                steps=[
+                    {
+                        "action": "login_as",
+                        "target": persona_id,
+                        "rationale": f"Authenticate as {persona_label}",
+                    },
+                    {
+                        "action": "get",
+                        "target": redirect_route,
+                        "rationale": f"Access {redirect_route} with session",
+                    },
+                    {
+                        "action": "assert_status",
+                        "target": "last_response",
+                        "data": {"status": 200},
+                        "rationale": "Verify access granted",
+                    },
+                ],
+                tags=["auth", "session", "generated", "dsl-derived"],
+            )
+        )
+
+        # AUTH_SESSION_EXPIRED — expired session rejected
+        tests.append(
+            self._create_test(
+                test_id=f"AUTH_SESSION_EXPIRED_{persona_id.upper()}",
+                title=f"Expired session rejected for {persona_label}",
+                description="Test that an expired or invalid session cookie is rejected",
+                trigger="api_call",
+                persona=persona_id,
+                steps=[
+                    {
+                        "action": "get_with_cookie",
+                        "target": redirect_route,
+                        "data": {"cookie": "dazzle_session", "value": "invalid-token"},
+                        "rationale": "Access page with invalid session",
+                    },
+                    {
+                        "action": "assert_unauthenticated",
+                        "target": "last_response",
+                        "data": {"expect": [401, 302]},
+                        "rationale": "Verify 401 or redirect to login",
+                    },
+                ],
+                tags=["auth", "session", "negative", "generated", "dsl-derived"],
+            )
+        )
+
+        # AUTH_LOGOUT — logout clears session
+        tests.append(
+            self._create_test(
+                test_id=f"AUTH_LOGOUT_{persona_id.upper()}",
+                title=f"Logout clears session for {persona_label}",
+                description=f"Test that logout invalidates the session for {persona_label}",
+                trigger="api_call",
+                persona=persona_id,
+                steps=[
+                    {
+                        "action": "login_as",
+                        "target": persona_id,
+                        "rationale": f"Authenticate as {persona_label}",
+                    },
+                    {
+                        "action": "post",
+                        "target": "/auth/logout",
+                        "rationale": "Logout",
+                    },
+                    {
+                        "action": "assert_cookie_cleared",
+                        "target": "last_response",
+                        "data": {"cookie": "dazzle_session"},
+                        "rationale": "Verify session cookie is cleared",
+                    },
+                    {
+                        "action": "get",
+                        "target": redirect_route,
+                        "rationale": "Attempt access after logout",
+                    },
+                    {
+                        "action": "assert_unauthenticated",
+                        "target": "last_response",
+                        "data": {"expect": [401, 302]},
+                        "rationale": "Verify session is invalid after logout",
+                    },
+                ],
+                tags=["auth", "logout", "generated", "dsl-derived"],
+            )
+        )
 
         return tests
 

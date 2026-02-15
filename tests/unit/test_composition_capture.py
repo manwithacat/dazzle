@@ -305,7 +305,10 @@ class TestCaptureCompositionHandler:
             capture_composition_handler,
         )
 
-        mock_load.return_value = MagicMock(pages=[])
+        sitespec = MagicMock(pages=[])
+        sitespec.auth_pages.login.enabled = False
+        sitespec.auth_pages.signup.enabled = False
+        mock_load.return_value = sitespec
         result = await capture_composition_handler(tmp_path, {"base_url": "http://localhost:3000"})
         data = json.loads(result)
         assert data["captures"] == []

@@ -206,6 +206,10 @@ def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
             result["coverage"]["processes"] = (
                 f"{len(coverage.processes_covered)}/{coverage.processes_total}"
             )
+        if coverage.auth_personas_total > 0:
+            result["coverage"]["auth"] = (
+                f"{len(coverage.auth_personas_covered)}/{coverage.auth_personas_total}"
+            )
 
         if save:
             result["saved_to"] = str(project_root / "dsl" / "tests")
@@ -605,6 +609,7 @@ def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> s
             ("workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
             ("events", coverage.events_total, len(coverage.events_covered)),
             ("processes", coverage.processes_total, len(coverage.processes_covered)),
+            ("auth", coverage.auth_personas_total, len(coverage.auth_personas_covered)),
         ]
 
         for name, total, tested in categories:
