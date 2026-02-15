@@ -1,0 +1,29 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-comparison">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-comparison-wrapper">
+      <table class="dz-comparison-table">
+        <thead>
+          <tr>
+            <th></th>
+            {% for col in section.columns | default([]) %}
+            <th{{ ' class="dz-comparison-highlighted"' if col.highlighted else '' }}>{{ col.label | default("") }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in section["items"] | default([]) %}
+          <tr>
+            <td class="dz-comparison-feature">{{ row.feature | default("") }}</td>
+            {% for cell in row.cells | default([]) %}
+            {% set col = section.columns[loop.index0] if loop.index0 < (section.columns | default([]) | length) else {} %}
+            <td{{ ' class="dz-comparison-highlighted"' if col.highlighted else '' }}>{{ cell }}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

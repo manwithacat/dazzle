@@ -1,0 +1,14 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-trust-bar">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-trust-strip">
+      {% for item in section["items"] | default([]) %}
+      <div class="dz-trust-item">
+        {% if item.icon %}<i data-lucide="{{ item.icon }}"></i>{% endif %}
+        <span>{{ item.text | default("") }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

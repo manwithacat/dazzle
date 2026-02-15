@@ -1,0 +1,21 @@
+{% extends "site/site_base.html" %}
+
+{% block title %}Page Not Found - {{ product_name }}{% endblock %}
+
+{% block body %}
+{% include "site/includes/nav.html" %}
+
+<main>
+  <section class="dz-section dz-section-hero">
+    <div class="dz-section-content dz-404-section">
+      <h1 class="dz-404-headline">404</h1>
+      <p class="dz-subhead">The page you're looking for doesn't exist.</p>
+      <div class="dz-cta-group dz-404-cta">
+        <a href="/" class="btn btn-primary">Go Home</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+{% include "site/includes/footer.html" %}
+{% endblock %}

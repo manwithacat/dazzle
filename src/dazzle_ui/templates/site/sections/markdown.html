@@ -1,0 +1,4 @@
+{% from "site/sections/_helpers.html" import section_id_attr %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-markdown">
+  <div class="dz-section-content prose max-w-none">{{ section.content | default("") | safe }}</div>
+</section>

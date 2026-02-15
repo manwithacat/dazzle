@@ -1,0 +1,24 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-pricing">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-pricing-grid">
+      {% for tier in section.tiers | default([]) %}
+      <div class="dz-pricing-tier{{ ' dz-pricing-highlighted' if tier.highlighted else '' }}">
+        <h3>{{ tier.name | default("") }}</h3>
+        <div class="dz-pricing-price">
+          <span class="dz-price">{{ tier.price | default("") }}</span><span class="dz-period">{{ tier.period | default("/month") }}</span>
+        </div>
+        <ul class="dz-pricing-features">
+          {% for feature in tier.features | default([]) %}
+          <li>{{ feature }}</li>
+          {% endfor %}
+        </ul>
+        {% if tier.cta %}
+        <a href="{{ tier.cta.href | default('#') }}" class="{{ 'btn btn-secondary' if tier.highlighted else 'btn btn-primary' }}">{{ tier.cta.label | default("Choose Plan") }}</a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

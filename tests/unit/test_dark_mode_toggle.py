@@ -86,25 +86,25 @@ class TestSitePageToggleButton:
         """Test that site page HTML includes toggle button."""
         from pathlib import Path
 
-        # Toggle button HTML is in site_renderer.py (extracted from combined_server.py)
-        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
-        py_content = py_path.read_text()
+        # Toggle button HTML is in the Jinja2 template
+        tpl_path = Path("src/dazzle_ui/templates/site/includes/theme_toggle.html")
+        tpl_content = tpl_path.read_text()
 
         # Check toggle button is included
-        assert "dz-theme-toggle" in py_content
-        assert "Toggle dark mode" in py_content
+        assert "dz-theme-toggle" in tpl_content
+        assert "Toggle dark mode" in tpl_content
 
     def test_site_page_toggle_has_icons(self):
         """Test that toggle button has sun and moon icons."""
         from pathlib import Path
 
-        # Toggle button HTML is in site_renderer.py (extracted from combined_server.py)
-        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
-        py_content = py_path.read_text()
+        # Toggle button HTML is in the Jinja2 template
+        tpl_path = Path("src/dazzle_ui/templates/site/includes/theme_toggle.html")
+        tpl_content = tpl_path.read_text()
 
         # Check for sun and moon SVG icons
-        assert "dz-theme-toggle__sun" in py_content
-        assert "dz-theme-toggle__moon" in py_content
+        assert "dz-theme-toggle__sun" in tpl_content
+        assert "dz-theme-toggle__moon" in tpl_content
 
     def test_site_js_includes_theme_init(self):
         """Test that site.js includes theme initialization."""

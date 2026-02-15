@@ -1,0 +1,16 @@
+{% from "site/sections/_helpers.html" import section_id_attr %}
+{% set order_cls = " dz-split--reversed" if section.alignment == "right" else "" %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-split-content{{ order_cls }}">
+  <div class="dz-section-content dz-split-grid">
+    <div class="dz-split-text">
+      <h2>{{ section.headline | default("") }}</h2>
+      {% if section.body %}<p>{{ section.body }}</p>{% endif %}
+      {% if section.primary_cta %}
+      <div class="dz-cta-group dz-cta-group--left"><a href="{{ section.primary_cta.href | default('#') }}" class="btn btn-primary">{{ section.primary_cta.label | default("Learn More") }}</a></div>
+      {% endif %}
+    </div>
+    {% if section.media and section.media.kind == "image" and section.media.src %}
+    <div class="dz-split-media"><img src="{{ section.media.src }}" alt="{{ section.media.alt | default('') }}" /></div>
+    {% endif %}
+  </div>
+</section>

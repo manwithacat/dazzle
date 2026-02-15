@@ -133,7 +133,8 @@ def register_site_404_handler(
     """
     from starlette.exceptions import HTTPException as StarletteHTTPException
 
-    from dazzle_ui.runtime.site_renderer import render_404_page_html
+    from dazzle_ui.runtime.site_context import build_site_404_context
+    from dazzle_ui.runtime.template_renderer import render_site_page
 
     has_custom_css = bool(
         project_root and (project_root / "static" / "css" / "custom.css").is_file()
@@ -148,10 +149,9 @@ def register_site_404_handler(
             # Only serve HTML 404 for browser requests (not API calls)
             accept = request.headers.get("accept", "")
             if "text/html" in accept:
+                ctx = build_site_404_context(sitespec_data, custom_css=has_custom_css)
                 return HTMLResponse(
-                    content=render_404_page_html(
-                        sitespec_data, str(request.url.path), custom_css=has_custom_css
-                    ),
+                    content=render_site_page("site/404.html", ctx),
                     status_code=404,
                 )
 

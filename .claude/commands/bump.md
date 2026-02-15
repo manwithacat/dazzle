@@ -20,9 +20,27 @@ Bump the project's semantic version. The user may specify a bump level as an arg
 
    **Do NOT** touch version references in code comments (e.g. `# v0.19.0 HLESS`) or dependency pins (e.g. `aiosqlite>=0.19.0`). Those refer to the version a feature was introduced, not the current project version.
 
-4. **Do NOT create a git tag yet.** The tag must be created AFTER the commit so it points to the correct commit. `/ship` handles tagging automatically.
+4. **Update CHANGELOG.md** following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) conventions:
+   - Read `CHANGELOG.md` and find the `## [Unreleased]` section.
+   - If the Unreleased section has content (entries under Added/Changed/Deprecated/Fixed/Removed/Security):
+     1. Insert a new heading `## [X.Y.Z] - YYYY-MM-DD` (today's date) immediately after the Unreleased section heading's blank line.
+     2. Move **all** subsection headings and entries from Unreleased under the new version heading.
+     3. Leave the `## [Unreleased]` heading in place with empty subsections beneath it, ready for future work:
+        ```
+        ## [Unreleased]
 
-5. **Report** the change: `Bumped version: OLD → NEW` and list the files modified.
+        ## [X.Y.Z] - YYYY-MM-DD
+
+        ### Added
+        - (the entries that were under Unreleased)
+        ...
+        ```
+   - If the Unreleased section is already empty, just add the new version heading with no content.
+   - **Do NOT** alter any existing released version sections below.
+
+5. **Do NOT create a git tag yet.** The tag must be created AFTER the commit so it points to the correct commit. `/ship` handles tagging automatically.
+
+6. **Report** the change: `Bumped version: OLD → NEW` and list the files modified.
    Remind the user: run `/ship` to commit, push, and create + push the tag (which triggers PyPI + Homebrew releases).
 
 Do NOT commit or tag. The user will run `/ship` separately.

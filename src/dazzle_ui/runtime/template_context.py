@@ -221,6 +221,92 @@ def build_field_source_context(
     )
 
 
+# =============================================================================
+# Site Page Context Models (Jinja2 site templates)
+# =============================================================================
+
+
+class SiteNavItem(BaseModel):
+    """Navigation item for site pages."""
+
+    label: str
+    href: str = "#"
+
+
+class SiteCTAContext(BaseModel):
+    """Call-to-action button context."""
+
+    label: str
+    href: str = "#"
+
+
+class SiteFooterLink(BaseModel):
+    """Footer column link."""
+
+    label: str
+    href: str = "#"
+
+
+class SiteFooterColumn(BaseModel):
+    """Footer column with title and links."""
+
+    title: str
+    links: list[SiteFooterLink] = Field(default_factory=list)
+
+
+class SiteOGMeta(BaseModel):
+    """Open Graph / SEO meta tag data."""
+
+    title: str = ""
+    description: str = ""
+    og_type: str = "website"
+
+
+class SitePageContext(BaseModel):
+    """Top-level context for site page templates."""
+
+    product_name: str = "My App"
+    page_title: str = ""
+    current_route: str = "/"
+    nav_items: list[SiteNavItem] = Field(default_factory=list)
+    nav_cta: SiteCTAContext | None = None
+    footer_columns: list[SiteFooterColumn] = Field(default_factory=list)
+    copyright_text: str = ""
+    og_meta: SiteOGMeta | None = None
+    sections: list[dict[str, Any]] = Field(default_factory=list)
+    custom_css: bool = False
+
+
+class SiteAuthContext(BaseModel):
+    """Context for auth page templates (login, signup, forgot/reset password)."""
+
+    product_name: str = "My App"
+    page_type: str = "login"  # login, signup, forgot_password, reset_password
+    title: str = "Sign In"
+    action_url: str = "/auth/login"
+    button_text: str = "Sign In"
+    is_login: bool = True
+    other_page: str = "/signup"
+    other_link_text: str = "Create an account"
+    show_forgot_password: bool = False
+    show_name_field: bool = False
+    show_confirm_password: bool = False
+    show_success_alert: bool = False
+    subtitle: str = ""
+    custom_css: bool = False
+
+
+class Site404Context(BaseModel):
+    """Context for 404 error page template."""
+
+    product_name: str = "My App"
+    nav_items: list[SiteNavItem] = Field(default_factory=list)
+    nav_cta: SiteCTAContext | None = None
+    footer_columns: list[SiteFooterColumn] = Field(default_factory=list)
+    copyright_text: str = ""
+    custom_css: bool = False
+
+
 def resolve_fragment_for_field(field: FieldContext) -> FragmentContext | None:
     """If *field* has a ``source``, wrap it into a FragmentContext for search_select.
 

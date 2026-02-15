@@ -1,0 +1,9 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-{{ section.type | default('unknown') | replace('_', '-') }}">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    {% if section.content %}
+    <div class="prose max-w-none">{{ section.content | safe }}</div>
+    {% endif %}
+  </div>
+</section>

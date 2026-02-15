@@ -1,0 +1,14 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-stats">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="stats stats-vertical lg:stats-horizontal shadow">
+      {% for item in section["items"] | default([]) %}
+      <div class="stat">
+        <div class="stat-value">{{ item.value | default("") }}</div>
+        <div class="stat-title">{{ item.label | default("") }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

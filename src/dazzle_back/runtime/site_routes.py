@@ -268,7 +268,7 @@ def create_site_page_routes(
     """
     Create FastAPI routes that serve HTML pages directly.
 
-    This is for server-side rendering of site pages using the DaisyUI renderer.
+    This is for server-side rendering of site pages using Jinja2 templates.
     For SPA mode, use create_site_routes() API endpoints instead.
 
     Args:
@@ -279,7 +279,9 @@ def create_site_page_routes(
         FastAPI router with HTML page routes
     """
     from dazzle_ui.runtime.css_loader import get_bundled_css
-    from dazzle_ui.runtime.site_renderer import get_site_js, render_site_page_html
+    from dazzle_ui.runtime.site_context import build_site_page_context
+    from dazzle_ui.runtime.site_renderer import get_site_js
+    from dazzle_ui.runtime.template_renderer import render_site_page
 
     router = APIRouter()
 
@@ -328,9 +330,10 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve a site page as HTML with SSR content."""
-            return render_site_page_html(
+            ctx = build_site_page_context(
                 sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
             )
+            return render_site_page("site/page.html", ctx)
 
     # Create routes for legal pages
     if legal.get("terms"):
@@ -342,9 +345,10 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the terms of service page."""
-            return render_site_page_html(
+            ctx = build_site_page_context(
                 sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
             )
+            return render_site_page("site/page.html", ctx)
 
     if legal.get("privacy"):
         privacy_route = legal["privacy"].get("route", "/privacy")
@@ -355,30 +359,38 @@ def create_site_page_routes(
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the privacy policy page."""
-            return render_site_page_html(
+            ctx = build_site_page_context(
                 sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
             )
+            return render_site_page("site/page.html", ctx)
 
     return router
 
 
 def create_site_404_handler(
     sitespec_data: dict[str, Any],
+    project_root: Path | None = None,
 ) -> Any:
     """
     Create a 404 exception handler that returns a styled HTML page for site routes.
 
     Non-API paths (i.e. those not starting with ``/api/``, ``/_site/``, etc.)
-    receive the branded 404 page from :func:`render_404_page_html`.
+    receive the branded 404 page rendered via Jinja2 templates.
     API paths fall through to a standard JSON 404 response.
 
     Args:
         sitespec_data: SiteSpec as dict
+        project_root: Project root for detecting custom CSS
 
     Returns:
         An async exception handler suitable for ``app.add_exception_handler(404, ...)``.
     """
-    from dazzle_ui.runtime.site_renderer import render_404_page_html
+    from dazzle_ui.runtime.site_context import build_site_404_context
+    from dazzle_ui.runtime.template_renderer import render_site_page
+
+    has_custom_css = bool(
+        project_root and (project_root / "static" / "css" / "custom.css").is_file()
+    )
 
     async def handle_404(request: Any, exc: Any) -> HTMLResponse | JSONResponse:
         path: str = request.url.path
@@ -388,8 +400,9 @@ def create_site_404_handler(
                 status_code=404,
                 content={"detail": str(exc.detail) if hasattr(exc, "detail") else "Not Found"},
             )
+        ctx = build_site_404_context(sitespec_data, custom_css=has_custom_css)
         return HTMLResponse(
-            content=render_404_page_html(sitespec_data, path),
+            content=render_site_page("site/404.html", ctx),
             status_code=404,
         )
 
@@ -412,11 +425,8 @@ def create_auth_page_routes(
     Returns:
         FastAPI router with auth page routes
     """
-    from dazzle_ui.runtime.site_renderer import (
-        render_auth_page_html,
-        render_forgot_password_page_html,
-        render_reset_password_page_html,
-    )
+    from dazzle_ui.runtime.site_context import build_site_auth_context
+    from dazzle_ui.runtime.template_renderer import render_site_page
 
     router = APIRouter()
 
@@ -427,21 +437,25 @@ def create_auth_page_routes(
     @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
     async def login_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the login page."""
-        return render_auth_page_html(sitespec, "login", custom_css=has_custom_css)
+        ctx = build_site_auth_context(sitespec, "login", custom_css=has_custom_css)
+        return render_site_page("site/auth/login.html", ctx)
 
     @router.get("/signup", response_class=HTMLResponse, include_in_schema=False)
     async def signup_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the signup page."""
-        return render_auth_page_html(sitespec, "signup", custom_css=has_custom_css)
+        ctx = build_site_auth_context(sitespec, "signup", custom_css=has_custom_css)
+        return render_site_page("site/auth/signup.html", ctx)
 
     @router.get("/forgot-password", response_class=HTMLResponse, include_in_schema=False)
     async def forgot_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the forgot-password page."""
-        return render_forgot_password_page_html(sitespec, custom_css=has_custom_css)
+        ctx = build_site_auth_context(sitespec, "forgot_password", custom_css=has_custom_css)
+        return render_site_page("site/auth/forgot_password.html", ctx)
 
     @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
     async def reset_password_page(sitespec: dict[str, Any] = sitespec_data) -> str:
         """Serve the reset-password page."""
-        return render_reset_password_page_html(sitespec, custom_css=has_custom_css)
+        ctx = build_site_auth_context(sitespec, "reset_password", custom_css=has_custom_css)
+        return render_site_page("site/auth/reset_password.html", ctx)
 
     return router

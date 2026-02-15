@@ -1,0 +1,36 @@
+(function() {
+    const form = document.getElementById('dz-auth-form');
+    const errorDiv = document.getElementById('dz-auth-error');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorDiv.classList.add('hidden');
+        errorDiv.textContent = '';
+
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.token) {
+                    localStorage.setItem('auth_token', result.token);
+                }
+                window.location.href = '/app';
+            } else {
+                const error = await response.json();
+                errorDiv.textContent = error.detail || 'Authentication failed';
+                errorDiv.classList.remove('hidden');
+            }
+        } catch (err) {
+            errorDiv.textContent = 'Network error. Please try again.';
+            errorDiv.classList.remove('hidden');
+        }
+    });
+})();

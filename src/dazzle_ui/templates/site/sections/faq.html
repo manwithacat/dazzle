@@ -1,0 +1,15 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-faq">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-faq-list">
+      {% for item in section["items"] | default([]) %}
+      <div class="collapse collapse-arrow bg-base-200">
+        <input type="radio" name="faq">
+        <div class="collapse-title font-medium">{{ item.question | default("") }}</div>
+        <div class="collapse-content"><p>{{ item.answer | default("") }}</p></div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

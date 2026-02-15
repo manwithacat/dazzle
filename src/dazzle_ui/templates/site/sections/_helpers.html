@@ -1,0 +1,10 @@
+{% macro section_id_attr(section) %}{% if section.id %} id="{{ section.id }}"{% elif section.headline %} id="{{ section.headline | slugify }}"{% endif %}{% endmacro %}
+
+{% macro section_header(section) %}
+{% if section.headline or section.subhead %}
+<div class="dz-section-header">
+  {% if section.headline %}<h2>{{ section.headline }}</h2>{% endif %}
+  {% if section.subhead %}<p class="dz-subhead">{{ section.subhead }}</p>{% endif %}
+</div>
+{% endif %}
+{% endmacro %}

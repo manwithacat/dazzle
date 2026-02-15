@@ -1,0 +1,11 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-logo-cloud">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-logos-grid">
+      {% for item in section["items"] | default([]) %}
+      <a href="{{ item.href | default('#') }}" class="dz-logo-item" title="{{ item.name | default('') }}"><img src="{{ item.src | default('') }}" alt="{{ item.name | default('') }}"></a>
+      {% endfor %}
+    </div>
+  </div>
+</section>

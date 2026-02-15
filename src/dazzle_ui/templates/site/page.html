@@ -1,0 +1,21 @@
+{% extends "site/site_base.html" %}
+
+{% block og_meta %}
+{% include "site/includes/og_meta.html" %}
+{% endblock %}
+
+{% block body %}
+{% include "site/includes/nav.html" %}
+
+<main id="dz-site-main" data-route="{{ current_route }}">
+  {% if sections %}
+  {% for section in sections %}
+  {% include ["site/sections/" + section.type + ".html", "site/sections/generic.html"] %}
+  {% endfor %}
+  {% else %}
+  <div class="dz-loading">Loading...</div>
+  {% endif %}
+</main>
+
+{% include "site/includes/footer.html" %}
+{% endblock %}

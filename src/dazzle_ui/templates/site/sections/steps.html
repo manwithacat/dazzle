@@ -1,0 +1,19 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-steps">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <ul class="steps steps-vertical lg:steps-horizontal">
+      {% for item in section["items"] | default([]) %}
+      <li class="step step-primary">
+        <div class="dz-step-item">
+          <span class="dz-step-number">{{ loop.index }}</span>
+          <div class="dz-step-content">
+            <h3>{{ item.title | default("") }}</h3>
+            <p>{{ item.body | default("") }}</p>
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>

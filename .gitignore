@@ -75,7 +75,7 @@ alpine/
 htmx/
 
 # MkDocs build output
-site/
+/site/
 
 # Generated API reference docs (built in CI)
 docs/api-reference/

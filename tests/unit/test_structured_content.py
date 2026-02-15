@@ -354,44 +354,6 @@ class TestCopyParserNewMappings:
 
 
 # =========================================================================
-# JS renderer registrations
-# =========================================================================
-
-
-class TestJSRendererRegistrations:
-    """site_renderer.py has all new section types in renderers map."""
-
-    def test_all_section_renderers_registered(self) -> None:
-        from dazzle_ui.runtime.site_renderer import get_site_js
-
-        js = get_site_js()
-        for name in [
-            "markdown",
-            "comparison",
-            "value_highlight",
-            "split_content",
-            "card_grid",
-            "trust_bar",
-        ]:
-            assert f"{name}: render" in js or f"{name}:" in js, (
-                f"Renderer for '{name}' not in renderers map"
-            )
-
-    def test_render_functions_defined(self) -> None:
-        from dazzle_ui.runtime.site_renderer import get_site_js
-
-        js = get_site_js()
-        for fn in [
-            "renderComparison",
-            "renderValueHighlight",
-            "renderSplitContent",
-            "renderCardGrid",
-            "renderTrustBar",
-        ]:
-            assert f"function {fn}" in js, f"{fn} not defined"
-
-
-# =========================================================================
 # Dark mode CSS for new types
 # =========================================================================
 

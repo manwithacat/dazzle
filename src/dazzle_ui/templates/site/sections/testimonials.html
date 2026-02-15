@@ -1,0 +1,17 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-testimonials">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-testimonials-grid">
+      {% for item in section["items"] | default([]) %}
+      <div class="card bg-base-200">
+        <div class="card-body">
+          <p class="italic">"{{ item.quote | default("") }}"</p>
+          <p class="font-medium mt-2">{{ item.name | default("") }}</p>
+          {% if item.role %}<p class="text-sm opacity-70">{{ item.role }}</p>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

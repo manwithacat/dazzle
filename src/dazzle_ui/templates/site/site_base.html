@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ page_title | default(product_name) }}{% endblock %}</title>
+  <link rel="icon" href="/static/assets/dazzle-favicon.svg" type="image/svg+xml">
+  {# Inter font #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {# DaisyUI 5 + Tailwind Browser #}
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  {# DAZZLE design system layer #}
+  <link rel="stylesheet" href="/styles/dazzle.css">
+  {% if custom_css %}
+  {# Project custom CSS #}
+  <link rel="stylesheet" href="/static/css/custom.css">
+  {% endif %}
+  {# Lucide icons #}
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  {% block og_meta %}{% endblock %}
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="dz-site bg-base-100">
+  {% block body %}{% endblock %}
+  <script src="/site.js"></script>
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

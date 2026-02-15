@@ -1,0 +1,9 @@
+{% if og_meta %}
+<meta name="description" content="{{ og_meta.description }}">
+<meta property="og:title" content="{{ og_meta.title }}">
+<meta property="og:description" content="{{ og_meta.description }}">
+<meta property="og:type" content="{{ og_meta.og_type }}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{{ og_meta.title }}">
+<meta name="twitter:description" content="{{ og_meta.description }}">
+{% endif %}

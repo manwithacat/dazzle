@@ -1,0 +1,17 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-features">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-features-grid">
+      {% for item in section["items"] | default([]) %}
+      <div class="dz-feature-item card bg-base-100 shadow-sm">
+        <div class="card-body">
+          {% if item.icon %}<i data-lucide="{{ item.icon }}"></i>{% endif %}
+          <h3 class="card-title">{{ item.title | default("") }}</h3>
+          <p>{{ item.body | default("") }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

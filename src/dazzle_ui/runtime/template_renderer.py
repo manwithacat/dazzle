@@ -15,7 +15,12 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from markupsafe import Markup
 
 if TYPE_CHECKING:
-    from dazzle_ui.runtime.template_context import PageContext
+    from dazzle_ui.runtime.template_context import (
+        PageContext,
+        Site404Context,
+        SiteAuthContext,
+        SitePageContext,
+    )
 
 # Template directory
 TEMPLATES_DIR = Path(__file__).parent.parent / "templates"
@@ -158,6 +163,17 @@ def _timeago_filter(value: Any) -> str:
     return f"{years} years ago" if years != 1 else "1 year ago"
 
 
+def _slugify_filter(value: Any) -> str:
+    """Slugify a string for use as an HTML id attribute."""
+    import re
+
+    if value is None:
+        return ""
+    text = str(value).lower().strip()
+    text = re.sub(r"[^a-z0-9]+", "-", text)
+    return text.strip("-")
+
+
 def _truncate_filter(value: Any, length: int = 50) -> str:
     """Truncate text to a given length."""
     if value is None:
@@ -184,6 +200,7 @@ def create_jinja_env() -> Environment:
     env.filters["bool_icon"] = _bool_icon_filter
     env.filters["truncate_text"] = _truncate_filter
     env.filters["timeago"] = _timeago_filter
+    env.filters["slugify"] = _slugify_filter
 
     return env
 
@@ -238,6 +255,24 @@ def render_page(context: PageContext) -> str:
 
     wrapper_template = env.from_string(wrapper_source)
     return wrapper_template.render(**template_vars)
+
+
+def render_site_page(
+    template_name: str,
+    context: SitePageContext | SiteAuthContext | Site404Context,
+) -> str:
+    """Render a site page from a context model.
+
+    Args:
+        template_name: Template path relative to templates/ (e.g. "site/page.html").
+        context: Pydantic context model.
+
+    Returns:
+        Rendered HTML string.
+    """
+    env = get_jinja_env()
+    template = env.get_template(template_name)
+    return template.render(**context.model_dump())
 
 
 def render_fragment(template_name: str, **kwargs: Any) -> str:

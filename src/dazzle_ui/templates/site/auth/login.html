@@ -1,0 +1,49 @@
+{% extends "site/site_base.html" %}
+
+{% block title %}{{ title }} - {{ product_name }}{% endblock %}
+
+{% block body %}
+<body class="dz-site dz-auth-page bg-base-200">
+  <div class="dz-auth-container">
+    <div class="card bg-base-100 shadow-xl dz-auth-card">
+      <div class="card-body">
+        <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{{ product_name }}</a>
+        <h1 class="card-title text-2xl justify-center">{{ title }}</h1>
+
+        <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
+
+        <form id="dz-auth-form" method="POST" action="{{ action_url }}">
+          <div class="form-control w-full">
+            <label class="label" for="email">
+              <span class="label-text">Email</span>
+            </label>
+            <input type="email" id="email" name="email" required autocomplete="email" class="input input-bordered w-full">
+          </div>
+          <div class="form-control w-full">
+            <label class="label" for="password">
+              <span class="label-text">Password</span>
+            </label>
+            <input type="password" id="password" name="password" required autocomplete="current-password" class="input input-bordered w-full">
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full mt-4">
+            {{ button_text }}
+          </button>
+        </form>
+
+        <p class="text-right text-sm mt-2"><a href="/forgot-password" class="link link-secondary">Forgot password?</a></p>
+
+        <p class="dz-auth-switch text-center text-sm mt-4">
+          <a href="{{ other_page }}" class="link link-primary">{{ other_link_text }}</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+{% include "site/auth/_auth_form_script.html" %}
+</script>
+{% endblock %}

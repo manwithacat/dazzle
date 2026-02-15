@@ -1,0 +1,11 @@
+{% from "site/sections/_helpers.html" import section_id_attr %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-value-highlight">
+  <div class="dz-section-content">
+    <h2 class="dz-value-headline">{{ section.headline | default("") }}</h2>
+    {% if section.subhead %}<p class="dz-subhead">{{ section.subhead }}</p>{% endif %}
+    {% if section.body %}<p class="dz-value-body">{{ section.body }}</p>{% endif %}
+    {% if section.primary_cta %}
+    <div class="dz-cta-group"><a href="{{ section.primary_cta.href | default('#') }}" class="btn btn-primary">{{ section.primary_cta.label | default("Get Started") }}</a></div>
+    {% endif %}
+  </div>
+</section>

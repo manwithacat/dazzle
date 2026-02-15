@@ -1,0 +1,14 @@
+<header class="dz-site-header">
+  <nav class="dz-site-nav">
+    <a href="/" class="dz-site-logo">{{ product_name }}</a>
+    <div class="dz-nav-items">
+      {% for item in nav_items %}
+      <a href="{{ item.href }}" class="dz-nav-link">{{ item.label }}</a>
+      {% endfor %}
+      {% if nav_cta %}
+      <a href="{{ nav_cta.href }}" class="btn btn-primary btn-sm">{{ nav_cta.label }}</a>
+      {% endif %}
+      {% include "site/includes/theme_toggle.html" %}
+    </div>
+  </nav>
+</header>

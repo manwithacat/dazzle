@@ -1,0 +1,23 @@
+{% from "site/sections/_helpers.html" import section_id_attr %}
+{% set has_media = section.media and section.media.kind == "image" and section.media.src %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-hero{{ ' dz-hero-with-media' if has_media else '' }}">
+  <div class="dz-section-content">
+    <h1 class="dz-hero-text">{{ section.headline | default("") }}</h1>
+    {% if section.subhead %}
+    <p class="dz-subhead">{{ section.subhead }}</p>
+    {% endif %}
+    {% if section.primary_cta or section.secondary_cta %}
+    <div class="dz-cta-group">
+      {% if section.primary_cta %}
+      <a href="{{ section.primary_cta.href | default('#') }}" class="btn btn-primary">{{ section.primary_cta.label | default("Get Started") }}</a>
+      {% endif %}
+      {% if section.secondary_cta %}
+      <a href="{{ section.secondary_cta.href | default('#') }}" class="btn btn-secondary btn-outline">{{ section.secondary_cta.label | default("Learn More") }}</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% if has_media %}
+  <div class="dz-hero-media"><img src="{{ section.media.src }}" alt="{{ section.media.alt | default('') }}" class="dz-hero-image"></div>
+  {% endif %}
+</section>
