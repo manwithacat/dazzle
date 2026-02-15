@@ -1,7 +1,7 @@
 """
 Dazzle Runtime Adapter for E2E Testing.
 
-Provides test infrastructure for DNR-based applications.
+Provides test infrastructure for Dazzle-based applications.
 """
 
 import logging
@@ -29,7 +29,7 @@ class DazzleAdapter(BaseAdapter):
         timeout: float = 30.0,
     ) -> None:
         """
-        Initialize the DNR adapter.
+        Initialize the Dazzle adapter.
 
         Args:
             base_url: Frontend URL (default: http://localhost:3000)
@@ -166,7 +166,7 @@ class DazzleAdapter(BaseAdapter):
         role: str | None = None,
     ) -> dict[str, Any]:
         """
-        Authenticate via DNR auth endpoint.
+        Authenticate via Dazzle auth endpoint.
 
         Args:
             username: Username (defaults to test user)
@@ -205,7 +205,7 @@ class DazzleAdapter(BaseAdapter):
         return response.json()
 
     async def logout(self) -> None:
-        """Log out via DNR auth endpoint."""
+        """Log out via Dazzle auth endpoint."""
         client = await self._get_client()
 
         await client.post(f"{self.api_url}/auth/logout")
@@ -298,9 +298,9 @@ class DazzleAdapter(BaseAdapter):
 
     def resolve_view_url(self, view_id: str) -> str:
         """
-        Resolve a view ID to a DNR URL.
+        Resolve a view ID to a Dazzle URL.
 
-        DNR uses path-based routing.
+        Dazzle uses path-based routing.
 
         Args:
             view_id: View identifier

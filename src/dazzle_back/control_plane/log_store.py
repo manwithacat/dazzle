@@ -185,20 +185,20 @@ def parse_log_line(line: str) -> LogEntry | None:
     """
     Parse a log line into a LogEntry.
 
-    Supports common Python logging format and Dazzle DNR format.
+    Supports common Python logging format and Dazzle log format.
     """
     if not line or not line.strip():
         return None
 
     line = line.strip()
 
-    # Try Dazzle DNR format: [timestamp] [source] message
-    dnr_match = re.match(
+    # Try Dazzle log format: [timestamp] [source] message
+    dazzle_match = re.match(
         r"\[(\d{2}:\d{2}:\d{2})\]\s*\[(\w+)\]\s*(.*)",
         line,
     )
-    if dnr_match:
-        time_str, source, message = dnr_match.groups()
+    if dazzle_match:
+        time_str, source, message = dazzle_match.groups()
         # Use today's date with the time
         today = datetime.now().strftime("%Y-%m-%d")
         try:

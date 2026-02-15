@@ -1,5 +1,5 @@
 """
-Dazzle Runtime - Backend (DNR-Back)
+Dazzle Runtime - Backend (Dazzle Backend)
 
 Framework-agnostic backend specification and runtime for Dazzle applications.
 

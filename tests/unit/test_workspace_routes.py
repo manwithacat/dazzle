@@ -343,7 +343,7 @@ class TestWorkspaceAuthEnforcement:
         """Build a FastAPI app with auth enabled and one workspace."""
         from unittest.mock import patch
 
-        from dazzle_back.runtime.server import DNRBackendApp, ServerConfig
+        from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
 
         config = ServerConfig(
             database_url="postgresql://mock/test",
@@ -355,7 +355,7 @@ class TestWorkspaceAuthEnforcement:
             patch("dazzle_back.runtime.server.auto_migrate"),
             patch("dazzle_back.runtime.auth.AuthStore._init_db"),
         ):
-            builder = DNRBackendApp(self._make_spec(), config=config)
+            builder = DazzleBackendApp(self._make_spec(), config=config)
             return builder.build()
 
     @pytest.fixture
@@ -363,7 +363,7 @@ class TestWorkspaceAuthEnforcement:
         """Build a FastAPI app with auth disabled and one workspace."""
         from unittest.mock import patch
 
-        from dazzle_back.runtime.server import DNRBackendApp, ServerConfig
+        from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
 
         config = ServerConfig(
             database_url="postgresql://mock/test",
@@ -374,16 +374,20 @@ class TestWorkspaceAuthEnforcement:
             patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
             patch("dazzle_back.runtime.server.auto_migrate"),
         ):
-            builder = DNRBackendApp(self._make_spec(), config=config)
+            builder = DazzleBackendApp(self._make_spec(), config=config)
             return builder.build()
 
-    def test_workspace_returns_401_without_session(self, app_with_auth: Any) -> None:
-        """Workspace route returns 401 when auth is enabled and no session cookie."""
+    def test_workspace_html_route_not_on_root(self, app_with_auth: Any) -> None:
+        """Root-level /workspaces/{name} HTML route is no longer registered.
+
+        Workspace HTML pages are served by page_routes.py at /app/workspaces/{name}
+        in the unified server. The backend app only exposes region API endpoints.
+        """
         from fastapi.testclient import TestClient
 
         client = TestClient(app_with_auth, raise_server_exceptions=False)
         resp = client.get("/workspaces/admin_dashboard")
-        assert resp.status_code == 401
+        assert resp.status_code == 404
 
     def test_workspace_region_returns_401_without_session(self, app_with_auth: Any) -> None:
         """Workspace region data returns 401 when auth is enabled and no session cookie."""
@@ -394,9 +398,9 @@ class TestWorkspaceAuthEnforcement:
         assert resp.status_code == 401
 
     def test_workspace_accessible_without_auth_when_disabled(self, app_without_auth: Any) -> None:
-        """Workspace route returns 200 when auth is not enabled."""
+        """Workspace region data accessible when auth is disabled."""
         from fastapi.testclient import TestClient
 
         client = TestClient(app_without_auth, raise_server_exceptions=False)
-        resp = client.get("/workspaces/admin_dashboard")
+        resp = client.get("/api/workspaces/admin_dashboard/regions/tasks")
         assert resp.status_code == 200

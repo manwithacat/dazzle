@@ -1,7 +1,7 @@
 """
 Runtime server - creates and runs a FastAPI application from BackendSpec.
 
-This module provides the main entry point for running a DNR-Back application.
+This module provides the main entry point for running a Dazzle backend application.
 """
 
 from __future__ import annotations
@@ -101,7 +101,7 @@ def _parse_simple_where(where_clause: str) -> dict[str, Any]:
 @dataclass
 class ServerConfig:
     """
-    Configuration for DNRBackendApp.
+    Configuration for DazzleBackendApp.
 
     Groups all initialization options into a single object for cleaner APIs.
     """
@@ -175,9 +175,9 @@ except ImportError:
 # =============================================================================
 
 
-class DNRBackendApp:
+class DazzleBackendApp:
     """
-    DNR Backend Application.
+    Dazzle Backend Application.
 
     Creates a complete FastAPI application from a BackendSpec.
     """
@@ -746,17 +746,6 @@ class DNRBackendApp:
             repositories = self._repositories
             auth_middleware = self._auth_middleware
 
-            # Build nav items list and app name once for all workspace pages
-            ws_nav_items = [
-                {
-                    "label": ws.title or ws.name.replace("_", " ").title(),
-                    "route": f"/workspaces/{ws.name}",
-                    "allow_personas": list(ws.access.allow_personas) if ws.access else [],
-                }
-                for ws in workspaces
-            ]
-            ws_app_name = getattr(spec, "title", "") or spec.name.replace("_", " ").title()
-
             # Auth enforcement: require auth for workspace routes when auth is
             # enabled and test mode is off (same policy as entity routes).
             require_auth = self._enable_auth and not self._enable_test_mode
@@ -765,59 +754,10 @@ class DNRBackendApp:
                 ws_ctx = build_workspace_context(workspace, spec)
                 ws_name = workspace.name
 
-                # Capture in closure
-                _ws_ctx = ws_ctx
-                _ws_route = f"/workspaces/{ws_name}"
                 _ws_access = workspace.access  # WorkspaceAccessSpec or None
 
-                @app.get(f"/workspaces/{ws_name}", tags=["Workspaces"])
-                async def workspace_page(
-                    request: Request,
-                    _ctx: Any = _ws_ctx,
-                    _route: str = _ws_route,
-                    _access: Any = _ws_access,
-                ) -> Any:
-                    """Render workspace page."""
-                    from fastapi.responses import HTMLResponse
-
-                    # Build auth context
-                    auth_ctx = None
-                    if auth_middleware:
-                        try:
-                            auth_ctx = auth_middleware.get_auth_context(request)
-                        except Exception:
-                            logger.debug("Failed to get auth context", exc_info=True)
-
-                    # Enforce authentication (#145)
-                    if require_auth and not (auth_ctx and auth_ctx.is_authenticated):
-                        raise HTTPException(status_code=401, detail="Authentication required")
-
-                    # RBAC: enforce persona restrictions from WorkspaceAccessSpec
-                    if _access and _access.allow_personas and auth_ctx:
-                        user_roles = auth_ctx.roles if auth_ctx.is_authenticated else []
-                        if not any(r in _access.allow_personas for r in user_roles):
-                            raise HTTPException(status_code=403, detail="Workspace access denied")
-
-                    # Filter nav items by user's roles
-                    user_roles = auth_ctx.roles if auth_ctx and auth_ctx.is_authenticated else []
-                    visible_nav = [
-                        {"label": item["label"], "route": item["route"]}
-                        for item in ws_nav_items
-                        if not item["allow_personas"]
-                        or any(r in item["allow_personas"] for r in user_roles)
-                    ]
-
-                    html = render_fragment(
-                        "workspace/workspace.html",
-                        workspace=_ctx,
-                        nav_items=visible_nav,
-                        app_name=ws_app_name,
-                        current_route=_route,
-                        is_authenticated=bool(auth_ctx and auth_ctx.is_authenticated),
-                        user_email=(auth_ctx.user.email if auth_ctx and auth_ctx.user else ""),
-                        user_name=(auth_ctx.user.username if auth_ctx and auth_ctx.user else ""),
-                    )
-                    return HTMLResponse(content=html)
+                # Workspace HTML pages are rendered by page_routes.py at /app/workspaces/{name}.
+                # Only region API endpoints are registered here.
 
                 # Region data endpoints — zip IR regions with context regions
                 # so we can access both ConditionExpr (IR) and RegionContext
@@ -1410,7 +1350,7 @@ class DNRBackendApp:
         if not self._database_url:
             raise ValueError(
                 "database_url is required. Set DATABASE_URL environment variable "
-                "or pass database_url to ServerConfig/DNRBackendApp."
+                "or pass database_url to ServerConfig/DazzleBackendApp."
             )
 
         from dazzle_back.runtime.pg_backend import PostgresBackend
@@ -1747,6 +1687,11 @@ class DNRBackendApp:
         except (ImportError, Exception):
             pass  # dazzle_ui not installed — static files served externally
 
+        # Validate routes for conflicts
+        from dazzle_back.runtime.route_validator import validate_routes
+
+        validate_routes(self._app)
+
         return self._app
 
     @property
@@ -1859,7 +1804,7 @@ def create_app(
     """
     Create a FastAPI application from a BackendSpec.
 
-    This is the main entry point for creating a DNR-Back application.
+    This is the main entry point for creating a Dazzle backend application.
 
     Args:
         spec: Backend specification
@@ -1882,7 +1827,7 @@ def create_app(
         >>> app = create_app(spec, database_url="postgresql://...")
         >>> # Run with uvicorn: uvicorn mymodule:app
     """
-    builder = DNRBackendApp(
+    builder = DazzleBackendApp(
         spec,
         database_url=database_url,
         enable_auth=enable_auth,
@@ -1913,7 +1858,7 @@ def run_app(
     scenarios: list[dict[str, Any]] | None = None,
 ) -> None:
     """
-    Run a DNR-Back application.
+    Run a Dazzle backend application.
 
     Args:
         spec: Backend specification
@@ -2190,7 +2135,7 @@ def create_app_factory(
     )
 
     # Build and return the FastAPI app
-    builder = DNRBackendApp(backend_spec, config=config)
+    builder = DazzleBackendApp(backend_spec, config=config)
     app = builder.build()
 
     # Sync DSL schedules to Celery Beat if using CeleryProcessAdapter
@@ -2271,3 +2216,11 @@ def create_app_factory(
         register_site_404_handler(app, sitespec_data, project_root=project_root)
 
     return app
+
+
+# =============================================================================
+# Backward Compatibility
+# =============================================================================
+
+# Backward compatibility alias (deprecated as of v0.28.0)
+DNRBackendApp = DazzleBackendApp

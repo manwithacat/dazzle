@@ -1,5 +1,5 @@
 """
-Development server for DNR-UI.
+Development server for Dazzle UI.
 
 Serves the generated UI with hot reload support.
 """
@@ -23,9 +23,9 @@ JSGenerator = None  # type: ignore
 # =============================================================================
 
 
-class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
+class DazzleDevHandler(http.server.SimpleHTTPRequestHandler):
     """
-    HTTP request handler for DNR-UI development.
+    HTTP request handler for Dazzle UI development.
 
     Serves generated UI and provides hot reload support.
     """
@@ -140,7 +140,7 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, format: str, *args: Any) -> None:
         """Log HTTP requests."""
-        print(f"[DNR-UI] {args[0]} {args[1]} {args[2]}")
+        print(f"[Dazzle] {args[0]} {args[1]} {args[2]}")
 
 
 # =============================================================================
@@ -148,9 +148,9 @@ class DNRDevHandler(http.server.SimpleHTTPRequestHandler):
 # =============================================================================
 
 
-class DNRDevServer:
+class DazzleDevServer:
     """
-    Development server for DNR-UI.
+    Development server for Dazzle UI.
 
     Provides:
     - Hot reload on spec changes
@@ -185,23 +185,23 @@ class DNRDevServer:
         Blocks until server is stopped.
         """
         # Configure handler
-        DNRDevHandler.spec = self.spec
-        DNRDevHandler.generator = self.generator
+        DazzleDevHandler.spec = self.spec
+        DazzleDevHandler.generator = self.generator
 
         # Create server
         socketserver.TCPServer.allow_reuse_address = True
-        self._server = socketserver.TCPServer((self.host, self.port), DNRDevHandler)
+        self._server = socketserver.TCPServer((self.host, self.port), DazzleDevHandler)
 
-        print("[DNR-UI] Development server starting...")
-        print(f"[DNR-UI] Serving: {self.spec.name}")
-        print(f"[DNR-UI] URL: http://{self.host}:{self.port}")
-        print("[DNR-UI] Press Ctrl+C to stop")
+        print("[Dazzle] Development server starting...")
+        print(f"[Dazzle] Serving: {self.spec.name}")
+        print(f"[Dazzle] URL: http://{self.host}:{self.port}")
+        print("[Dazzle] Press Ctrl+C to stop")
         print()
 
         try:
             self._server.serve_forever()
         except KeyboardInterrupt:
-            print("\n[DNR-UI] Shutting down...")
+            print("\n[Dazzle] Shutting down...")
         finally:
             self._server.shutdown()
 
@@ -219,8 +219,8 @@ class DNRDevServer:
         """
         self.spec = spec
         self.generator = JSGenerator(spec)
-        DNRDevHandler.spec = spec
-        DNRDevHandler.generator = self.generator
+        DazzleDevHandler.spec = spec
+        DazzleDevHandler.generator = self.generator
 
 
 # =============================================================================
@@ -241,7 +241,7 @@ def run_dev_server(
         host: Host to bind to
         port: Port to bind to
     """
-    server = DNRDevServer(spec, host, port)
+    server = DazzleDevServer(spec, host, port)
     server.start()
 
 
@@ -277,3 +277,12 @@ def run_dev_server_from_json(
     """
     spec_dict = json.loads(Path(json_path).read_text())
     run_dev_server_from_dict(spec_dict, host, port)
+
+
+# =============================================================================
+# Backward Compatibility
+# =============================================================================
+
+# Backward compatibility aliases (deprecated as of v0.28.0)
+DNRDevHandler = DazzleDevHandler
+DNRDevServer = DazzleDevServer

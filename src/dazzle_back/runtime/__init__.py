@@ -64,7 +64,8 @@ from dazzle_back.runtime.route_generator import (
     generate_crud_routes,
 )
 from dazzle_back.runtime.server import (
-    DNRBackendApp,
+    DazzleBackendApp,
+    DNRBackendApp,  # Backward compat
     ServerConfig,
     create_app,
     create_app_from_dict,
@@ -107,7 +108,8 @@ __all__ = [
     "generate_crud_routes",
     "FASTAPI_AVAILABLE",
     # Server
-    "DNRBackendApp",
+    "DazzleBackendApp",
+    "DNRBackendApp",  # Backward compat
     "ServerConfig",
     "create_app",
     "run_app",

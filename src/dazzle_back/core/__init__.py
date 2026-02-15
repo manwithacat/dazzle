@@ -1,5 +1,5 @@
 """
-DNR-Back Core
+Dazzle Backend Core
 
 Framework-agnostic backend abstraction layer.
 

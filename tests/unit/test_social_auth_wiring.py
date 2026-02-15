@@ -100,9 +100,9 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Server starts normally without OAuth config."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             minimal_backend_spec,
             database_url="postgresql://mock/test",
             enable_auth=True,
@@ -127,14 +127,14 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Server starts normally with empty oauth_providers list."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
             oauth_providers=[],  # Empty list
         )
 
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             minimal_backend_spec,
             database_url="postgresql://mock/test",
             enable_auth=True,
@@ -161,7 +161,7 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Social routes are created when OAuth is configured with valid env vars."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -176,7 +176,7 @@ class TestSocialAuthWiring:
 
         # Set environment variable
         with patch.dict(os.environ, {"TEST_GOOGLE_CLIENT_ID": "test-client-id"}):
-            app_builder = DNRBackendApp(
+            app_builder = DazzleBackendApp(
                 minimal_backend_spec,
                 database_url="postgresql://mock/test",
                 enable_auth=True,
@@ -204,7 +204,7 @@ class TestSocialAuthWiring:
         caplog,
     ) -> None:
         """Missing env vars log warning but server still starts."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -220,7 +220,7 @@ class TestSocialAuthWiring:
         # Ensure env var is NOT set
         env_without_google = {k: v for k, v in os.environ.items() if "NONEXISTENT_GOOGLE" not in k}
         with patch.dict(os.environ, env_without_google, clear=True):
-            app_builder = DNRBackendApp(
+            app_builder = DazzleBackendApp(
                 minimal_backend_spec,
                 database_url="postgresql://mock/test",
                 enable_auth=True,
@@ -246,7 +246,7 @@ class TestSocialAuthWiring:
         tmp_path,
     ) -> None:
         """Multiple OAuth providers can be configured."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -271,7 +271,7 @@ class TestSocialAuthWiring:
         }
 
         with patch.dict(os.environ, env_vars):
-            app_builder = DNRBackendApp(
+            app_builder = DazzleBackendApp(
                 minimal_backend_spec,
                 database_url="postgresql://mock/test",
                 enable_auth=True,
@@ -290,7 +290,7 @@ class TestSocialAuthWiring:
         self, _mock_pg, _mock_migrate, minimal_backend_spec: BackendSpec, tmp_path
     ) -> None:
         """When auth is disabled, no social routes even if OAuth is configured."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         auth_config = MockAuthConfig(
             enabled=True,
@@ -304,7 +304,7 @@ class TestSocialAuthWiring:
         )
 
         with patch.dict(os.environ, {"TEST_GOOGLE_ID": "test-id"}):
-            app_builder = DNRBackendApp(
+            app_builder = DazzleBackendApp(
                 minimal_backend_spec,
                 database_url="postgresql://mock/test",
                 enable_auth=False,  # Auth disabled
@@ -323,12 +323,12 @@ class TestBuildSocialAuthConfig:
 
     def test_google_provider_extracts_client_id(self, tmp_path) -> None:
         """Google provider correctly extracts client_id from env."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.specs import BackendSpec
 
         spec = BackendSpec(name="test", entities=[], services=[], endpoints=[])
 
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
             database_url="postgresql://mock/test",
             enable_auth=True,
@@ -350,12 +350,12 @@ class TestBuildSocialAuthConfig:
 
     def test_github_provider_extracts_id_and_secret(self, tmp_path) -> None:
         """GitHub provider correctly extracts client_id and secret from env."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.specs import BackendSpec
 
         spec = BackendSpec(name="test", entities=[], services=[], endpoints=[])
 
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
             database_url="postgresql://mock/test",
             enable_auth=True,
@@ -382,12 +382,12 @@ class TestBuildSocialAuthConfig:
 
     def test_returns_none_when_no_providers_configured(self, tmp_path) -> None:
         """Returns None when no providers have valid credentials."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.specs import BackendSpec
 
         spec = BackendSpec(name="test", entities=[], services=[], endpoints=[])
 
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
             database_url="postgresql://mock/test",
             enable_auth=True,

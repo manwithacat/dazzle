@@ -1,5 +1,5 @@
 """
-End-to-end tests for DNR Backend server.
+End-to-end tests for Dazzle Backend server.
 
 Tests the complete flow from spec to running API.
 """

@@ -1,7 +1,7 @@
 """
 End-to-end tests for the Dazzle Runtime.
 
-These tests spin up actual DNR server instances for each example project
+These tests spin up actual Dazzle server instances for each example project
 and verify that:
 1. The API endpoints work correctly
 2. CRUD operations function properly
@@ -26,7 +26,7 @@ import requests
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-# List of examples to test - these use the DNR stack
+# List of examples to test - these use the Dazzle stack
 DAZZLE_EXAMPLES = [
     "simple_task",
     "contact_manager",
@@ -60,8 +60,8 @@ def wait_for_server(url: str, timeout: int = SERVER_STARTUP_TIMEOUT) -> bool:
     return False
 
 
-class DNRLocalServerManager:
-    """Context manager for running DNR server locally.
+class DazzleLocalServerManager:
+    """Context manager for running Dazzle server locally.
 
     This is the default and most reliable mode for E2E tests.
     """
@@ -74,8 +74,8 @@ class DNRLocalServerManager:
         self.api_url = f"http://127.0.0.1:{port}"
         self.ui_url = f"http://127.0.0.1:{port}"
 
-    def __enter__(self) -> DNRLocalServerManager:
-        # Start the DNR server locally
+    def __enter__(self) -> DazzleLocalServerManager:
+        # Start the Dazzle server locally
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
 
@@ -168,14 +168,14 @@ class DNRLocalServerManager:
 @pytest.fixture(scope="module")
 def simple_task_server(
     dazzle_root: Path,
-) -> Iterator[DNRLocalServerManager]:
-    """Start DNR server for simple_task example."""
+) -> Iterator[DazzleLocalServerManager]:
+    """Start Dazzle server for simple_task example."""
     example_dir = dazzle_root / "examples" / "simple_task"
     if not example_dir.exists():
         pytest.skip(f"Example directory not found: {example_dir}")
 
     # Use unique port to avoid conflicts with other running servers
-    with DNRLocalServerManager(example_dir, port=3001) as server:
+    with DazzleLocalServerManager(example_dir, port=3001) as server:
         yield server
 
 
@@ -183,14 +183,14 @@ class TestSimpleTaskE2E:
     """E2E tests for the simple_task example."""
 
     @pytest.mark.e2e
-    def test_api_docs_available(self, simple_task_server: DNRLocalServerManager) -> None:
+    def test_api_docs_available(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that OpenAPI docs are served."""
         resp = requests.get(f"{simple_task_server.api_url}/docs", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200
         assert "swagger" in resp.text.lower() or "openapi" in resp.text.lower()
 
     @pytest.mark.e2e
-    def test_openapi_schema_available(self, simple_task_server: DNRLocalServerManager) -> None:
+    def test_openapi_schema_available(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that OpenAPI JSON schema is available."""
         resp = requests.get(f"{simple_task_server.api_url}/openapi.json", timeout=REQUEST_TIMEOUT)
         assert resp.status_code == 200
@@ -199,7 +199,7 @@ class TestSimpleTaskE2E:
         assert "paths" in data
 
     @pytest.mark.e2e
-    def test_api_endpoints_respond(self, simple_task_server: DNRLocalServerManager) -> None:
+    def test_api_endpoints_respond(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that API endpoints respond correctly."""
         api = simple_task_server.api_url
 
@@ -226,7 +226,7 @@ class TestSimpleTaskE2E:
         assert created["title"] == "E2E Test Task"
 
     @pytest.mark.e2e
-    def test_task_crud_persistence(self, simple_task_server: DNRLocalServerManager) -> None:
+    def test_task_crud_persistence(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test Create, Read, Update, List operations with persistence."""
         api = simple_task_server.api_url
 
@@ -274,7 +274,7 @@ class TestSimpleTaskE2E:
         assert persisted["priority"] == "medium"
 
     @pytest.mark.e2e
-    def test_frontend_serves_html(self, simple_task_server: DNRLocalServerManager) -> None:
+    def test_frontend_serves_html(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that frontend serves server-rendered HTMX HTML content."""
         resp = requests.get(simple_task_server.ui_url, timeout=REQUEST_TIMEOUT)
         # Frontend might be served at root, or at a subpath
@@ -350,7 +350,7 @@ class TestAuthDisabled:
 
     @pytest.mark.e2e
     def test_auth_me_returns_401_when_disabled(
-        self, simple_task_server: DNRLocalServerManager
+        self, simple_task_server: DazzleLocalServerManager
     ) -> None:
         """Test that /auth/me returns a valid response when auth is disabled.
 
@@ -365,7 +365,7 @@ class TestAuthDisabled:
         )
 
     @pytest.mark.e2e
-    def test_crud_works_without_auth(self, simple_task_server: DNRLocalServerManager) -> None:
+    def test_crud_works_without_auth(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that CRUD operations work without authentication.
 
         Even with auth enabled by default, the API should allow CRUD

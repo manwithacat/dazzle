@@ -1,5 +1,5 @@
 """
-Dazzle Runtime - UI (DNR-UI)
+Dazzle Runtime - UI (Dazzle UI)
 
 LLM-first UI specification and runtime for Dazzle applications.
 

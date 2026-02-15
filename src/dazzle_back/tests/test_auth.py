@@ -680,7 +680,7 @@ class TestAuthRoutes:
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestServerAuthIntegration:
-    """Tests for auth integration with DNRBackendApp."""
+    """Tests for auth integration with DazzleBackendApp."""
 
     @pytest.fixture
     def simple_spec(self) -> Any:
@@ -710,9 +710,9 @@ class TestServerAuthIntegration:
 
     def test_build_without_auth(self, simple_spec: Any, tmp_path: Any) -> None:
         """Test building app without auth."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
-        builder = DNRBackendApp(
+        builder = DazzleBackendApp(
             simple_spec,
             enable_auth=False,
         )
@@ -724,9 +724,9 @@ class TestServerAuthIntegration:
     @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
     def test_build_with_auth(self, simple_spec: Any, tmp_path: Any) -> None:
         """Test building app with auth enabled."""
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
-        builder = DNRBackendApp(
+        builder = DazzleBackendApp(
             simple_spec,
             database_url=os.environ["DATABASE_URL"],
             enable_auth=True,
@@ -744,9 +744,9 @@ class TestServerAuthIntegration:
         except ImportError:
             pytest.skip("FastAPI not installed")
 
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
-        builder = DNRBackendApp(
+        builder = DazzleBackendApp(
             simple_spec,
             database_url=os.environ["DATABASE_URL"],
             enable_auth=True,
@@ -773,9 +773,9 @@ class TestServerAuthIntegration:
         except ImportError:
             pytest.skip("FastAPI not installed")
 
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
-        builder = DNRBackendApp(
+        builder = DazzleBackendApp(
             simple_spec,
             database_url=os.environ["DATABASE_URL"],
             enable_auth=True,

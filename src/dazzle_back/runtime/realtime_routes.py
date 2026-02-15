@@ -230,7 +230,7 @@ async def _validate_token_async(auth_store: AuthStore, token: str) -> dict[str, 
 
 
 # =============================================================================
-# Integration with DNRBackendApp
+# Integration with DazzleBackendApp
 # =============================================================================
 
 

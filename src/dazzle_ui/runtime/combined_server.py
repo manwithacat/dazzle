@@ -150,7 +150,7 @@ def run_unified_server(
     try:
         import uvicorn
 
-        from dazzle_back.runtime.server import DNRBackendApp, ServerConfig
+        from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
     except ImportError as e:
         print(f"[Dazzle] Error: Required dependencies not available: {e}")
         print("[Dazzle] Install with: pip install fastapi uvicorn dazzle-app-back")
@@ -204,7 +204,11 @@ def run_unified_server(
     if redis_url:
         os.environ.setdefault("REDIS_URL", redis_url)
 
-    config = ServerConfig(
+    if backend_spec is None:
+        print("[Dazzle] Error: backend_spec is required")
+        return
+
+    server_config = ServerConfig(
         database_url=database_url or None,
         enable_test_mode=enable_test_mode,
         enable_auth=enable_auth,
@@ -216,10 +220,18 @@ def run_unified_server(
         project_root=project_root,
         fragment_sources=frag_sources,
     )
-    builder = DNRBackendApp(backend_spec, config=config)
+    builder = DazzleBackendApp(backend_spec, config=server_config)
     app = builder.build()
 
-    # ---- Mount site page routes (landing pages, /site.js, /styles/dazzle.css) ----
+    # ---- Route mounting order (do not reorder) ----
+    # 1. Site page routes (/, /about, /pricing) — catch-all marketing pages
+    # 2. Auth page routes (/login, /signup) — must not be shadowed by site pages
+    # 3. App page routes (/app/*) — prefixed, no collision risk
+    # 4. Island API routes (/api/islands) — prefixed, no collision risk
+    # 5. 404 handler — must come after all page routes
+    # 6. validate_routes() — detect any conflicts from the above
+
+    # ---- 1. Mount site page routes (landing pages, /site.js, /styles/dazzle.css) ----
     if sitespec_data:
         try:
             from dazzle_back.runtime.site_routes import (
@@ -227,18 +239,20 @@ def run_unified_server(
                 create_site_page_routes,
             )
 
+            # ---- 1. Site page routes ----
             site_page_router = create_site_page_routes(
                 sitespec_data=sitespec_data,
                 project_root=project_root,
             )
             app.include_router(site_page_router)
 
+            # ---- 2. Auth page routes ----
             auth_page_router = create_auth_page_routes(sitespec_data)
             app.include_router(auth_page_router)
         except ImportError:
             pass
 
-    # ---- Mount app page routes (/app/*) ----
+    # ---- 3. Mount app page routes (/app/*) ----
     if appspec:
         try:
             from dazzle_ui.runtime.page_routes import create_page_routes
@@ -277,7 +291,7 @@ def run_unified_server(
         except ImportError as e:
             print(f"[Dazzle] Warning: Page routes not available: {e}")
 
-    # ---- Mount island API routes ----
+    # ---- 4. Mount island API routes ----
     if appspec and getattr(appspec, "islands", None):
         try:
             from dazzle_back.runtime.island_routes import create_island_routes
@@ -303,6 +317,23 @@ def run_unified_server(
             print(f"[Dazzle] Islands:  {len(appspec.islands)} mounted at /api/islands")
         except ImportError:
             pass
+
+    # ---- 5. Register 404 handler ----
+    if sitespec_data:
+        try:
+            from dazzle_back.runtime.exception_handlers import register_site_404_handler
+
+            register_site_404_handler(app, sitespec_data, project_root=project_root)
+        except ImportError:
+            pass
+
+    # ---- 6. Validate routes for conflicts ----
+    try:
+        from dazzle_back.runtime.route_validator import validate_routes
+
+        validate_routes(app)
+    except ImportError:
+        pass
 
     # ---- Print startup info ----
     base_url = f"http://{host}:{port}"
@@ -372,7 +403,7 @@ def run_backend_only(
     try:
         import uvicorn
 
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
     except ImportError as e:
         print(f"[Dazzle] Error: Required dependencies not available: {e}")
         print("[Dazzle] Install with: pip install fastapi uvicorn dazzle-app-back")
@@ -391,7 +422,7 @@ def run_backend_only(
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-    app_builder = DNRBackendApp(
+    app_builder = DazzleBackendApp(
         backend_spec,
         database_url=database_url or None,
         enable_test_mode=enable_test_mode,

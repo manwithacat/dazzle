@@ -266,7 +266,7 @@ class ChannelResolver:
         )
 
     def _log_resolution(self, channel_name: str, result: DetectionResult, method: str) -> None:
-        """Log resolution for console output and DNR logs.
+        """Log resolution for console output and Dazzle logs.
 
         Args:
             channel_name: Name of the channel

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, Response
 
 logger = logging.getLogger("dazzle.site_routes")
 
@@ -365,48 +365,6 @@ def create_site_page_routes(
             return render_site_page("site/page.html", ctx)
 
     return router
-
-
-def create_site_404_handler(
-    sitespec_data: dict[str, Any],
-    project_root: Path | None = None,
-) -> Any:
-    """
-    Create a 404 exception handler that returns a styled HTML page for site routes.
-
-    Non-API paths (i.e. those not starting with ``/api/``, ``/_site/``, etc.)
-    receive the branded 404 page rendered via Jinja2 templates.
-    API paths fall through to a standard JSON 404 response.
-
-    Args:
-        sitespec_data: SiteSpec as dict
-        project_root: Project root for detecting custom CSS
-
-    Returns:
-        An async exception handler suitable for ``app.add_exception_handler(404, ...)``.
-    """
-    from dazzle_ui.runtime.site_context import build_site_404_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
-
-    has_custom_css = bool(
-        project_root and (project_root / "static" / "css" / "custom.css").is_file()
-    )
-
-    async def handle_404(request: Any, exc: Any) -> HTMLResponse | JSONResponse:
-        path: str = request.url.path
-        # Let API, internal, and static routes return JSON 404
-        if path.startswith(("/api/", "/_site/", "/static/", "/assets/", "/docs", "/openapi")):
-            return JSONResponse(
-                status_code=404,
-                content={"detail": str(exc.detail) if hasattr(exc, "detail") else "Not Found"},
-            )
-        ctx = build_site_404_context(sitespec_data, custom_css=has_custom_css)
-        return HTMLResponse(
-            content=render_site_page("site/404.html", ctx),
-            status_code=404,
-        )
-
-    return handle_404
 
 
 def create_auth_page_routes(

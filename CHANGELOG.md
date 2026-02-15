@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-02-15
+
 ### Added
 - Agent swarm infrastructure with parallel execution and background tasks ([#224](https://github.com/manwithacat/dazzle/issues/224))
 - `--base-url` flag for `dsl-run` to test against remote servers ([#226](https://github.com/manwithacat/dazzle/issues/226))

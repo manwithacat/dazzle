@@ -27,7 +27,8 @@ from dazzle_ui.runtime.combined_server import (
     run_unified_server,
 )
 from dazzle_ui.runtime.dev_server import (
-    DNRDevServer,
+    DazzleDevServer,
+    DNRDevServer,  # Backward compat
     run_dev_server,
     run_dev_server_from_dict,
     run_dev_server_from_json,
@@ -72,7 +73,8 @@ __all__ = [
     "get_realtime_client_js",
     "generate_realtime_init_js",
     # Development server
-    "DNRDevServer",
+    "DazzleDevServer",
+    "DNRDevServer",  # Backward compat
     "run_dev_server",
     "run_dev_server_from_dict",
     "run_dev_server_from_json",

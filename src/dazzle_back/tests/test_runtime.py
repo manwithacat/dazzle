@@ -1,5 +1,5 @@
 """
-Tests for DNR-Back runtime module.
+Tests for Dazzle-Back runtime module.
 """
 
 from __future__ import annotations
@@ -492,10 +492,10 @@ class TestServerWithDatabase:
         """Test that server creates database manager with PostgreSQL."""
         import os
 
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         database_url = os.environ["DATABASE_URL"]
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             simple_backend_spec,
             database_url=database_url,
         )
@@ -508,12 +508,12 @@ class TestServerWithDatabase:
         """Test that server raises ValueError without database_url."""
         import os
 
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         # Temporarily clear DATABASE_URL so the builder doesn't pick it up
         saved = os.environ.pop("DATABASE_URL", None)
         try:
-            app_builder = DNRBackendApp(simple_backend_spec)
+            app_builder = DazzleBackendApp(simple_backend_spec)
             with pytest.raises(ValueError, match="database_url is required"):
                 app_builder.build()
         finally:
@@ -524,10 +524,10 @@ class TestServerWithDatabase:
         """Test that CRUD service is wired up to repository."""
         import os
 
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         database_url = os.environ["DATABASE_URL"]
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             simple_backend_spec,
             database_url=database_url,
         )
@@ -546,10 +546,10 @@ class TestServerWithDatabase:
         """Test that CRUD operations persist data to PostgreSQL."""
         import os
 
-        from dazzle_back.runtime.server import DNRBackendApp
+        from dazzle_back.runtime.server import DazzleBackendApp
 
         database_url = os.environ["DATABASE_URL"]
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             simple_backend_spec,
             database_url=database_url,
         )
@@ -573,7 +573,7 @@ class TestServerWithDatabase:
         assert read_task.title == "Test Task"  # type: ignore[union-attr]
 
         # Create a new app instance to verify persistence
-        app_builder2 = DNRBackendApp(
+        app_builder2 = DazzleBackendApp(
             simple_backend_spec,
             database_url=database_url,
         )

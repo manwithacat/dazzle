@@ -1,5 +1,5 @@
 """
-Unit tests for DNR test endpoints.
+Unit tests for Dazzle test endpoints.
 
 Tests the /__test__/* endpoints for E2E testing support.
 """

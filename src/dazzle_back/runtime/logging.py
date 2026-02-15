@@ -78,7 +78,7 @@ class JSONLFormatter(logging.Formatter):
         entry: dict[str, Any] = {
             "timestamp": datetime.utcfromtimestamp(record.created).isoformat() + "Z",
             "level": record.levelname,
-            "component": getattr(record, "component", "DNR"),
+            "component": getattr(record, "component", "dazzle"),
             "message": record.getMessage(),
         }
 
@@ -122,7 +122,7 @@ class ConsoleFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         # Get component from record or default
-        component = getattr(record, "component", "DNR")
+        component = getattr(record, "component", "dazzle")
         component_color = getattr(record, "component_color", Colors.DAZZLE)
 
         # Format timestamp (brief for console)
@@ -218,7 +218,7 @@ def setup_logging(
     root_logger.info(
         "Dazzle logging initialized",
         extra={
-            "component": "DNR",
+            "component": "dazzle",
             "context": {
                 "log_format": "jsonl",
                 "log_file": str(log_file),
@@ -311,8 +311,8 @@ def get_dev_logger() -> logging.Logger:
 
 
 def get_dazzle_logger() -> logging.Logger:
-    """Get logger for general DNR operations."""
-    return get_logger("DNR", Colors.DAZZLE)
+    """Get logger for general dazzle operations."""
+    return get_logger("dazzle", Colors.DAZZLE)
 
 
 # =============================================================================

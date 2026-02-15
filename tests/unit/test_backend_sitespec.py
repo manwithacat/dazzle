@@ -1,7 +1,7 @@
-"""Tests for DNRBackendApp sitespec handling.
+"""Tests for DazzleBackendApp sitespec handling.
 
 Regression test for issue where sitespec_data parameter was being
-overwritten by config defaults in DNRBackendApp.__init__.
+overwritten by config defaults in DazzleBackendApp.__init__.
 """
 
 from unittest.mock import MagicMock, patch
@@ -11,7 +11,7 @@ import pytest
 # Skip if FastAPI not installed
 pytest.importorskip("fastapi")
 
-from dazzle_back.runtime.server import DNRBackendApp, ServerConfig  # noqa: E402
+from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig  # noqa: E402
 from dazzle_back.specs import BackendSpec, EntitySpec, FieldSpec  # noqa: E402
 from dazzle_back.specs.entity import FieldType, ScalarType  # noqa: E402
 
@@ -47,7 +47,7 @@ def _create_minimal_backend_spec() -> BackendSpec:
     )
 
 
-class TestDNRBackendAppSitespec:
+class TestDazzleBackendAppSitespec:
     """Tests for sitespec_data parameter handling."""
 
     def test_sitespec_data_param_takes_precedence_over_config(self) -> None:
@@ -66,7 +66,7 @@ class TestDNRBackendAppSitespec:
         }
 
         # Create app with explicit sitespec_data
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
             sitespec_data=sitespec_data,
         )
@@ -89,7 +89,7 @@ class TestDNRBackendAppSitespec:
         }
 
         config = ServerConfig(sitespec_data=config_sitespec)
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
             config=config,
         )
@@ -99,7 +99,7 @@ class TestDNRBackendAppSitespec:
     def test_sitespec_data_none_when_not_provided(self) -> None:
         """Test that sitespec_data is None when not provided anywhere."""
         spec = _create_minimal_backend_spec()
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
         )
 
@@ -120,7 +120,7 @@ class TestDNRBackendAppSitespec:
             "legal": {},
         }
 
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
             sitespec_data=sitespec_data,
             database_url="postgresql://mock/test",
@@ -141,7 +141,7 @@ class TestDNRBackendAppSitespec:
         """Test that /_site/* routes are NOT registered when no sitespec_data."""
         spec = _create_minimal_backend_spec()
 
-        app_builder = DNRBackendApp(
+        app_builder = DazzleBackendApp(
             spec,
             database_url="postgresql://mock/test",
         )

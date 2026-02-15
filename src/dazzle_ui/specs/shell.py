@@ -1,5 +1,5 @@
 """
-ShellSpec - Application shell configuration for DNR-UI.
+ShellSpec - Application shell configuration for Dazzle UI.
 
 The shell provides the chrome around workspace content:
 - Navigation (sidebar, topbar, or tabs)

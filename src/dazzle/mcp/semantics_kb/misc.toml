@@ -6,8 +6,8 @@ file = "misc"
 concept_count = 4
 
 [concepts.authentication]
-category = "DNR Runtime"
-definition = "Session-based authentication system in DNR. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project."
+category = "Dazzle Runtime"
+definition = "Session-based authentication system in Dazzle. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project."
 example = '''
 # In DSL, use personas to define role-based access:
 ux:
