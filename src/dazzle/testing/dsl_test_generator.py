@@ -31,6 +31,7 @@ from dazzle.core.ir.eventing import EventSpec
 from dazzle.core.ir.fields import FieldSpec
 from dazzle.core.ir.personas import PersonaSpec
 from dazzle.core.ir.process import ProcessSpec
+from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.core.ir.workspaces import WorkspaceSpec
 from dazzle.core.project import load_project
 
@@ -177,6 +178,10 @@ class DSLTestGenerator:
         # Build entity lookup and dependency graph
         self._entity_map: dict[str, EntitySpec] = {e.name: e for e in appspec.domain.entities}
         self._entity_deps = self._build_dependency_graph()
+        # Entities that have a create surface (POST endpoint exists)
+        self._creatable_entities: set[str] = {
+            s.entity_ref for s in appspec.surfaces if s.entity_ref and s.mode == SurfaceMode.CREATE
+        }
 
     def _next_id(self, prefix: str) -> str:
         """Generate next test ID with prefix."""
@@ -206,23 +211,32 @@ class DSLTestGenerator:
     def _get_required_refs(self, entity: EntitySpec) -> list[tuple[str, str, str]]:
         """Get required ref fields for an entity.
 
+        Includes both explicitly required refs and refs needed to satisfy
+        invariant OR-clause constraints (e.g. ``contact != null or company != null``).
+
         Returns list of (field_name, target_entity, pk_field_name) tuples.
         """
         from dazzle.core.ir.fields import FieldTypeKind
 
+        # Fields needed by invariant OR clauses
+        invariant_fields = set(_invariant_required_fields(entity))
+
         refs: list[tuple[str, str, str]] = []
         for fld in entity.fields:
-            if fld.type.kind == FieldTypeKind.REF and fld.is_required:
-                target = fld.type.ref_entity
-                if target and target in self._entity_map:
-                    # Find the PK field of the target entity
-                    target_entity = self._entity_map[target]
-                    pk_field = "id"  # Default
-                    for tf in target_entity.fields:
-                        if tf.is_primary_key:
-                            pk_field = tf.name
-                            break
-                    refs.append((fld.name, target, pk_field))
+            if fld.type.kind != FieldTypeKind.REF:
+                continue
+            if not fld.is_required and fld.name not in invariant_fields:
+                continue
+            target = fld.type.ref_entity
+            if target and target in self._entity_map:
+                # Find the PK field of the target entity
+                target_entity = self._entity_map[target]
+                pk_field = "id"  # Default
+                for tf in target_entity.fields:
+                    if tf.is_primary_key:
+                        pk_field = tf.name
+                        break
+                refs.append((fld.name, target, pk_field))
         return refs
 
     def generate_all(self) -> GeneratedTestSuite:
@@ -247,7 +261,10 @@ class DSLTestGenerator:
         for entity in self.appspec.domain.entities:
             if _entity_has_forbid_create(entity):
                 continue  # Skip CRUD tests for entities where create is forbidden
-            designs.extend(self._generate_entity_tests(entity))
+            has_create_surface = entity.name in self._creatable_entities
+            designs.extend(
+                self._generate_entity_tests(entity, has_create_surface=has_create_surface)
+            )
             self.coverage.entities_covered.add(entity.name)
 
         # State machine tests
@@ -300,8 +317,17 @@ class DSLTestGenerator:
     # Entity Tests
     # =========================================================================
 
-    def _generate_entity_tests(self, entity: EntitySpec) -> list[dict[str, Any]]:
-        """Generate CRUD and validation tests for an entity."""
+    def _generate_entity_tests(
+        self, entity: EntitySpec, *, has_create_surface: bool = True
+    ) -> list[dict[str, Any]]:
+        """Generate CRUD and validation tests for an entity.
+
+        Args:
+            entity: The entity to generate tests for.
+            has_create_surface: Whether the entity has a create surface (POST endpoint).
+                When False, create-dependent tests are skipped and read tests assume
+                pre-existing data.
+        """
         tests = []
 
         # Get required references for this entity
@@ -316,131 +342,159 @@ class DSLTestGenerator:
         # Generate entity data with ref placeholders
         entity_data = self._generate_entity_data_with_refs(entity, required_refs)
 
-        # CRUD Create test
-        create_steps = setup_steps + [
-            {
-                "action": "create",
-                "target": f"entity:{entity.name}",
-                "data": entity_data,
-                "rationale": f"Create valid {entity.title or entity.name}",
-            },
-            {
-                "action": "assert_count",
-                "target": f"entity:{entity.name}",
-                "data": {"min": 1},
-                "rationale": "Verify entity was created",
-            },
-        ]
-        tests.append(
-            self._create_test(
-                test_id=f"CRUD_{entity.name.upper()}_CREATE",
-                title=f"Create {entity.title or entity.name}",
-                description=f"Test creating a new {entity.title or entity.name}",
-                trigger="api_call",
-                steps=create_steps,
-                entities=related_entities,
-                tags=["crud", "create", "generated", "dsl-derived"],
-            )
-        )
-
-        # CRUD Read test
-        read_steps = setup_steps + [
-            {
-                "action": "create",
-                "target": f"entity:{entity.name}",
-                "data": entity_data,
-                "rationale": "Seed test data",
-            },
-            {
-                "action": "read_list",
-                "target": f"entity:{entity.name}",
-                "rationale": f"Fetch {entity.title or entity.name} list",
-            },
-            {
-                "action": "assert_count",
-                "target": f"entity:{entity.name}",
-                "data": {"min": 1},
-                "rationale": "Verify list has data",
-            },
-        ]
-        tests.append(
-            self._create_test(
-                test_id=f"CRUD_{entity.name.upper()}_READ",
-                title=f"Read {entity.title or entity.name} list",
-                description=f"Test reading {entity.title or entity.name} list",
-                trigger="api_call",
-                steps=read_steps,
-                entities=related_entities,
-                tags=["crud", "read", "generated", "dsl-derived"],
-            )
-        )
-
-        # Validation test for required fields
-        required_fields = [
-            f
-            for f in entity.fields
-            if f.is_required and f.name not in ("id", "created_at", "updated_at")
-        ]
-        if required_fields:
+        if has_create_surface:
+            # CRUD Create test
+            create_steps = setup_steps + [
+                {
+                    "action": "create",
+                    "target": f"entity:{entity.name}",
+                    "data": entity_data,
+                    "rationale": f"Create valid {entity.title or entity.name}",
+                },
+                {
+                    "action": "assert_count",
+                    "target": f"entity:{entity.name}",
+                    "data": {"min": 1},
+                    "rationale": "Verify entity was created",
+                },
+            ]
             tests.append(
                 self._create_test(
-                    test_id=f"VAL_{entity.name.upper()}_REQUIRED",
-                    title=f"Validate required fields for {entity.title or entity.name}",
-                    description="Test that missing required fields are rejected",
+                    test_id=f"CRUD_{entity.name.upper()}_CREATE",
+                    title=f"Create {entity.title or entity.name}",
+                    description=f"Test creating a new {entity.title or entity.name}",
                     trigger="api_call",
-                    steps=[
-                        {
-                            "action": "create_expect_error",
-                            "target": f"entity:{entity.name}",
-                            "data": {},  # Empty data
-                            "rationale": "Attempt create without required fields",
-                        },
-                        {
-                            "action": "assert_error",
-                            "target": "last_response",
-                            "data": {"type": "validation_error"},
-                            "rationale": "Verify validation error returned",
-                        },
-                    ],
-                    entities=[entity.name],
-                    tags=["validation", "required", "generated", "dsl-derived"],
-                )
-            )
-
-        # Unique constraint tests
-        unique_fields = [f for f in entity.fields if f.is_unique and f.name != "id"]
-        for uf in unique_fields:
-            tests.append(
-                self._create_test(
-                    test_id=f"VAL_{entity.name.upper()}_{uf.name.upper()}_UNIQUE",
-                    title=f"Validate {uf.name} uniqueness for {entity.title or entity.name}",
-                    description=f"Test that duplicate {uf.name} values are rejected",
-                    trigger="api_call",
-                    steps=setup_steps
-                    + [
-                        {
-                            "action": "create",
-                            "target": f"entity:{entity.name}",
-                            "data": entity_data,
-                            "rationale": "Create first entity",
-                        },
-                        {
-                            "action": "create_expect_error",
-                            "target": f"entity:{entity.name}",
-                            "data": entity_data,  # Same data — should trigger unique violation
-                            "rationale": f"Attempt duplicate {uf.name}",
-                        },
-                        {
-                            "action": "assert_error",
-                            "target": "last_response",
-                            "data": {"type": "unique_violation"},
-                            "rationale": "Verify unique constraint enforced",
-                        },
-                    ],
+                    steps=create_steps,
                     entities=related_entities,
-                    tags=["validation", "unique", "generated", "dsl-derived"],
+                    tags=["crud", "create", "generated", "dsl-derived"],
                 )
             )
+
+            # CRUD Read test (with seeded data)
+            read_steps = setup_steps + [
+                {
+                    "action": "create",
+                    "target": f"entity:{entity.name}",
+                    "data": entity_data,
+                    "rationale": "Seed test data",
+                },
+                {
+                    "action": "read_list",
+                    "target": f"entity:{entity.name}",
+                    "rationale": f"Fetch {entity.title or entity.name} list",
+                },
+                {
+                    "action": "assert_count",
+                    "target": f"entity:{entity.name}",
+                    "data": {"min": 1},
+                    "rationale": "Verify list has data",
+                },
+            ]
+            tests.append(
+                self._create_test(
+                    test_id=f"CRUD_{entity.name.upper()}_READ",
+                    title=f"Read {entity.title or entity.name} list",
+                    description=f"Test reading {entity.title or entity.name} list",
+                    trigger="api_call",
+                    steps=read_steps,
+                    entities=related_entities,
+                    tags=["crud", "read", "generated", "dsl-derived"],
+                )
+            )
+        else:
+            # Read-only entity — test list endpoint without creating data
+            read_steps = [
+                {
+                    "action": "read_list",
+                    "target": f"entity:{entity.name}",
+                    "rationale": f"Fetch {entity.title or entity.name} list",
+                },
+                {
+                    "action": "assert_status",
+                    "target": "last_response",
+                    "data": {"status": 200},
+                    "rationale": "Verify list endpoint exists",
+                },
+            ]
+            tests.append(
+                self._create_test(
+                    test_id=f"CRUD_{entity.name.upper()}_READ",
+                    title=f"Read {entity.title or entity.name} list",
+                    description=f"Test reading {entity.title or entity.name} list (read-only entity)",
+                    trigger="api_call",
+                    steps=read_steps,
+                    entities=[entity.name],
+                    tags=["crud", "read", "read_only", "generated", "dsl-derived"],
+                )
+            )
+
+        if has_create_surface:
+            # Validation test for required fields
+            required_fields = [
+                f
+                for f in entity.fields
+                if f.is_required and f.name not in ("id", "created_at", "updated_at")
+            ]
+            if required_fields:
+                tests.append(
+                    self._create_test(
+                        test_id=f"VAL_{entity.name.upper()}_REQUIRED",
+                        title=f"Validate required fields for {entity.title or entity.name}",
+                        description="Test that missing required fields are rejected",
+                        trigger="api_call",
+                        steps=[
+                            {
+                                "action": "create_expect_error",
+                                "target": f"entity:{entity.name}",
+                                "data": {},  # Empty data
+                                "rationale": "Attempt create without required fields",
+                            },
+                            {
+                                "action": "assert_error",
+                                "target": "last_response",
+                                "data": {"type": "validation_error"},
+                                "rationale": "Verify validation error returned",
+                            },
+                        ],
+                        entities=[entity.name],
+                        tags=["validation", "required", "generated", "dsl-derived"],
+                    )
+                )
+
+            # Unique constraint tests
+            unique_fields = [f for f in entity.fields if f.is_unique and f.name != "id"]
+            for uf in unique_fields:
+                tests.append(
+                    self._create_test(
+                        test_id=f"VAL_{entity.name.upper()}_{uf.name.upper()}_UNIQUE",
+                        title=f"Validate {uf.name} uniqueness for {entity.title or entity.name}",
+                        description=f"Test that duplicate {uf.name} values are rejected",
+                        trigger="api_call",
+                        steps=setup_steps
+                        + [
+                            {
+                                "action": "create",
+                                "target": f"entity:{entity.name}",
+                                "data": entity_data,
+                                "rationale": "Create first entity",
+                            },
+                            {
+                                "action": "create_expect_error",
+                                "target": f"entity:{entity.name}",
+                                "data": entity_data,  # Same data — should trigger unique violation
+                                "rationale": f"Attempt duplicate {uf.name}",
+                            },
+                            {
+                                "action": "assert_error",
+                                "target": "last_response",
+                                "data": {"type": "unique_violation"},
+                                "rationale": "Verify unique constraint enforced",
+                            },
+                        ],
+                        entities=related_entities,
+                        tags=["validation", "unique", "generated", "dsl-derived"],
+                    )
+                )
 
         return tests
 
@@ -838,58 +892,86 @@ class DSLTestGenerator:
         workspace_label = workspace.title or workspace.name
 
         # Determine the route for this workspace
-        # Workspaces typically have routes like /workspace_name or derive from their name
         workspace_route = f"/app/workspaces/{workspace.name}"
 
+        # Extract the first allowed persona from access rules (if any)
+        ws_persona: str | None = None
+        if workspace.access and workspace.access.allow_personas:
+            ws_persona = workspace.access.allow_personas[0]
+
         # Tier 1 Playwright navigation test - scripted, no LLM needed
+        nav_steps: list[dict[str, Any]] = []
+        if ws_persona:
+            nav_steps.append(
+                {
+                    "action": "login_as",
+                    "target": ws_persona,
+                    "rationale": f"Authenticate as {ws_persona}",
+                }
+            )
+        nav_steps.extend(
+            [
+                {
+                    "action": "navigate_to",
+                    "target": f"workspace:{workspace.name}",
+                    "data": {"route": workspace_route},
+                    "rationale": f"Navigate to {workspace_label} workspace",
+                },
+                {
+                    "action": "wait_for_load",
+                    "target": "page",
+                    "rationale": "Wait for workspace to fully load",
+                },
+                {
+                    "action": "assert_visible",
+                    "target": f"[data-dazzle-workspace='{workspace.name}']",
+                    "rationale": "Verify workspace container is visible",
+                },
+                {
+                    "action": "assert_no_errors",
+                    "target": "console",
+                    "rationale": "Verify no JavaScript errors in console",
+                },
+            ]
+        )
         tests.append(
             self._create_test(
                 test_id=f"WS_{workspace.name.upper()}_NAV",
                 title=f"Navigate to {workspace_label}",
                 description=f"Verify {workspace_label} workspace loads and displays correctly",
                 trigger="playwright",  # Tier 1: Scripted Playwright test
-                steps=[
-                    {
-                        "action": "navigate_to",
-                        "target": f"workspace:{workspace.name}",
-                        "data": {"route": workspace_route},
-                        "rationale": f"Navigate to {workspace_label} workspace",
-                    },
-                    {
-                        "action": "wait_for_load",
-                        "target": "page",
-                        "rationale": "Wait for workspace to fully load",
-                    },
-                    {
-                        "action": "assert_visible",
-                        "target": f"[data-dazzle-workspace='{workspace.name}']",
-                        "rationale": "Verify workspace container is visible",
-                    },
-                    {
-                        "action": "assert_no_errors",
-                        "target": "console",
-                        "rationale": "Verify no JavaScript errors in console",
-                    },
-                ],
+                persona=ws_persona,
+                steps=nav_steps,
                 tags=["workspace", "navigation", "playwright", "tier1", "generated", "dsl-derived"],
             )
         )
 
         # API-based workspace route check (can run without browser)
+        route_steps: list[dict[str, Any]] = []
+        if ws_persona:
+            route_steps.append(
+                {
+                    "action": "login_as",
+                    "target": ws_persona,
+                    "rationale": f"Authenticate as {ws_persona}",
+                }
+            )
+        route_steps.append(
+            {
+                "action": "check_route",
+                "target": f"workspace:{workspace.name}",
+                "data": {"route": workspace_route},
+                "rationale": f"Verify route for {workspace_label} is defined",
+            }
+        )
         tests.append(
             self._create_test(
                 test_id=f"WS_{workspace.name.upper()}_ROUTE",
                 title=f"Workspace {workspace_label} route exists",
                 description=f"Verify {workspace_label} workspace route is configured",
                 trigger="api_call",
-                steps=[
-                    {
-                        "action": "check_route",
-                        "target": f"workspace:{workspace.name}",
-                        "data": {"route": workspace_route},
-                        "rationale": f"Verify route for {workspace_label} is defined",
-                    }
-                ],
+                persona=ws_persona,
+                steps=route_steps,
                 tags=["workspace", "route", "generated", "dsl-derived"],
             )
         )

@@ -5,6 +5,7 @@ from __future__ import annotations
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.testing.dsl_test_generator import DSLTestGenerator
 
 
@@ -41,11 +42,16 @@ def _money_field(name: str, currency: str = "GBP", required: bool = True) -> Fie
 
 
 def _make_appspec(*entities: EntitySpec) -> AppSpec:
+    # Auto-create create surfaces so CRUD CREATE tests are generated
+    surfaces = [
+        SurfaceSpec(name=f"{e.name.lower()}_create", entity_ref=e.name, mode=SurfaceMode.CREATE)
+        for e in entities
+    ]
     return AppSpec(
         name="test",
         title="Test",
         domain=DomainSpec(entities=list(entities)),
-        surfaces=[],
+        surfaces=surfaces,
         views=[],
         enums=[],
         processes=[],
