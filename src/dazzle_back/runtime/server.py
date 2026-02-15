@@ -2096,15 +2096,27 @@ def create_app_factory(
     # Compute view-based list projections from DSL surfaces
     entity_list_projections: dict[str, list[str]] = {}
     views_by_name = {v.name: v for v in appspec.views}
+    # Build entity field type lookup for money field expansion
+    entity_field_types: dict[str, dict[str, str]] = {}
+    for entity in appspec.entities:
+        entity_field_types[entity.name] = {f.name: f.type.kind for f in entity.fields}
     for surface in appspec.surfaces:
         if surface.view_ref and surface.entity_ref:
             view = views_by_name.get(surface.view_ref)
             if view and view.fields:
-                fields = [f.name for f in view.fields]
+                field_types = entity_field_types.get(surface.entity_ref, {})
+                columns: list[str] = []
+                for f in view.fields:
+                    if field_types.get(f.name) == "money":
+                        # Money fields are stored as _minor (INT) + _currency (STR) pairs
+                        columns.append(f"{f.name}_minor")
+                        columns.append(f"{f.name}_currency")
+                    else:
+                        columns.append(f.name)
                 # Always include 'id' for detail links
-                if "id" not in fields:
-                    fields.insert(0, "id")
-                entity_list_projections[surface.entity_ref] = fields
+                if "id" not in columns:
+                    columns.insert(0, "id")
+                entity_list_projections[surface.entity_ref] = columns
 
     # Auto-detect ref fields for eager loading (prevents N+1 queries)
     entity_auto_includes: dict[str, list[str]] = {}

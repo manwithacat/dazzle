@@ -39,8 +39,8 @@
       <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50">
         {% if table.detail_url_template %}
         <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}">View</a></li>
-        {% endif %}
         <li><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit" class="text-warning" data-dazzle-action="{{ table.entity_name }}.edit">Edit</a></li>
+        {% endif %}
         <li>
           <button class="text-error"
                   data-dazzle-action="{{ table.entity_name }}.delete"
