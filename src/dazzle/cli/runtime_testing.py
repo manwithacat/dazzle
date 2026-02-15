@@ -5,6 +5,7 @@ This module contains test helper functions used by the `dazzle check` command.
 It includes API contract testing, E2E tests, benchmarks, and accessibility checks.
 """
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
     from dazzle_back.specs.backend import BackendSpec
 
     from dazzle.core import ir
+
+logger = logging.getLogger(__name__)
 
 
 def run_api_contract_tests(
@@ -382,7 +385,7 @@ def run_benchmarks(
         with urllib.request.urlopen(f"{api_url}{list_endpoint}", timeout=10):
             pass
     except Exception:
-        pass
+        logger.debug("Cold start request failed", exc_info=True)
     cold_start = (time.perf_counter() - start) * 1000
     results["cold_start_ms"] = cold_start
 
@@ -401,7 +404,7 @@ def run_benchmarks(
             latency = (time.perf_counter() - start) * 1000
             latencies.append(latency)
         except Exception:
-            pass
+            logger.debug("Benchmark request failed", exc_info=True)
 
     if latencies:
         latencies.sort()

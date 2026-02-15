@@ -982,7 +982,9 @@ def _analyze_cross_entity_gaps(
                         if adj and adj.get("distance", 999) <= 2:
                             continue
                     except Exception:
-                        pass
+                        logger.debug(
+                            "Failed to compute KG adjacency for %s→%s", e1, e2, exc_info=True
+                        )
 
                 gaps.append(
                     PersonaJourneyGap(

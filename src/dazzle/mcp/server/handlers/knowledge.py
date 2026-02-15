@@ -15,13 +15,12 @@ from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.semantics import lookup_concept
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
+from .common import extract_progress
 
 
 def lookup_concept_handler(args: dict[str, Any]) -> str:
     """Look up a DAZZLE DSL concept."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     term = args.get("term")
     if not term:
         return json.dumps({"error": "term parameter required"})
@@ -33,7 +32,7 @@ def lookup_concept_handler(args: dict[str, Any]) -> str:
 
 def find_examples_handler(args: dict[str, Any]) -> str:
     """Find example projects by features or complexity."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Searching examples...")
     features = args.get("features")
     complexity = args.get("complexity")
@@ -55,7 +54,7 @@ def find_examples_handler(args: dict[str, Any]) -> str:
 
 def get_cli_help_handler(args: dict[str, Any]) -> str:
     """Get CLI help for a command."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Loading CLI help...")
     command = args.get("command")
     result = get_cli_help(command)
@@ -64,7 +63,7 @@ def get_cli_help_handler(args: dict[str, Any]) -> str:
 
 def get_workflow_guide_handler(args: dict[str, Any]) -> str:
     """Get workflow guide."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Loading workflow guide...")
     workflow = args.get("workflow")
     if not workflow:
@@ -76,7 +75,7 @@ def get_workflow_guide_handler(args: dict[str, Any]) -> str:
 
 def lookup_inference_handler(args: dict[str, Any]) -> str:
     """Search the inference knowledge base for DSL generation patterns."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Querying inference KB...")
     list_all = args.get("list_all", False)
 

@@ -16,6 +16,7 @@ Usage::
 
 from __future__ import annotations
 
+import logging
 import sys
 import time
 from dataclasses import dataclass, field
@@ -37,6 +38,8 @@ from dazzle.mcp.server.activity_log import (
     TYPE_TOOL_END,
     TYPE_TOOL_START,
 )
+
+logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
@@ -232,7 +235,7 @@ def read_new_entries_db(db_path: Path, state: WorkshopState) -> list[dict[str, A
         finally:
             conn.close()
     except Exception:
-        pass
+        logger.debug("Failed to poll activity events", exc_info=True)
     return entries
 
 
@@ -613,7 +616,7 @@ def _load_project_config(project_dir: Path) -> tuple[str, str, dict[str, Any]]:
             project_name = proj.get("name", project_name)
             version = proj.get("version", "")
         except Exception:
-            pass
+            logger.debug("Failed to read dazzle.toml", exc_info=True)
     return project_name, version, config
 
 

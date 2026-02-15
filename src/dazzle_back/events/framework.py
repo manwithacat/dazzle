@@ -484,7 +484,7 @@ class EventFramework:
                 stats = await self._outbox.get_stats(self._conn)
                 outbox_depth = stats.get("pending", 0)
             except Exception:
-                pass
+                logger.debug("Failed to get outbox stats", exc_info=True)
 
         publisher_stats = self._publisher.stats if self._publisher else None
 

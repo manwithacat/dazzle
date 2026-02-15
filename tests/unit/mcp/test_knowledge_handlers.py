@@ -17,6 +17,7 @@ def _import_knowledge():
     """
     # Create mock modules to satisfy imports
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
+    sys.modules["dazzle.mcp.server.handlers.common"] = MagicMock()
 
     # Mock the dependent modules
     mock_semantics = MagicMock()

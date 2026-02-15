@@ -7,12 +7,11 @@ Handles MCP server status and DNR log retrieval.
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 from dazzle.mcp.semantics import get_mcp_version
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
 from ..state import (
     get_active_project,
     get_active_project_path,
@@ -20,11 +19,14 @@ from ..state import (
     get_project_root,
     is_dev_mode,
 )
+from .common import extract_progress
+
+logger = logging.getLogger(__name__)
 
 
 def get_mcp_status_handler(args: dict[str, Any]) -> str:
     """Get MCP server status and optionally reload modules."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Gathering MCP status...")
     from pathlib import Path
 
@@ -45,7 +47,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
             active["manifest_name"] = manifest.name
             active["version"] = manifest.version
         except Exception:
-            pass
+            logger.debug("Failed to load project manifest", exc_info=True)
         result["active_project"] = active
     elif is_dev_mode():
         project_name = get_active_project()
@@ -119,7 +121,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
             "active": gate.active_count,
         }
     except Exception:
-        pass
+        logger.debug("Browser gate not available", exc_info=True)
 
     # Activity log path — useful for workshop / tail -f
     try:
@@ -129,7 +131,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
         if alog is not None:
             result["activity_log_path"] = str(alog.path)
     except Exception:
-        pass
+        logger.debug("Activity log not available", exc_info=True)
 
     if is_dev_mode():
         result["available_projects"] = list(get_available_projects().keys())
@@ -139,7 +141,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
 
 def get_telemetry_handler(args: dict[str, Any]) -> str:
     """Get MCP tool call telemetry data."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Loading telemetry...")
     from ..state import get_knowledge_graph
 
@@ -177,7 +179,7 @@ def get_activity_handler(args: dict[str, Any]) -> str:
         count: int — max entries to return (default 20)
         format: str — "structured" (default) or "formatted" (markdown)
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Reading activity log...")
     from ..state import get_activity_store
 
@@ -219,7 +221,7 @@ def get_activity_handler(args: dict[str, Any]) -> str:
 
 def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     """Get DNR runtime logs for debugging."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Reading DNR logs...")
     from pathlib import Path
 

@@ -9,13 +9,12 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress
 
 
 def list_api_packs_handler(args: dict[str, Any]) -> str:
     """List all available API packs."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     from dazzle.api_kb import list_packs
 
     progress.log_sync("Listing API packs...")
@@ -41,7 +40,7 @@ def list_api_packs_handler(args: dict[str, Any]) -> str:
 
 def search_api_packs_handler(args: dict[str, Any]) -> str:
     """Search for API packs by category, provider, or query."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     from dazzle.api_kb import search_packs
 
     progress.log_sync("Searching API packs...")
@@ -76,7 +75,7 @@ def search_api_packs_handler(args: dict[str, Any]) -> str:
 
 def get_api_pack_handler(args: dict[str, Any]) -> str:
     """Get full details of an API pack."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     from dazzle.api_kb import load_pack
 
     pack_name = args.get("pack_name")
@@ -164,7 +163,7 @@ def _serialize_infrastructure(infra: Any) -> dict[str, Any] | None:
 
 def generate_service_dsl_handler(args: dict[str, Any]) -> str:
     """Generate DSL service and foreign_model blocks from an API pack."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     from dazzle.api_kb import load_pack
 
     progress.log_sync("Generating DSL from API pack...")
@@ -202,24 +201,19 @@ def generate_service_dsl_handler(args: dict[str, Any]) -> str:
 
 def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
     """Discover infrastructure requirements for services declared in DSL."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Discovering infrastructure requirements...")
     from pathlib import Path
 
     from dazzle.api_kb import load_pack
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
+
+    from .common import load_project_appspec
 
     if project_path is None:
         return json.dumps({"error": "No active project"})
 
     try:
-        manifest = load_manifest(Path(project_path) / "dazzle.toml")
-        dsl_files = discover_dsl_files(Path(project_path), manifest)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, manifest.project_root)
+        appspec = load_project_appspec(Path(project_path))
     except Exception as e:
         return json.dumps({"error": f"Failed to load project: {e}"})
 
@@ -274,7 +268,7 @@ def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
 
 def get_env_vars_for_packs_handler(args: dict[str, Any]) -> str:
     """Get .env.example content for specified packs or all packs."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Generating env vars...")
     from dazzle.api_kb.loader import generate_env_example
 

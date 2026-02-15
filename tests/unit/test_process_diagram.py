@@ -46,6 +46,7 @@ def _import_module():
         "dazzle.mcp",
         "dazzle.mcp.server",
         "dazzle.mcp.server.handlers",
+        "dazzle.mcp.server.handlers.common",
         "dazzle.mcp.server.progress",
     ]
     _orig = {k: sys.modules.get(k) for k in _mocked}
@@ -56,13 +57,15 @@ def _import_module():
     src_path = Path(__file__).parent.parent.parent / "src"
     module_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process.py"
 
-    # Import module
+    # Import module with package info for relative imports
     spec = importlib.util.spec_from_file_location(
-        "process_module",
+        "dazzle.mcp.server.handlers.process",
         module_path,
+        submodule_search_locations=[],
     )
     _process_module = importlib.util.module_from_spec(spec)
-    sys.modules["process_module"] = _process_module
+    _process_module.__package__ = "dazzle.mcp.server.handlers"
+    sys.modules["dazzle.mcp.server.handlers.process"] = _process_module
     spec.loader.exec_module(_process_module)
 
     # Restore sys.modules to prevent pollution of other tests

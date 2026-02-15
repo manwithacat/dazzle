@@ -11,12 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress, load_project_appspec
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -61,14 +56,11 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
     )
     from dazzle.testing.test_design_persistence import get_next_test_design_id
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Proposing persona tests...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         persona_filter = args.get("persona")
         max_tests = args.get("max_tests", 10)
@@ -287,14 +279,11 @@ def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.testing.test_design_persistence import load_test_designs
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Analyzing test gaps...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         # Load existing test designs
         existing_designs = load_test_designs(project_root)
@@ -499,7 +488,7 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
     from dazzle.testing.test_design_persistence import add_test_designs, get_dsl_tests_dir
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     designs_data = args.get("designs", [])
     overwrite = args.get("overwrite", False)
@@ -581,7 +570,7 @@ def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
         get_test_designs_by_status,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     status_filter = args.get("status_filter")
     test_ids = args.get("test_ids")
@@ -665,17 +654,14 @@ def get_coverage_actions_handler(project_root: Path, args: dict[str, Any]) -> st
     from dazzle.testing.test_design_persistence import load_test_designs
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     max_actions = args.get("max_actions", 5)
     focus = args.get("focus", "all")
 
     try:
         progress.log_sync("Building coverage action list...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         # Load existing test designs and testspec
         existing_designs = load_test_designs(project_root)
@@ -935,7 +921,7 @@ def get_runtime_coverage_gaps_handler(project_root: Path, args: dict[str, Any]) 
     This reads the actual runtime coverage from test execution and identifies
     specific gaps that need test coverage.
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     max_actions = args.get("max_actions", 5)
     coverage_path = args.get("coverage_report_path")
@@ -1177,7 +1163,7 @@ def _generate_view_steps(entity_name: str, view: str) -> list[dict[str, Any]]:
 
 def save_runtime_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save runtime coverage report to dsl/tests/ for future analysis."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     coverage_data = args.get("coverage_data")
 

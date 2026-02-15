@@ -20,6 +20,7 @@ def _import_sitespec():
     """
     # Create mock modules to satisfy imports
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
+    sys.modules["dazzle.mcp.server.handlers.common"] = MagicMock()
 
     # Mock sitespec data structures
     mock_nav_item = SimpleNamespace(label="Home", href="/")

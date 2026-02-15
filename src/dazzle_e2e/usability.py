@@ -12,6 +12,7 @@ Usage:
     page_results = await checker.check_page(page)
 """
 
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
@@ -25,6 +26,8 @@ from dazzle.core.ir import (
 
 if TYPE_CHECKING:
     from playwright.async_api import Page
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -290,7 +293,7 @@ class UsabilityChecker:
                         )
                     )
             except Exception:
-                pass
+                logger.debug("Failed to check primary action visibility", exc_info=True)
         else:
             # Check if primary actions are visible
             for i in range(primary_count):
@@ -310,7 +313,7 @@ class UsabilityChecker:
                             )
                         )
                 except Exception:
-                    pass
+                    logger.debug("Failed to check action visibility", exc_info=True)
 
     async def _check_validation_placement(
         self,

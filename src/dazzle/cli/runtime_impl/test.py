@@ -7,6 +7,7 @@ Run tests for a Dazzle application.
 from __future__ import annotations
 
 import json as json_module
+import logging
 import subprocess
 import sys
 import time
@@ -21,6 +22,8 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+
+logger = logging.getLogger(__name__)
 
 
 def check_command(
@@ -204,7 +207,7 @@ def check_command(
                     if resp.status == 200:
                         break
             except Exception:
-                pass
+                logger.debug("Waiting for API server to start", exc_info=True)
             time.sleep(0.5)
             waited += 0.5
 
@@ -228,7 +231,7 @@ def check_command(
                         if resp.status == 200:
                             break
                 except Exception:
-                    pass
+                    logger.debug("Waiting for UI server to start", exc_info=True)
                 time.sleep(0.5)
                 ui_waited += 0.5
 

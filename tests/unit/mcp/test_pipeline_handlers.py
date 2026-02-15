@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 def _import_pipeline():
     """Import pipeline handlers directly to avoid MCP package init issues."""
     sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
+    sys.modules.setdefault("dazzle.mcp.server.handlers.common", MagicMock())
 
     module_path = (
         Path(__file__).parent.parent.parent.parent
@@ -687,6 +688,7 @@ class TestFidelityGapsOnly:
     def _import_fidelity_fresh(self) -> Any:
         """Import fidelity handlers directly."""
         sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
+        sys.modules.setdefault("dazzle.mcp.server.handlers.common", MagicMock())
         module_path = (
             Path(__file__).parent.parent.parent.parent
             / "src"

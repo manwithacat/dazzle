@@ -128,7 +128,7 @@ class RabbitMQDetector(ProviderDetector):
                     ) as resp:
                         return bool(resp.status == 200)
             except Exception:
-                pass
+                logger.debug("RabbitMQ management API not available", exc_info=True)
 
         # Fall back to port check
         try:

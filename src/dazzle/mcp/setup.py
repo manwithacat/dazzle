@@ -1,9 +1,12 @@
 """MCP server setup and configuration utilities."""
 
 import json
+import logging
 import sys
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def get_claude_config_path() -> Path | None:
@@ -137,8 +140,7 @@ def check_mcp_server() -> dict[str, Any]:
         try:
             status["tools"] = _get_available_tools()
         except Exception:
-            # Don't fail if we can't get tools
-            pass
+            logger.debug("Failed to enumerate MCP tools", exc_info=True)
 
     return status
 

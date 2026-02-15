@@ -14,6 +14,7 @@ Emits health events for SSE streaming.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
@@ -31,6 +32,8 @@ from dazzle_back.runtime.ops_database import (
 
 if TYPE_CHECKING:
     from dazzle_back.events.bus import EventBus
+
+logger = logging.getLogger(__name__)
 
 
 class AggregateStatus(StrEnum):
@@ -314,8 +317,7 @@ class HealthAggregator:
             try:
                 await self.check_all()
             except Exception:
-                # Log but don't crash the loop
-                pass
+                logger.warning("Health check loop iteration failed", exc_info=True)
             await asyncio.sleep(self.check_interval)
 
 

@@ -21,6 +21,32 @@ def _import_fidelity():
     # Create mock modules to satisfy imports
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
 
+    # Build a common mock with real implementations for DSL loading
+    from types import ModuleType
+
+    from dazzle.core.fileset import discover_dsl_files
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.manifest import load_manifest
+    from dazzle.core.parser import parse_modules
+
+    common_mock = ModuleType("dazzle.mcp.server.handlers.common")
+
+    def _extract_progress(args=None):
+        ctx = MagicMock()
+        ctx.log_sync = MagicMock()
+        return ctx
+
+    def _load_project_appspec(project_root):
+        manifest = load_manifest(project_root / "dazzle.toml")
+        dsl_files = discover_dsl_files(project_root, manifest)
+        modules = parse_modules(dsl_files)
+        return build_appspec(modules, manifest.project_root)
+
+    common_mock.extract_progress = _extract_progress
+    common_mock.load_project_appspec = _load_project_appspec
+    common_mock.handler_error_json = lambda fn: fn
+    sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
+
     module_path = (
         Path(__file__).parent.parent.parent.parent
         / "src"

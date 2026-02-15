@@ -7,8 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
+from .common import extract_progress, load_project_appspec
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -23,24 +22,16 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     Returns:
         JSON string with fidelity report.
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     try:
         from dazzle.core.fidelity_scorer import score_appspec_fidelity
     except ImportError:
         return json.dumps({"error": "fidelity_scorer module not available"})
 
     # Parse and link DSL
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
-
     try:
         progress.log_sync("Loading project DSL...")
-        manifest = load_manifest(project_path / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_path, manifest)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, manifest.project_root)
+        appspec = load_project_appspec(project_path)
     except Exception as e:
         return json.dumps({"error": f"Failed to parse/link DSL: {e}"})
 

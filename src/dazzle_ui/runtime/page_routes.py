@@ -9,10 +9,13 @@ Each workspace+surface combination gets a GET route that:
 4. Returns an HTMLResponse
 """
 
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from dazzle.core import ir
+
+logger = logging.getLogger(__name__)
 
 try:
     from fastapi import APIRouter, Request
@@ -98,7 +101,7 @@ def create_page_routes(
                                     ctx.nav_items = persona_nav
                                     break
                 except Exception:
-                    pass
+                    logger.debug("Failed to resolve auth context for page", exc_info=True)
 
             # Enforce surface access control
             surface_name = view_name or getattr(ctx, "view_name", None)
@@ -155,7 +158,7 @@ def create_page_routes(
                     with urllib.request.urlopen(req, timeout=5) as resp:
                         ctx.form.initial_values = json.loads(resp.read())
                 except Exception:
-                    pass
+                    logger.warning("Failed to fetch initial form values", exc_info=True)
 
                 ctx.form.action_url = ctx.form.action_url.replace("{id}", str(path_id))
                 if ctx.form.cancel_url:
@@ -272,7 +275,7 @@ def create_page_routes(
                                     or any(r in item["allow_personas"] for r in user_roles)
                                 ]
                         except Exception:
-                            pass
+                            logger.debug("Failed to resolve auth for workspace nav", exc_info=True)
 
                     html = render_fragment(
                         "workspace/workspace.html",

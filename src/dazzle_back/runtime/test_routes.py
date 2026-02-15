@@ -7,6 +7,7 @@ and capturing database snapshots.
 These endpoints are only available when test mode is enabled.
 """
 
+import logging
 from typing import Any
 
 try:
@@ -22,6 +23,8 @@ from pydantic import BaseModel
 
 from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
 from dazzle_back.specs.entity import EntitySpec
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Request/Response Models
@@ -180,8 +183,7 @@ def create_test_routes(
                 try:
                     conn.execute(f"DELETE FROM {entity.name}")
                 except Exception:
-                    # Table might not exist yet
-                    pass
+                    logger.debug("Table %s might not exist yet", entity.name, exc_info=True)
 
         return {"status": "reset_complete"}
 

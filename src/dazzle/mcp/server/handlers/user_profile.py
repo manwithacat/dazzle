@@ -15,15 +15,14 @@ import logging
 import time
 from typing import Any
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
+from .common import extract_progress
 
 logger = logging.getLogger("dazzle.mcp.handlers.user_profile")
 
 
 def handle_user_profile(arguments: dict[str, Any]) -> str:
     """Dispatch user_profile operations."""
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     progress.log_sync("Processing user profile...")
     from dazzle.mcp.user_profile import (
         analyze_message,

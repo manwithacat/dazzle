@@ -454,7 +454,7 @@ class TopologyDriftDetector:
                 groups = await self._bus.list_consumer_groups(topic)
                 consumers.extend(groups)
             except Exception:
-                pass
+                logger.debug("Failed to list consumer groups for topic %s", topic, exc_info=True)
 
         # Deduplicate consumers
         consumers = list(set(consumers))

@@ -11,27 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _load_appspec(project_path: Path, progress: ProgressContext) -> Any:
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
-
-    progress.log_sync("Loading project DSL...")
-    manifest = load_manifest(project_path / "dazzle.toml")
-    dsl_files = discover_dsl_files(project_path, manifest)
-    progress.log_sync("Parsing DSL...")
-    modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root)
-
+from .common import extract_progress, load_project_appspec
 
 # ---------------------------------------------------------------------------
 # scan
@@ -40,10 +20,11 @@ def _load_appspec(project_path: Path, progress: ProgressContext) -> Any:
 
 def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run sentinel scan against project DSL."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     t0 = time.monotonic()
     try:
-        appspec = _load_appspec(project_path, progress)
+        progress.log_sync("Loading project DSL...")
+        appspec = load_project_appspec(project_path)
     except Exception as e:
         return json.dumps({"error": f"Failed to load DSL: {e}", "project_path": str(project_path)})
 

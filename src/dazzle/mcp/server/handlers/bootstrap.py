@@ -12,8 +12,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
+from .common import extract_progress
 from .spec_analyze import handle_spec_analyze
 
 logger = logging.getLogger(__name__)
@@ -37,7 +36,7 @@ def handle_bootstrap(arguments: dict[str, Any], project_path: Path | None = None
 
     Scans for spec files, runs cognition pass, returns mission briefing.
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     # Determine working directory
     work_dir = project_path or Path.cwd()
 

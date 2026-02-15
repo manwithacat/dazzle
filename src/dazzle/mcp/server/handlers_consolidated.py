@@ -8,11 +8,14 @@ Each handler routes the 'operation' parameter to existing handler functions.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any
 
 from .state import get_available_projects, get_project_root, is_dev_mode, resolve_project_path
+
+logger = logging.getLogger(__name__)
 
 
 def _resolve_project(arguments: dict[str, Any]) -> Path | None:
@@ -1714,7 +1717,7 @@ async def dispatch_consolidated_tool(
             try:
                 activity_store.log_event("tool_start", name, operation)
             except Exception:
-                pass
+                logger.debug("Failed to log tool_start event", exc_info=True)
 
         t0 = time.monotonic()
         call_ok = True
@@ -1747,7 +1750,7 @@ async def dispatch_consolidated_tool(
                         error=call_error,
                     )
                 except Exception:
-                    pass
+                    logger.debug("Failed to log tool_end event", exc_info=True)
 
             # Write to tool_invocations (compact summary table)
             try:

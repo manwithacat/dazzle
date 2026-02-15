@@ -19,15 +19,14 @@ import logging
 import re
 from typing import Any
 
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress
 
 logger = logging.getLogger(__name__)
 
 
 def handle_spec_analyze(arguments: dict[str, Any]) -> str:
     """Handle spec_analyze tool calls."""
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     operation = arguments.get("operation")
 
     progress.log_sync(f"Spec analysis: {operation}...")
@@ -58,7 +57,7 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
     - User roles (special entity type)
     - Actions (potential state transitions or services)
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     progress.log_sync("Discovering entities from spec text...")
     spec_text = arguments.get("spec_text", "")
 
@@ -509,7 +508,7 @@ def _identify_lifecycles(arguments: dict[str, Any]) -> str:
     Takes discovered entities and the spec text, returns
     suggested state machines.
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     progress.log_sync("Identifying entity lifecycles...")
     spec_text = arguments.get("spec_text", "")
     entities = arguments.get("entities", [])
@@ -596,7 +595,7 @@ def _extract_personas(arguments: dict[str, Any]) -> str:
 
     Personas include their goals, primary actions, and information needs.
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     progress.log_sync("Extracting personas from spec...")
     spec_text = arguments.get("spec_text", "")
 
@@ -673,7 +672,7 @@ def _surface_rules(arguments: dict[str, Any]) -> str:
     - Validation rules
     - Derived values
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     progress.log_sync("Extracting business rules...")
     spec_text = arguments.get("spec_text", "")
 
@@ -768,7 +767,7 @@ def _generate_questions(arguments: dict[str, Any]) -> str:
     These are genuine questions that affect implementation,
     not obvious things.
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     progress.log_sync("Generating clarification questions...")
     spec_text = arguments.get("spec_text", "")
     entities = arguments.get("entities", [])
@@ -857,7 +856,7 @@ def _refine_spec(arguments: dict[str, Any]) -> str:
     This combines the outputs of other operations into
     a coherent specification document.
     """
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     progress.log_sync("Refining spec into structured requirements...")
     spec_text = arguments.get("spec_text", "")
     answers = arguments.get("answers", {})  # Answers to generated questions

@@ -43,6 +43,26 @@ class EmailSendStatus(StrEnum):
 
 
 @dataclass
+class EmailMessage:
+    """Parameters for sending an email, replacing 14 individual parameters."""
+
+    to: str
+    subject: str
+    body: str | None = None
+    html_body: str | None = None
+    from_address: str | None = None
+    cc: list[str] | None = None
+    bcc: list[str] | None = None
+    template_id: str | None = None
+    triggered_by: str | None = None
+    correlation_id: str | None = None
+    tenant_id: str | None = None
+    channel_name: str = "email"
+    operation_name: str = "send"
+    idempotency_key: str | None = None
+
+
+@dataclass
 class EmailSendResult:
     """Result of sending an email."""
 
@@ -103,8 +123,8 @@ class EmailSender:
 
     async def send(
         self,
-        to: str,
-        subject: str,
+        to: str = "",
+        subject: str = "",
         body: str | None = None,
         html_body: str | None = None,
         from_address: str | None = None,
@@ -117,28 +137,29 @@ class EmailSender:
         channel_name: str = "email",
         operation_name: str = "send",
         idempotency_key: str | None = None,
+        *,
+        message: EmailMessage | None = None,
     ) -> EmailSendResult:
         """Send an email with event emission.
 
-        Args:
-            to: Recipient email address
-            subject: Email subject
-            body: Plain text body
-            html_body: HTML body (optional)
-            from_address: From address (uses default if not provided)
-            cc: CC recipients
-            bcc: BCC recipients
-            template_id: Template ID if using templates
-            triggered_by: What triggered this send (e.g., "Order.status_changed.123")
-            correlation_id: Correlation ID for tracing
-            tenant_id: Tenant ID for multi-tenancy
-            channel_name: Channel name for events
-            operation_name: Operation name for events
-            idempotency_key: Key for deduplication
-
-        Returns:
-            EmailSendResult with status and events
+        Accepts either individual parameters (backward compat) or an EmailMessage.
         """
+        if message is not None:
+            to = message.to
+            subject = message.subject
+            body = message.body
+            html_body = message.html_body
+            from_address = message.from_address
+            cc = message.cc
+            bcc = message.bcc
+            template_id = message.template_id
+            triggered_by = message.triggered_by
+            correlation_id = message.correlation_id
+            tenant_id = message.tenant_id
+            channel_name = message.channel_name
+            operation_name = message.operation_name
+            idempotency_key = message.idempotency_key
+
         request_id = str(uuid.uuid4())
         idem_key = idempotency_key or request_id
 

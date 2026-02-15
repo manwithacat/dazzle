@@ -8,31 +8,33 @@ pattern analysis, and linting.
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
 from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
 from ..state import get_active_project, is_dev_mode
+from .common import extract_progress, handler_error_json, load_project_appspec
+
+logger = logging.getLogger(__name__)
 
 
 def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Validate DSL files in the project."""
-    progress: ProgressContext = (args.get("_progress") if args else None) or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Loading project DSL...")
+        app_spec = load_project_appspec(project_root)
+
+        # Count modules via manifest for the response
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
-        progress.log_sync("Parsing and validating DSL...")
         modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
 
         result: dict[str, Any] = {
             "status": "valid",
@@ -55,247 +57,218 @@ def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
         )
 
 
+@handler_error_json
 def list_modules(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """List all modules in the project."""
-    progress: ProgressContext = (args.get("_progress") if args else None) or _noop_progress()
-    try:
-        progress.log_sync("Listing project modules...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        parsed_modules = parse_modules(dsl_files)
+    progress = extract_progress(args)
+    progress.log_sync("Listing project modules...")
+    manifest = load_manifest(project_root / "dazzle.toml")
+    dsl_files = discover_dsl_files(project_root, manifest)
+    parsed_modules = parse_modules(dsl_files)
 
-        modules = {}
-        for idx, module in enumerate(parsed_modules):
-            modules[module.name] = {
-                "file": str(dsl_files[idx].relative_to(project_root)),
-                "dependencies": module.uses,
-            }
+    modules = {}
+    for idx, module in enumerate(parsed_modules):
+        modules[module.name] = {
+            "file": str(dsl_files[idx].relative_to(project_root)),
+            "dependencies": module.uses,
+        }
 
-        return json.dumps({"project_path": str(project_root), "modules": modules}, indent=2)
-    except Exception as e:
-        return json.dumps({"project_path": str(project_root), "error": str(e)}, indent=2)
+    return json.dumps({"project_path": str(project_root), "modules": modules}, indent=2)
 
 
+@handler_error_json
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect an entity definition."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     entity_name = args.get("entity_name") or args.get("name")
     if not entity_name:
         return json.dumps({"error": "entity_name required"})
 
-    try:
-        progress.log_sync(f"Inspecting entity '{entity_name}'...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+    progress.log_sync(f"Inspecting entity '{entity_name}'...")
+    app_spec = load_project_appspec(project_root)
 
-        entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
-        if not entity:
-            return json.dumps({"error": f"Entity '{entity_name}' not found"})
+    entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
+    if not entity:
+        return json.dumps({"error": f"Entity '{entity_name}' not found"})
 
-        return json.dumps(
-            {
-                "name": entity.name,
-                "description": entity.title,
-                "fields": [
-                    {
-                        "name": f.name,
-                        "type": str(f.type.kind),
-                        "required": f.is_required,
-                        "modifiers": [str(m) for m in f.modifiers],
-                    }
-                    for f in entity.fields
-                ],
-                "constraints": [str(c) for c in entity.constraints] if entity.constraints else [],
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "name": entity.name,
+            "description": entity.title,
+            "fields": [
+                {
+                    "name": f.name,
+                    "type": str(f.type.kind),
+                    "required": f.is_required,
+                    "modifiers": [str(m) for m in f.modifiers],
+                }
+                for f in entity.fields
+            ],
+            "constraints": [str(c) for c in entity.constraints] if entity.constraints else [],
+        },
+        indent=2,
+    )
 
 
+@handler_error_json
 def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a surface definition."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     surface_name = args.get("surface_name") or args.get("name")
     if not surface_name:
         return json.dumps({"error": "surface_name required"})
 
-    try:
-        progress.log_sync(f"Inspecting surface '{surface_name}'...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+    progress.log_sync(f"Inspecting surface '{surface_name}'...")
+    app_spec = load_project_appspec(project_root)
 
-        surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
-        if not surface:
-            return json.dumps({"error": f"Surface '{surface_name}' not found"})
+    surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
+    if not surface:
+        return json.dumps({"error": f"Surface '{surface_name}' not found"})
 
-        info: dict[str, Any] = {
-            "name": surface.name,
-            "entity": surface.entity_ref,
-            "mode": str(surface.mode),
-            "description": surface.title,
-            "sections": len(surface.sections) if surface.sections else 0,
+    info: dict[str, Any] = {
+        "name": surface.name,
+        "entity": surface.entity_ref,
+        "mode": str(surface.mode),
+        "description": surface.title,
+        "sections": len(surface.sections) if surface.sections else 0,
+    }
+    if hasattr(surface, "ux") and surface.ux:
+        ux = surface.ux
+        info["ux"] = {
+            "purpose": ux.purpose,
+            "sort": [str(s) for s in ux.sort] if ux.sort else [],
+            "filter": list(ux.filter) if ux.filter else [],
+            "search": list(ux.search) if ux.search else [],
+            "empty_message": ux.empty_message,
+            "attention_signals": len(ux.attention_signals),
+            "persona_variants": [p.persona for p in ux.persona_variants],
         }
-        if hasattr(surface, "ux") and surface.ux:
-            ux = surface.ux
-            info["ux"] = {
-                "purpose": ux.purpose,
-                "sort": [str(s) for s in ux.sort] if ux.sort else [],
-                "filter": list(ux.filter) if ux.filter else [],
-                "search": list(ux.search) if ux.search else [],
-                "empty_message": ux.empty_message,
-                "attention_signals": len(ux.attention_signals),
-                "persona_variants": [p.persona for p in ux.persona_variants],
-            }
-        return json.dumps(info, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(info, indent=2)
 
 
+@handler_error_json
 def analyze_patterns(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Analyze the project for patterns."""
-    progress: ProgressContext = (args.get("_progress") if args else None) or _noop_progress()
-    try:
-        progress.log_sync("Loading project DSL...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+    progress = extract_progress(args)
+    progress.log_sync("Loading project DSL...")
+    app_spec = load_project_appspec(project_root)
 
-        progress.log_sync("Detecting CRUD patterns...")
-        crud_patterns = detect_crud_patterns(app_spec)
-        progress.log_sync("Detecting integration patterns...")
-        integration_patterns = detect_integration_patterns(app_spec)
+    progress.log_sync("Detecting CRUD patterns...")
+    crud_patterns = detect_crud_patterns(app_spec)
+    progress.log_sync("Detecting integration patterns...")
+    integration_patterns = detect_integration_patterns(app_spec)
 
-        crud_list = [
-            {
-                "entity": p.entity_name,
-                "has_create": p.has_create,
-                "has_list": p.has_list,
-                "has_detail": p.has_detail,
-                "has_edit": p.has_edit,
-                "is_complete": p.is_complete,
-                "missing_operations": p.missing_operations,
-                "is_system_managed": p.is_system_managed,
-            }
-            for p in crud_patterns
-        ]
-        result: dict[str, Any] = {
-            "crud_patterns": crud_list,
-            "integration_patterns": [
-                {
-                    "name": p.integration_name,
-                    "service": p.service_name,
-                    "has_actions": p.has_actions,
-                    "has_syncs": p.has_syncs,
-                    "action_count": p.action_count,
-                    "sync_count": p.sync_count,
-                    "connected_entities": list(p.connected_entities or []),
-                    "connected_surfaces": list(p.connected_surfaces or []),
-                }
-                for p in integration_patterns
-            ],
+    crud_list = [
+        {
+            "entity": p.entity_name,
+            "has_create": p.has_create,
+            "has_list": p.has_list,
+            "has_detail": p.has_detail,
+            "has_edit": p.has_edit,
+            "is_complete": p.is_complete,
+            "missing_operations": p.missing_operations,
+            "is_system_managed": p.is_system_managed,
         }
+        for p in crud_patterns
+    ]
+    result: dict[str, Any] = {
+        "crud_patterns": crud_list,
+        "integration_patterns": [
+            {
+                "name": p.integration_name,
+                "service": p.service_name,
+                "has_actions": p.has_actions,
+                "has_syncs": p.has_syncs,
+                "action_count": p.action_count,
+                "sync_count": p.sync_count,
+                "connected_entities": list(p.connected_entities or []),
+                "connected_surfaces": list(p.connected_surfaces or []),
+            }
+            for p in integration_patterns
+        ],
+    }
 
-        has_incomplete = any(not c["is_complete"] for c in crud_list)
-        if has_incomplete:
-            result["discovery_hint"] = (
-                "Some entities have incomplete CRUD coverage. "
-                "Use discovery(operation='run', mode='entity_completeness') "
-                "for detailed gap analysis with targeted verification."
-            )
+    has_incomplete = any(not c["is_complete"] for c in crud_list)
+    if has_incomplete:
+        result["discovery_hint"] = (
+            "Some entities have incomplete CRUD coverage. "
+            "Use discovery(operation='run', mode='entity_completeness') "
+            "for detailed gap analysis with targeted verification."
+        )
 
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(result, indent=2)
 
 
+@handler_error_json
 def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Export a framework-agnostic frontend specification from DSL."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
+    progress.log_sync("Loading project DSL...")
+    app_spec = load_project_appspec(project_root)
+
+    # Load sitespec (optional)
+    progress.log_sync("Loading sitespec...")
+    sitespec = None
     try:
-        progress.log_sync("Loading project DSL...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        from dazzle.core.sitespec_loader import load_sitespec
 
-        # Load sitespec (optional)
-        progress.log_sync("Loading sitespec...")
-        sitespec = None
-        try:
-            from dazzle.core.sitespec_loader import load_sitespec
+        sitespec = load_sitespec(project_root, use_defaults=True)
+    except Exception:
+        logger.debug("Optional sitespec not available", exc_info=True)
 
-            sitespec = load_sitespec(project_root, use_defaults=True)
-        except Exception:
-            pass
+    # Load stories (optional)
+    progress.log_sync("Loading stories...")
+    stories = []
+    try:
+        from dazzle.core.stories_persistence import load_stories
 
-        # Load stories (optional)
-        progress.log_sync("Loading stories...")
-        stories = []
-        try:
-            from dazzle.core.stories_persistence import load_stories
+        stories = load_stories(project_root)
+    except Exception:
+        logger.debug("Optional stories not available", exc_info=True)
 
-            stories = load_stories(project_root)
-        except Exception:
-            pass
+    # Load test designs (optional)
+    progress.log_sync("Loading test designs...")
+    test_designs = []
+    try:
+        from dazzle.testing.test_design_persistence import load_test_designs
 
-        # Load test designs (optional)
-        progress.log_sync("Loading test designs...")
-        test_designs = []
-        try:
-            from dazzle.testing.test_design_persistence import load_test_designs
+        test_designs = load_test_designs(project_root)
+    except Exception:
+        logger.debug("Optional test designs not available", exc_info=True)
 
-            test_designs = load_test_designs(project_root)
-        except Exception:
-            pass
+    from dazzle.core.frontend_spec_export import export_frontend_spec
 
-        from dazzle.core.frontend_spec_export import export_frontend_spec
+    fmt = args.get("format", "markdown")
+    sections = args.get("sections")
+    entities = args.get("entities")
 
-        fmt = args.get("format", "markdown")
-        sections = args.get("sections")
-        entities = args.get("entities")
-
-        progress.log_sync("Exporting frontend spec...")
-        result = export_frontend_spec(
-            app_spec, sitespec, stories, test_designs, fmt, sections, entities
-        )
-        return result
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    progress.log_sync("Exporting frontend spec...")
+    return export_frontend_spec(app_spec, sitespec, stories, test_designs, fmt, sections, entities)
 
 
+@handler_error_json
 def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     """Run linting on the project."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     extended = args.get("extended", False)
 
-    try:
-        progress.log_sync("Loading project DSL...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+    progress.log_sync("Loading project DSL...")
+    app_spec = load_project_appspec(project_root)
 
-        progress.log_sync("Running lint checks...")
-        errors, warnings = lint_appspec(app_spec, extended=extended)
+    progress.log_sync("Running lint checks...")
+    errors, warnings = lint_appspec(app_spec, extended=extended)
 
-        return json.dumps(
-            {
-                "errors": len(errors),
-                "warnings": len(warnings),
-                "issues": [str(e) for e in errors] + [str(w) for w in warnings],
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "errors": len(errors),
+            "warnings": len(warnings),
+            "issues": [str(e) for e in errors] + [str(w) for w in warnings],
+        },
+        indent=2,
+    )
 
 
+@handler_error_json
 def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
     """Get unified view of all issues from lint, compliance, and fidelity.
 
@@ -304,137 +277,129 @@ def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
     """
     from dazzle.mcp.event_first_tools import infer_compliance_requirements
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     extended = args.get("extended", False)
 
-    try:
-        progress.log_sync("Loading project DSL...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+    progress.log_sync("Loading project DSL...")
+    app_spec = load_project_appspec(project_root)
 
-        # Run lint
-        progress.log_sync("Running lint checks...")
-        lint_errors, lint_warnings = lint_appspec(app_spec, extended=extended)
+    # Run lint
+    progress.log_sync("Running lint checks...")
+    lint_errors, lint_warnings = lint_appspec(app_spec, extended=extended)
 
-        # Run compliance inference
-        progress.log_sync("Inferring compliance requirements...")
-        compliance = infer_compliance_requirements(app_spec)
+    # Run compliance inference
+    progress.log_sync("Inferring compliance requirements...")
+    compliance = infer_compliance_requirements(app_spec)
 
-        # Build unified issue map keyed by entity.field (or just message for global)
-        issues: dict[str, dict[str, Any]] = {}
+    # Build unified issue map keyed by entity.field (or just message for global)
+    issues: dict[str, dict[str, Any]] = {}
 
-        # Parse lint messages to extract entity+field where possible
-        for msg in lint_errors:
-            key = _extract_issue_key(msg)
-            if key not in issues:
-                issues[key] = {
-                    "key": key,
-                    "severity": "error",
-                    "sources": [],
-                    "messages": [],
-                }
+    # Parse lint messages to extract entity+field where possible
+    for msg in lint_errors:
+        key = _extract_issue_key(msg)
+        if key not in issues:
+            issues[key] = {
+                "key": key,
+                "severity": "error",
+                "sources": [],
+                "messages": [],
+            }
+        issues[key]["sources"].append("lint")
+        issues[key]["messages"].append(msg)
+
+    for msg in lint_warnings:
+        key = _extract_issue_key(msg)
+        if key not in issues:
+            issues[key] = {
+                "key": key,
+                "severity": "warning",
+                "sources": [],
+                "messages": [],
+            }
+        if "lint" not in issues[key]["sources"]:
             issues[key]["sources"].append("lint")
-            issues[key]["messages"].append(msg)
+        issues[key]["messages"].append(msg)
 
-        for msg in lint_warnings:
-            key = _extract_issue_key(msg)
-            if key not in issues:
-                issues[key] = {
-                    "key": key,
-                    "severity": "warning",
-                    "sources": [],
-                    "messages": [],
-                }
-            if "lint" not in issues[key]["sources"]:
-                issues[key]["sources"].append("lint")
-            issues[key]["messages"].append(msg)
-
-        # Add compliance findings
-        for field_info in compliance.get("pii_fields", []):
-            key = f"{field_info['entity']}.{field_info['field']}"
-            if key not in issues:
-                issues[key] = {
-                    "key": key,
-                    "severity": "info",
-                    "sources": [],
-                    "messages": [],
-                }
-            if "compliance" not in issues[key]["sources"]:
-                issues[key]["sources"].append("compliance")
-            issues[key]["messages"].append(
-                f"PII field ({field_info['pattern']}): consider GDPR classification"
-            )
-
-        for field_info in compliance.get("financial_fields", []):
-            key = f"{field_info['entity']}.{field_info['field']}"
-            if key not in issues:
-                issues[key] = {
-                    "key": key,
-                    "severity": "info",
-                    "sources": [],
-                    "messages": [],
-                }
-            if "compliance" not in issues[key]["sources"]:
-                issues[key]["sources"].append("compliance")
-            issues[key]["messages"].append(
-                f"Financial field ({field_info['pattern']}): consider PCI-DSS"
-            )
-
-        for field_info in compliance.get("health_fields", []):
-            key = f"{field_info['entity']}.{field_info['field']}"
-            if key not in issues:
-                issues[key] = {
-                    "key": key,
-                    "severity": "info",
-                    "sources": [],
-                    "messages": [],
-                }
-            if "compliance" not in issues[key]["sources"]:
-                issues[key]["sources"].append("compliance")
-            issues[key]["messages"].append(
-                f"Health field ({field_info['pattern']}): consider HIPAA"
-            )
-
-        # Build cross-reference summary for issues flagged by multiple tools
-        progress.log_sync("Cross-referencing findings...")
-        multi_source_issues = [i for i in issues.values() if len(i["sources"]) > 1]
-
-        # Sort by severity then by key
-        severity_order = {"error": 0, "warning": 1, "info": 2}
-        sorted_issues = sorted(
-            issues.values(),
-            key=lambda x: (severity_order.get(x["severity"], 3), x["key"]),
+    # Add compliance findings
+    for field_info in compliance.get("pii_fields", []):
+        key = f"{field_info['entity']}.{field_info['field']}"
+        if key not in issues:
+            issues[key] = {
+                "key": key,
+                "severity": "info",
+                "sources": [],
+                "messages": [],
+            }
+        if "compliance" not in issues[key]["sources"]:
+            issues[key]["sources"].append("compliance")
+        issues[key]["messages"].append(
+            f"PII field ({field_info['pattern']}): consider GDPR classification"
         )
 
-        return json.dumps(
-            {
-                "total_issues": len(issues),
-                "error_count": len(lint_errors),
-                "warning_count": len(lint_warnings),
-                "compliance_findings": (
-                    len(compliance.get("pii_fields", []))
-                    + len(compliance.get("financial_fields", []))
-                    + len(compliance.get("health_fields", []))
-                ),
-                "multi_source_count": len(multi_source_issues),
-                "recommended_frameworks": compliance.get("recommended_frameworks", []),
-                "issues": sorted_issues,
-                "cross_references": [
-                    {
-                        "key": i["key"],
-                        "flagged_by": i["sources"],
-                        "hint": f"Flagged by {' and '.join(i['sources'])}. "
-                        "Address the underlying issue to resolve all findings.",
-                    }
-                    for i in multi_source_issues
-                ],
-            },
-            indent=2,
+    for field_info in compliance.get("financial_fields", []):
+        key = f"{field_info['entity']}.{field_info['field']}"
+        if key not in issues:
+            issues[key] = {
+                "key": key,
+                "severity": "info",
+                "sources": [],
+                "messages": [],
+            }
+        if "compliance" not in issues[key]["sources"]:
+            issues[key]["sources"].append("compliance")
+        issues[key]["messages"].append(
+            f"Financial field ({field_info['pattern']}): consider PCI-DSS"
         )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+
+    for field_info in compliance.get("health_fields", []):
+        key = f"{field_info['entity']}.{field_info['field']}"
+        if key not in issues:
+            issues[key] = {
+                "key": key,
+                "severity": "info",
+                "sources": [],
+                "messages": [],
+            }
+        if "compliance" not in issues[key]["sources"]:
+            issues[key]["sources"].append("compliance")
+        issues[key]["messages"].append(f"Health field ({field_info['pattern']}): consider HIPAA")
+
+    # Build cross-reference summary for issues flagged by multiple tools
+    progress.log_sync("Cross-referencing findings...")
+    multi_source_issues = [i for i in issues.values() if len(i["sources"]) > 1]
+
+    # Sort by severity then by key
+    severity_order = {"error": 0, "warning": 1, "info": 2}
+    sorted_issues = sorted(
+        issues.values(),
+        key=lambda x: (severity_order.get(x["severity"], 3), x["key"]),
+    )
+
+    return json.dumps(
+        {
+            "total_issues": len(issues),
+            "error_count": len(lint_errors),
+            "warning_count": len(lint_warnings),
+            "compliance_findings": (
+                len(compliance.get("pii_fields", []))
+                + len(compliance.get("financial_fields", []))
+                + len(compliance.get("health_fields", []))
+            ),
+            "multi_source_count": len(multi_source_issues),
+            "recommended_frameworks": compliance.get("recommended_frameworks", []),
+            "issues": sorted_issues,
+            "cross_references": [
+                {
+                    "key": i["key"],
+                    "flagged_by": i["sources"],
+                    "hint": f"Flagged by {' and '.join(i['sources'])}. "
+                    "Address the underlying issue to resolve all findings.",
+                }
+                for i in multi_source_issues
+            ],
+        },
+        indent=2,
+    )
 
 
 def _extract_issue_key(message: str) -> str:

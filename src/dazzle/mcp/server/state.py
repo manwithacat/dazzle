@@ -235,7 +235,7 @@ def _detect_dev_environment(root: Path) -> bool:
             project_name = data.get("project", {}).get("name", "")
             has_pyproject = "dazzle" in project_name.lower()
         except Exception:
-            pass
+            logger.debug("Failed to parse pyproject.toml", exc_info=True)
 
     return has_src and has_examples and has_pyproject
 
@@ -440,7 +440,7 @@ def init_activity_store(root: Path) -> None:
 
             version = get_version()
         except Exception:
-            pass
+            logger.debug("Failed to get version for activity session", exc_info=True)
 
         session_id = graph.start_activity_session(
             project_name=project_name,

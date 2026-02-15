@@ -6,6 +6,8 @@ This module provides the main entry point for running a DNR-Back application.
 
 from __future__ import annotations
 
+import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -33,7 +35,7 @@ if TYPE_CHECKING:
 
     from dazzle_back.runtime.pg_backend import PostgresBackend
 
-import re
+logger = logging.getLogger(__name__)
 
 # Regex for aggregate expressions like count(Task) or count(Task where status = open)
 _AGGREGATE_RE = re.compile(r"(count|sum|avg|min|max)\((\w+)(?:\s+where\s+(.+))?\)")
@@ -784,7 +786,7 @@ class DNRBackendApp:
                         try:
                             auth_ctx = auth_middleware.get_auth_context(request)
                         except Exception:
-                            pass
+                            logger.debug("Failed to get auth context", exc_info=True)
 
                     # Enforce authentication (#145)
                     if require_auth and not (auth_ctx and auth_ctx.is_authenticated):
@@ -874,7 +876,9 @@ class DNRBackendApp:
                                 try:
                                     auth_ctx = auth_middleware.get_auth_context(request)
                                 except Exception:
-                                    pass
+                                    logger.debug(
+                                        "Failed to get auth context for region", exc_info=True
+                                    )
                             if not (auth_ctx and auth_ctx.is_authenticated):
                                 raise HTTPException(
                                     status_code=401, detail="Authentication required"
@@ -910,7 +914,9 @@ class DNRBackendApp:
                                             context={},
                                         )
                                     except Exception:
-                                        pass
+                                        logger.warning(
+                                            "Failed to evaluate condition filter", exc_info=True
+                                        )
 
                                 # Build sort — user sort param overrides IR sort
                                 sort_list: list[str] | None = None
@@ -949,7 +955,9 @@ class DNRBackendApp:
                                         for i in raw_items
                                     ]
                             except Exception:
-                                pass
+                                logger.warning(
+                                    "Failed to list items for workspace region", exc_info=True
+                                )
 
                         # Build columns from entity metadata when available
                         if _espec and hasattr(_espec, "fields"):
@@ -1052,7 +1060,9 @@ class DNRBackendApp:
                                         # Sum with where — not yet supported, use 0
                                         value = 0
                                 except Exception:
-                                    pass
+                                    logger.warning(
+                                        "Failed to compute aggregate metric", exc_info=True
+                                    )
                             elif expr == "count":
                                 # Legacy bare "count" — use current query total
                                 value = total
@@ -1114,7 +1124,9 @@ class DNRBackendApp:
                                                     "message": sig.message,
                                                 }
                                     except Exception:
-                                        pass
+                                        logger.debug(
+                                            "Failed to evaluate attention signal", exc_info=True
+                                        )
                                 if best:
                                     item["_attention"] = best
 
@@ -1641,8 +1653,7 @@ class DNRBackendApp:
         try:
             self._service_loader.load_services()
         except Exception:
-            # Services are optional - log but don't fail startup
-            pass
+            logger.warning("Failed to load domain services", exc_info=True)
 
         # Add domain service routes if any services loaded
         if self._service_loader and self._service_loader.services:
@@ -2225,7 +2236,7 @@ def create_app_factory(
 
             theme_css = get_bundled_css()
         except Exception:
-            pass
+            logger.debug("Failed to load bundled theme CSS", exc_info=True)
 
         # Get auth context getter from builder if auth is enabled
         _page_get_auth_context = None

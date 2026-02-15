@@ -13,12 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress, load_project_appspec
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
@@ -91,7 +86,7 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         processes: List of process dicts (ProcessSpec-compatible)
         overwrite: If True, replace processes with matching names (default: False)
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         from dazzle.core.ir.process import ProcessSpec
         from dazzle.core.process_persistence import add_processes
@@ -180,10 +175,7 @@ class ProcessRunSummary:
 
 def _load_app_spec(project_root: Path) -> AppSpec:
     """Load and build AppSpec from project."""
-    manifest = load_manifest(project_root / "dazzle.toml")
-    dsl_files = discover_dsl_files(project_root, manifest)
-    modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root)
+    return load_project_appspec(project_root)
 
 
 def _get_process_adapter(project_root: Path) -> ProcessAdapter:
@@ -217,7 +209,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         limit: Max stories to return (default: 50)
         offset: Number of stories to skip (default: 0)
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Loading app spec for coverage analysis...")
         app_spec = _load_app_spec(project_root)
@@ -597,7 +589,7 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     that guide the agent in composing processes, rather than generating
     ready-made DSL stubs.
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Loading app spec and stories...")
         app_spec = _load_app_spec(project_root)
@@ -1157,7 +1149,7 @@ async def _list_runs_async(project_root: Path, args: dict[str, Any]) -> str:
     """Async implementation for listing process runs."""
     from dazzle.core.process.adapter import ProcessStatus
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Loading process runs...")
         adapter = _get_process_adapter(project_root)
@@ -1214,7 +1206,7 @@ async def list_process_runs_handler(project_root: Path, args: dict[str, Any]) ->
 
 async def _get_run_async(project_root: Path, args: dict[str, Any]) -> str:
     """Async implementation for getting a process run."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Fetching process run details...")
         adapter = _get_process_adapter(project_root)
@@ -1275,7 +1267,7 @@ async def get_process_run_handler(project_root: Path, args: dict[str, Any]) -> s
 
 def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a process definition."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     process_name = args.get("process_name") if args else None
 
     if not process_name:
@@ -1434,7 +1426,7 @@ def _format_step(step: ProcessStepSpec) -> dict[str, Any]:
 
 def list_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     """List all processes in the project."""
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Loading processes...")
         app_spec = _load_app_spec(project_root)
@@ -1491,7 +1483,7 @@ def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str
     - Parallel step groupings
     - Compensation handlers (optional)
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     process_name = args.get("process_name") if args else None
     include_compensations = args.get("include_compensations", False) if args else False
     diagram_type = args.get("type", "flowchart") if args else "flowchart"

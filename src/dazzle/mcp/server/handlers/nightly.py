@@ -174,7 +174,7 @@ def _run_step_with_activity(
         try:
             activity_store.log_event("tool_start", namespaced, None, source="cli")
         except Exception:
-            pass
+            logger.debug("Failed to log nightly step start", exc_info=True)
 
     t0 = time.monotonic()
     result: dict[str, Any] = {"operation": step.name}
@@ -221,7 +221,7 @@ def _run_step_with_activity(
                 source="cli",
             )
         except Exception:
-            pass
+            logger.debug("Failed to log nightly step end", exc_info=True)
 
     return result
 

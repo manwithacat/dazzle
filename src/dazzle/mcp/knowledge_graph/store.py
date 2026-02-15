@@ -21,6 +21,26 @@ from typing import Any
 
 
 @dataclass
+class ActivityEvent:
+    """Parameters for logging an activity event, replacing 14 individual parameters."""
+
+    session_id: str
+    event_type: str
+    tool: str
+    operation: str | None = None
+    success: bool | None = None
+    duration_ms: float | None = None
+    error: str | None = None
+    warnings: int = 0
+    progress_current: int | None = None
+    progress_total: int | None = None
+    message: str | None = None
+    level: str = "info"
+    context_json: str | None = None
+    source: str = "mcp"
+
+
+@dataclass
 class Entity:
     """A node in the knowledge graph."""
 
@@ -1448,9 +1468,9 @@ class KnowledgeGraph:
 
     def log_activity_event(
         self,
-        session_id: str,
-        event_type: str,
-        tool: str,
+        session_id: str | ActivityEvent = "",
+        event_type: str = "",
+        tool: str = "",
         operation: str | None = None,
         *,
         success: bool | None = None,
@@ -1463,8 +1483,29 @@ class KnowledgeGraph:
         level: str = "info",
         context_json: str | None = None,
         source: str = "mcp",
+        event: ActivityEvent | None = None,
     ) -> int:
-        """Log an activity event. Returns the event id."""
+        """Log an activity event. Returns the event id.
+
+        Accepts either individual parameters or an ActivityEvent dataclass.
+        """
+        if isinstance(session_id, ActivityEvent):
+            event = session_id
+        if event is not None:
+            session_id = event.session_id
+            event_type = event.event_type
+            tool = event.tool
+            operation = event.operation
+            success = event.success
+            duration_ms = event.duration_ms
+            error = event.error
+            warnings = event.warnings
+            progress_current = event.progress_current
+            progress_total = event.progress_total
+            message = event.message
+            level = event.level
+            context_json = event.context_json
+            source = event.source
         now = time.time()
         ts = datetime.now(UTC).isoformat(timespec="milliseconds")
         conn = self._get_connection()

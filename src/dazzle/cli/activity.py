@@ -89,7 +89,7 @@ def cli_activity(
         try:
             activity_store.log_event("tool_start", tool, operation, source="cli")
         except Exception:
-            pass
+            logger.debug("Failed to log tool_start event", exc_info=True)
 
     t0 = time.monotonic()
     call_ok = True
@@ -114,7 +114,7 @@ def cli_activity(
             try:
                 ctx_json = json.dumps(progress.result_context)
             except Exception:
-                pass
+                logger.debug("Failed to serialize result context", exc_info=True)
 
         if activity_store is not None:
             try:
@@ -129,4 +129,4 @@ def cli_activity(
                     source="cli",
                 )
             except Exception:
-                pass
+                logger.debug("Failed to log tool_end event", exc_info=True)

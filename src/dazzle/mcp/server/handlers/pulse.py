@@ -21,8 +21,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress
 
 logger = logging.getLogger("dazzle.mcp.handlers.pulse")
 
@@ -44,7 +43,7 @@ def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     Returns JSON with both structured metrics and a markdown narrative.
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     business_context = args.get("business_context")
 
     t0 = time.monotonic()

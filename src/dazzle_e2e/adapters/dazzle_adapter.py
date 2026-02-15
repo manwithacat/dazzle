@@ -4,12 +4,15 @@ Dazzle Runtime Adapter for E2E Testing.
 Provides test infrastructure for DNR-based applications.
 """
 
+import logging
 from typing import Any
 
 import httpx
 
 from dazzle.core.ir import FixtureSpec
 from dazzle_e2e.adapters.base import BaseAdapter
+
+logger = logging.getLogger(__name__)
 
 
 class DazzleAdapter(BaseAdapter):
@@ -221,7 +224,7 @@ class DazzleAdapter(BaseAdapter):
             if response.status_code == 200:
                 return response.json()
         except Exception:
-            pass
+            logger.debug("Failed to get current user info", exc_info=True)
 
         return None
 

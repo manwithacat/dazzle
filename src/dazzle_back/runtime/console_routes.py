@@ -621,7 +621,7 @@ def _get_api_perf_data(ops_db: Any, hours: int) -> list[dict[str, Any]]:
                     }
                 )
     except Exception:
-        pass
+        logger.warning("Failed to fetch performance data", exc_info=True)
     return result
 
 
@@ -660,7 +660,7 @@ def _get_error_data(ops_db: Any, cutoff: str) -> dict[str, Any]:
             )
             result["recent"] = [dict(row) for row in cursor.fetchall()]
     except Exception:
-        pass
+        logger.warning("Failed to fetch error data", exc_info=True)
     return result
 
 
@@ -693,5 +693,5 @@ def _get_cost_data(ops_db: Any, hours: int) -> dict[str, Any]:
                 result["total_cents"] += row["cost_cents"] or 0
                 result["total_calls"] += row["calls"]
     except Exception:
-        pass
+        logger.warning("Failed to fetch cost data", exc_info=True)
     return result

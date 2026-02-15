@@ -697,7 +697,7 @@ class KafkaBus(EventBus):
                         result.append(group_id)
                         break
             except Exception:
-                pass
+                logger.debug("Failed to list offsets for group %s", group_id, exc_info=True)
 
         return result
 

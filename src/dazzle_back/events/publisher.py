@@ -264,8 +264,7 @@ class OutboxPublisher:
         try:
             await self._conn.rollback()
         except Exception:
-            # Connection may be broken — _reconnect will handle it
-            pass
+            logger.debug("Rollback failed, connection may be broken", exc_info=True)
 
     async def _reconnect(self) -> None:
         """Close the current connection and open a fresh one."""
@@ -273,7 +272,7 @@ class OutboxPublisher:
             try:
                 await self._conn.close()
             except Exception:
-                pass
+                logger.debug("Failed to close connection during reconnect", exc_info=True)
             self._conn = None
 
         try:

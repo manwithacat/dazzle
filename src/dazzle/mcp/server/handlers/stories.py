@@ -11,12 +11,7 @@ from datetime import UTC
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress, load_project_appspec
 
 if TYPE_CHECKING:
     from dazzle.core.ir.stories import StorySpec
@@ -254,13 +249,10 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     Default: returns compact summaries of all entities and surfaces.
     With entity_names/surface_names: returns full details for those items only.
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Loading DSL specification...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         entity_names: list[str] = args.get("entity_names") or []
         surface_names: list[str] = args.get("surface_names") or []
@@ -327,13 +319,10 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.stories_persistence import get_next_story_id
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     try:
         progress.log_sync("Parsing DSL and building app spec...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         max_stories = args.get("max_stories", 30)
         filter_entities = args.get("entities")
@@ -456,7 +445,7 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.stories_persistence import add_stories, get_stories_file
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     stories_data = args.get("stories", [])
     overwrite = args.get("overwrite", False)
 
@@ -514,7 +503,7 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.ir.stories import StoryStatus
     from dazzle.core.stories_persistence import get_stories_by_status, get_stories_file
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     status_filter = args.get("status_filter", "all")
     story_ids = args.get("story_ids")
 
@@ -570,7 +559,7 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     from .process import stories_coverage_handler
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     actor_filter_str: str | None = args.get("persona")
 
     try:
@@ -672,7 +661,7 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
     )
     from dazzle.core.stories_persistence import get_stories_by_status
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     story_ids = args.get("story_ids")
     include_draft = args.get("include_draft", False)
 

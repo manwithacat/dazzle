@@ -16,6 +16,7 @@ For code generation, use:
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +32,8 @@ from dazzle.core.parser import parse_modules
 
 if TYPE_CHECKING:
     from dazzle.core import ir
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -327,7 +330,7 @@ def init_command(
                 typer.echo("  dazzle mcp-setup")
                 typer.echo("  Then restart Claude Code to access DAZZLE tools")
         except Exception:
-            pass
+            logger.debug("Failed to check MCP server status", exc_info=True)
 
     except InitError as e:
         typer.echo(f"Initialization failed: {e}", err=True)

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -39,6 +40,8 @@ from .event_test_runner import (
     generate_event_tests_from_appspec,
 )
 from .test_runner import TestRunner, TestRunResult
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -340,7 +343,7 @@ class UnifiedTestRunner:
                     time.sleep(1)  # Give it a moment to fully initialize
                     return True
             except Exception:
-                pass
+                logger.debug("Error reading server output", exc_info=True)
 
             time.sleep(0.1)
 
@@ -437,7 +440,7 @@ class UnifiedTestRunner:
                         if design["test_id"] not in existing_ids:
                             all_designs.append(design)
             except Exception:
-                pass
+                logger.warning("Failed to load existing test designs", exc_info=True)
 
         # Apply filters
         if test_id:

@@ -18,8 +18,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress
 
 logger = logging.getLogger("dazzle.mcp.handlers.pipeline")
 
@@ -43,7 +42,7 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     Each step runs regardless of prior failures (unless stop_on_error=True).
     Returns a structured JSON report with per-step results and overall summary.
     """
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     stop_on_error = args.get("stop_on_error", False)
     base_url = args.get("base_url")

@@ -10,8 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -258,7 +257,7 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     try:
         from dazzle.testing.unified_runner import UnifiedTestRunner
 
-        progress: ProgressContext = args.get("_progress") or _noop_progress()
+        progress = extract_progress(args)
         base_url = args.get("base_url")
 
         if base_url:
@@ -386,7 +385,7 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     try:
         from dazzle.testing.unified_runner import UnifiedTestRunner
 
-        progress: ProgressContext = args.get("_progress") or _noop_progress()
+        progress = extract_progress(args)
         regenerate = args.get("regenerate", False)
         base_url = args.get("base_url")
 

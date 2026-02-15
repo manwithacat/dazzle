@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,8 @@ from typing import Any
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.fields import FieldSpec, FieldTypeKind
 from dazzle.core.strings import to_api_plural
+
+logger = logging.getLogger(__name__)
 
 ALL_SUITES = ["smoke", "auth", "crud", "validation", "state", "security", "persona"]
 
@@ -240,7 +243,7 @@ report
                     label = f"Page {route}"
                     lines.append(f'  assert_status "{label}" GET "${{BASE_URL}}{route}" 200')
             except Exception:
-                pass
+                logger.debug("Optional sitespec not available for curl tests", exc_info=True)
 
         lines.append("}")
         lines.append("")

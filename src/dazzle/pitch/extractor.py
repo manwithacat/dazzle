@@ -124,31 +124,31 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
             stories = load_stories(project_root)
             ctx.story_count = len(stories)
         except Exception:
-            pass
+            logger.debug("Failed to load stories for pitch context", exc_info=True)
 
         # Extract integrations
         try:
             ctx.integrations = [i.name for i in appspec.integrations]
         except Exception:
-            pass
+            logger.debug("Failed to extract integrations", exc_info=True)
 
         # Extract services
         try:
             ctx.services = [s.name for s in appspec.domain_services]
         except Exception:
-            pass
+            logger.debug("Failed to extract services", exc_info=True)
 
         # Count ledgers (TigerBeetle)
         try:
             ctx.ledger_count = len(appspec.ledgers)
         except Exception:
-            pass
+            logger.debug("Failed to count ledgers", exc_info=True)
 
         # Count processes
         try:
             ctx.process_count = len(appspec.processes)
         except Exception:
-            pass
+            logger.debug("Failed to count processes", exc_info=True)
 
         # Count E2E test flows
         try:
@@ -157,7 +157,7 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
             flows = load_e2e_flows(project_root)
             ctx.e2e_flow_count = len(flows)
         except Exception:
-            pass
+            logger.debug("Failed to load E2E flows", exc_info=True)
 
         # Infrastructure summary
         try:
@@ -165,7 +165,7 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
 
             ctx.infra_summary = analyze_infra_requirements(appspec)
         except Exception:
-            pass
+            logger.debug("Failed to analyze infra requirements", exc_info=True)
 
         logger.info(
             f"Extracted DSL context: {len(ctx.entities)} entities, "

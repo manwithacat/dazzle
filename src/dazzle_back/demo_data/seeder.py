@@ -6,6 +6,7 @@ Seeds demo data into the database with scenario and persona awareness.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
 
     from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
     from dazzle_back.specs import BackendSpec
+
+logger = logging.getLogger(__name__)
 
 
 class DemoDataSeeder:
@@ -68,8 +71,7 @@ class DemoDataSeeder:
                 try:
                     conn.execute(f"DELETE FROM {entity.name}")
                 except Exception:
-                    # Table might not exist yet
-                    pass
+                    logger.debug("Table %s might not exist yet", entity.name, exc_info=True)
 
     async def seed_from_data(
         self,
@@ -105,8 +107,7 @@ class DemoDataSeeder:
                     await repo.create(record)
                     created_count += 1
                 except Exception:
-                    # Skip failed records
-                    pass
+                    logger.debug("Failed to seed record for %s", entity_name, exc_info=True)
 
             counts[entity_name] = created_count
 
@@ -151,8 +152,9 @@ class DemoDataSeeder:
                     await repo.create(record)
                     created_count += 1
                 except Exception:
-                    # Skip failed records
-                    pass
+                    logger.debug(
+                        "Failed to seed generated record for %s", entity_name, exc_info=True
+                    )
 
             counts[entity_name] = created_count
 

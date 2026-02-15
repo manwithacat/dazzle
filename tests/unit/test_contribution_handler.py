@@ -34,6 +34,7 @@ def _import_modules():
         "mcp.server.fastmcp",
         "mcp.server.stdio",
         "dazzle.mcp.server.handlers",
+        "dazzle.mcp.server.handlers.common",
         "dazzle.mcp.server.github_issues",
         "dazzle.mcp",
     ]
@@ -68,13 +69,15 @@ def _import_modules():
     src_path = Path(__file__).parent.parent.parent / "src"
     contribution_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "contribution.py"
 
-    # Import contribution module
+    # Import contribution module with package info for relative imports
     spec = importlib.util.spec_from_file_location(
-        "contribution_module",
+        "dazzle.mcp.server.handlers.contribution",
         contribution_path,
+        submodule_search_locations=[],
     )
     _contribution_module = importlib.util.module_from_spec(spec)
-    sys.modules["contribution_module"] = _contribution_module
+    _contribution_module.__package__ = "dazzle.mcp.server.handlers"
+    sys.modules["dazzle.mcp.server.handlers.contribution"] = _contribution_module
     spec.loader.exec_module(_contribution_module)
 
     # Restore sys.modules to prevent pollution of other tests.

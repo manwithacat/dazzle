@@ -410,7 +410,7 @@ class SessionManager:
                     email = email or creds.get("email")
                     password = password or creds.get("password")
                 except Exception:
-                    pass
+                    logger.warning("Failed to load test credentials", exc_info=True)
 
         if not email or not password:
             # Fall back to generated test credentials

@@ -6,10 +6,13 @@ Packs are TOML files containing pre-validated API configurations.
 
 from __future__ import annotations
 
+import logging
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -415,8 +418,7 @@ def _discover_packs() -> None:
                     pack = _load_pack_from_toml(toml_file)
                     _pack_cache[pack.name] = pack
                 except Exception:
-                    # Skip malformed packs
-                    pass
+                    logger.warning("Failed to load API pack from %s", toml_file, exc_info=True)
 
     _packs_loaded = True
 

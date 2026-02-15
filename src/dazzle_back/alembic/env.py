@@ -8,6 +8,7 @@ the DSL schema against the live database.
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
 from logging.config import fileConfig
@@ -15,6 +16,8 @@ from pathlib import Path
 
 import sqlalchemy
 from alembic import context
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Alembic Config object (provides access to alembic.ini values)
@@ -63,7 +66,7 @@ def _load_target_metadata() -> sqlalchemy.MetaData:
                 backend_spec = convert_appspec_to_backend(appspec)
                 return build_metadata(backend_spec.entities)
     except Exception:
-        pass
+        logger.debug("Failed to load target metadata from DSL", exc_info=True)
 
     # Fallback: empty metadata
     import sqlalchemy

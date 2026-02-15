@@ -15,6 +15,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -27,6 +28,8 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class TestResult(StrEnum):
@@ -242,7 +245,7 @@ class DazzleClient:
                 if resp.status_code == 404:
                     self._test_routes_available = False
             except Exception:
-                pass
+                logger.debug("Test login endpoint not available", exc_info=True)
 
         # Fallback: real auth via /auth/login
         return self._login_with_credentials()
@@ -265,7 +268,7 @@ class DazzleClient:
                     email = creds.get("email")
                     password = creds.get("password")
                 except Exception:
-                    pass
+                    logger.warning("Failed to load test credentials", exc_info=True)
 
         if not email or not password:
             return False

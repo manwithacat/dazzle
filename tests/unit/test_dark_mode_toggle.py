@@ -110,30 +110,30 @@ class TestSitePageToggleButton:
         """Test that site.js includes theme initialization."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
-        py_content = py_path.read_text()
+        js_path = Path("src/dazzle_ui/static/js/site.js")
+        js_content = js_path.read_text()
 
         # Check for theme initialization in site.js
-        assert "initTheme()" in py_content
-        assert "toggleTheme()" in py_content
+        assert "initTheme()" in js_content
+        assert "toggleTheme()" in js_content
 
     def test_site_js_uses_storage_key(self):
         """Test that site.js uses the same storage key."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
-        py_content = py_path.read_text()
+        js_path = Path("src/dazzle_ui/static/js/site.js")
+        js_content = js_path.read_text()
 
         # Check for storage key in site.js
-        assert "dz-theme-variant" in py_content
+        assert "dz-theme-variant" in js_content
 
     def test_site_js_listens_for_system_preference(self):
         """Test that site.js listens for system preference changes."""
         from pathlib import Path
 
-        py_path = Path("src/dazzle_ui/runtime/site_renderer.py")
-        py_content = py_path.read_text()
+        js_path = Path("src/dazzle_ui/static/js/site.js")
+        js_content = js_path.read_text()
 
         # Check for system preference listener
-        assert "prefers-color-scheme" in py_content
-        assert "addEventListener" in py_content
+        assert "prefers-color-scheme" in js_content
+        assert "addEventListener" in js_content

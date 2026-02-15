@@ -273,7 +273,7 @@ def create_control_plane_routes(
                     try:
                         conn.execute(f"DELETE FROM {entity.name}")
                     except Exception:
-                        pass
+                        logger.debug("Failed to delete from %s", entity.name, exc_info=True)
 
             # Seed each fixture if present
             for fixture in demo_fixtures:
@@ -297,8 +297,7 @@ def create_control_plane_routes(
                         await repo.create(record)
                         created += 1
                     except Exception:
-                        # Skip on error (e.g., duplicate)
-                        pass
+                        logger.debug("Failed to seed record for %s", entity_name, exc_info=True)
 
                 seeded_counts[entity_name] = created
 
@@ -327,8 +326,7 @@ def create_control_plane_routes(
                 try:
                     conn.execute(f"DELETE FROM {entity.name}")
                 except Exception:
-                    # Table might not exist
-                    pass
+                    logger.debug("Failed to reset table %s", entity.name, exc_info=True)
 
         return {"status": "reset_complete"}
 
@@ -353,7 +351,9 @@ def create_control_plane_routes(
                 try:
                     conn.execute(f"DELETE FROM {entity.name}")
                 except Exception:
-                    pass
+                    logger.debug(
+                        "Failed to clear table %s before regeneration", entity.name, exc_info=True
+                    )
 
         # Create generator with fixed seed for reproducibility
         generator = DemoDataGenerator(seed=42)
@@ -383,8 +383,7 @@ def create_control_plane_routes(
                     await repo.create(entity_data)
                     created += 1
                 except Exception:
-                    # Skip on error
-                    pass
+                    logger.debug("Failed to create demo record for %s", entity.name, exc_info=True)
 
             counts[entity.name] = created
 

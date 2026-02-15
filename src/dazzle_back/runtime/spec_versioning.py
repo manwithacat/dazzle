@@ -182,7 +182,7 @@ class SpecVersionStore:
                         diff = json.loads(row["diff_data"])
                         diff_summary = diff.get("summary", "")
                     except Exception:
-                        pass
+                        logger.debug("Failed to parse diff data", exc_info=True)
                 results.append(
                     {
                         "id": row["id"],

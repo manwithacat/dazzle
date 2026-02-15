@@ -6,6 +6,7 @@ Validates toolchain versions and loads project context.
 
 from __future__ import annotations
 
+import logging
 import shutil
 import subprocess
 
@@ -15,6 +16,8 @@ from ..models import (
     FindingSeverity,
 )
 from .base import PreflightStage
+
+logger = logging.getLogger(__name__)
 
 
 class BootstrapStage(PreflightStage):
@@ -229,7 +232,7 @@ class BootstrapStage(PreflightStage):
                 if result.returncode == 0:
                     self.context.commit_sha = result.stdout.strip()[:12]
             except Exception:
-                pass
+                logger.debug("Failed to get git commit SHA", exc_info=True)
 
         # Try to load app info from dazzle.toml
         toml_path = self.context.project_root / "dazzle.toml"

@@ -30,10 +30,13 @@ DSL syntax examples:
         retention: 24_months
 """
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
 from ..lexer import TokenType
+
+logger = logging.getLogger(__name__)
 
 
 class GovernanceParserMixin:
@@ -621,7 +624,7 @@ class GovernanceParserMixin:
                 try:
                     result_parts.append(self.expect_identifier_or_keyword().value)
                 except Exception:
-                    pass
+                    logger.debug("Failed to parse SLA value token", exc_info=True)
                 break
 
         return "".join(result_parts) if result_parts else "medium"

@@ -10,12 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress, load_project_appspec
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -136,7 +131,7 @@ def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> 
         TenantBlueprint,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     domain_description = args.get("domain_description", "")
     tenant_count = args.get("tenant_count", 2)
@@ -148,10 +143,10 @@ def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> 
 
     try:
         progress.log_sync("Analyzing DSL for demo data...")
+        from dazzle.core.manifest import load_manifest
+
         manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         # v0.14.2: Warn about large projects
         total_entities = len(app_spec.domain.entities)
@@ -348,7 +343,7 @@ def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str
     from dazzle.core.demo_blueprint_persistence import load_blueprint, save_blueprint
     from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     blueprint_data = args.get("blueprint")
     merge_entities = args.get("merge", False)  # v0.14.2: Merge with existing blueprint
@@ -398,10 +393,7 @@ def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str
         # v0.14.2: Validate coverage against DSL
         if validate_coverage:
             try:
-                manifest = load_manifest(project_root / "dazzle.toml")
-                dsl_files = discover_dsl_files(project_root, manifest)
-                modules = parse_modules(dsl_files)
-                app_spec = build_appspec(modules, manifest.project_root)
+                app_spec = load_project_appspec(project_root)
 
                 dsl_entity_names = {e.name for e in app_spec.domain.entities}
                 blueprint_entity_names = {e.name for e in new_blueprint.entities}
@@ -453,7 +445,7 @@ def get_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load the current Demo Data Blueprint."""
     from dazzle.core.demo_blueprint_persistence import get_blueprint_file, load_blueprint
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Loading demo data blueprint...")
@@ -486,7 +478,7 @@ def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.demo_blueprint_persistence import load_blueprint
     from dazzle.demo_data.blueprint_generator import BlueprintDataGenerator
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     output_format = args.get("format", "csv")
     output_dir = args.get("output_dir", "demo_data")

@@ -4,12 +4,15 @@ File upload routes for DNR Backend.
 Provides REST endpoints for file upload, download, and management.
 """
 
+import logging
 from typing import Any
 from uuid import UUID
 
 from fastapi import FastAPI
 
 from .file_storage import FileService
+
+logger = logging.getLogger(__name__)
 
 
 def create_file_routes(
@@ -95,8 +98,7 @@ def create_file_routes(
                     # Update metadata with thumbnail
                     # Note: In a full implementation, we'd update the metadata store
                 except Exception:
-                    # Thumbnail generation failed, continue without it
-                    pass
+                    logger.warning("Thumbnail generation failed", exc_info=True)
 
             return {
                 "id": str(metadata.id),

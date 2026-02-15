@@ -10,8 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -24,7 +23,7 @@ def get_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         sitespec_exists,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     use_defaults = args.get("use_defaults", True)
 
     try:
@@ -125,7 +124,7 @@ def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         validate_sitespec,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     check_content_files = args.get("check_content_files", True)
 
     try:
@@ -135,19 +134,11 @@ def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         # Try to load AppSpec for DSL route awareness
         appspec = None
         try:
-            from dazzle.core.fileset import discover_dsl_files
-            from dazzle.core.linker import build_appspec
-            from dazzle.core.manifest import load_manifest
-            from dazzle.core.parser import parse_modules
+            from .common import load_project_appspec
 
             manifest_path = project_root / "dazzle.toml"
             if manifest_path.exists():
-                manifest = load_manifest(manifest_path)
-                dsl_files = discover_dsl_files(project_root, manifest)
-                if dsl_files:
-                    modules = parse_modules(dsl_files)
-                    if modules:
-                        appspec = build_appspec(modules, manifest.project_root)
+                appspec = load_project_appspec(project_root)
         except Exception:
             logger.debug("Could not load AppSpec for sitespec validation", exc_info=True)
 
@@ -180,7 +171,7 @@ def scaffold_site_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create default site structure with templates."""
     from dazzle.core.sitespec_loader import scaffold_site as do_scaffold_site
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     product_name = args.get("product_name", "My App")
     overwrite = args.get("overwrite", False)
 
@@ -238,7 +229,7 @@ def get_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
     from dazzle.core.sitespec_loader import copy_file_exists, get_copy_file_path, load_copy
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Loading copy...")
@@ -321,7 +312,7 @@ def scaffold_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
         scaffold_copy_file,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     product_name = args.get("product_name", "My App")
     overwrite = args.get("overwrite", False)
 
@@ -383,7 +374,7 @@ def review_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.copy_parser import load_copy_file
     from dazzle.core.sitespec_loader import copy_file_exists, get_copy_file_path
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Reviewing copy...")
@@ -483,7 +474,7 @@ def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
         load_sitespec,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     business_context = args.get("business_context")
 
     try:
@@ -538,7 +529,7 @@ def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.site_coherence import validate_site_coherence
     from dazzle.core.sitespec_loader import SiteSpecError, load_copy, load_sitespec
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     business_context = args.get("business_context")
 
     try:
@@ -711,7 +702,7 @@ def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         themespec_exists,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     use_defaults = args.get("use_defaults", True)
 
     try:
@@ -781,7 +772,7 @@ def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create a default themespec.yaml file."""
     from dazzle.core.themespec_loader import scaffold_themespec, themespec_exists
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Scaffolding themespec...")
     brand_hue = args.get("brand_hue", 260.0)
     brand_chroma = args.get("brand_chroma", 0.15)
@@ -808,7 +799,7 @@ def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
             if product_name == "My App" and sitespec.brand.product_name:
                 product_name = sitespec.brand.product_name
         except Exception:
-            pass
+            logger.debug("Failed to extract brand info from sitespec", exc_info=True)
 
         created_path = scaffold_themespec(
             project_root,
@@ -849,7 +840,7 @@ def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         validate_themespec,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Validating themespec...")
@@ -879,7 +870,7 @@ def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.core.dtcg_export import export_dtcg_file, generate_dtcg_tokens
     from dazzle.core.themespec_loader import ThemeSpecError, load_themespec
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Generating design tokens...")
@@ -925,7 +916,7 @@ def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -
     from dazzle.core.imagery_prompts import generate_imagery_prompts
     from dazzle.core.themespec_loader import ThemeSpecError, load_themespec
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     try:
         progress.log_sync("Generating imagery prompts...")
@@ -938,7 +929,7 @@ def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -
 
             sitespec = load_sitespec(project_root, use_defaults=False)
         except Exception:
-            pass
+            logger.debug("Optional sitespec not available for imagery prompts", exc_info=True)
 
         prompts = generate_imagery_prompts(themespec, sitespec)
 

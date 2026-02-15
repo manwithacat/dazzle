@@ -8,8 +8,7 @@ from typing import Any
 
 from dazzle.core.loader import load_and_link
 
-from ..progress import ProgressContext
-from ..progress import noop as _noop_progress
+from .common import extract_progress
 
 
 def run_viewport_tests_handler(
@@ -27,7 +26,7 @@ def run_viewport_tests_handler(
 
     Returns JSON report.
     """
-    progress: ProgressContext = _noop_progress()
+    progress = extract_progress(None)
     progress.log_sync("Running viewport tests...")
     from dazzle.testing.viewport import derive_patterns_from_appspec
     from dazzle.testing.viewport_runner import ViewportRunner, ViewportRunOptions
@@ -103,7 +102,7 @@ def manage_viewport_specs_handler(
         save_custom_viewport_specs,
     )
 
-    progress: ProgressContext = _noop_progress()
+    progress = extract_progress(None)
     progress.log_sync("Managing viewport specs...")
 
     project = Path(project_path)

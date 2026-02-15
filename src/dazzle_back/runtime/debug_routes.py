@@ -9,6 +9,7 @@ These endpoints are always available in development mode (localhost).
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -28,6 +29,8 @@ if TYPE_CHECKING:
     from dazzle_back.runtime.repository import DatabaseManager
     from dazzle_back.specs import BackendSpec
     from dazzle_back.specs.entity import EntitySpec
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -190,7 +193,7 @@ def create_debug_routes(
                         conn.execute(f"SELECT 1 FROM {entity.name}_fts LIMIT 1")
                         has_fts = True
                     except Exception:
-                        pass
+                        logger.debug("FTS table not available for %s", entity.name, exc_info=True)
 
                     entity_stats.append(EntityStats(name=entity.name, count=count, has_fts=has_fts))
                     total_records += count
@@ -273,7 +276,7 @@ def create_debug_routes(
                 rows = cursor.fetchall()
                 sample = [dict(row) for row in rows]
             except Exception:
-                pass
+                logger.debug("Failed to fetch sample data for %s", entity_name, exc_info=True)
 
         # Get count
         count = 0
@@ -283,7 +286,7 @@ def create_debug_routes(
                 row = cursor.fetchone()
                 count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
             except Exception:
-                pass
+                logger.debug("Failed to count records for %s", entity_name, exc_info=True)
 
         return {
             "name": entity.name,

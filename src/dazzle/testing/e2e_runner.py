@@ -11,6 +11,7 @@ Provides unified E2E test execution that:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import socket
 import subprocess
@@ -20,6 +21,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -242,7 +245,7 @@ class E2ERunner:
                         time.sleep(1)  # Give it a moment to fully initialize
                         return True
             except Exception:
-                pass
+                logger.debug("Error reading server output during startup", exc_info=True)
 
             time.sleep(0.1)
 

@@ -10,10 +10,31 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
 logger = logging.getLogger("dazzle.audit")
+
+
+@dataclass
+class AuditDecision:
+    """Parameters for an audit log decision entry, replacing 14 individual parameters."""
+
+    operation: str
+    entity_name: str
+    entity_id: str | None
+    decision: str
+    matched_policy: str
+    policy_effect: str
+    user_id: str | None = None
+    user_email: str | None = None
+    user_roles: list[str] | None = None
+    ip_address: str | None = None
+    request_path: str | None = None
+    request_method: str | None = None
+    tenant_id: str | None = None
+    evaluation_time_us: int | None = None
 
 
 # =============================================================================
@@ -125,12 +146,12 @@ class AuditLogger:
 
     async def log_decision(
         self,
-        operation: str,
-        entity_name: str,
-        entity_id: str | None,
-        decision: str,
-        matched_policy: str,
-        policy_effect: str,
+        operation: str = "",
+        entity_name: str = "",
+        entity_id: str | None = None,
+        decision: str = "",
+        matched_policy: str = "",
+        policy_effect: str = "",
         user_id: str | None = None,
         user_email: str | None = None,
         user_roles: list[str] | None = None,
@@ -139,6 +160,8 @@ class AuditLogger:
         request_method: str | None = None,
         tenant_id: str | None = None,
         evaluation_time_us: int | None = None,
+        *,
+        audit_decision: AuditDecision | None = None,
     ) -> None:
         """
         Queue an audit log entry. Non-blocking — drops if queue is full.
@@ -159,6 +182,23 @@ class AuditLogger:
             tenant_id: Multi-tenant scope
             evaluation_time_us: Policy evaluation latency in microseconds
         """
+        if audit_decision is not None:
+            d = audit_decision
+            operation = d.operation
+            entity_name = d.entity_name
+            entity_id = d.entity_id
+            decision = d.decision
+            matched_policy = d.matched_policy
+            policy_effect = d.policy_effect
+            user_id = d.user_id
+            user_email = d.user_email
+            user_roles = d.user_roles
+            ip_address = d.ip_address
+            request_path = d.request_path
+            request_method = d.request_method
+            tenant_id = d.tenant_id
+            evaluation_time_us = d.evaluation_time_us
+
         import json
         from datetime import UTC, datetime
 

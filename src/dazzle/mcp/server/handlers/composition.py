@@ -19,8 +19,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+from .common import extract_progress
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     from dazzle.core.composition import run_composition_audit
     from dazzle.core.sitespec_loader import load_sitespec_with_copy
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Running composition audit...")
     routes_filter: list[str] | None = args.get("pages")
 
@@ -70,7 +69,7 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
     from dazzle.core.composition_capture import capture_page_sections
     from dazzle.core.sitespec_loader import load_sitespec_with_copy
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Capturing composition screenshots...")
     base_url: str | None = args.get("base_url")
     if not base_url:
@@ -147,7 +146,7 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
         evaluate_captures,
     )
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
     progress.log_sync("Analyzing composition screenshots...")
     focus: list[str] | None = args.get("focus")
     token_budget: int = args.get("token_budget", 50_000)
@@ -271,7 +270,7 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
     from dazzle.core.composition import run_composition_audit
     from dazzle.core.sitespec_loader import load_sitespec_with_copy
 
-    progress: ProgressContext = args.get("_progress") or _noop_progress()
+    progress = extract_progress(args)
 
     base_url: str | None = args.get("base_url")
     routes_filter: list[str] | None = args.get("pages")

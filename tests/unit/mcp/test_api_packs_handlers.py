@@ -18,6 +18,7 @@ def _import_api_packs():
     """
     # Create mock modules to satisfy imports
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
+    sys.modules["dazzle.mcp.server.handlers.common"] = MagicMock()
 
     # Create mock API pack objects using SimpleNamespace for JSON serializability
     mock_auth = SimpleNamespace(

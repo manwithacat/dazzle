@@ -12,6 +12,7 @@ Provides a single function to mount all ops routes on a FastAPI app.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -55,6 +56,8 @@ if TYPE_CHECKING:
 
     from dazzle_back.events.bus import EventBus
     from dazzle_back.runtime.websocket_manager import WebSocketManager
+
+logger = logging.getLogger(__name__)
 
 
 class OpsConfig:
@@ -263,7 +266,7 @@ class OpsPlatform:
 
             self.deploy_history_store = DeployHistoryStore(self.ops_db)
         except Exception:
-            pass
+            logger.debug("Deploy history store not available", exc_info=True)
 
         # Initialize rollback manager
         try:
@@ -275,7 +278,7 @@ class OpsPlatform:
                     deploy_history_store=self.deploy_history_store,
                 )
         except Exception:
-            pass
+            logger.debug("Rollback manager not available", exc_info=True)
 
     def create_routes(self) -> list[Any]:
         """

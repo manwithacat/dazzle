@@ -81,15 +81,9 @@ def _deserialize_observations(raw_observations: list[dict[str, Any]]) -> list[Ob
 
 def _load_appspec(project_path: Path) -> Any:
     """Load and return AppSpec from a project directory."""
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
+    from .common import load_project_appspec
 
-    manifest = load_manifest(project_path / "dazzle.toml")
-    dsl_files = discover_dsl_files(project_path, manifest)
-    modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root)
+    return load_project_appspec(project_path)
 
 
 def _populate_kg_for_discovery(
@@ -312,7 +306,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
                         + (f" → {step.action.target[:40]}" if step.action.target else "")
                     )
                 except Exception:
-                    pass
+                    logger.debug("Failed to log discovery step progress", exc_info=True)
 
         async with httpx.AsyncClient(
             base_url=base_url,
@@ -585,7 +579,7 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
 
             kg_store = KnowledgeGraph(str(kg_db))
         except Exception:
-            pass
+            logger.debug("Knowledge graph not available for compile", exc_info=True)
 
     # Compile
     compiler = NarrativeCompiler(persona=persona, kg_store=kg_store)

@@ -62,7 +62,7 @@ def _mock_appspec() -> MagicMock:
 
 
 class TestScanHandler:
-    @patch("dazzle.mcp.server.handlers.sentinel._load_appspec")
+    @patch("dazzle.mcp.server.handlers.sentinel.load_project_appspec")
     @patch("dazzle.sentinel.orchestrator.ScanOrchestrator.run_scan")
     def test_returns_scan_json(
         self, mock_run: MagicMock, mock_load: MagicMock, tmp_path: Path
@@ -74,13 +74,13 @@ class TestScanHandler:
         assert "scan_id" in result
         assert "summary" in result
 
-    @patch("dazzle.mcp.server.handlers.sentinel._load_appspec")
+    @patch("dazzle.mcp.server.handlers.sentinel.load_project_appspec")
     def test_returns_error_on_load_failure(self, mock_load: MagicMock, tmp_path: Path) -> None:
         mock_load.side_effect = Exception("parse error")
         result = json.loads(scan_handler(tmp_path, {}))
         assert "error" in result
 
-    @patch("dazzle.mcp.server.handlers.sentinel._load_appspec")
+    @patch("dazzle.mcp.server.handlers.sentinel.load_project_appspec")
     @patch("dazzle.sentinel.orchestrator.ScanOrchestrator.run_scan")
     def test_metrics_detail(
         self, mock_run: MagicMock, mock_load: MagicMock, tmp_path: Path
@@ -91,7 +91,7 @@ class TestScanHandler:
         assert "findings" not in result
         assert "summary" in result
 
-    @patch("dazzle.mcp.server.handlers.sentinel._load_appspec")
+    @patch("dazzle.mcp.server.handlers.sentinel.load_project_appspec")
     @patch("dazzle.sentinel.orchestrator.ScanOrchestrator.run_scan")
     def test_full_detail_includes_agent_results(
         self, mock_run: MagicMock, mock_load: MagicMock, tmp_path: Path

@@ -15,7 +15,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator
 from dazzle.core.ir.domain import (
     AccessSpec,
@@ -24,11 +23,8 @@ from dazzle.core.ir.domain import (
     PermissionRule,
     PolicyEffect,
 )
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
-from dazzle.mcp.server.progress import ProgressContext
-from dazzle.mcp.server.progress import noop as _noop_progress
+
+from .common import extract_progress, load_project_appspec
 
 logger = logging.getLogger("dazzle.mcp.policy")
 
@@ -38,7 +34,7 @@ ALL_OPS = list(PermissionKind)
 
 def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
     """Handle policy analysis operations."""
-    progress: ProgressContext = arguments.get("_progress") or _noop_progress()
+    progress = extract_progress(arguments)
     operation = arguments.get("operation")
     entity_names: list[str] | None = arguments.get("entity_names")
     persona: str | None = arguments.get("persona")
@@ -46,10 +42,7 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
 
     try:
         progress.log_sync("Loading DSL...")
-        manifest = load_manifest(project_path / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_path, manifest)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, manifest.project_root)
+        appspec = load_project_appspec(project_path)
     except Exception as e:
         return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
 

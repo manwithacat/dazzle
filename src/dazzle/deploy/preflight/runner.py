@@ -6,6 +6,7 @@ Orchestrates the execution of all preflight stages.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -28,6 +29,8 @@ from .stages.base import PreflightStage, StageContext
 
 if TYPE_CHECKING:
     pass
+
+logger = logging.getLogger(__name__)
 
 
 class PreflightRunner:
@@ -169,7 +172,7 @@ class PreflightRunner:
                     if isinstance(env, str):
                         return env
             except Exception:
-                pass
+                logger.debug("Failed to read deploy environment from dazzle.toml", exc_info=True)
         return "staging"
 
 

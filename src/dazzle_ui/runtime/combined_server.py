@@ -8,12 +8,41 @@ Provides:
 
 from __future__ import annotations
 
+import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+logger = logging.getLogger(__name__)
+
 if TYPE_CHECKING:
     from dazzle_back.specs import BackendSpec
+
+
+@dataclass
+class UnifiedServerConfig:
+    """Configuration for run_unified_server(), replacing 19 individual parameters."""
+
+    backend_spec: BackendSpec
+    ui_spec: Any = None
+    port: int = 3000
+    db_path: str | Path | None = None
+    enable_test_mode: bool = False
+    enable_dev_mode: bool = True
+    enable_auth: bool = True
+    auth_config: Any = None
+    host: str = "127.0.0.1"
+    enable_watch: bool = False
+    watch_source: bool = False
+    project_root: Path | None = None
+    personas: list[dict[str, Any]] | None = None
+    scenarios: list[dict[str, Any]] | None = None
+    sitespec_data: dict[str, Any] | None = None
+    theme_preset: str = "saas-default"
+    theme_overrides: dict[str, Any] | None = None
+    appspec: Any = None
+    redis_url: str = ""
 
 
 # =============================================================================
@@ -66,7 +95,7 @@ def _clickable_url(url: str, label: str | None = None) -> str:
 
 
 def run_unified_server(
-    backend_spec: BackendSpec,
+    backend_spec: BackendSpec | None = None,
     ui_spec: Any = None,
     port: int = 3000,
     db_path: str | Path | None = None,
@@ -85,36 +114,39 @@ def run_unified_server(
     theme_overrides: dict[str, Any] | None = None,
     appspec: Any = None,
     redis_url: str = "",
+    *,
+    config: UnifiedServerConfig | None = None,
 ) -> None:
     """
     Run a unified Dazzle server on a single port.
 
-    Builds a FastAPI app with:
-    - Backend API routes (entities, auth, files, etc.)
-    - Server-rendered app pages (/app/*)
-    - Site pages (/, /about, /pricing, etc.) if sitespec exists
-    - Static file serving (/static/*)
+    Accepts either individual parameters (backward compat) or a UnifiedServerConfig.
 
     Args:
-        backend_spec: Backend specification
-        ui_spec: UI specification (unused, kept for backward compat)
-        port: Port to bind to
-        db_path: Path to SQLite database
-        enable_test_mode: Enable test endpoints (/__test__/*)
-        enable_dev_mode: Enable dev control plane
-        enable_auth: Enable authentication endpoints (/auth/*)
-        auth_config: Full auth configuration from manifest
-        host: Host to bind to
-        enable_watch: Enable hot reload file watching (currently unused)
-        watch_source: Also watch framework source files (currently unused)
-        project_root: Project root directory
-        personas: List of persona configurations
-        scenarios: List of scenario configurations
-        sitespec_data: SiteSpec data as dict for public site pages
-        theme_preset: Theme preset name
-        theme_overrides: Custom theme token overrides
-        appspec: AppSpec for template-based page rendering
+        config: UnifiedServerConfig with all options (preferred).
+            When provided, individual parameters are ignored.
     """
+    # If config provided, unpack it — otherwise use individual params
+    if config is not None:
+        backend_spec = config.backend_spec
+        ui_spec = config.ui_spec  # noqa: F841 — reserved for future use
+        port = config.port
+        db_path = config.db_path
+        enable_test_mode = config.enable_test_mode
+        enable_dev_mode = config.enable_dev_mode
+        enable_auth = config.enable_auth
+        auth_config = config.auth_config
+        host = config.host
+        enable_watch = config.enable_watch  # noqa: F841 — reserved for future use
+        watch_source = config.watch_source  # noqa: F841 — reserved for future use
+        project_root = config.project_root
+        personas = config.personas
+        scenarios = config.scenarios
+        sitespec_data = config.sitespec_data
+        theme_preset = config.theme_preset
+        theme_overrides = config.theme_overrides
+        appspec = config.appspec
+        redis_url = config.redis_url
     try:
         import uvicorn
 
@@ -222,12 +254,13 @@ def run_unified_server(
                 )
                 theme_css = get_bundled_css(theme_css=generate_theme_css(theme))
             except Exception:
+                logger.debug("Failed to load themed CSS, trying default", exc_info=True)
                 try:
                     from dazzle_ui.runtime.css_loader import get_bundled_css
 
                     theme_css = get_bundled_css()
                 except Exception:
-                    pass
+                    logger.debug("Failed to load bundled CSS", exc_info=True)
 
             get_auth_context = None
             if builder.auth_middleware:

@@ -4,10 +4,13 @@ Vocabulary management CLI commands.
 Commands for managing app-local vocabulary (macros, aliases, patterns).
 """
 
+import logging
 from datetime import UTC
 from pathlib import Path
 
 import typer
+
+logger = logging.getLogger(__name__)
 
 vocab_app = typer.Typer(help="Manage app-local vocabulary (macros, aliases, patterns)")
 
@@ -98,7 +101,7 @@ def vocab_init(
                 config = tomllib.load(f)
                 app_id = config.get("project", {}).get("name", app_id)
         except Exception:
-            pass
+            logger.debug("Failed to read app name from dazzle.toml", exc_info=True)
 
     # Create directory and manifest
     vocab_dir.mkdir(parents=True, exist_ok=True)

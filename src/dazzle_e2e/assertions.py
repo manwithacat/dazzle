@@ -20,6 +20,7 @@ Usage:
     await assertions.redirected_to("task_detail")
 """
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from dazzle_e2e.locators import DazzleLocators
@@ -28,6 +29,8 @@ if TYPE_CHECKING:
     from playwright.async_api import Page
 
     from dazzle_e2e.adapters.base import BaseAdapter
+
+logger = logging.getLogger(__name__)
 
 
 class DazzleAssertions:
@@ -527,5 +530,5 @@ class DazzleAssertions:
                     if user_info and user_info.get("persona") == persona:
                         return
                 except Exception:
-                    pass
+                    logger.debug("Failed to check persona via adapter", exc_info=True)
             raise AssertionError(f"User does not have persona '{persona}'")
