@@ -2098,7 +2098,7 @@ def create_app_factory(
     views_by_name = {v.name: v for v in appspec.views}
     # Build entity field type lookup for money field expansion
     entity_field_types: dict[str, dict[str, str]] = {}
-    for entity in appspec.entities:
+    for entity in appspec.domain.entities:
         entity_field_types[entity.name] = {f.name: f.type.kind for f in entity.fields}
     for surface in appspec.surfaces:
         if surface.view_ref and surface.entity_ref:
