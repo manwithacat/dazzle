@@ -481,8 +481,10 @@ def _ssr_steps(section: dict[str, Any]) -> str:
         items_html += f"""<li class="step step-primary">
     <div class="dz-step-item">
         <span class="dz-step-number">{i}</span>
-        <h3>{title}</h3>
-        <p>{body}</p>
+        <div class="dz-step-content">
+            <h3>{title}</h3>
+            <p>{body}</p>
+        </div>
     </div>
 </li>"""
 
