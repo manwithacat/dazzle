@@ -188,7 +188,7 @@ class EmailSender:
         # Build outbox message for adapter
         from ..channels.outbox import OutboxMessage
 
-        message = OutboxMessage(
+        outbox_msg = OutboxMessage(
             id=request_id,
             channel_name=channel_name,
             operation_name=operation_name,
@@ -208,7 +208,7 @@ class EmailSender:
 
         # Send via adapter
         try:
-            result = await self._adapter.send(message)
+            result = await self._adapter.send(outbox_msg)
 
             if result.is_success:
                 # Create sent event

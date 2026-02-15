@@ -200,4 +200,4 @@ The `status activity` MCP operation provides the same data for programmatic poll
 - `pip install dazzle-dsl` provides the `dazzle` console command
 
 ---
-**Version**: 0.26.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.27.0 | **Python**: 3.12+ | **Status**: Production Ready
