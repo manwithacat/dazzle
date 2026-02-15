@@ -248,17 +248,23 @@ class DazzleClient:
                 logger.debug("Test login endpoint not available", exc_info=True)
 
         # Fallback: real auth via /auth/login
-        return self._login_with_credentials()
+        return self._login_with_credentials(persona)
 
-    def _login_with_credentials(self) -> bool:
-        """Authenticate using real credentials.
+    def _login_with_credentials(self, persona: str = "admin") -> bool:
+        """Authenticate using real credentials for a specific persona.
 
         Uses credentials from (in priority order):
-        1. DAZZLE_TEST_EMAIL / DAZZLE_TEST_PASSWORD environment variables
-        2. .dazzle/test_credentials.json (top-level email/password or personas.admin)
+        1. DAZZLE_TEST_EMAIL / DAZZLE_TEST_PASSWORD environment variables (admin only)
+        2. .dazzle/test_credentials.json personas.<persona> section
+        3. .dazzle/test_credentials.json top-level email/password (admin fallback)
         """
-        email = os.environ.get("DAZZLE_TEST_EMAIL")
-        password = os.environ.get("DAZZLE_TEST_PASSWORD")
+        email: str | None = None
+        password: str | None = None
+
+        # Env vars only apply to admin persona
+        if persona == "admin":
+            email = os.environ.get("DAZZLE_TEST_EMAIL")
+            password = os.environ.get("DAZZLE_TEST_PASSWORD")
 
         if not email or not password:
             # Try credentials file
@@ -266,11 +272,14 @@ class DazzleClient:
             if creds_path.exists():
                 try:
                     creds = json.loads(creds_path.read_text())
-                    # Try personas.admin first, then top-level
                     personas = creds.get("personas", {})
-                    admin = personas.get("admin", {})
-                    email = email or admin.get("email") or creds.get("email")
-                    password = password or admin.get("password") or creds.get("password")
+                    persona_creds = personas.get(persona, {})
+                    email = email or persona_creds.get("email")
+                    password = password or persona_creds.get("password")
+                    # Top-level fallback only for admin
+                    if persona == "admin":
+                        email = email or creds.get("email")
+                        password = password or creds.get("password")
                 except Exception:
                     logger.warning("Failed to load test credentials", exc_info=True)
 

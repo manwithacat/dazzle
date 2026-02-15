@@ -339,16 +339,14 @@ class DSLTestGenerator:
             step["target"].removeprefix("entity:") for step in setup_steps
         ]
 
-        # Generate entity data with ref placeholders
-        entity_data = self._generate_entity_data_with_refs(entity, required_refs)
-
         if has_create_surface:
-            # CRUD Create test
+            # CRUD Create test — fresh data per test to avoid unique collisions
+            create_data = self._generate_entity_data_with_refs(entity, required_refs)
             create_steps = setup_steps + [
                 {
                     "action": "create",
                     "target": f"entity:{entity.name}",
-                    "data": entity_data,
+                    "data": create_data,
                     "rationale": f"Create valid {entity.title or entity.name}",
                 },
                 {
@@ -370,12 +368,13 @@ class DSLTestGenerator:
                 )
             )
 
-            # CRUD Read test (with seeded data)
+            # CRUD Read test (with seeded data) — fresh data to avoid collisions with CREATE
+            read_data = self._generate_entity_data_with_refs(entity, required_refs)
             read_steps = setup_steps + [
                 {
                     "action": "create",
                     "target": f"entity:{entity.name}",
-                    "data": entity_data,
+                    "data": read_data,
                     "rationale": "Seed test data",
                 },
                 {
@@ -461,9 +460,11 @@ class DSLTestGenerator:
                     )
                 )
 
-            # Unique constraint tests
+            # Unique constraint tests — fresh data per test, intentionally duplicated
+            # within the test to trigger the unique violation
             unique_fields = [f for f in entity.fields if f.is_unique and f.name != "id"]
             for uf in unique_fields:
+                unique_data = self._generate_entity_data_with_refs(entity, required_refs)
                 tests.append(
                     self._create_test(
                         test_id=f"VAL_{entity.name.upper()}_{uf.name.upper()}_UNIQUE",
@@ -475,13 +476,13 @@ class DSLTestGenerator:
                             {
                                 "action": "create",
                                 "target": f"entity:{entity.name}",
-                                "data": entity_data,
+                                "data": unique_data,
                                 "rationale": "Create first entity",
                             },
                             {
                                 "action": "create_expect_error",
                                 "target": f"entity:{entity.name}",
-                                "data": entity_data,  # Same data — should trigger unique violation
+                                "data": unique_data,  # Same data — should trigger unique violation
                                 "rationale": f"Attempt duplicate {uf.name}",
                             },
                             {
@@ -1313,8 +1314,11 @@ class DSLTestGenerator:
         if type_kind == FieldTypeKind.UUID:
             return str(uuid_module.uuid4())
         elif type_kind == FieldTypeKind.STR:
-            value = f"Test {field.name}{suffix}"
             max_len = field.type.max_length
+            if field.is_unique and max_len and max_len <= 16:
+                # Short unique field: use pure hex to maximize uniqueness
+                return uuid_module.uuid4().hex[:max_len]
+            value = f"Test {field.name}{suffix}"
             if max_len and len(value) > max_len:
                 # Truncate but keep suffix for uniqueness
                 if suffix and max_len >= len(suffix) + 1:

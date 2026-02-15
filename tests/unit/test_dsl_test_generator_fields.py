@@ -1,4 +1,4 @@
-"""Tests for field value generation fixes (#246 money flattening, #247 unique randomness)."""
+"""Tests for field value generation fixes (#246–#252)."""
 
 from __future__ import annotations
 
@@ -253,3 +253,155 @@ class TestUniqueFieldRandomness:
         data1 = gen1._generate_entity_data(entity)
         data2 = gen2._generate_entity_data(entity)
         assert data1["slug"] != data2["slug"]
+
+
+# ---------------------------------------------------------------------------
+# #251: Per-test fresh data avoids unique collisions
+# ---------------------------------------------------------------------------
+
+
+class TestPerTestFreshData:
+    """CREATE and READ tests should have different unique field values."""
+
+    def test_create_and_read_have_different_data(self):
+        entity = EntitySpec(
+            name="Company",
+            title="Company",
+            fields=[_pk_field(), _str_field("slug", unique=True), _str_field("name")],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        suite = gen.generate_all()
+        create_test = next(d for d in suite.designs if d["test_id"] == "CRUD_COMPANY_CREATE")
+        read_test = next(d for d in suite.designs if d["test_id"] == "CRUD_COMPANY_READ")
+        create_step = next(s for s in create_test["steps"] if s["action"] == "create")
+        read_step = next(s for s in read_test["steps"] if s["action"] == "create")
+        # Unique field should differ between CREATE and READ tests
+        assert create_step["data"]["slug"] != read_step["data"]["slug"]
+
+    def test_unique_test_uses_same_data_twice(self):
+        """VAL_UNIQUE test should use the SAME data for both create attempts."""
+        entity = EntitySpec(
+            name="Company",
+            title="Company",
+            fields=[_pk_field(), _str_field("slug", unique=True), _str_field("name")],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        suite = gen.generate_all()
+        unique_test = next(d for d in suite.designs if d["test_id"] == "VAL_COMPANY_SLUG_UNIQUE")
+        create_steps = [
+            s for s in unique_test["steps"] if s["action"] in ("create", "create_expect_error")
+        ]
+        assert len(create_steps) == 2
+        assert create_steps[0]["data"] == create_steps[1]["data"]
+
+    def test_unique_test_data_differs_from_create(self):
+        """VAL_UNIQUE test data should differ from CRUD_CREATE data."""
+        entity = EntitySpec(
+            name="Company",
+            title="Company",
+            fields=[_pk_field(), _str_field("slug", unique=True), _str_field("name")],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        suite = gen.generate_all()
+        create_test = next(d for d in suite.designs if d["test_id"] == "CRUD_COMPANY_CREATE")
+        unique_test = next(d for d in suite.designs if d["test_id"] == "VAL_COMPANY_SLUG_UNIQUE")
+        create_slug = next(s for s in create_test["steps"] if s["action"] == "create")["data"][
+            "slug"
+        ]
+        unique_slug = next(s for s in unique_test["steps"] if s["action"] == "create")["data"][
+            "slug"
+        ]
+        assert create_slug != unique_slug
+
+    def test_non_unique_fields_are_consistent(self):
+        """Non-unique fields can be the same across tests (they're deterministic)."""
+        entity = EntitySpec(
+            name="Task",
+            title="Task",
+            fields=[_pk_field(), _str_field("title", unique=False)],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        suite = gen.generate_all()
+        create_test = next(d for d in suite.designs if d["test_id"] == "CRUD_TASK_CREATE")
+        read_test = next(d for d in suite.designs if d["test_id"] == "CRUD_TASK_READ")
+        create_title = next(s for s in create_test["steps"] if s["action"] == "create")["data"][
+            "title"
+        ]
+        read_title = next(s for s in read_test["steps"] if s["action"] == "create")["data"]["title"]
+        assert create_title == read_title
+
+
+# ---------------------------------------------------------------------------
+# #252: Short max_length unique fields use hex-only values
+# ---------------------------------------------------------------------------
+
+
+class TestShortUniqueFields:
+    """Unique fields with short max_length should use hex-only values."""
+
+    def test_short_unique_uses_hex(self):
+        entity = EntitySpec(
+            name="Company",
+            title="Company",
+            fields=[_pk_field(), _str_field("code", unique=True, max_length=8)],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        data = gen._generate_entity_data(entity)
+        assert len(data["code"]) == 8
+        # Should be valid hex
+        int(data["code"], 16)
+
+    def test_short_unique_respects_max_length(self):
+        entity = EntitySpec(
+            name="Company",
+            title="Company",
+            fields=[_pk_field(), _str_field("code", unique=True, max_length=6)],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        data = gen._generate_entity_data(entity)
+        assert len(data["code"]) == 6
+
+    def test_short_unique_is_random(self):
+        entity = EntitySpec(
+            name="Company",
+            title="Company",
+            fields=[_pk_field(), _str_field("code", unique=True, max_length=8)],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        data1 = gen._generate_entity_data(entity)
+        data2 = gen._generate_entity_data(entity)
+        assert data1["code"] != data2["code"]
+
+    def test_boundary_16_uses_hex(self):
+        """max_length=16 should still use hex (boundary case)."""
+        entity = EntitySpec(
+            name="Item",
+            title="Item",
+            fields=[_pk_field(), _str_field("sku", unique=True, max_length=16)],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        data = gen._generate_entity_data(entity)
+        assert len(data["sku"]) == 16
+        int(data["sku"], 16)
+
+    def test_boundary_17_uses_normal(self):
+        """max_length=17 should use normal Test prefix (just above threshold)."""
+        entity = EntitySpec(
+            name="Item",
+            title="Item",
+            fields=[_pk_field(), _str_field("sku", unique=True, max_length=17)],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        data = gen._generate_entity_data(entity)
+        assert data["sku"].startswith("Test")
+
+    def test_non_unique_short_not_hex(self):
+        """Non-unique short fields should NOT use hex (deterministic is fine)."""
+        entity = EntitySpec(
+            name="Company",
+            title="Company",
+            fields=[_pk_field(), _str_field("code", unique=False, max_length=8)],
+        )
+        gen = DSLTestGenerator(_make_appspec(entity))
+        data = gen._generate_entity_data(entity)
+        assert data["code"].startswith("Test")
