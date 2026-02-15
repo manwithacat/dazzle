@@ -719,7 +719,19 @@ class TestAuditPage:
 # ── Full Audit Tests ─────────────────────────────────────────────────
 
 
-def _mock_sitespec(pages: list[dict[str, Any]]) -> MagicMock:
+def _mock_auth_page(route: str = "/login", enabled: bool = True) -> MagicMock:
+    """Build a mock AuthPageSpec."""
+    auth_page = MagicMock()
+    auth_page.route = route
+    auth_page.enabled = enabled
+    return auth_page
+
+
+def _mock_sitespec(
+    pages: list[dict[str, Any]],
+    auth_login: MagicMock | None = None,
+    auth_signup: MagicMock | None = None,
+) -> MagicMock:
     """Build a mock SiteSpec for run_composition_audit."""
     spec = MagicMock()
     mock_pages = []
@@ -742,6 +754,9 @@ def _mock_sitespec(pages: list[dict[str, Any]]) -> MagicMock:
             page.sections.append(sec)
         mock_pages.append(page)
     spec.pages = mock_pages
+    # Auth pages default to disabled unless explicitly provided
+    spec.auth_pages.login = auth_login or _mock_auth_page("/login", enabled=False)
+    spec.auth_pages.signup = auth_signup or _mock_auth_page("/signup", enabled=False)
     return spec
 
 
@@ -836,6 +851,53 @@ class TestRunCompositionAudit:
         assert "/" in result["summary"]
         assert "/100" in result["summary"]
 
+    def test_auth_pages_included_when_enabled(self) -> None:
+        """Enabled auth pages appear in audit results."""
+        sitespec = _mock_sitespec(
+            [{"route": "/", "sections": [{"section_type": "hero", "headline": "Hi"}]}],
+            auth_login=_mock_auth_page("/login", enabled=True),
+            auth_signup=_mock_auth_page("/signup", enabled=True),
+        )
+        result = run_composition_audit(sitespec)
+        routes = [p["route"] for p in result["pages"]]
+        assert "/login" in routes
+        assert "/signup" in routes
+        assert len(result["pages"]) == 3  # / + /login + /signup
+
+    def test_auth_pages_excluded_when_disabled(self) -> None:
+        """Disabled auth pages do not appear in audit results."""
+        sitespec = _mock_sitespec(
+            [{"route": "/", "sections": [{"section_type": "hero", "headline": "Hi"}]}],
+            auth_login=_mock_auth_page("/login", enabled=False),
+            auth_signup=_mock_auth_page("/signup", enabled=False),
+        )
+        result = run_composition_audit(sitespec)
+        routes = [p["route"] for p in result["pages"]]
+        assert "/login" not in routes
+        assert len(result["pages"]) == 1
+
+    def test_auth_pages_respect_routes_filter(self) -> None:
+        """Auth pages respect the routes_filter parameter."""
+        sitespec = _mock_sitespec(
+            [{"route": "/", "sections": [{"section_type": "hero", "headline": "Hi"}]}],
+            auth_login=_mock_auth_page("/login", enabled=True),
+            auth_signup=_mock_auth_page("/signup", enabled=True),
+        )
+        result = run_composition_audit(sitespec, routes_filter=["/login"])
+        routes = [p["route"] for p in result["pages"]]
+        assert routes == ["/login"]
+
+    def test_auth_page_has_no_sections(self) -> None:
+        """Auth pages are audited with no sections (only page-level rules)."""
+        sitespec = _mock_sitespec(
+            [],
+            auth_login=_mock_auth_page("/login", enabled=True),
+        )
+        result = run_composition_audit(sitespec)
+        login_page = result["pages"][0]
+        assert login_page["route"] == "/login"
+        assert login_page["sections"] == []
+
 
 # ── MCP Handler Tests ────────────────────────────────────────────────
 
@@ -867,7 +929,7 @@ class TestAuditCompositionHandler:
     def test_empty_sitespec(self, mock_load: Any, tmp_path: Any) -> None:
         from dazzle.mcp.server.handlers.composition import audit_composition_handler
 
-        mock_load.return_value = MagicMock(pages=[])
+        mock_load.return_value = _mock_sitespec([])
         result = audit_composition_handler(tmp_path, {})
         data = json.loads(result)
         assert data["overall_score"] == 100

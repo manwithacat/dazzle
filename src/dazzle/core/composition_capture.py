@@ -197,6 +197,27 @@ async def capture_page_sections(
                 )
                 results.append(captured)
 
+            # Include enabled auth pages (login, signup) — they have no
+            # sections so only the full-page screenshot is captured.
+            from types import SimpleNamespace
+
+            for auth_page in [sitespec.auth_pages.login, sitespec.auth_pages.signup]:
+                if not auth_page.enabled:
+                    continue
+                route = auth_page.route
+                if routes_filter and route not in routes_filter:
+                    continue
+                captured = await _capture_single_page(
+                    page=page,
+                    base_url=base_url,
+                    route=route,
+                    spec_page=SimpleNamespace(sections=[]),
+                    viewport_name=vp_name,
+                    output_dir=output_dir,
+                    preprocess=preprocess,
+                )
+                results.append(captured)
+
             await context.close()
 
     return results

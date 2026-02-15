@@ -452,6 +452,7 @@ class PageKind(StrEnum):
     LEGAL = "legal"
     PRICING = "pricing"
     REDIRECT = "redirect"
+    AUTH = "auth"
 
 
 class PageSpec(BaseModel):

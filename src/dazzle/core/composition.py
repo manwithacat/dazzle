@@ -577,6 +577,17 @@ def run_composition_audit(
         page_result = audit_page(route, sections, page_type)
         pages.append(page_result)
 
+    # Include enabled auth pages (login, signup) — they have no sections
+    # but should still appear in the audit for visual quality checks.
+    for auth_page in [sitespec.auth_pages.login, sitespec.auth_pages.signup]:
+        if not auth_page.enabled:
+            continue
+        route = auth_page.route
+        if routes_filter and route not in routes_filter:
+            continue
+        page_result = audit_page(route, [], "auth")
+        pages.append(page_result)
+
     overall_score = min((p["score"] for p in pages), default=100)
     total_violations = sum(sum(p["violations_count"].values()) for p in pages)
 

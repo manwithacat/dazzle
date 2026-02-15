@@ -40,7 +40,8 @@ def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     try:
         sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
 
-        if not sitespec.pages:
+        has_auth = sitespec.auth_pages.login.enabled or sitespec.auth_pages.signup.enabled
+        if not sitespec.pages and not has_auth:
             return json.dumps(
                 {
                     "pages": [],
@@ -91,7 +92,8 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
     try:
         sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
 
-        if not sitespec.pages:
+        has_auth = sitespec.auth_pages.login.enabled or sitespec.auth_pages.signup.enabled
+        if not sitespec.pages and not has_auth:
             return json.dumps({"captures": [], "summary": "No pages to capture"})
 
         captures = await capture_page_sections(
