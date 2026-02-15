@@ -251,10 +251,11 @@ class DazzleClient:
         return self._login_with_credentials()
 
     def _login_with_credentials(self) -> bool:
-        """Authenticate using real credentials from environment variables.
+        """Authenticate using real credentials.
 
-        Reads DAZZLE_TEST_EMAIL and DAZZLE_TEST_PASSWORD from the environment.
-        Falls back to .dazzle/test_credentials.json if env vars are not set.
+        Uses credentials from (in priority order):
+        1. DAZZLE_TEST_EMAIL / DAZZLE_TEST_PASSWORD environment variables
+        2. .dazzle/test_credentials.json (top-level email/password or personas.admin)
         """
         email = os.environ.get("DAZZLE_TEST_EMAIL")
         password = os.environ.get("DAZZLE_TEST_PASSWORD")
@@ -265,8 +266,11 @@ class DazzleClient:
             if creds_path.exists():
                 try:
                     creds = json.loads(creds_path.read_text())
-                    email = creds.get("email")
-                    password = creds.get("password")
+                    # Try personas.admin first, then top-level
+                    personas = creds.get("personas", {})
+                    admin = personas.get("admin", {})
+                    email = email or admin.get("email") or creds.get("email")
+                    password = password or admin.get("password") or creds.get("password")
                 except Exception:
                     logger.warning("Failed to load test credentials", exc_info=True)
 

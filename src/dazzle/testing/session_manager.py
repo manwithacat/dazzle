@@ -392,28 +392,41 @@ class SessionManager:
         """Try authenticating via /auth/login.
 
         Uses credentials from (in priority order):
-        1. DAZZLE_TEST_EMAIL / DAZZLE_TEST_PASSWORD environment variables
-        2. .dazzle/test_credentials.json file
-        3. Generated test credentials ({persona_id}@test.local / {persona_id}pass123)
+        1. Per-persona entry in .dazzle/test_credentials.json ``{"personas": {"admin": {...}}}``
+        2. DAZZLE_TEST_EMAIL / DAZZLE_TEST_PASSWORD environment variables
+        3. Top-level email/password in .dazzle/test_credentials.json
+        4. Generated test credentials ({persona_id}@test.local / {persona_id}pass123)
         """
         import os
 
-        email = os.environ.get("DAZZLE_TEST_EMAIL")
-        password = os.environ.get("DAZZLE_TEST_PASSWORD")
+        email: str | None = None
+        password: str | None = None
 
-        if not email or not password:
-            # Try credentials file
-            creds_path = self.project_path / ".dazzle" / "test_credentials.json"
-            if creds_path.exists():
-                try:
-                    creds = json.loads(creds_path.read_text())
+        # 1. Per-persona credentials from file
+        creds_path = self.project_path / ".dazzle" / "test_credentials.json"
+        if creds_path.exists():
+            try:
+                creds = json.loads(creds_path.read_text())
+                personas = creds.get("personas", {})
+                if persona_id in personas:
+                    email = personas[persona_id].get("email")
+                    password = personas[persona_id].get("password")
+                if not email or not password:
+                    # 3. Top-level fallback
                     email = email or creds.get("email")
                     password = password or creds.get("password")
-                except Exception:
-                    logger.warning("Failed to load test credentials", exc_info=True)
+            except Exception:
+                logger.warning("Failed to load test credentials", exc_info=True)
+
+        # 2. Environment variables (override file if set)
+        env_email = os.environ.get("DAZZLE_TEST_EMAIL")
+        env_password = os.environ.get("DAZZLE_TEST_PASSWORD")
+        if env_email and env_password:
+            email = email or env_email
+            password = password or env_password
 
         if not email or not password:
-            # Fall back to generated test credentials
+            # 4. Fall back to generated test credentials
             email = f"{persona_id}@test.local"
             password = f"{persona_id}pass123"  # nosec B105 - test-only credential
 
