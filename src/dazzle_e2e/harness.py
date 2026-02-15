@@ -347,7 +347,10 @@ class FlowRunner:
                 target = assertion.target or ""
                 if target.startswith("field:"):
                     target = target.split(":", 1)[1]
-                await self.assertions.field_value(target, assertion.expected)
+                expected_val: str | bool = (
+                    str(assertion.expected) if assertion.expected is not None else ""
+                )
+                await self.assertions.field_value(target, expected_val)
 
             # Auth assertions
             case FlowAssertionKind.IS_AUTHENTICATED:
@@ -386,13 +389,15 @@ class FlowRunner:
                 if fixture_id in self._fixture_data:
                     data = self._fixture_data[fixture_id]
                     if isinstance(data, dict) and field_name in data:
-                        return data[field_name]
+                        resolved: str | int | float | bool = data[field_name]
+                        return resolved
 
                 # Fall back to fixture definition
                 if fixture_id in self.fixtures:
                     fixture = self.fixtures[fixture_id]
                     if field_name in fixture.data:
-                        return fixture.data[field_name]
+                        resolved = fixture.data[field_name]
+                        return resolved
 
         raise ValueError(f"Could not resolve value for step: {step}")
 

@@ -117,4 +117,5 @@ def get_template_for_source(source: Any) -> str:
         Template name string, e.g. ``"fragments/search_select.html"``.
     """
     # Fields with an external data source always render as search_select
-    return FRAGMENT_REGISTRY["search_select"]["template"]
+    result: str = FRAGMENT_REGISTRY["search_select"]["template"]
+    return result

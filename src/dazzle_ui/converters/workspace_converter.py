@@ -9,6 +9,7 @@ from dazzle.core import ir
 from dazzle.core.strings import to_api_plural
 from dazzle_ui.specs import (
     AppShellLayout,
+    LayoutSpec,
     RouteSpec,
     SingleColumnLayout,
     WorkspaceAccessLevel,
@@ -69,7 +70,7 @@ def _infer_layout_from_workspace(
     workspace: ir.WorkspaceSpec,
     surfaces: list[ir.SurfaceSpec],
     surface_component_map: dict[str, str],
-) -> dict:
+) -> LayoutSpec:
     """
     Infer a layout spec from workspace regions.
 
@@ -350,7 +351,7 @@ def _generate_routes_from_surfaces(
 
     # Sort routes so static paths come before dynamic paths
     # This prevents /task/:id from matching before /task/create
-    def route_priority(route: RouteSpec) -> tuple[int, str]:
+    def route_priority(route: RouteSpec) -> tuple[int, int, str]:
         path = route.path
         # Count dynamic segments (those starting with :)
         segments = path.split("/")

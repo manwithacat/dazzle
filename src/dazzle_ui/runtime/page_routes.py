@@ -1,5 +1,5 @@
 """
-Page routes for server-rendered DNR pages.
+Page routes for server-rendered Dazzle pages.
 
 Creates FastAPI routes that render full HTML pages using Jinja2 templates.
 Each workspace+surface combination gets a GET route that:
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from fastapi import APIRouter, Request
-    from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+    from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -30,7 +30,7 @@ def create_page_routes(
     appspec: ir.AppSpec,
     backend_url: str = "http://127.0.0.1:8000",
     theme_css: str = "",
-    get_auth_context: Callable | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
     app_prefix: str = "",
 ) -> APIRouter:
     """
@@ -77,7 +77,7 @@ def create_page_routes(
     def _make_page_handler(route_path: str, ctx: Any, view_name: str | None = None) -> Any:
         """Create a closure-based handler for a specific page route."""
 
-        async def page_handler(request: Request) -> HTMLResponse:
+        async def page_handler(request: Request) -> Response:
             # Set current route for nav highlighting
             ctx.current_route = route_path
 

@@ -223,11 +223,18 @@ def _resolve_fk_field(
         for f in getattr(ent, "fields", []):
             ft = getattr(f, "type", None)
             kind = getattr(ft, "kind", None)
-            kind_val = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
+            kind_val: str = (
+                kind.value
+                if kind is not None and hasattr(kind, "value")
+                else str(kind)
+                if kind
+                else ""
+            )
             if kind_val == "ref":
                 ref_target = getattr(ft, "entity_ref", None) or getattr(ft, "ref_entity", None)
                 if ref_target == target_entity:
-                    return f.name
+                    field_name: str = f.name
+                    return field_name
     return None
 
 

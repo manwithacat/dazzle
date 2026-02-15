@@ -932,7 +932,9 @@ def get_realtime_client_js() -> str:
 REALTIME_CLIENT_JS = _REALTIME_CLIENT_JS_INLINE
 
 
-def generate_realtime_init_js(websocket_url: str = "/ws", options: dict | None = None) -> str:
+def generate_realtime_init_js(
+    websocket_url: str = "/ws", options: dict[str, object] | None = None
+) -> str:
     """
     Generate JavaScript to initialize the realtime client.
 

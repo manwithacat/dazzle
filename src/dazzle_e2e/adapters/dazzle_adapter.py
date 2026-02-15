@@ -82,7 +82,8 @@ class DazzleAdapter(BaseAdapter):
         )
         response.raise_for_status()
 
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     async def reset(self) -> None:
         """
@@ -105,7 +106,8 @@ class DazzleAdapter(BaseAdapter):
         response = await client.get(f"{self.api_url}/__test__/snapshot")
         response.raise_for_status()
 
-        return response.json()
+        result: dict[str, list[dict[str, Any]]] = response.json()
+        return result
 
     async def get_entities(self, entity: str) -> list[dict[str, Any]]:
         """
@@ -123,14 +125,14 @@ class DazzleAdapter(BaseAdapter):
         response = await client.get(f"{self.api_url}/{entity.lower()}")
 
         if response.status_code == 200:
-            data = response.json()
+            data: Any = response.json()
             # Handle both list and paginated responses
             if isinstance(data, list):
-                return data
+                return list(data)
             elif isinstance(data, dict) and "items" in data:
-                return data["items"]
+                return list(data["items"])
             elif isinstance(data, dict) and "data" in data:
-                return data["data"]
+                return list(data["data"])
 
         # Fall back to snapshot
         snapshot = await self.snapshot()
@@ -152,7 +154,8 @@ class DazzleAdapter(BaseAdapter):
         response = await client.get(f"{self.api_url}/{entity.lower()}/{entity_id}")
 
         if response.status_code == 200:
-            return response.json()
+            result: dict[str, Any] = response.json()
+            return result
         elif response.status_code == 404:
             return None
 
@@ -193,7 +196,8 @@ class DazzleAdapter(BaseAdapter):
         )
 
         if response.status_code == 200:
-            return response.json()
+            auth_result: dict[str, Any] = response.json()
+            return auth_result
 
         # If auth fails, try test endpoint
         response = await client.post(
@@ -202,7 +206,8 @@ class DazzleAdapter(BaseAdapter):
         )
         response.raise_for_status()
 
-        return response.json()
+        auth_result = response.json()
+        return auth_result
 
     async def logout(self) -> None:
         """Log out via Dazzle auth endpoint."""
@@ -222,7 +227,8 @@ class DazzleAdapter(BaseAdapter):
         try:
             response = await client.get(f"{self.api_url}/auth/me")
             if response.status_code == 200:
-                return response.json()
+                user_result: dict[str, Any] = response.json()
+                return user_result
         except Exception:
             logger.debug("Failed to get current user info", exc_info=True)
 
@@ -264,7 +270,8 @@ class DazzleAdapter(BaseAdapter):
         )
         response.raise_for_status()
 
-        return response.json()
+        created_user: dict[str, Any] = response.json()
+        return created_user
 
     async def login_as(
         self,
@@ -289,12 +296,12 @@ class DazzleAdapter(BaseAdapter):
         )
         response.raise_for_status()
 
-        result = response.json()
+        login_result: dict[str, Any] = response.json()
 
         # Store cookies from response
-        result["cookies"] = dict(response.cookies)
+        login_result["cookies"] = dict(response.cookies)
 
-        return result
+        return login_result
 
     def resolve_view_url(self, view_id: str) -> str:
         """
@@ -346,7 +353,7 @@ class DazzleAdapter(BaseAdapter):
                 json={"fixtures": fixture_data},
             )
             response.raise_for_status()
-            result = response.json()
+            result: dict[str, Any] = response.json()
 
         # Store created entity IDs for fixture_ref resolution
         created = result.get("created", {})
@@ -369,7 +376,8 @@ class DazzleAdapter(BaseAdapter):
         with httpx.Client(timeout=self.timeout) as client:
             response = client.get(f"{self.api_url}/__test__/snapshot")
             response.raise_for_status()
-            return response.json()
+            snap_result: dict[str, list[dict[str, Any]]] = response.json()
+            return snap_result
 
     def authenticate_sync(
         self,
@@ -394,7 +402,8 @@ class DazzleAdapter(BaseAdapter):
             )
 
             if response.status_code == 200:
-                return response.json()
+                sync_auth: dict[str, Any] = response.json()
+                return sync_auth
 
             # Fall back to test endpoint
             response = client.post(
@@ -402,7 +411,8 @@ class DazzleAdapter(BaseAdapter):
                 json=auth_data,
             )
             response.raise_for_status()
-            return response.json()
+            sync_auth = response.json()
+            return sync_auth
 
     def get_entity_count_sync(self, entity: str) -> int:
         """Get entity count synchronously for assertions."""
@@ -410,14 +420,14 @@ class DazzleAdapter(BaseAdapter):
             response = client.get(f"{self.api_url}/__test__/entity/{entity}/count")
 
             if response.status_code == 200:
-                data = response.json()
-                return data.get("count", 0)
+                count_data: dict[str, Any] = response.json()
+                return int(count_data.get("count", 0))
 
             # Fall back to snapshot
             response = client.get(f"{self.api_url}/__test__/snapshot")
             if response.status_code == 200:
-                snapshot = response.json()
-                entities = snapshot.get("entities", {})
-                return len(entities.get(entity, []))
+                snapshot: dict[str, Any] = response.json()
+                snap_entities: dict[str, list[Any]] = snapshot.get("entities", {})
+                return len(snap_entities.get(entity, []))
 
             return 0

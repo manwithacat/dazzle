@@ -230,7 +230,7 @@ def _generate_state(
 def _generate_dazzle_attrs(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
-) -> dict:
+) -> dict[str, str | None]:
     """Generate semantic dazzle attributes for the surface."""
     entity_name = entity.name if entity else surface.entity_ref
     mode_map = {
@@ -286,7 +286,7 @@ def _generate_field_element(
         # Handle enum fields -> Select component
         if type_kind == "enum" and field_type.enum_values:
             return ElementNode(
-                as_="Select",
+                **{"as": "Select"},  # type: ignore[arg-type]
                 props={
                     "placeholder": LiteralBinding(value=f"Select {field_label}"),
                     "options": LiteralBinding(value=field_type.enum_values),
@@ -297,7 +297,7 @@ def _generate_field_element(
         # Handle boolean fields -> Checkbox component
         if type_kind == "bool":
             return ElementNode(
-                as_="Checkbox",
+                **{"as": "Checkbox"},  # type: ignore[arg-type]
                 props={
                     "label": LiteralBinding(value=field_label),
                     "dazzle": LiteralBinding(value=dazzle_attrs),
@@ -307,7 +307,7 @@ def _generate_field_element(
         # Handle date/datetime fields -> Input with type
         if type_kind == "date":
             return ElementNode(
-                as_="Input",
+                **{"as": "Input"},  # type: ignore[arg-type]
                 props={
                     "fieldType": LiteralBinding(value="date"),
                     "placeholder": LiteralBinding(value=field_label),
@@ -317,7 +317,7 @@ def _generate_field_element(
 
         if type_kind == "datetime":
             return ElementNode(
-                as_="Input",
+                **{"as": "Input"},  # type: ignore[arg-type]
                 props={
                     "fieldType": LiteralBinding(value="datetime"),
                     "placeholder": LiteralBinding(value=field_label),
@@ -328,7 +328,7 @@ def _generate_field_element(
         # Handle numeric fields
         if type_kind in ("int", "float", "decimal"):
             return ElementNode(
-                as_="Input",
+                **{"as": "Input"},  # type: ignore[arg-type]
                 props={
                     "fieldType": LiteralBinding(value=type_kind),
                     "placeholder": LiteralBinding(value=field_label),
@@ -339,7 +339,7 @@ def _generate_field_element(
         # Handle text fields (multiline)
         if type_kind == "text":
             return ElementNode(
-                as_="Input",
+                **{"as": "Input"},  # type: ignore[arg-type]
                 props={
                     "fieldType": LiteralBinding(value="text"),
                     "multiline": LiteralBinding(value=True),
@@ -350,7 +350,7 @@ def _generate_field_element(
 
     # Default: standard text input
     return ElementNode(
-        as_="Input",
+        **{"as": "Input"},  # type: ignore[arg-type]
         props={
             "placeholder": LiteralBinding(value=field_label),
             "dazzle": LiteralBinding(value=dazzle_attrs),
@@ -398,7 +398,7 @@ def _generate_form_fields(
             # Create label element
             children.append(
                 ElementNode(
-                    as_="Text",
+                    **{"as": "Text"},  # type: ignore[arg-type]
                     props={
                         "variant": LiteralBinding(value="label"),
                         "dazzle": LiteralBinding(value={"label": f"{entity_name}.{field_name}"}),
@@ -417,13 +417,13 @@ def _generate_form_fields(
 def _generate_table_columns(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
-) -> list[dict]:
+) -> list[dict[str, str]]:
     """
     Generate column definitions for a list surface.
 
     Returns a list of column configs: [{"key": "field_name", "label": "Field Label"}, ...]
     """
-    columns: list[dict] = []
+    columns: list[dict[str, str]] = []
 
     # Get columns from surface sections, or entity fields if not defined
     if surface.sections:
@@ -466,7 +466,7 @@ def _generate_form_actions(
     # Save/Submit button
     action_children.append(
         ElementNode(
-            as_="Button",
+            **{"as": "Button"},  # type: ignore[arg-type]
             props={
                 "variant": LiteralBinding(value="primary"),
                 "type": LiteralBinding(value="submit"),
@@ -484,7 +484,7 @@ def _generate_form_actions(
     # Cancel button
     action_children.append(
         ElementNode(
-            as_="Button",
+            **{"as": "Button"},  # type: ignore[arg-type]
             props={
                 "variant": LiteralBinding(value="secondary"),
                 "type": LiteralBinding(value="button"),
@@ -502,12 +502,12 @@ def _generate_form_actions(
     # Wrap in Stack
     children.append(
         ElementNode(
-            as_="Stack",
+            **{"as": "Stack"},  # type: ignore[arg-type]
             props={
                 "direction": LiteralBinding(value="row"),
                 "gap": LiteralBinding(value="sm"),
             },
-            children=action_children,
+            children=action_children,  # type: ignore[arg-type]
         )
     )
 
@@ -529,7 +529,7 @@ def _generate_view(
         api_endpoint = f"/{to_api_plural(entity_name)}" if entity_name else None
 
         return ElementNode(
-            as_=component_type,
+            **{"as": component_type},  # type: ignore[arg-type]
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "entity": LiteralBinding(value=entity_name),
@@ -541,7 +541,7 @@ def _generate_view(
 
     elif surface.mode == ir.SurfaceMode.VIEW:
         return ElementNode(
-            as_="Card",
+            **{"as": "Card"},  # type: ignore[arg-type]
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "dazzle": LiteralBinding(value=dazzle_attrs),
@@ -554,19 +554,19 @@ def _generate_view(
         form_actions = _generate_form_actions(surface, entity)
 
         return ElementNode(
-            as_="Form",
+            **{"as": "Form"},  # type: ignore[arg-type]
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "entity": LiteralBinding(value=dazzle_attrs.get("entity")),
                 "mode": LiteralBinding(value=dazzle_attrs.get("formMode")),
                 "dazzle": LiteralBinding(value=dazzle_attrs),
             },
-            children=form_fields + form_actions,
+            children=form_fields + form_actions,  # type: ignore[arg-type]
         )
 
     else:
         return ElementNode(
-            as_="Page",
+            **{"as": "Page"},  # type: ignore[arg-type]
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "dazzle": LiteralBinding(value=dazzle_attrs),

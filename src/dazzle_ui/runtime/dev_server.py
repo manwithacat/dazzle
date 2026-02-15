@@ -16,7 +16,6 @@ from dazzle_ui.specs import UISpec
 
 # JSGenerator was removed in the HTMX migration.
 # Dev server now uses template rendering.
-JSGenerator = None  # type: ignore
 
 # =============================================================================
 # Request Handler
@@ -31,7 +30,7 @@ class DazzleDevHandler(http.server.SimpleHTTPRequestHandler):
     """
 
     spec: UISpec | None = None
-    generator: JSGenerator | None = None
+    generator: Any = None
 
     def do_GET(self) -> None:
         """Handle GET requests."""
@@ -175,7 +174,6 @@ class DazzleDevServer:
         self.spec = spec
         self.host = host
         self.port = port
-        self.generator = JSGenerator(spec)
         self._server: socketserver.TCPServer | None = None
 
     def start(self) -> None:
@@ -186,7 +184,6 @@ class DazzleDevServer:
         """
         # Configure handler
         DazzleDevHandler.spec = self.spec
-        DazzleDevHandler.generator = self.generator
 
         # Create server
         socketserver.TCPServer.allow_reuse_address = True
@@ -218,9 +215,7 @@ class DazzleDevServer:
             spec: New UI specification
         """
         self.spec = spec
-        self.generator = JSGenerator(spec)
         DazzleDevHandler.spec = spec
-        DazzleDevHandler.generator = self.generator
 
 
 # =============================================================================

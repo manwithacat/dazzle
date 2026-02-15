@@ -83,7 +83,7 @@ def _date_filter(value: Any, fmt: str = "%d %b %Y") -> str:
         try:
             value = datetime.fromisoformat(value)
         except ValueError:
-            return value
+            return str(value)
     if isinstance(value, (date, datetime)):
         return value.strftime(fmt)
     return str(value)

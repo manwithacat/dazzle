@@ -26,7 +26,7 @@ from dazzle_ui.specs import (
 )
 
 
-def test_component_spec_creation():
+def test_component_spec_creation() -> None:
     """Test creating a ComponentSpec."""
     component = ComponentSpec(
         name="ClientCard",
@@ -42,7 +42,7 @@ def test_component_spec_creation():
     assert len(component.props_schema.fields) == 1
 
 
-def test_workspace_spec_creation():
+def test_workspace_spec_creation() -> None:
     """Test creating a WorkspaceSpec."""
     workspace = WorkspaceSpec(
         name="dashboard",
@@ -58,7 +58,7 @@ def test_workspace_spec_creation():
     assert workspace.get_route("/") is not None
 
 
-def test_theme_spec_creation():
+def test_theme_spec_creation() -> None:
     """Test creating a ThemeSpec."""
     theme = ThemeSpec(
         name="default",
@@ -75,7 +75,7 @@ def test_theme_spec_creation():
     assert theme.tokens.spacing["md"] == 16
 
 
-def test_state_spec_creation():
+def test_state_spec_creation() -> None:
     """Test creating a StateSpec."""
     state = StateSpec(
         name="selectedClient",
@@ -87,20 +87,21 @@ def test_state_spec_creation():
     assert state.initial is None
 
 
-def test_action_spec_creation():
+def test_action_spec_creation() -> None:
     """Test creating an ActionSpec."""
     action = ActionSpec(
         name="selectClient",
         inputs={"client_id": "uuid"},
     )
     assert action.name == "selectClient"
+    assert action.inputs is not None
     assert action.inputs["client_id"] == "uuid"
 
 
-def test_element_node_creation():
+def test_element_node_creation() -> None:
     """Test creating an ElementNode."""
     node = ElementNode(
-        as_="Card",
+        **{"as": "Card"},  # type: ignore[arg-type]
         props={
             "title": LiteralBinding(value="Client Details"),
             "client": PropBinding(path="client"),
@@ -111,7 +112,7 @@ def test_element_node_creation():
     assert node.props["title"].kind == "literal"
 
 
-def test_ui_spec_creation():
+def test_ui_spec_creation() -> None:
     """Test creating a complete UISpec."""
     spec = UISpec(
         name="test_ui",
@@ -151,7 +152,7 @@ def test_ui_spec_creation():
     assert stats["themes"] == 1
 
 
-def test_ui_spec_validation():
+def test_ui_spec_validation() -> None:
     """Test UISpec reference validation."""
     # Valid spec
     spec = UISpec(
@@ -186,7 +187,7 @@ def test_ui_spec_validation():
     assert "NonExistentComponent" in errors[0]
 
 
-def test_immutability():
+def test_immutability() -> None:
     """Test that specs are immutable (frozen)."""
     from pydantic import ValidationError
 
