@@ -33,6 +33,7 @@ from dazzle_back.specs import BackendSpec
 if TYPE_CHECKING:
     from fastapi import FastAPI
 
+    from dazzle.core.ir import EntitySpec, SurfaceSpec, ViewSpec
     from dazzle_back.runtime.pg_backend import PostgresBackend
 
 logger = logging.getLogger(__name__)
@@ -1939,6 +1940,63 @@ def create_app_from_json(json_path: str) -> FastAPI:
 
 
 # =============================================================================
+# View-based list projections
+# =============================================================================
+
+
+def build_entity_list_projections(
+    entities: list[EntitySpec],
+    surfaces: list[SurfaceSpec],
+    views: list[ViewSpec],
+) -> dict[str, list[str]]:
+    """Build column projections for view-backed list surfaces.
+
+    When a surface has ``view_ref``, only the view's fields are SELECTed.
+    Money fields are stored as ``_minor``/``_currency`` column pairs in the
+    database, so they must be expanded here to avoid ``UndefinedColumn``
+    errors at query time.
+
+    Returns a mapping of ``{entity_name: [column_names]}``.
+    """
+    views_by_name = {v.name: v for v in views}
+    # Build per-entity field metadata: type kind + required status
+    entity_fields_meta: dict[str, dict[str, tuple[str, bool]]] = {}
+    for entity in entities:
+        entity_fields_meta[entity.name] = {
+            f.name: (f.type.kind, f.is_required) for f in entity.fields
+        }
+
+    projections: dict[str, list[str]] = {}
+    for surface in surfaces:
+        if surface.view_ref and surface.entity_ref:
+            view = views_by_name.get(surface.view_ref)
+            if view and view.fields:
+                fields_meta = entity_fields_meta.get(surface.entity_ref, {})
+                view_field_names = {f.name for f in view.fields}
+                columns: list[str] = []
+                # First add all required fields not in the view (Pydantic needs them)
+                for fname, (fkind, freq) in fields_meta.items():
+                    if freq and fname not in view_field_names and fname != "id":
+                        if fkind == "money":
+                            columns.append(f"{fname}_minor")
+                            columns.append(f"{fname}_currency")
+                        else:
+                            columns.append(fname)
+                # Then add the view's explicit fields
+                for f in view.fields:
+                    kind = fields_meta.get(f.name, ("scalar", False))[0]
+                    if kind == "money":
+                        columns.append(f"{f.name}_minor")
+                        columns.append(f"{f.name}_currency")
+                    else:
+                        columns.append(f.name)
+                if "id" not in columns:
+                    columns.insert(0, "id")
+                projections[surface.entity_ref] = columns
+    return projections
+
+
+# =============================================================================
 # Production Factory (Heroku, etc.)
 # =============================================================================
 
@@ -2094,29 +2152,11 @@ def create_app_factory(
         # Default: None means LiteProcessAdapter will be used
 
     # Compute view-based list projections from DSL surfaces
-    entity_list_projections: dict[str, list[str]] = {}
-    views_by_name = {v.name: v for v in appspec.views}
-    # Build entity field type lookup for money field expansion
-    entity_field_types: dict[str, dict[str, str]] = {}
-    for entity in appspec.domain.entities:
-        entity_field_types[entity.name] = {f.name: f.type.kind for f in entity.fields}
-    for surface in appspec.surfaces:
-        if surface.view_ref and surface.entity_ref:
-            view = views_by_name.get(surface.view_ref)
-            if view and view.fields:
-                field_types = entity_field_types.get(surface.entity_ref, {})
-                columns: list[str] = []
-                for f in view.fields:
-                    if field_types.get(f.name) == "money":
-                        # Money fields are stored as _minor (INT) + _currency (STR) pairs
-                        columns.append(f"{f.name}_minor")
-                        columns.append(f"{f.name}_currency")
-                    else:
-                        columns.append(f.name)
-                # Always include 'id' for detail links
-                if "id" not in columns:
-                    columns.insert(0, "id")
-                entity_list_projections[surface.entity_ref] = columns
+    entity_list_projections = build_entity_list_projections(
+        entities=appspec.domain.entities,
+        surfaces=appspec.surfaces,
+        views=appspec.views,
+    )
 
     # Auto-detect ref fields for eager loading (prevents N+1 queries)
     entity_auto_includes: dict[str, list[str]] = {}
