@@ -245,12 +245,16 @@ def create_page_routes(
             ws_ctx = build_workspace_context(workspace, appspec)
             _ws_ctx = ws_ctx
             _ws_route = f"{app_prefix}/workspaces/{workspace.name}"
+            _ws_allowed = (
+                list(workspace.access.allow_personas) if getattr(workspace, "access", None) else []
+            )
 
             def _make_workspace_handler(
                 ws_context: Any = _ws_ctx,
                 ws_route: str = _ws_route,
+                ws_allowed_personas: list[str] = _ws_allowed,
             ) -> Any:
-                async def workspace_handler(request: Request) -> HTMLResponse:
+                async def workspace_handler(request: Request) -> Response:
                     from dazzle_ui.runtime.template_renderer import render_fragment
 
                     # Inject auth context if available
@@ -258,6 +262,7 @@ def create_page_routes(
                     is_authenticated = False
                     user_email = ""
                     user_name = ""
+                    user_roles: list[str] = []
 
                     if get_auth_context is not None:
                         try:
@@ -276,6 +281,14 @@ def create_page_routes(
                                 ]
                         except Exception:
                             logger.debug("Failed to resolve auth for workspace nav", exc_info=True)
+
+                    # Enforce workspace persona access control
+                    if ws_allowed_personas:
+                        if not user_roles or not any(r in ws_allowed_personas for r in user_roles):
+                            return JSONResponse(
+                                status_code=403,
+                                content={"detail": "Access denied: insufficient role"},
+                            )
 
                     html = render_fragment(
                         "workspace/workspace.html",
