@@ -2121,20 +2121,20 @@ def create_app_factory(
         except Exception as e:
             logger.warning(f"Failed to load sitespec.yaml: {e}")
 
-    # Extract personas for dev mode (if enabled)
-    personas = (
-        [
-            {
-                "id": p.id,
-                "label": p.label,
-                "description": p.description,
-                "goals": p.goals,
-            }
-            for p in appspec.personas
-        ]
-        if enable_dev_mode
-        else []
-    )
+    # Extract personas with default routes for auth redirect (#255)
+    from dazzle_ui.converters.workspace_converter import compute_persona_default_routes
+
+    persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
+    personas = [
+        {
+            "id": p.id,
+            "label": p.label,
+            "description": p.description,
+            "goals": p.goals,
+            "default_route": persona_routes.get(p.id),
+        }
+        for p in appspec.personas
+    ]
 
     # Resolve process adapter class from parameter or environment
     resolved_adapter_class = process_adapter_class
