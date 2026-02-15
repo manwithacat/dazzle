@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-02-15
+
+### Fixed
+- Composition `analyze` returning false 100/100 when LLM evaluation fails — now returns `visual_score: null` with actual error messages ([#239](https://github.com/manwithacat/dazzle/issues/239))
+- Sentinel PR-05 false positives on list surfaces with view-based projections — now counts view fields instead of entity fields ([#238](https://github.com/manwithacat/dazzle/issues/238))
+- Sentinel PR-01 false positives for N+1 risk on entities with ref fields — ref fields excluded since runtime auto-eager-loads them ([#238](https://github.com/manwithacat/dazzle/issues/238))
+
 ## [0.28.0] - 2026-02-15
 
 ### Added
