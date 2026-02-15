@@ -312,7 +312,7 @@ class TestBuildVisualReport:
 
     def test_empty_results(self) -> None:
         report = build_visual_report([])
-        assert report["visual_score"] == 100
+        assert report["visual_score"] is None
         assert report["tokens_used"] == 0
         assert report["findings_by_severity"] == {"high": 0, "medium": 0, "low": 0}
 
@@ -394,7 +394,7 @@ class TestBuildVisualReport:
         result = PageVisualResult(
             route="/",
             viewport="desktop",
-            visual_score=100,
+            visual_score=None,  # All dimensions failed → None
             tokens_used=0,
             dimensions_skipped=[
                 {"dimension": "hero:content_rendering", "reason": "evaluation_failed"},
@@ -402,8 +402,10 @@ class TestBuildVisualReport:
             ],
         )
         report = build_visual_report([result])
+        assert report["visual_score"] is None
         assert report["dimensions_skipped_total"] == 2
         assert "2 dimension(s) skipped" in report["summary"]
+        assert "could not be evaluated" in report["summary"]
         assert report["pages"][0]["dimensions_skipped"] == result.dimensions_skipped
 
     def test_report_omits_skip_fields_when_none_skipped(self) -> None:
@@ -411,6 +413,34 @@ class TestBuildVisualReport:
         report = build_visual_report([result])
         assert "dimensions_skipped_total" not in report
         assert "dimensions_skipped" not in report["pages"][0]
+
+    def test_all_failed_returns_null_score(self) -> None:
+        """When every page has visual_score=None, overall score is None."""
+        results = [
+            PageVisualResult(
+                route="/",
+                viewport="desktop",
+                visual_score=None,
+                dimensions_skipped=[
+                    {"dimension": "hero:content_rendering", "reason": "RuntimeError: no key"}
+                ],
+            ),
+        ]
+        report = build_visual_report(results)
+        assert report["visual_score"] is None
+        assert "evaluation failed" in report["summary"]
+        assert "Evaluation Failed" in report["markdown"]
+
+    def test_partial_failure_averages_evaluated_only(self) -> None:
+        """When some pages succeed and some fail, average only the successes."""
+        results = [
+            PageVisualResult(route="/", viewport="desktop", visual_score=80),
+            PageVisualResult(route="/about", viewport="desktop", visual_score=None),
+        ]
+        report = build_visual_report(results)
+        # Only the successfully evaluated page counts
+        assert report["visual_score"] == 80
+        assert "1 page(s) could not be evaluated" in report["summary"]
 
 
 # ── Evaluate Captures Tests ──────────────────────────────────────────
@@ -518,6 +548,7 @@ class TestEvaluateCaptures:
         # Desktop viewport should skip responsive_fidelity
         assert not mock_api.called
         assert results[0].dimensions_evaluated == []
+        assert results[0].visual_score is None  # No dims evaluated → None
 
     @patch("dazzle.core.composition_visual._call_vision_api")
     def test_missing_screenshot_skipped(self, mock_api: Any, tmp_path: Any) -> None:
@@ -542,8 +573,10 @@ class TestEvaluateCaptures:
 
         assert not mock_api.called
         assert results[0].dimensions_evaluated == []
+        assert results[0].visual_score is None  # All dims failed → None
         assert len(results[0].dimensions_skipped) == 1
         assert results[0].dimensions_skipped[0]["dimension"] == "hero:content_rendering"
+        assert "not found" in results[0].dimensions_skipped[0]["reason"].lower()
 
     @patch("dazzle.core.composition_visual._call_vision_api")
     def test_api_failure_tracked_as_skipped(self, mock_api: Any, tmp_path: Any) -> None:
@@ -556,8 +589,11 @@ class TestEvaluateCaptures:
         )
 
         assert results[0].dimensions_evaluated == []
+        assert results[0].visual_score is None  # All dims failed → None
         assert len(results[0].dimensions_skipped) == 1
         assert results[0].tokens_used == 0
+        # Error message should surface the actual exception
+        assert "API key not set" in results[0].dimensions_skipped[0]["reason"]
 
 
 # ── MCP Handler Tests ────────────────────────────────────────────────
