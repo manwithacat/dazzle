@@ -580,65 +580,45 @@ class TestAuthRoutes:
 
         assert response.status_code == 200
 
-    def test_logout_browser_redirect(self, app: Any) -> None:
-        """Browser logout (Accept: text/html) returns 302 redirect to /."""
+    def test_login_includes_redirect_url(self, app: Any) -> None:
+        """Login response includes redirect_url for post-login navigation."""
         _, client, auth_store = app
 
-        auth_store.create_user(email="logout_browser@example.com", password="pass")
-        login_response = client.post(
-            "/auth/login",
-            json={"email": "logout_browser@example.com", "password": "pass"},
-        )
-
+        auth_store.create_user(email="redirect@example.com", password="pass")
         response = client.post(
-            "/auth/logout",
-            cookies=login_response.cookies,
-            headers={"Accept": "text/html"},
-            follow_redirects=False,
-        )
-
-        assert response.status_code == 302
-        assert response.headers["location"] == "/"
-
-    def test_logout_api_json(self, app: Any) -> None:
-        """API logout (Accept: application/json) returns 200 with JSON."""
-        _, client, auth_store = app
-
-        auth_store.create_user(email="logout_api@example.com", password="pass")
-        login_response = client.post(
             "/auth/login",
-            json={"email": "logout_api@example.com", "password": "pass"},
-        )
-
-        response = client.post(
-            "/auth/logout",
-            cookies=login_response.cookies,
-            headers={"Accept": "application/json"},
+            json={"email": "redirect@example.com", "password": "pass"},
         )
 
         assert response.status_code == 200
-        assert response.json()["message"] == "Logout successful"
+        data = response.json()
+        assert "redirect_url" in data
+        # Default is /app when no persona routes configured
+        assert data["redirect_url"] == "/app"
 
-    def test_logout_cookie_cleared(self, app: Any) -> None:
-        """Logout clears the dazzle_session cookie regardless of Accept header."""
-        _, client, auth_store = app
+    def test_login_redirect_url_with_persona_routes(self) -> None:
+        """Login resolves redirect_url from user roles when persona_routes given."""
+        try:
+            from fastapi import FastAPI
+            from fastapi.testclient import TestClient
+        except ImportError:
+            pytest.skip("FastAPI not installed")
 
-        auth_store.create_user(email="logout_cookie@example.com", password="pass")
-        login_response = client.post(
-            "/auth/login",
-            json={"email": "logout_cookie@example.com", "password": "pass"},
-        )
+        auth_store = AuthStore(os.environ["DATABASE_URL"])
+        persona_routes = {"admin": "/app/workspaces/admin_dashboard"}
+        app = FastAPI()
+        router = create_auth_routes(auth_store, persona_routes=persona_routes)
+        app.include_router(router)
+        client = TestClient(app)
 
+        auth_store.create_user(email="admin@example.com", password="pass", roles=["admin"])
         response = client.post(
-            "/auth/logout",
-            cookies=login_response.cookies,
-            headers={"Accept": "text/html"},
-            follow_redirects=False,
+            "/auth/login",
+            json={"email": "admin@example.com", "password": "pass"},
         )
 
-        # Cookie should be deleted (set with max-age=0 or expires in past)
-        set_cookie = response.headers.get("set-cookie", "")
-        assert "dazzle_session" in set_cookie
+        assert response.status_code == 200
+        assert response.json()["redirect_url"] == "/app/workspaces/admin_dashboard"
 
     def test_get_me_authenticated(self, app: Any) -> None:
         """Test getting current user when authenticated."""

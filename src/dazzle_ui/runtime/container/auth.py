@@ -67,8 +67,17 @@ def get_auth_stats() -> dict[str, int]:
     }
 
 
-def register_auth_routes(app: FastAPI) -> None:
-    """Register authentication routes on the FastAPI app."""
+def register_auth_routes(
+    app: FastAPI,
+    persona_routes: dict[str, str] | None = None,
+) -> None:
+    """Register authentication routes on the FastAPI app.
+
+    Args:
+        app: FastAPI application instance.
+        persona_routes: Mapping of persona/role ID to default route URL.
+            Used to include ``redirect_url`` in the login response.
+    """
 
     @app.post("/auth/register", tags=["Authentication"], summary="Register new user")
     async def auth_register(data: RegisterRequest) -> JSONResponse:
@@ -135,6 +144,15 @@ def register_auth_routes(app: FastAPI) -> None:
         }
         AUTH_SESSIONS[session_token] = session
 
+        # Resolve post-login landing page from persona routes
+        redirect_url = "/app"
+        if persona_routes:
+            for role in user.get("roles", []):
+                route = persona_routes.get(role)
+                if route:
+                    redirect_url = route
+                    break
+
         response = JSONResponse(
             {
                 "user": {
@@ -142,6 +160,7 @@ def register_auth_routes(app: FastAPI) -> None:
                     "email": user["email"],
                     "display_name": user.get("display_name"),
                 },
+                "redirect_url": redirect_url,
                 "message": "Login successful",
             }
         )

@@ -1404,7 +1404,16 @@ class DazzleBackendApp:
                 database_url=self._database_url,
             )
             self._auth_middleware = AuthMiddleware(self._auth_store)
-            auth_router = create_auth_routes(self._auth_store)
+            # Build persona → default_route mapping for post-login redirect
+            _persona_routes: dict[str, str] = {}
+            for p in self._personas:
+                route = p.get("default_route")
+                if route:
+                    _persona_routes[p["id"]] = route
+            auth_router = create_auth_routes(
+                self._auth_store,
+                persona_routes=_persona_routes or None,
+            )
             self._app.include_router(auth_router)
             # Create FastAPI Depends()-compatible auth dependencies
             from dazzle_back.runtime.auth import (

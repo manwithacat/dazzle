@@ -728,11 +728,20 @@ def create_auth_routes(
     auth_store: AuthStore,
     cookie_name: str = "dazzle_session",
     session_expires_days: int = 7,
+    persona_routes: dict[str, str] | None = None,
 ) -> APIRouter:
     """
     Create authentication routes for FastAPI.
 
     Returns a router with login, logout, register, and me endpoints.
+
+    Args:
+        auth_store: Authentication store instance.
+        cookie_name: Name of the session cookie.
+        session_expires_days: Session cookie lifetime in days.
+        persona_routes: Mapping of persona/role ID to default route URL.
+            Used to include ``redirect_url`` in the login response so the
+            client can navigate to the persona's landing page.
     """
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for auth routes")
@@ -765,6 +774,15 @@ def create_auth_routes(
             user_agent=request.headers.get("user-agent"),
         )
 
+        # Resolve persona landing page from user roles
+        redirect_url = "/app"
+        if persona_routes and user.roles:
+            for role in user.roles:
+                route = persona_routes.get(role)
+                if route:
+                    redirect_url = route
+                    break
+
         # Return response with cookie
         response = JSONResponse(
             content={
@@ -774,6 +792,7 @@ def create_auth_routes(
                     "username": user.username,
                     "roles": user.roles,
                 },
+                "redirect_url": redirect_url,
                 "message": "Login successful",
             }
         )
