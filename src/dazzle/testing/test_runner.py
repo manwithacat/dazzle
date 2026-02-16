@@ -460,6 +460,16 @@ class DazzleClient:
         if overrides:
             data.update(overrides)
 
+        # Regenerate unique fields after overrides — design-time values
+        # from test JSON files are generated once and become stale across
+        # runs, causing unique-constraint collisions in the database.
+        if overrides:
+            for fld in schema.get("fields", []):
+                fname = fld.get("name", "")
+                if fld.get("unique", False) and fname in overrides and fname not in ("id",):
+                    ftype = fld.get("type", "").lower()
+                    data[fname] = self._generate_field_value(fname, ftype, unique=True)
+
         return data
 
     def _generate_field_value(self, name: str, field_type: str, unique: bool = False) -> Any:
@@ -467,8 +477,9 @@ class DazzleClient:
         import re
         import uuid as uuid_module
 
-        # Generate unique suffix for unique fields
-        unique_suffix = f"_{int(time.time() * 1000) % 100000}" if unique else ""
+        # Generate unique suffix for unique fields — use UUID4 hex to
+        # guarantee no collisions across runs or parallel execution.
+        unique_suffix = f"_{uuid_module.uuid4().hex[:8]}" if unique else ""
 
         # Handle enum types
         enum_match = re.search(r"enum\(([^)]+)\)", field_type)
@@ -481,10 +492,9 @@ class DazzleClient:
         if name_lower == "email" or "email" in field_type:
             return f"test{unique_suffix}@example.com"
         elif name_lower in ("serial_number", "serialnumber", "serial"):
-            return f"SN{unique_suffix or int(time.time() * 1000) % 100000}"
+            return f"SN{unique_suffix or '_' + uuid_module.uuid4().hex[:8]}"
         elif name_lower == "version":
-            # Always use milliseconds for version uniqueness
-            return f"1.0.{int(time.time() * 1000) % 100000}"
+            return f"1.0.{uuid_module.uuid4().hex[:6]}"
 
         if "uuid" in field_type:
             return str(uuid_module.uuid4())
