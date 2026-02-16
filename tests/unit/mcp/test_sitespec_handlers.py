@@ -11,6 +11,17 @@ from unittest.mock import MagicMock
 
 import pytest
 
+_CONFTEST_PATH = str(Path(__file__).parent / "conftest.py")
+
+
+def _load_conftest_helper(name: str) -> object:
+    """Load a helper from conftest.py by file path (not package import)."""
+    spec = importlib.util.spec_from_file_location("_mcp_conftest", _CONFTEST_PATH)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return getattr(mod, name)
+
 
 def _import_sitespec():
     """Import sitespec handlers directly to avoid MCP package init issues.
@@ -19,7 +30,7 @@ def _import_sitespec():
     in test environments. We need to import the handlers module directly.
     """
     # Create mock modules to satisfy imports
-    from tests.unit.mcp.conftest import install_handlers_common_mock
+    install_handlers_common_mock = _load_conftest_helper("install_handlers_common_mock")
 
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
     install_handlers_common_mock()
