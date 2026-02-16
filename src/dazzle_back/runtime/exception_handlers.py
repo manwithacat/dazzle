@@ -161,9 +161,9 @@ def register_site_error_handlers(
             )
 
         if exc.status_code == 404 and is_browser:
-            ctx = build_site_404_context(sitespec_data, custom_css=has_custom_css)
+            ctx_404 = build_site_404_context(sitespec_data, custom_css=has_custom_css)
             return HTMLResponse(
-                content=render_site_page("site/404.html", ctx),
+                content=render_site_page("site/404.html", ctx_404),
                 status_code=404,
             )
 
