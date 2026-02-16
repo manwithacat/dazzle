@@ -2342,6 +2342,33 @@ def create_app_factory(
     except ImportError as e:
         logger.warning(f"Page routes not available: {e}")
 
+    # Add island API routes (/api/islands)
+    if getattr(appspec, "islands", None):
+        try:
+            from dazzle_back.runtime.island_routes import create_island_routes
+
+            _island_auth_dep = None
+            _island_opt_dep = None
+            if builder._auth_store:
+                from dazzle_back.runtime.auth import (
+                    create_auth_dependency,
+                    create_optional_auth_dependency,
+                )
+
+                _island_auth_dep = create_auth_dependency(builder._auth_store)
+                _island_opt_dep = create_optional_auth_dependency(builder._auth_store)
+
+            island_router = create_island_routes(
+                islands=appspec.islands,
+                services=builder.services,
+                auth_dep=_island_auth_dep,
+                optional_auth_dep=_island_opt_dep,
+            )
+            app.include_router(island_router)
+            logger.info(f"  Islands: {len(appspec.islands)} mounted at /api/islands")
+        except ImportError as e:
+            logger.warning(f"Island routes not available: {e}")
+
     # Log startup info
     logger.info(f"Dazzle app '{appspec.name}' ready")
     logger.info(f"  Entities: {len(backend_spec.entities)}")

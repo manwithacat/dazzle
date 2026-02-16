@@ -147,6 +147,7 @@ class SymbolTable:
     webhooks: dict[str, ir.WebhookSpec] = field(default_factory=dict)  # v0.25.0
     approvals: dict[str, ir.ApprovalSpec] = field(default_factory=dict)  # v0.25.0
     slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
+    islands: dict[str, ir.IslandSpec] = field(default_factory=dict)  # UI Islands
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
@@ -348,6 +349,10 @@ class SymbolTable:
         """Add SLA to symbol table, checking for duplicates (v0.25.0)."""
         _add_symbol(self.slas, sla.name, sla, "SLA", module_name, self.symbol_sources)
 
+    def add_island(self, island: ir.IslandSpec, module_name: str) -> None:
+        """Add UI island to symbol table, checking for duplicates."""
+        _add_symbol(self.islands, island.name, island, "island", module_name, self.symbol_sources)
+
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:
     """
@@ -530,6 +535,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add SLAs (v0.25.0)
         for sla in module.fragment.slas:
             symbols.add_sla(sla, module.name)
+
+        # Add UI Islands
+        for island in module.fragment.islands:
+            symbols.add_island(island, module.name)
 
     return symbols
 
@@ -1099,4 +1108,5 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         webhooks=list(symbols.webhooks.values()),  # v0.25.0
         approvals=list(symbols.approvals.values()),  # v0.25.0
         slas=list(symbols.slas.values()),  # v0.25.0
+        islands=list(symbols.islands.values()),  # UI Islands
     )
