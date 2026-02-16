@@ -1406,6 +1406,7 @@ class DazzleBackendApp:
         if not self._enable_auth:
             return auth_dep, optional_auth_dep
 
+        assert self._database_url is not None  # guaranteed by _setup_database()
         self._auth_store = AuthStore(database_url=self._database_url)
         self._auth_middleware = AuthMiddleware(self._auth_store)
 
