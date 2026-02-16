@@ -228,8 +228,13 @@ def create_page_routes(
 
     # Register routes
     for route_path, ctx in page_contexts.items():
-        # Convert {id} to FastAPI's :id format
-        fastapi_path = route_path.replace("{id}", "{id:path}")
+        # Route paths include app_prefix for URL generation (nav highlighting,
+        # cross-references).  Strip it for registration since the router is
+        # mounted with the same prefix — otherwise routes get double-prefixed.
+        reg_path = route_path
+        if app_prefix and reg_path.startswith(app_prefix):
+            reg_path = reg_path[len(app_prefix) :] or "/"
+        fastapi_path = reg_path.replace("{id}", "{id:path}")
 
         handler = _make_page_handler(route_path, ctx, view_name=getattr(ctx, "view_name", None))
         router.get(fastapi_path, response_class=HTMLResponse)(handler)

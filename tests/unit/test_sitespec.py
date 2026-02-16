@@ -535,7 +535,9 @@ class TestNavLinkValidation:
 
     def test_nav_href_matches_dsl_route(self) -> None:
         """Test nav link validation accepts DSL-derived routes."""
-        # Create a sitespec with nav link to a DSL route
+        # Create a sitespec with nav link to a DSL route.
+        # Routes use singular, lowercase, hyphenated slugs (matching
+        # the template compiler) — NOT api-plural or workspace-prefixed.
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
@@ -544,7 +546,7 @@ class TestNavLinkValidation:
                         NavItemSpec(label="Home", href="/"),
                     ],
                     authenticated=[
-                        NavItemSpec(label="Contacts", href="/app/agent_dashboard/contacts"),
+                        NavItemSpec(label="Contacts", href="/app/contact"),
                     ],
                 ),
             ),
@@ -558,13 +560,13 @@ class TestNavLinkValidation:
         )
 
         result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
-        # Should have no warnings about the /app/agent_dashboard/contacts href
-        nav_warnings = [w for w in result.warnings if "agent_dashboard/contacts" in w]
+        # Should have no warnings about the /app/contact href
+        nav_warnings = [w for w in result.warnings if "/app/contact" in w]
         assert len(nav_warnings) == 0
 
     def test_nav_href_fuzzy_suggestion_suffix_match(self) -> None:
         """Test fuzzy suggestion when nav href has suffix overlap with DSL route."""
-        # Nav link uses short path that partially matches
+        # Nav link uses plural form that partially matches the correct singular route
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
@@ -583,11 +585,11 @@ class TestNavLinkValidation:
         )
 
         result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
-        # Should warn and suggest the correct route
+        # Should warn and suggest the correct singular route
         nav_warnings = [w for w in result.warnings if "/app/contacts" in w]
         assert len(nav_warnings) == 1
         assert "did you mean" in nav_warnings[0]
-        assert "/app/agent_dashboard/contacts" in nav_warnings[0]
+        assert "/app/contact" in nav_warnings[0]
 
     def test_nav_href_no_suggestion_when_no_close_match(self) -> None:
         """Test no suggestion when href doesn't resemble any known route."""
@@ -661,7 +663,7 @@ class TestNavLinkValidation:
             layout=LayoutSpec(
                 nav=NavSpec(
                     authenticated=[
-                        NavItemSpec(label="Tasks", href="/app/tasks"),
+                        NavItemSpec(label="Tasks", href="/app/task"),
                     ],
                 ),
             ),
@@ -669,17 +671,17 @@ class TestNavLinkValidation:
 
         appspec = self._make_mock_appspec(entities=["Task"])
         result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
-        nav_warnings = [w for w in result.warnings if "/app/tasks" in w]
+        nav_warnings = [w for w in result.warnings if "/app/task" in w]
         assert len(nav_warnings) == 0
 
-    def test_nav_href_matches_workspace_entity_route_no_surface(self) -> None:
-        """Nav link matching a workspace entity route (no explicit surface) produces no warning."""
+    def test_nav_href_matches_workspace_route(self) -> None:
+        """Nav link matching a workspace route produces no warning."""
         spec = SiteSpec(
             brand=BrandSpec(product_name="Test"),
             layout=LayoutSpec(
                 nav=NavSpec(
                     authenticated=[
-                        NavItemSpec(label="Tasks", href="/app/dashboard/tasks"),
+                        NavItemSpec(label="Dashboard", href="/app/workspaces/dashboard"),
                     ],
                 ),
             ),
@@ -690,7 +692,7 @@ class TestNavLinkValidation:
             workspaces=[("dashboard", ["Task"])],
         )
         result = validate_sitespec(spec, check_content_files=False, appspec=appspec)
-        nav_warnings = [w for w in result.warnings if "/app/dashboard/tasks" in w]
+        nav_warnings = [w for w in result.warnings if "/app/workspaces/dashboard" in w]
         assert len(nav_warnings) == 0
 
     def test_nav_href_entity_route_without_appspec_still_warns(self) -> None:
@@ -700,12 +702,12 @@ class TestNavLinkValidation:
             layout=LayoutSpec(
                 nav=NavSpec(
                     authenticated=[
-                        NavItemSpec(label="Tasks", href="/app/tasks"),
+                        NavItemSpec(label="Tasks", href="/app/task"),
                     ],
                 ),
             ),
         )
 
         result = validate_sitespec(spec, check_content_files=False)
-        nav_warnings = [w for w in result.warnings if "/app/tasks" in w]
+        nav_warnings = [w for w in result.warnings if "/app/task" in w]
         assert len(nav_warnings) == 1

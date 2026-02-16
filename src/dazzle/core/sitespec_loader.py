@@ -57,7 +57,6 @@ from .ir.sitespec import (
     TrustBarItem,
     create_default_sitespec,
 )
-from .strings import to_api_plural
 
 logger = logging.getLogger(__name__)
 
@@ -760,9 +759,8 @@ def _validate_section(
 def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
     """Derive app routes from AppSpec surfaces/workspaces.
 
-    Lightweight inline version of frontend_spec_export._build_route_map()
-    to avoid circular imports.  Also includes standalone entity list routes
-    and workspace-prefixed entity routes that the runtime auto-generates.
+    Must match the slugification used by the template compiler
+    (singular, lowercase, hyphens) — NOT the API plural form.
     """
     seen: set[str] = set()
     routes: list[str] = []
@@ -773,22 +771,16 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
             seen.add(route)
             routes.append(route)
 
-    # 1. Surface-derived routes (explicit surfaces)
+    def _entity_slug(name: str) -> str:
+        """Match template_compiler slugification: singular, lowercase, hyphens."""
+        return name.lower().replace("_", "-")
+
+    # 1. Surface-derived routes — flat (no workspace prefix), matching
+    #    the template compiler's route_map format.
     for surface in appspec.surfaces:
         entity_name = surface.entity_ref or "general"
-        slug = to_api_plural(entity_name)
-
-        # Find workspace containing this entity
-        workspace_slug: str | None = None
-        for ws in appspec.workspaces:
-            for region in ws.regions:
-                if region.source == entity_name:
-                    workspace_slug = ws.name
-                    break
-            if workspace_slug:
-                break
-
-        base = f"{mount}/{workspace_slug}/{slug}" if workspace_slug else f"{mount}/{slug}"
+        slug = _entity_slug(entity_name)
+        base = f"{mount}/{slug}"
         mode = surface.mode.value
 
         if mode == "list":
@@ -796,23 +788,19 @@ def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:
         elif mode == "view":
             _add(f"{base}/:id")
         elif mode == "create":
-            _add(f"{base}/new")
+            _add(f"{base}/create")
         elif mode == "edit":
             _add(f"{base}/:id/edit")
 
-    # 2. Standalone entity list routes — the runtime auto-generates CRUD
-    #    routes for every entity even without explicit surfaces.
+    # 2. Standalone entity routes (for entities that may not have
+    #    explicit surfaces but get auto-generated CRUD pages).
     for entity in appspec.domain.entities:
-        slug = to_api_plural(entity.name)
+        slug = _entity_slug(entity.name)
         _add(f"{mount}/{slug}")
 
-    # 3. Workspace-prefixed entity routes — the runtime registers
-    #    /{ws_name}/{entity_plural} redirect routes for each workspace region.
+    # 3. Workspace routes
     for ws in appspec.workspaces:
-        for region in ws.regions:
-            if region.source:
-                slug = to_api_plural(region.source)
-                _add(f"{mount}/{ws.name}/{slug}")
+        _add(f"{mount}/workspaces/{ws.name}")
 
     return routes
 
