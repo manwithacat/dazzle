@@ -1,0 +1,35 @@
+{# macros/a11y.html — reusable accessibility helpers #}
+
+{# Screen-reader-only text #}
+{% macro sr_only(text) %}
+<span class="sr-only">{{ text }}</span>
+{% endmacro %}
+
+{# Visually hidden but focusable skip link #}
+{% macro skip_link(target="#main-content", text="Skip to main content") %}
+<a href="{{ target }}"
+   class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2
+          focus:z-[9999] focus:p-3 focus:bg-primary focus:text-primary-content
+          focus:rounded focus:shadow-lg focus:text-sm focus:font-semibold">
+  {{ text }}
+</a>
+{% endmacro %}
+
+{# Icon with accessible label — decorative by default #}
+{% macro icon(svg, label=None) %}
+{% if label %}
+<span role="img" aria-label="{{ label }}">{{ svg | safe }}</span>
+{% else %}
+<span aria-hidden="true">{{ svg | safe }}</span>
+{% endif %}
+{% endmacro %}
+
+{# Loading spinner with live announcement #}
+{% macro loading_spinner(label="Loading", id=None) %}
+<div {% if id %}id="{{ id }}"{% endif %}
+     class="htmx-indicator flex justify-center py-4"
+     role="status" aria-label="{{ label }}">
+  <span class="loading loading-spinner loading-md" aria-hidden="true"></span>
+  <span class="sr-only">{{ label }}</span>
+</div>
+{% endmacro %}

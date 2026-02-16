@@ -1,5 +1,6 @@
 {# Search-select fragment — debounced search with dropdown results, no Alpine #}
 {# Uses native focus/blur + HTMX. Dropdown closes on click-outside via focusout. #}
+{# ARIA combobox pattern for screen reader accessibility. #}
 
 <div class="relative w-full" data-dz-toggleable>
   {# Hidden input stores the selected value #}
@@ -12,27 +13,35 @@
          class="input input-bordered w-full"
          placeholder="{{ field.placeholder or ('Search ' + field.label + '...') }}"
          autocomplete="off"
+         role="combobox"
+         aria-expanded="false"
+         aria-controls="search-results-{{ field.name }}"
+         aria-autocomplete="list"
+         aria-haspopup="listbox"
          hx-get="{{ field.source.endpoint }}"
          hx-trigger="keyup changed delay:{{ field.source.debounce_ms }}ms"
          hx-target="#search-results-{{ field.name }}"
          hx-indicator="#search-spinner-{{ field.name }}"
          hx-params="q"
          {% if field.source.min_chars %}hx-vals='{"min_chars": {{ field.source.min_chars }}}'{% endif %}
-         onfocus="this.closest('[data-dz-toggleable]').querySelector('[data-dz-show]').style.display=''"
-         onblur="setTimeout(()=>{const c=this.closest('[data-dz-toggleable]');const d=c.querySelector('[data-dz-show]');if(d)d.style.display='none'},200)" />
+         onfocus="this.setAttribute('aria-expanded','true');this.closest('[data-dz-toggleable]').querySelector('[data-dz-show]').style.display=''"
+         onblur="setTimeout(()=>{const c=this.closest('[data-dz-toggleable]');const d=c.querySelector('[data-dz-show]');if(d)d.style.display='none';this.setAttribute('aria-expanded','false')},200)" />
 
   {# Loading indicator #}
-  <span id="search-spinner-{{ field.name }}" class="htmx-indicator absolute right-3 top-3">
-    <span class="loading loading-spinner loading-sm"></span>
+  <span id="search-spinner-{{ field.name }}" class="htmx-indicator absolute right-3 top-3"
+        role="status" aria-label="Searching">
+    <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
   </span>
 
   {# Dropdown results container #}
   <div id="search-results-{{ field.name }}"
        data-dz-show
+       role="listbox"
+       aria-label="{{ field.label }} suggestions"
        style="display:none;"
        class="absolute z-50 w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
     {# Empty state shown before any search #}
-    <div class="p-3 text-sm text-base-content/50">
+    <div class="p-3 text-sm text-base-content/50" role="option" aria-disabled="true">
       Type at least {{ field.source.min_chars }} characters to search...
     </div>
   </div>

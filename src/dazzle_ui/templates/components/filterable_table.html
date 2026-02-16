@@ -15,8 +15,8 @@
       {# Column visibility toggle #}
       {% if table.columns | length > 3 %}
       <div data-dz-toggleable class="relative">
-        <button data-dz-toggle class="btn btn-ghost btn-sm" title="Toggle columns">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18"/></svg>
+        <button data-dz-toggle class="btn btn-ghost btn-sm" aria-label="Toggle column visibility">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18"/></svg>
           Columns
         </button>
         <div data-dz-show style="display:none;"
@@ -58,39 +58,48 @@
   {% endif %}
 
   {# Loading indicator #}
-  <div id="{{ table.table_id or 'dt-table' }}-loading" class="htmx-indicator flex justify-center py-4">
-    <span class="loading loading-spinner loading-md"></span>
+  <div id="{{ table.table_id or 'dt-table' }}-loading" class="htmx-indicator flex justify-center py-4"
+       role="status" aria-label="Loading">
+    <span class="loading loading-spinner loading-md" aria-hidden="true"></span>
+    <span class="sr-only">Loading data...</span>
   </div>
 
   {# Table #}
-  <div class="overflow-x-auto">
-    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}" data-dazzle-table="{{ table.entity_name }}">
+  <div class="overflow-x-auto" role="region" aria-label="{{ table.title }} table" tabindex="0">
+    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}" data-dazzle-table="{{ table.entity_name }}"
+           aria-label="{{ table.title }}">
+      <caption class="sr-only">{{ table.title }}</caption>
       <thead>
         <tr>
           {% if table.bulk_actions %}
-          <th class="w-10">
-            <input type="checkbox" class="checkbox checkbox-sm" data-dz-select-all />
+          <th scope="col" class="w-10">
+            <input type="checkbox" class="checkbox checkbox-sm" data-dz-select-all
+                   aria-label="Select all rows" />
           </th>
           {% endif %}
           {% for col in table.columns %}
-          <th data-dz-col="{{ col.key }}"
+          <th scope="col" data-dz-col="{{ col.key }}"
               {% if col.sortable %}
-              class="cursor-pointer select-none hover:bg-base-200"
               data-dz-sort="{{ col.key }}"
+              aria-sort="none"
               {% endif %}>
-            <span class="inline-flex items-center gap-1">
+            {% if col.sortable %}
+            <button class="inline-flex items-center gap-1 cursor-pointer select-none hover:bg-base-200 rounded px-1 -mx-1"
+                    data-dz-sort-btn
+                    aria-label="Sort by {{ col.label }}">
               {{ col.label }}
-              {% if col.sortable %}
               <svg data-dz-sort-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                    class="w-3 h-3 stroke-current transition-transform"
-                   style="display:none;">
+                   style="display:none;" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
               </svg>
-              {% endif %}
-            </span>
+            </button>
+            {% else %}
+            {{ col.label }}
+            {% endif %}
           </th>
           {% endfor %}
-          <th class="w-16"></th>
+          <th scope="col" class="w-16"><span class="sr-only">Actions</span></th>
         </tr>
       </thead>
       <tbody id="{{ table.table_id or 'dt-table' }}-body"

@@ -319,7 +319,7 @@ const dz = (() => {
   // ── Inline Edit ──────────────────────────────────────────────────────
 
   function initInlineEdit() {
-    // Click to enter edit mode
+    // Click to enter edit mode (supports both <span> and <button> triggers)
     document.addEventListener("click", (e) => {
       const display = /** @type {HTMLElement} */ (e.target).closest(
         "[data-dz-inline-display]",
@@ -329,7 +329,7 @@ const dz = (() => {
       if (!container) return;
       const form = container.querySelector("form");
       const input = container.querySelector("input[name]");
-      if (display) /** @type {HTMLElement} */ (display).style.display = "none";
+      /** @type {HTMLElement} */ (display).style.display = "none";
       if (form) /** @type {HTMLElement} */ (form).style.display = "";
       if (input) /** @type {HTMLInputElement} */ (input).focus();
     });

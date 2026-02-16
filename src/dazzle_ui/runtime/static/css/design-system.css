@@ -171,8 +171,17 @@
   --dz-spacing-feature-gap: 2rem;
   --dz-spacing-card-padding: 1.5rem;
 
+  /* Fluid typography — clamp() for responsive sizing without breakpoints */
+  --dz-font-size-fluid-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+  --dz-font-size-fluid-sm: clamp(0.875rem, 0.8rem + 0.375vw, 1rem);
+  --dz-font-size-fluid-base: clamp(1rem, 0.9rem + 0.5vw, 1.125rem);
+  --dz-font-size-fluid-lg: clamp(1.125rem, 1rem + 0.625vw, 1.375rem);
+  --dz-font-size-fluid-xl: clamp(1.25rem, 1rem + 1.25vw, 1.75rem);
+  --dz-font-size-fluid-2xl: clamp(1.5rem, 1.1rem + 2vw, 2.25rem);
+  --dz-font-size-fluid-3xl: clamp(1.875rem, 1.3rem + 2.875vw, 3rem);
+
   /* Typography — hero */
-  --dz-font-size-hero-headline: 3.5rem;
+  --dz-font-size-hero-headline: clamp(2.25rem, 1.5rem + 3.75vw, 3.5rem);
   --dz-font-weight-hero-headline: 800;
   --dz-line-height-hero-headline: 1.1;
   --dz-letter-spacing-hero-headline: -0.02em;
@@ -386,6 +395,40 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   transition: all var(--duration-fast) var(--ease-default);
 }
 
+/* Focus visibility — consistent, high-contrast focus ring */
+:focus-visible {
+  outline: 3px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Remove default focus outline — rely on :focus-visible only */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+  :root {
+    --border: 240 10% 30%;
+    --input: 240 10% 30%;
+    --muted-foreground: 240 10% 25%;
+  }
+  .btn {
+    border: 2px solid currentColor;
+  }
+  .badge {
+    border: 1px solid currentColor;
+  }
+  .card {
+    border-width: 2px;
+  }
+  .input,
+  .select,
+  .textarea {
+    border-width: 2px;
+  }
+}
+
 /* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
@@ -406,11 +449,11 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 .drawer-side > aside.bg-base-200,
 .drawer-side > aside.bg-base-100 {
   background: hsl(var(--card));
-  border-right: 1px solid hsl(var(--border));
+  border-inline-end: 1px solid hsl(var(--border));
 }
 
 .drawer-side aside > div:first-child {
-  border-bottom-color: hsl(var(--border));
+  border-block-end-color: hsl(var(--border));
 }
 
 .drawer-side aside > div:first-child a {
@@ -440,7 +483,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 }
 
 .drawer-side aside > div:last-child {
-  border-top-color: hsl(var(--border));
+  border-block-start-color: hsl(var(--border));
 }
 
 /* --- Navbar --- */
@@ -448,7 +491,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 .navbar {
   backdrop-filter: blur(8px);
   background: hsl(var(--background) / 0.85);
-  border-bottom: 1px solid hsl(var(--border));
+  border-block-end: 1px solid hsl(var(--border));
 }
 
 .navbar .text-xl {
@@ -606,8 +649,9 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: hsl(var(--muted-foreground));
-  border-bottom: 1px solid hsl(var(--border));
-  padding: 0.75rem 1rem;
+  border-block-end: 1px solid hsl(var(--border));
+  padding-block: 0.75rem;
+  padding-inline: 1rem;
 }
 
 .table tbody tr {
@@ -619,13 +663,14 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 }
 
 .table tbody td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid hsl(var(--border) / 0.5);
+  padding-block: 0.75rem;
+  padding-inline: 1rem;
+  border-block-end: 1px solid hsl(var(--border) / 0.5);
   vertical-align: middle;
 }
 
 .table tbody tr:last-child td {
-  border-bottom: none;
+  border-block-end: none;
 }
 
 /* --- Badges --- */
@@ -747,7 +792,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 /* --- Page Header --- */
 
 .dz-page-header {
-  margin-bottom: 1.5rem;
+  margin-block-end: 1.5rem;
 }
 
 .dz-page-header h1,
@@ -782,7 +827,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-block-end: 1rem;
   gap: 1rem;
 }
 
@@ -886,11 +931,51 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
 
   .table thead th,
   .table tbody td {
-    padding: 0.5rem 0.75rem;
+    padding-block: 0.5rem;
+    padding-inline: 0.75rem;
     font-size: 0.875rem;
   }
 
   .stat {
     padding: 1rem;
+  }
+}
+
+/* =============================================================================
+   8. Container Queries
+   ============================================================================= */
+
+/* Table container — enable container queries for responsive stacking */
+.overflow-x-auto[role="region"] {
+  container-type: inline-size;
+  container-name: table-container;
+}
+
+/* Stack table on narrow containers */
+@container table-container (max-width: 480px) {
+  .table thead {
+    display: none;
+  }
+  .table tbody tr {
+    display: block;
+    margin-block-end: 0.75rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: var(--radius-md);
+    padding: 0.5rem;
+  }
+  .table tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding-block: 0.25rem;
+    padding-inline: 0.5rem;
+    border-block-end: none;
+  }
+  .table tbody td::before {
+    content: attr(data-label);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: hsl(var(--muted-foreground));
   }
 }

@@ -1,16 +1,20 @@
 {# Inline editing fragment — click-to-edit with HTMX save, no Alpine #}
 {# Parameters: field_name, field_value, endpoint, field_type (default: text) #}
 {% set field_type = field_type | default('text') %}
-<div data-dz-inline-edit class="inline-edit-container group cursor-pointer">
+<div data-dz-inline-edit class="inline-edit-container group">
 
-  {# Display mode #}
-  <span data-dz-inline-display
-        class="inline-flex items-center gap-1 hover:bg-base-200 rounded px-1 -mx-1 transition-colors">
+  {# Display mode — button for keyboard accessibility #}
+  <button type="button"
+          data-dz-inline-display
+          class="inline-flex items-center gap-1 hover:bg-base-200 rounded px-1 -mx-1
+                 transition-colors cursor-pointer text-left"
+          aria-label="Edit {{ field_name | replace('_', ' ') }}: {{ field_value }}">
     <span>{{ field_value }}</span>
-    <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 group-focus-within:opacity-50 transition-opacity"
+         fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
     </svg>
-  </span>
+  </button>
 
   {# Edit mode (hidden by default) #}
   <form style="display:none;"
@@ -20,13 +24,15 @@
         hx-headers='{"Accept": "text/html"}'
         hx-indicator="next .htmx-indicator">
     <div class="flex items-center gap-1">
-      <input type="{{ field_type }}"
+      <label for="inline-{{ field_name }}" class="sr-only">{{ field_name | replace('_', ' ') | title }}</label>
+      <input id="inline-{{ field_name }}"
+             type="{{ field_type }}"
              name="{{ field_name }}"
              value="{{ field_value }}"
              onblur="this.form.requestSubmit()"
              onkeydown="if(event.key==='Enter'){event.preventDefault();this.form.requestSubmit()}if(event.key==='Escape'){this.closest('[data-dz-inline-edit]').querySelector('[data-dz-inline-display]').style.display='';this.form.style.display='none'}"
              class="input input-bordered input-sm input-ghost w-full" />
-      <span class="htmx-indicator loading loading-spinner loading-xs"></span>
+      <span class="htmx-indicator loading loading-spinner loading-xs" aria-hidden="true"></span>
     </div>
   </form>
 </div>

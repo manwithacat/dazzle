@@ -1,6 +1,7 @@
 {# Status badge fragment - expects 'value' variable in scope #}
 {% if value %}
-<span class="badge badge-sm {{ value | badge_class }}">{{ value | replace("_", " ") | title }}</span>
+<span class="badge badge-sm {{ value | badge_class }}"
+      role="status">{{ value | replace("_", " ") | title }}</span>
 {% else %}
-<span class="text-base-content/30">—</span>
+<span class="text-base-content/30" aria-label="No status">—</span>
 {% endif %}

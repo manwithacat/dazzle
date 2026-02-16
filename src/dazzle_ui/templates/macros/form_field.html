@@ -1,16 +1,24 @@
 {# Form field macros - renders the appropriate input for each field type #}
+{# Accessible version: aria-required, aria-invalid, aria-describedby #}
 
 {% macro render_field(field, values={}, errors={}) %}
 {% set value = values.get(field.name, field.default) if values else field.default %}
 {% set error = errors.get(field.name, "") if errors else "" %}
+{% set field_id = "field-" ~ field.name %}
+{% set error_id = "error-" ~ field.name %}
+{% set hint_id = "hint-" ~ field.name if field.hint is defined and field.hint else "" %}
+{% set described_by = ([error_id] if error else []) + ([hint_id] if hint_id else []) %}
 
 <div class="form-control w-full {% if error %}has-error{% endif %}">
   {% if field.type == "checkbox" %}
     {# Checkbox: label is inline #}
     <label class="label cursor-pointer justify-start gap-3">
       <input type="checkbox" name="{{ field.name }}"
+             id="{{ field_id }}"
              data-dazzle-field="{{ field.name }}"
              class="checkbox checkbox-primary"
+             {% if error %}aria-invalid="true"{% endif %}
+             {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %}
              {% if value %}checked{% endif %} />
       <span class="label-text">{{ field.label }}</span>
     </label>
@@ -20,33 +28,49 @@
     <label class="label" for="search-input-{{ field.name }}">
       <span class="label-text">
         {{ field.label }}
-        {% if field.required %}<span class="text-error">*</span>{% endif %}
+        {% if field.required %}
+          <span class="text-error" aria-hidden="true">*</span>
+          <span class="sr-only">(required)</span>
+        {% endif %}
       </span>
     </label>
     {% include "fragments/search_select.html" %}
 
   {% else %}
     {# Standard fields: label above #}
-    <label class="label" for="field-{{ field.name }}">
+    <label class="label" for="{{ field_id }}">
       <span class="label-text">
         {{ field.label }}
-        {% if field.required %}<span class="text-error">*</span>{% endif %}
+        {% if field.required %}
+          <span class="text-error" aria-hidden="true">*</span>
+          <span class="sr-only">(required)</span>
+        {% endif %}
       </span>
     </label>
 
+    {% if field.hint is defined and field.hint %}
+    <p id="{{ hint_id }}" class="label-text-alt text-base-content/60 mb-1">
+      {{ field.hint }}
+    </p>
+    {% endif %}
+
     {% if field.type == "textarea" %}
-      <textarea id="field-{{ field.name }}" name="{{ field.name }}"
+      <textarea id="{{ field_id }}" name="{{ field.name }}"
                 data-dazzle-field="{{ field.name }}"
                 class="textarea textarea-bordered w-full {% if error %}textarea-error{% endif %}"
                 placeholder="{{ field.placeholder }}"
-                {% if field.required %}required{% endif %}
+                {% if field.required %}required aria-required="true"{% endif %}
+                {% if error %}aria-invalid="true"{% endif %}
+                {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %}
                 rows="4">{{ value | default("", true) }}</textarea>
 
     {% elif field.type == "select" %}
-      <select id="field-{{ field.name }}" name="{{ field.name }}"
+      <select id="{{ field_id }}" name="{{ field.name }}"
               data-dazzle-field="{{ field.name }}"
               class="select select-bordered w-full {% if error %}select-error{% endif %}"
-              {% if field.required %}required{% endif %}>
+              {% if field.required %}required aria-required="true"{% endif %}
+              {% if error %}aria-invalid="true"{% endif %}
+              {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %}>
         <option value="" disabled {% if not value %}selected{% endif %}>
           {{ field.placeholder or ("Select " + field.label) }}
         </option>
@@ -58,18 +82,22 @@
       </select>
 
     {% elif field.type == "date" %}
-      <input id="field-{{ field.name }}" type="date" name="{{ field.name }}"
+      <input id="{{ field_id }}" type="date" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
-             {% if field.required %}required{% endif %} />
+             {% if field.required %}required aria-required="true"{% endif %}
+             {% if error %}aria-invalid="true"{% endif %}
+             {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
 
     {% elif field.type == "datetime" %}
-      <input id="field-{{ field.name }}" type="datetime-local" name="{{ field.name }}"
+      <input id="{{ field_id }}" type="datetime-local" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
-             {% if field.required %}required{% endif %} />
+             {% if field.required %}required aria-required="true"{% endif %}
+             {% if error %}aria-invalid="true"{% endif %}
+             {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
 
     {% elif field.type == "money" %}
       {# Money widget: major-unit display input + hidden minor-unit value #}
@@ -78,13 +106,18 @@
       <div data-dz-money="{{ field.name }}" data-dz-currency="{{ field.extra.currency_code }}"
            data-dz-scale="{{ field.extra.scale }}">
         <div class="join w-full">
-          <span class="join-item btn btn-ghost no-animation pointer-events-none dz-money-prefix">
+          <span class="join-item btn btn-ghost no-animation pointer-events-none dz-money-prefix"
+                aria-hidden="true">
             {{ field.extra.symbol }}
           </span>
-          <input type="text" inputmode="decimal" id="field-{{ field.name }}"
+          <input type="text" inputmode="decimal" id="{{ field_id }}"
                  data-dazzle-field="{{ field.name }}" data-dz-money-display
                  class="input input-bordered join-item w-full {% if error %}input-error{% endif %}"
-                 placeholder="0.00" {% if field.required %}required{% endif %} />
+                 placeholder="0.00"
+                 aria-label="{{ field.label }} ({{ field.extra.currency_code }})"
+                 {% if field.required %}required aria-required="true"{% endif %}
+                 {% if error %}aria-invalid="true"{% endif %}
+                 {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
         </div>
         <input type="hidden" name="{{ field.name }}_minor" data-dz-money-minor
                value="{{ values.get(field.name ~ '_minor', '') if values else '' }}" />
@@ -96,7 +129,8 @@
       <div data-dz-money="{{ field.name }}" data-dz-scale="{{ field.extra.scale }}">
         <div class="join w-full">
           <select data-dz-money-currency name="{{ field.name }}_currency"
-                  class="select select-bordered join-item w-36">
+                  class="select select-bordered join-item w-36"
+                  aria-label="Currency for {{ field.label }}">
             {% for opt in field.extra.get('currency_options', []) %}
             <option value="{{ opt.code }}" data-scale="{{ opt.scale }}"
                     data-symbol="{{ opt.symbol }}"
@@ -105,10 +139,14 @@
             </option>
             {% endfor %}
           </select>
-          <input type="text" inputmode="decimal" id="field-{{ field.name }}"
+          <input type="text" inputmode="decimal" id="{{ field_id }}"
                  data-dazzle-field="{{ field.name }}" data-dz-money-display
                  class="input input-bordered join-item w-full {% if error %}input-error{% endif %}"
-                 placeholder="0.00" {% if field.required %}required{% endif %} />
+                 placeholder="0.00"
+                 aria-label="{{ field.label }}"
+                 {% if field.required %}required aria-required="true"{% endif %}
+                 {% if error %}aria-invalid="true"{% endif %}
+                 {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
         </div>
         <input type="hidden" name="{{ field.name }}_minor" data-dz-money-minor
                value="{{ values.get(field.name ~ '_minor', '') if values else '' }}" />
@@ -116,36 +154,42 @@
       {% endif %}
 
     {% elif field.type == "number" %}
-      <input id="field-{{ field.name }}" type="number" name="{{ field.name }}"
+      <input id="{{ field_id }}" type="number" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
-             {% if field.required %}required{% endif %} />
+             {% if field.required %}required aria-required="true"{% endif %}
+             {% if error %}aria-invalid="true"{% endif %}
+             {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
 
     {% elif field.type == "email" %}
-      <input id="field-{{ field.name }}" type="email" name="{{ field.name }}"
+      <input id="{{ field_id }}" type="email" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
-             {% if field.required %}required{% endif %} />
+             {% if field.required %}required aria-required="true"{% endif %}
+             {% if error %}aria-invalid="true"{% endif %}
+             {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
 
     {% else %}
       {# Default: text input #}
-      <input id="field-{{ field.name }}" type="text" name="{{ field.name }}"
+      <input id="{{ field_id }}" type="text" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
              class="input input-bordered w-full {% if error %}input-error{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
-             {% if field.required %}required{% endif %} />
+             {% if field.required %}required aria-required="true"{% endif %}
+             {% if error %}aria-invalid="true"{% endif %}
+             {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
     {% endif %}
   {% endif %}
 
   {% if error %}
-  <label class="label">
-    <span class="label-text-alt text-error">{{ error }}</span>
-  </label>
+  <p id="{{ error_id }}" class="label-text-alt text-error mt-1" role="alert">
+    {{ error }}
+  </p>
   {% endif %}
 </div>
 {% endmacro %}
