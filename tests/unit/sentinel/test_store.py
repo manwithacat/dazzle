@@ -121,7 +121,7 @@ class TestSuppressFinding:
         ok = store.suppress_finding(f.finding_id, "false positive")
         assert ok is True
         latest = store.load_latest_findings()
-        assert latest[0].status == FindingStatus.FALSE_POSITIVE
+        assert latest[0].status == FindingStatus.SUPPRESSED
         assert latest[0].suppression_reason == "false positive"
 
     def test_returns_false_for_unknown_finding(self, tmp_path: Path) -> None:

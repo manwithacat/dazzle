@@ -37,6 +37,7 @@ class FindingStatus(StrEnum):
     MITIGATED = "mitigated"
     CLOSED = "closed"
     FALSE_POSITIVE = "false_positive"
+    SUPPRESSED = "suppressed"
 
 
 class ScanTrigger(StrEnum):

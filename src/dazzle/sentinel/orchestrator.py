@@ -86,7 +86,7 @@ class ScanOrchestrator:
                 f
                 for f in stamped
                 if _SEVERITY_ORDER.get(f.severity, 4) <= threshold_idx
-                and f.status != FindingStatus.FALSE_POSITIVE
+                and f.status not in (FindingStatus.FALSE_POSITIVE, FindingStatus.SUPPRESSED)
             ]
         else:
             stamped = [f for f in stamped if _SEVERITY_ORDER.get(f.severity, 4) <= threshold_idx]

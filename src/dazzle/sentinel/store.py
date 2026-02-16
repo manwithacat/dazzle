@@ -96,7 +96,7 @@ class FindingStore:
         mutated = False
         for f in data.get("findings", []):
             if f.get("finding_id") == finding_id:
-                f["status"] = FindingStatus.FALSE_POSITIVE.value
+                f["status"] = FindingStatus.SUPPRESSED.value
                 f["suppression_reason"] = reason
                 mutated = True
                 break

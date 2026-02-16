@@ -183,7 +183,7 @@ class TestDeduplication:
         ):
             config = ScanConfig(include_suppressed=True)
             result2 = orch.run_scan(make_appspec(), config)
-        suppressed = [f for f in result2.findings if f.status == FindingStatus.FALSE_POSITIVE]
+        suppressed = [f for f in result2.findings if f.status == FindingStatus.SUPPRESSED]
         assert len(suppressed) == 1
 
 
