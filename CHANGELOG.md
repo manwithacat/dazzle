@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.2] - 2026-02-16
+
+### Changed
+- Split god classes: DazzleBackendApp, KnowledgeGraphHandlers, LiteProcessAdapter into focused sub-classes
+- Split large modules: discovery.py and KG handlers.py into packages with focused sub-modules
+- Extract BaseEventBus from postgres/redis/sqlite event bus implementations
+- Handler factory pattern for consolidated MCP handlers reducing boilerplate
+- Centralized path constants in paths.py replacing hardcoded strings
+- LSP completion refactored into per-context dispatch for maintainability
+
+### Removed
+- Dead tools.py (1623 lines) replaced by tools_consolidated.py
+
+### Fixed
+- Error handling in queue/stream adapters for JSON decode and subprocess timeouts
+- Type safety: concrete DB return types, TypedDict for structured returns
+- ARIA accessibility improvements for generated app interfaces
+
 ## [0.28.1] - 2026-02-15
 
 ### Fixed

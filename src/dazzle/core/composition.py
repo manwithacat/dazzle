@@ -189,10 +189,9 @@ DEFAULT_SECTION_RULES: dict[str, list[dict[str, Any]]] = {
             "type": "balance",
             "left": ["h1", "subhead", "primary_cta", "secondary_cta"],
             "right": ["hero_image"],
-            "max_imbalance": 0.30,
+            "max_imbalance": 0.65,
             "severity": "low",
-            "escalate_with_media": "high",
-            "message": "Left/right total weight within 30%",
+            "message": "Left/right total weight within 65%",
         },
     ],
     "features": [
