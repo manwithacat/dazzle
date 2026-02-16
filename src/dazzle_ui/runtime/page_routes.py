@@ -240,8 +240,9 @@ def create_page_routes(
     if workspaces:
         from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
-        # Build nav items for workspace pages (same logic as template_compiler)
-        ws_nav_items = []
+        # Build nav items for workspace pages: workspace links + entity surface links.
+        # Entity surfaces are derived from workspace regions' source entities.
+        ws_nav_items: list[dict[str, Any]] = []
         for ws in workspaces:
             ws_nav_items.append(
                 {
@@ -252,6 +253,35 @@ def create_page_routes(
                     else [],
                 }
             )
+
+        # Add entity surface links from each workspace's regions
+        surfaces = getattr(appspec, "surfaces", []) or []
+        _list_surfaces_by_entity: dict[str, Any] = {}
+        for surface in surfaces:
+            if surface.mode.value == "list" and surface.entity_ref:
+                _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
+
+        # Per-workspace nav: workspace links + entity surfaces from regions
+        ws_entity_nav: dict[str, list[dict[str, Any]]] = {}
+        for ws in workspaces:
+            entity_items: list[dict[str, Any]] = []
+            seen_entities: set[str] = set()
+            for region in ws.regions:
+                if region.source and region.source not in seen_entities:
+                    seen_entities.add(region.source)
+                    list_surface = _list_surfaces_by_entity.get(region.source)
+                    if list_surface:
+                        entity_slug = region.source.lower().replace("_", "-")
+                        entity_items.append(
+                            {
+                                "label": list_surface.title
+                                or region.source.replace("_", " ").title(),
+                                "route": f"{app_prefix}/{entity_slug}",
+                                "allow_personas": [],
+                            }
+                        )
+            ws_entity_nav[ws.name] = entity_items
+
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
 
         for workspace in workspaces:
@@ -261,17 +291,19 @@ def create_page_routes(
             _ws_allowed = (
                 list(workspace.access.allow_personas) if getattr(workspace, "access", None) else []
             )
+            _ws_entity_items = ws_entity_nav.get(workspace.name, [])
 
             def _make_workspace_handler(
                 ws_context: Any = _ws_ctx,
                 ws_route: str = _ws_route,
                 ws_allowed_personas: list[str] = _ws_allowed,
+                ws_entity_items: list[dict[str, Any]] = _ws_entity_items,
             ) -> Any:
                 async def workspace_handler(request: Request) -> Response:
                     from dazzle_ui.runtime.template_renderer import render_fragment
 
                     # Inject auth context if available
-                    visible_nav = list(ws_nav_items)
+                    visible_nav = list(ws_nav_items) + list(ws_entity_items)
                     is_authenticated = False
                     user_email = ""
                     user_name = ""
@@ -288,7 +320,7 @@ def create_page_routes(
                                 # Filter nav by persona access
                                 visible_nav = [
                                     {"label": item["label"], "route": item["route"]}
-                                    for item in ws_nav_items
+                                    for item in ws_nav_items + ws_entity_items
                                     if not item["allow_personas"]
                                     or any(r in item["allow_personas"] for r in user_roles)
                                 ]
@@ -298,7 +330,7 @@ def create_page_routes(
                     # Enforce workspace persona access control (superusers bypass)
                     is_superuser = (
                         get_auth_context is not None
-                        and auth_ctx is not None  # type: ignore[possibly-undefined]
+                        and auth_ctx is not None  # noqa: F821
                         and auth_ctx.user is not None
                         and auth_ctx.user.is_superuser
                     )
