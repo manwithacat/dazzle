@@ -159,7 +159,7 @@ dazzle = ["py.typed"]
 "dazzle.lsp" = ["grammars/*.json"]
 # Dazzle UI templates (Jinja2 HTML templates for site pages, components, etc.)
 # Note: templates/ is a data directory, not a Python package, so include from parent
-"dazzle_ui" = ["templates/**/*.html", "templates/**/*.css", "templates/**/*.js"]
+"dazzle_ui" = ["templates/**/*.html", "templates/**/*.css", "templates/**/*.js", "static/**/*.js", "static/**/*.css"]
 # Dazzle UI runtime static files (JS, CSS)
 "dazzle_ui.runtime.static" = ["**/*.js", "**/*.css"]
 
