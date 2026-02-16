@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pptx.presentation import Presentation
+    from pptx.slide import Slide
 
 from dazzle.pitch.extractor import PitchContext
 from dazzle.pitch.generators.pptx_primitives import (
@@ -65,7 +69,7 @@ _ = (
 )
 
 
-def _build_title_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_title_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build the title slide."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
@@ -122,7 +126,7 @@ def _build_title_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> N
     _add_speaker_notes(slide, notes or f"Title slide for {name}. {tagline}")
 
 
-def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_problem_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build the problem slide."""
     from pptx.util import Inches
 
@@ -170,7 +174,7 @@ def _build_problem_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
     _add_speaker_notes(slide, notes or f"Problem: {problem.headline}")
 
 
-def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_solution_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build the solution slide."""
     from pptx.util import Inches
 
@@ -242,7 +246,7 @@ def _build_solution_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
     _add_speaker_notes(slide, notes or f"Solution: {solution.headline}")
 
 
-def _build_platform_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_platform_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build platform overview slide from DSL data."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
@@ -337,7 +341,7 @@ def _build_platform_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
     )
 
 
-def _build_personas_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_personas_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build personas slide from DSL data."""
     from pptx.util import Inches
 
@@ -379,7 +383,7 @@ def _build_personas_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -
     _add_speaker_notes(slide, f"{len(ctx.personas)} user personas defined in DSL.")
 
 
-def _build_market_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_market_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build market sizing slide."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
@@ -483,7 +487,9 @@ def _build_market_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> 
     _add_speaker_notes(slide, notes or "Market sizing: TAM/SAM/SOM breakdown.")
 
 
-def _build_business_model_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_business_model_slide(
+    prs: Presentation, ctx: PitchContext, colors: dict[str, Any]
+) -> None:
     """Build business model / pricing slide."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
@@ -564,7 +570,7 @@ def _build_business_model_slide(prs: Any, ctx: PitchContext, colors: dict[str, A
     _add_speaker_notes(slide, notes or f"Business model with {tier_count} pricing tiers.")
 
 
-def _build_financials_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_financials_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build financials slide with projections."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
@@ -715,7 +721,7 @@ def _estimate_team_height(team: Any, scale: dict[str, int] | None = None) -> flo
 
 
 def _render_team_member(
-    slide: Any,
+    slide: Slide,
     region: ContentRegion,
     member: Any,
     colors: dict[str, Any],
@@ -765,8 +771,8 @@ def _render_team_member(
 
 
 def _build_team_content(
-    prs: Any,
-    slide: Any,
+    prs: Presentation,
+    slide: Slide,
     region: ContentRegion,
     colors: dict[str, Any],
     founders: list[Any],
@@ -892,7 +898,7 @@ def _build_team_content(
         )
 
 
-def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_team_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build team slide with light background, auto-scale, and auto-split."""
     team = ctx.spec.team
     if not team:
@@ -937,7 +943,7 @@ def _build_team_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> No
     )
 
 
-def _build_competition_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_competition_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build competition slide with light background and table."""
     from pptx.util import Inches
 
@@ -967,8 +973,8 @@ def _build_competition_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]
 
 
 def _build_milestones_content(
-    prs: Any,
-    slide: Any,
+    prs: Presentation,
+    slide: Slide,
     region: ContentRegion,
     colors: dict[str, Any],
     sections: list[tuple[str, list[str], Any, str, Any | None]],
@@ -1032,7 +1038,7 @@ def _build_milestones_content(
         is_first_on_slide = False
 
 
-def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_milestones_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build milestones / roadmap slide with auto-split on overflow."""
     ms = ctx.spec.milestones
     if not ms:
@@ -1060,7 +1066,7 @@ def _build_milestones_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any])
     _add_speaker_notes(slide, notes or "Milestones and roadmap.")
 
 
-def _build_ask_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_ask_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build the funding ask slide."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
@@ -1140,7 +1146,7 @@ def _build_ask_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> Non
     _add_speaker_notes(slide, f"Raising {ask_str} at {stage} stage.")
 
 
-def _build_closing_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) -> None:
+def _build_closing_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any]) -> None:
     """Build the closing / thank you slide."""
     from pptx.enum.text import PP_ALIGN
     from pptx.util import Inches
@@ -1187,7 +1193,7 @@ def _build_closing_slide(prs: Any, ctx: PitchContext, colors: dict[str, Any]) ->
 
 
 def _build_extra_slide(
-    prs: Any, ctx: PitchContext, colors: dict[str, Any], extra: ExtraSlide
+    prs: Presentation, ctx: PitchContext, colors: dict[str, Any], extra: ExtraSlide
 ) -> None:
     """Build a user-defined extra slide based on its layout."""
     from pptx.enum.text import PP_ALIGN

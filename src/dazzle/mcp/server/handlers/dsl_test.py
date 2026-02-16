@@ -10,12 +10,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import async_handler_error_json, extract_progress, handler_error_json
+from .common import extract_progress, wrap_async_handler_errors, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
 
-@handler_error_json
+@wrap_handler_errors
 def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Verify a story by mapping it to entity tests, running them, and returning a verdict.
 
@@ -155,7 +155,7 @@ def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate tests from DSL/AppSpec definitions."""
     try:
@@ -248,7 +248,7 @@ def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
     return script
 
 
-@handler_error_json
+@wrap_handler_errors
 def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Run ALL DSL-driven tests without filtering, returning a structured batch report.
 
@@ -378,7 +378,7 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Run DSL-driven tests against a running DNR server."""
     try:
@@ -480,7 +480,7 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create authenticated sessions for all DSL-defined personas."""
     try:
@@ -517,7 +517,7 @@ async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> s
         return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Compare route responses across personas."""
     try:
@@ -547,7 +547,7 @@ async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str
         return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get test coverage for DSL constructs."""
     try:
@@ -650,7 +650,7 @@ def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> s
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def list_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """List available DSL-driven tests."""
     try:

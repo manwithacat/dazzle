@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..common import extract_progress, handler_error_json
+from ..common import extract_progress, wrap_handler_errors
 from . import _helpers
 
 if TYPE_CHECKING:
@@ -29,7 +29,7 @@ FLOW_FAILURE_KEYWORDS = ("fail", "error")
 # =============================================================================
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate a Mermaid diagram for a process.
 

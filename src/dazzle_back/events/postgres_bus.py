@@ -801,18 +801,7 @@ class PostgresBus(BaseEventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        conditions = []
-        params: list[Any] = []
-
-        if topic:
-            conditions.append("topic = %s")
-            params.append(topic)
-
-        if group_id:
-            conditions.append("group_id = %s")
-            params.append(group_id)
-
-        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        where_clause, params = self._build_dlq_filter_clause(topic, group_id, placeholder="%s")
         params.append(limit)
 
         async with pool.connection() as conn:
@@ -866,19 +855,9 @@ class PostgresBus(BaseEventBus):
             row = await cur.fetchone()
             return row["count"] if row else 0
 
-    async def replay_dlq_event(
-        self,
-        event_id: str,
-        group_id: str,
-    ) -> bool:
-        """
-        Replay a single event from the DLQ.
-
-        The event is removed from DLQ and reprocessed through the normal path.
-
-        Returns:
-            True if event was found and replayed successfully
-        """
+    async def _fetch_dlq_event(
+        self, event_id: str, group_id: str
+    ) -> tuple[str, EventEnvelope] | None:
         pool = self._get_pool()
         prefix = self._prefix
 
@@ -892,40 +871,36 @@ class PostgresBus(BaseEventBus):
             )
             row = await cur.fetchone()
             if not row:
-                return False
+                return None
 
-            topic = row["topic"]
             envelope_data = row["envelope"]
             if isinstance(envelope_data, str):
                 envelope_data = json.loads(envelope_data)
 
-            envelope = EventEnvelope.from_dict(envelope_data)
+            return row["topic"], EventEnvelope.from_dict(envelope_data)
 
-            # Process through handler
-            key = (topic, group_id)
-            if key not in self._subscriptions:
-                raise ConsumerNotFoundError(topic, group_id)
+    async def _delete_dlq_event(self, event_id: str, group_id: str) -> None:
+        pool = self._get_pool()
+        prefix = self._prefix
 
-            handler = self._subscriptions[key].handler
+        async with pool.connection() as conn:
+            await conn.execute(
+                f"DELETE FROM {prefix}dlq WHERE event_id = %s AND group_id = %s",
+                (str(UUID(event_id)), group_id),
+            )
 
-            try:
-                await handler(envelope)
-                # Remove from DLQ on success
-                await conn.execute(
-                    f"DELETE FROM {prefix}dlq WHERE event_id = %s AND group_id = %s",
-                    (str(UUID(event_id)), group_id),
-                )
-                return True
-            except Exception:
-                # Update attempts count
-                await conn.execute(
-                    f"""
-                    UPDATE {prefix}dlq SET attempts = attempts + 1
-                    WHERE event_id = %s AND group_id = %s
-                    """,
-                    (str(UUID(event_id)), group_id),
-                )
-                raise
+    async def _increment_dlq_attempts(self, event_id: str, group_id: str) -> None:
+        pool = self._get_pool()
+        prefix = self._prefix
+
+        async with pool.connection() as conn:
+            await conn.execute(
+                f"""
+                UPDATE {prefix}dlq SET attempts = attempts + 1
+                WHERE event_id = %s AND group_id = %s
+                """,
+                (str(UUID(event_id)), group_id),
+            )
 
     async def clear_dlq(
         self,
@@ -941,18 +916,7 @@ class PostgresBus(BaseEventBus):
         pool = self._get_pool()
         prefix = self._prefix
 
-        conditions = []
-        params: list[Any] = []
-
-        if topic:
-            conditions.append("topic = %s")
-            params.append(topic)
-
-        if group_id:
-            conditions.append("group_id = %s")
-            params.append(group_id)
-
-        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        where_clause, params = self._build_dlq_filter_clause(topic, group_id, placeholder="%s")
         params_tuple = tuple(params) if params else ()
 
         async with pool.connection() as conn:

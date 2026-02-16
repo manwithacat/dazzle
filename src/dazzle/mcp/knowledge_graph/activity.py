@@ -11,9 +11,12 @@ import json
 import time
 import uuid
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .models import ActivityEvent
+
+if TYPE_CHECKING:
+    from ._protocol import KGStoreProtocol
 
 
 class KnowledgeGraphActivity:
@@ -24,7 +27,7 @@ class KnowledgeGraphActivity:
     # =========================================================================
 
     def log_tool_invocation(
-        self,
+        self: KGStoreProtocol,
         *,
         tool_name: str,
         operation: str | None = None,
@@ -48,7 +51,7 @@ class KnowledgeGraphActivity:
             result_size: Length of the result string in characters.
             duration_ms: Wall-clock duration in milliseconds.
         """
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             conn.execute(
                 """
@@ -71,10 +74,10 @@ class KnowledgeGraphActivity:
             )
             conn.commit()
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
     def get_tool_invocations(
-        self,
+        self: KGStoreProtocol,
         limit: int = 50,
         tool_name_filter: str | None = None,
         since: float | None = None,
@@ -103,7 +106,7 @@ class KnowledgeGraphActivity:
         where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
         params.append(limit)
 
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             rows = conn.execute(
                 f"SELECT * FROM tool_invocations {where} ORDER BY created_at DESC LIMIT ?",
@@ -111,9 +114,9 @@ class KnowledgeGraphActivity:
             ).fetchall()
             return [dict(row) for row in rows]
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
-    def get_tool_stats(self) -> dict[str, Any]:
+    def get_tool_stats(self: KGStoreProtocol) -> dict[str, Any]:
         """
         Aggregate telemetry statistics.
 
@@ -122,7 +125,7 @@ class KnowledgeGraphActivity:
             call_count, error_count, avg_duration_ms, max_duration_ms,
             first_call, and last_call per tool.
         """
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             total = conn.execute("SELECT COUNT(*) FROM tool_invocations").fetchone()[0]
             rows = conn.execute(
@@ -154,14 +157,14 @@ class KnowledgeGraphActivity:
             ]
             return {"total_calls": total, "by_tool": by_tool}
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
     # =========================================================================
     # Activity Event Stream
     # =========================================================================
 
     def start_activity_session(
-        self,
+        self: KGStoreProtocol,
         project_name: str | None = None,
         project_path: str | None = None,
         version: str | None = None,
@@ -169,7 +172,7 @@ class KnowledgeGraphActivity:
         """Start a new activity session. Returns the session_id (UUID)."""
         session_id = str(uuid.uuid4())
         now = time.time()
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             conn.execute(
                 """
@@ -181,12 +184,12 @@ class KnowledgeGraphActivity:
             )
             conn.commit()
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
         return session_id
 
-    def end_activity_session(self, session_id: str) -> None:
+    def end_activity_session(self: KGStoreProtocol, session_id: str) -> None:
         """Mark an activity session as ended."""
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             conn.execute(
                 "UPDATE activity_sessions SET ended_at = ? WHERE id = ?",
@@ -194,10 +197,10 @@ class KnowledgeGraphActivity:
             )
             conn.commit()
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
     def log_activity_event(
-        self,
+        self: KGStoreProtocol,
         session_id: str | ActivityEvent = "",
         event_type: str = "",
         tool: str = "",
@@ -238,7 +241,7 @@ class KnowledgeGraphActivity:
             source = event.source
         now = time.time()
         ts = datetime.now(UTC).isoformat(timespec="milliseconds")
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             cursor = conn.execute(
                 """
@@ -271,10 +274,10 @@ class KnowledgeGraphActivity:
             conn.commit()
             return cursor.lastrowid or 0
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
     def get_activity_events(
-        self,
+        self: KGStoreProtocol,
         since_id: int = 0,
         session_id: str | None = None,
         limit: int = 100,
@@ -293,7 +296,7 @@ class KnowledgeGraphActivity:
         params.append(limit)
         where = " AND ".join(conditions)
 
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             rows = conn.execute(
                 f"SELECT * FROM activity_events WHERE {where} ORDER BY id ASC LIMIT ?",
@@ -301,11 +304,11 @@ class KnowledgeGraphActivity:
             ).fetchall()
             return [dict(row) for row in rows]
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
-    def get_activity_sessions(self, limit: int = 20) -> list[dict[str, Any]]:
+    def get_activity_sessions(self: KGStoreProtocol, limit: int = 20) -> list[dict[str, Any]]:
         """List recent activity sessions, newest first."""
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             rows = conn.execute(
                 "SELECT * FROM activity_sessions ORDER BY started_at DESC LIMIT ?",
@@ -313,9 +316,9 @@ class KnowledgeGraphActivity:
             ).fetchall()
             return [dict(row) for row in rows]
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
-    def get_activity_stats(self, session_id: str | None = None) -> dict[str, Any]:
+    def get_activity_stats(self: KGStoreProtocol, session_id: str | None = None) -> dict[str, Any]:
         """Aggregate activity statistics, optionally filtered by session."""
         where = ""
         params: list[Any] = []
@@ -323,7 +326,7 @@ class KnowledgeGraphActivity:
             where = "WHERE session_id = ?"
             params = [session_id]
 
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             total = conn.execute(
                 f"SELECT COUNT(*) FROM activity_events {where}", params
@@ -385,4 +388,4 @@ class KnowledgeGraphActivity:
                 "by_tool": by_tool,
             }
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)

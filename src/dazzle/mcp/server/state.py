@@ -83,6 +83,10 @@ class ServerState:
         self._roots_cache[key] = value
 
 
+# Module-level singleton holding all mutable MCP server state.
+# Designed for single-threaded asyncio use — not thread-safe.
+# Accessed via the public functions below; tests may call ``reset_state()``
+# to get a clean instance.
 _state = ServerState()
 
 
@@ -566,7 +570,16 @@ _LEGACY_ATTR_MAP: dict[str, str] = {
 
 
 class _StateModule(types.ModuleType):
-    """Module subclass that proxies legacy global names to ``_state``."""
+    """Module subclass that proxies legacy global attribute names to ``_state``.
+
+    Why: Several callers (especially tests) historically accessed module-level
+    globals like ``state._knowledge_graph`` directly.  Rather than updating
+    every call-site, this proxy intercepts ``__getattr__`` / ``__setattr__``
+    and forwards reads/writes of the old underscore-prefixed names to the
+    corresponding attributes on the ``_state`` singleton.  This keeps the
+    module importable as ``from dazzle.mcp.server import state; state.X``
+    while centralising mutable state inside ``ServerState``.
+    """
 
     def __getattr__(self, name: str) -> Any:
         mapped = _LEGACY_ATTR_MAP.get(name)

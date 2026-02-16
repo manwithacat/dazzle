@@ -7,9 +7,12 @@ iterative BFS, plus text search and raw SQL query support.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .models import Entity, PathResult, Relation
+
+if TYPE_CHECKING:
+    from ._protocol import KGStoreProtocol
 
 
 class KnowledgeGraphQuery:
@@ -20,7 +23,7 @@ class KnowledgeGraphQuery:
     # =========================================================================
 
     def find_paths(
-        self,
+        self: KGStoreProtocol,
         source_id: str,
         target_id: str,
         max_depth: int = 5,
@@ -84,7 +87,7 @@ class KnowledgeGraphQuery:
         else:
             params = [target_id, source_id, max_depth]
 
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             rows = conn.execute(query, params).fetchall()
             results = []
@@ -102,10 +105,10 @@ class KnowledgeGraphQuery:
                 )
             return results
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
     def get_neighbourhood(
-        self,
+        self: KGStoreProtocol,
         entity_id: str,
         depth: int = 1,
         relation_types: list[str] | None = None,
@@ -130,7 +133,7 @@ class KnowledgeGraphQuery:
         for _ in range(depth):
             next_frontier: set[str] = set()
             for eid in frontier:
-                relations = self.get_relations(  # type: ignore[attr-defined]
+                relations = self.get_relations(
                     entity_id=eid,
                     relation_type=relation_types[0]
                     if relation_types and len(relation_types) == 1
@@ -152,7 +155,7 @@ class KnowledgeGraphQuery:
         # Fetch entity details
         entities = []
         for eid in visited_ids:
-            entity = self.get_entity(eid)  # type: ignore[attr-defined]
+            entity = self.get_entity(eid)
             if entity:
                 entities.append(entity)
 
@@ -163,7 +166,7 @@ class KnowledgeGraphQuery:
         }
 
     def get_dependents(
-        self,
+        self: KGStoreProtocol,
         entity_id: str,
         relation_types: list[str] | None = None,
         transitive: bool = False,
@@ -179,7 +182,7 @@ class KnowledgeGraphQuery:
             max_depth: Max depth for transitive search
         """
         if not transitive:
-            relations = self.get_relations(  # type: ignore[attr-defined]
+            relations = self.get_relations(
                 entity_id=entity_id,
                 direction="incoming",
             )
@@ -187,7 +190,7 @@ class KnowledgeGraphQuery:
                 relations = [r for r in relations if r.relation_type in relation_types]
 
             entity_ids = {r.source_id for r in relations}
-            return [e for eid in entity_ids if (e := self.get_entity(eid))]  # type: ignore[attr-defined]
+            return [e for eid in entity_ids if (e := self.get_entity(eid))]
 
         # Transitive: use recursive traversal
         visited: set[str] = set()
@@ -196,7 +199,7 @@ class KnowledgeGraphQuery:
         for _ in range(max_depth):
             next_frontier: set[str] = set()
             for eid in frontier:
-                relations = self.get_relations(entity_id=eid, direction="incoming")  # type: ignore[attr-defined]
+                relations = self.get_relations(entity_id=eid, direction="incoming")
                 if relation_types:
                     relations = [r for r in relations if r.relation_type in relation_types]
                 for rel in relations:
@@ -205,10 +208,10 @@ class KnowledgeGraphQuery:
                         next_frontier.add(rel.source_id)
             frontier = next_frontier
 
-        return [e for eid in visited if (e := self.get_entity(eid))]  # type: ignore[attr-defined]
+        return [e for eid in visited if (e := self.get_entity(eid))]
 
     def get_dependencies(
-        self,
+        self: KGStoreProtocol,
         entity_id: str,
         relation_types: list[str] | None = None,
         transitive: bool = False,
@@ -224,7 +227,7 @@ class KnowledgeGraphQuery:
             max_depth: Max depth for transitive search
         """
         if not transitive:
-            relations = self.get_relations(  # type: ignore[attr-defined]
+            relations = self.get_relations(
                 entity_id=entity_id,
                 direction="outgoing",
             )
@@ -232,7 +235,7 @@ class KnowledgeGraphQuery:
                 relations = [r for r in relations if r.relation_type in relation_types]
 
             entity_ids = {r.target_id for r in relations}
-            return [e for eid in entity_ids if (e := self.get_entity(eid))]  # type: ignore[attr-defined]
+            return [e for eid in entity_ids if (e := self.get_entity(eid))]
 
         # Transitive: use recursive traversal
         visited: set[str] = set()
@@ -241,7 +244,7 @@ class KnowledgeGraphQuery:
         for _ in range(max_depth):
             next_frontier: set[str] = set()
             for eid in frontier:
-                relations = self.get_relations(entity_id=eid, direction="outgoing")  # type: ignore[attr-defined]
+                relations = self.get_relations(entity_id=eid, direction="outgoing")
                 if relation_types:
                     relations = [r for r in relations if r.relation_type in relation_types]
                 for rel in relations:
@@ -250,13 +253,15 @@ class KnowledgeGraphQuery:
                         next_frontier.add(rel.target_id)
             frontier = next_frontier
 
-        return [e for eid in visited if (e := self.get_entity(eid))]  # type: ignore[attr-defined]
+        return [e for eid in visited if (e := self.get_entity(eid))]
 
     # =========================================================================
     # DSL Adjacency
     # =========================================================================
 
-    def compute_adjacency(self, node_a: str, node_b: str, max_distance: int = 2) -> int:
+    def compute_adjacency(
+        self: KGStoreProtocol, node_a: str, node_b: str, max_distance: int = 2
+    ) -> int:
         """
         Compute the shortest distance between two graph nodes.
 
@@ -286,7 +291,7 @@ class KnowledgeGraphQuery:
 
         return -1
 
-    def persona_capability_map(self, persona_id: str) -> dict[str, list[Entity]]:
+    def persona_capability_map(self: KGStoreProtocol, persona_id: str) -> dict[str, list[Entity]]:
         """
         Build a capability map for a persona: what can they access?
 
@@ -315,7 +320,7 @@ class KnowledgeGraphQuery:
     # =========================================================================
 
     def query(
-        self,
+        self: KGStoreProtocol,
         text: str,
         entity_types: list[str] | None = None,
         limit: int = 20,
@@ -338,7 +343,7 @@ class KnowledgeGraphQuery:
 
         params.append(limit)
 
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             rows = conn.execute(
                 f"""
@@ -351,9 +356,11 @@ class KnowledgeGraphQuery:
             ).fetchall()
             return [Entity.from_row(row) for row in rows]
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
-    def query_sql(self, sql: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
+    def query_sql(
+        self: KGStoreProtocol, sql: str, params: list[Any] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Execute raw SQL query (read-only).
 
@@ -368,20 +375,20 @@ class KnowledgeGraphQuery:
         if not sql_upper.startswith("SELECT"):
             raise ValueError("Only SELECT queries allowed")
 
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             rows = conn.execute(sql, params or []).fetchall()
             return [dict(row) for row in rows]
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)
 
     # =========================================================================
     # Stats
     # =========================================================================
 
-    def get_stats(self) -> dict[str, Any]:
+    def get_stats(self: KGStoreProtocol) -> dict[str, Any]:
         """Get graph statistics."""
-        conn = self._get_connection()  # type: ignore[attr-defined]
+        conn = self._get_connection()
         try:
             entity_count = conn.execute("SELECT COUNT(*) FROM entities").fetchone()[0]
             relation_count = conn.execute("SELECT COUNT(*) FROM relations").fetchone()[0]
@@ -401,4 +408,4 @@ class KnowledgeGraphQuery:
                 "relation_types": {row["relation_type"]: row["count"] for row in rel_type_counts},
             }
         finally:
-            self._close_connection(conn)  # type: ignore[attr-defined]
+            self._close_connection(conn)

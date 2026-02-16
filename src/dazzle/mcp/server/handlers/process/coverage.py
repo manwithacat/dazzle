@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
-from ..common import extract_progress, handler_error_json
+from ..common import extract_progress, wrap_handler_errors
 from . import _helpers
 
 if TYPE_CHECKING:
@@ -103,7 +103,7 @@ class CoverageReport:
 # =============================================================================
 
 
-@handler_error_json
+@wrap_handler_errors
 def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze story coverage by processes.
 

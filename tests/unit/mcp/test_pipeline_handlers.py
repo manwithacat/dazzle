@@ -44,6 +44,7 @@ def _import_pipeline():
     sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
     _mock_common = MagicMock()
     _mock_common.handler_error_json = lambda fn: fn  # identity — don't wrap handlers
+    _mock_common.wrap_handler_errors = lambda fn: fn
     _mock_common.extract_progress = MagicMock(return_value=MagicMock())
     sys.modules.setdefault("dazzle.mcp.server.handlers.common", _mock_common)
     # Pre-register sibling modules that _build_quality_steps lazily imports
@@ -733,6 +734,7 @@ class TestFidelityGapsOnly:
         sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
         _mock_common = MagicMock()
         _mock_common.handler_error_json = lambda fn: fn
+        _mock_common.wrap_handler_errors = lambda fn: fn
         _mock_common.extract_progress = MagicMock(return_value=MagicMock())
         sys.modules.setdefault("dazzle.mcp.server.handlers.common", _mock_common)
         module_path = (

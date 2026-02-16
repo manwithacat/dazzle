@@ -69,6 +69,21 @@ def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     return "text"
 
 
+@dataclass
+class WorkspaceRegionContext:
+    """Bundles the non-request, non-pagination context for a workspace region handler."""
+
+    ctx_region: Any
+    ir_region: Any
+    source: str
+    entity_spec: Any
+    attention_signals: list[Any]
+    ws_access: Any
+    repositories: dict[str, Any]
+    require_auth: bool
+    auth_middleware: Any
+
+
 async def _workspace_region_handler(
     request: Any,
     page: int,
@@ -76,20 +91,12 @@ async def _workspace_region_handler(
     sort: str | None,
     dir: str,
     *,
-    ctx_region: Any,
-    ir_region: Any,
-    source: str,
-    entity_spec: Any,
-    attention_signals: list[Any],
-    ws_access: Any,
-    repositories: dict[str, Any],
-    require_auth: bool,
-    auth_middleware: Any,
+    ctx: WorkspaceRegionContext,
 ) -> Any:
     """Return rendered HTML for a workspace region.
 
     Extracted from DazzleBackendApp._init_workspace_routes to reduce closure
-    complexity.  All context is passed as explicit keyword arguments.
+    complexity.  All context is bundled in a ``WorkspaceRegionContext``.
     """
     from fastapi import HTTPException
     from fastapi.responses import HTMLResponse
@@ -97,20 +104,20 @@ async def _workspace_region_handler(
     from dazzle_ui.runtime.template_renderer import render_fragment
 
     # Enforce authentication (#145)
-    if require_auth:
+    if ctx.require_auth:
         auth_ctx = None
-        if auth_middleware:
+        if ctx.auth_middleware:
             try:
-                auth_ctx = auth_middleware.get_auth_context(request)
+                auth_ctx = ctx.auth_middleware.get_auth_context(request)
             except Exception:
                 logger.debug("Failed to get auth context for region", exc_info=True)
         if not (auth_ctx and auth_ctx.is_authenticated):
             raise HTTPException(status_code=401, detail="Authentication required")
 
         # RBAC: enforce workspace persona restrictions on region data
-        if ws_access and ws_access.allow_personas and auth_ctx:
+        if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
             is_super = auth_ctx.user and auth_ctx.user.is_superuser
-            if not is_super and not any(r in ws_access.allow_personas for r in auth_ctx.roles):
+            if not is_super and not any(r in ctx.ws_access.allow_personas for r in auth_ctx.roles):
                 raise HTTPException(status_code=403, detail="Workspace access denied")
 
     # Query the source entity
@@ -118,12 +125,12 @@ async def _workspace_region_handler(
     total = 0
     columns: list[dict[str, Any]] = []
 
-    repo = repositories.get(source) if repositories else None
+    repo = ctx.repositories.get(ctx.source) if ctx.repositories else None
     if repo:
         try:
             # Build filters from IR ConditionExpr
             filters: dict[str, Any] | None = None
-            ir_filter = getattr(ir_region, "filter", None)
+            ir_filter = getattr(ctx.ir_region, "filter", None)
             if ir_filter is not None:
                 try:
                     from dazzle_back.runtime.condition_evaluator import (
@@ -142,7 +149,7 @@ async def _workspace_region_handler(
             if sort:
                 sort_list = [f"-{sort}" if dir == "desc" else sort]
             else:
-                ir_sort = getattr(ir_region, "sort", [])
+                ir_sort = getattr(ctx.ir_region, "sort", [])
                 if ir_sort:
                     sort_list = [
                         f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
@@ -157,7 +164,7 @@ async def _workspace_region_handler(
                         filters = {}
                     filters[field_name] = param_val
 
-            limit = ctx_region.limit or page_size
+            limit = ctx.ctx_region.limit or page_size
             result = await repo.list(
                 page=page,
                 page_size=limit,
@@ -172,9 +179,9 @@ async def _workspace_region_handler(
             logger.warning("Failed to list items for workspace region", exc_info=True)
 
     # Build columns from entity metadata when available
-    if entity_spec and hasattr(entity_spec, "fields"):
+    if ctx.entity_spec and hasattr(ctx.entity_spec, "fields"):
         columns = []
-        for f in entity_spec.fields:
+        for f in ctx.entity_spec.fields:
             if f.name == "id":
                 continue
             ft = getattr(f, "type", None)
@@ -192,7 +199,7 @@ async def _workspace_region_handler(
             # Hide _id suffix columns (foreign keys)
             if f.name.endswith("_id"):
                 continue
-            col_type = _field_kind_to_col_type(f, entity_spec)
+            col_type = _field_kind_to_col_type(f, ctx.entity_spec)
             # Money fields: use expanded _minor column key
             col_key = f.name
             if kind_val == "money":
@@ -215,7 +222,7 @@ async def _workspace_region_handler(
                         col["filter_options"] = list(ev)
                 else:
                     # State-machine status field
-                    sm = getattr(entity_spec, "state_machine", None)
+                    sm = getattr(ctx.entity_spec, "state_machine", None)
                     if sm:
                         states = getattr(sm, "states", [])
                         if states:
@@ -242,12 +249,12 @@ async def _workspace_region_handler(
 
     # Build aggregate metrics if configured
     metrics: list[dict[str, Any]] = []
-    for metric_name, expr in ctx_region.aggregates.items():
+    for metric_name, expr in ctx.ctx_region.aggregates.items():
         value: Any = 0
         agg_match = _AGGREGATE_RE.match(expr)
         if agg_match:
             func, entity_name, where_clause = agg_match.groups()
-            agg_repo = repositories.get(entity_name) if repositories else None
+            agg_repo = ctx.repositories.get(entity_name) if ctx.repositories else None
             try:
                 if func == "count" and agg_repo:
                     agg_filters: dict[str, Any] | None = None
@@ -289,7 +296,7 @@ async def _workspace_region_handler(
     }
 
     # Evaluate attention signals for row highlighting
-    if attention_signals and items:
+    if ctx.attention_signals and items:
         from dazzle_back.runtime.condition_evaluator import (
             evaluate_condition as _eval_cond,
         )
@@ -303,7 +310,7 @@ async def _workspace_region_handler(
         for item in items:
             best: dict[str, str] | None = None
             best_sev = 999
-            for sig in attention_signals:
+            for sig in ctx.attention_signals:
                 try:
                     cond_dict = sig.condition.model_dump(exclude_none=True)
                     if _eval_cond(cond_dict, item, {}):
@@ -321,20 +328,20 @@ async def _workspace_region_handler(
                 item["_attention"] = best
 
     html = render_fragment(
-        ctx_region.template,
-        title=ctx_region.title,
+        ctx.ctx_region.template,
+        title=ctx.ctx_region.title,
         items=items,
         total=total,
         columns=columns,
         metrics=metrics,
-        empty_message=ctx_region.empty_message,
+        empty_message=ctx.ctx_region.empty_message,
         display_key=columns[0]["key"] if columns else "name",
         item=items[0] if items else None,
-        action_url=ctx_region.action_url,
+        action_url=ctx.ctx_region.action_url,
         sort_field=sort or "",
         sort_dir=dir,
-        endpoint=ctx_region.endpoint,
-        region_name=ctx_region.name,
+        endpoint=ctx.ctx_region.endpoint,
+        region_name=ctx.ctx_region.name,
         filter_columns=filter_columns,
         active_filters=active_filters,
     )
@@ -364,6 +371,362 @@ def _parse_simple_where(where_clause: str) -> dict[str, Any]:
                 filters[key] = value
                 break
     return filters
+
+
+# =============================================================================
+# Extracted delegate classes
+# =============================================================================
+
+
+class IntegrationManager:
+    """Manages integration executor and messaging channels for DazzleBackendApp."""
+
+    def __init__(
+        self,
+        *,
+        app: FastAPI,
+        spec: BackendSpec,
+        db_manager: PostgresBackend | None,
+        fragment_sources: dict[str, dict[str, Any]],
+    ) -> None:
+        self._app = app
+        self._spec = spec
+        self._db_manager = db_manager
+        self._fragment_sources = fragment_sources
+        self.channel_manager: Any | None = None
+        self.integration_executor: Any | None = None
+
+    def init_channel_manager(self) -> None:
+        """Initialize the channel manager for messaging."""
+        try:
+            from dazzle.core.ir import ChannelKind
+            from dazzle.core.ir import ChannelSpec as IRChannelSpec
+            from dazzle_back.channels import create_channel_manager
+
+            ir_channels = []
+            for channel in self._spec.channels:
+                kind_map = {
+                    "email": ChannelKind.EMAIL,
+                    "queue": ChannelKind.QUEUE,
+                    "stream": ChannelKind.STREAM,
+                }
+                ir_channel = IRChannelSpec(
+                    name=channel.name,
+                    kind=kind_map.get(channel.kind, ChannelKind.EMAIL),
+                    provider=channel.provider,
+                )
+                ir_channels.append(ir_channel)
+
+            self.channel_manager = create_channel_manager(
+                db_manager=self._db_manager,
+                channel_specs=ir_channels,
+                build_id=f"{self._spec.name}-{self._spec.version}",
+            )
+
+            self._add_channel_routes()
+
+        except ImportError:
+            pass
+        except Exception as e:
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init channels: {e}")
+
+    def _add_channel_routes(self) -> None:
+        """Add channel management routes to the FastAPI app."""
+        if not self.channel_manager or not self._app:
+            return
+
+        channel_manager = self.channel_manager  # Capture for closures
+
+        @self._app.on_event("startup")
+        async def startup_channels() -> None:
+            await channel_manager.initialize()
+            await channel_manager.start_processor()
+
+        @self._app.on_event("shutdown")
+        async def shutdown_channels() -> None:
+            await channel_manager.shutdown()
+
+        @self._app.get("/_dazzle/channels", tags=["Channels"])
+        async def list_channels() -> dict[str, Any]:
+            statuses = channel_manager.get_all_statuses()
+            return {
+                "channels": [s.to_dict() for s in statuses],
+                "outbox_stats": channel_manager.get_outbox_stats(),
+            }
+
+        @self._app.get("/_dazzle/channels/{channel_name}", tags=["Channels"])
+        async def get_channel_status(channel_name: str) -> dict[str, Any]:
+            status = channel_manager.get_channel_status(channel_name)
+            if not status:
+                return {"error": f"Channel '{channel_name}' not found"}
+            result: dict[str, Any] = status.to_dict()
+            return result
+
+        @self._app.post("/_dazzle/channels/{channel_name}/send", tags=["Channels"])
+        async def send_message(
+            channel_name: str,
+            message: dict[str, Any],
+        ) -> dict[str, Any]:
+            try:
+                result = await channel_manager.send(
+                    channel=channel_name,
+                    operation=message.get("operation", "test"),
+                    message_type=message.get("type", "TestMessage"),
+                    payload=message.get("payload", {}),
+                    recipient=message.get("recipient", "test@example.com"),
+                    metadata=message.get("metadata"),
+                )
+                if hasattr(result, "to_dict"):
+                    return {"status": "queued", "message": result.to_dict()}
+                elif hasattr(result, "is_success"):
+                    return {
+                        "status": "sent" if result.is_success else "failed",
+                        "error": result.error,
+                    }
+                return {"status": "queued"}
+            except Exception as e:
+                return {"error": str(e)}
+
+        @self._app.post("/_dazzle/channels/health", tags=["Channels"])
+        async def check_channel_health() -> dict[str, Any]:
+            results = await channel_manager.health_check_all()
+            return {"health": results}
+
+        @self._app.get("/_dazzle/channels/outbox/recent", tags=["Channels"])
+        async def get_recent_outbox(limit: int = 20) -> dict[str, Any]:
+            messages = channel_manager.get_recent_messages(limit)
+            return {
+                "messages": [
+                    {
+                        "id": m.id,
+                        "channel": m.channel_name,
+                        "recipient": m.recipient,
+                        "subject": m.payload.get("subject", m.message_type),
+                        "status": m.status.value,
+                        "created_at": m.created_at.isoformat(),
+                        "last_error": m.last_error,
+                    }
+                    for m in messages
+                ],
+                "stats": channel_manager.get_outbox_stats(),
+            }
+
+    def init_integration_executor(self) -> None:
+        """Initialize integration action executor (v0.20.0)."""
+        if not self._app:
+            return
+
+        try:
+            from dazzle_back.runtime.integration_executor import IntegrationExecutor
+
+            has_actions = False
+            for integration in getattr(self._spec, "integrations", []):
+                if getattr(integration, "actions", []):
+                    has_actions = True
+                    break
+
+            if not has_actions:
+                return
+
+            self.integration_executor = IntegrationExecutor(
+                app_spec=self._spec,
+                fragment_sources=self._fragment_sources,
+            )
+
+            import logging
+
+            logging.getLogger("dazzle.server").info("Integration executor initialized")
+
+        except ImportError as e:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(f"Integration executor not available: {e}")
+        except Exception as e:
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init integration executor: {e}")
+
+
+class WorkspaceRouteBuilder:
+    """Registers workspace region and entity redirect routes for DazzleBackendApp."""
+
+    def __init__(
+        self,
+        *,
+        app: FastAPI,
+        spec: BackendSpec,
+        repositories: dict[str, Any],
+        auth_middleware: AuthMiddleware | None,
+        enable_auth: bool,
+        enable_test_mode: bool,
+    ) -> None:
+        self._app = app
+        self._spec = spec
+        self._repositories = repositories
+        self._auth_middleware = auth_middleware
+        self._enable_auth = enable_auth
+        self._enable_test_mode = enable_test_mode
+
+    def init_workspace_routes(self) -> None:
+        """Initialize workspace layout routes (v0.20.0)."""
+        if not self._app:
+            return
+
+        workspaces = getattr(self._spec, "workspaces", [])
+        if not workspaces:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(
+                "No workspaces in spec — skipping workspace routes"
+            )
+            return
+
+        try:
+            from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+            app = self._app
+            spec = self._spec
+            repositories = self._repositories
+            auth_middleware = self._auth_middleware
+
+            require_auth = self._enable_auth and not self._enable_test_mode
+
+            for workspace in workspaces:
+                ws_ctx = build_workspace_context(workspace, spec)
+                ws_name = workspace.name
+
+                _ws_access = workspace.access
+
+                for ir_region, ctx_region in zip(workspace.regions, ws_ctx.regions, strict=False):
+                    if not ctx_region.source:
+                        continue
+
+                    _ir_region = ir_region
+                    _ctx_region = ctx_region
+                    _source = ctx_region.source
+
+                    _entity_spec = None
+                    if spec and hasattr(spec, "domain") and spec.domain:
+                        for _e in spec.domain.entities:
+                            if _e.name == _source:
+                                _entity_spec = _e
+                                break
+
+                    _attention_signals: list[Any] = []
+                    if spec and hasattr(spec, "surfaces"):
+                        for _surf in spec.surfaces:
+                            if getattr(_surf, "entity_ref", None) == _source:
+                                ux = getattr(_surf, "ux", None)
+                                if ux and getattr(ux, "attention_signals", None):
+                                    _attention_signals = list(ux.attention_signals)
+                                    break
+
+                    _region_ctx = WorkspaceRegionContext(
+                        ctx_region=ctx_region,
+                        ir_region=ir_region,
+                        source=_source,
+                        entity_spec=_entity_spec,
+                        attention_signals=_attention_signals,
+                        ws_access=_ws_access,
+                        repositories=repositories,
+                        require_auth=require_auth,
+                        auth_middleware=auth_middleware,
+                    )
+
+                    @app.get(
+                        f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
+                        tags=["Workspaces"],
+                    )
+                    async def workspace_region_data(
+                        request: Request,
+                        page: int = 1,
+                        page_size: int = 20,
+                        sort: str | None = None,
+                        dir: str = "asc",
+                        _rctx: Any = _region_ctx,
+                    ) -> Any:
+                        return await _workspace_region_handler(
+                            request,
+                            page,
+                            page_size,
+                            sort,
+                            dir,
+                            ctx=_rctx,
+                        )
+
+                self._init_workspace_entity_routes(workspaces, app)
+
+            import logging
+
+            logging.getLogger("dazzle.server").info(
+                f"Workspace routes initialized for {len(workspaces)} workspace(s)"
+            )
+
+        except ImportError as e:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(f"Workspace renderer not available: {e}")
+        except Exception as e:
+            import logging
+            import traceback
+
+            logging.getLogger("dazzle.server").error(
+                f"Failed to init workspace routes: {e}\n{traceback.format_exc()}"
+            )
+
+    def _init_workspace_entity_routes(self, workspaces: list[Any], app: Any) -> None:
+        """Register workspace-prefixed entity routes (v0.20.1)."""
+        from starlette.responses import RedirectResponse
+
+        from dazzle.core.strings import to_api_plural
+
+        seen: set[str] = set()
+
+        for workspace in workspaces:
+            ws_name = workspace.name
+            for region in workspace.regions:
+                source: str | None = region.source
+                if not source:
+                    continue
+
+                entity_plural = to_api_plural(source)
+                route_key = f"{ws_name}/{entity_plural}"
+                if route_key in seen:
+                    continue
+                seen.add(route_key)
+
+                _entity_plural = entity_plural
+
+                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
+                    f"/{ws_name}/{entity_plural}",
+                    methods=["GET", "POST"],
+                    tags=["Workspaces"],
+                    include_in_schema=False,
+                )
+                async def ws_entity_collection(
+                    request: Request,
+                    _ep: str = _entity_plural,
+                ) -> RedirectResponse:
+                    qs = str(request.query_params)
+                    target = f"/{_ep}?{qs}" if qs else f"/{_ep}"
+                    return RedirectResponse(url=target, status_code=307)
+
+                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
+                    f"/{ws_name}/{entity_plural}/{{id}}",
+                    methods=["GET", "PUT", "PATCH", "DELETE"],
+                    tags=["Workspaces"],
+                    include_in_schema=False,
+                )
+                async def ws_entity_item(
+                    request: Request,
+                    id: str,
+                    _ep: str = _entity_plural,
+                ) -> RedirectResponse:
+                    qs = str(request.query_params)
+                    target = f"/{_ep}/{id}?{qs}" if qs else f"/{_ep}/{id}"
+                    return RedirectResponse(url=target, status_code=307)
 
 
 # =============================================================================
@@ -541,8 +904,10 @@ class DazzleBackendApp:
         self._start_time: datetime | None = None
         self._service_loader: ServiceLoader | None = None
         # Messaging channels (v0.9)
-        self._channel_manager: Any | None = None  # ChannelManager type
         self._enable_channels = config.enable_channels
+        # Delegate instances (created lazily in _setup_optional_features)
+        self._integration_mgr: IntegrationManager | None = None
+        self._workspace_builder: WorkspaceRouteBuilder | None = None
         # Security (v0.11.0)
         self._security_profile = config.security_profile
         self._cors_origins = config.cors_origins
@@ -565,136 +930,14 @@ class DazzleBackendApp:
         self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
 
     def _init_channel_manager(self) -> None:
-        """Initialize the channel manager for messaging."""
-        try:
-            from dazzle.core.ir import ChannelKind
-            from dazzle.core.ir import ChannelSpec as IRChannelSpec
-            from dazzle_back.channels import create_channel_manager
-
-            # Convert BackendSpec channels to IR ChannelSpecs
-            ir_channels = []
-            for channel in self.spec.channels:
-                # Map string kind to ChannelKind enum
-                kind_map = {
-                    "email": ChannelKind.EMAIL,
-                    "queue": ChannelKind.QUEUE,
-                    "stream": ChannelKind.STREAM,
-                }
-                ir_channel = IRChannelSpec(
-                    name=channel.name,
-                    kind=kind_map.get(channel.kind, ChannelKind.EMAIL),
-                    provider=channel.provider,
-                )
-                ir_channels.append(ir_channel)
-
-            # Create channel manager
-            self._channel_manager = create_channel_manager(
-                db_manager=self._db_manager,
-                channel_specs=ir_channels,
-                build_id=f"{self.spec.name}-{self.spec.version}",
-            )
-
-            # Add channel routes to the app
-            self._add_channel_routes()
-
-        except ImportError:
-            # Channels module not available - skip
-            pass
-        except Exception as e:
-            # Log but don't fail startup
-            import logging
-
-            logging.getLogger("dazzle.server").warning(f"Failed to init channels: {e}")
+        """Initialize the channel manager for messaging (delegates to IntegrationManager)."""
+        if self._integration_mgr:
+            self._integration_mgr.init_channel_manager()
 
     def _add_channel_routes(self) -> None:
-        """Add channel management routes to the FastAPI app."""
-        if not self._channel_manager or not self._app:
-            return
-
-        channel_manager = self._channel_manager  # Capture for closures
-
-        @self._app.on_event("startup")
-        async def startup_channels() -> None:
-            """Initialize channels on app startup."""
-            await channel_manager.initialize()
-            # Start background outbox processor
-            await channel_manager.start_processor()
-
-        @self._app.on_event("shutdown")
-        async def shutdown_channels() -> None:
-            """Cleanup channels on app shutdown."""
-            await channel_manager.shutdown()
-
-        @self._app.get("/_dazzle/channels", tags=["Channels"])
-        async def list_channels() -> dict[str, Any]:
-            """List all messaging channels and their status."""
-            statuses = channel_manager.get_all_statuses()
-            return {
-                "channels": [s.to_dict() for s in statuses],
-                "outbox_stats": channel_manager.get_outbox_stats(),
-            }
-
-        @self._app.get("/_dazzle/channels/{channel_name}", tags=["Channels"])
-        async def get_channel_status(channel_name: str) -> dict[str, Any]:
-            """Get status of a specific channel."""
-            status = channel_manager.get_channel_status(channel_name)
-            if not status:
-                return {"error": f"Channel '{channel_name}' not found"}
-            result: dict[str, Any] = status.to_dict()
-            return result
-
-        @self._app.post("/_dazzle/channels/{channel_name}/send", tags=["Channels"])
-        async def send_message(
-            channel_name: str,
-            message: dict[str, Any],
-        ) -> dict[str, Any]:
-            """Send a message through a channel (for testing)."""
-            try:
-                result = await channel_manager.send(
-                    channel=channel_name,
-                    operation=message.get("operation", "test"),
-                    message_type=message.get("type", "TestMessage"),
-                    payload=message.get("payload", {}),
-                    recipient=message.get("recipient", "test@example.com"),
-                    metadata=message.get("metadata"),
-                )
-                # Return message info
-                if hasattr(result, "to_dict"):
-                    return {"status": "queued", "message": result.to_dict()}
-                elif hasattr(result, "is_success"):
-                    return {
-                        "status": "sent" if result.is_success else "failed",
-                        "error": result.error,
-                    }
-                return {"status": "queued"}
-            except Exception as e:
-                return {"error": str(e)}
-
-        @self._app.post("/_dazzle/channels/health", tags=["Channels"])
-        async def check_channel_health() -> dict[str, Any]:
-            """Run health checks on all channels."""
-            results = await channel_manager.health_check_all()
-            return {"health": results}
-
-        @self._app.get("/_dazzle/channels/outbox/recent", tags=["Channels"])
-        async def get_recent_outbox(limit: int = 20) -> dict[str, Any]:
-            """Get recent outbox messages for the email panel."""
-            messages = channel_manager.get_recent_messages(limit)
-            return {
-                "messages": [
-                    {
-                        "id": m.id,
-                        "channel": m.channel_name,
-                        "recipient": m.recipient,
-                        "subject": m.payload.get("subject", m.message_type),
-                        "status": m.status.value,
-                        "created_at": m.created_at.isoformat(),
-                        "last_error": m.last_error,
-                    }
-                    for m in messages
-                ],
-                "stats": channel_manager.get_outbox_stats(),
-            }
+        """Add channel management routes (delegates to IntegrationManager)."""
+        if self._integration_mgr:
+            self._integration_mgr._add_channel_routes()
 
     def _init_social_auth(self) -> None:
         """Initialize social auth (OAuth2) if providers are configured."""
@@ -961,227 +1204,19 @@ class DazzleBackendApp:
             logging.getLogger("dazzle.server").debug(f"Fragment routes not available: {e}")
 
     def _init_integration_executor(self) -> None:
-        """Initialize integration action executor (v0.20.0)."""
-        if not self._app:
-            return
-
-        try:
-            from dazzle_back.runtime.integration_executor import IntegrationExecutor
-
-            # Check if any integrations have actions
-            has_actions = False
-            for integration in getattr(self.spec, "integrations", []):
-                if getattr(integration, "actions", []):
-                    has_actions = True
-                    break
-
-            if not has_actions:
-                return
-
-            self._integration_executor = IntegrationExecutor(
-                app_spec=self.spec,
-                fragment_sources=self._fragment_sources,
-            )
-
-            import logging
-
-            logging.getLogger("dazzle.server").info("Integration executor initialized")
-
-        except ImportError as e:
-            import logging
-
-            logging.getLogger("dazzle.server").debug(f"Integration executor not available: {e}")
-        except Exception as e:
-            import logging
-
-            logging.getLogger("dazzle.server").warning(f"Failed to init integration executor: {e}")
+        """Initialize integration action executor (delegates to IntegrationManager)."""
+        if self._integration_mgr:
+            self._integration_mgr.init_integration_executor()
 
     def _init_workspace_routes(self) -> None:
-        """Initialize workspace layout routes (v0.20.0)."""
-        if not self._app:
-            return
-
-        workspaces = getattr(self.spec, "workspaces", [])
-        if not workspaces:
-            import logging
-
-            logging.getLogger("dazzle.server").debug(
-                "No workspaces in spec — skipping workspace routes"
-            )
-            return
-
-        try:
-            from dazzle_ui.runtime.workspace_renderer import build_workspace_context
-
-            app = self._app
-            spec = self.spec
-            repositories = self._repositories
-            auth_middleware = self._auth_middleware
-
-            # Auth enforcement: require auth for workspace routes when auth is
-            # enabled and test mode is off (same policy as entity routes).
-            require_auth = self._enable_auth and not self._enable_test_mode
-
-            for workspace in workspaces:
-                ws_ctx = build_workspace_context(workspace, spec)
-                ws_name = workspace.name
-
-                _ws_access = workspace.access  # WorkspaceAccessSpec or None
-
-                # Workspace HTML pages are rendered by page_routes.py at /app/workspaces/{name}.
-                # Only region API endpoints are registered here.
-
-                # Region data endpoints — zip IR regions with context regions
-                # so we can access both ConditionExpr (IR) and RegionContext
-                for ir_region, ctx_region in zip(workspace.regions, ws_ctx.regions, strict=False):
-                    if not ctx_region.source:
-                        continue
-
-                    _ir_region = ir_region  # WorkspaceRegion IR with ConditionExpr
-                    _ctx_region = ctx_region  # RegionContext for template
-                    _source = ctx_region.source
-
-                    # Resolve entity spec for column metadata
-                    _entity_spec = None
-                    if spec and hasattr(spec, "domain") and spec.domain:
-                        for _e in spec.domain.entities:
-                            if _e.name == _source:
-                                _entity_spec = _e
-                                break
-
-                    # Resolve attention signals from surfaces that reference this entity
-                    _attention_signals: list[Any] = []
-                    if spec and hasattr(spec, "surfaces"):
-                        for _surf in spec.surfaces:
-                            if getattr(_surf, "entity_ref", None) == _source:
-                                ux = getattr(_surf, "ux", None)
-                                if ux and getattr(ux, "attention_signals", None):
-                                    _attention_signals = list(ux.attention_signals)
-                                    break
-
-                    # Capture all loop variables for closure
-                    _ctx_r = ctx_region
-                    _ir_r = ir_region
-                    _src = _source
-                    _esp = _entity_spec
-                    _att = _attention_signals
-                    _wsa = _ws_access
-
-                    @app.get(
-                        f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
-                        tags=["Workspaces"],
-                    )
-                    async def workspace_region_data(
-                        request: Request,
-                        page: int = 1,
-                        page_size: int = 20,
-                        sort: str | None = None,
-                        dir: str = "asc",
-                        _r: Any = _ctx_r,
-                        _ir: Any = _ir_r,
-                        _s: str = _src,
-                        _espec: Any = _esp,
-                        _attn: list[Any] = _att,  # noqa: B006
-                        _raccess: Any = _wsa,
-                    ) -> Any:
-                        return await _workspace_region_handler(
-                            request,
-                            page,
-                            page_size,
-                            sort,
-                            dir,
-                            ctx_region=_r,
-                            ir_region=_ir,
-                            source=_s,
-                            entity_spec=_espec,
-                            attention_signals=_attn,
-                            ws_access=_raccess,
-                            repositories=repositories,
-                            require_auth=require_auth,
-                            auth_middleware=auth_middleware,
-                        )
-
-            # Workspace-prefixed entity routes (v0.20.1)
-            # Register /{ws_name}/{entity_plural} → redirect to /{entity_plural}
-            # so frontend specs like /admin_dashboard/onboardingflows work.
-            self._init_workspace_entity_routes(workspaces, app)
-
-            import logging
-
-            logging.getLogger("dazzle.server").info(
-                f"Workspace routes initialized for {len(workspaces)} workspace(s)"
-            )
-
-        except ImportError as e:
-            import logging
-
-            logging.getLogger("dazzle.server").debug(f"Workspace renderer not available: {e}")
-        except Exception as e:
-            import logging
-            import traceback
-
-            logging.getLogger("dazzle.server").error(
-                f"Failed to init workspace routes: {e}\n{traceback.format_exc()}"
-            )
+        """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""
+        if self._workspace_builder:
+            self._workspace_builder.init_workspace_routes()
 
     def _init_workspace_entity_routes(self, workspaces: list[Any], app: Any) -> None:
-        """Register workspace-prefixed entity routes (v0.20.1).
-
-        For each workspace region with a ``source`` entity, register redirect
-        routes so that ``/{ws_name}/{entity_plural}`` forwards to the
-        standalone ``/{entity_plural}`` CRUD routes.  Uses HTTP 307 to
-        preserve the request method and body.
-        """
-        from starlette.responses import RedirectResponse
-
-        from dazzle.core.strings import to_api_plural
-
-        seen: set[str] = set()  # avoid duplicate registrations
-
-        for workspace in workspaces:
-            ws_name = workspace.name
-            for region in workspace.regions:
-                source: str | None = region.source
-                if not source:
-                    continue
-
-                entity_plural = to_api_plural(source)
-                route_key = f"{ws_name}/{entity_plural}"
-                if route_key in seen:
-                    continue
-                seen.add(route_key)
-
-                # Capture in closure defaults
-                _entity_plural = entity_plural
-
-                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
-                    f"/{ws_name}/{entity_plural}",
-                    methods=["GET", "POST"],
-                    tags=["Workspaces"],
-                    include_in_schema=False,
-                )
-                async def ws_entity_collection(
-                    request: Request,
-                    _ep: str = _entity_plural,
-                ) -> RedirectResponse:
-                    qs = str(request.query_params)
-                    target = f"/{_ep}?{qs}" if qs else f"/{_ep}"
-                    return RedirectResponse(url=target, status_code=307)
-
-                @app.api_route(  # type: ignore[misc, untyped-decorator, unused-ignore]
-                    f"/{ws_name}/{entity_plural}/{{id}}",
-                    methods=["GET", "PUT", "PATCH", "DELETE"],
-                    tags=["Workspaces"],
-                    include_in_schema=False,
-                )
-                async def ws_entity_item(
-                    request: Request,
-                    id: str,
-                    _ep: str = _entity_plural,
-                ) -> RedirectResponse:
-                    qs = str(request.query_params)
-                    target = f"/{_ep}/{id}?{qs}" if qs else f"/{_ep}/{id}"
-                    return RedirectResponse(url=target, status_code=307)
+        """Register workspace-prefixed entity routes (delegates to WorkspaceRouteBuilder)."""
+        if self._workspace_builder:
+            self._workspace_builder._init_workspace_entity_routes(workspaces, app)
 
     def _init_process_manager(self) -> None:
         """Initialize process manager for workflow execution (v0.24.0)."""
@@ -1546,6 +1581,22 @@ class DazzleBackendApp:
         """Initialize optional features: events, debug, site, channels, etc."""
         assert self._app is not None
 
+        # Create delegate instances
+        self._integration_mgr = IntegrationManager(
+            app=self._app,
+            spec=self.spec,
+            db_manager=self._db_manager,
+            fragment_sources=self._fragment_sources,
+        )
+        self._workspace_builder = WorkspaceRouteBuilder(
+            app=self._app,
+            spec=self.spec,
+            repositories=self._repositories,
+            auth_middleware=self._auth_middleware,
+            enable_auth=self._enable_auth,
+            enable_test_mode=self._enable_test_mode,
+        )
+
         # Event framework (v0.18.0)
         self._init_event_framework()
 
@@ -1801,12 +1852,12 @@ class DazzleBackendApp:
     @property
     def channel_manager(self) -> Any | None:
         """Get the channel manager (None if channels not enabled)."""
-        return self._channel_manager
+        return self._integration_mgr.channel_manager if self._integration_mgr else None
 
     @property
     def channels_enabled(self) -> bool:
         """Check if messaging channels are enabled."""
-        return self._enable_channels and self._channel_manager is not None
+        return self._enable_channels and self.channel_manager is not None
 
     @property
     def process_manager(self) -> Any | None:

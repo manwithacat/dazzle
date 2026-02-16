@@ -344,6 +344,141 @@ def _build_name_index(appspec: ir.AppSpec) -> dict[str, tuple[str, Any]]:
     return index
 
 
+def _format_view_hover_section(spec: Any, lines: list[str]) -> None:
+    source = getattr(spec, "source_entity", None)
+    if source:
+        lines.append(f"**Source entity:** `{source}`")
+    fields = getattr(spec, "fields", None)
+    if fields:
+        lines.append(f"**Fields:** {len(fields)}")
+
+
+def _format_enum_hover_section(spec: Any, lines: list[str]) -> None:
+    values = getattr(spec, "values", None)
+    if values:
+        preview = ", ".join(getattr(v, "name", str(v)) for v in values[:6])
+        if len(values) > 6:
+            preview += ", ..."
+        lines.append(f"**Values:** {preview}")
+
+
+def _format_process_hover_section(spec: Any, lines: list[str]) -> None:
+    states = getattr(spec, "states", None)
+    if states:
+        state_names = [s if isinstance(s, str) else getattr(s, "name", str(s)) for s in states]
+        lines.append(f"**States:** {', '.join(state_names[:6])}")
+    implements = getattr(spec, "implements", None)
+    if implements:
+        lines.append(f"**Implements:** {', '.join(implements)}")
+
+
+def _format_story_hover_section(spec: Any, lines: list[str]) -> None:
+    actor = getattr(spec, "actor", None)
+    if actor:
+        lines.append(f"**Actor:** {actor}")
+    steps = getattr(spec, "steps", None)
+    if steps:
+        lines.append(f"**Steps:** {len(steps)}")
+
+
+def _format_persona_hover_section(spec: Any, lines: list[str]) -> None:
+    goals = getattr(spec, "goals", None)
+    if goals:
+        lines.append(f"**Goals:** {', '.join(goals[:3])}")
+    proficiency = getattr(spec, "proficiency", None)
+    if proficiency:
+        lines.append(f"**Proficiency:** {proficiency}")
+
+
+def _format_ledger_hover_section(spec: Any, lines: list[str]) -> None:
+    account_type = getattr(spec, "account_type", None)
+    currency = getattr(spec, "currency", None)
+    if account_type:
+        lines.append(f"**Account type:** {account_type}")
+    if currency:
+        lines.append(f"**Currency:** {currency}")
+
+
+def _format_transaction_hover_section(spec: Any, lines: list[str]) -> None:
+    execution = getattr(spec, "execution", None)
+    transfers = getattr(spec, "transfers", None)
+    if execution:
+        lines.append(f"**Execution:** {execution}")
+    if transfers:
+        lines.append(f"**Transfers:** {len(transfers)}")
+
+
+def _format_webhook_hover_section(spec: Any, lines: list[str]) -> None:
+    events = getattr(spec, "events", None)
+    if events:
+        lines.append(f"**Events:** {', '.join(events[:4])}")
+
+
+def _format_approval_hover_section(spec: Any, lines: list[str]) -> None:
+    approver_role = getattr(spec, "approver_role", None)
+    if approver_role:
+        lines.append(f"**Approver role:** {approver_role}")
+
+
+def _format_sla_hover_section(spec: Any, lines: list[str]) -> None:
+    threshold = getattr(spec, "threshold", None)
+    if threshold:
+        lines.append(f"**Threshold:** {threshold}")
+
+
+def _format_island_hover_section(spec: Any, lines: list[str]) -> None:
+    framework = getattr(spec, "framework", None)
+    if framework:
+        lines.append(f"**Framework:** {framework}")
+
+
+def _format_workspace_hover_section(spec: Any, lines: list[str]) -> None:
+    stages = getattr(spec, "stages", None)
+    if stages:
+        lines.append(f"**Stages:** {len(stages)}")
+
+
+def _format_experience_hover_section(spec: Any, lines: list[str]) -> None:
+    steps = getattr(spec, "steps", None)
+    if steps:
+        lines.append(f"**Steps:** {len(steps)}")
+
+
+def _format_service_hover_section(spec: Any, lines: list[str]) -> None:
+    kind = getattr(spec, "kind", None)
+    if kind:
+        lines.append(f"**Kind:** {kind}")
+
+
+def _format_schedule_hover_section(spec: Any, lines: list[str]) -> None:
+    cron = getattr(spec, "cron", None)
+    interval = getattr(spec, "interval", None)
+    if cron:
+        lines.append(f"**Cron:** `{cron}`")
+    if interval:
+        lines.append(f"**Interval:** {interval}")
+
+
+_HOVER_FORMATTERS: dict[str, Any] = {
+    "view": _format_view_hover_section,
+    "enum": _format_enum_hover_section,
+    "process": _format_process_hover_section,
+    "story": _format_story_hover_section,
+    "persona": _format_persona_hover_section,
+    "ledger": _format_ledger_hover_section,
+    "transaction": _format_transaction_hover_section,
+    "webhook": _format_webhook_hover_section,
+    "approval": _format_approval_hover_section,
+    "sla": _format_sla_hover_section,
+    "island": _format_island_hover_section,
+    "workspace": _format_workspace_hover_section,
+    "experience": _format_experience_hover_section,
+    "service": _format_service_hover_section,
+    "integration": _format_service_hover_section,
+    "schedule": _format_schedule_hover_section,
+}
+
+
 def _format_generic_hover(construct_type: str, spec: Any) -> str:
     """Format a generic hover for any named construct."""
     name = getattr(spec, "name", None) or getattr(spec, "id", "unknown")
@@ -354,92 +489,9 @@ def _format_generic_hover(construct_type: str, spec: Any) -> str:
         lines.append(f"_{title}_")
     lines.append("")
 
-    # Show key properties based on construct type
-    if construct_type == "view":
-        source = getattr(spec, "source_entity", None)
-        if source:
-            lines.append(f"**Source entity:** `{source}`")
-        fields = getattr(spec, "fields", None)
-        if fields:
-            lines.append(f"**Fields:** {len(fields)}")
-    elif construct_type == "enum":
-        values = getattr(spec, "values", None)
-        if values:
-            preview = ", ".join(getattr(v, "name", str(v)) for v in values[:6])
-            if len(values) > 6:
-                preview += ", ..."
-            lines.append(f"**Values:** {preview}")
-    elif construct_type == "process":
-        states = getattr(spec, "states", None)
-        if states:
-            state_names = [s if isinstance(s, str) else getattr(s, "name", str(s)) for s in states]
-            lines.append(f"**States:** {', '.join(state_names[:6])}")
-        implements = getattr(spec, "implements", None)
-        if implements:
-            lines.append(f"**Implements:** {', '.join(implements)}")
-    elif construct_type == "story":
-        actor = getattr(spec, "actor", None)
-        if actor:
-            lines.append(f"**Actor:** {actor}")
-        steps = getattr(spec, "steps", None)
-        if steps:
-            lines.append(f"**Steps:** {len(steps)}")
-    elif construct_type == "persona":
-        goals = getattr(spec, "goals", None)
-        if goals:
-            lines.append(f"**Goals:** {', '.join(goals[:3])}")
-        proficiency = getattr(spec, "proficiency", None)
-        if proficiency:
-            lines.append(f"**Proficiency:** {proficiency}")
-    elif construct_type == "ledger":
-        account_type = getattr(spec, "account_type", None)
-        currency = getattr(spec, "currency", None)
-        if account_type:
-            lines.append(f"**Account type:** {account_type}")
-        if currency:
-            lines.append(f"**Currency:** {currency}")
-    elif construct_type == "transaction":
-        execution = getattr(spec, "execution", None)
-        transfers = getattr(spec, "transfers", None)
-        if execution:
-            lines.append(f"**Execution:** {execution}")
-        if transfers:
-            lines.append(f"**Transfers:** {len(transfers)}")
-    elif construct_type == "webhook":
-        events = getattr(spec, "events", None)
-        if events:
-            lines.append(f"**Events:** {', '.join(events[:4])}")
-    elif construct_type == "approval":
-        approver_role = getattr(spec, "approver_role", None)
-        if approver_role:
-            lines.append(f"**Approver role:** {approver_role}")
-    elif construct_type == "sla":
-        threshold = getattr(spec, "threshold", None)
-        if threshold:
-            lines.append(f"**Threshold:** {threshold}")
-    elif construct_type == "island":
-        framework = getattr(spec, "framework", None)
-        if framework:
-            lines.append(f"**Framework:** {framework}")
-    elif construct_type == "workspace":
-        stages = getattr(spec, "stages", None)
-        if stages:
-            lines.append(f"**Stages:** {len(stages)}")
-    elif construct_type == "experience":
-        steps = getattr(spec, "steps", None)
-        if steps:
-            lines.append(f"**Steps:** {len(steps)}")
-    elif construct_type in ("service", "integration"):
-        kind = getattr(spec, "kind", None)
-        if kind:
-            lines.append(f"**Kind:** {kind}")
-    elif construct_type == "schedule":
-        cron = getattr(spec, "cron", None)
-        interval = getattr(spec, "interval", None)
-        if cron:
-            lines.append(f"**Cron:** `{cron}`")
-        if interval:
-            lines.append(f"**Interval:** {interval}")
+    formatter = _HOVER_FORMATTERS.get(construct_type)
+    if formatter:
+        formatter(spec, lines)
 
     return "\n".join(lines)
 
@@ -894,6 +946,96 @@ _CHILD_SYMBOL_KIND: dict[str, SymbolKind] = {
 }
 
 
+_FIELD_NAME_BLACKLIST = frozenset(
+    {
+        "id",
+        "index",
+        "constraint",
+        "invariant",
+        "mode",
+        "uses",
+        "source",
+        "intent",
+        "domain",
+        "patterns",
+        "extends",
+        "access",
+    }
+)
+
+
+def _make_child_symbol(
+    line_no: int,
+    line: str,
+    name: str,
+    kind: SymbolKind,
+    sel_start: int,
+    detail: str,
+) -> DocumentSymbol:
+    """Create a child DocumentSymbol at the given line."""
+    return DocumentSymbol(
+        name=name,
+        kind=kind,
+        range=Range(
+            start=Position(line=line_no, character=0),
+            end=Position(line=line_no, character=len(line)),
+        ),
+        selection_range=Range(
+            start=Position(line=line_no, character=sel_start),
+            end=Position(line=line_no, character=sel_start + len(name)),
+        ),
+        detail=detail,
+    )
+
+
+def _append_child(parent: DocumentSymbol, child: DocumentSymbol) -> None:
+    """Append a child symbol to a parent construct."""
+    children = list(parent.children or [])
+    children.append(child)
+    parent.children = children
+
+
+def _try_match_child(line: str, line_no: int, current_construct: DocumentSymbol) -> bool:
+    """Try to match a named child pattern (field, section, action, etc.).
+
+    Returns True if a match was found and the child was added.
+    """
+    cm = _CHILD_RE.match(line)
+    if not cm:
+        return False
+    child_indent, child_keyword, child_name, child_title = cm.groups()
+    child_kind = _CHILD_SYMBOL_KIND.get(child_keyword, SymbolKind.Field)
+    sel_start = len(child_indent) + len(child_keyword) + 1
+    detail = child_keyword + (f" — {child_title}" if child_title else "")
+    child_sym = _make_child_symbol(line_no, line, child_name, child_kind, sel_start, detail)
+    _append_child(current_construct, child_sym)
+    return True
+
+
+def _try_match_entity_field(line: str, line_no: int, current_construct: DocumentSymbol) -> bool:
+    """Try to match an entity field declaration (name: type).
+
+    Only applies when the current construct is an entity (SymbolKind.Class).
+    Returns True if a match was found and the field was added.
+    """
+    if current_construct.kind != SymbolKind.Class:
+        return False
+    fm = _FIELD_RE.match(line)
+    if not fm:
+        return False
+    field_indent, field_name = fm.groups()
+    if field_name in _FIELD_NAME_BLACKLIST:
+        return False
+    sel_start = len(field_indent)
+    field_sym = _make_child_symbol(line_no, line, field_name, SymbolKind.Field, sel_start, "")
+    _append_child(current_construct, field_sym)
+    return True
+
+
+# Ordered list of child matchers to try within a construct block.
+_CHILD_MATCHERS = [_try_match_child, _try_match_entity_field]
+
+
 def _scan_document_symbols(text: str) -> list[DocumentSymbol]:
     """Scan document text to extract symbols with correct positions.
 
@@ -916,7 +1058,6 @@ def _scan_document_symbols(text: str) -> list[DocumentSymbol]:
 
             sym_kind = _CONSTRUCT_SYMBOL_KIND.get(keyword, SymbolKind.Variable)
             sel_start = len(indent_str) + len(keyword) + 1  # after "keyword "
-            sel_end = sel_start + len(name)
 
             sym = DocumentSymbol(
                 name=name,
@@ -927,7 +1068,7 @@ def _scan_document_symbols(text: str) -> list[DocumentSymbol]:
                 ),
                 selection_range=Range(
                     start=Position(line=line_no, character=sel_start),
-                    end=Position(line=line_no, character=sel_end),
+                    end=Position(line=line_no, character=sel_start + len(name)),
                 ),
                 detail=f"{keyword}" + (f" — {title}" if title else ""),
                 children=[],
@@ -937,72 +1078,11 @@ def _scan_document_symbols(text: str) -> list[DocumentSymbol]:
             current_construct = sym
             continue
 
-        # If we're inside a construct, look for children
+        # If we're inside a construct, try each child matcher in order
         if current_construct is not None:
-            # Check for named children (field, section, action, step, state, etc.)
-            cm = _CHILD_RE.match(line)
-            if cm:
-                child_indent, child_keyword, child_name, child_title = cm.groups()
-                child_kind = _CHILD_SYMBOL_KIND.get(child_keyword, SymbolKind.Field)
-                sel_start = len(child_indent) + len(child_keyword) + 1
-                sel_end = sel_start + len(child_name)
-
-                child_sym = DocumentSymbol(
-                    name=child_name,
-                    kind=child_kind,
-                    range=Range(
-                        start=Position(line=line_no, character=0),
-                        end=Position(line=line_no, character=len(line)),
-                    ),
-                    selection_range=Range(
-                        start=Position(line=line_no, character=sel_start),
-                        end=Position(line=line_no, character=sel_end),
-                    ),
-                    detail=child_keyword + (f" — {child_title}" if child_title else ""),
-                )
-                children = list(current_construct.children or [])
-                children.append(child_sym)
-                current_construct.children = children
-                continue
-
-            # For entities, also detect field declarations (name: type)
-            if current_construct.kind == SymbolKind.Class:
-                fm = _FIELD_RE.match(line)
-                if fm:
-                    field_indent, field_name = fm.groups()
-                    # Skip keywords that look like fields but aren't
-                    if field_name not in (
-                        "id",
-                        "index",
-                        "constraint",
-                        "invariant",
-                        "mode",
-                        "uses",
-                        "source",
-                        "intent",
-                        "domain",
-                        "patterns",
-                        "extends",
-                        "access",
-                    ):
-                        sel_start = len(field_indent)
-                        sel_end = sel_start + len(field_name)
-                        field_sym = DocumentSymbol(
-                            name=field_name,
-                            kind=SymbolKind.Field,
-                            range=Range(
-                                start=Position(line=line_no, character=0),
-                                end=Position(line=line_no, character=len(line)),
-                            ),
-                            selection_range=Range(
-                                start=Position(line=line_no, character=sel_start),
-                                end=Position(line=line_no, character=sel_end),
-                            ),
-                            detail="",
-                        )
-                        children = list(current_construct.children or [])
-                        children.append(field_sym)
-                        current_construct.children = children
+            for matcher in _CHILD_MATCHERS:
+                if matcher(line, line_no, current_construct):
+                    break
 
     # Close the last construct
     if current_construct is not None:

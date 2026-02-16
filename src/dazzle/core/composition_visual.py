@@ -559,13 +559,19 @@ def _evaluate_section_dimension(
         )
         findings = _parse_findings(response_text, section.section_type, dimension)
         return findings, tokens, None
-    except Exception:
+    except Exception as exc:
         logger.exception(
             "Visual evaluation failed for %s/%s",
             section.section_type,
             dimension,
         )
-        return [], 0, traceback.format_exc().splitlines()[-1]
+        tb_lines = traceback.format_exc().splitlines()
+        error_detail = (
+            f"{type(exc).__name__}: {exc} "
+            f"[section={section.section_type}, dimension={dimension}] "
+            f"({tb_lines[-1]})"
+        )
+        return [], 0, error_detail
 
 
 def _score_findings(findings: list[VisualFinding]) -> int:

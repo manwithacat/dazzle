@@ -37,13 +37,15 @@ def _import_module():
         "dazzle.mcp.server.handlers",
         "dazzle.mcp.server.handlers.common",
         "dazzle.mcp.server.handlers.utils",
+        "dazzle.mcp.server.handlers.text_utils",
+        "dazzle.mcp.server.paths",
         "dazzle.mcp.server.progress",
     ]
     _orig = {k: sys.modules.get(k) for k in _mocked}
     for k in _mocked:
         sys.modules[k] = MagicMock(pytest_plugins=[])
 
-    # Provide a real slugify so proposals.py's `from ..utils import slugify` works
+    # Provide a real slugify so proposals.py's `from ..text_utils import slugify` works
     import re
 
     def _real_slugify(text: str) -> str:
@@ -52,6 +54,8 @@ def _import_module():
         text = re.sub(r"[-\s]+", "_", text)
         return text[:30]
 
+    sys.modules["dazzle.mcp.server.handlers.text_utils"].slugify = _real_slugify
+    # Keep backward compat mock on utils too
     sys.modules["dazzle.mcp.server.handlers.utils"].slugify = _real_slugify
 
     src_path = Path(__file__).parent.parent.parent / "src"

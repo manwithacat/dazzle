@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, handler_error_json
+from .common import extract_progress, wrap_handler_errors
 
 
 def _get_dazzle_version() -> str:
@@ -79,7 +79,7 @@ CONTRIBUTION_TYPES = [
 GITHUB_ISSUE_BASE = "https://github.com/manwithacat/dazzle/issues/new"
 
 
-@handler_error_json
+@wrap_handler_errors
 def templates_handler(args: dict[str, Any]) -> str:
     """List available contribution templates."""
     progress = extract_progress(args)
@@ -94,7 +94,7 @@ def templates_handler(args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def create_handler(args: dict[str, Any]) -> str:
     """Create a contribution package."""
     progress = extract_progress(args)
@@ -162,7 +162,7 @@ def create_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def validate_handler(args: dict[str, Any]) -> str:
     """Validate a contribution package."""
     progress = extract_progress(args)
@@ -202,7 +202,7 @@ def validate_handler(args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def examples_handler(args: dict[str, Any]) -> str:
     """Show example contributions."""
     progress = extract_progress(args)

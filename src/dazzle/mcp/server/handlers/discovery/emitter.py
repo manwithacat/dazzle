@@ -8,14 +8,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..common import handler_error_json
-from ..utils import deserialize_observations, load_report_data
-from ._helpers import _load_appspec
+from ..common import wrap_handler_errors
+from ._helpers import _load_appspec, deserialize_observations, load_report_data
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
-@handler_error_json
+@wrap_handler_errors
 def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Generate valid DSL code from compiled proposals.

@@ -59,6 +59,7 @@ def _import_demo_data():
     common_mock.extract_progress = _extract_progress
     common_mock.load_project_appspec = _load_project_appspec
     common_mock.handler_error_json = _handler_error_json
+    common_mock.wrap_handler_errors = _handler_error_json
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
     sys.modules["dazzle.mcp.server.state"] = mock_state
 

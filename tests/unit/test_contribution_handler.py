@@ -45,6 +45,7 @@ def _import_modules():
     # Provide real handler_error_json so the decorator doesn't mask functions
     common_mock = sys.modules["dazzle.mcp.server.handlers.common"]
     common_mock.handler_error_json = lambda fn: fn
+    common_mock.wrap_handler_errors = lambda fn: fn
     common_mock.extract_progress = lambda args: _noop_ctx
 
     # Mock the progress module that contribution.py now imports

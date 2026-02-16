@@ -10,13 +10,13 @@ from typing import Any
 
 from dazzle.mcp.server.paths import project_discovery_dir, project_kg_db
 
-from ..common import handler_error_json
-from ..utils import deserialize_observations, load_report_data
+from ..common import wrap_handler_errors
+from ._helpers import deserialize_observations, load_report_data
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Get the latest discovery report from a project.
@@ -73,7 +73,7 @@ def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> st
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Compile observations from a discovery report into prioritized proposals.

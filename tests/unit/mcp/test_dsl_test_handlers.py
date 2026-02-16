@@ -54,7 +54,9 @@ def _import_dsl_test():
 
     common_mock.extract_progress = _extract_progress
     common_mock.handler_error_json = _handler_error_json
+    common_mock.wrap_handler_errors = _handler_error_json
     common_mock.async_handler_error_json = _async_handler_error_json
+    common_mock.wrap_async_handler_errors = _async_handler_error_json
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
     sys.modules["dazzle.mcp.server.state"] = mock_state
 

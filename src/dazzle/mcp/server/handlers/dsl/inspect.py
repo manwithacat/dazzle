@@ -6,10 +6,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..common import extract_progress, handler_error_json, load_project_appspec
+from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 
 
-@handler_error_json
+@wrap_handler_errors
 def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect an entity definition."""
     progress = extract_progress(args)
@@ -43,7 +43,7 @@ def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a surface definition."""
     progress = extract_progress(args)

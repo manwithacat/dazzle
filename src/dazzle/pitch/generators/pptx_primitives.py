@@ -10,7 +10,13 @@ import logging
 import math
 import re
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from pptx.dml.color import RGBColor
+    from pptx.presentation import Presentation
+
+    from dazzle.pitch.ir import BrandColors
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +74,7 @@ class LayoutResult:
     overflow: bool
 
 
-def _resolve_colors(brand: Any) -> dict[str, Any]:
+def _resolve_colors(brand: BrandColors) -> dict[str, Any]:
     """Convert brand hex colors to RGBColor objects."""
     from pptx.dml.color import RGBColor
 
@@ -91,15 +97,15 @@ def _resolve_colors(brand: Any) -> dict[str, Any]:
 
 def _add_text_box(
     slide: Any,
-    left: Any,
-    top: Any,
-    width: Any,
-    height: Any,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
     text: str,
     *,
     font_size: int = 18,
     bold: bool = False,
-    color: Any = None,
+    color: RGBColor | None = None,
     alignment: int | None = None,
     font_name: str | None = None,
 ) -> Any:
@@ -124,14 +130,14 @@ def _add_text_box(
 
 def _add_rich_text_box(
     slide: Any,
-    left: Any,
-    top: Any,
-    width: Any,
-    height: Any,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
     text: str,
     *,
     font_size: int = 18,
-    color: Any = None,
+    color: RGBColor | None = None,
     alignment: int | None = None,
     font_name: str | None = None,
 ) -> Any:
@@ -168,7 +174,7 @@ def _add_rich_text_box(
     return txbox
 
 
-def _create_dark_slide(prs: Any, colors: dict[str, Any]) -> Any:
+def _create_dark_slide(prs: Presentation, colors: dict[str, Any]) -> Any:
     """Create a slide with dark background."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank layout
     background = slide.background
@@ -178,7 +184,7 @@ def _create_dark_slide(prs: Any, colors: dict[str, Any]) -> Any:
     return slide
 
 
-def _create_light_slide(prs: Any, colors: dict[str, Any]) -> Any:
+def _create_light_slide(prs: Presentation, colors: dict[str, Any]) -> Any:
     """Create a slide with light background."""
     slide = prs.slides.add_slide(prs.slide_layouts[6])  # blank layout
     background = slide.background
@@ -191,7 +197,8 @@ def _create_light_slide(prs: Any, colors: dict[str, Any]) -> Any:
 def _add_speaker_notes(slide: Any, text: str) -> None:
     """Add speaker notes to a slide."""
     notes_slide = slide.notes_slide
-    notes_slide.notes_text_frame.text = text
+    if notes_slide.notes_text_frame is not None:
+        notes_slide.notes_text_frame.text = text
 
 
 def _fmt_currency(amount: int, currency: str = "GBP") -> str:
@@ -209,13 +216,13 @@ def _fmt_currency(amount: int, currency: str = "GBP") -> str:
 
 def _add_card(
     slide: Any,
-    left: Any,
-    top: Any,
-    width: Any,
-    height: Any,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
     *,
-    fill_color: Any = None,
-    border_color: Any = None,
+    fill_color: RGBColor | None = None,
+    border_color: RGBColor | None = None,
 ) -> Any:
     """Add a rounded rectangle card shape to a slide."""
     from pptx.util import Pt
@@ -242,14 +249,14 @@ def _add_card(
 
 def _add_stat_box(
     slide: Any,
-    left: Any,
-    top: Any,
-    width: Any,
+    left: int,
+    top: int,
+    width: int,
     value: str,
     label: str,
     *,
-    value_color: Any = None,
-    label_color: Any = None,
+    value_color: RGBColor | None = None,
+    label_color: RGBColor | None = None,
     alignment: int | None = None,
 ) -> None:
     """Add a big-number + caption stat box."""
@@ -295,11 +302,11 @@ def _add_stat_box(
 
 def _add_columns(
     slide: Any,
-    top: Any,
+    top: int,
     items: list[tuple[str, str]],
     *,
-    value_color: Any = None,
-    label_color: Any = None,
+    value_color: RGBColor | None = None,
+    label_color: RGBColor | None = None,
     alignment: int | None = None,
 ) -> None:
     """Auto-layout N stat boxes across slide width."""
@@ -326,7 +333,7 @@ def _add_columns(
 
 
 def _add_slide_heading(
-    slide: Any, text: str, colors: dict[str, Any], *, text_color: Any = None
+    slide: Any, text: str, colors: dict[str, Any], *, text_color: RGBColor | None = None
 ) -> float:
     """Add a title heading with accent bar underneath. Returns y position after heading."""
     from pptx.util import Inches, Pt
@@ -372,16 +379,16 @@ def _add_slide_heading(
 
 def _add_bullet_list(
     slide: Any,
-    left: Any,
-    top: Any,
-    width: Any,
+    left: int | float,
+    top: float,
+    width: int | float,
     items: list[str],
     colors: dict[str, Any],
     *,
     font_size: int = 18,
     spacing: float = 0.6,
     bullet_char: str = "\u2022",
-    color: Any = None,
+    color: RGBColor | None = None,
 ) -> LayoutResult:
     """Render N bullet items with bounds checking. Returns LayoutResult."""
     from pptx.util import Inches
@@ -420,9 +427,9 @@ def _add_bullet_list(
 
 def _add_table(
     slide: Any,
-    left: Any,
-    top: Any,
-    width: Any,
+    left: int,
+    top: int,
+    width: int,
     headers: list[str],
     rows: list[list[str]],
     colors: dict[str, Any],
@@ -506,9 +513,9 @@ def _add_table(
 
 def _add_callout_box(
     slide: Any,
-    left: Any,
-    top: Any,
-    width: Any,
+    left: int,
+    top: int,
+    width: int,
     text: str,
     colors: dict[str, Any],
     *,

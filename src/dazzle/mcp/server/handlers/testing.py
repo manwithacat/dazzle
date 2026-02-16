@@ -14,16 +14,16 @@ from typing import Any
 
 from ..state import get_active_project_path, get_project_root
 from .common import (
-    async_handler_error_json,
     extract_progress,
-    handler_error_json,
     load_project_appspec,
+    wrap_async_handler_errors,
+    wrap_handler_errors,
 )
 
 logger = logging.getLogger("dazzle.mcp.testing")
 
 
-@handler_error_json
+@wrap_handler_errors
 def check_test_infrastructure_handler() -> str:
     """
     Check test infrastructure requirements.
@@ -165,7 +165,7 @@ def check_test_infrastructure_handler() -> str:
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def run_e2e_tests_handler(
     project_path: str | None = None,
     priority: str | None = None,
@@ -265,7 +265,7 @@ def run_e2e_tests_handler(
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_e2e_test_coverage_handler(
     project_path: str | None = None,
 ) -> str:
@@ -360,7 +360,7 @@ def get_e2e_test_coverage_handler(
     return json.dumps(coverage, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def list_e2e_flows_handler(
     project_path: str | None = None,
     priority: str | None = None,
@@ -450,7 +450,7 @@ def list_e2e_flows_handler(
     )
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def run_agent_e2e_tests_handler(
     project_path: str | None = None,
     test_id: str | None = None,
@@ -560,7 +560,7 @@ async def run_agent_e2e_tests_handler(
         )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
     """Provide guidance on which test tier to use for a scenario."""
     progress = extract_progress(arguments)

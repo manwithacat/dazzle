@@ -60,6 +60,7 @@ def _import_stories():
         return wrapper
 
     common_mock.handler_error_json = _handler_error_json
+    common_mock.wrap_handler_errors = _handler_error_json
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
     sys.modules["dazzle.mcp.server.state"] = mock_state
     sys.modules.setdefault("dazzle.mcp", MagicMock(pytest_plugins=[]))

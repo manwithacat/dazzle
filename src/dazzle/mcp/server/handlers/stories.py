@@ -11,7 +11,7 @@ from datetime import UTC
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .common import extract_progress, handler_error_json, load_project_appspec
+from .common import extract_progress, load_project_appspec, wrap_handler_errors
 from .serializers import (
     serialize_entity_detail,
     serialize_entity_summary,
@@ -66,7 +66,7 @@ def _get_trigger_map() -> dict[Any, Any]:
     return _TRIGGER_MAP
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get DSL specification with lazy loading support.
 
@@ -130,7 +130,7 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     return json.dumps(spec, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze DSL and propose behavioural user stories."""
     from datetime import datetime
@@ -255,7 +255,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save stories to .dazzle/stories/stories.json."""
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
@@ -306,7 +306,7 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Retrieve stories filtered by status.
 
@@ -355,7 +355,7 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Story Wall — founder-friendly board grouped by implementation status.
 
@@ -453,7 +453,7 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate test designs from accepted stories.
 

@@ -17,7 +17,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
-from .common import handler_error_json
+from .common import wrap_handler_errors
 from .orchestration import QualityStep, aggregate_results, run_step
 
 # Backward-compat alias — tests import NightlyStep by this name
@@ -151,7 +151,7 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Qualit
 # ---------------------------------------------------------------------------
 
 
-@handler_error_json
+@wrap_handler_errors
 def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run quality steps in parallel with topological scheduling."""
     stop_on_error = args.get("stop_on_error", False)

@@ -8,29 +8,28 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core.fileset import discover_dsl_files
+from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
 
 from ...state import get_active_project, is_dev_mode
-from ..common import extract_progress, handler_error_json, load_project_appspec
-from ..utils import extract_issue_key
+from ..common import extract_progress, load_project_appspec, wrap_handler_errors
+from ..text_utils import extract_issue_key
 
 logger = logging.getLogger(__name__)
 
 
-@handler_error_json
+@wrap_handler_errors
 def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Validate DSL files in the project."""
     progress = extract_progress(args)
     try:
         progress.log_sync("Loading project DSL...")
-        app_spec = load_project_appspec(project_root)
-
-        # Count modules via manifest for the response
         manifest = load_manifest(project_root / "dazzle.toml")
         dsl_files = discover_dsl_files(project_root, manifest)
         modules = parse_modules(dsl_files)
+        app_spec = build_appspec(modules, manifest.project_root)
 
         result: dict[str, Any] = {
             "status": "valid",
@@ -53,7 +52,7 @@ def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
         )
 
 
-@handler_error_json
+@wrap_handler_errors
 def list_modules(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """List all modules in the project."""
     progress = extract_progress(args)
@@ -72,7 +71,7 @@ def list_modules(project_root: Path, args: dict[str, Any] | None = None) -> str:
     return json.dumps({"project_path": str(project_root), "modules": modules}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     """Run linting on the project."""
     progress = extract_progress(args)
@@ -94,7 +93,7 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
     """Get unified view of all issues from lint, compliance, and fidelity.
 

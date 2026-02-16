@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..common import extract_progress, handler_error_json, load_project_appspec
+from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 from ..serializers import serialize_test_design
 
 logger = logging.getLogger("dazzle.mcp")
@@ -35,7 +35,7 @@ def _parse_test_design_trigger(value: str) -> Any:
         raise ValueError(f"'{value}' is not a valid trigger. Valid triggers: {valid}") from None
 
 
-@handler_error_json
+@wrap_handler_errors
 def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
     Generate test designs from persona goals and workflows.

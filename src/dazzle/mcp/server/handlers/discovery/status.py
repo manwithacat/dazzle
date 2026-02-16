@@ -9,13 +9,13 @@ from typing import Any
 
 from dazzle.mcp.server.paths import project_discovery_dir, project_kg_db
 
-from ..common import handler_error_json
+from ..common import wrap_handler_errors
 from ._helpers import _load_appspec
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
-@handler_error_json
+@wrap_handler_errors
 def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Batch verify all accepted stories against API tests.
@@ -72,7 +72,7 @@ def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Module not available: {e}"}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Check discovery infrastructure status.
@@ -148,7 +148,7 @@ def _compute_coherence_score(deductions: float) -> int:
     return max(0, min(100, round(100 - deductions)))
 
 
-@handler_error_json
+@wrap_handler_errors
 def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Run persona-by-persona authenticated UX coherence checks.

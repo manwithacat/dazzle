@@ -89,7 +89,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     expanded_entities = expand_archetypes(list(symbols.entities.values()), symbols)
 
     # Update symbol table with expanded entities
-    symbols.entities = {e.name: e for e in expanded_entities}
+    symbols._domain.entities = {e.name: e for e in expanded_entities}
 
     # 6. Generate auto-surfaces for semantic archetypes
     existing_surfaces = list(symbols.surfaces.values())

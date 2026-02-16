@@ -218,76 +218,125 @@ def test_run(
     """
     # Check for playwright
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # noqa: F401
     except ImportError:
         typer.echo("Playwright not installed. Install with:", err=True)
         typer.echo("  pip install playwright", err=True)
         typer.echo("  playwright install chromium", err=True)
         raise typer.Exit(code=1)
 
-    # If auto_server is enabled, use E2ERunner for full lifecycle management
     if auto_server:
-        from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions, format_e2e_report
-
-        manifest_path = Path(manifest).resolve()
-        root = manifest_path.parent
-
-        runner = E2ERunner(root)
-
-        # Check Playwright browsers
-        playwright_ok, playwright_msg = runner.ensure_playwright()
-        if not playwright_ok:
-            typer.echo(playwright_msg, err=True)
-            raise typer.Exit(code=1)
-
-        options = E2ERunOptions(
+        _run_auto_server_tests(
+            manifest=manifest,
             headless=headless,
             priority=priority,
             tag=tag,
-            flow_id=flow,
+            flow=flow,
             timeout=timeout,
+            output=output,
+            verbose=verbose,
+        )
+    else:
+        _run_legacy_tests(
+            manifest=manifest,
+            base_url=base_url,
+            api_url=api_url,
+            headless=headless,
+            priority=priority,
+            tag=tag,
+            flow=flow,
+            timeout=timeout,
+            output=output,
+            verbose=verbose,
         )
 
-        if verbose:
-            typer.echo("Starting E2E test run with auto-server...")
-            typer.echo(f"  Project: {root}")
 
-        result = runner.run_all(options)
+def _run_auto_server_tests(
+    *,
+    manifest: str,
+    headless: bool,
+    priority: str | None,
+    tag: str | None,
+    flow: str | None,
+    timeout: int,
+    output: str | None,
+    verbose: bool,
+) -> None:
+    """Run E2E tests using E2ERunner with automatic server lifecycle management."""
+    from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions, format_e2e_report
 
-        # Output results
-        if verbose:
-            typer.echo(format_e2e_report(result))
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    runner = E2ERunner(root)
+
+    # Check Playwright browsers
+    playwright_ok, playwright_msg = runner.ensure_playwright()
+    if not playwright_ok:
+        typer.echo(playwright_msg, err=True)
+        raise typer.Exit(code=1)
+
+    options = E2ERunOptions(
+        headless=headless,
+        priority=priority,
+        tag=tag,
+        flow_id=flow,
+        timeout=timeout,
+    )
+
+    if verbose:
+        typer.echo("Starting E2E test run with auto-server...")
+        typer.echo(f"  Project: {root}")
+
+    result = runner.run_all(options)
+
+    # Output results
+    if verbose:
+        typer.echo(format_e2e_report(result))
+    else:
+        if result.error:
+            typer.secho(f"ERROR: {result.error}", fg=typer.colors.RED, err=True)
         else:
-            if result.error:
-                typer.secho(f"ERROR: {result.error}", fg=typer.colors.RED, err=True)
-            else:
-                for flow_result in result.flows:
-                    icon = "✓" if flow_result.status == "passed" else "✗"
-                    color = (
-                        typer.colors.GREEN if flow_result.status == "passed" else typer.colors.RED
-                    )
-                    typer.secho(f"  {icon} {flow_result.flow_id}", fg=color)
-                    if flow_result.error and verbose:
-                        typer.echo(f"    Error: {flow_result.error}")
+            for flow_result in result.flows:
+                icon = "✓" if flow_result.status == "passed" else "✗"
+                color = typer.colors.GREEN if flow_result.status == "passed" else typer.colors.RED
+                typer.secho(f"  {icon} {flow_result.flow_id}", fg=color)
+                if flow_result.error and verbose:
+                    typer.echo(f"    Error: {flow_result.error}")
 
-                typer.echo()
-                typer.echo(f"Results: {result.passed} passed, {result.failed} failed")
+            typer.echo()
+            typer.echo(f"Results: {result.passed} passed, {result.failed} failed")
 
-        # Output to file if requested
-        if output:
-            import json
+    # Output to file if requested
+    if output:
+        import json
 
-            output_path = Path(output)
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(json.dumps(result.to_dict(), indent=2))
-            typer.echo(f"Results saved to {output_path}")
+        output_path = Path(output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(result.to_dict(), indent=2))
+        typer.echo(f"Results saved to {output_path}")
 
-        # Exit with appropriate code
-        if result.error or result.failed > 0:
-            raise typer.Exit(code=1)
-        return
+    # Exit with appropriate code
+    if result.error or result.failed > 0:
+        raise typer.Exit(code=1)
 
-    # Legacy mode: --no-auto-server requires running server
+
+def _run_legacy_tests(
+    *,
+    manifest: str,
+    base_url: str,
+    api_url: str,
+    headless: bool,
+    priority: str | None,
+    tag: str | None,
+    flow: str | None,
+    timeout: int,
+    output: str | None,
+    verbose: bool,
+) -> None:
+    """Run E2E tests in legacy mode (--no-auto-server) with a manually started server."""
+    from playwright.sync_api import sync_playwright
+
     try:
         from dazzle.testing.testspec_generator import generate_e2e_testspec
         from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter
@@ -655,6 +704,255 @@ def _resolve_step_value(
     raise ValueError("Could not resolve value for step")
 
 
+def _assert_visible(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    selector = _build_selector(target)
+    expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_not_visible(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    selector = _build_selector(target)
+    expect(page.locator(selector)).to_be_hidden(timeout=timeout)
+
+
+def _assert_text_contains(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    expect(page.locator("body")).to_contain_text(str(assertion.expected), timeout=timeout)
+
+
+def _assert_entity_exists(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    entity_name = assertion.target or ""
+    if entity_name.startswith("entity:"):
+        entity_name = entity_name.split(":", 1)[1]
+    count = adapter.get_entity_count_sync(entity_name)
+    if count == 0:
+        raise AssertionError(f"Expected {entity_name} to exist, but count is 0")
+
+
+def _assert_entity_not_exists(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    entity_name = assertion.target or ""
+    if entity_name.startswith("entity:"):
+        entity_name = entity_name.split(":", 1)[1]
+    count = adapter.get_entity_count_sync(entity_name)
+    if count > 0:
+        raise AssertionError(f"Expected {entity_name} to not exist, but count is {count}")
+
+
+def _assert_validation_error(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    if target.startswith("field:"):
+        target = target.split(":", 1)[1]
+    selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
+    expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_redirects_to(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    if target.startswith("view:"):
+        view_id = target.split(":", 1)[1]
+        selector = f'[data-dazzle-view="{view_id}"]'
+        expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_count(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    entity_name = assertion.target or ""
+    if entity_name.startswith("entity:"):
+        entity_name = entity_name.split(":", 1)[1]
+    expected = int(assertion.expected) if assertion.expected is not None else 0
+    count = adapter.get_entity_count_sync(entity_name)
+    if count != expected:
+        raise AssertionError(f"Expected {entity_name} count to be {expected}, but was {count}")
+
+
+def _assert_field_value(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    if target.startswith("field:"):
+        target = target.split(":", 1)[1]
+    selector = f'[data-dazzle-field="{target}"]'
+    expect(page.locator(selector)).to_have_value(str(assertion.expected), timeout=timeout)
+
+
+def _assert_state_transition_allowed(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    expected_state = str(assertion.expected) if assertion.expected else ""
+    if "." in target:
+        entity_name, field_name = target.split(".", 1)
+    else:
+        entity_name, field_name = target, "status"
+    try:
+        snapshot = adapter.snapshot_sync()
+        entities_data = snapshot.get("entities", {}).get(entity_name, [])
+        found = any(str(e.get(field_name, "")) == expected_state for e in entities_data)
+        if not found:
+            raise AssertionError(
+                f"Expected {entity_name}.{field_name} = '{expected_state}', "
+                f"but no matching entity found"
+            )
+    except AttributeError:
+        expect(page.locator("body")).to_contain_text(expected_state, timeout=timeout)
+
+
+def _assert_state_transition_blocked(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    original_state = str(assertion.expected) if assertion.expected else ""
+    if "." in target:
+        entity_name, field_name = target.split(".", 1)
+    else:
+        entity_name, field_name = target, "status"
+    try:
+        snapshot = adapter.snapshot_sync()
+        entities_data = snapshot.get("entities", {}).get(entity_name, [])
+        found = any(str(e.get(field_name, "")) == original_state for e in entities_data)
+        if not found:
+            raise AssertionError(
+                f"Expected {entity_name}.{field_name} = '{original_state}' "
+                f"(unchanged), but no matching entity found"
+            )
+    except AttributeError:
+        expect(page.locator("body")).to_contain_text(original_state, timeout=timeout)
+
+
+def _assert_computed_value(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    if target.startswith("field:"):
+        target = target.split(":", 1)[1]
+    selector = f'[data-dazzle-field="{target}"][data-dazzle-computed="true"]'
+    if assertion.expected is not None:
+        expect(page.locator(selector)).to_contain_text(str(assertion.expected), timeout=timeout)
+    else:
+        expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_permission_granted(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
+    expect(page.locator(selector)).to_be_hidden(timeout=timeout)
+
+
+def _assert_permission_denied(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    denied_selector = (
+        f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
+    )
+    auth_modal_selector = "[data-dazzle-auth-modal]"
+    combined = f"{denied_selector}, {auth_modal_selector}"
+    expect(page.locator(combined).first).to_be_visible(timeout=timeout)
+
+
+def _assert_ref_valid(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    error_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
+    expect(page.locator(error_selector)).to_be_hidden(timeout=timeout)
+
+
+def _assert_ref_invalid(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    target = assertion.target or ""
+    error_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
+    expect(page.locator(error_selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_is_authenticated(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    selector = '[data-dazzle-auth="authenticated"]'
+    expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_is_not_authenticated(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    selector = '[data-dazzle-auth="unauthenticated"]'
+    expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_login_succeeded(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    error_selector = '[data-dazzle-message-kind="auth_error"]'
+    expect(page.locator(error_selector)).to_be_hidden(timeout=timeout)
+
+
+def _assert_login_failed(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    error_selector = '[data-dazzle-message-kind="auth_error"]'
+    expect(page.locator(error_selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_route_protected(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    auth_modal_selector = "[data-dazzle-auth-modal]"
+    expect(page.locator(auth_modal_selector)).to_be_visible(timeout=timeout)
+
+
+def _assert_has_persona(page: Any, assertion: Any, adapter: Any, timeout: int) -> None:
+    from playwright.sync_api import expect
+
+    expected_persona = assertion.expected or ""
+    selector = f'[data-dazzle-persona="{expected_persona}"]'
+    expect(page.locator(selector)).to_be_visible(timeout=timeout)
+
+
+def _build_assertion_handlers() -> dict[Any, Any]:
+    """Build the assertion kind -> handler mapping. Deferred to avoid import at module level."""
+    from dazzle.core.ir import FlowAssertionKind
+
+    return {
+        FlowAssertionKind.VISIBLE: _assert_visible,
+        FlowAssertionKind.NOT_VISIBLE: _assert_not_visible,
+        FlowAssertionKind.TEXT_CONTAINS: _assert_text_contains,
+        FlowAssertionKind.ENTITY_EXISTS: _assert_entity_exists,
+        FlowAssertionKind.ENTITY_NOT_EXISTS: _assert_entity_not_exists,
+        FlowAssertionKind.VALIDATION_ERROR: _assert_validation_error,
+        FlowAssertionKind.REDIRECTS_TO: _assert_redirects_to,
+        FlowAssertionKind.COUNT: _assert_count,
+        FlowAssertionKind.FIELD_VALUE: _assert_field_value,
+        FlowAssertionKind.STATE_TRANSITION_ALLOWED: _assert_state_transition_allowed,
+        FlowAssertionKind.STATE_TRANSITION_BLOCKED: _assert_state_transition_blocked,
+        FlowAssertionKind.COMPUTED_VALUE: _assert_computed_value,
+        FlowAssertionKind.PERMISSION_GRANTED: _assert_permission_granted,
+        FlowAssertionKind.PERMISSION_DENIED: _assert_permission_denied,
+        FlowAssertionKind.REF_VALID: _assert_ref_valid,
+        FlowAssertionKind.REF_INVALID: _assert_ref_invalid,
+        FlowAssertionKind.IS_AUTHENTICATED: _assert_is_authenticated,
+        FlowAssertionKind.IS_NOT_AUTHENTICATED: _assert_is_not_authenticated,
+        FlowAssertionKind.LOGIN_SUCCEEDED: _assert_login_succeeded,
+        FlowAssertionKind.LOGIN_FAILED: _assert_login_failed,
+        FlowAssertionKind.ROUTE_PROTECTED: _assert_route_protected,
+        FlowAssertionKind.HAS_PERSONA: _assert_has_persona,
+    }
+
+
+_ASSERTION_HANDLERS: dict[Any, Any] | None = None
+
+
 def _execute_assertion_sync(
     page: Any,
     assertion: Any,
@@ -662,191 +960,14 @@ def _execute_assertion_sync(
     timeout: int,
 ) -> None:
     """Execute an assertion synchronously."""
-    from playwright.sync_api import expect
+    global _ASSERTION_HANDLERS
+    if _ASSERTION_HANDLERS is None:
+        _ASSERTION_HANDLERS = _build_assertion_handlers()
 
-    from dazzle.core.ir import FlowAssertionKind
-
-    if assertion.kind == FlowAssertionKind.VISIBLE:
-        target = assertion.target or ""
-        selector = _build_selector(target)
-        expect(page.locator(selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.NOT_VISIBLE:
-        target = assertion.target or ""
-        selector = _build_selector(target)
-        expect(page.locator(selector)).to_be_hidden(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.TEXT_CONTAINS:
-        expect(page.locator("body")).to_contain_text(str(assertion.expected), timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.ENTITY_EXISTS:
-        # Check via API
-        entity_name = assertion.target or ""
-        if entity_name.startswith("entity:"):
-            entity_name = entity_name.split(":", 1)[1]
-        count = adapter.get_entity_count_sync(entity_name)
-        if count == 0:
-            raise AssertionError(f"Expected {entity_name} to exist, but count is 0")
-
-    elif assertion.kind == FlowAssertionKind.ENTITY_NOT_EXISTS:
-        entity_name = assertion.target or ""
-        if entity_name.startswith("entity:"):
-            entity_name = entity_name.split(":", 1)[1]
-        count = adapter.get_entity_count_sync(entity_name)
-        if count > 0:
-            raise AssertionError(f"Expected {entity_name} to not exist, but count is {count}")
-
-    elif assertion.kind == FlowAssertionKind.VALIDATION_ERROR:
-        target = assertion.target or ""
-        if target.startswith("field:"):
-            target = target.split(":", 1)[1]
-        selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
-        expect(page.locator(selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.REDIRECTS_TO:
-        target = assertion.target or ""
-        if target.startswith("view:"):
-            view_id = target.split(":", 1)[1]
-            selector = f'[data-dazzle-view="{view_id}"]'
-            expect(page.locator(selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.COUNT:
-        entity_name = assertion.target or ""
-        if entity_name.startswith("entity:"):
-            entity_name = entity_name.split(":", 1)[1]
-        expected = int(assertion.expected) if assertion.expected is not None else 0
-        count = adapter.get_entity_count_sync(entity_name)
-        if count != expected:
-            raise AssertionError(f"Expected {entity_name} count to be {expected}, but was {count}")
-
-    elif assertion.kind == FlowAssertionKind.FIELD_VALUE:
-        target = assertion.target or ""
-        if target.startswith("field:"):
-            target = target.split(":", 1)[1]
-        selector = f'[data-dazzle-field="{target}"]'
-        expect(page.locator(selector)).to_have_value(str(assertion.expected), timeout=timeout)
-
-    # v0.13.0 assertion kinds
-    elif assertion.kind == FlowAssertionKind.STATE_TRANSITION_ALLOWED:
-        # Check that the entity's status field matches expected value
-        # After transition, verify via API count or page content
-        target = assertion.target or ""  # e.g., "Task.status"
-        expected_state = str(assertion.expected) if assertion.expected else ""
-        if "." in target:
-            entity_name, field_name = target.split(".", 1)
-        else:
-            entity_name, field_name = target, "status"
-        # Verify via API snapshot - more reliable than page content
-        try:
-            snapshot = adapter.snapshot_sync()
-            entities_data = snapshot.get("entities", {}).get(entity_name, [])
-            found = any(str(e.get(field_name, "")) == expected_state for e in entities_data)
-            if not found:
-                raise AssertionError(
-                    f"Expected {entity_name}.{field_name} = '{expected_state}', "
-                    f"but no matching entity found"
-                )
-        except AttributeError:
-            # Fallback to page text if adapter has no snapshot_sync
-            expect(page.locator("body")).to_contain_text(expected_state, timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.STATE_TRANSITION_BLOCKED:
-        # Check that the entity's status field still has the original value
-        target = assertion.target or ""  # e.g., "Task.status"
-        original_state = str(assertion.expected) if assertion.expected else ""
-        if "." in target:
-            entity_name, field_name = target.split(".", 1)
-        else:
-            entity_name, field_name = target, "status"
-        try:
-            snapshot = adapter.snapshot_sync()
-            entities_data = snapshot.get("entities", {}).get(entity_name, [])
-            found = any(str(e.get(field_name, "")) == original_state for e in entities_data)
-            if not found:
-                raise AssertionError(
-                    f"Expected {entity_name}.{field_name} = '{original_state}' "
-                    f"(unchanged), but no matching entity found"
-                )
-        except AttributeError:
-            expect(page.locator("body")).to_contain_text(original_state, timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.COMPUTED_VALUE:
-        # Check that computed field has expected value
-        target = assertion.target or ""
-        if target.startswith("field:"):
-            target = target.split(":", 1)[1]
-        selector = f'[data-dazzle-field="{target}"][data-dazzle-computed="true"]'
-        # For computed fields, we check the text content
-        if assertion.expected is not None:
-            expect(page.locator(selector)).to_contain_text(str(assertion.expected), timeout=timeout)
-        else:
-            expect(page.locator(selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.PERMISSION_GRANTED:
-        # Check that operation was allowed (form/action is accessible)
-        target = assertion.target or ""  # e.g., "Document.create"
-        # Should NOT see a permission denied message
-        selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
-        expect(page.locator(selector)).to_be_hidden(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.PERMISSION_DENIED:
-        # Check that operation was denied (403 or access denied message)
-        target = assertion.target or ""  # e.g., "Document.create"
-        # Should see a permission denied message or be redirected to login
-        denied_selector = (
-            f'[data-dazzle-message="{target}"][data-dazzle-message-kind="permission_denied"]'
-        )
-        auth_modal_selector = "[data-dazzle-auth-modal]"
-        # Either permission denied message OR auth modal should be visible
-        combined = f"{denied_selector}, {auth_modal_selector}"
-        expect(page.locator(combined).first).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.REF_VALID:
-        # Check that reference was accepted (no validation error)
-        target = assertion.target or ""  # e.g., "Task.project_id"
-        error_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
-        expect(page.locator(error_selector)).to_be_hidden(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.REF_INVALID:
-        # Check that invalid reference shows validation error
-        target = assertion.target or ""  # e.g., "Task.project_id"
-        error_selector = f'[data-dazzle-message="{target}"][data-dazzle-message-kind="validation"]'
-        expect(page.locator(error_selector)).to_be_visible(timeout=timeout)
-
-    # Auth-related assertion kinds (v0.3.3)
-    elif assertion.kind == FlowAssertionKind.IS_AUTHENTICATED:
-        # Check for authenticated user indicator
-        selector = '[data-dazzle-auth="authenticated"]'
-        expect(page.locator(selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.IS_NOT_AUTHENTICATED:
-        # Check that user is not authenticated (login button visible, etc.)
-        selector = '[data-dazzle-auth="unauthenticated"]'
-        expect(page.locator(selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.LOGIN_SUCCEEDED:
-        # Check that login succeeded (should be on dashboard or no error)
-        error_selector = '[data-dazzle-message-kind="auth_error"]'
-        expect(page.locator(error_selector)).to_be_hidden(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.LOGIN_FAILED:
-        # Check that login failed (error message visible)
-        error_selector = '[data-dazzle-message-kind="auth_error"]'
-        expect(page.locator(error_selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.ROUTE_PROTECTED:
-        # Check that accessing route shows auth modal or redirects
-        auth_modal_selector = "[data-dazzle-auth-modal]"
-        expect(page.locator(auth_modal_selector)).to_be_visible(timeout=timeout)
-
-    elif assertion.kind == FlowAssertionKind.HAS_PERSONA:
-        # Check that user has specific persona/role
-        expected_persona = assertion.expected or ""
-        selector = f'[data-dazzle-persona="{expected_persona}"]'
-        expect(page.locator(selector)).to_be_visible(timeout=timeout)
-
-    else:
+    handler = _ASSERTION_HANDLERS.get(assertion.kind)
+    if handler is None:
         raise ValueError(f"Unknown assertion kind: {assertion.kind}")
+    handler(page, assertion, adapter, timeout)
 
 
 @test_app.command("list")
@@ -1603,8 +1724,6 @@ def dsl_coverage(
         dazzle test dsl-coverage --format markdown        # Markdown for docs
         dazzle test dsl-coverage --format json            # JSON for CI
     """
-    import json
-
     try:
         from dazzle.testing.dsl_test_generator import generate_tests_from_dsl
     except ImportError as e:
@@ -1648,174 +1767,210 @@ def dsl_coverage(
     )
     overall_pct = (tested_constructs / total_constructs * 100) if total_constructs > 0 else 0
 
+    coverage_data = {
+        "coverage": coverage,
+        "test_suite": test_suite,
+        "overall_pct": overall_pct,
+        "total_constructs": total_constructs,
+        "tested_constructs": tested_constructs,
+    }
+
     if format == "json":
-        # JSON output for CI
-        result = {
-            "overall_coverage": overall_pct,
-            "total_constructs": total_constructs,
-            "tested_constructs": tested_constructs,
-            "total_tests": len(test_suite.designs),
-            "categories": {
-                "entities": {
-                    "total": coverage.entities_total,
-                    "tested": len(coverage.entities_covered),
-                    "coverage": (len(coverage.entities_covered) / coverage.entities_total * 100)
-                    if coverage.entities_total > 0
-                    else 0,
-                },
-                "state_machines": {
-                    "total": coverage.state_machines_total,
-                    "tested": len(coverage.state_machines_covered),
-                    "coverage": (
-                        len(coverage.state_machines_covered) / coverage.state_machines_total * 100
-                    )
-                    if coverage.state_machines_total > 0
-                    else 0,
-                },
-                "personas": {
-                    "total": coverage.personas_total,
-                    "tested": len(coverage.personas_covered),
-                    "coverage": (len(coverage.personas_covered) / coverage.personas_total * 100)
-                    if coverage.personas_total > 0
-                    else 0,
-                },
-                "workspaces": {
-                    "total": coverage.workspaces_total,
-                    "tested": len(coverage.workspaces_covered),
-                    "coverage": (len(coverage.workspaces_covered) / coverage.workspaces_total * 100)
-                    if coverage.workspaces_total > 0
-                    else 0,
-                },
-                "events": {
-                    "total": coverage.events_total,
-                    "tested": len(coverage.events_covered),
-                    "coverage": (len(coverage.events_covered) / coverage.events_total * 100)
-                    if coverage.events_total > 0
-                    else 0,
-                },
-                "processes": {
-                    "total": coverage.processes_total,
-                    "tested": len(coverage.processes_covered),
-                    "coverage": (len(coverage.processes_covered) / coverage.processes_total * 100)
-                    if coverage.processes_total > 0
-                    else 0,
-                },
-            },
-            "dsl_hash": test_suite.dsl_hash,
-        }
-        typer.echo(json.dumps(result, indent=2))
-
+        _render_coverage_json(coverage_data, detailed)
     elif format == "markdown":
-        # Markdown output for docs
-        typer.echo(f"# Test Coverage Report: {test_suite.project_name}")
-        typer.echo()
-        typer.echo(
-            f"**Overall Coverage:** {overall_pct:.1f}%"
-            f" ({tested_constructs}/{total_constructs} constructs)"
-        )
-        typer.echo(f"**Total Tests:** {len(test_suite.designs)}")
-        typer.echo()
-        typer.echo("## Coverage by Category")
-        typer.echo()
-        typer.echo("| Category | Total | Tested | Coverage |")
-        typer.echo("|----------|-------|--------|----------|")
-
-        rows = [
-            ("Entities", coverage.entities_total, len(coverage.entities_covered)),
-            ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
-            ("Personas", coverage.personas_total, len(coverage.personas_covered)),
-            ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
-            ("Events", coverage.events_total, len(coverage.events_covered)),
-            ("Processes", coverage.processes_total, len(coverage.processes_covered)),
-        ]
-
-        for name, total, tested in rows:
-            if total > 0:
-                pct = tested / total * 100
-                typer.echo(f"| {name} | {total} | {tested} | {pct:.1f}% |")
-
-        typer.echo()
-        typer.echo(f"*DSL Hash: `{test_suite.dsl_hash[:12]}`*")
-
+        _render_coverage_markdown(coverage_data, detailed)
     else:
-        # Table output (default)
-        typer.secho(f"Test Coverage: {test_suite.project_name}", bold=True)
-        typer.echo()
+        _render_coverage_table(coverage_data, detailed)
 
-        # Overall bar
-        bar_width = 40
-        filled = int(overall_pct / 100 * bar_width)
-        bar = "█" * filled + "░" * (bar_width - filled)
-        color = (
-            typer.colors.GREEN
-            if overall_pct >= 80
-            else (typer.colors.YELLOW if overall_pct >= 50 else typer.colors.RED)
-        )
-        typer.echo(f"Overall: [{bar}] ", nl=False)
-        typer.secho(f"{overall_pct:.1f}%", fg=color)
-        typer.echo()
 
-        # Category breakdown
-        typer.echo("Category Breakdown:")
-        categories = [
-            ("Entities", coverage.entities_total, len(coverage.entities_covered)),
-            ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
-            ("Personas", coverage.personas_total, len(coverage.personas_covered)),
-            ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
-            ("Events", coverage.events_total, len(coverage.events_covered)),
-            ("Processes", coverage.processes_total, len(coverage.processes_covered)),
-        ]
+def _render_coverage_json(coverage_data: dict[str, Any], detailed: bool) -> None:
+    """Render coverage output in JSON format (for CI)."""
+    import json
 
-        for name, total, tested in categories:
-            if total > 0:
-                pct = tested / total * 100
-                color = (
-                    typer.colors.GREEN
-                    if pct >= 80
-                    else (typer.colors.YELLOW if pct >= 50 else typer.colors.RED)
+    coverage = coverage_data["coverage"]
+    test_suite = coverage_data["test_suite"]
+    overall_pct = coverage_data["overall_pct"]
+    total_constructs = coverage_data["total_constructs"]
+    tested_constructs = coverage_data["tested_constructs"]
+
+    result = {
+        "overall_coverage": overall_pct,
+        "total_constructs": total_constructs,
+        "tested_constructs": tested_constructs,
+        "total_tests": len(test_suite.designs),
+        "categories": {
+            "entities": {
+                "total": coverage.entities_total,
+                "tested": len(coverage.entities_covered),
+                "coverage": (len(coverage.entities_covered) / coverage.entities_total * 100)
+                if coverage.entities_total > 0
+                else 0,
+            },
+            "state_machines": {
+                "total": coverage.state_machines_total,
+                "tested": len(coverage.state_machines_covered),
+                "coverage": (
+                    len(coverage.state_machines_covered) / coverage.state_machines_total * 100
                 )
-                typer.echo(f"  {name:18} ", nl=False)
-                typer.secho(f"{tested:3}/{total:3} ({pct:5.1f}%)", fg=color)
+                if coverage.state_machines_total > 0
+                else 0,
+            },
+            "personas": {
+                "total": coverage.personas_total,
+                "tested": len(coverage.personas_covered),
+                "coverage": (len(coverage.personas_covered) / coverage.personas_total * 100)
+                if coverage.personas_total > 0
+                else 0,
+            },
+            "workspaces": {
+                "total": coverage.workspaces_total,
+                "tested": len(coverage.workspaces_covered),
+                "coverage": (len(coverage.workspaces_covered) / coverage.workspaces_total * 100)
+                if coverage.workspaces_total > 0
+                else 0,
+            },
+            "events": {
+                "total": coverage.events_total,
+                "tested": len(coverage.events_covered),
+                "coverage": (len(coverage.events_covered) / coverage.events_total * 100)
+                if coverage.events_total > 0
+                else 0,
+            },
+            "processes": {
+                "total": coverage.processes_total,
+                "tested": len(coverage.processes_covered),
+                "coverage": (len(coverage.processes_covered) / coverage.processes_total * 100)
+                if coverage.processes_total > 0
+                else 0,
+            },
+        },
+        "dsl_hash": test_suite.dsl_hash,
+    }
+    typer.echo(json.dumps(result, indent=2))
 
+
+def _render_coverage_markdown(coverage_data: dict[str, Any], detailed: bool) -> None:
+    """Render coverage output in Markdown format (for docs)."""
+    coverage = coverage_data["coverage"]
+    test_suite = coverage_data["test_suite"]
+    overall_pct = coverage_data["overall_pct"]
+    total_constructs = coverage_data["total_constructs"]
+    tested_constructs = coverage_data["tested_constructs"]
+
+    typer.echo(f"# Test Coverage Report: {test_suite.project_name}")
+    typer.echo()
+    typer.echo(
+        f"**Overall Coverage:** {overall_pct:.1f}%"
+        f" ({tested_constructs}/{total_constructs} constructs)"
+    )
+    typer.echo(f"**Total Tests:** {len(test_suite.designs)}")
+    typer.echo()
+    typer.echo("## Coverage by Category")
+    typer.echo()
+    typer.echo("| Category | Total | Tested | Coverage |")
+    typer.echo("|----------|-------|--------|----------|")
+
+    rows = [
+        ("Entities", coverage.entities_total, len(coverage.entities_covered)),
+        ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
+        ("Personas", coverage.personas_total, len(coverage.personas_covered)),
+        ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
+        ("Events", coverage.events_total, len(coverage.events_covered)),
+        ("Processes", coverage.processes_total, len(coverage.processes_covered)),
+    ]
+
+    for name, total, tested in rows:
+        if total > 0:
+            pct = tested / total * 100
+            typer.echo(f"| {name} | {total} | {tested} | {pct:.1f}% |")
+
+    typer.echo()
+    typer.echo(f"*DSL Hash: `{test_suite.dsl_hash[:12]}`*")
+
+
+def _render_coverage_table(coverage_data: dict[str, Any], detailed: bool) -> None:
+    """Render coverage output as a terminal table (default format)."""
+    coverage = coverage_data["coverage"]
+    test_suite = coverage_data["test_suite"]
+    overall_pct = coverage_data["overall_pct"]
+
+    typer.secho(f"Test Coverage: {test_suite.project_name}", bold=True)
+    typer.echo()
+
+    # Overall bar
+    bar_width = 40
+    filled = int(overall_pct / 100 * bar_width)
+    bar = "\u2588" * filled + "\u2591" * (bar_width - filled)
+    color = (
+        typer.colors.GREEN
+        if overall_pct >= 80
+        else (typer.colors.YELLOW if overall_pct >= 50 else typer.colors.RED)
+    )
+    typer.echo(f"Overall: [{bar}] ", nl=False)
+    typer.secho(f"{overall_pct:.1f}%", fg=color)
+    typer.echo()
+
+    # Category breakdown
+    typer.echo("Category Breakdown:")
+    categories = [
+        ("Entities", coverage.entities_total, len(coverage.entities_covered)),
+        ("State Machines", coverage.state_machines_total, len(coverage.state_machines_covered)),
+        ("Personas", coverage.personas_total, len(coverage.personas_covered)),
+        ("Workspaces", coverage.workspaces_total, len(coverage.workspaces_covered)),
+        ("Events", coverage.events_total, len(coverage.events_covered)),
+        ("Processes", coverage.processes_total, len(coverage.processes_covered)),
+    ]
+
+    for name, total, tested in categories:
+        if total > 0:
+            pct = tested / total * 100
+            color = (
+                typer.colors.GREEN
+                if pct >= 80
+                else (typer.colors.YELLOW if pct >= 50 else typer.colors.RED)
+            )
+            typer.echo(f"  {name:18} ", nl=False)
+            typer.secho(f"{tested:3}/{total:3} ({pct:5.1f}%)", fg=color)
+
+    typer.echo()
+    typer.echo(f"Total tests: {len(test_suite.designs)}")
+    typer.echo(f"DSL hash: {test_suite.dsl_hash[:12]}")
+
+    # Detailed breakdown
+    if detailed:
         typer.echo()
-        typer.echo(f"Total tests: {len(test_suite.designs)}")
-        typer.echo(f"DSL hash: {test_suite.dsl_hash[:12]}")
+        typer.secho("Detailed Coverage:", bold=True)
 
-        # Detailed breakdown
-        if detailed:
-            typer.echo()
-            typer.secho("Detailed Coverage:", bold=True)
+        # By entity
+        typer.echo()
+        typer.echo("  Entities:")
+        entity_tests: dict[str, int] = {}
+        for design in test_suite.designs:
+            entities = design.get("entities", [])
+            for entity in entities:
+                entity_tests[entity] = entity_tests.get(entity, 0) + 1
 
-            # By entity
+        for entity_name in sorted(coverage.entities_covered):
+            count = entity_tests.get(entity_name, 0)
+            icon = "\u2713" if count > 0 else "\u2717"
+            color = typer.colors.GREEN if count > 0 else typer.colors.RED
+            typer.secho(f"    {icon} {entity_name}: {count} tests", fg=color)
+
+        # By persona
+        if coverage.personas_covered:
             typer.echo()
-            typer.echo("  Entities:")
-            entity_tests: dict[str, int] = {}
+            typer.echo("  Personas:")
+            persona_tests: dict[str, int] = {}
             for design in test_suite.designs:
-                entities = design.get("entities", [])
-                for entity in entities:
-                    entity_tests[entity] = entity_tests.get(entity, 0) + 1
+                persona = design.get("persona")
+                if persona:
+                    persona_tests[persona] = persona_tests.get(persona, 0) + 1
 
-            for entity_name in sorted(coverage.entities_covered):
-                count = entity_tests.get(entity_name, 0)
-                icon = "✓" if count > 0 else "✗"
+            for persona_id in sorted(coverage.personas_covered):
+                count = persona_tests.get(persona_id, 0)
+                icon = "\u2713" if count > 0 else "\u2717"
                 color = typer.colors.GREEN if count > 0 else typer.colors.RED
-                typer.secho(f"    {icon} {entity_name}: {count} tests", fg=color)
-
-            # By persona
-            if coverage.personas_covered:
-                typer.echo()
-                typer.echo("  Personas:")
-                persona_tests: dict[str, int] = {}
-                for design in test_suite.designs:
-                    persona = design.get("persona")
-                    if persona:
-                        persona_tests[persona] = persona_tests.get(persona, 0) + 1
-
-                for persona_id in sorted(coverage.personas_covered):
-                    count = persona_tests.get(persona_id, 0)
-                    icon = "✓" if count > 0 else "✗"
-                    color = typer.colors.GREEN if count > 0 else typer.colors.RED
-                    typer.secho(f"    {icon} {persona_id}: {count} tests", fg=color)
+                typer.secho(f"    {icon} {persona_id}: {count} tests", fg=color)
 
 
 @test_app.command("agent")

@@ -21,12 +21,12 @@ from typing import Any
 
 from dazzle.mcp.server.paths import project_composition_captures, project_composition_references
 
-from .common import async_handler_error_json, extract_progress, handler_error_json
+from .common import extract_progress, wrap_async_handler_errors, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
 
-@handler_error_json
+@wrap_handler_errors
 def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run deterministic composition audit from sitespec structure.
 
@@ -57,7 +57,7 @@ def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def capture_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Capture section-level screenshots from a running Dazzle app.
 
@@ -131,7 +131,7 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
         return json.dumps({"error": str(e)})
 
 
-@handler_error_json
+@wrap_handler_errors
 def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run LLM visual evaluation on previously captured screenshots.
 
@@ -260,7 +260,7 @@ def _load_captures_from_dir(captures_dir: Path) -> list[Any]:
     return list(page_map.values())
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def report_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run combined composition report: audit + optional capture + analyze.
 
@@ -518,7 +518,7 @@ def _build_combined_markdown(
     return "\n".join(lines)
 
 
-@handler_error_json
+@wrap_handler_errors
 def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Generate the synthetic reference library for few-shot visual evaluation.
 
@@ -582,7 +582,7 @@ def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> s
     )
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def inspect_styles_handler(_project_path: Path, args: dict[str, Any]) -> str:
     """Extract computed CSS styles from a running app via Playwright.
 

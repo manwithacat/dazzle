@@ -7,12 +7,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..common import extract_progress, handler_error_json, load_project_appspec
+from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_test_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
     Analyze coverage and suggest what's missing.

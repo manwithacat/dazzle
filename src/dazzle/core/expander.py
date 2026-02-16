@@ -88,9 +88,6 @@ class VocabExpander:
         except Exception as e:
             raise ExpansionError(f"Unexpected error expanding '{entry_id}': {e}")
 
-        # TODO: Recursively expand any nested vocab references in the result
-        # For Phase 1, we'll keep it simple and not support nested references
-
         visited.remove(entry_id)
         return expanded
 

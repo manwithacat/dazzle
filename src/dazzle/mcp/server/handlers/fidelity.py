@@ -7,12 +7,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, handler_error_json, load_project_appspec
+from .common import extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
 
-@handler_error_json
+@wrap_handler_errors
 def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str:
     """Score rendered HTML fidelity against the AppSpec.
 

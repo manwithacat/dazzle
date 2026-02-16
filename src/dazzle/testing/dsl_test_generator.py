@@ -4,13 +4,13 @@ DAZZLE DSL-Driven Test Generator
 Generates executable test designs directly from parsed DSL/AppSpec without
 requiring a running server. Tests are derived from:
 
-1. Entity definitions → CRUD tests, validation tests
-2. State machines → Transition tests, invalid transition tests
-3. Personas → Access control tests, goal verification tests
-4. Workspaces → Navigation tests, component tests
-5. Events → Event emission tests, handler tests
-6. Processes → Workflow execution tests, compensation tests
-7. Messages/Channels → Delivery tests, throttle tests
+1. Entity definitions -> CRUD tests, validation tests
+2. State machines -> Transition tests, invalid transition tests
+3. Personas -> Access control tests, goal verification tests
+4. Workspaces -> Navigation tests, component tests
+5. Events -> Event emission tests, handler tests
+6. Processes -> Workflow execution tests, compensation tests
+7. Messages/Channels -> Delivery tests, throttle tests
 
 Tests are versioned based on DSL hash for change tracking.
 """
@@ -168,200 +168,265 @@ def compute_dsl_hash(appspec: AppSpec) -> str:
     return hashlib.sha256(content.encode()).hexdigest()[:16]
 
 
-class DSLTestGenerator:
-    """Generate tests directly from AppSpec."""
+# =========================================================================
+# Shared helpers (used by builders and facade)
+# =========================================================================
 
-    def __init__(self, appspec: AppSpec):
-        self.appspec = appspec
-        self.coverage = TestCoverage()
-        self._test_id_counter = 0
-        # Build entity lookup and dependency graph
-        self._entity_map: dict[str, EntitySpec] = {e.name: e for e in appspec.domain.entities}
-        self._entity_deps = self._build_dependency_graph()
-        # Entities that have a create surface (POST endpoint exists)
-        self._creatable_entities: set[str] = {
-            s.entity_ref for s in appspec.surfaces if s.entity_ref and s.mode == SurfaceMode.CREATE
-        }
 
-    def _next_id(self, prefix: str) -> str:
-        """Generate next test ID with prefix."""
-        self._test_id_counter += 1
-        return f"{prefix}_{self._test_id_counter:03d}"
+def _create_test(
+    test_id: str,
+    title: str,
+    description: str,
+    trigger: str,
+    steps: list[dict[str, Any]],
+    entities: list[str] | None = None,
+    persona: str | None = None,
+    tags: list[str] | None = None,
+) -> dict[str, Any]:
+    """Create a test design dict."""
+    return {
+        "test_id": test_id,
+        "title": title,
+        "description": description,
+        "trigger": trigger,
+        "persona": persona,
+        "scenario": None,
+        "steps": steps,
+        "expected_outcomes": [f"{title} succeeds"],
+        "entities": entities or [],
+        "surfaces": [],
+        "tags": tags or [],
+        "status": "accepted",
+        "source": "dsl-derived",
+        "created_at": datetime.now().isoformat(),
+    }
 
-    def _build_dependency_graph(self) -> dict[str, list[str]]:
-        """Build a graph of entity dependencies (which entities depend on which).
 
-        Returns a dict mapping entity name -> list of entity names it depends on
-        (i.e., entities it has required ref fields pointing to).
-        """
-        from dazzle.core.ir.fields import FieldTypeKind
+def _slugify(text: str) -> str:
+    """Convert text to slug."""
+    return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
-        deps: dict[str, list[str]] = {}
-        for entity in self.appspec.domain.entities:
-            entity_deps: list[str] = []
-            for fld in entity.fields:
-                if fld.type.kind == FieldTypeKind.REF and fld.is_required:
-                    # Extract target entity name from ref type
-                    target = fld.type.ref_entity
-                    if target and target in self._entity_map:
-                        entity_deps.append(target)
-            deps[entity.name] = entity_deps
-        return deps
 
-    def _get_required_refs(self, entity: EntitySpec) -> list[tuple[str, str, str]]:
-        """Get required ref fields for an entity.
+def _generate_field_value(fld: FieldSpec, unique_suffix: int = 0) -> Any:
+    """Generate a test value for a field."""
+    import uuid as uuid_module
 
-        Includes both explicitly required refs and refs needed to satisfy
-        invariant OR-clause constraints (e.g. ``contact != null or company != null``).
+    from dazzle.core.ir.fields import FieldTypeKind
 
-        Returns list of (field_name, target_entity, pk_field_name) tuples.
-        """
-        from dazzle.core.ir.fields import FieldTypeKind
+    type_kind = fld.type.kind
+    name = fld.name.lower()
+    # Use random suffixes for unique fields to avoid collisions across
+    # test runs (e.g. on staging servers without DB resets)
+    if fld.is_unique:
+        suffix = f"_{uuid_module.uuid4().hex[:8]}"
+    else:
+        suffix = ""
 
-        # Fields needed by invariant OR clauses
-        invariant_fields = set(_invariant_required_fields(entity))
+    # Enum handling
+    if type_kind == FieldTypeKind.ENUM:
+        if fld.type.enum_values:
+            return fld.type.enum_values[0]
+        return "default"
 
-        refs: list[tuple[str, str, str]] = []
-        for fld in entity.fields:
-            if fld.type.kind != FieldTypeKind.REF:
-                continue
-            if not fld.is_required and fld.name not in invariant_fields:
-                continue
-            target = fld.type.ref_entity
-            if target and target in self._entity_map:
-                # Find the PK field of the target entity
-                target_entity = self._entity_map[target]
-                pk_field = "id"  # Default
-                for tf in target_entity.fields:
-                    if tf.is_primary_key:
-                        pk_field = tf.name
-                        break
-                refs.append((fld.name, target, pk_field))
-        return refs
+    # Common field name patterns
+    if name == "email" or type_kind == FieldTypeKind.EMAIL:
+        return f"test{suffix}@example.com"
+    if name == "version":
+        return f"1.0.{unique_suffix}"
+    if name in ("serial_number", "serialnumber"):
+        return f"SN{unique_suffix or 1}"
 
-    def _init_coverage_totals(self) -> None:
-        """Set total counts on the coverage tracker from the appspec."""
-        self.coverage.entities_total = len(self.appspec.domain.entities)
-        self.coverage.state_machines_total = sum(
-            1 for e in self.appspec.domain.entities if e.state_machine
+    # Type-based generation
+    if type_kind == FieldTypeKind.UUID:
+        return str(uuid_module.uuid4())
+    elif type_kind == FieldTypeKind.STR:
+        max_len = fld.type.max_length
+        if fld.is_unique and max_len and max_len <= 16:
+            # Short unique field: use pure hex to maximize uniqueness
+            return uuid_module.uuid4().hex[:max_len]
+        value = f"Test {fld.name}{suffix}"
+        if max_len and len(value) > max_len:
+            # Truncate but keep suffix for uniqueness
+            if suffix and max_len >= len(suffix) + 1:
+                value = value[: max_len - len(suffix)] + suffix
+            else:
+                value = value[:max_len]
+        return value
+    elif type_kind == FieldTypeKind.TEXT:
+        return f"Test description for {fld.name}{suffix}"
+    elif type_kind == FieldTypeKind.INT:
+        return 1
+    elif type_kind == FieldTypeKind.DECIMAL:
+        return 10.0
+    elif type_kind == FieldTypeKind.BOOL:
+        return True
+    elif type_kind == FieldTypeKind.DATE:
+        return datetime.now().strftime("%Y-%m-%d")
+    elif type_kind == FieldTypeKind.DATETIME:
+        return datetime.now().isoformat()
+    elif type_kind == FieldTypeKind.URL:
+        return f"https://example.com/{fld.name}{suffix}"
+    elif type_kind == FieldTypeKind.FILE:
+        return f"test_file{suffix}.txt"
+    elif type_kind == FieldTypeKind.MONEY:
+        currency = fld.type.currency_code or "USD"
+        return {f"{fld.name}_minor": 10000, f"{fld.name}_currency": currency}
+    elif type_kind == FieldTypeKind.JSON:
+        return {"key": f"value{suffix}"}
+    else:
+        return f"test_{fld.name}{suffix}"
+
+
+def _generate_entity_data(entity: EntitySpec, entity_map: dict[str, EntitySpec]) -> dict[str, Any]:
+    """Generate valid test data for an entity."""
+    from dazzle.core.ir.fields import FieldTypeKind
+
+    data: dict[str, Any] = {}
+    timestamp = int(datetime.now().timestamp() * 1000) % 100000
+
+    for fld in entity.fields:
+        if fld.name in ("id", "created_at", "updated_at"):
+            continue
+        if not fld.is_required:
+            continue
+        if fld.type.kind == FieldTypeKind.REF:
+            continue  # Skip refs - handled by _generate_entity_data_with_refs
+        if fld.type.kind == FieldTypeKind.MONEY:
+            currency = fld.type.currency_code or "USD"
+            data[f"{fld.name}_minor"] = 10000
+            data[f"{fld.name}_currency"] = currency
+            continue
+        data[fld.name] = _generate_field_value(fld, timestamp)
+
+    # Satisfy invariant OR clauses
+    for field_name in _invariant_required_fields(entity):
+        if field_name not in data:
+            inv_field = next((f for f in entity.fields if f.name == field_name), None)
+            if inv_field and inv_field.type.kind != FieldTypeKind.REF:
+                if inv_field.type.kind == FieldTypeKind.MONEY:
+                    currency = inv_field.type.currency_code or "USD"
+                    data[f"{field_name}_minor"] = 10000
+                    data[f"{field_name}_currency"] = currency
+                else:
+                    data[field_name] = _generate_field_value(inv_field, timestamp)
+
+    return data
+
+
+def _get_required_refs(
+    entity: EntitySpec, entity_map: dict[str, EntitySpec]
+) -> list[tuple[str, str, str]]:
+    """Get required ref fields for an entity.
+
+    Returns list of (field_name, target_entity, pk_field_name) tuples.
+    """
+    from dazzle.core.ir.fields import FieldTypeKind
+
+    invariant_fields = set(_invariant_required_fields(entity))
+    refs: list[tuple[str, str, str]] = []
+    for fld in entity.fields:
+        if fld.type.kind != FieldTypeKind.REF:
+            continue
+        if not fld.is_required and fld.name not in invariant_fields:
+            continue
+        target = fld.type.ref_entity
+        if target and target in entity_map:
+            target_entity = entity_map[target]
+            pk_field = "id"
+            for tf in target_entity.fields:
+                if tf.is_primary_key:
+                    pk_field = tf.name
+                    break
+            refs.append((fld.name, target, pk_field))
+    return refs
+
+
+def _generate_parent_setup_steps(
+    required_refs: list[tuple[str, str, str]],
+    entity_map: dict[str, EntitySpec],
+) -> list[dict[str, Any]]:
+    """Generate setup steps that create parent entities for required refs."""
+    steps: list[dict[str, Any]] = []
+    created: set[str] = set()
+    visiting: set[str] = set()
+
+    def _create_ancestors(entity_name: str) -> None:
+        if entity_name in created or entity_name not in entity_map:
+            return
+        if entity_name in visiting:
+            return
+
+        visiting.add(entity_name)
+        parent = entity_map[entity_name]
+        parent_refs = _get_required_refs(parent, entity_map)
+
+        for _fn, target, _pk in parent_refs:
+            _create_ancestors(target)
+
+        parent_data = _generate_entity_data(parent, entity_map)
+        for fn, target, pk in parent_refs:
+            if target in created:
+                parent_data[fn] = f"$ref:parent_{target.lower()}.{pk}"
+
+        steps.append(
+            {
+                "action": "create",
+                "target": f"entity:{entity_name}",
+                "data": parent_data,
+                "store_result": f"parent_{entity_name.lower()}",
+                "rationale": f"Create parent {parent.title or entity_name}",
+            }
         )
-        self.coverage.personas_total = len(self.appspec.personas) if self.appspec.personas else 0
-        self.coverage.auth_personas_total = (
-            len(self.appspec.personas) if self.appspec.personas else 0
-        )
-        self.coverage.workspaces_total = (
-            len(self.appspec.workspaces) if self.appspec.workspaces else 0
-        )
-        self.coverage.events_total = (
-            len(self.appspec.event_model.events) if self.appspec.event_model else 0
-        )
-        self.coverage.processes_total = len(self.appspec.processes) if self.appspec.processes else 0
+        created.add(entity_name)
+        visiting.discard(entity_name)
 
-    def generate_all(self) -> GeneratedTestSuite:
-        """Generate complete test suite from AppSpec."""
-        self._init_coverage_totals()
+    for _fn, target_entity, _pk in required_refs:
+        _create_ancestors(target_entity)
 
-        designs: list[dict[str, Any]] = []
-        designs.extend(self._build_entity_coverage_designs())
-        designs.extend(self._build_persona_coverage_designs())
+    return steps
 
-        # Workspace tests
-        if self.appspec.workspaces:
-            for workspace in self.appspec.workspaces:
-                designs.extend(self._generate_workspace_tests(workspace))
-                self.coverage.workspaces_covered.add(workspace.name)
 
-        # Event tests
-        if self.appspec.event_model:
-            for event in self.appspec.event_model.events:
-                designs.extend(self._generate_event_tests(event))
-                self.coverage.events_covered.add(event.name)
+def _generate_entity_data_with_refs(
+    entity: EntitySpec,
+    required_refs: list[tuple[str, str, str]],
+    entity_map: dict[str, EntitySpec],
+) -> dict[str, Any]:
+    """Generate entity data including reference field placeholders."""
+    data = _generate_entity_data(entity, entity_map)
+    for field_name, target_entity, pk_field in required_refs:
+        data[field_name] = f"$ref:parent_{target_entity.lower()}.{pk_field}"
+    return data
 
-        # Process/workflow tests
-        if self.appspec.processes:
-            for process in self.appspec.processes:
-                designs.extend(self._generate_process_tests(process))
-                self.coverage.processes_covered.add(process.name)
 
-        return GeneratedTestSuite(
-            version="2.0",
-            dsl_hash=compute_dsl_hash(self.appspec),
-            generated_at=datetime.now().isoformat(),
-            project_name=self.appspec.name,
-            designs=designs,
-            coverage=self.coverage,
-        )
+# =========================================================================
+# Builder: CRUD Tests
+# =========================================================================
 
-    def _build_entity_coverage_designs(self) -> list[dict[str, Any]]:
-        """Generate entity CRUD, validation, and state machine test designs."""
-        designs: list[dict[str, Any]] = []
 
-        # Entity tests (CRUD + validation)
-        for entity in self.appspec.domain.entities:
-            if _entity_has_forbid_create(entity):
-                continue  # Skip CRUD tests for entities where create is forbidden
-            has_create_surface = entity.name in self._creatable_entities
-            designs.extend(
-                self._generate_entity_tests(entity, has_create_surface=has_create_surface)
-            )
-            self.coverage.entities_covered.add(entity.name)
+class CRUDTestBuilder:
+    """Generates CRUD and validation tests for entities."""
 
-        # State machine tests
-        for entity in self.appspec.domain.entities:
-            if entity.state_machine:
-                designs.extend(self._generate_state_machine_tests(entity))
-                self.coverage.state_machines_covered.add(entity.name)
+    def __init__(
+        self,
+        entity_map: dict[str, EntitySpec],
+        creatable_entities: set[str],
+    ):
+        self._entity_map = entity_map
+        self._creatable_entities = creatable_entities
 
-        return designs
-
-    def _build_persona_coverage_designs(self) -> list[dict[str, Any]]:
-        """Generate persona access control and auth lifecycle test designs."""
-        designs: list[dict[str, Any]] = []
-
-        if not self.appspec.personas:
-            return designs
-
-        # Persona tests
-        for persona in self.appspec.personas:
-            designs.extend(self._generate_persona_tests(persona))
-            self.coverage.personas_covered.add(persona.id)
-
-        # Auth lifecycle tests (login, session, logout per persona)
-        for persona in self.appspec.personas:
-            designs.extend(self._generate_auth_lifecycle_tests(persona))
-            self.coverage.auth_personas_covered.add(persona.id)
-
-        return designs
-
-    # =========================================================================
-    # Entity Tests
-    # =========================================================================
-
-    def _generate_entity_tests(
+    def generate_entity_tests(
         self, entity: EntitySpec, *, has_create_surface: bool = True
     ) -> list[dict[str, Any]]:
-        """Generate CRUD and validation tests for an entity.
-
-        Args:
-            entity: The entity to generate tests for.
-            has_create_surface: Whether the entity has a create surface (POST endpoint).
-                When False, create-dependent tests are skipped and read tests assume
-                pre-existing data.
-        """
+        """Generate CRUD and validation tests for an entity."""
         tests = []
-
-        # Get required references for this entity
-        required_refs = self._get_required_refs(entity)
-
-        # Build setup steps for parent entities (recursive — includes transitive deps)
-        setup_steps = self._generate_parent_setup_steps(required_refs)
+        required_refs = _get_required_refs(entity, self._entity_map)
+        setup_steps = _generate_parent_setup_steps(required_refs, self._entity_map)
         related_entities = [entity.name] + [
             step["target"].removeprefix("entity:") for step in setup_steps
         ]
 
         if has_create_surface:
-            # CRUD Create test — fresh data per test to avoid unique collisions
-            create_data = self._generate_entity_data_with_refs(entity, required_refs)
+            create_data = _generate_entity_data_with_refs(entity, required_refs, self._entity_map)
             create_steps = setup_steps + [
                 {
                     "action": "create",
@@ -377,7 +442,7 @@ class DSLTestGenerator:
                 },
             ]
             tests.append(
-                self._create_test(
+                _create_test(
                     test_id=f"CRUD_{entity.name.upper()}_CREATE",
                     title=f"Create {entity.title or entity.name}",
                     description=f"Test creating a new {entity.title or entity.name}",
@@ -388,8 +453,7 @@ class DSLTestGenerator:
                 )
             )
 
-            # CRUD Read test (with seeded data) — fresh data to avoid collisions with CREATE
-            read_data = self._generate_entity_data_with_refs(entity, required_refs)
+            read_data = _generate_entity_data_with_refs(entity, required_refs, self._entity_map)
             read_steps = setup_steps + [
                 {
                     "action": "create",
@@ -410,7 +474,7 @@ class DSLTestGenerator:
                 },
             ]
             tests.append(
-                self._create_test(
+                _create_test(
                     test_id=f"CRUD_{entity.name.upper()}_READ",
                     title=f"Read {entity.title or entity.name} list",
                     description=f"Test reading {entity.title or entity.name} list",
@@ -421,7 +485,6 @@ class DSLTestGenerator:
                 )
             )
         else:
-            # Read-only entity — test list endpoint without creating data
             read_steps = [
                 {
                     "action": "read_list",
@@ -436,7 +499,7 @@ class DSLTestGenerator:
                 },
             ]
             tests.append(
-                self._create_test(
+                _create_test(
                     test_id=f"CRUD_{entity.name.upper()}_READ",
                     title=f"Read {entity.title or entity.name} list",
                     description=f"Test reading {entity.title or entity.name} list (read-only entity)",
@@ -448,7 +511,6 @@ class DSLTestGenerator:
             )
 
         if has_create_surface:
-            # Validation test for required fields
             required_fields = [
                 f
                 for f in entity.fields
@@ -456,7 +518,7 @@ class DSLTestGenerator:
             ]
             if required_fields:
                 tests.append(
-                    self._create_test(
+                    _create_test(
                         test_id=f"VAL_{entity.name.upper()}_REQUIRED",
                         title=f"Validate required fields for {entity.title or entity.name}",
                         description="Test that missing required fields are rejected",
@@ -465,7 +527,7 @@ class DSLTestGenerator:
                             {
                                 "action": "create_expect_error",
                                 "target": f"entity:{entity.name}",
-                                "data": {},  # Empty data
+                                "data": {},
                                 "rationale": "Attempt create without required fields",
                             },
                             {
@@ -480,13 +542,13 @@ class DSLTestGenerator:
                     )
                 )
 
-            # Unique constraint tests — fresh data per test, intentionally duplicated
-            # within the test to trigger the unique violation
             unique_fields = [f for f in entity.fields if f.is_unique and f.name != "id"]
             for uf in unique_fields:
-                unique_data = self._generate_entity_data_with_refs(entity, required_refs)
+                unique_data = _generate_entity_data_with_refs(
+                    entity, required_refs, self._entity_map
+                )
                 tests.append(
-                    self._create_test(
+                    _create_test(
                         test_id=f"VAL_{entity.name.upper()}_{uf.name.upper()}_UNIQUE",
                         title=f"Validate {uf.name} uniqueness for {entity.title or entity.name}",
                         description=f"Test that duplicate {uf.name} values are rejected",
@@ -502,7 +564,7 @@ class DSLTestGenerator:
                             {
                                 "action": "create_expect_error",
                                 "target": f"entity:{entity.name}",
-                                "data": unique_data,  # Same data — should trigger unique violation
+                                "data": unique_data,
                                 "rationale": f"Attempt duplicate {uf.name}",
                             },
                             {
@@ -519,11 +581,19 @@ class DSLTestGenerator:
 
         return tests
 
-    # =========================================================================
-    # State Machine Tests
-    # =========================================================================
 
-    def _generate_state_machine_tests(self, entity: EntitySpec) -> list[dict[str, Any]]:
+# =========================================================================
+# Builder: State Machine Tests
+# =========================================================================
+
+
+class StateMachineTestBuilder:
+    """Generates state machine transition tests for entities."""
+
+    def __init__(self, entity_map: dict[str, EntitySpec]):
+        self._entity_map = entity_map
+
+    def generate_state_machine_tests(self, entity: EntitySpec) -> list[dict[str, Any]]:
         """Generate state machine transition tests."""
         tests: list[dict[str, Any]] = []
         sm = entity.state_machine
@@ -531,21 +601,18 @@ class DSLTestGenerator:
             return tests
 
         state_field = sm.status_field or "status"
-
-        # Build parent setup (recursive — handles transitive FK chains)
-        required_refs = self._get_required_refs(entity)
-        setup_steps = self._generate_parent_setup_steps(required_refs)
-        entity_data = self._generate_entity_data_with_refs(entity, required_refs)
+        required_refs = _get_required_refs(entity, self._entity_map)
+        setup_steps = _generate_parent_setup_steps(required_refs, self._entity_map)
+        entity_data = _generate_entity_data_with_refs(entity, required_refs, self._entity_map)
         related_entities = [entity.name] + [
             step["target"].removeprefix("entity:") for step in setup_steps
         ]
 
-        # Valid transitions
         for trans in sm.transitions:
             tests.append(
-                self._create_test(
+                _create_test(
                     test_id=f"SM_{entity.name.upper()}_{trans.from_state.upper()}_{trans.to_state.upper()}",
-                    title=f"{entity.title or entity.name}: {trans.from_state} → {trans.to_state}",
+                    title=f"{entity.title or entity.name}: {trans.from_state} \u2192 {trans.to_state}",
                     description=f"Test valid transition from {trans.from_state} to {trans.to_state}",
                     trigger="state_change",
                     steps=setup_steps
@@ -553,10 +620,7 @@ class DSLTestGenerator:
                         {
                             "action": "create",
                             "target": f"entity:{entity.name}",
-                            "data": {
-                                **entity_data,
-                                state_field: trans.from_state,
-                            },
+                            "data": {**entity_data, state_field: trans.from_state},
                             "rationale": f"Create entity in {trans.from_state} state",
                         },
                         {
@@ -577,16 +641,15 @@ class DSLTestGenerator:
                 )
             )
 
-        # Invalid transitions (if we can detect them)
         all_states = set(sm.states)
         for state in sm.states:
             valid_next = {t.to_state for t in sm.transitions if t.from_state == state}
             invalid_next = all_states - valid_next - {state}
-            for invalid_state in list(invalid_next)[:1]:  # Test one invalid per state
+            for invalid_state in list(invalid_next)[:1]:
                 tests.append(
-                    self._create_test(
+                    _create_test(
                         test_id=f"SM_{entity.name.upper()}_{state.upper()}_{invalid_state.upper()}_INVALID",
-                        title=f"{entity.title or entity.name}: {state} → {invalid_state} (invalid)",
+                        title=f"{entity.title or entity.name}: {state} \u2192 {invalid_state} (invalid)",
                         description=f"Test that invalid transition from {state} to {invalid_state} is rejected",
                         trigger="state_change",
                         steps=setup_steps
@@ -617,19 +680,23 @@ class DSLTestGenerator:
 
         return tests
 
-    # =========================================================================
-    # Persona Tests
-    # =========================================================================
 
-    def _generate_persona_tests(self, persona: PersonaSpec) -> list[dict[str, Any]]:
+# =========================================================================
+# Builder: Persona Tests
+# =========================================================================
+
+
+class PersonaTestBuilder:
+    """Generates persona access control and auth lifecycle tests."""
+
+    def generate_persona_tests(self, persona: PersonaSpec) -> list[dict[str, Any]]:
         """Generate access control tests for a persona."""
         tests = []
-        persona_id = persona.id  # PersonaSpec uses 'id' not 'name'
+        persona_id = persona.id
         persona_label = persona.label or persona_id
 
-        # Basic access test
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"ACL_{persona_id.upper()}_ACCESS",
                 title=f"{persona_label} can authenticate",
                 description=f"Test that {persona_label} persona can authenticate",
@@ -651,12 +718,11 @@ class DSLTestGenerator:
             )
         )
 
-        # Goal-based tests
         if persona.goals:
             for goal in persona.goals:
                 tests.append(
-                    self._create_test(
-                        test_id=f"GOAL_{persona_id.upper()}_{self._slugify(goal)[:20].upper()}",
+                    _create_test(
+                        test_id=f"GOAL_{persona_id.upper()}_{_slugify(goal)[:20].upper()}",
                         title=f"{persona_label}: {goal}",
                         description=f"Test that {persona_label} can achieve goal: {goal}",
                         trigger="user_action",
@@ -679,19 +745,16 @@ class DSLTestGenerator:
 
         return tests
 
-    # =========================================================================
-    # Auth Lifecycle Tests
-    # =========================================================================
-
-    def _generate_auth_lifecycle_tests(self, persona: PersonaSpec) -> list[dict[str, Any]]:
+    def generate_auth_lifecycle_tests(self, persona: PersonaSpec) -> list[dict[str, Any]]:
         """Generate auth lifecycle tests (login, session, logout) for a persona."""
         tests = []
         persona_id = persona.id
         persona_label = persona.label or persona_id
+        redirect_route = persona.default_route or "/app"
 
-        # AUTH_LOGIN_VALID — successful login
+        # AUTH_LOGIN_VALID
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"AUTH_LOGIN_VALID_{persona_id.upper()}",
                 title=f"Login as {persona_label} with valid credentials",
                 description=f"Test that {persona_label} can log in with correct credentials",
@@ -724,9 +787,9 @@ class DSLTestGenerator:
             )
         )
 
-        # AUTH_LOGIN_INVALID_PASSWORD — wrong password rejected
+        # AUTH_LOGIN_INVALID_PASSWORD
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"AUTH_LOGIN_INVALID_{persona_id.upper()}",
                 title=f"Reject invalid password for {persona_label}",
                 description=f"Test that {persona_label} cannot log in with wrong password",
@@ -759,10 +822,9 @@ class DSLTestGenerator:
             )
         )
 
-        # AUTH_REDIRECT — post-login redirect to persona's default_route
-        redirect_route = persona.default_route or "/app"
+        # AUTH_REDIRECT
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"AUTH_REDIRECT_{persona_id.upper()}",
                 title=f"{persona_label} redirects to {redirect_route} after login",
                 description=(
@@ -792,9 +854,9 @@ class DSLTestGenerator:
             )
         )
 
-        # AUTH_SESSION_VALID — authenticated request succeeds
+        # AUTH_SESSION_VALID
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"AUTH_SESSION_VALID_{persona_id.upper()}",
                 title=f"Authenticated request succeeds for {persona_label}",
                 description=f"Test that requests with a valid session cookie succeed for {persona_label}",
@@ -822,9 +884,9 @@ class DSLTestGenerator:
             )
         )
 
-        # AUTH_SESSION_EXPIRED — expired session rejected
+        # AUTH_SESSION_EXPIRED
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"AUTH_SESSION_EXPIRED_{persona_id.upper()}",
                 title=f"Expired session rejected for {persona_label}",
                 description="Test that an expired or invalid session cookie is rejected",
@@ -848,9 +910,9 @@ class DSLTestGenerator:
             )
         )
 
-        # AUTH_LOGOUT — logout clears session
+        # AUTH_LOGOUT
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"AUTH_LOGOUT_{persona_id.upper()}",
                 title=f"Logout clears session for {persona_label}",
                 description=f"Test that logout invalidates the session for {persona_label}",
@@ -862,11 +924,7 @@ class DSLTestGenerator:
                         "target": persona_id,
                         "rationale": f"Authenticate as {persona_label}",
                     },
-                    {
-                        "action": "post",
-                        "target": "/auth/logout",
-                        "rationale": "Logout",
-                    },
+                    {"action": "post", "target": "/auth/logout", "rationale": "Logout"},
                     {
                         "action": "assert_cookie_cleared",
                         "target": "last_response",
@@ -891,36 +949,193 @@ class DSLTestGenerator:
 
         return tests
 
-    # =========================================================================
-    # Workspace Tests
-    # =========================================================================
+
+# =========================================================================
+# Facade
+# =========================================================================
+
+
+class DSLTestGenerator:
+    """Generate tests directly from AppSpec.
+
+    Delegates to CRUDTestBuilder, StateMachineTestBuilder, and
+    PersonaTestBuilder for specific test categories.
+    """
+
+    def __init__(self, appspec: AppSpec):
+        self.appspec = appspec
+        self.coverage = TestCoverage()
+        self._test_id_counter = 0
+        self._entity_map: dict[str, EntitySpec] = {e.name: e for e in appspec.domain.entities}
+        self._entity_deps = self._build_dependency_graph()
+        self._creatable_entities: set[str] = {
+            s.entity_ref for s in appspec.surfaces if s.entity_ref and s.mode == SurfaceMode.CREATE
+        }
+        # Create builders
+        self._crud_builder = CRUDTestBuilder(self._entity_map, self._creatable_entities)
+        self._sm_builder = StateMachineTestBuilder(self._entity_map)
+        self._persona_builder = PersonaTestBuilder()
+
+    def _next_id(self, prefix: str) -> str:
+        """Generate next test ID with prefix."""
+        self._test_id_counter += 1
+        return f"{prefix}_{self._test_id_counter:03d}"
+
+    def _build_dependency_graph(self) -> dict[str, list[str]]:
+        """Build a graph of entity dependencies."""
+        from dazzle.core.ir.fields import FieldTypeKind
+
+        deps: dict[str, list[str]] = {}
+        for entity in self.appspec.domain.entities:
+            entity_deps: list[str] = []
+            for fld in entity.fields:
+                if fld.type.kind == FieldTypeKind.REF and fld.is_required:
+                    target = fld.type.ref_entity
+                    if target and target in self._entity_map:
+                        entity_deps.append(target)
+            deps[entity.name] = entity_deps
+        return deps
+
+    # --- Backward-compat wrappers for methods used by external code ---
+
+    def _get_required_refs(self, entity: EntitySpec) -> list[tuple[str, str, str]]:
+        return _get_required_refs(entity, self._entity_map)
+
+    def _generate_entity_data(self, entity: EntitySpec) -> dict[str, Any]:
+        return _generate_entity_data(entity, self._entity_map)
+
+    def _generate_parent_setup_steps(
+        self, required_refs: list[tuple[str, str, str]]
+    ) -> list[dict[str, Any]]:
+        return _generate_parent_setup_steps(required_refs, self._entity_map)
+
+    def _generate_entity_data_with_refs(
+        self, entity: EntitySpec, required_refs: list[tuple[str, str, str]]
+    ) -> dict[str, Any]:
+        return _generate_entity_data_with_refs(entity, required_refs, self._entity_map)
+
+    def _generate_entity_tests(
+        self, entity: EntitySpec, *, has_create_surface: bool = True
+    ) -> list[dict[str, Any]]:
+        return self._crud_builder.generate_entity_tests(
+            entity, has_create_surface=has_create_surface
+        )
+
+    def _generate_state_machine_tests(self, entity: EntitySpec) -> list[dict[str, Any]]:
+        return self._sm_builder.generate_state_machine_tests(entity)
+
+    def _generate_field_value(self, fld: FieldSpec, unique_suffix: int = 0) -> Any:
+        return _generate_field_value(fld, unique_suffix)
+
+    def _create_test(self, **kwargs: Any) -> dict[str, Any]:
+        return _create_test(**kwargs)
+
+    def _slugify(self, text: str) -> str:
+        return _slugify(text)
+
+    # --- Coverage & orchestration ---
+
+    def _init_coverage_totals(self) -> None:
+        """Set total counts on the coverage tracker from the appspec."""
+        self.coverage.entities_total = len(self.appspec.domain.entities)
+        self.coverage.state_machines_total = sum(
+            1 for e in self.appspec.domain.entities if e.state_machine
+        )
+        self.coverage.personas_total = len(self.appspec.personas) if self.appspec.personas else 0
+        self.coverage.auth_personas_total = (
+            len(self.appspec.personas) if self.appspec.personas else 0
+        )
+        self.coverage.workspaces_total = (
+            len(self.appspec.workspaces) if self.appspec.workspaces else 0
+        )
+        self.coverage.events_total = (
+            len(self.appspec.event_model.events) if self.appspec.event_model else 0
+        )
+        self.coverage.processes_total = len(self.appspec.processes) if self.appspec.processes else 0
+
+    def generate_all(self) -> GeneratedTestSuite:
+        """Generate complete test suite from AppSpec."""
+        self._init_coverage_totals()
+
+        designs: list[dict[str, Any]] = []
+        designs.extend(self._build_entity_coverage_designs())
+        designs.extend(self._build_persona_coverage_designs())
+
+        if self.appspec.workspaces:
+            for workspace in self.appspec.workspaces:
+                designs.extend(self._generate_workspace_tests(workspace))
+                self.coverage.workspaces_covered.add(workspace.name)
+
+        if self.appspec.event_model:
+            for event in self.appspec.event_model.events:
+                designs.extend(self._generate_event_tests(event))
+                self.coverage.events_covered.add(event.name)
+
+        if self.appspec.processes:
+            for process in self.appspec.processes:
+                designs.extend(self._generate_process_tests(process))
+                self.coverage.processes_covered.add(process.name)
+
+        return GeneratedTestSuite(
+            version="2.0",
+            dsl_hash=compute_dsl_hash(self.appspec),
+            generated_at=datetime.now().isoformat(),
+            project_name=self.appspec.name,
+            designs=designs,
+            coverage=self.coverage,
+        )
+
+    def _build_entity_coverage_designs(self) -> list[dict[str, Any]]:
+        """Generate entity CRUD, validation, and state machine test designs."""
+        designs: list[dict[str, Any]] = []
+
+        for entity in self.appspec.domain.entities:
+            if _entity_has_forbid_create(entity):
+                continue
+            has_create_surface = entity.name in self._creatable_entities
+            designs.extend(
+                self._crud_builder.generate_entity_tests(
+                    entity, has_create_surface=has_create_surface
+                )
+            )
+            self.coverage.entities_covered.add(entity.name)
+
+        for entity in self.appspec.domain.entities:
+            if entity.state_machine:
+                designs.extend(self._sm_builder.generate_state_machine_tests(entity))
+                self.coverage.state_machines_covered.add(entity.name)
+
+        return designs
+
+    def _build_persona_coverage_designs(self) -> list[dict[str, Any]]:
+        """Generate persona access control and auth lifecycle test designs."""
+        designs: list[dict[str, Any]] = []
+
+        if not self.appspec.personas:
+            return designs
+
+        for persona in self.appspec.personas:
+            designs.extend(self._persona_builder.generate_persona_tests(persona))
+            self.coverage.personas_covered.add(persona.id)
+
+        for persona in self.appspec.personas:
+            designs.extend(self._persona_builder.generate_auth_lifecycle_tests(persona))
+            self.coverage.auth_personas_covered.add(persona.id)
+
+        return designs
+
+    # --- Methods kept on facade (workspace/event/process tests) ---
 
     def _generate_workspace_tests(self, workspace: WorkspaceSpec) -> list[dict[str, Any]]:
-        """Generate navigation and access tests for a workspace.
-
-        Workspace tests use Playwright for browser-based testing but are Tier 1
-        (scripted, deterministic). They do NOT require LLM agent involvement.
-
-        Test Tiers:
-        - tier1: Scripted tests (API or Playwright) - fast, deterministic, free
-        - tier2: Agent tests (LLM-driven) - adaptive, slow, costs money
-
-        Workspace navigation is tier1 because the steps are predictable and
-        don't require visual judgment or adaptive decision-making.
-        """
+        """Generate navigation and access tests for a workspace."""
         tests = []
-
         workspace_label = workspace.title or workspace.name
-
-        # Determine the route for this workspace
         workspace_route = f"/app/workspaces/{workspace.name}"
 
-        # Extract the first allowed persona from access rules (if any)
         ws_persona: str | None = None
         if workspace.access and workspace.access.allow_personas:
             ws_persona = workspace.access.allow_personas[0]
 
-        # Tier 1 Playwright navigation test - scripted, no LLM needed
         nav_steps: list[dict[str, Any]] = []
         if ws_persona:
             nav_steps.append(
@@ -956,18 +1171,17 @@ class DSLTestGenerator:
             ]
         )
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"WS_{workspace.name.upper()}_NAV",
                 title=f"Navigate to {workspace_label}",
                 description=f"Verify {workspace_label} workspace loads and displays correctly",
-                trigger="playwright",  # Tier 1: Scripted Playwright test
+                trigger="playwright",
                 persona=ws_persona,
                 steps=nav_steps,
                 tags=["workspace", "navigation", "playwright", "tier1", "generated", "dsl-derived"],
             )
         )
 
-        # API-based workspace route check (can run without browser)
         route_steps: list[dict[str, Any]] = []
         if ws_persona:
             route_steps.append(
@@ -986,7 +1200,7 @@ class DSLTestGenerator:
             }
         )
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"WS_{workspace.name.upper()}_ROUTE",
                 title=f"Workspace {workspace_label} route exists",
                 description=f"Verify {workspace_label} workspace route is configured",
@@ -999,17 +1213,11 @@ class DSLTestGenerator:
 
         return tests
 
-    # =========================================================================
-    # Event Tests
-    # =========================================================================
-
     def _generate_event_tests(self, event: EventSpec) -> list[dict[str, Any]]:
         """Generate event emission and handling tests."""
         tests = []
-
-        # Event emission test
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"EVT_{event.name.upper()}_EMIT",
                 title=f"Emit {event.name} event",
                 description=f"Test that {event.name} event is emitted correctly",
@@ -1031,10 +1239,8 @@ class DSLTestGenerator:
                 tags=["event", "emission", "generated", "dsl-derived"],
             )
         )
-
-        # Event structure validation
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"EVT_{event.name.upper()}_SCHEMA",
                 title=f"Validate {event.name} schema",
                 description=f"Test that {event.name} event payload is validated",
@@ -1043,7 +1249,7 @@ class DSLTestGenerator:
                     {
                         "action": "emit_event_expect_error",
                         "target": f"event:{event.name}",
-                        "data": {},  # Invalid payload
+                        "data": {},
                         "rationale": f"Emit invalid {event.name} event",
                     },
                     {
@@ -1056,20 +1262,13 @@ class DSLTestGenerator:
                 tags=["event", "validation", "generated", "dsl-derived"],
             )
         )
-
         return tests
-
-    # =========================================================================
-    # Process Tests
-    # =========================================================================
 
     def _generate_process_tests(self, process: ProcessSpec) -> list[dict[str, Any]]:
         """Generate workflow execution tests."""
         tests = []
-
-        # Process trigger test
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"PROC_{process.name.upper()}_TRIGGER",
                 title=f"Trigger {process.title or process.name}",
                 description=f"Test that {process.name} process starts correctly",
@@ -1090,10 +1289,8 @@ class DSLTestGenerator:
                 tags=["process", "trigger", "generated", "dsl-derived"],
             )
         )
-
-        # Process completion test (happy path)
         tests.append(
-            self._create_test(
+            _create_test(
                 test_id=f"PROC_{process.name.upper()}_COMPLETE",
                 title=f"Complete {process.title or process.name}",
                 description=f"Test that {process.name} process completes successfully",
@@ -1120,11 +1317,9 @@ class DSLTestGenerator:
                 tags=["process", "completion", "generated", "dsl-derived"],
             )
         )
-
-        # Step execution tests
         for step in process.steps or []:
             tests.append(
-                self._create_test(
+                _create_test(
                     test_id=f"PROC_{process.name.upper()}_STEP_{step.name.upper()}",
                     title=f"{process.name}: Step {step.name}",
                     description=f"Test that step {step.name} executes correctly",
@@ -1145,248 +1340,19 @@ class DSLTestGenerator:
                     tags=["process", "step", "generated", "dsl-derived"],
                 )
             )
-
         return tests
-
-    # =========================================================================
-    # Helpers
-    # =========================================================================
-
-    def _create_test(
-        self,
-        test_id: str,
-        title: str,
-        description: str,
-        trigger: str,
-        steps: list[dict[str, Any]],
-        entities: list[str] | None = None,
-        persona: str | None = None,
-        tags: list[str] | None = None,
-    ) -> dict[str, Any]:
-        """Create a test design dict."""
-        return {
-            "test_id": test_id,
-            "title": title,
-            "description": description,
-            "trigger": trigger,
-            "persona": persona,
-            "scenario": None,
-            "steps": steps,
-            "expected_outcomes": [f"{title} succeeds"],
-            "entities": entities or [],
-            "surfaces": [],
-            "tags": tags or [],
-            "status": "accepted",
-            "source": "dsl-derived",
-            "created_at": datetime.now().isoformat(),
-        }
-
-    def _generate_entity_data(self, entity: EntitySpec) -> dict[str, Any]:
-        """Generate valid test data for an entity."""
-        from dazzle.core.ir.fields import FieldTypeKind
-
-        data: dict[str, Any] = {}
-        timestamp = int(datetime.now().timestamp() * 1000) % 100000
-
-        for fld in entity.fields:
-            if fld.name in ("id", "created_at", "updated_at"):
-                continue
-            if not fld.is_required:
-                continue
-
-            # Handle reference fields
-            if fld.type.kind == FieldTypeKind.REF:
-                continue  # Skip refs for now - handled by _generate_entity_data_with_refs
-
-            # Money fields expand to two storage columns: {name}_minor, {name}_currency
-            if fld.type.kind == FieldTypeKind.MONEY:
-                currency = fld.type.currency_code or "USD"
-                data[f"{fld.name}_minor"] = 10000
-                data[f"{fld.name}_currency"] = currency
-                continue
-
-            data[fld.name] = self._generate_field_value(fld, timestamp)
-
-        # Satisfy invariant OR clauses that require at least one optional field
-        # e.g. invariant: uprn != null or canonical_text != null
-        for field_name in _invariant_required_fields(entity):
-            if field_name not in data:
-                inv_field = next((f for f in entity.fields if f.name == field_name), None)
-                if inv_field and inv_field.type.kind != FieldTypeKind.REF:
-                    if inv_field.type.kind == FieldTypeKind.MONEY:
-                        currency = inv_field.type.currency_code or "USD"
-                        data[f"{field_name}_minor"] = 10000
-                        data[f"{field_name}_currency"] = currency
-                    else:
-                        data[field_name] = self._generate_field_value(inv_field, timestamp)
-
-        return data
-
-    def _generate_parent_setup_steps(
-        self, required_refs: list[tuple[str, str, str]]
-    ) -> list[dict[str, Any]]:
-        """Generate setup steps that create parent entities for required refs.
-
-        Recursively creates ancestor entities for transitive FK chains
-        (e.g. A → B → C creates C first, then B with ref to C, then A with ref to B).
-        Circular dependencies are detected and skipped.
-
-        Args:
-            required_refs: List of (field_name, target_entity, pk_field) tuples
-
-        Returns:
-            List of step dictionaries for creating parent entities in dependency order
-        """
-        steps: list[dict[str, Any]] = []
-        created: set[str] = set()
-        visiting: set[str] = set()
-
-        def _create_ancestors(entity_name: str) -> None:
-            if entity_name in created or entity_name not in self._entity_map:
-                return
-            if entity_name in visiting:
-                # Circular dependency — skip to avoid infinite recursion
-                return
-
-            visiting.add(entity_name)
-            parent = self._entity_map[entity_name]
-            parent_refs = self._get_required_refs(parent)
-
-            # Recursively create this parent's own dependencies first
-            for _fn, target, _pk in parent_refs:
-                _create_ancestors(target)
-
-            # Now create this entity — all its ancestors already exist
-            parent_data = self._generate_entity_data(parent)
-            for fn, target, pk in parent_refs:
-                if target in created:
-                    parent_data[fn] = f"$ref:parent_{target.lower()}.{pk}"
-
-            steps.append(
-                {
-                    "action": "create",
-                    "target": f"entity:{entity_name}",
-                    "data": parent_data,
-                    "store_result": f"parent_{entity_name.lower()}",
-                    "rationale": f"Create parent {parent.title or entity_name}",
-                }
-            )
-            created.add(entity_name)
-            visiting.discard(entity_name)
-
-        for _fn, target_entity, _pk in required_refs:
-            _create_ancestors(target_entity)
-
-        return steps
-
-    def _generate_entity_data_with_refs(
-        self, entity: EntitySpec, required_refs: list[tuple[str, str, str]]
-    ) -> dict[str, Any]:
-        """Generate entity data including reference field placeholders.
-
-        Args:
-            entity: The entity to generate data for
-            required_refs: List of (field_name, target_entity, pk_field) tuples
-
-        Returns:
-            Dictionary with entity data, including $ref placeholders for foreign keys
-        """
-        # Start with base data (without refs)
-        data = self._generate_entity_data(entity)
-
-        # Add ref placeholders that reference stored parent IDs
-        for field_name, target_entity, pk_field in required_refs:
-            # Use $ref: syntax to reference the stored parent ID
-            data[field_name] = f"$ref:parent_{target_entity.lower()}.{pk_field}"
-
-        return data
-
-    def _generate_field_value(self, field: FieldSpec, unique_suffix: int = 0) -> Any:
-        """Generate a test value for a field."""
-        import uuid as uuid_module
-
-        from dazzle.core.ir.fields import FieldTypeKind
-
-        type_kind = field.type.kind
-        name = field.name.lower()
-        # Use random suffixes for unique fields to avoid collisions across
-        # test runs (e.g. on staging servers without DB resets)
-        if field.is_unique:
-            suffix = f"_{uuid_module.uuid4().hex[:8]}"
-        else:
-            suffix = ""
-
-        # Enum handling
-        if type_kind == FieldTypeKind.ENUM:
-            if field.type.enum_values:
-                return field.type.enum_values[0]
-            return "default"
-
-        # Common field name patterns
-        if name == "email" or type_kind == FieldTypeKind.EMAIL:
-            return f"test{suffix}@example.com"
-        if name == "version":
-            return f"1.0.{unique_suffix}"
-        if name in ("serial_number", "serialnumber"):
-            return f"SN{unique_suffix or 1}"
-
-        # Type-based generation
-        if type_kind == FieldTypeKind.UUID:
-            return str(uuid_module.uuid4())
-        elif type_kind == FieldTypeKind.STR:
-            max_len = field.type.max_length
-            if field.is_unique and max_len and max_len <= 16:
-                # Short unique field: use pure hex to maximize uniqueness
-                return uuid_module.uuid4().hex[:max_len]
-            value = f"Test {field.name}{suffix}"
-            if max_len and len(value) > max_len:
-                # Truncate but keep suffix for uniqueness
-                if suffix and max_len >= len(suffix) + 1:
-                    value = value[: max_len - len(suffix)] + suffix
-                else:
-                    value = value[:max_len]
-            return value
-        elif type_kind == FieldTypeKind.TEXT:
-            return f"Test description for {field.name}{suffix}"
-        elif type_kind == FieldTypeKind.INT:
-            return 1
-        elif type_kind == FieldTypeKind.DECIMAL:
-            return 10.0
-        elif type_kind == FieldTypeKind.BOOL:
-            return True
-        elif type_kind == FieldTypeKind.DATE:
-            return datetime.now().strftime("%Y-%m-%d")
-        elif type_kind == FieldTypeKind.DATETIME:
-            return datetime.now().isoformat()
-        elif type_kind == FieldTypeKind.URL:
-            return f"https://example.com/{field.name}{suffix}"
-        elif type_kind == FieldTypeKind.FILE:
-            return f"test_file{suffix}.txt"
-        elif type_kind == FieldTypeKind.MONEY:
-            # Money fields expand to {name}_minor + {name}_currency storage
-            # columns. Prefer handling at _generate_entity_data level; this
-            # fallback uses the flat key convention for standalone callers.
-            currency = field.type.currency_code or "USD"
-            return {f"{field.name}_minor": 10000, f"{field.name}_currency": currency}
-        elif type_kind == FieldTypeKind.JSON:
-            return {"key": f"value{suffix}"}
-        else:
-            return f"test_{field.name}{suffix}"
 
     def _generate_event_payload(self, event: EventSpec) -> dict[str, Any]:
         """Generate test payload for an event."""
         payload = {}
-
         for ef in event.custom_fields or []:
             payload[ef.name] = self._generate_event_field_value(ef)
-
         return payload
 
     def _generate_event_field_value(self, field: Any) -> Any:
         """Generate test value for an event field."""
         import uuid as uuid_module
 
-        # EventFieldSpec uses 'field_type', FieldSpec uses 'type'
         type_name: Any = getattr(field, "field_type", None) or getattr(field, "type", "str")
         if type_name is not None and hasattr(type_name, "kind"):
             type_name = type_name.kind.value
@@ -1410,9 +1376,7 @@ class DSLTestGenerator:
         import uuid as uuid_module
 
         inputs: dict[str, Any] = {}
-
         for inp in process.inputs or []:
-            # Process inputs may use 'field_type' or 'type'
             type_name: Any = getattr(inp, "field_type", None) or getattr(inp, "type", "str")
             if type_name is not None and hasattr(type_name, "kind"):
                 type_name = type_name.kind.value
@@ -1428,12 +1392,7 @@ class DSLTestGenerator:
                 inputs[inp.name] = True
             else:
                 inputs[inp.name] = f"test_{inp.name}"
-
         return inputs
-
-    def _slugify(self, text: str) -> str:
-        """Convert text to slug."""
-        return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_")
 
 
 def generate_tests_from_dsl(project_path: Path) -> GeneratedTestSuite:

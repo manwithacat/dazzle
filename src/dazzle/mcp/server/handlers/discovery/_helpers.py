@@ -120,6 +120,60 @@ async def _get_persona_session_info(
     return {"authenticated": False, "persona": persona}
 
 
+def load_report_data(
+    project_path: Path,
+    session_id: str | None,
+) -> tuple[dict[str, Any], str] | str:
+    """Find and load a discovery report.
+
+    Returns ``(data_dict, session_id)`` on success, or a JSON error string
+    on failure.
+    """
+    report_dir = project_discovery_dir(project_path)
+
+    if session_id:
+        report_file = report_dir / f"{session_id}.json"
+    else:
+        if not report_dir.exists():
+            return json.dumps({"error": "No discovery reports found"})
+        reports = sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        if not reports:
+            return json.dumps({"error": "No discovery reports found"})
+        report_file = reports[0]
+        session_id = report_file.stem
+
+    if not report_file.exists():
+        return json.dumps({"error": f"Report not found: {session_id}"})
+
+    try:
+        data = json.loads(report_file.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        return json.dumps({"error": f"Could not read report: {e}"})
+
+    return data, session_id
+
+
+def deserialize_observations(raw_observations: list[dict[str, Any]]) -> list[Any]:
+    """Reconstruct Observation objects from serialized dicts."""
+    from dazzle.agent.transcript import Observation
+
+    observations: list[Observation] = []
+    for obs_dict in raw_observations:
+        observations.append(
+            Observation(
+                category=obs_dict.get("category", "gap"),
+                severity=obs_dict.get("severity", "medium"),
+                title=obs_dict.get("title", ""),
+                description=obs_dict.get("description", ""),
+                location=obs_dict.get("location", ""),
+                related_artefacts=obs_dict.get("related_artefacts", []),
+                metadata=obs_dict.get("metadata", {}),
+                step_number=obs_dict.get("step_number", 0),
+            )
+        )
+    return observations
+
+
 def save_discovery_report(project_path: Path, transcript_json: dict[str, Any]) -> Path:
     """
     Save a discovery transcript as a report file.

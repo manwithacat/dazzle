@@ -9,7 +9,7 @@ Split into submodules:
 - analysis: analyze_patterns, export_frontend_spec_handler
 """
 
-from ..utils import extract_issue_key as _extract_issue_key
+from ..text_utils import extract_issue_key as _extract_issue_key
 from .analysis import analyze_patterns, export_frontend_spec_handler
 from .inspect import inspect_entity, inspect_surface
 from .validate import get_unified_issues, lint_project, list_modules, validate_dsl

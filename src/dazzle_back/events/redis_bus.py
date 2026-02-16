@@ -127,6 +127,8 @@ class RedisBus(BaseEventBus):
         self._redis: aioredis.Redis | None = None
         # Override with Redis-specific ActiveSubscription (has consumer_name)
         self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}  # type: ignore[assignment]
+        # Used by DLQ replay to pass msg_id between _fetch and _delete
+        self._pending_dlq_msg: tuple[str, str | None] | None = None
 
     def _stream_key(self, topic: str) -> str:
         """Get Redis key for a stream."""
@@ -746,49 +748,30 @@ class RedisBus(BaseEventBus):
                 pass
         return total
 
-    async def replay_dlq_event(
-        self,
-        event_id: str,
-        group_id: str,
-    ) -> bool:
-        """
-        Replay a single event from the DLQ.
-
-        Returns:
-            True if event was found and replayed successfully
-        """
-        redis = self._get_redis()
-
-        # Find the event in DLQ
+    async def _fetch_dlq_event(
+        self, event_id: str, group_id: str
+    ) -> tuple[str, EventEnvelope] | None:
+        # Search across DLQ streams for the matching event
         dlq_events = await self.get_dlq_events(group_id=group_id, limit=1000)
-        target = None
         for ev in dlq_events:
             if ev["event_id"] == event_id:
-                target = ev
-                break
+                # Stash msg_id for deletion
+                self._pending_dlq_msg = (ev["topic"], ev.get("msg_id"))
+                return ev["topic"], ev["envelope"]
+        return None
 
-        if not target:
-            return False
-
-        topic = target["topic"]
-        envelope = target["envelope"]
-        msg_id = target.get("msg_id")
-
-        # Process through handler
-        key = (topic, group_id)
-        if key not in self._subscriptions:
-            raise ConsumerNotFoundError(topic, group_id)
-
-        handler = self._subscriptions[key].handler
-
-        try:
-            await handler(envelope)
-            # Remove from DLQ on success
+    async def _delete_dlq_event(self, event_id: str, group_id: str) -> None:
+        redis = self._get_redis()
+        if self._pending_dlq_msg:
+            topic, msg_id = self._pending_dlq_msg
             if msg_id:
                 await redis.xdel(self._dlq_key(topic), msg_id)
-            return True
-        except Exception:
-            raise
+            self._pending_dlq_msg = None
+
+    async def _increment_dlq_attempts(self, event_id: str, group_id: str) -> None:
+        # Redis DLQ entries are immutable stream entries; attempts are
+        # embedded in the message fields and cannot be updated in place.
+        pass
 
     async def clear_dlq(
         self,

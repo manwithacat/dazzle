@@ -743,18 +743,7 @@ class DevBrokerSQLite(BaseEventBus):
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         """Get events from the dead letter queue."""
-        conditions = []
-        params: list[Any] = []
-
-        if topic:
-            conditions.append("topic = ?")
-            params.append(topic)
-
-        if group_id:
-            conditions.append("group_id = ?")
-            params.append(group_id)
-
-        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        where_clause, params = self._build_dlq_filter_clause(topic, group_id)
 
         async with self._get_conn() as conn:
             cursor = await conn.execute(
@@ -786,19 +775,9 @@ class DevBrokerSQLite(BaseEventBus):
 
             return results
 
-    async def replay_dlq_event(
-        self,
-        event_id: str,
-        group_id: str,
-    ) -> bool:
-        """
-        Replay a single event from the DLQ.
-
-        The event is removed from DLQ and reprocessed through the normal path.
-
-        Returns:
-            True if event was found and replayed
-        """
+    async def _fetch_dlq_event(
+        self, event_id: str, group_id: str
+    ) -> tuple[str, EventEnvelope] | None:
         async with self._get_conn() as conn:
             cursor = await conn.execute(
                 "SELECT topic, envelope FROM _dazzle_dlq WHERE event_id = ? AND group_id = ?",
@@ -806,35 +785,25 @@ class DevBrokerSQLite(BaseEventBus):
             )
             row = await cursor.fetchone()
             if not row:
-                return False
+                return None
 
-            topic = row["topic"]
-            envelope = EventEnvelope.from_json(row["envelope"])
+            return row["topic"], EventEnvelope.from_json(row["envelope"])
 
-            # Process through handler
-            key = (topic, group_id)
-            if key not in self._subscriptions:
-                raise ConsumerNotFoundError(topic, group_id)
+    async def _delete_dlq_event(self, event_id: str, group_id: str) -> None:
+        async with self._get_conn() as conn:
+            await conn.execute(
+                "DELETE FROM _dazzle_dlq WHERE event_id = ? AND group_id = ?",
+                (event_id, group_id),
+            )
+            await conn.commit()
 
-            handler = self._subscriptions[key].handler
-
-            try:
-                await handler(envelope)
-                # Remove from DLQ on success
-                await conn.execute(
-                    "DELETE FROM _dazzle_dlq WHERE event_id = ? AND group_id = ?",
-                    (event_id, group_id),
-                )
-                await conn.commit()
-                return True
-            except Exception:
-                # Update attempts count
-                await conn.execute(
-                    "UPDATE _dazzle_dlq SET attempts = attempts + 1 WHERE event_id = ? AND group_id = ?",
-                    (event_id, group_id),
-                )
-                await conn.commit()
-                raise
+    async def _increment_dlq_attempts(self, event_id: str, group_id: str) -> None:
+        async with self._get_conn() as conn:
+            await conn.execute(
+                "UPDATE _dazzle_dlq SET attempts = attempts + 1 WHERE event_id = ? AND group_id = ?",
+                (event_id, group_id),
+            )
+            await conn.commit()
 
     async def clear_dlq(
         self,
@@ -847,18 +816,7 @@ class DevBrokerSQLite(BaseEventBus):
         Returns:
             Number of events cleared
         """
-        conditions = []
-        params: list[Any] = []
-
-        if topic:
-            conditions.append("topic = ?")
-            params.append(topic)
-
-        if group_id:
-            conditions.append("group_id = ?")
-            params.append(group_id)
-
-        where_clause = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        where_clause, params = self._build_dlq_filter_clause(topic, group_id)
 
         async with self._get_conn() as conn:
             cursor = await conn.execute(

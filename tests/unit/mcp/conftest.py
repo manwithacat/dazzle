@@ -67,9 +67,14 @@ def install_handlers_common_mock() -> ModuleType:
         ctx.log_sync = MagicMock()
         return ctx
 
+    _hej = _make_handler_error_json()
+    _ahej = _make_async_handler_error_json()
     common.extract_progress = _extract_progress  # type: ignore[attr-defined]
-    common.handler_error_json = _make_handler_error_json()  # type: ignore[attr-defined]
-    common.async_handler_error_json = _make_async_handler_error_json()  # type: ignore[attr-defined]
+    common.wrap_handler_errors = _hej  # type: ignore[attr-defined]
+    common.wrap_async_handler_errors = _ahej  # type: ignore[attr-defined]
+    # Backward-compatible aliases
+    common.handler_error_json = _hej  # type: ignore[attr-defined]
+    common.async_handler_error_json = _ahej  # type: ignore[attr-defined]
 
     sys.modules["dazzle.mcp.server.handlers.common"] = common
     return common
@@ -104,10 +109,15 @@ def install_handlers_common_real() -> ModuleType:
         modules = parse_modules(dsl_files)
         return build_appspec(modules, manifest.project_root)
 
+    _hej = _make_handler_error_json()
+    _ahej = _make_async_handler_error_json()
     common.extract_progress = _extract_progress  # type: ignore[attr-defined]
     common.load_project_appspec = _load_project_appspec  # type: ignore[attr-defined]
-    common.handler_error_json = _make_handler_error_json()  # type: ignore[attr-defined]
-    common.async_handler_error_json = _make_async_handler_error_json()  # type: ignore[attr-defined]
+    common.wrap_handler_errors = _hej  # type: ignore[attr-defined]
+    common.wrap_async_handler_errors = _ahej  # type: ignore[attr-defined]
+    # Backward-compatible aliases
+    common.handler_error_json = _hej  # type: ignore[attr-defined]
+    common.async_handler_error_json = _ahej  # type: ignore[attr-defined]
 
     sys.modules["dazzle.mcp.server.handlers.common"] = common
     return common

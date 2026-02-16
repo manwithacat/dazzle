@@ -15,10 +15,10 @@ from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.semantics import lookup_concept
 
-from .common import extract_progress, handler_error_json
+from .common import extract_progress, wrap_handler_errors
 
 
-@handler_error_json
+@wrap_handler_errors
 def lookup_concept_handler(args: dict[str, Any]) -> str:
     """Look up a DAZZLE DSL concept."""
     progress = extract_progress(args)
@@ -31,7 +31,7 @@ def lookup_concept_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def find_examples_handler(args: dict[str, Any]) -> str:
     """Find example projects by features or complexity."""
     progress = extract_progress(args)
@@ -54,7 +54,7 @@ def find_examples_handler(args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_cli_help_handler(args: dict[str, Any]) -> str:
     """Get CLI help for a command."""
     progress = extract_progress(args)
@@ -64,7 +64,7 @@ def get_cli_help_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_workflow_guide_handler(args: dict[str, Any]) -> str:
     """Get workflow guide."""
     progress = extract_progress(args)
@@ -77,7 +77,7 @@ def get_workflow_guide_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def lookup_inference_handler(args: dict[str, Any]) -> str:
     """Search the inference knowledge base for DSL generation patterns."""
     progress = extract_progress(args)

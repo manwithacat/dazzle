@@ -94,6 +94,12 @@ class StepExecutor:
             except ProcessStepFailed:
                 raise
 
+            except ConnectionError as e:
+                last_error = str(e)
+                logger.warning(
+                    "Transient error in step %s (attempt %d): %s", step.name, attempt + 1, e
+                )
+
             except Exception as e:
                 last_error = str(e)
 
@@ -456,6 +462,9 @@ class SchedulePoller:
                         try:
                             run_id = await self._adapter.start_process(name, {})
                             await self._adapter._update_schedule_run(name, run_id)
+                        except (TimeoutError, ConnectionError) as e:
+                            logger.warning("Transient error scheduling %s: %s", name, e)
+                            await self._adapter._record_schedule_error(name, str(e))
                         except Exception as e:
                             await self._adapter._record_schedule_error(name, str(e))
 

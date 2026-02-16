@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..common import extract_progress, handler_error_json
+from ..common import extract_progress, wrap_handler_errors
 from . import _helpers
 
 if TYPE_CHECKING:
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 # =============================================================================
 
 
-@handler_error_json
+@wrap_handler_errors
 def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Inspect a process definition."""
     progress = extract_progress(args)
@@ -181,7 +181,7 @@ def _format_step(step: ProcessStepSpec) -> dict[str, Any]:
 # =============================================================================
 
 
-@handler_error_json
+@wrap_handler_errors
 def list_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     """List all processes in the project."""
     progress = extract_progress(args)

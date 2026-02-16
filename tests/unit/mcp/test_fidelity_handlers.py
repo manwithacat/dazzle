@@ -58,6 +58,7 @@ def _import_fidelity():
         return wrapper
 
     common_mock.handler_error_json = _handler_error_json
+    common_mock.wrap_handler_errors = _handler_error_json
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
 
     module_path = (

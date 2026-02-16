@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, handler_error_json
+from .common import extract_progress, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +149,7 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     return score_map
 
 
-@handler_error_json
+@wrap_handler_errors
 def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Scaffold a pitchspec.yaml file."""
     from dazzle.pitch.loader import scaffold_pitchspec
@@ -188,7 +188,7 @@ def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
 
-@handler_error_json
+@wrap_handler_errors
 def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate pitch materials."""
     from dazzle.pitch.extractor import extract_pitch_context
@@ -278,7 +278,7 @@ def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
     return json.dumps(response, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def validate_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate the pitchspec.yaml."""
     from dazzle.pitch.loader import load_pitchspec, validate_pitchspec
@@ -321,7 +321,7 @@ def validate_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get the current pitchspec."""
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec, pitchspec_exists
@@ -362,7 +362,7 @@ def get_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
 
-@handler_error_json
+@wrap_handler_errors
 def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze pitch content quality and suggest improvements."""
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec
@@ -563,7 +563,7 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Merge a patch into pitchspec.yaml."""
     from dazzle.pitch.loader import merge_pitchspec
@@ -595,7 +595,7 @@ def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze pitchspec + DSL context and return structured enrichment tasks."""
     from dazzle.pitch.extractor import extract_pitch_context
@@ -770,7 +770,7 @@ def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def init_assets_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create pitch_assets/ directory structure."""
     from dazzle.pitch.loader import ensure_pitch_assets

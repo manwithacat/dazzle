@@ -4,11 +4,121 @@ Module linker implementation for DAZZLE.
 Handles dependency resolution, symbol table building, and reference validation.
 """
 
+from __future__ import annotations
+
 from collections import deque
 from dataclasses import dataclass, field
+from typing import Any
 
 from . import ir
 from .errors import LinkError
+
+
+def _add_symbol(
+    registry: dict[str, Any],
+    key: str,
+    value: Any,
+    kind: str,
+    module_name: str,
+    symbol_sources: dict[str, str],
+) -> None:
+    """Add a symbol to a registry, raising LinkError on duplicates."""
+    if key in registry:
+        existing_module = symbol_sources.get(key, "unknown")
+        raise LinkError(
+            f"Duplicate {kind} '{key}' defined in modules '{existing_module}' and '{module_name}'"
+        )
+    registry[key] = value
+    symbol_sources[key] = module_name
+
+
+@dataclass
+class DomainSymbols:
+    """Domain-layer symbols: entities, enums, views, ledgers, foreign models."""
+
+    entities: dict[str, ir.EntitySpec] = field(default_factory=dict)
+    enums: dict[str, ir.EnumSpec] = field(default_factory=dict)
+    views: dict[str, ir.ViewSpec] = field(default_factory=dict)
+    ledgers: dict[str, ir.LedgerSpec] = field(default_factory=dict)
+    foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
+
+    def add_entity(self, entity: ir.EntitySpec, module_name: str, sources: dict[str, str]) -> None:
+        _add_symbol(self.entities, entity.name, entity, "entity", module_name, sources)
+
+    def add_enum(self, enum: ir.EnumSpec, module_name: str, sources: dict[str, str]) -> None:
+        _add_symbol(self.enums, enum.name, enum, "enum", module_name, sources)
+
+    def add_view(self, view: ir.ViewSpec, module_name: str, sources: dict[str, str]) -> None:
+        _add_symbol(self.views, view.name, view, "view", module_name, sources)
+
+    def add_ledger(self, ledger: ir.LedgerSpec, module_name: str, sources: dict[str, str]) -> None:
+        _add_symbol(self.ledgers, ledger.name, ledger, "ledger", module_name, sources)
+
+    def add_foreign_model(
+        self, foreign_model: ir.ForeignModelSpec, module_name: str, sources: dict[str, str]
+    ) -> None:
+        _add_symbol(
+            self.foreign_models,
+            foreign_model.name,
+            foreign_model,
+            "foreign model",
+            module_name,
+            sources,
+        )
+
+
+@dataclass
+class UISymbols:
+    """UI-layer symbols: surfaces, workspaces, experiences."""
+
+    surfaces: dict[str, ir.SurfaceSpec] = field(default_factory=dict)
+    workspaces: dict[str, ir.WorkspaceSpec] = field(default_factory=dict)
+    experiences: dict[str, ir.ExperienceSpec] = field(default_factory=dict)
+
+    def add_surface(
+        self, surface: ir.SurfaceSpec, module_name: str, sources: dict[str, str]
+    ) -> None:
+        _add_symbol(self.surfaces, surface.name, surface, "surface", module_name, sources)
+
+    def add_workspace(
+        self, workspace: ir.WorkspaceSpec, module_name: str, sources: dict[str, str]
+    ) -> None:
+        _add_symbol(self.workspaces, workspace.name, workspace, "workspace", module_name, sources)
+
+    def add_experience(
+        self, experience: ir.ExperienceSpec, module_name: str, sources: dict[str, str]
+    ) -> None:
+        _add_symbol(
+            self.experiences, experience.name, experience, "experience", module_name, sources
+        )
+
+
+@dataclass
+class ProcessSymbols:
+    """Process-layer symbols: processes, stories, personas, scenarios."""
+
+    processes: dict[str, ir.ProcessSpec] = field(default_factory=dict)
+    stories: dict[str, ir.StorySpec] = field(default_factory=dict)
+    personas: dict[str, ir.PersonaSpec] = field(default_factory=dict)
+    scenarios: dict[str, ir.ScenarioSpec] = field(default_factory=dict)
+
+    def add_process(
+        self, process: ir.ProcessSpec, module_name: str, sources: dict[str, str]
+    ) -> None:
+        _add_symbol(self.processes, process.name, process, "process", module_name, sources)
+
+    def add_story(self, story: ir.StorySpec, module_name: str, sources: dict[str, str]) -> None:
+        _add_symbol(self.stories, story.story_id, story, "story", module_name, sources)
+
+    def add_persona(
+        self, persona: ir.PersonaSpec, module_name: str, sources: dict[str, str]
+    ) -> None:
+        _add_symbol(self.personas, persona.id, persona, "persona", module_name, sources)
+
+    def add_scenario(
+        self, scenario: ir.ScenarioSpec, module_name: str, sources: dict[str, str]
+    ) -> None:
+        _add_symbol(self.scenarios, scenario.id, scenario, "scenario", module_name, sources)
 
 
 @dataclass
@@ -16,30 +126,24 @@ class SymbolTable:
     """
     Symbol table for tracking all named definitions across modules.
 
-    Tracks entities, surfaces, workspaces, experiences, APIs, foreign models,
-    integrations, tests, and archetypes to enable cross-module reference resolution.
+    Delegates to DomainSymbols, UISymbols, and ProcessSymbols for grouped
+    symbol types. Remaining symbol types are managed directly.
     """
 
-    entities: dict[str, ir.EntitySpec] = field(default_factory=dict)
-    surfaces: dict[str, ir.SurfaceSpec] = field(default_factory=dict)
-    workspaces: dict[str, ir.WorkspaceSpec] = field(default_factory=dict)
-    experiences: dict[str, ir.ExperienceSpec] = field(default_factory=dict)
+    # Delegate groups
+    _domain: DomainSymbols = field(default_factory=DomainSymbols)
+    _ui: UISymbols = field(default_factory=UISymbols)
+    _process: ProcessSymbols = field(default_factory=ProcessSymbols)
+
+    # Remaining symbols managed directly
     apis: dict[str, ir.APISpec] = field(default_factory=dict)
-    foreign_models: dict[str, ir.ForeignModelSpec] = field(default_factory=dict)
     integrations: dict[str, ir.IntegrationSpec] = field(default_factory=dict)
     tests: dict[str, ir.TestSpec] = field(default_factory=dict)
-    personas: dict[str, ir.PersonaSpec] = field(default_factory=dict)  # v0.8.5
-    scenarios: dict[str, ir.ScenarioSpec] = field(default_factory=dict)  # v0.8.5
     archetypes: dict[str, ir.ArchetypeSpec] = field(default_factory=dict)  # v0.10.3
-    stories: dict[str, ir.StorySpec] = field(default_factory=dict)  # v0.22.0
     llm_models: dict[str, ir.LLMModelSpec] = field(default_factory=dict)  # v0.21.0
     llm_intents: dict[str, ir.LLMIntentSpec] = field(default_factory=dict)  # v0.21.0
-    processes: dict[str, ir.ProcessSpec] = field(default_factory=dict)  # v0.23.0
     schedules: dict[str, ir.ScheduleSpec] = field(default_factory=dict)  # v0.23.0
-    ledgers: dict[str, ir.LedgerSpec] = field(default_factory=dict)  # v0.24.0
     transactions: dict[str, ir.TransactionSpec] = field(default_factory=dict)  # v0.24.0
-    enums: dict[str, ir.EnumSpec] = field(default_factory=dict)  # v0.25.0
-    views: dict[str, ir.ViewSpec] = field(default_factory=dict)  # v0.25.0
     webhooks: dict[str, ir.WebhookSpec] = field(default_factory=dict)  # v0.25.0
     approvals: dict[str, ir.ApprovalSpec] = field(default_factory=dict)  # v0.25.0
     slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
@@ -50,159 +154,141 @@ class SymbolTable:
     # Track LLM config (only one per app, from root module)
     llm_config: ir.LLMConfigSpec | None = None  # v0.21.0
 
+    # --- Delegated properties for backward compatibility ---
+
+    @property
+    def entities(self) -> dict[str, ir.EntitySpec]:
+        return self._domain.entities
+
+    @property
+    def enums(self) -> dict[str, ir.EnumSpec]:
+        return self._domain.enums
+
+    @property
+    def views(self) -> dict[str, ir.ViewSpec]:
+        return self._domain.views
+
+    @property
+    def ledgers(self) -> dict[str, ir.LedgerSpec]:
+        return self._domain.ledgers
+
+    @property
+    def foreign_models(self) -> dict[str, ir.ForeignModelSpec]:
+        return self._domain.foreign_models
+
+    @property
+    def surfaces(self) -> dict[str, ir.SurfaceSpec]:
+        return self._ui.surfaces
+
+    @property
+    def workspaces(self) -> dict[str, ir.WorkspaceSpec]:
+        return self._ui.workspaces
+
+    @property
+    def experiences(self) -> dict[str, ir.ExperienceSpec]:
+        return self._ui.experiences
+
+    @property
+    def processes(self) -> dict[str, ir.ProcessSpec]:
+        return self._process.processes
+
+    @property
+    def stories(self) -> dict[str, ir.StorySpec]:
+        return self._process.stories
+
+    @property
+    def personas(self) -> dict[str, ir.PersonaSpec]:
+        return self._process.personas
+
+    @property
+    def scenarios(self) -> dict[str, ir.ScenarioSpec]:
+        return self._process.scenarios
+
+    # --- Delegated add methods ---
+
     def add_entity(self, entity: ir.EntitySpec, module_name: str) -> None:
         """Add entity to symbol table, checking for duplicates."""
-        if entity.name in self.entities:
-            existing_module = self.symbol_sources.get(entity.name, "unknown")
-            raise LinkError(
-                f"Duplicate entity '{entity.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.entities[entity.name] = entity
-        self.symbol_sources[entity.name] = module_name
+        self._domain.add_entity(entity, module_name, self.symbol_sources)
 
     def add_surface(self, surface: ir.SurfaceSpec, module_name: str) -> None:
         """Add surface to symbol table, checking for duplicates."""
-        if surface.name in self.surfaces:
-            existing_module = self.symbol_sources.get(surface.name, "unknown")
-            raise LinkError(
-                f"Duplicate surface '{surface.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.surfaces[surface.name] = surface
-        self.symbol_sources[surface.name] = module_name
+        self._ui.add_surface(surface, module_name, self.symbol_sources)
 
     def add_workspace(self, workspace: ir.WorkspaceSpec, module_name: str) -> None:
         """Add workspace to symbol table, checking for duplicates."""
-        if workspace.name in self.workspaces:
-            existing_module = self.symbol_sources.get(workspace.name, "unknown")
-            raise LinkError(
-                f"Duplicate workspace '{workspace.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.workspaces[workspace.name] = workspace
-        self.symbol_sources[workspace.name] = module_name
+        self._ui.add_workspace(workspace, module_name, self.symbol_sources)
 
     def add_experience(self, experience: ir.ExperienceSpec, module_name: str) -> None:
         """Add experience to symbol table, checking for duplicates."""
-        if experience.name in self.experiences:
-            existing_module = self.symbol_sources.get(experience.name, "unknown")
-            raise LinkError(
-                f"Duplicate experience '{experience.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.experiences[experience.name] = experience
-        self.symbol_sources[experience.name] = module_name
+        self._ui.add_experience(experience, module_name, self.symbol_sources)
 
     def add_api(self, api: ir.APISpec, module_name: str) -> None:
         """Add external API to symbol table, checking for duplicates."""
-        if api.name in self.apis:
-            existing_module = self.symbol_sources.get(api.name, "unknown")
-            raise LinkError(
-                f"Duplicate API '{api.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.apis[api.name] = api
-        self.symbol_sources[api.name] = module_name
+        _add_symbol(self.apis, api.name, api, "API", module_name, self.symbol_sources)
 
     def add_foreign_model(self, foreign_model: ir.ForeignModelSpec, module_name: str) -> None:
         """Add foreign model to symbol table, checking for duplicates."""
-        if foreign_model.name in self.foreign_models:
-            existing_module = self.symbol_sources.get(foreign_model.name, "unknown")
-            raise LinkError(
-                f"Duplicate foreign model '{foreign_model.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.foreign_models[foreign_model.name] = foreign_model
-        self.symbol_sources[foreign_model.name] = module_name
+        self._domain.add_foreign_model(foreign_model, module_name, self.symbol_sources)
 
     def add_integration(self, integration: ir.IntegrationSpec, module_name: str) -> None:
         """Add integration to symbol table, checking for duplicates."""
-        if integration.name in self.integrations:
-            existing_module = self.symbol_sources.get(integration.name, "unknown")
-            raise LinkError(
-                f"Duplicate integration '{integration.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.integrations[integration.name] = integration
-        self.symbol_sources[integration.name] = module_name
+        _add_symbol(
+            self.integrations,
+            integration.name,
+            integration,
+            "integration",
+            module_name,
+            self.symbol_sources,
+        )
 
     def add_test(self, test: ir.TestSpec, module_name: str) -> None:
         """Add test to symbol table, checking for duplicates."""
-        if test.name in self.tests:
-            existing_module = self.symbol_sources.get(test.name, "unknown")
-            raise LinkError(
-                f"Duplicate test '{test.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.tests[test.name] = test
-        self.symbol_sources[test.name] = module_name
+        _add_symbol(self.tests, test.name, test, "test", module_name, self.symbol_sources)
 
     def add_persona(self, persona: ir.PersonaSpec, module_name: str) -> None:
         """Add persona to symbol table, checking for duplicates (v0.8.5)."""
-        if persona.id in self.personas:
-            existing_module = self.symbol_sources.get(persona.id, "unknown")
-            raise LinkError(
-                f"Duplicate persona '{persona.id}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.personas[persona.id] = persona
-        self.symbol_sources[persona.id] = module_name
+        self._process.add_persona(persona, module_name, self.symbol_sources)
 
     def add_scenario(self, scenario: ir.ScenarioSpec, module_name: str) -> None:
         """Add scenario to symbol table, checking for duplicates (v0.8.5)."""
-        if scenario.id in self.scenarios:
-            existing_module = self.symbol_sources.get(scenario.id, "unknown")
-            raise LinkError(
-                f"Duplicate scenario '{scenario.id}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.scenarios[scenario.id] = scenario
-        self.symbol_sources[scenario.id] = module_name
+        self._process.add_scenario(scenario, module_name, self.symbol_sources)
 
     def add_archetype(self, archetype: ir.ArchetypeSpec, module_name: str) -> None:
         """Add archetype to symbol table, checking for duplicates (v0.10.3)."""
-        if archetype.name in self.archetypes:
-            existing_module = self.symbol_sources.get(archetype.name, "unknown")
-            raise LinkError(
-                f"Duplicate archetype '{archetype.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.archetypes[archetype.name] = archetype
-        self.symbol_sources[archetype.name] = module_name
+        _add_symbol(
+            self.archetypes,
+            archetype.name,
+            archetype,
+            "archetype",
+            module_name,
+            self.symbol_sources,
+        )
 
     def add_story(self, story: ir.StorySpec, module_name: str) -> None:
         """Add story to symbol table, checking for duplicates (v0.22.0)."""
-        if story.story_id in self.stories:
-            existing_module = self.symbol_sources.get(story.story_id, "unknown")
-            raise LinkError(
-                f"Duplicate story '{story.story_id}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.stories[story.story_id] = story
-        self.symbol_sources[story.story_id] = module_name
+        self._process.add_story(story, module_name, self.symbol_sources)
 
     def add_llm_model(self, llm_model: ir.LLMModelSpec, module_name: str) -> None:
         """Add LLM model to symbol table, checking for duplicates (v0.21.0)."""
-        if llm_model.name in self.llm_models:
-            existing_module = self.symbol_sources.get(llm_model.name, "unknown")
-            raise LinkError(
-                f"Duplicate llm_model '{llm_model.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.llm_models[llm_model.name] = llm_model
-        self.symbol_sources[llm_model.name] = module_name
+        _add_symbol(
+            self.llm_models,
+            llm_model.name,
+            llm_model,
+            "llm_model",
+            module_name,
+            self.symbol_sources,
+        )
 
     def add_llm_intent(self, llm_intent: ir.LLMIntentSpec, module_name: str) -> None:
         """Add LLM intent to symbol table, checking for duplicates (v0.21.0)."""
-        if llm_intent.name in self.llm_intents:
-            existing_module = self.symbol_sources.get(llm_intent.name, "unknown")
-            raise LinkError(
-                f"Duplicate llm_intent '{llm_intent.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.llm_intents[llm_intent.name] = llm_intent
-        self.symbol_sources[llm_intent.name] = module_name
+        _add_symbol(
+            self.llm_intents,
+            llm_intent.name,
+            llm_intent,
+            "llm_intent",
+            module_name,
+            self.symbol_sources,
+        )
 
     def set_llm_config(self, config: ir.LLMConfigSpec, module_name: str) -> None:
         """Set LLM config (v0.21.0). Only one config per app allowed."""
@@ -215,102 +301,52 @@ class SymbolTable:
 
     def add_process(self, process: ir.ProcessSpec, module_name: str) -> None:
         """Add process to symbol table, checking for duplicates (v0.23.0)."""
-        if process.name in self.processes:
-            existing_module = self.symbol_sources.get(process.name, "unknown")
-            raise LinkError(
-                f"Duplicate process '{process.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.processes[process.name] = process
-        self.symbol_sources[process.name] = module_name
+        self._process.add_process(process, module_name, self.symbol_sources)
 
     def add_schedule(self, schedule: ir.ScheduleSpec, module_name: str) -> None:
         """Add schedule to symbol table, checking for duplicates (v0.23.0)."""
-        if schedule.name in self.schedules:
-            existing_module = self.symbol_sources.get(schedule.name, "unknown")
-            raise LinkError(
-                f"Duplicate schedule '{schedule.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.schedules[schedule.name] = schedule
-        self.symbol_sources[schedule.name] = module_name
+        _add_symbol(
+            self.schedules, schedule.name, schedule, "schedule", module_name, self.symbol_sources
+        )
 
     def add_ledger(self, ledger: ir.LedgerSpec, module_name: str) -> None:
         """Add ledger to symbol table, checking for duplicates (v0.24.0)."""
-        if ledger.name in self.ledgers:
-            existing_module = self.symbol_sources.get(ledger.name, "unknown")
-            raise LinkError(
-                f"Duplicate ledger '{ledger.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.ledgers[ledger.name] = ledger
-        self.symbol_sources[ledger.name] = module_name
+        self._domain.add_ledger(ledger, module_name, self.symbol_sources)
 
     def add_transaction(self, transaction: ir.TransactionSpec, module_name: str) -> None:
         """Add transaction to symbol table, checking for duplicates (v0.24.0)."""
-        if transaction.name in self.transactions:
-            existing_module = self.symbol_sources.get(transaction.name, "unknown")
-            raise LinkError(
-                f"Duplicate transaction '{transaction.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.transactions[transaction.name] = transaction
-        self.symbol_sources[transaction.name] = module_name
+        _add_symbol(
+            self.transactions,
+            transaction.name,
+            transaction,
+            "transaction",
+            module_name,
+            self.symbol_sources,
+        )
 
     def add_enum(self, enum: ir.EnumSpec, module_name: str) -> None:
         """Add shared enum to symbol table, checking for duplicates (v0.25.0)."""
-        if enum.name in self.enums:
-            existing_module = self.symbol_sources.get(enum.name, "unknown")
-            raise LinkError(
-                f"Duplicate enum '{enum.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.enums[enum.name] = enum
-        self.symbol_sources[enum.name] = module_name
+        self._domain.add_enum(enum, module_name, self.symbol_sources)
 
     def add_view(self, view: ir.ViewSpec, module_name: str) -> None:
         """Add view to symbol table, checking for duplicates (v0.25.0)."""
-        if view.name in self.views:
-            existing_module = self.symbol_sources.get(view.name, "unknown")
-            raise LinkError(
-                f"Duplicate view '{view.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.views[view.name] = view
-        self.symbol_sources[view.name] = module_name
+        self._domain.add_view(view, module_name, self.symbol_sources)
 
     def add_webhook(self, webhook: ir.WebhookSpec, module_name: str) -> None:
         """Add webhook to symbol table, checking for duplicates (v0.25.0)."""
-        if webhook.name in self.webhooks:
-            existing_module = self.symbol_sources.get(webhook.name, "unknown")
-            raise LinkError(
-                f"Duplicate webhook '{webhook.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.webhooks[webhook.name] = webhook
-        self.symbol_sources[webhook.name] = module_name
+        _add_symbol(
+            self.webhooks, webhook.name, webhook, "webhook", module_name, self.symbol_sources
+        )
 
     def add_approval(self, approval: ir.ApprovalSpec, module_name: str) -> None:
         """Add approval to symbol table, checking for duplicates (v0.25.0)."""
-        if approval.name in self.approvals:
-            existing_module = self.symbol_sources.get(approval.name, "unknown")
-            raise LinkError(
-                f"Duplicate approval '{approval.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.approvals[approval.name] = approval
-        self.symbol_sources[approval.name] = module_name
+        _add_symbol(
+            self.approvals, approval.name, approval, "approval", module_name, self.symbol_sources
+        )
 
     def add_sla(self, sla: ir.SLASpec, module_name: str) -> None:
         """Add SLA to symbol table, checking for duplicates (v0.25.0)."""
-        if sla.name in self.slas:
-            existing_module = self.symbol_sources.get(sla.name, "unknown")
-            raise LinkError(
-                f"Duplicate SLA '{sla.name}' defined in modules "
-                f"'{existing_module}' and '{module_name}'"
-            )
-        self.slas[sla.name] = sla
-        self.symbol_sources[sla.name] = module_name
+        _add_symbol(self.slas, sla.name, sla, "SLA", module_name, self.symbol_sources)
 
 
 def resolve_dependencies(modules: list[ir.ModuleIR]) -> list[ir.ModuleIR]:

@@ -20,12 +20,12 @@ from ..state import (
     get_project_root,
     is_dev_mode,
 )
-from .common import extract_progress, handler_error_json
+from .common import extract_progress, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_mcp_status_handler(args: dict[str, Any]) -> str:
     """Get MCP server status and optionally reload modules."""
     progress = extract_progress(args)
@@ -141,7 +141,7 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_telemetry_handler(args: dict[str, Any]) -> str:
     """Get MCP tool call telemetry data."""
     progress = extract_progress(args)
@@ -174,7 +174,7 @@ def get_telemetry_handler(args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_activity_handler(args: dict[str, Any]) -> str:
     """Read recent MCP activity events from the SQLite activity store.
 
@@ -223,7 +223,7 @@ def get_activity_handler(args: dict[str, Any]) -> str:
     return json.dumps(data, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_dnr_logs_handler(args: dict[str, Any]) -> str:
     """Get DNR runtime logs for debugging."""
     progress = extract_progress(args)

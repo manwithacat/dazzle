@@ -9,12 +9,12 @@ from typing import Any
 
 from dazzle.mcp.server.paths import project_test_results_dir
 
-from ..common import extract_progress, handler_error_json, load_project_appspec
+from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_coverage_actions_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
     Get prioritized actions to increase test coverage.
@@ -281,7 +281,7 @@ def _generate_state_machine_test_template(entity_name: str, state_machine: Any) 
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_runtime_coverage_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
     """
     Analyze runtime UX coverage report to find gaps and generate tests.
@@ -524,7 +524,7 @@ def _generate_view_steps(entity_name: str, view: str) -> list[dict[str, Any]]:
     return []
 
 
-@handler_error_json
+@wrap_handler_errors
 def save_runtime_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save runtime coverage report to dsl/tests/ for future analysis."""
     progress = extract_progress(args)

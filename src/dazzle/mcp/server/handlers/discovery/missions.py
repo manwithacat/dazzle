@@ -8,7 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from ..common import async_handler_error_json, handler_error_json
+from ..common import wrap_async_handler_errors, wrap_handler_errors
 from ._helpers import (
     _get_persona_session_info,
     _load_appspec,
@@ -19,7 +19,7 @@ from ._helpers import (
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Build a discovery mission and execute the agent loop.
@@ -213,7 +213,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Run headless persona journey analysis.

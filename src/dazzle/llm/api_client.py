@@ -5,13 +5,19 @@ Handles authentication, request formatting, and response parsing.
 Supports fallback to Claude CLI for users with Claude subscriptions.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import os
 import shutil
 import subprocess
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from anthropic import Anthropic
+    from openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -142,8 +148,7 @@ class LLMAPIClient:
 
     def _init_client(self) -> None:
         """Initialize provider-specific client."""
-        # Type as Any since client can be Anthropic, OpenAI, or None
-        self.client: Any = None
+        self.client: Anthropic | OpenAI | None = None
         if self._use_cli_fallback:
             # No client needed for CLI fallback
             return
@@ -359,9 +364,10 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
         """Call Anthropic Claude API."""
         logger.debug(f"Calling Anthropic API with model {self.model}")
         assert self.client is not None, "Client not initialized"
+        client = cast("Anthropic", self.client)
 
         try:
-            response = self.client.messages.create(
+            response = client.messages.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
@@ -383,9 +389,10 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
         """Call OpenAI GPT API."""
         logger.debug(f"Calling OpenAI API with model {self.model}")
         assert self.client is not None, "Client not initialized"
+        client = cast("OpenAI", self.client)
 
         try:
-            response = self.client.chat.completions.create(
+            response = client.chat.completions.create(
                 model=self.model,
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,

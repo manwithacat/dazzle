@@ -10,12 +10,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, handler_error_json
+from .common import extract_progress, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load and return the SiteSpec from sitespec.yaml."""
     from dazzle.core.sitespec_loader import (
@@ -114,7 +114,7 @@ def get_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate the SiteSpec for semantic correctness."""
     from dazzle.core.sitespec_loader import (
@@ -163,7 +163,7 @@ def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def scaffold_site_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create default site structure with templates."""
     from dazzle.core.sitespec_loader import scaffold_site as do_scaffold_site
@@ -207,7 +207,7 @@ def scaffold_site_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load and return the parsed copy.md content.
 
@@ -282,7 +282,7 @@ def get_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def scaffold_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create or regenerate the copy.md template file.
 
@@ -343,7 +343,7 @@ def scaffold_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def review_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Review copy.md content in a founder-friendly format.
 
@@ -424,7 +424,7 @@ def review_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     return json.dumps(review, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate site coherence - does it feel like a real website?
 
@@ -484,7 +484,7 @@ def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Live Review — page-by-page comparison of spec vs rendering status.
 
@@ -655,7 +655,7 @@ def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load and return the ThemeSpec from themespec.yaml."""
     from dazzle.core.themespec_loader import (
@@ -727,7 +727,7 @@ def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create a default themespec.yaml file."""
     from dazzle.core.themespec_loader import scaffold_themespec, themespec_exists
@@ -787,7 +787,7 @@ def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate the ThemeSpec for semantic correctness."""
     from dazzle.core.themespec_loader import (
@@ -818,7 +818,7 @@ def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate DTCG tokens.json from themespec.yaml."""
     from dazzle.core.dtcg_export import export_dtcg_file, generate_dtcg_tokens
@@ -862,7 +862,7 @@ def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate imagery prompts from themespec.yaml."""
     from dazzle.core.imagery_prompts import generate_imagery_prompts

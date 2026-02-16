@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..common import async_handler_error_json, extract_progress, handler_error_json
+from ..common import extract_progress, wrap_async_handler_errors, wrap_handler_errors
 from . import _helpers
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ class ProcessRunSummary:
 # =============================================================================
 
 
-@handler_error_json
+@wrap_handler_errors
 def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save composed processes to .dazzle/processes/processes.json.
 
@@ -176,7 +176,7 @@ async def _list_runs_async(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def list_process_runs_handler(project_root: Path, args: dict[str, Any]) -> str:
     """List process runs with optional filters."""
     try:
@@ -229,7 +229,7 @@ async def _get_run_async(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": str(e)}, indent=2)
 
 
-@async_handler_error_json
+@wrap_async_handler_errors
 async def get_process_run_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get detailed information about a specific process run."""
     run_id = args.get("run_id") if args else None

@@ -77,7 +77,7 @@ def _add_entity_schemas(openapi: dict[str, Any], entity: EntitySpec) -> None:
     schemas[f"{entity_name}Update"] = update_schema
 
     # Read schema (includes id and relationships)
-    read_schema = _entity_to_schema(entity, include_id=True, include_computed=True)
+    read_schema = _entity_to_schema(entity, include_id=True)
     schemas[f"{entity_name}Read"] = read_schema
 
     # List response schema
@@ -101,7 +101,6 @@ def _entity_to_schema(
     include_id: bool = True,
     for_create: bool = False,
     all_optional: bool = False,
-    include_computed: bool = False,  # TODO: implement computed field inclusion
 ) -> dict[str, Any]:
     """Convert entity to JSON Schema."""
     from dazzle.core.ir import FieldModifier

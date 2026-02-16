@@ -24,7 +24,7 @@ from dazzle.core.ir.domain import (
     PolicyEffect,
 )
 
-from .common import extract_progress, handler_error_json, load_project_appspec
+from .common import extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp.policy")
 
@@ -41,7 +41,7 @@ class AnalyzeResult(TypedDict):
     entities_with_full_coverage: int
 
 
-@handler_error_json
+@wrap_handler_errors
 def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
     """Handle policy analysis operations."""
     progress = extract_progress(arguments)

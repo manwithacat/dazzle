@@ -11,14 +11,14 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, handler_error_json, load_project_appspec
+from .common import extract_progress, load_project_appspec, wrap_handler_errors
 
 # ---------------------------------------------------------------------------
 # scan
 # ---------------------------------------------------------------------------
 
 
-@handler_error_json
+@wrap_handler_errors
 def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run sentinel scan against project DSL."""
     progress = extract_progress(args)
@@ -85,7 +85,7 @@ def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@handler_error_json
+@wrap_handler_errors
 def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Get findings from latest or specific scan."""
     from dazzle.sentinel.store import FindingStore
@@ -125,7 +125,7 @@ def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@handler_error_json
+@wrap_handler_errors
 def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Mark a finding as false_positive."""
     from dazzle.sentinel.store import FindingStore
@@ -147,7 +147,7 @@ def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@handler_error_json
+@wrap_handler_errors
 def status_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Return infrastructure status: available agents, last scan info."""
     from dazzle.sentinel.agents import get_all_agents
@@ -174,7 +174,7 @@ def status_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@handler_error_json
+@wrap_handler_errors
 def history_handler(project_path: Path, args: dict[str, Any]) -> str:
     """List recent scans."""
     from dazzle.sentinel.store import FindingStore

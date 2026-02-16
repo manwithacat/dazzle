@@ -9,12 +9,12 @@ from typing import Any
 
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 
-from ..common import extract_progress, handler_error_json, load_project_appspec
+from ..common import extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
 
-@handler_error_json
+@wrap_handler_errors
 def analyze_patterns(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Analyze the project for patterns."""
     progress = extract_progress(args)
@@ -67,7 +67,7 @@ def analyze_patterns(project_root: Path, args: dict[str, Any] | None = None) -> 
     return json.dumps(result, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Export a framework-agnostic frontend specification from DSL."""
     progress = extract_progress(args)

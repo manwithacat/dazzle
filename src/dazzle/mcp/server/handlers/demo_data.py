@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, handler_error_json, load_project_appspec
+from .common import extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -120,7 +120,7 @@ def _infer_field_strategy(
     return "free_text_lorem", {"min_words": 2, "max_words": 5}
 
 
-@handler_error_json
+@wrap_handler_errors
 def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze DSL and propose a Demo Data Blueprint."""
     from dazzle.core.ir.demo_blueprint import (
@@ -336,7 +336,7 @@ def propose_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> 
     return json.dumps(response, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json."""
     from dazzle.core.demo_blueprint_persistence import load_blueprint, save_blueprint
@@ -432,7 +432,7 @@ def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str
     return json.dumps(response, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load the current Demo Data Blueprint."""
     from dazzle.core.demo_blueprint_persistence import get_blueprint_file, load_blueprint
@@ -462,7 +462,7 @@ def get_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate demo data files from the blueprint."""
     from dazzle.core.demo_blueprint_persistence import load_blueprint

@@ -43,7 +43,7 @@ def load_project_appspec(project_root: Path) -> AppSpec:
     return build_appspec(modules, manifest.project_root)
 
 
-def handler_error_json(
+def wrap_handler_errors(
     fn: Callable[..., str],
 ) -> Callable[..., str]:
     """Decorator that wraps handler exceptions into JSON error responses.
@@ -63,10 +63,10 @@ def handler_error_json(
     return wrapper
 
 
-def async_handler_error_json(
+def wrap_async_handler_errors(
     fn: Callable[..., Any],
 ) -> Callable[..., Any]:
-    """Async variant of :func:`handler_error_json`.
+    """Async variant of :func:`wrap_handler_errors`.
 
     Wraps an ``async def`` handler so that any unhandled exception is caught,
     logged, and returned as ``{"error": "<message>"}``.
@@ -82,3 +82,8 @@ def async_handler_error_json(
             return json.dumps({"error": str(e)}, indent=2)
 
     return wrapper
+
+
+# Backward-compatible aliases
+handler_error_json = wrap_handler_errors
+async_handler_error_json = wrap_async_handler_errors

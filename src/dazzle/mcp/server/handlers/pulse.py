@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, handler_error_json
+from .common import extract_progress, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp.handlers.pulse")
 
@@ -31,7 +31,7 @@ logger = logging.getLogger("dazzle.mcp.handlers.pulse")
 # ---------------------------------------------------------------------------
 
 
-@handler_error_json
+@wrap_handler_errors
 def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Generate a founder-ready project health report.
 
@@ -106,7 +106,7 @@ def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def radar_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Return just the 6-axis readiness radar with plain-language axis labels.
 
@@ -152,7 +152,7 @@ def radar_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Show the app through a specific persona's eyes.
 
@@ -233,7 +233,7 @@ def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def timeline_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Auto-detected milestone timeline.
 
@@ -282,7 +282,7 @@ def timeline_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
 
-@handler_error_json
+@wrap_handler_errors
 def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Founder decision queue with actionable choices.
 

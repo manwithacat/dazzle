@@ -7,14 +7,14 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..common import extract_progress, handler_error_json
+from ..common import extract_progress, wrap_handler_errors
 from ..serializers import serialize_test_design, serialize_test_design_summary
 from .proposals import _parse_test_design_action, _parse_test_design_trigger
 
 logger = logging.getLogger("dazzle.mcp")
 
 
-@handler_error_json
+@wrap_handler_errors
 def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save test designs to dsl/tests/designs.json."""
     from dazzle.core.ir.test_design import (
@@ -93,7 +93,7 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     return json.dumps(response, indent=2)
 
 
-@handler_error_json
+@wrap_handler_errors
 def get_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Retrieve test designs from storage.
 
