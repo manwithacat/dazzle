@@ -339,11 +339,30 @@ def create_page_routes(
 
         # When workspaces exist and "/" is not already registered as a page,
         # add a redirect so users landing at the app root reach a real page.
+        # Uses persona default_workspace to pick the right workspace per user.
         if "/" not in page_contexts:
-            first_ws_route = f"{app_prefix}/workspaces/{workspaces[0].name}"
+            # Build persona → workspace route mapping
+            _persona_ws_routes: dict[str, str] = {}
+            for persona in appspec.personas:
+                if persona.default_workspace:
+                    _persona_ws_routes[persona.name] = (
+                        f"{app_prefix}/workspaces/{persona.default_workspace}"
+                    )
+            _fallback_ws_route = f"{app_prefix}/workspaces/{workspaces[0].name}"
 
             async def root_redirect(request: Request) -> Response:
-                return RedirectResponse(url=first_ws_route, status_code=302)
+                # Try to resolve the user's persona and redirect to their workspace
+                if get_auth_context is not None:
+                    try:
+                        auth_ctx = get_auth_context(request)
+                        if auth_ctx and auth_ctx.is_authenticated and auth_ctx.roles:
+                            for role in auth_ctx.roles:
+                                route = _persona_ws_routes.get(role)
+                                if route:
+                                    return RedirectResponse(url=route, status_code=302)
+                    except Exception:
+                        pass
+                return RedirectResponse(url=_fallback_ws_route, status_code=302)
 
             router.get("/", response_class=HTMLResponse)(root_redirect)
 
