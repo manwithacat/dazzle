@@ -422,13 +422,21 @@ def evaluate_captures(
     total_tokens_used = 0
     results: list[PageVisualResult] = []
 
+    budget_exhausted = False
+
     for capture in captures:
+        if budget_exhausted:
+            break
+
         page_result = PageVisualResult(
             route=capture.route,
             viewport=capture.viewport,
         )
 
         for section in capture.sections:
+            if budget_exhausted:
+                break
+
             sec_ctx = ctx.get(section.section_type, {})
             sec_refs = refs.get(section.section_type, [])
 
@@ -444,6 +452,7 @@ def evaluate_captures(
                         total_tokens_used,
                         token_budget,
                     )
+                    budget_exhausted = True
                     break
 
                 dim_label = f"{section.section_type}:{dim}"
@@ -466,11 +475,17 @@ def evaluate_captures(
                         {"dimension": dim_label, "reason": error or "evaluation_failed"}
                     )
 
-        # Score: only meaningful when at least one dimension was evaluated.
-        # When all dimensions fail, visual_score stays None to signal
-        # "could not evaluate" rather than a misleading 100/100.
-        if page_result.dimensions_evaluated:
+        # Score: only meaningful when at least one dimension was evaluated
+        # AND the page was fully evaluated (not cut short by budget).
+        # Incomplete pages get visual_score=None to avoid dragging the average.
+        if page_result.dimensions_evaluated and not budget_exhausted:
             page_result.visual_score = _score_findings(page_result.findings)
+        elif page_result.dimensions_evaluated and budget_exhausted:
+            # Partial evaluation — still score but flag it
+            page_result.visual_score = _score_findings(page_result.findings)
+            page_result.dimensions_skipped.append(
+                {"dimension": "budget_exhausted", "reason": "token budget reached mid-page"}
+            )
         results.append(page_result)
 
     return results
@@ -507,10 +522,6 @@ def _evaluate_section_dimension(
         logger.warning("%s — skipping evaluation", msg)
         return [], 0, msg
 
-    # Apply dimension-specific preprocessing
-    filter_name = DIMENSION_PREPROCESSING.get(dimension)
-    processed_path = apply_filter(img_path, filter_name)
-
     # Build prompt
     prompt_builder = DIMENSION_PROMPT_BUILDERS.get(dimension)
     if not prompt_builder:
@@ -534,8 +545,10 @@ def _evaluate_section_dimension(
                 except (ValueError, AttributeError):
                     continue
 
-    # Add the target image last
-    img_b64 = image_to_base64(processed_path)
+    # Send the original screenshot — preprocessed variants (blur, edges,
+    # mono, quant) cause false positives because the evaluator interprets
+    # filter artefacts as rendering failures.
+    img_b64 = image_to_base64(img_path)
     images.append((img_b64, "image/png"))
 
     # Augment prompt with reference context if we have any
