@@ -17,6 +17,13 @@ from typing import Any
 # =============================================================================
 
 
+class ObserverMode(StrEnum):
+    """How the observer captures page state."""
+
+    DOM = "dom"
+    ACCESSIBILITY = "accessibility"
+
+
 class ActionType(StrEnum):
     """Types of actions the agent can take on a page."""
 
@@ -60,6 +67,9 @@ class PageState:
     screenshot_b64: str | None = None
     dazzle_attributes: dict[str, list[str]] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
+    console_messages: list[dict[str, Any]] = field(default_factory=list)
+    network_errors: list[dict[str, Any]] = field(default_factory=list)
+    accessibility_tree: list[dict[str, Any]] = field(default_factory=list)
 
     def to_prompt(self, include_screenshot: bool = True) -> str:
         """Convert page state to a prompt for the LLM."""
@@ -68,19 +78,27 @@ class PageState:
             f"URL: {self.url}",
             f"Title: {self.title}",
             "",
-            "### Clickable Elements",
         ]
 
-        for i, el in enumerate(self.clickables[:20]):
-            text_preview = el.text[:50] + "..." if len(el.text) > 50 else el.text
-            lines.append(f'  [{i}] {el.tag}: "{text_preview}" (selector: {el.selector})')
+        if self.accessibility_tree:
+            lines.append("### Interactive Elements")
+            for i, node in enumerate(self.accessibility_tree[:30]):
+                role = node.get("role", "unknown")
+                name = node.get("name", "")
+                selector = node.get("selector", "")
+                name_preview = name[:50] + "..." if len(name) > 50 else name
+                lines.append(f'  [{i}] {role}: "{name_preview}" (selector: {selector})')
+        else:
+            lines.append("### Clickable Elements")
+            for i, el in enumerate(self.clickables[:20]):
+                text_preview = el.text[:50] + "..." if len(el.text) > 50 else el.text
+                lines.append(f'  [{i}] {el.tag}: "{text_preview}" (selector: {el.selector})')
 
-        lines.append("")
-        lines.append("### Input Fields")
-
-        for i, el in enumerate(self.inputs[:15]):
-            placeholder = el.attributes.get("placeholder", "")
-            lines.append(f"  [{i}] {el.tag}: {placeholder} (selector: {el.selector})")
+            lines.append("")
+            lines.append("### Input Fields")
+            for i, el in enumerate(self.inputs[:15]):
+                placeholder = el.attributes.get("placeholder", "")
+                lines.append(f"  [{i}] {el.tag}: {placeholder} (selector: {el.selector})")
 
         if self.dazzle_attributes:
             lines.append("")
@@ -92,6 +110,23 @@ class PageState:
             lines.append("")
             lines.append("### Visible Text (excerpt)")
             lines.append(self.visible_text[:500])
+
+        if self.console_messages:
+            lines.append("")
+            lines.append("### Console Messages")
+            for msg in self.console_messages[:10]:
+                level = msg.get("level", "error")
+                text = msg.get("text", "")[:200]
+                lines.append(f"  [{level}] {text}")
+
+        if self.network_errors:
+            lines.append("")
+            lines.append("### Network Errors")
+            for err in self.network_errors[:10]:
+                method = err.get("method", "GET")
+                url = err.get("url", "")[:100]
+                status = err.get("status", 0)
+                lines.append(f"  {method} {url} -> {status}")
 
         return "\n".join(lines)
 

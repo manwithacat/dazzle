@@ -49,19 +49,40 @@ class PlaywrightExecutor:
     def __init__(self, page: Any):
         self._page = page
 
+    def _resolve_locator(self, selector: str) -> Any:
+        """Resolve a selector to a Playwright locator.
+
+        Supports ``role=<role>[name="<name>"]`` syntax (matching Playwright's
+        accessibility locator API) as well as standard CSS/Playwright selectors.
+        """
+        if selector.startswith("role="):
+            import re
+
+            m = re.match(r'role=(\w+)(?:\[name="(.+)"\])?$', selector)
+            if m:
+                role = m.group(1)
+                name = m.group(2)
+                if name:
+                    return self._page.get_by_role(role, name=name)
+                return self._page.get_by_role(role)
+        return self._page.locator(selector)
+
     async def execute(self, action: AgentAction) -> ActionResult:
         try:
             if action.type == ActionType.CLICK:
-                await self._page.click(action.target, timeout=5000)
+                locator = self._resolve_locator(action.target or "")
+                await locator.click(timeout=5000)
                 await self._page.wait_for_load_state("networkidle", timeout=5000)
                 return ActionResult(message=f"Clicked {action.target}")
 
             elif action.type == ActionType.TYPE:
-                await self._page.fill(action.target, action.value or "", timeout=5000)
+                locator = self._resolve_locator(action.target or "")
+                await locator.fill(action.value or "", timeout=5000)
                 return ActionResult(message=f"Typed '{action.value}' into {action.target}")
 
             elif action.type == ActionType.SELECT:
-                await self._page.select_option(action.target, action.value, timeout=5000)
+                locator = self._resolve_locator(action.target or "")
+                await locator.select_option(action.value, timeout=5000)
                 return ActionResult(message=f"Selected '{action.value}' in {action.target}")
 
             elif action.type == ActionType.NAVIGATE:
@@ -74,12 +95,14 @@ class PlaywrightExecutor:
                 return ActionResult(message=f"Navigated to {target}")
 
             elif action.type == ActionType.WAIT:
-                await self._page.wait_for_selector(action.target, timeout=10000)
+                locator = self._resolve_locator(action.target or "")
+                await locator.wait_for(timeout=10000)
                 return ActionResult(message=f"Found {action.target}")
 
             elif action.type == ActionType.ASSERT:
                 try:
-                    await self._page.wait_for_selector(action.target, timeout=3000)
+                    locator = self._resolve_locator(action.target or "")
+                    await locator.wait_for(timeout=3000)
                     return ActionResult(message=f"Assertion passed: {action.target} is visible")
                 except Exception:
                     if await self._page.locator(f"text={action.target}").count() > 0:

@@ -98,12 +98,27 @@ class PageObserver:
     This is a backward-compatible wrapper around PlaywrightObserver.
     """
 
-    def __init__(self, include_screenshots: bool = True):
+    def __init__(
+        self,
+        include_screenshots: bool = True,
+        observer_mode: str = "dom",
+        capture_console: bool = False,
+        capture_network: bool = False,
+    ):
         self.include_screenshots = include_screenshots
+        self.observer_mode = observer_mode
+        self.capture_console = capture_console
+        self.capture_network = capture_network
 
     async def observe(self, page: Any) -> PageState:
         """Capture the current state of the page."""
-        observer = PlaywrightObserver(page, include_screenshots=self.include_screenshots)
+        observer = PlaywrightObserver(
+            page,
+            include_screenshots=self.include_screenshots,
+            mode=self.observer_mode,
+            capture_console=self.capture_console,
+            capture_network=self.capture_network,
+        )
         return await observer.observe()
 
 
@@ -127,10 +142,16 @@ class E2EAgent:
         model: str | None = None,
         api_key: str | None = None,
         include_screenshots: bool = True,
+        observer_mode: str = "dom",
+        capture_console: bool = False,
+        capture_network: bool = False,
     ):
         self.model = model or self.DEFAULT_MODEL
         self.api_key = api_key
         self.include_screenshots = include_screenshots
+        self.observer_mode = observer_mode
+        self.capture_console = capture_console
+        self.capture_network = capture_network
 
     async def __aenter__(self) -> E2EAgent:
         return self
@@ -161,7 +182,13 @@ class E2EAgent:
         mission = build_test_mission(test_spec, base_url)
 
         # Create agent with Playwright backends
-        observer = PlaywrightObserver(page, include_screenshots=self.include_screenshots)
+        observer = PlaywrightObserver(
+            page,
+            include_screenshots=self.include_screenshots,
+            mode=self.observer_mode,
+            capture_console=self.capture_console,
+            capture_network=self.capture_network,
+        )
         executor = PlaywrightExecutor(page)
         agent = DazzleAgent(observer, executor, model=self.model, api_key=self.api_key)
 
@@ -252,6 +279,7 @@ async def run_agent_tests(
     headless: bool = False,
     model: str | None = None,
     base_url: str | None = None,
+    observer_mode: str = "dom",
 ) -> list[AgentTestResult]:
     """
     Run agent-based E2E tests for a project.
@@ -314,7 +342,7 @@ async def run_agent_tests(
             context = await browser.new_context(viewport={"width": 1280, "height": 720})
             page = await context.new_page()
 
-            async with E2EAgent(model=model) as agent:
+            async with E2EAgent(model=model, observer_mode=observer_mode) as agent:
                 for test in agent_tests:
                     logger.info(f"Running: {test.get('test_id')}")
                     result = await agent.run_test(page, test, base_url)

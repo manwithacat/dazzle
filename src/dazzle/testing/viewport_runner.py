@@ -226,32 +226,49 @@ class ViewportRunner:
         options: ViewportRunOptions,
         result: ViewportRunResult,
     ) -> None:
-        """Iterate viewports × pages and evaluate assertions."""
+        """Iterate viewports × pages and evaluate assertions.
+
+        Uses a single browser context + page, resizing the viewport for each
+        breakpoint instead of creating a new context per viewport.
+        """
+        if not viewports:
+            return
+
+        # Find largest viewport for initial context size
+        max_w, max_h = 0, 0
         for vp_name in viewports:
             vp_size = VIEWPORT_MATRIX.get(vp_name)
-            if vp_size is None:
-                continue
+            if vp_size:
+                max_w = max(max_w, vp_size["width"])
+                max_h = max(max_h, vp_size["height"])
+        if max_w == 0:
+            return
 
-            context = browser.new_context(
-                viewport={"width": vp_size["width"], "height": vp_size["height"]}
+        context = browser.new_context(viewport={"width": max_w, "height": max_h})
+
+        # Inject persona cookies once
+        if options.persona_id:
+            from dazzle.testing.viewport_auth import load_persona_cookies
+
+            cookies = load_persona_cookies(
+                self.project_path,
+                options.persona_id,
+                options.base_url,
             )
+            if cookies:
+                context.add_cookies(cookies)
 
-            # Inject persona cookies if configured
-            if options.persona_id:
-                from dazzle.testing.viewport_auth import load_persona_cookies
+        page = context.new_page()
+        page.set_default_timeout(options.timeout)
 
-                cookies = load_persona_cookies(
-                    self.project_path,
-                    options.persona_id,
-                    options.base_url,
-                )
-                if cookies:
-                    context.add_cookies(cookies)
+        try:
+            for vp_name in viewports:
+                vp_size = VIEWPORT_MATRIX.get(vp_name)
+                if vp_size is None:
+                    continue
 
-            page = context.new_page()
-            page.set_default_timeout(options.timeout)
+                page.set_viewport_size({"width": vp_size["width"], "height": vp_size["height"]})
 
-            try:
                 for page_path, pattern_list in patterns.items():
                     # Collect assertions relevant to this viewport
                     assertions_for_page = []
@@ -272,7 +289,14 @@ class ViewportRunner:
                         {"selector": a.selector, "property": a.property}
                         for a in assertions_for_page
                     ]
-                    raw_results: list[dict[str, Any]] = page.evaluate(_JS_BATCH_EVAL, specs)
+                    try:
+                        raw_results: list[dict[str, Any]] = page.evaluate(_JS_BATCH_EVAL, specs)
+                    except Exception:
+                        # JS evaluation failed — treat all actuals as None
+                        raw_results = [
+                            {"selector": s["selector"], "property": s["property"], "actual": None}
+                            for s in specs
+                        ]
 
                     duration_ms = (time.monotonic() - t0) * 1000
 
@@ -343,5 +367,5 @@ class ViewportRunner:
                     result.total_passed += passed_count
                     result.total_failed += failed_count
 
-            finally:
-                context.close()
+        finally:
+            context.close()
