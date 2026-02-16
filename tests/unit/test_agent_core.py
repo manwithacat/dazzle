@@ -602,3 +602,86 @@ class TestPageStatePrompt:
         prompt = state.to_prompt()
         assert "### Network Errors" in prompt
         assert "POST http://localhost:3000/api/data -> 500" in prompt
+
+    def test_to_prompt_includes_clickable_attrs(self) -> None:
+        """Clickable elements include href/hx-get/hx-post in prompt."""
+        from dazzle.agent.models import Element
+
+        state = PageState(
+            url="http://localhost:3000/",
+            title="Test",
+            clickables=[
+                Element(
+                    tag="a",
+                    text="Login",
+                    selector='a[href="/login"]',
+                    attributes={"href": "/login"},
+                ),
+                Element(
+                    tag="button",
+                    text="Save",
+                    selector="button",
+                    attributes={"hx-post": "/api/save"},
+                ),
+            ],
+        )
+        prompt = state.to_prompt()
+        assert "href=/login" in prompt
+        assert "hx-post=/api/save" in prompt
+
+
+# =============================================================================
+# HttpExecutor — href extraction from CSS selectors
+# =============================================================================
+
+
+class TestHttpExecutorClick:
+    """Test that _click extracts href from selectors instead of no-oping."""
+
+    @pytest.mark.asyncio
+    async def test_click_extracts_href_from_selector(self) -> None:
+        from dazzle.agent.executor import HttpExecutor
+
+        client = AsyncMock()
+        response = MagicMock()
+        response.url = "http://localhost:3000/login"
+        response.text = "<html></html>"
+        response.status_code = 200
+        client.get = AsyncMock(return_value=response)
+
+        executor = HttpExecutor(client, "http://localhost:3000")
+        action = AgentAction(type=ActionType.CLICK, target='a[href="/login"]')
+        result = await executor.execute(action)
+
+        client.get.assert_called_once_with("http://localhost:3000/login", follow_redirects=True)
+        assert "Navigated" in result.message
+
+    @pytest.mark.asyncio
+    async def test_click_extracts_hx_get_from_selector(self) -> None:
+        from dazzle.agent.executor import HttpExecutor
+
+        client = AsyncMock()
+        response = MagicMock()
+        response.url = "http://localhost:3000/api/data"
+        response.text = "<html></html>"
+        response.status_code = 200
+        client.get = AsyncMock(return_value=response)
+
+        executor = HttpExecutor(client, "http://localhost:3000")
+        action = AgentAction(type=ActionType.CLICK, target='div[hx-get="/api/data"]')
+        result = await executor.execute(action)
+
+        client.get.assert_called_once()
+        assert "Navigated" in result.message
+
+    @pytest.mark.asyncio
+    async def test_click_falls_back_gracefully(self) -> None:
+        from dazzle.agent.executor import HttpExecutor
+
+        client = AsyncMock()
+        executor = HttpExecutor(client, "http://localhost:3000")
+        action = AgentAction(type=ActionType.CLICK, target="button.submit")
+        result = await executor.execute(action)
+
+        assert "Click on button.submit" in result.message
+        client.get.assert_not_called()

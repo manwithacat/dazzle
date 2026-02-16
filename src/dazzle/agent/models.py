@@ -92,7 +92,16 @@ class PageState:
             lines.append("### Clickable Elements")
             for i, el in enumerate(self.clickables[:20]):
                 text_preview = el.text[:50] + "..." if len(el.text) > 50 else el.text
-                lines.append(f'  [{i}] {el.tag}: "{text_preview}" (selector: {el.selector})')
+                # Include href/hx-get/hx-post so the LLM can reason about targets
+                attr_parts = []
+                for key in ("href", "hx-get", "hx-post"):
+                    val = el.attributes.get(key)
+                    if val:
+                        attr_parts.append(f"{key}={val}")
+                attr_info = f" [{', '.join(attr_parts)}]" if attr_parts else ""
+                lines.append(
+                    f'  [{i}] {el.tag}: "{text_preview}"{attr_info} (selector: {el.selector})'
+                )
 
             lines.append("")
             lines.append("### Input Fields")

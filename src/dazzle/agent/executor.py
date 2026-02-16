@@ -219,20 +219,50 @@ class HttpExecutor:
         return ActionResult(message=f"Navigated to {response.url}")
 
     async def _click(self, action: AgentAction) -> ActionResult:
-        """Handle click by following href or hx-get/hx-post."""
+        """Handle click by following href or hx-get/hx-post.
+
+        The LLM typically sends a CSS selector as the target (e.g.
+        ``a[href="/login"]``).  We extract the URL from the selector so
+        the HTTP executor can follow the link instead of silently
+        no-op-ing.
+        """
+        import re
+
         target = action.target or ""
 
         # If the target looks like a URL or path, navigate
         if target.startswith("/") or target.startswith("http"):
             return await self._navigate(target)
 
-        # If target has href attribute info in the value, follow it
-        if action.value and action.value.startswith("/"):
+        # If value contains a URL/path, navigate to it
+        if action.value and (action.value.startswith("/") or action.value.startswith("http")):
             return await self._navigate(action.value)
+
+        # Extract href from CSS selector (e.g. a[href="/login"])
+        href_match = re.search(r'href=["\']?([^"\')\]\s]+)', target)
+        if href_match:
+            return await self._navigate(href_match.group(1))
+
+        # Extract hx-get from CSS selector
+        hx_get_match = re.search(r'hx-get=["\']?([^"\')\]\s]+)', target)
+        if hx_get_match:
+            return await self._navigate(hx_get_match.group(1))
 
         # For hx-post targets, submit a POST
         if action.value and action.value.startswith("hx-post:"):
             post_url = action.value.replace("hx-post:", "")
+            if not post_url.startswith("http"):
+                post_url = self._base_url + post_url
+            response = await self._client.post(post_url, follow_redirects=True)
+            if self._observer:
+                self._observer._current_url = str(response.url)
+                self._observer._last_html = response.text
+            return ActionResult(message=f"POST {post_url} -> {response.status_code}")
+
+        # Extract hx-post from CSS selector
+        hx_post_match = re.search(r'hx-post=["\']?([^"\')\]\s]+)', target)
+        if hx_post_match:
+            post_url = hx_post_match.group(1)
             if not post_url.startswith("http"):
                 post_url = self._base_url + post_url
             response = await self._client.post(post_url, follow_redirects=True)

@@ -286,6 +286,11 @@ def build_discovery_mission(
         _make_list_surfaces_tool(appspec),
     ]
 
+    # Persona mode uses pre-loaded auth cookies, so start directly at
+    # the app shell instead of the public homepage (avoids getting stuck
+    # on the unauthenticated landing page).
+    start_url = f"{base_url}/app"
+
     return Mission(
         name=f"discovery:{persona_name}",
         system_prompt=system_prompt,
@@ -293,7 +298,7 @@ def build_discovery_mission(
         completion_criteria=make_stagnation_completion(8, "Discovery"),
         max_steps=max_steps,
         token_budget=token_budget,
-        start_url=base_url,
+        start_url=start_url,
         context={
             "persona": persona_name,
             "mode": "discovery",

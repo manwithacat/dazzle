@@ -219,7 +219,8 @@ class TestBuildDiscoveryMission:
         mission = build_discovery_mission(sample_appspec)
         assert mission.max_steps == 50
         assert mission.token_budget == 200_000
-        assert mission.start_url == "http://localhost:3000"
+        # Persona discovery starts at /app (pre-authed, skips public homepage)
+        assert mission.start_url == "http://localhost:3000/app"
 
     def test_custom_persona(self, sample_appspec: SimpleNamespace) -> None:
         mission = build_discovery_mission(sample_appspec, persona_name="viewer")
@@ -233,7 +234,7 @@ class TestBuildDiscoveryMission:
             max_steps=100,
             token_budget=500_000,
         )
-        assert mission.start_url == "http://localhost:8080"
+        assert mission.start_url == "http://localhost:8080/app"
         assert mission.max_steps == 100
         assert mission.token_budget == 500_000
 
