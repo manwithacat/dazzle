@@ -85,6 +85,7 @@ def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
+@handler_error_json
 def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Get findings from latest or specific scan."""
     from dazzle.sentinel.store import FindingStore
@@ -124,6 +125,7 @@ def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
+@handler_error_json
 def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Mark a finding as false_positive."""
     from dazzle.sentinel.store import FindingStore
@@ -145,6 +147,7 @@ def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
+@handler_error_json
 def status_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Return infrastructure status: available agents, last scan info."""
     from dazzle.sentinel.agents import get_all_agents
@@ -171,6 +174,7 @@ def status_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
+@handler_error_json
 def history_handler(project_path: Path, args: dict[str, Any]) -> str:
     """List recent scans."""
     from dazzle.sentinel.store import FindingStore

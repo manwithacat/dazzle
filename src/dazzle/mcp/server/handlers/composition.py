@@ -129,6 +129,7 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
         return json.dumps({"error": str(e)})
 
 
+@handler_error_json
 def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run LLM visual evaluation on previously captured screenshots.
 

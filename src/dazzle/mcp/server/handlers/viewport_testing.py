@@ -8,9 +8,10 @@ from typing import Any
 
 from dazzle.core.loader import load_and_link
 
-from .common import extract_progress
+from .common import extract_progress, handler_error_json
 
 
+@handler_error_json
 def run_viewport_tests_handler(
     project_path: str,
     headless: bool = True,
@@ -75,6 +76,7 @@ def run_viewport_tests_handler(
     return result.to_json()
 
 
+@handler_error_json
 def manage_viewport_specs_handler(
     project_path: str,
     operation: str,

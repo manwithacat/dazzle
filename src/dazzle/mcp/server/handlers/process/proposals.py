@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..common import extract_progress
+from ..common import extract_progress, handler_error_json
 from . import _helpers
 from .coverage import (
     CRUD_OUTCOME_PATTERNS,
@@ -61,6 +61,7 @@ def _slugify(text: str) -> str:
 # =============================================================================
 
 
+@handler_error_json
 def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate workflow design briefs from uncovered stories.
 

@@ -19,6 +19,7 @@ from ..utils import extract_issue_key
 logger = logging.getLogger(__name__)
 
 
+@handler_error_json
 def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Validate DSL files in the project."""
     progress = extract_progress(args)

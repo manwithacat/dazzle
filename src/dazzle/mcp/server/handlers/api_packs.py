@@ -12,6 +12,7 @@ from typing import Any
 from .common import extract_progress, handler_error_json
 
 
+@handler_error_json
 def list_api_packs_handler(args: dict[str, Any]) -> str:
     """List all available API packs."""
     progress = extract_progress(args)
@@ -38,6 +39,7 @@ def list_api_packs_handler(args: dict[str, Any]) -> str:
     )
 
 
+@handler_error_json
 def search_api_packs_handler(args: dict[str, Any]) -> str:
     """Search for API packs by category, provider, or query."""
     progress = extract_progress(args)
@@ -73,6 +75,7 @@ def search_api_packs_handler(args: dict[str, Any]) -> str:
     )
 
 
+@handler_error_json
 def get_api_pack_handler(args: dict[str, Any]) -> str:
     """Get full details of an API pack."""
     progress = extract_progress(args)
@@ -161,6 +164,7 @@ def _serialize_infrastructure(infra: Any) -> dict[str, Any] | None:
     return result
 
 
+@handler_error_json
 def generate_service_dsl_handler(args: dict[str, Any]) -> str:
     """Generate DSL service and foreign_model blocks from an API pack."""
     progress = extract_progress(args)
@@ -263,6 +267,7 @@ def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
     )
 
 
+@handler_error_json
 def get_env_vars_for_packs_handler(args: dict[str, Any]) -> str:
     """Get .env.example content for specified packs or all packs."""
     progress = extract_progress(args)

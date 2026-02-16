@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress
+from .common import extract_progress, handler_error_json
 from .orchestration import (
     QualityStep,
     aggregate_results,
@@ -35,6 +35,7 @@ _extract_step_metrics = extract_step_metrics
 _collect_top_issues = collect_top_issues
 
 
+@handler_error_json
 def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run the full deterministic quality pipeline.
 

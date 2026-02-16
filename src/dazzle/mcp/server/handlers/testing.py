@@ -13,11 +13,17 @@ from pathlib import Path
 from typing import Any
 
 from ..state import get_active_project_path, get_project_root
-from .common import async_handler_error_json, extract_progress, handler_error_json
+from .common import (
+    async_handler_error_json,
+    extract_progress,
+    handler_error_json,
+    load_project_appspec,
+)
 
 logger = logging.getLogger("dazzle.mcp.testing")
 
 
+@handler_error_json
 def check_test_infrastructure_handler() -> str:
     """
     Check test infrastructure requirements.
@@ -296,17 +302,13 @@ def get_e2e_test_coverage_handler(
                 )
 
     # Load and generate testspec
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
+    appspec = load_project_appspec(root)
     manifest_path = root / "dazzle.toml"
+    from dazzle.core.manifest import load_manifest
+
     manifest = load_manifest(manifest_path)
-    dsl_files = discover_dsl_files(root, manifest)
-    modules = parse_modules(dsl_files)
-    appspec = build_appspec(modules, manifest.project_root)
     testspec = generate_e2e_testspec(appspec, manifest)
 
     # Analyze coverage
@@ -399,17 +401,13 @@ def list_e2e_flows_handler(
                 )
 
     # Generate testspec
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
+    appspec = load_project_appspec(root)
     manifest_path = root / "dazzle.toml"
+    from dazzle.core.manifest import load_manifest
+
     manifest = load_manifest(manifest_path)
-    dsl_files = discover_dsl_files(root, manifest)
-    modules = parse_modules(dsl_files)
-    appspec = build_appspec(modules, manifest.project_root)
     testspec = generate_e2e_testspec(appspec, manifest)
 
     # Filter flows
@@ -562,6 +560,7 @@ async def run_agent_e2e_tests_handler(
         )
 
 
+@handler_error_json
 def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
     """Provide guidance on which test tier to use for a scenario."""
     progress = extract_progress(arguments)

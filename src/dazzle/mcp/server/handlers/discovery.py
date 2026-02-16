@@ -19,7 +19,7 @@ from typing import Any
 
 from dazzle.agent.transcript import Observation
 
-from .common import handler_error_json
+from .common import async_handler_error_json, handler_error_json
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
@@ -188,6 +188,7 @@ async def _get_persona_session_info(
     return {"authenticated": False, "persona": persona}
 
 
+@async_handler_error_json
 async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Build a discovery mission and execute the agent loop.
@@ -467,6 +468,7 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
     return json.dumps(result, indent=2)
 
 
+@handler_error_json
 def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Get the latest discovery report from a project.
@@ -540,6 +542,7 @@ def save_discovery_report(project_path: Path, transcript_json: dict[str, Any]) -
     return report_file
 
 
+@handler_error_json
 def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Compile observations from a discovery report into prioritized proposals.
@@ -596,6 +599,7 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
+@handler_error_json
 def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Generate valid DSL code from compiled proposals.
@@ -728,6 +732,7 @@ def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": f"Module not available: {e}"}, indent=2)
 
 
+@handler_error_json
 def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Check discovery infrastructure status.
