@@ -26,7 +26,7 @@ except ImportError:
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from dazzle_back.events.bus import EventEnvelope
+    from dazzle_back.events.envelope import EventEnvelope
     from dazzle_back.events.framework import EventFramework
 
 

@@ -235,7 +235,7 @@ class UserStoreMixin:
             """,
             (hash_password(new_password), datetime.now(UTC).isoformat(), str(user_id)),
         )
-        return rowcount > 0
+        return bool(rowcount > 0)
 
     def create_password_reset_token(
         self,
@@ -307,7 +307,7 @@ class UserStoreMixin:
             "UPDATE password_reset_tokens SET used = TRUE WHERE token = %s AND used = FALSE",
             (token,),
         )
-        return rowcount > 0
+        return bool(rowcount > 0)
 
     def list_users(
         self,
@@ -510,11 +510,11 @@ class SessionStoreMixin:
     def delete_session(self, session_id: str) -> bool:
         """Delete a session."""
         rowcount = self._execute_modify("DELETE FROM sessions WHERE id = %s", (session_id,))
-        return rowcount > 0
+        return bool(rowcount > 0)
 
     def delete_user_sessions(self, user_id: UUID) -> int:
         """Delete all sessions for a user."""
-        return self._execute_modify("DELETE FROM sessions WHERE user_id = %s", (str(user_id),))
+        return int(self._execute_modify("DELETE FROM sessions WHERE user_id = %s", (str(user_id),)))
 
     def count_active_sessions(self, user_id: UUID) -> int:
         """
@@ -530,13 +530,15 @@ class SessionStoreMixin:
             "SELECT COUNT(*) as count FROM sessions WHERE user_id = %s AND expires_at > %s",
             (str(user_id), datetime.now(UTC).isoformat()),
         )
-        return rows[0]["count"] if rows else 0
+        return int(rows[0]["count"]) if rows else 0
 
     def cleanup_expired_sessions(self) -> int:
         """Delete all expired sessions."""
-        return self._execute_modify(
-            "DELETE FROM sessions WHERE expires_at < %s",
-            (datetime.now(UTC).isoformat(),),
+        return int(
+            self._execute_modify(
+                "DELETE FROM sessions WHERE expires_at < %s",
+                (datetime.now(UTC).isoformat(),),
+            )
         )
 
 

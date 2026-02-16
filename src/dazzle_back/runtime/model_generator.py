@@ -255,7 +255,7 @@ def generate_entity_model(
     )
 
     assert issubclass(model, BaseModel)
-    return model
+    return model  # type: ignore[no-any-return]
 
 
 def generate_all_entity_models(
@@ -327,7 +327,7 @@ def generate_create_schema(
     )
 
     assert issubclass(model, BaseModel)
-    return model
+    return model  # type: ignore[no-any-return]
 
 
 def generate_update_schema(
@@ -371,7 +371,7 @@ def generate_update_schema(
     )
 
     assert issubclass(model, BaseModel)
-    return model
+    return model  # type: ignore[no-any-return]
 
 
 def generate_list_response_schema(
@@ -402,4 +402,4 @@ def generate_list_response_schema(
     )
 
     assert issubclass(model, BaseModel)
-    return model
+    return model  # type: ignore[no-any-return]
