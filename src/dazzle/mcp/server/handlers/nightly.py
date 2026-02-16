@@ -14,28 +14,15 @@ import json
 import logging
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .orchestration import QualityStep, aggregate_results, run_step
+
+# Backward-compat alias — tests import NightlyStep by this name
+NightlyStep = QualityStep
+
 logger = logging.getLogger("dazzle.mcp.handlers.nightly")
-
-
-# ---------------------------------------------------------------------------
-# Step dataclass
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class NightlyStep:
-    """A single step in the nightly quality run."""
-
-    name: str
-    handler: Any  # callable
-    handler_args: tuple[Any, ...] = ()
-    handler_kwargs: dict[str, Any] = field(default_factory=dict)
-    depends_on: list[str] = field(default_factory=list)
-    optional: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -43,7 +30,7 @@ class NightlyStep:
 # ---------------------------------------------------------------------------
 
 
-def _build_steps(project_path: Path, base_url: str | None = None) -> list[NightlyStep]:
+def _build_steps(project_path: Path, base_url: str | None = None) -> list[QualityStep]:
     """Build the list of nightly steps with dependency edges."""
     from .composition import audit_composition_handler
     from .dsl import lint_project, validate_dsl
@@ -52,59 +39,59 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Nightl
     from .process import stories_coverage_handler
     from .test_design import get_test_gaps_handler
 
-    steps: list[NightlyStep] = [
+    steps: list[QualityStep] = [
         # Gate
-        NightlyStep(
+        QualityStep(
             name="dsl(validate)",
             handler=validate_dsl,
             handler_args=(project_path,),
         ),
         # Track A — independent after gate
-        NightlyStep(
+        QualityStep(
             name="dsl(lint)",
             handler=lint_project,
             handler_args=(project_path, {"extended": True}),
             depends_on=["dsl(validate)"],
         ),
-        NightlyStep(
+        QualityStep(
             name="dsl(fidelity)",
             handler=score_fidelity_handler,
             handler_args=(project_path, {"gaps_only": True}),
             depends_on=["dsl(validate)"],
         ),
-        NightlyStep(
+        QualityStep(
             name="composition(audit)",
             handler=audit_composition_handler,
             handler_args=(project_path, {}),
             depends_on=["dsl(validate)"],
         ),
         # Track B — sequential pair
-        NightlyStep(
+        QualityStep(
             name="dsl_test(generate)",
             handler=generate_dsl_tests_handler,
             handler_args=(project_path, {"save": True}),
             depends_on=["dsl(validate)"],
         ),
-        NightlyStep(
+        QualityStep(
             name="dsl_test(coverage)",
             handler=get_dsl_test_coverage_handler,
             handler_args=(project_path, {}),
             depends_on=["dsl_test(generate)"],
         ),
         # Track C — independent after gate
-        NightlyStep(
+        QualityStep(
             name="story(coverage)",
             handler=stories_coverage_handler,
             handler_args=(project_path, {}),
             depends_on=["dsl(validate)"],
         ),
-        NightlyStep(
+        QualityStep(
             name="process(coverage)",
             handler=stories_coverage_handler,
             handler_args=(project_path, {"status_filter": "all"}),
             depends_on=["dsl(validate)"],
         ),
-        NightlyStep(
+        QualityStep(
             name="test_design(gaps)",
             handler=get_test_gaps_handler,
             handler_args=(project_path, {}),
@@ -117,7 +104,7 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Nightl
         from dazzle.mcp.event_first_tools import handle_extract_semantics, handle_validate_events
 
         steps.append(
-            NightlyStep(
+            QualityStep(
                 name="semantics(extract)",
                 handler=handle_extract_semantics,
                 handler_args=({"compact": True}, project_path),
@@ -126,7 +113,7 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Nightl
             )
         )
         steps.append(
-            NightlyStep(
+            QualityStep(
                 name="semantics(validate_events)",
                 handler=handle_validate_events,
                 handler_args=({}, project_path),
@@ -146,7 +133,7 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Nightl
             from .dsl_test import run_all_dsl_tests_handler
 
             steps.append(
-                NightlyStep(
+                QualityStep(
                     name="dsl_test(run_all)",
                     handler=run_all_dsl_tests_handler,
                     handler_args=(project_path, {"base_url": base_url}),
@@ -159,82 +146,12 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Nightl
 
 
 # ---------------------------------------------------------------------------
-# Single-step runner with activity logging
-# ---------------------------------------------------------------------------
-
-
-def _run_step_with_activity(
-    step: NightlyStep,
-    activity_store: Any | None,
-) -> dict[str, Any]:
-    """Execute a single step, logging activity events."""
-    namespaced = f"nightly:{step.name}"
-
-    if activity_store is not None:
-        try:
-            activity_store.log_event("tool_start", namespaced, None, source="cli")
-        except Exception:
-            logger.debug("Failed to log nightly step start", exc_info=True)
-
-    t0 = time.monotonic()
-    result: dict[str, Any] = {"operation": step.name}
-    ok = True
-    error_msg: str | None = None
-
-    try:
-        raw = step.handler(*step.handler_args, **step.handler_kwargs)
-        duration_ms = (time.monotonic() - t0) * 1000
-        result["duration_ms"] = round(duration_ms, 1)
-
-        try:
-            data = json.loads(raw)
-            if "error" in data:
-                result["status"] = "error"
-                result["error"] = data["error"]
-                ok = False
-                error_msg = data["error"]
-            else:
-                result["status"] = "passed"
-                result["result"] = data
-        except (json.JSONDecodeError, TypeError):
-            result["status"] = "passed"
-            result["result"] = str(raw)[:500]
-
-    except Exception as e:
-        duration_ms = (time.monotonic() - t0) * 1000
-        result["duration_ms"] = round(duration_ms, 1)
-        result["status"] = "error"
-        result["error"] = str(e)
-        ok = False
-        error_msg = str(e)
-        logger.warning("Nightly step %s failed: %s", step.name, e)
-
-    if activity_store is not None:
-        try:
-            activity_store.log_event(
-                "tool_end",
-                namespaced,
-                None,
-                success=ok,
-                duration_ms=result.get("duration_ms", 0),
-                error=error_msg,
-                source="cli",
-            )
-        except Exception:
-            logger.debug("Failed to log nightly step end", exc_info=True)
-
-    return result
-
-
-# ---------------------------------------------------------------------------
 # Main handler — topological parallel scheduler
 # ---------------------------------------------------------------------------
 
 
 def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run quality steps in parallel with topological scheduling."""
-    from .pipeline import _build_pipeline_response
-
     stop_on_error = args.get("stop_on_error", False)
     base_url = args.get("base_url")
     detail = args.get("detail", "issues")
@@ -257,7 +174,7 @@ def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
     errors: list[str] = []
     stop_flag = False
 
-    def _deps_satisfied(step: NightlyStep) -> bool:
+    def _deps_satisfied(step: QualityStep) -> bool:
         for dep in step.depends_on:
             if dep in failed_names or dep in skipped_names:
                 return False
@@ -265,7 +182,7 @@ def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
                 return False
         return True
 
-    def _deps_failed(step: NightlyStep) -> bool:
+    def _deps_failed(step: QualityStep) -> bool:
         for dep in step.depends_on:
             if dep in failed_names or dep in skipped_names:
                 return True
@@ -310,7 +227,9 @@ def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
                 ):
                     continue
                 if _deps_satisfied(s):
-                    fut = pool.submit(_run_step_with_activity, s, activity_store)
+                    fut = pool.submit(
+                        run_step, s, activity_store=activity_store, activity_prefix="nightly:"
+                    )
                     futures[fut] = s.name
                     submitted.add(s.name)
 
@@ -365,7 +284,7 @@ def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
                 }
             )
 
-    response_json = _build_pipeline_response(steps_output, errors, pipeline_start, detail=detail)
+    response_json = aggregate_results(steps_output, errors, pipeline_start, detail=detail)
 
     # Inject parallel metadata
     data = json.loads(response_json)

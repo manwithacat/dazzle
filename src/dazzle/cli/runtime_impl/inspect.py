@@ -14,10 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 import typer
 
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
+from dazzle.cli.utils import load_project_appspec
 
 if TYPE_CHECKING:
     from dazzle.core import ir
@@ -109,19 +106,18 @@ def schema_command(
 
     # Load and parse the project
     try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(project_root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
+        appspec = load_project_appspec(project_root)
     except Exception as e:
         typer.echo(f"Error loading project: {e}", err=True)
         raise typer.Exit(code=1)
 
     # Import converters
     try:
+        from dazzle.core.manifest import load_manifest
         from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_ui.converters import convert_appspec_to_ui
 
+        mf = load_manifest(manifest_path)
         backend_spec = convert_appspec_to_backend(appspec)
         ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
     except ImportError as e:

@@ -16,12 +16,9 @@ from typing import Any
 
 import typer
 
+from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
 
 logger = logging.getLogger(__name__)
 
@@ -108,10 +105,7 @@ def check_command(
     root = manifest_path.parent
 
     try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
+        appspec = load_project_appspec(root)
 
         # Validate
         errors, warnings = lint_appspec(appspec)

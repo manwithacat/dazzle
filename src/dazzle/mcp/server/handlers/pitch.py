@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress
+from .common import extract_progress, handler_error_json
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +149,7 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     return score_map
 
 
+@handler_error_json
 def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Scaffold a pitchspec.yaml file."""
     from dazzle.pitch.loader import scaffold_pitchspec
@@ -156,39 +157,35 @@ def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     overwrite = args.get("overwrite", False)
 
-    try:
-        progress.log_sync("Scaffolding pitchspec...")
-        result = scaffold_pitchspec(project_root, overwrite=overwrite)
+    progress.log_sync("Scaffolding pitchspec...")
+    result = scaffold_pitchspec(project_root, overwrite=overwrite)
 
-        if result:
-            return json.dumps(
-                {
-                    "success": True,
-                    "created": str(result),
-                    "message": "Created pitchspec.yaml. Edit it and run pitch generate.",
-                    "next_steps": [
-                        "Edit pitchspec.yaml with your company details, problem, solution, and market data",
-                        "Run pitch(operation='validate') to check completeness",
-                        "Run pitch(operation='generate', format='all') to build the deck",
-                    ],
-                },
-                indent=2,
-            )
-        else:
-            return json.dumps(
-                {
-                    "success": False,
-                    "message": "pitchspec.yaml already exists. Use overwrite=true to replace.",
-                    "next_steps": [
-                        "Run pitch(operation='get') to see current pitchspec contents",
-                        "Run pitch(operation='validate') to check for issues",
-                    ],
-                },
-                indent=2,
-            )
-    except Exception as e:
-        logger.exception("Error scaffolding pitchspec")
-        return json.dumps({"error": f"Failed to scaffold pitchspec: {e}"}, indent=2)
+    if result:
+        return json.dumps(
+            {
+                "success": True,
+                "created": str(result),
+                "message": "Created pitchspec.yaml. Edit it and run pitch generate.",
+                "next_steps": [
+                    "Edit pitchspec.yaml with your company details, problem, solution, and market data",
+                    "Run pitch(operation='validate') to check completeness",
+                    "Run pitch(operation='generate', format='all') to build the deck",
+                ],
+            },
+            indent=2,
+        )
+    else:
+        return json.dumps(
+            {
+                "success": False,
+                "message": "pitchspec.yaml already exists. Use overwrite=true to replace.",
+                "next_steps": [
+                    "Run pitch(operation='get') to see current pitchspec contents",
+                    "Run pitch(operation='validate') to check for issues",
+                ],
+            },
+            indent=2,
+        )
 
 
 def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
@@ -565,6 +562,7 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
+@handler_error_json
 def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Merge a patch into pitchspec.yaml."""
     from dazzle.pitch.loader import PitchSpecError, merge_pitchspec
@@ -597,9 +595,6 @@ def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
     except PitchSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error updating pitchspec")
-        return json.dumps({"error": f"Failed to update pitchspec: {e}"}, indent=2)
 
 
 def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
@@ -779,6 +774,7 @@ def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
+@handler_error_json
 def init_assets_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create pitch_assets/ directory structure."""
     from dazzle.pitch.loader import ensure_pitch_assets
@@ -786,21 +782,17 @@ def init_assets_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     progress.log_sync("Initializing pitch assets...")
 
-    try:
-        assets_dir = ensure_pitch_assets(project_root)
-        return json.dumps(
-            {
-                "success": True,
-                "path": str(assets_dir),
-                "subdirectories": ["team", "research", "charts", "media"],
-                "next_steps": [
-                    "Add team headshots to pitch_assets/team/",
-                    "Add company logo to pitch_assets/media/logo.png",
-                    "Run pitch(operation='enrich') to see what assets are needed",
-                ],
-            },
-            indent=2,
-        )
-    except Exception as e:
-        logger.exception("Error creating pitch assets")
-        return json.dumps({"error": f"Failed to create pitch assets: {e}"}, indent=2)
+    assets_dir = ensure_pitch_assets(project_root)
+    return json.dumps(
+        {
+            "success": True,
+            "path": str(assets_dir),
+            "subdirectories": ["team", "research", "charts", "media"],
+            "next_steps": [
+                "Add team headshots to pitch_assets/team/",
+                "Add company logo to pitch_assets/media/logo.png",
+                "Run pitch(operation='enrich') to see what assets are needed",
+            ],
+        },
+        indent=2,
+    )

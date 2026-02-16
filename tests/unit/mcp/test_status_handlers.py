@@ -24,8 +24,10 @@ def _import_status():
     mock_state.get_active_project_path = MagicMock(return_value=None)
     mock_state.get_available_projects = MagicMock(return_value={})
     mock_state.is_dev_mode = MagicMock(return_value=True)
+    from tests.unit.mcp.conftest import install_handlers_common_mock
+
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
-    sys.modules["dazzle.mcp.server.handlers.common"] = MagicMock()
+    install_handlers_common_mock()
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
     # Mock semantics module

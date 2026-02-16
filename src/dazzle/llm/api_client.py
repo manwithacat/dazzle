@@ -43,7 +43,10 @@ def _call_claude_cli(prompt: str, system_prompt: str | None = None) -> str:
     # Strip CLAUDECODE env var so the subprocess doesn't refuse to start
     # when invoked from inside a Claude Code session.
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=env)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Claude CLI timed out after 300 seconds")
 
     if result.returncode != 0:
         raise RuntimeError(f"Claude CLI failed: {result.stderr}")

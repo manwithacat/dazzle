@@ -18,10 +18,44 @@ def _import_dsl_test():
     in test environments. We need to import the handlers module directly.
     """
     # Create mock modules to satisfy imports
+    from functools import wraps
+    from types import ModuleType
+
     mock_state = MagicMock()
     mock_state.get_project_path = MagicMock(return_value=None)
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
-    sys.modules["dazzle.mcp.server.handlers.common"] = MagicMock()
+
+    common_mock = ModuleType("dazzle.mcp.server.handlers.common")
+
+    def _extract_progress(args=None):
+        ctx = MagicMock()
+        ctx.log_sync = MagicMock()
+        return ctx
+
+    def _handler_error_json(fn):
+        @wraps(fn)
+        def wrapper(*a, **kw):
+            try:
+                return fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
+    def _async_handler_error_json(fn):
+        @wraps(fn)
+        async def wrapper(*a, **kw):
+            try:
+                return await fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
+    common_mock.extract_progress = _extract_progress
+    common_mock.handler_error_json = _handler_error_json
+    common_mock.async_handler_error_json = _async_handler_error_json
+    sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
     module_path = (

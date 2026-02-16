@@ -19,11 +19,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress
+from .common import async_handler_error_json, extract_progress, handler_error_json
 
 logger = logging.getLogger(__name__)
 
 
+@handler_error_json
 def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run deterministic composition audit from sitespec structure.
 
@@ -37,27 +38,24 @@ def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     progress.log_sync("Running composition audit...")
     routes_filter: list[str] | None = args.get("pages")
 
-    try:
-        sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
+    sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
 
-        has_auth = sitespec.auth_pages.login.enabled or sitespec.auth_pages.signup.enabled
-        if not sitespec.pages and not has_auth:
-            return json.dumps(
-                {
-                    "pages": [],
-                    "overall_score": 100,
-                    "summary": "No pages defined in sitespec",
-                    "markdown": "# Composition Audit\n\nNo pages to audit.",
-                }
-            )
+    has_auth = sitespec.auth_pages.login.enabled or sitespec.auth_pages.signup.enabled
+    if not sitespec.pages and not has_auth:
+        return json.dumps(
+            {
+                "pages": [],
+                "overall_score": 100,
+                "summary": "No pages defined in sitespec",
+                "markdown": "# Composition Audit\n\nNo pages to audit.",
+            }
+        )
 
-        result = run_composition_audit(sitespec, routes_filter=routes_filter)
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        logger.exception("Composition audit failed")
-        return json.dumps({"error": str(e)})
+    result = run_composition_audit(sitespec, routes_filter=routes_filter)
+    return json.dumps(result, indent=2)
 
 
+@async_handler_error_json
 async def capture_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Capture section-level screenshots from a running Dazzle app.
 
@@ -128,9 +126,6 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
             indent=2,
         )
     except ImportError as e:
-        return json.dumps({"error": str(e)})
-    except Exception as e:
-        logger.exception("Composition capture failed")
         return json.dumps({"error": str(e)})
 
 
@@ -262,6 +257,7 @@ def _load_captures_from_dir(captures_dir: Path) -> list[Any]:
     return list(page_map.values())
 
 
+@async_handler_error_json
 async def report_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run combined composition report: audit + optional capture + analyze.
 
@@ -292,12 +288,7 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
 
     # Step 1: DOM audit (always runs)
     await progress.advance(1, total_phases, "Loading sitespec")
-    try:
-        sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
-    except Exception as e:
-        logger.exception("Failed to load sitespec")
-        return json.dumps({"error": f"Failed to load sitespec: {e}"})
-
+    sitespec = load_sitespec_with_copy(project_path, use_defaults=True)
     if not sitespec.pages:
         return json.dumps(
             {
@@ -524,6 +515,7 @@ def _build_combined_markdown(
     return "\n".join(lines)
 
 
+@handler_error_json
 def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Generate the synthetic reference library for few-shot visual evaluation.
 
@@ -560,10 +552,6 @@ def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> s
         by_section = bootstrap_references(ref_dir)
     except ImportError as e:
         return json.dumps({"error": f"Pillow required for bootstrap: {e}"})
-    except Exception as e:
-        logger.exception("Reference bootstrap failed")
-        return json.dumps({"error": str(e)})
-
     total = sum(len(refs) for refs in by_section.values())
     good = sum(1 for refs in by_section.values() for r in refs if r.label == "good")
     bad = total - good
@@ -591,6 +579,7 @@ def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> s
     )
 
 
+@async_handler_error_json
 async def inspect_styles_handler(_project_path: Path, args: dict[str, Any]) -> str:
     """Extract computed CSS styles from a running app via Playwright.
 
@@ -629,10 +618,6 @@ async def inspect_styles_handler(_project_path: Path, args: dict[str, Any]) -> s
         return json.dumps({"error": str(e)})
     except RuntimeError as e:
         return json.dumps({"error": str(e)})
-    except Exception as e:
-        logger.exception("Style inspection failed")
-        return json.dumps({"error": str(e)})
-
     not_found = [label for label, styles in results.items() if styles is None]
     found = {label: styles for label, styles in results.items() if styles is not None}
 

@@ -159,10 +159,6 @@ if _TEMPORAL_AVAILABLE:
             f"Executing service '{service_name}.{method}' with inputs: {list(inputs.keys())}"
         )
 
-        # TODO: Integrate with service registry
-        # service = get_service(service_name)
-        # return await getattr(service, method)(**inputs)
-
         return {
             "status": "executed",
             "service": service_name,

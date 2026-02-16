@@ -1,9 +1,4 @@
-"""
-DSL analysis tool handlers.
-
-Handles DSL validation, module listing, entity/surface inspection,
-pattern analysis, and linting.
-"""
+"""DSL validation and linting handlers."""
 
 from __future__ import annotations
 
@@ -16,10 +11,10 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 
-from ..state import get_active_project, is_dev_mode
-from .common import extract_progress, handler_error_json, load_project_appspec
+from ...state import get_active_project, is_dev_mode
+from ..common import extract_progress, handler_error_json, load_project_appspec
+from ..utils import extract_issue_key
 
 logger = logging.getLogger(__name__)
 
@@ -77,176 +72,6 @@ def list_modules(project_root: Path, args: dict[str, Any] | None = None) -> str:
 
 
 @handler_error_json
-def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
-    """Inspect an entity definition."""
-    progress = extract_progress(args)
-    entity_name = args.get("entity_name") or args.get("name")
-    if not entity_name:
-        return json.dumps({"error": "entity_name required"})
-
-    progress.log_sync(f"Inspecting entity '{entity_name}'...")
-    app_spec = load_project_appspec(project_root)
-
-    entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
-    if not entity:
-        return json.dumps({"error": f"Entity '{entity_name}' not found"})
-
-    return json.dumps(
-        {
-            "name": entity.name,
-            "description": entity.title,
-            "fields": [
-                {
-                    "name": f.name,
-                    "type": str(f.type.kind),
-                    "required": f.is_required,
-                    "modifiers": [str(m) for m in f.modifiers],
-                }
-                for f in entity.fields
-            ],
-            "constraints": [str(c) for c in entity.constraints] if entity.constraints else [],
-        },
-        indent=2,
-    )
-
-
-@handler_error_json
-def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
-    """Inspect a surface definition."""
-    progress = extract_progress(args)
-    surface_name = args.get("surface_name") or args.get("name")
-    if not surface_name:
-        return json.dumps({"error": "surface_name required"})
-
-    progress.log_sync(f"Inspecting surface '{surface_name}'...")
-    app_spec = load_project_appspec(project_root)
-
-    surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
-    if not surface:
-        return json.dumps({"error": f"Surface '{surface_name}' not found"})
-
-    info: dict[str, Any] = {
-        "name": surface.name,
-        "entity": surface.entity_ref,
-        "mode": str(surface.mode),
-        "description": surface.title,
-        "sections": len(surface.sections) if surface.sections else 0,
-    }
-    if hasattr(surface, "ux") and surface.ux:
-        ux = surface.ux
-        info["ux"] = {
-            "purpose": ux.purpose,
-            "sort": [str(s) for s in ux.sort] if ux.sort else [],
-            "filter": list(ux.filter) if ux.filter else [],
-            "search": list(ux.search) if ux.search else [],
-            "empty_message": ux.empty_message,
-            "attention_signals": len(ux.attention_signals),
-            "persona_variants": [p.persona for p in ux.persona_variants],
-        }
-    return json.dumps(info, indent=2)
-
-
-@handler_error_json
-def analyze_patterns(project_root: Path, args: dict[str, Any] | None = None) -> str:
-    """Analyze the project for patterns."""
-    progress = extract_progress(args)
-    progress.log_sync("Loading project DSL...")
-    app_spec = load_project_appspec(project_root)
-
-    progress.log_sync("Detecting CRUD patterns...")
-    crud_patterns = detect_crud_patterns(app_spec)
-    progress.log_sync("Detecting integration patterns...")
-    integration_patterns = detect_integration_patterns(app_spec)
-
-    crud_list = [
-        {
-            "entity": p.entity_name,
-            "has_create": p.has_create,
-            "has_list": p.has_list,
-            "has_detail": p.has_detail,
-            "has_edit": p.has_edit,
-            "is_complete": p.is_complete,
-            "missing_operations": p.missing_operations,
-            "is_system_managed": p.is_system_managed,
-        }
-        for p in crud_patterns
-    ]
-    result: dict[str, Any] = {
-        "crud_patterns": crud_list,
-        "integration_patterns": [
-            {
-                "name": p.integration_name,
-                "service": p.service_name,
-                "has_actions": p.has_actions,
-                "has_syncs": p.has_syncs,
-                "action_count": p.action_count,
-                "sync_count": p.sync_count,
-                "connected_entities": list(p.connected_entities or []),
-                "connected_surfaces": list(p.connected_surfaces or []),
-            }
-            for p in integration_patterns
-        ],
-    }
-
-    has_incomplete = any(not c["is_complete"] for c in crud_list)
-    if has_incomplete:
-        result["discovery_hint"] = (
-            "Some entities have incomplete CRUD coverage. "
-            "Use discovery(operation='run', mode='entity_completeness') "
-            "for detailed gap analysis with targeted verification."
-        )
-
-    return json.dumps(result, indent=2)
-
-
-@handler_error_json
-def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Export a framework-agnostic frontend specification from DSL."""
-    progress = extract_progress(args)
-    progress.log_sync("Loading project DSL...")
-    app_spec = load_project_appspec(project_root)
-
-    # Load sitespec (optional)
-    progress.log_sync("Loading sitespec...")
-    sitespec = None
-    try:
-        from dazzle.core.sitespec_loader import load_sitespec
-
-        sitespec = load_sitespec(project_root, use_defaults=True)
-    except Exception:
-        logger.debug("Optional sitespec not available", exc_info=True)
-
-    # Load stories (optional)
-    progress.log_sync("Loading stories...")
-    stories = []
-    try:
-        from dazzle.core.stories_persistence import load_stories
-
-        stories = load_stories(project_root)
-    except Exception:
-        logger.debug("Optional stories not available", exc_info=True)
-
-    # Load test designs (optional)
-    progress.log_sync("Loading test designs...")
-    test_designs = []
-    try:
-        from dazzle.testing.test_design_persistence import load_test_designs
-
-        test_designs = load_test_designs(project_root)
-    except Exception:
-        logger.debug("Optional test designs not available", exc_info=True)
-
-    from dazzle.core.frontend_spec_export import export_frontend_spec
-
-    fmt = args.get("format", "markdown")
-    sections = args.get("sections")
-    entities = args.get("entities")
-
-    progress.log_sync("Exporting frontend spec...")
-    return export_frontend_spec(app_spec, sitespec, stories, test_designs, fmt, sections, entities)
-
-
-@handler_error_json
 def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     """Run linting on the project."""
     progress = extract_progress(args)
@@ -296,7 +121,7 @@ def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
 
     # Parse lint messages to extract entity+field where possible
     for msg in lint_errors:
-        key = _extract_issue_key(msg)
+        key = extract_issue_key(msg)
         if key not in issues:
             issues[key] = {
                 "key": key,
@@ -308,7 +133,7 @@ def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
         issues[key]["messages"].append(msg)
 
     for msg in lint_warnings:
-        key = _extract_issue_key(msg)
+        key = extract_issue_key(msg)
         if key not in issues:
             issues[key] = {
                 "key": key,
@@ -400,20 +225,3 @@ def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
         },
         indent=2,
     )
-
-
-def _extract_issue_key(message: str) -> str:
-    """Extract entity.field key from a lint message, or return the message."""
-    import re
-
-    # Try to extract "Entity 'X'" or "entity 'X'" pattern
-    entity_match = re.search(r"[Ee]ntity ['\"](\w+)['\"]", message)
-    field_match = re.search(r"[Ff]ield ['\"](\w+)['\"]", message)
-
-    if entity_match and field_match:
-        return f"{entity_match.group(1)}.{field_match.group(1)}"
-    if entity_match:
-        return entity_match.group(1)
-
-    # Fallback: use a truncated version of the message as key
-    return message[:80] if len(message) > 80 else message

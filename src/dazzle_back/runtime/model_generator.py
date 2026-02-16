@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Annotated, Any, cast
+from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import AfterValidator, BaseModel, Field, create_model
@@ -254,7 +254,8 @@ def generate_entity_model(
         **field_definitions,
     )
 
-    return cast(type[BaseModel], model)
+    assert issubclass(model, BaseModel)
+    return model
 
 
 def generate_all_entity_models(
@@ -325,7 +326,8 @@ def generate_create_schema(
         **field_definitions,
     )
 
-    return cast(type[BaseModel], model)
+    assert issubclass(model, BaseModel)
+    return model
 
 
 def generate_update_schema(
@@ -368,7 +370,8 @@ def generate_update_schema(
         **field_definitions,
     )
 
-    return cast(type[BaseModel], model)
+    assert issubclass(model, BaseModel)
+    return model
 
 
 def generate_list_response_schema(
@@ -398,4 +401,5 @@ def generate_list_response_schema(
         **field_definitions,
     )
 
-    return cast(type[BaseModel], model)
+    assert issubclass(model, BaseModel)
+    return model

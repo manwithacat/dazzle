@@ -45,27 +45,72 @@ def _import_test_design():
 
     common_mock.extract_progress = _extract_progress
     common_mock.load_project_appspec = _load_project_appspec
+
+    def _handler_error_json(fn):
+        """Decorator that catches exceptions and returns JSON error."""
+        from functools import wraps
+
+        @wraps(fn)
+        def wrapper(*a, **kw):
+            try:
+                return fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
+    common_mock.handler_error_json = _handler_error_json
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
     sys.modules["dazzle.mcp.server.state"] = mock_state
 
-    module_path = (
+    handlers_dir = (
         Path(__file__).parent.parent.parent.parent
         / "src"
         / "dazzle"
         / "mcp"
         / "server"
         / "handlers"
-        / "test_design.py"
     )
-    spec = importlib.util.spec_from_file_location(
-        "dazzle.mcp.server.handlers.test_design",
-        module_path,
+
+    # Pre-load the serializers module so test_design submodules' `from ..serializers import ...` resolves
+    ser_path = handlers_dir / "serializers.py"
+    ser_spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.serializers",
+        ser_path,
         submodule_search_locations=[],
     )
-    module = importlib.util.module_from_spec(spec)
+    ser_mod = importlib.util.module_from_spec(ser_spec)
+    ser_mod.__package__ = "dazzle.mcp.server.handlers"
+    sys.modules["dazzle.mcp.server.handlers.serializers"] = ser_mod
+    ser_spec.loader.exec_module(ser_mod)
 
-    # Set up the package structure for relative imports
-    module.__package__ = "dazzle.mcp.server.handlers"
+    # Attach serializers to the handlers mock so relative import resolves
+    sys.modules["dazzle.mcp.server.handlers"].serializers = ser_mod
+
+    pkg_dir = handlers_dir / "test_design"
+
+    # Import submodules first so the package __init__ can re-export them
+    for submod_name in ("proposals", "gaps", "persistence", "coverage"):
+        submod_path = pkg_dir / f"{submod_name}.py"
+        sub_spec = importlib.util.spec_from_file_location(
+            f"dazzle.mcp.server.handlers.test_design.{submod_name}",
+            submod_path,
+            submodule_search_locations=[],
+        )
+        sub_module = importlib.util.module_from_spec(sub_spec)
+        sub_module.__package__ = "dazzle.mcp.server.handlers.test_design"
+        sys.modules[f"dazzle.mcp.server.handlers.test_design.{submod_name}"] = sub_module
+        sub_spec.loader.exec_module(sub_module)
+
+    # Now import the package __init__
+    init_path = pkg_dir / "__init__.py"
+    spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.test_design",
+        init_path,
+        submodule_search_locations=[str(pkg_dir)],
+    )
+    module = importlib.util.module_from_spec(spec)
+    module.__package__ = "dazzle.mcp.server.handlers.test_design"
     sys.modules["dazzle.mcp.server.handlers.test_design"] = module
 
     spec.loader.exec_module(module)

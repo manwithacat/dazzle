@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,57 @@ def _project_error() -> str:
         )
 
 
+def _dispatch_project_ops(
+    arguments: dict[str, Any],
+    ops: dict[str, Callable[..., str]],
+    tool_label: str,
+) -> str:
+    """Common pattern: resolve project, look up operation in dict, call handler(project_path, arguments)."""
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+    if project_path is None:
+        return _project_error()
+    handler = ops.get(operation)  # type: ignore[arg-type]
+    if handler is None:
+        return json.dumps({"error": f"Unknown {tool_label} operation: {operation}"})
+    return handler(project_path, arguments)
+
+
+async def _dispatch_project_ops_async(
+    arguments: dict[str, Any],
+    ops: dict[str, Callable[..., Any]],
+    tool_label: str,
+) -> str:
+    """Async variant of _dispatch_project_ops. All handlers are awaited."""
+    import inspect
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+    if project_path is None:
+        return _project_error()
+    handler = ops.get(operation)  # type: ignore[arg-type]
+    if handler is None:
+        return json.dumps({"error": f"Unknown {tool_label} operation: {operation}"})
+    result = handler(project_path, arguments)
+    if inspect.isawaitable(result):
+        rv: str = await result
+        return rv
+    return str(result)
+
+
+def _dispatch_standalone_ops(
+    arguments: dict[str, Any],
+    ops: dict[str, Callable[..., str]],
+    tool_label: str,
+) -> str:
+    """Dispatch for handlers that take only arguments (no project_path)."""
+    operation = arguments.get("operation")
+    handler = ops.get(operation)  # type: ignore[arg-type]
+    if handler is None:
+        return json.dumps({"error": f"Unknown {tool_label} operation: {operation}"})
+    return handler(arguments)
+
+
 # =============================================================================
 # DSL Operations Handler
 # =============================================================================
@@ -68,42 +120,36 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
     )
     from .handlers.stories import get_dsl_spec_handler
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
-
-    if project_path is None:
-        return _project_error()
-
-    if operation == "validate":
-        return validate_dsl(project_path, arguments)
-    elif operation == "list_modules":
-        return list_modules(project_path, arguments)
-    elif operation == "inspect_entity":
-        return inspect_entity(project_path, arguments)
-    elif operation == "inspect_surface":
-        return inspect_surface(project_path, arguments)
-    elif operation == "analyze":
-        return analyze_patterns(project_path, arguments)
-    elif operation == "lint":
-        return lint_project(project_path, arguments)
-    elif operation == "issues":
-        return get_unified_issues(project_path, arguments)
-    elif operation == "get_spec":
-        return get_dsl_spec_handler(project_path, arguments)
-    elif operation == "fidelity":
+    def _fidelity(project_path: Path, args: dict[str, Any]) -> str:
         from .handlers.fidelity import score_fidelity_handler
 
-        return score_fidelity_handler(project_path, arguments)
-    elif operation == "export_frontend_spec":
+        return score_fidelity_handler(project_path, args)
+
+    def _export_frontend_spec(project_path: Path, args: dict[str, Any]) -> str:
         from .handlers.dsl import export_frontend_spec_handler
 
-        return export_frontend_spec_handler(project_path, arguments)
-    elif operation == "list_fragments":
+        return export_frontend_spec_handler(project_path, args)
+
+    def _list_fragments(project_path: Path, args: dict[str, Any]) -> str:
         from dazzle_ui.runtime.fragment_registry import get_fragment_registry
 
         return json.dumps({"fragments": get_fragment_registry()}, indent=2)
-    else:
-        return json.dumps({"error": f"Unknown DSL operation: {operation}"})
+
+    ops: dict[str, Callable[..., str]] = {
+        "validate": validate_dsl,
+        "list_modules": list_modules,
+        "inspect_entity": inspect_entity,
+        "inspect_surface": inspect_surface,
+        "analyze": analyze_patterns,
+        "lint": lint_project,
+        "issues": get_unified_issues,
+        "get_spec": get_dsl_spec_handler,
+        "fidelity": _fidelity,
+        "export_frontend_spec": _export_frontend_spec,
+        "list_fragments": _list_fragments,
+    }
+
+    return _dispatch_project_ops(arguments, ops, "DSL")
 
 
 # =============================================================================
@@ -122,25 +168,29 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
         search_api_packs_handler,
     )
 
+    standalone_ops: dict[str, Callable[..., str]] = {
+        "list": list_api_packs_handler,
+        "search": search_api_packs_handler,
+        "get": get_api_pack_handler,
+        "generate_dsl": generate_service_dsl_handler,
+        "env_vars": get_env_vars_for_packs_handler,
+    }
+
     operation = arguments.get("operation")
 
-    if operation == "list":
-        return list_api_packs_handler(arguments)
-    elif operation == "search":
-        return search_api_packs_handler(arguments)
-    elif operation == "get":
-        return get_api_pack_handler(arguments)
-    elif operation == "generate_dsl":
-        return generate_service_dsl_handler(arguments)
-    elif operation == "env_vars":
-        return get_env_vars_for_packs_handler(arguments)
-    elif operation == "infrastructure":
+    # Most ops are standalone (no project_path)
+    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
+    if standalone is not None:
+        return standalone(arguments)
+
+    # infrastructure needs project context
+    if operation == "infrastructure":
         project_path = _resolve_project(arguments)
         if project_path is None:
             return _project_error()
         return infrastructure_handler(project_path=project_path, args=arguments)
-    else:
-        return json.dumps({"error": f"Unknown API pack operation: {operation}"})
+
+    return json.dumps({"error": f"Unknown API pack operation: {operation}"})
 
 
 # =============================================================================
@@ -165,21 +215,22 @@ def handle_story(arguments: dict[str, Any]) -> str:
     if project_path is None:
         return _project_error()
 
-    if operation == "propose":
-        return propose_stories_from_dsl_handler(project_path, arguments)
-    elif operation == "save":
-        return save_stories_handler(project_path, arguments)
-    elif operation == "get":
-        # Wall view is a special mode of get
-        if arguments.get("view") == "wall":
-            return wall_stories_handler(project_path, arguments)
-        return get_stories_handler(project_path, arguments)
-    elif operation == "generate_tests":
-        return generate_tests_from_stories_handler(project_path, arguments)
-    elif operation == "coverage":
-        return stories_coverage_handler(project_path, arguments)
-    else:
+    # Special case: "get" with wall view
+    if operation == "get" and arguments.get("view") == "wall":
+        return wall_stories_handler(project_path, arguments)
+
+    ops: dict[str, Callable[..., str]] = {
+        "propose": propose_stories_from_dsl_handler,
+        "save": save_stories_handler,
+        "get": get_stories_handler,
+        "generate_tests": generate_tests_from_stories_handler,
+        "coverage": stories_coverage_handler,
+    }
+
+    handler = ops.get(operation)  # type: ignore[arg-type]
+    if handler is None:
         return json.dumps({"error": f"Unknown story operation: {operation}"})
+    return handler(project_path, arguments)
 
 
 # =============================================================================
@@ -196,22 +247,14 @@ def handle_demo_data(arguments: dict[str, Any]) -> str:
         save_demo_blueprint_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "propose": propose_demo_blueprint_handler,
+        "save": save_demo_blueprint_handler,
+        "get": get_demo_blueprint_handler,
+        "generate": generate_demo_data_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "propose":
-        return propose_demo_blueprint_handler(project_path, arguments)
-    elif operation == "save":
-        return save_demo_blueprint_handler(project_path, arguments)
-    elif operation == "get":
-        return get_demo_blueprint_handler(project_path, arguments)
-    elif operation == "generate":
-        return generate_demo_data_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown demo data operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "demo data")
 
 
 # =============================================================================
@@ -231,32 +274,19 @@ def handle_test_design(arguments: dict[str, Any]) -> str:
         save_test_designs_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "propose_persona": propose_persona_tests_handler,
+        "gaps": get_test_gaps_handler,
+        "save": save_test_designs_handler,
+        "get": get_test_designs_handler,
+        "coverage_actions": get_coverage_actions_handler,
+        "runtime_gaps": get_runtime_coverage_gaps_handler,
+        "save_runtime": save_runtime_coverage_handler,
+        "auto_populate": _auto_populate_tests,
+        "improve_coverage": _improve_coverage,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "propose_persona":
-        return propose_persona_tests_handler(project_path, arguments)
-    elif operation == "gaps":
-        return get_test_gaps_handler(project_path, arguments)
-    elif operation == "save":
-        return save_test_designs_handler(project_path, arguments)
-    elif operation == "get":
-        return get_test_designs_handler(project_path, arguments)
-    elif operation == "coverage_actions":
-        return get_coverage_actions_handler(project_path, arguments)
-    elif operation == "runtime_gaps":
-        return get_runtime_coverage_gaps_handler(project_path, arguments)
-    elif operation == "save_runtime":
-        return save_runtime_coverage_handler(project_path, arguments)
-    elif operation == "auto_populate":
-        return _auto_populate_tests(project_path, arguments)
-    elif operation == "improve_coverage":
-        return _improve_coverage(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown test design operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "test design")
 
 
 # =============================================================================
@@ -282,40 +312,23 @@ def handle_sitespec(arguments: dict[str, Any]) -> str:
         validate_theme_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "get": get_sitespec_handler,
+        "validate": validate_sitespec_handler,
+        "scaffold": scaffold_site_handler,
+        "get_copy": get_copy_handler,
+        "scaffold_copy": scaffold_copy_handler,
+        "review_copy": review_copy_handler,
+        "coherence": coherence_handler,
+        "get_theme": get_theme_handler,
+        "scaffold_theme": scaffold_theme_handler,
+        "validate_theme": validate_theme_handler,
+        "generate_tokens": generate_tokens_handler,
+        "generate_imagery_prompts": generate_imagery_prompts_handler,
+        "review": review_sitespec_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "get":
-        return get_sitespec_handler(project_path, arguments)
-    elif operation == "validate":
-        return validate_sitespec_handler(project_path, arguments)
-    elif operation == "scaffold":
-        return scaffold_site_handler(project_path, arguments)
-    elif operation == "get_copy":
-        return get_copy_handler(project_path, arguments)
-    elif operation == "scaffold_copy":
-        return scaffold_copy_handler(project_path, arguments)
-    elif operation == "review_copy":
-        return review_copy_handler(project_path, arguments)
-    elif operation == "coherence":
-        return coherence_handler(project_path, arguments)
-    elif operation == "get_theme":
-        return get_theme_handler(project_path, arguments)
-    elif operation == "scaffold_theme":
-        return scaffold_theme_handler(project_path, arguments)
-    elif operation == "validate_theme":
-        return validate_theme_handler(project_path, arguments)
-    elif operation == "generate_tokens":
-        return generate_tokens_handler(project_path, arguments)
-    elif operation == "generate_imagery_prompts":
-        return generate_imagery_prompts_handler(project_path, arguments)
-    elif operation == "review":
-        return review_sitespec_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown sitespec operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "sitespec")
 
 
 # =============================================================================
@@ -334,26 +347,23 @@ def handle_semantics(arguments: dict[str, Any]) -> str:
         handle_validate_events,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    # These handlers take (arguments, project_path) — reversed signature
+    def _wrap(fn: Callable[..., str]) -> Callable[..., str]:
+        def wrapper(project_path: Path, args: dict[str, Any]) -> str:
+            return fn(args, project_path)
 
-    if project_path is None:
-        return _project_error()
+        return wrapper
 
-    if operation == "extract":
-        return handle_extract_semantics(arguments, project_path)
-    elif operation == "validate_events":
-        return handle_validate_events(arguments, project_path)
-    elif operation == "tenancy":
-        return handle_infer_tenancy(arguments, project_path)
-    elif operation == "compliance":
-        return handle_infer_compliance(arguments, project_path)
-    elif operation == "analytics":
-        return handle_infer_analytics(arguments, project_path)
-    elif operation == "extract_guards":
-        return handle_extract_guards(arguments, project_path)
-    else:
-        return json.dumps({"error": f"Unknown semantics operation: {operation}"})
+    ops: dict[str, Callable[..., str]] = {
+        "extract": _wrap(handle_extract_semantics),
+        "validate_events": _wrap(handle_validate_events),
+        "tenancy": _wrap(handle_infer_tenancy),
+        "compliance": _wrap(handle_infer_compliance),
+        "analytics": _wrap(handle_infer_analytics),
+        "extract_guards": _wrap(handle_extract_guards),
+    }
+
+    return _dispatch_project_ops(arguments, ops, "semantics")
 
 
 # =============================================================================
@@ -374,30 +384,18 @@ async def handle_process(arguments: dict[str, Any]) -> str:
         stories_coverage_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., Any]] = {
+        "propose": propose_processes_handler,
+        "save": save_processes_handler,
+        "list": list_processes_handler,
+        "inspect": inspect_process_handler,
+        "list_runs": list_process_runs_handler,
+        "get_run": get_process_run_handler,
+        "diagram": get_process_diagram_handler,
+        "coverage": stories_coverage_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "propose":
-        return propose_processes_handler(project_path, arguments)
-    elif operation == "save":
-        return save_processes_handler(project_path, arguments)
-    elif operation == "list":
-        return list_processes_handler(project_path, arguments)
-    elif operation == "inspect":
-        return inspect_process_handler(project_path, arguments)
-    elif operation == "list_runs":
-        return await list_process_runs_handler(project_path, arguments)
-    elif operation == "get_run":
-        return await get_process_run_handler(project_path, arguments)
-    elif operation == "diagram":
-        return get_process_diagram_handler(project_path, arguments)
-    elif operation == "coverage":
-        return stories_coverage_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown process operation: {operation}"})
+    return await _dispatch_project_ops_async(arguments, ops, "process")
 
 
 # =============================================================================
@@ -418,30 +416,18 @@ async def handle_dsl_test(arguments: dict[str, Any]) -> str:
         verify_story_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., Any]] = {
+        "generate": generate_dsl_tests_handler,
+        "run": run_dsl_tests_handler,
+        "run_all": run_all_dsl_tests_handler,
+        "coverage": get_dsl_test_coverage_handler,
+        "list": list_dsl_tests_handler,
+        "create_sessions": create_sessions_handler,
+        "diff_personas": diff_personas_handler,
+        "verify_story": verify_story_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "generate":
-        return generate_dsl_tests_handler(project_path, arguments)
-    elif operation == "run":
-        return run_dsl_tests_handler(project_path, arguments)
-    elif operation == "run_all":
-        return run_all_dsl_tests_handler(project_path, arguments)
-    elif operation == "coverage":
-        return get_dsl_test_coverage_handler(project_path, arguments)
-    elif operation == "list":
-        return list_dsl_tests_handler(project_path, arguments)
-    elif operation == "create_sessions":
-        return await create_sessions_handler(project_path, arguments)
-    elif operation == "diff_personas":
-        return await diff_personas_handler(project_path, arguments)
-    elif operation == "verify_story":
-        return verify_story_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown DSL test operation: {operation}"})
+    return await _dispatch_project_ops_async(arguments, ops, "DSL test")
 
 
 # =============================================================================
@@ -463,35 +449,42 @@ async def handle_e2e_test(arguments: dict[str, Any]) -> str:
     operation = arguments.get("operation")
 
     # check_infra and tier_guidance don't need project context
-    if operation == "check_infra":
-        return check_test_infrastructure_handler()
-    elif operation == "tier_guidance":
-        return get_test_tier_guidance_handler(arguments)
+    standalone_ops: dict[str, Callable[..., Any]] = {
+        "check_infra": lambda: check_test_infrastructure_handler(),
+        "tier_guidance": lambda: get_test_tier_guidance_handler(arguments),
+    }
+
+    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
+    if standalone is not None:
+        return str(standalone())
 
     # Other operations need project context
     project_path = _resolve_project(arguments)
     if project_path is None:
         return _project_error()
 
+    pp = str(project_path)
+
     if operation == "run":
         return run_e2e_tests_handler(
-            project_path=str(project_path),
+            project_path=pp,
             priority=arguments.get("priority"),
             tag=arguments.get("tag"),
             headless=arguments.get("headless", True),
         )
     elif operation == "run_agent":
-        return await run_agent_e2e_tests_handler(
-            project_path=str(project_path),
+        rv: str = await run_agent_e2e_tests_handler(
+            project_path=pp,
             test_id=arguments.get("test_id"),
             headless=arguments.get("headless", True),
             model=arguments.get("model"),
         )
+        return rv
     elif operation == "coverage":
-        return get_e2e_test_coverage_handler(project_path=str(project_path))
+        return get_e2e_test_coverage_handler(project_path=pp)
     elif operation == "list_flows":
         return list_e2e_flows_handler(
-            project_path=str(project_path),
+            project_path=pp,
             priority=arguments.get("priority"),
             tag=arguments.get("tag"),
             limit=arguments.get("limit", 20),
@@ -500,7 +493,7 @@ async def handle_e2e_test(arguments: dict[str, Any]) -> str:
         from .handlers.viewport_testing import run_viewport_tests_handler
 
         return run_viewport_tests_handler(
-            project_path=str(project_path),
+            project_path=pp,
             headless=arguments.get("headless", True),
             viewports=arguments.get("viewports"),
             persona_id=arguments.get("persona_id"),
@@ -511,7 +504,7 @@ async def handle_e2e_test(arguments: dict[str, Any]) -> str:
         from .handlers.viewport_testing import manage_viewport_specs_handler
 
         return manage_viewport_specs_handler(
-            project_path=str(project_path),
+            project_path=pp,
             operation=operation,
             specs=arguments.get("viewport_specs"),
             to_dsl=arguments.get("to_dsl", True),
@@ -537,19 +530,24 @@ def handle_status(arguments: dict[str, Any]) -> str:
 
     operation = arguments.get("operation")
 
-    if operation == "mcp":
-        return get_mcp_status_handler(arguments)
-    elif operation == "logs":
-        return get_dnr_logs_handler(arguments)
-    elif operation == "active_project":
+    # All status ops are standalone (no project_path)
+    standalone_ops: dict[str, Callable[..., str]] = {
+        "mcp": get_mcp_status_handler,
+        "logs": get_dnr_logs_handler,
+        "telemetry": get_telemetry_handler,
+        "activity": get_activity_handler,
+    }
+
+    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
+    if standalone is not None:
+        return standalone(arguments)
+
+    # active_project uses a different arg
+    if operation == "active_project":
         resolved = arguments.get("_resolved_project_path")
         return get_active_project_info(resolved_path=resolved)
-    elif operation == "telemetry":
-        return get_telemetry_handler(arguments)
-    elif operation == "activity":
-        return get_activity_handler(arguments)
-    else:
-        return json.dumps({"error": f"Unknown status operation: {operation}"})
+
+    return json.dumps({"error": f"Unknown status operation: {operation}"})
 
 
 # =============================================================================
@@ -567,27 +565,30 @@ def handle_knowledge(arguments: dict[str, Any]) -> str:
     )
     from .tool_handlers import find_examples_handler
 
+    standalone_ops: dict[str, Callable[..., str]] = {
+        "concept": lookup_concept_handler,
+        "examples": find_examples_handler,
+        "cli_help": get_cli_help_handler,
+        "workflow": get_workflow_guide_handler,
+        "inference": lookup_inference_handler,
+    }
+
     operation = arguments.get("operation")
 
-    if operation == "concept":
-        return lookup_concept_handler(arguments)
-    elif operation == "examples":
-        return find_examples_handler(arguments)
-    elif operation == "cli_help":
-        return get_cli_help_handler(arguments)
-    elif operation == "workflow":
-        return get_workflow_guide_handler(arguments)
-    elif operation == "inference":
-        return lookup_inference_handler(arguments)
-    elif operation == "get_spec":
+    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
+    if standalone is not None:
+        return standalone(arguments)
+
+    # get_spec needs project context
+    if operation == "get_spec":
         project_path = _resolve_project(arguments)
         if project_path is None:
             return _project_error()
         from .tool_handlers import get_product_spec_handler
 
         return get_product_spec_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown knowledge operation: {operation}"})
+
+    return json.dumps({"error": f"Unknown knowledge operation: {operation}"})
 
 
 # =============================================================================
@@ -727,79 +728,39 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
-    """
-    Auto-populate stories and test designs from DSL.
-
-    This operation runs the full autonomous workflow:
-    1. Propose stories from DSL entities
-    2. Auto-accept all proposed stories
-    3. Generate test designs from accepted stories
-    4. Save everything to dsl/stories/ and dsl/tests/
-
-    Args:
-        project_path: Path to the project directory
-        arguments: dict with optional keys:
-            - max_stories: Maximum stories to propose (default: 30)
-            - include_test_designs: Whether to generate test designs (default: True)
-
-    Returns:
-        JSON string with summary of what was created
-    """
-    from datetime import UTC, datetime
-
+def _load_appspec(project_path: Path) -> Any:
+    """Load and return appspec from project, or raise on failure."""
     from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
     from dazzle.core.linker import build_appspec
     from dazzle.core.manifest import load_manifest
     from dazzle.core.parser import parse_modules
-    from dazzle.core.stories_persistence import add_stories, get_next_story_id, load_stories
-    from dazzle.testing.test_design_persistence import add_test_designs
 
-    max_stories = arguments.get("max_stories", 30)
-    include_test_designs = arguments.get("include_test_designs", True)
+    manifest = load_manifest(project_path / "dazzle.toml")
+    dsl_files = discover_dsl_files(project_path, manifest)
+    modules = parse_modules(dsl_files)
+    return build_appspec(modules, manifest.project_root)
 
-    try:
-        manifest = load_manifest(project_path / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_path, manifest)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, manifest.project_root)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}"})
 
-    # Load existing stories and build a title set for dedup
-    existing_stories = load_stories(project_path)
-    existing_titles = {s.title for s in existing_stories}
+def _generate_entity_stories(
+    appspec: Any,
+    max_stories: int,
+    existing_titles: set[str],
+    default_actor: str,
+    now: str,
+    next_story_id: Callable[[], str],
+) -> tuple[list[Any], int]:
+    """Generate stories from entities and their state machine transitions.
 
-    # Get starting story ID
-    base_id = get_next_story_id(project_path)
-    base_num = int(base_id[3:])
-    story_count = 0
-
-    def next_story_id() -> str:
-        nonlocal story_count
-        result = f"ST-{base_num + story_count:03d}"
-        story_count += 1
-        return result
-
-    now = datetime.now(UTC).isoformat()
-    default_actor = "User"
-    if appspec.personas:
-        default_actor = appspec.personas[0].label or appspec.personas[0].id
+    Returns (new_stories, skipped_count).
+    """
+    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
 
     stories: list[StorySpec] = []
     skipped = 0
+    count = 0
 
-    # Generate stories from entities
     for entity in appspec.domain.entities:
-        if story_count >= max_stories:
+        if count >= max_stories:
             break
 
         # Create story (skip if title already exists)
@@ -830,11 +791,12 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
                     accepted_at=now,
                 )
             )
+            count += 1
 
         # State machine transitions
         if entity.state_machine:
             for transition in entity.state_machine.transitions[:3]:
-                if story_count >= max_stories:
+                if count >= max_stories:
                     break
                 sm = entity.state_machine
                 title = f"{default_actor} changes {entity.name} from {transition.from_state} to {transition.to_state}"
@@ -863,6 +825,149 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
                         accepted_at=now,
                     )
                 )
+                count += 1
+
+    return stories, skipped
+
+
+def _generate_test_designs_from_stories(stories: list[Any]) -> list[Any]:
+    """Generate test design specs from a list of stories.
+
+    Returns list of TestDesignSpec instances.
+    """
+    from dazzle.core.ir.stories import StoryTrigger
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+
+    trigger_map = {
+        StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
+        StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
+        StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
+    }
+
+    test_designs: list[TestDesignSpec] = []
+
+    for story in stories:
+        test_id = story.story_id.replace("ST-", "TD-")
+
+        steps: list[TestDesignStep] = [
+            TestDesignStep(
+                action=TestDesignAction.LOGIN_AS,
+                target=story.actor,
+                rationale=f"Test from {story.actor}'s perspective",
+            )
+        ]
+
+        if story.trigger == StoryTrigger.FORM_SUBMITTED:
+            scope_entity = story.scope[0] if story.scope else "form"
+            steps.extend(
+                [
+                    TestDesignStep(
+                        action=TestDesignAction.NAVIGATE_TO,
+                        target=f"{scope_entity}_create",
+                        rationale="Navigate to creation form",
+                    ),
+                    TestDesignStep(
+                        action=TestDesignAction.FILL,
+                        target="form",
+                        data={"fields": "required_fields"},
+                        rationale="Fill form with test data",
+                    ),
+                    TestDesignStep(
+                        action=TestDesignAction.CLICK,
+                        target="submit_button",
+                        rationale="Submit the form",
+                    ),
+                ]
+            )
+        elif story.trigger == StoryTrigger.STATUS_CHANGED:
+            scope_entity = story.scope[0] if story.scope else "entity"
+            steps.append(
+                TestDesignStep(
+                    action=TestDesignAction.TRIGGER_TRANSITION,
+                    target=scope_entity,
+                    rationale="Trigger status change",
+                )
+            )
+
+        test_designs.append(
+            TestDesignSpec(
+                test_id=test_id,
+                title=f"Verify: {story.title}",
+                description=f"Test generated from story {story.story_id}",
+                persona=story.actor,
+                trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
+                steps=steps,
+                expected_outcomes=story.happy_path_outcome.copy(),
+                entities=story.scope.copy(),
+                tags=[f"story:{story.story_id}", "auto-populated"],
+                status=TestDesignStatus.PROPOSED,
+            )
+        )
+
+    return test_designs
+
+
+def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
+    """
+    Auto-populate stories and test designs from DSL.
+
+    This operation runs the full autonomous workflow:
+    1. Propose stories from DSL entities
+    2. Auto-accept all proposed stories
+    3. Generate test designs from accepted stories
+    4. Save everything to dsl/stories/ and dsl/tests/
+
+    Args:
+        project_path: Path to the project directory
+        arguments: dict with optional keys:
+            - max_stories: Maximum stories to propose (default: 30)
+            - include_test_designs: Whether to generate test designs (default: True)
+
+    Returns:
+        JSON string with summary of what was created
+    """
+    from datetime import UTC, datetime
+
+    from dazzle.core.stories_persistence import add_stories, get_next_story_id, load_stories
+    from dazzle.testing.test_design_persistence import add_test_designs
+
+    max_stories = arguments.get("max_stories", 30)
+    include_test_designs = arguments.get("include_test_designs", True)
+
+    try:
+        appspec = _load_appspec(project_path)
+    except Exception as e:
+        return json.dumps({"error": f"Failed to load DSL: {e}"})
+
+    # Load existing stories and build a title set for dedup
+    existing_stories = load_stories(project_path)
+    existing_titles = {s.title for s in existing_stories}
+
+    # Get starting story ID
+    base_id = get_next_story_id(project_path)
+    base_num = int(base_id[3:])
+    story_count = 0
+
+    def next_story_id() -> str:
+        nonlocal story_count
+        result = f"ST-{base_num + story_count:03d}"
+        story_count += 1
+        return result
+
+    now = datetime.now(UTC).isoformat()
+    default_actor = "User"
+    if appspec.personas:
+        default_actor = appspec.personas[0].label or appspec.personas[0].id
+
+    stories, skipped = _generate_entity_stories(
+        appspec, max_stories, existing_titles, default_actor, now, next_story_id
+    )
 
     # Save stories
     all_stories = add_stories(project_path, stories, overwrite=False)
@@ -876,72 +981,7 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
 
     # Generate test designs from stories
     if include_test_designs and stories:
-        trigger_map = {
-            StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
-            StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
-            StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
-        }
-
-        test_designs: list[TestDesignSpec] = []
-
-        for story in stories:
-            test_id = story.story_id.replace("ST-", "TD-")
-
-            steps: list[TestDesignStep] = [
-                TestDesignStep(
-                    action=TestDesignAction.LOGIN_AS,
-                    target=story.actor,
-                    rationale=f"Test from {story.actor}'s perspective",
-                )
-            ]
-
-            if story.trigger == StoryTrigger.FORM_SUBMITTED:
-                scope_entity = story.scope[0] if story.scope else "form"
-                steps.extend(
-                    [
-                        TestDesignStep(
-                            action=TestDesignAction.NAVIGATE_TO,
-                            target=f"{scope_entity}_create",
-                            rationale="Navigate to creation form",
-                        ),
-                        TestDesignStep(
-                            action=TestDesignAction.FILL,
-                            target="form",
-                            data={"fields": "required_fields"},
-                            rationale="Fill form with test data",
-                        ),
-                        TestDesignStep(
-                            action=TestDesignAction.CLICK,
-                            target="submit_button",
-                            rationale="Submit the form",
-                        ),
-                    ]
-                )
-            elif story.trigger == StoryTrigger.STATUS_CHANGED:
-                scope_entity = story.scope[0] if story.scope else "entity"
-                steps.append(
-                    TestDesignStep(
-                        action=TestDesignAction.TRIGGER_TRANSITION,
-                        target=scope_entity,
-                        rationale="Trigger status change",
-                    )
-                )
-
-            test_designs.append(
-                TestDesignSpec(
-                    test_id=test_id,
-                    title=f"Verify: {story.title}",
-                    description=f"Test generated from story {story.story_id}",
-                    persona=story.actor,
-                    trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
-                    steps=steps,
-                    expected_outcomes=story.happy_path_outcome.copy(),
-                    entities=story.scope.copy(),
-                    tags=[f"story:{story.story_id}", "auto-populated"],
-                    status=TestDesignStatus.PROPOSED,
-                )
-            )
-
+        test_designs = _generate_test_designs_from_stories(stories)
         add_test_designs(project_path, test_designs, overwrite=False, to_dsl=True)
         result["test_designs_generated"] = len(test_designs)
 
@@ -951,6 +991,139 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
     ]
 
     return json.dumps(result, indent=2)
+
+
+def _propose_persona_coverage_tests(
+    appspec: Any,
+    covered_personas: set[str],
+    max_actions: int,
+    start_id: int,
+) -> tuple[list[Any], list[dict[str, Any]], int]:
+    """Generate test designs for uncovered personas.
+
+    Returns (new_designs, actions_taken, next_id).
+    """
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+
+    new_designs: list[TestDesignSpec] = []
+    actions_taken: list[dict[str, Any]] = []
+    next_id = start_id
+
+    for persona in appspec.personas:
+        if len(actions_taken) >= max_actions:
+            break
+        if persona.id not in covered_personas and persona.goals:
+            new_designs.append(
+                TestDesignSpec(
+                    test_id=f"TD-{next_id:03d}",
+                    title=f"Verify {persona.label or persona.id} can achieve their goals",
+                    description=f"Auto-generated to cover persona {persona.id}",
+                    persona=persona.id,
+                    trigger=TestDesignTrigger.USER_CLICK,
+                    steps=[
+                        TestDesignStep(
+                            action=TestDesignAction.LOGIN_AS,
+                            target=persona.id,
+                            rationale=f"Test as {persona.id}",
+                        ),
+                        TestDesignStep(
+                            action=TestDesignAction.NAVIGATE_TO,
+                            target="dashboard",
+                            rationale="Navigate to main view",
+                        ),
+                    ],
+                    expected_outcomes=[f"{persona.id} can access their workspace"],
+                    entities=[],
+                    tags=["auto-coverage", f"persona:{persona.id}"],
+                    status=TestDesignStatus.PROPOSED,
+                )
+            )
+            next_id += 1
+            actions_taken.append(
+                {
+                    "action": "propose_persona_test",
+                    "persona": persona.id,
+                    "test_id": new_designs[-1].test_id,
+                }
+            )
+
+    return new_designs, actions_taken, next_id
+
+
+def _propose_entity_coverage_tests(
+    appspec: Any,
+    uncovered_entities: set[str],
+    max_actions: int,
+    actions_so_far: int,
+    start_id: int,
+) -> tuple[list[Any], list[dict[str, Any]]]:
+    """Generate test designs for uncovered entities.
+
+    Returns (new_designs, actions_taken).
+    """
+    from dazzle.core.ir.test_design import (
+        TestDesignAction,
+        TestDesignSpec,
+        TestDesignStatus,
+        TestDesignStep,
+        TestDesignTrigger,
+    )
+
+    new_designs: list[TestDesignSpec] = []
+    actions_taken: list[dict[str, Any]] = []
+    next_id = start_id
+
+    for entity in appspec.domain.entities:
+        if actions_so_far + len(actions_taken) >= max_actions:
+            break
+        if entity.name in uncovered_entities:
+            new_designs.append(
+                TestDesignSpec(
+                    test_id=f"TD-{next_id:03d}",
+                    title=f"CRUD operations for {entity.title or entity.name}",
+                    description=f"Auto-generated to cover entity {entity.name}",
+                    persona="User",
+                    trigger=TestDesignTrigger.FORM_SUBMITTED,
+                    steps=[
+                        TestDesignStep(
+                            action=TestDesignAction.NAVIGATE_TO,
+                            target=f"{entity.name}_create",
+                            rationale="Navigate to creation form",
+                        ),
+                        TestDesignStep(
+                            action=TestDesignAction.FILL,
+                            target="form",
+                            data={"fields": "required"},
+                            rationale="Fill required fields",
+                        ),
+                        TestDesignStep(
+                            action=TestDesignAction.CLICK,
+                            target="submit",
+                            rationale="Submit form",
+                        ),
+                    ],
+                    expected_outcomes=[f"{entity.name} is created successfully"],
+                    entities=[entity.name],
+                    tags=["auto-coverage", f"entity:{entity.name}", "crud"],
+                    status=TestDesignStatus.PROPOSED,
+                )
+            )
+            next_id += 1
+            actions_taken.append(
+                {
+                    "action": "propose_entity_test",
+                    "entity": entity.name,
+                    "test_id": new_designs[-1].test_id,
+                }
+            )
+
+    return new_designs, actions_taken
 
 
 def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
@@ -971,27 +1144,13 @@ def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
     Returns:
         JSON string with summary of actions taken
     """
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
     from dazzle.testing.test_design_persistence import add_test_designs, load_test_designs
 
     max_actions = arguments.get("max_actions", 5)
     focus = arguments.get("focus", "all")
 
     try:
-        manifest = load_manifest(project_path / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_path, manifest)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, manifest.project_root)
+        appspec = _load_appspec(project_path)
     except Exception as e:
         return json.dumps({"error": f"Failed to load DSL: {e}"})
 
@@ -1015,95 +1174,24 @@ def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
     uncovered_personas = all_personas - covered_personas
 
     actions_taken: list[dict[str, Any]] = []
-    new_designs: list[TestDesignSpec] = []
+    new_designs: list[Any] = []
     next_id = len(existing_designs) + 1
 
     # Priority 1: Uncovered personas
     if focus in ("all", "personas"):
-        for persona in appspec.personas:
-            if len(actions_taken) >= max_actions:
-                break
-            if persona.id not in covered_personas and persona.goals:
-                # Create a test design for this persona
-                new_designs.append(
-                    TestDesignSpec(
-                        test_id=f"TD-{next_id:03d}",
-                        title=f"Verify {persona.label or persona.id} can achieve their goals",
-                        description=f"Auto-generated to cover persona {persona.id}",
-                        persona=persona.id,
-                        trigger=TestDesignTrigger.USER_CLICK,
-                        steps=[
-                            TestDesignStep(
-                                action=TestDesignAction.LOGIN_AS,
-                                target=persona.id,
-                                rationale=f"Test as {persona.id}",
-                            ),
-                            TestDesignStep(
-                                action=TestDesignAction.NAVIGATE_TO,
-                                target="dashboard",
-                                rationale="Navigate to main view",
-                            ),
-                        ],
-                        expected_outcomes=[f"{persona.id} can access their workspace"],
-                        entities=[],
-                        tags=["auto-coverage", f"persona:{persona.id}"],
-                        status=TestDesignStatus.PROPOSED,
-                    )
-                )
-                next_id += 1
-                actions_taken.append(
-                    {
-                        "action": "propose_persona_test",
-                        "persona": persona.id,
-                        "test_id": new_designs[-1].test_id,
-                    }
-                )
+        persona_designs, persona_actions, next_id = _propose_persona_coverage_tests(
+            appspec, covered_personas, max_actions, next_id
+        )
+        new_designs.extend(persona_designs)
+        actions_taken.extend(persona_actions)
 
     # Priority 2: Uncovered entities
     if focus in ("all", "entities"):
-        for entity in appspec.domain.entities:
-            if len(actions_taken) >= max_actions:
-                break
-            if entity.name in uncovered_entities:
-                new_designs.append(
-                    TestDesignSpec(
-                        test_id=f"TD-{next_id:03d}",
-                        title=f"CRUD operations for {entity.title or entity.name}",
-                        description=f"Auto-generated to cover entity {entity.name}",
-                        persona="User",
-                        trigger=TestDesignTrigger.FORM_SUBMITTED,
-                        steps=[
-                            TestDesignStep(
-                                action=TestDesignAction.NAVIGATE_TO,
-                                target=f"{entity.name}_create",
-                                rationale="Navigate to creation form",
-                            ),
-                            TestDesignStep(
-                                action=TestDesignAction.FILL,
-                                target="form",
-                                data={"fields": "required"},
-                                rationale="Fill required fields",
-                            ),
-                            TestDesignStep(
-                                action=TestDesignAction.CLICK,
-                                target="submit",
-                                rationale="Submit form",
-                            ),
-                        ],
-                        expected_outcomes=[f"{entity.name} is created successfully"],
-                        entities=[entity.name],
-                        tags=["auto-coverage", f"entity:{entity.name}", "crud"],
-                        status=TestDesignStatus.PROPOSED,
-                    )
-                )
-                next_id += 1
-                actions_taken.append(
-                    {
-                        "action": "propose_entity_test",
-                        "entity": entity.name,
-                        "test_id": new_designs[-1].test_id,
-                    }
-                )
+        entity_designs, entity_actions = _propose_entity_coverage_tests(
+            appspec, uncovered_entities, max_actions, len(actions_taken), next_id
+        )
+        new_designs.extend(entity_designs)
+        actions_taken.extend(entity_actions)
 
     # Save new test designs
     if new_designs:
@@ -1169,30 +1257,18 @@ def handle_pitch(arguments: dict[str, Any]) -> str:
         validate_pitchspec_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "scaffold": scaffold_pitchspec_handler,
+        "generate": generate_pitch_handler,
+        "validate": validate_pitchspec_handler,
+        "get": get_pitchspec_handler,
+        "review": review_pitchspec_handler,
+        "update": update_pitchspec_handler,
+        "enrich": enrich_pitchspec_handler,
+        "init_assets": init_assets_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "scaffold":
-        return scaffold_pitchspec_handler(project_path, arguments)
-    elif operation == "generate":
-        return generate_pitch_handler(project_path, arguments)
-    elif operation == "validate":
-        return validate_pitchspec_handler(project_path, arguments)
-    elif operation == "get":
-        return get_pitchspec_handler(project_path, arguments)
-    elif operation == "review":
-        return review_pitchspec_handler(project_path, arguments)
-    elif operation == "update":
-        return update_pitchspec_handler(project_path, arguments)
-    elif operation == "enrich":
-        return enrich_pitchspec_handler(project_path, arguments)
-    elif operation == "init_assets":
-        return init_assets_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown pitch operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "pitch")
 
 
 # =============================================================================
@@ -1209,18 +1285,14 @@ def handle_contribution(arguments: dict[str, Any]) -> str:
         validate_handler,
     )
 
-    operation = arguments.get("operation")
+    ops: dict[str, Callable[..., str]] = {
+        "templates": templates_handler,
+        "create": create_handler,
+        "validate": validate_handler,
+        "examples": examples_handler,
+    }
 
-    if operation == "templates":
-        return templates_handler(arguments)
-    elif operation == "create":
-        return create_handler(arguments)
-    elif operation == "validate":
-        return validate_handler(arguments)
-    elif operation == "examples":
-        return examples_handler(arguments)
-    else:
-        return json.dumps({"error": f"Unknown contribution operation: {operation}"})
+    return _dispatch_standalone_ops(arguments, ops, "contribution")
 
 
 # =============================================================================
@@ -1257,6 +1329,139 @@ def handle_spec_analyze(arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 
+def _handle_graph_query(handlers: Any, arguments: dict[str, Any]) -> str:
+    return json.dumps(
+        handlers.handle_query(
+            text=arguments.get("text", ""),
+            entity_types=arguments.get("entity_types"),
+            limit=arguments.get("limit", 20),
+        ),
+        indent=2,
+    )
+
+
+def _handle_graph_dependencies(handlers: Any, arguments: dict[str, Any]) -> str:
+    return json.dumps(
+        handlers.handle_get_dependencies(
+            entity_id=arguments.get("entity_id", ""),
+            relation_types=arguments.get("relation_types"),
+            transitive=arguments.get("transitive", False),
+        ),
+        indent=2,
+    )
+
+
+def _handle_graph_dependents(handlers: Any, arguments: dict[str, Any]) -> str:
+    return json.dumps(
+        handlers.handle_get_dependents(
+            entity_id=arguments.get("entity_id", ""),
+            relation_types=arguments.get("relation_types"),
+            transitive=arguments.get("transitive", False),
+        ),
+        indent=2,
+    )
+
+
+def _handle_graph_neighbourhood(handlers: Any, arguments: dict[str, Any]) -> str:
+    return json.dumps(
+        handlers.handle_get_neighbourhood(
+            entity_id=arguments.get("entity_id", ""),
+            depth=arguments.get("depth", 1),
+            relation_types=arguments.get("relation_types"),
+        ),
+        indent=2,
+    )
+
+
+def _handle_graph_paths(handlers: Any, arguments: dict[str, Any]) -> str:
+    return json.dumps(
+        handlers.handle_find_paths(
+            source_id=arguments.get("source_id", ""),
+            target_id=arguments.get("target_id", ""),
+            relation_types=arguments.get("relation_types"),
+        ),
+        indent=2,
+    )
+
+
+def _handle_graph_concept(graph: Any, arguments: dict[str, Any]) -> str:
+    name = arguments.get("name", "")
+    entity = graph.lookup_concept(name)
+    if entity is None:
+        return json.dumps({"error": f"Concept not found: {name}"})
+    return json.dumps(
+        {
+            "id": entity.id,
+            "type": entity.entity_type,
+            "name": entity.name,
+            "metadata": entity.metadata,
+        },
+        indent=2,
+    )
+
+
+def _handle_graph_inference(graph: Any, arguments: dict[str, Any]) -> str:
+    query_text = arguments.get("text", "")
+    limit = arguments.get("limit", 20)
+    matches = graph.lookup_inference_matches(query_text, limit=limit)
+    return json.dumps(
+        {
+            "query": query_text,
+            "matches": [
+                {
+                    "id": e.id,
+                    "name": e.name,
+                    "category": e.metadata.get("category", ""),
+                    "triggers": e.metadata.get("triggers", []),
+                }
+                for e in matches
+            ],
+            "count": len(matches),
+        },
+        indent=2,
+    )
+
+
+def _handle_graph_related(graph: Any, arguments: dict[str, Any]) -> str:
+    entity_id = arguments.get("entity_id", "")
+    relations = graph.get_relations(
+        entity_id=entity_id,
+        relation_type="related_concept",
+        direction="outgoing",
+    )
+    related_ids = [r.target_id for r in relations]
+    related_entities = [e for eid in related_ids if (e := graph.get_entity(eid)) is not None]
+    return json.dumps(
+        {
+            "entity_id": entity_id,
+            "related": [
+                {"id": e.id, "name": e.name, "type": e.entity_type} for e in related_entities
+            ],
+            "count": len(related_entities),
+        },
+        indent=2,
+    )
+
+
+def _handle_graph_import(graph: Any, arguments: dict[str, Any]) -> str:
+    import_data = arguments.get("data")
+    file_path = arguments.get("file_path")
+    if import_data is None and file_path:
+        try:
+            with open(file_path) as f:
+                import_data = json.load(f)
+        except Exception as e:
+            return json.dumps({"error": f"Failed to read file: {e}"})
+    if import_data is None:
+        return json.dumps({"error": "Either 'data' or 'file_path' is required"})
+    mode = arguments.get("mode", "merge")
+    try:
+        stats = graph.import_project_data(import_data, mode=mode)
+        return json.dumps({"status": "success", "mode": mode, **stats}, indent=2)
+    except ValueError as e:
+        return json.dumps({"error": str(e)})
+
+
 def handle_graph(arguments: dict[str, Any]) -> str:
     """Handle knowledge graph operations."""
     from .state import get_knowledge_graph, refresh_knowledge_graph
@@ -1270,132 +1475,29 @@ def handle_graph(arguments: dict[str, Any]) -> str:
     handlers = KnowledgeGraphHandlers(graph)
     operation = arguments.get("operation")
 
-    if operation == "query":
-        return json.dumps(
-            handlers.handle_query(
-                text=arguments.get("text", ""),
-                entity_types=arguments.get("entity_types"),
-                limit=arguments.get("limit", 20),
-            ),
-            indent=2,
-        )
-    elif operation == "dependencies":
-        return json.dumps(
-            handlers.handle_get_dependencies(
-                entity_id=arguments.get("entity_id", ""),
-                relation_types=arguments.get("relation_types"),
-                transitive=arguments.get("transitive", False),
-            ),
-            indent=2,
-        )
-    elif operation == "dependents":
-        return json.dumps(
-            handlers.handle_get_dependents(
-                entity_id=arguments.get("entity_id", ""),
-                relation_types=arguments.get("relation_types"),
-                transitive=arguments.get("transitive", False),
-            ),
-            indent=2,
-        )
-    elif operation == "neighbourhood":
-        return json.dumps(
-            handlers.handle_get_neighbourhood(
-                entity_id=arguments.get("entity_id", ""),
-                depth=arguments.get("depth", 1),
-                relation_types=arguments.get("relation_types"),
-            ),
-            indent=2,
-        )
-    elif operation == "paths":
-        return json.dumps(
-            handlers.handle_find_paths(
-                source_id=arguments.get("source_id", ""),
-                target_id=arguments.get("target_id", ""),
-                relation_types=arguments.get("relation_types"),
-            ),
-            indent=2,
-        )
-    elif operation == "stats":
-        return json.dumps(handlers.handle_get_stats(), indent=2)
-    elif operation == "populate":
-        root_path = arguments.get("root_path")
-        return json.dumps(refresh_knowledge_graph(root_path), indent=2)
-    elif operation == "concept":
-        name = arguments.get("name", "")
-        entity = graph.lookup_concept(name)
-        if entity is None:
-            return json.dumps({"error": f"Concept not found: {name}"})
-        return json.dumps(
-            {
-                "id": entity.id,
-                "type": entity.entity_type,
-                "name": entity.name,
-                "metadata": entity.metadata,
-            },
-            indent=2,
-        )
-    elif operation == "inference":
-        query_text = arguments.get("text", "")
-        limit = arguments.get("limit", 20)
-        matches = graph.lookup_inference_matches(query_text, limit=limit)
-        return json.dumps(
-            {
-                "query": query_text,
-                "matches": [
-                    {
-                        "id": e.id,
-                        "name": e.name,
-                        "category": e.metadata.get("category", ""),
-                        "triggers": e.metadata.get("triggers", []),
-                    }
-                    for e in matches
-                ],
-                "count": len(matches),
-            },
-            indent=2,
-        )
-    elif operation == "related":
-        entity_id = arguments.get("entity_id", "")
-        relations = graph.get_relations(
-            entity_id=entity_id,
-            relation_type="related_concept",
-            direction="outgoing",
-        )
-        related_ids = [r.target_id for r in relations]
-        related_entities = [e for eid in related_ids if (e := graph.get_entity(eid)) is not None]
-        return json.dumps(
-            {
-                "entity_id": entity_id,
-                "related": [
-                    {"id": e.id, "name": e.name, "type": e.entity_type} for e in related_entities
-                ],
-                "count": len(related_entities),
-            },
-            indent=2,
-        )
-    elif operation == "export":
-        export_data = graph.export_project_data()
-        return json.dumps(export_data, indent=2)
-    elif operation == "import":
-        # Accept data inline or from a file path
-        import_data = arguments.get("data")
-        file_path = arguments.get("file_path")
-        if import_data is None and file_path:
-            try:
-                with open(file_path) as f:
-                    import_data = json.load(f)
-            except Exception as e:
-                return json.dumps({"error": f"Failed to read file: {e}"})
-        if import_data is None:
-            return json.dumps({"error": "Either 'data' or 'file_path' is required"})
-        mode = arguments.get("mode", "merge")
-        try:
-            stats = graph.import_project_data(import_data, mode=mode)
-            return json.dumps({"status": "success", "mode": mode, **stats}, indent=2)
-        except ValueError as e:
-            return json.dumps({"error": str(e)})
-    else:
+    # Operations that use the KnowledgeGraphHandlers wrapper
+    handler_ops: dict[str, Callable[..., str]] = {
+        "query": lambda args: _handle_graph_query(handlers, args),
+        "dependencies": lambda args: _handle_graph_dependencies(handlers, args),
+        "dependents": lambda args: _handle_graph_dependents(handlers, args),
+        "neighbourhood": lambda args: _handle_graph_neighbourhood(handlers, args),
+        "paths": lambda args: _handle_graph_paths(handlers, args),
+        "stats": lambda args: json.dumps(handlers.handle_get_stats(), indent=2),
+        "populate": lambda args: json.dumps(
+            refresh_knowledge_graph(args.get("root_path")), indent=2
+        ),
+        # Operations that use the graph directly
+        "concept": lambda args: _handle_graph_concept(graph, args),
+        "inference": lambda args: _handle_graph_inference(graph, args),
+        "related": lambda args: _handle_graph_related(graph, args),
+        "export": lambda args: json.dumps(graph.export_project_data(), indent=2),
+        "import": lambda args: _handle_graph_import(graph, args),
+    }
+
+    handler_fn = handler_ops.get(operation)  # type: ignore[arg-type]
+    if handler_fn is None:
         return json.dumps({"error": f"Unknown graph operation: {operation}"})
+    return handler_fn(arguments)
 
 
 # =============================================================================
@@ -1415,28 +1517,17 @@ async def handle_discovery(arguments: dict[str, Any]) -> str:
         verify_all_stories_handler,
     )
 
-    operation = arguments.get("operation")
+    ops: dict[str, Callable[..., Any]] = {
+        "run": run_discovery_handler,
+        "report": get_discovery_report_handler,
+        "compile": compile_discovery_handler,
+        "emit": emit_discovery_handler,
+        "status": discovery_status_handler,
+        "verify_all_stories": verify_all_stories_handler,
+        "coherence": app_coherence_handler,
+    }
 
-    project_path = _resolve_project(arguments)
-    if project_path is None:
-        return _project_error()
-
-    if operation == "run":
-        return await run_discovery_handler(project_path, arguments)
-    elif operation == "report":
-        return get_discovery_report_handler(project_path, arguments)
-    elif operation == "compile":
-        return compile_discovery_handler(project_path, arguments)
-    elif operation == "emit":
-        return emit_discovery_handler(project_path, arguments)
-    elif operation == "status":
-        return discovery_status_handler(project_path, arguments)
-    elif operation == "verify_all_stories":
-        return verify_all_stories_handler(project_path, arguments)
-    elif operation == "coherence":
-        return app_coherence_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown discovery operation: {operation}"})
+    return await _dispatch_project_ops_async(arguments, ops, "discovery")
 
 
 # =============================================================================
@@ -1476,16 +1567,11 @@ def handle_pipeline(arguments: dict[str, Any]) -> str:
     """Handle pipeline operations."""
     from .handlers.pipeline import run_pipeline_handler
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "run": run_pipeline_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "run":
-        return run_pipeline_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown pipeline operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "pipeline")
 
 
 # =============================================================================
@@ -1497,16 +1583,11 @@ def handle_nightly(arguments: dict[str, Any]) -> str:
     """Handle nightly parallel quality operations."""
     from .handlers.nightly import run_nightly_handler
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "run": run_nightly_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "run":
-        return run_nightly_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown nightly operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "nightly")
 
 
 # =============================================================================
@@ -1524,24 +1605,15 @@ def handle_pulse(arguments: dict[str, Any]) -> str:
         timeline_pulse_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "run": run_pulse_handler,
+        "radar": radar_pulse_handler,
+        "persona": persona_pulse_handler,
+        "timeline": timeline_pulse_handler,
+        "decisions": decisions_pulse_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "run":
-        return run_pulse_handler(project_path, arguments)
-    elif operation == "radar":
-        return radar_pulse_handler(project_path, arguments)
-    elif operation == "persona":
-        return persona_pulse_handler(project_path, arguments)
-    elif operation == "timeline":
-        return timeline_pulse_handler(project_path, arguments)
-    elif operation == "decisions":
-        return decisions_pulse_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown pulse operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "pulse")
 
 
 async def handle_composition(arguments: dict[str, Any]) -> str:
@@ -1555,26 +1627,16 @@ async def handle_composition(arguments: dict[str, Any]) -> str:
         report_composition_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., Any]] = {
+        "audit": audit_composition_handler,
+        "capture": capture_composition_handler,
+        "analyze": analyze_composition_handler,
+        "report": report_composition_handler,
+        "bootstrap": bootstrap_composition_handler,
+        "inspect_styles": inspect_styles_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "audit":
-        return audit_composition_handler(project_path, arguments)
-    elif operation == "capture":
-        return await capture_composition_handler(project_path, arguments)
-    elif operation == "analyze":
-        return analyze_composition_handler(project_path, arguments)
-    elif operation == "report":
-        return await report_composition_handler(project_path, arguments)
-    elif operation == "bootstrap":
-        return bootstrap_composition_handler(project_path, arguments)
-    elif operation == "inspect_styles":
-        return await inspect_styles_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown composition operation: {operation}"})
+    return await _dispatch_project_ops_async(arguments, ops, "composition")
 
 
 # =============================================================================
@@ -1592,24 +1654,15 @@ def handle_sentinel(arguments: dict[str, Any]) -> str:
         suppress_handler,
     )
 
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
+    ops: dict[str, Callable[..., str]] = {
+        "scan": scan_handler,
+        "findings": findings_handler,
+        "suppress": suppress_handler,
+        "status": status_handler,
+        "history": history_handler,
+    }
 
-    if project_path is None:
-        return _project_error()
-
-    if operation == "scan":
-        return scan_handler(project_path, arguments)
-    elif operation == "findings":
-        return findings_handler(project_path, arguments)
-    elif operation == "suppress":
-        return suppress_handler(project_path, arguments)
-    elif operation == "status":
-        return status_handler(project_path, arguments)
-    elif operation == "history":
-        return history_handler(project_path, arguments)
-    else:
-        return json.dumps({"error": f"Unknown sentinel operation: {operation}"})
+    return _dispatch_project_ops(arguments, ops, "sentinel")
 
 
 # =============================================================================

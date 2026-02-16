@@ -15,12 +15,9 @@ from pathlib import Path
 
 import typer
 
+from dazzle.cli.utils import load_project_appspec
 from dazzle.core import ir
 from dazzle.core.errors import DazzleError, ParseError
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import ProjectManifest, load_manifest
-from dazzle.core.parser import parse_modules
 
 story_app = typer.Typer(
     help="Story-driven test generation. Propose stories from DSL, "
@@ -29,14 +26,11 @@ story_app = typer.Typer(
 )
 
 
-def _load_appspec(manifest_path: Path) -> tuple[ir.AppSpec, Path, ProjectManifest]:
+def _load_appspec(manifest_path: Path) -> tuple[ir.AppSpec, Path]:
     """Load AppSpec from manifest path."""
     root = manifest_path.parent
-    mf = load_manifest(manifest_path)
-    dsl_files = discover_dsl_files(root, mf)
-    modules = parse_modules(dsl_files)
-    appspec = build_appspec(modules, mf.project_root)
-    return appspec, root, mf
+    appspec = load_project_appspec(root)
+    return appspec, root
 
 
 @story_app.command("propose")
@@ -83,7 +77,7 @@ def propose_stories(
     manifest_path = Path(manifest).resolve()
 
     try:
-        appspec, root, mf = _load_appspec(manifest_path)
+        appspec, root = _load_appspec(manifest_path)
     except (ParseError, DazzleError) as e:
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)

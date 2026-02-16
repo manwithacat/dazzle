@@ -19,6 +19,8 @@ from typing import Any
 
 from dazzle.agent.transcript import Observation
 
+from .common import handler_error_json
+
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
@@ -379,6 +381,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
     return json.dumps(result, indent=2)
 
 
+@handler_error_json
 def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Run headless persona journey analysis.
@@ -401,11 +404,7 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
 
     t0 = time.monotonic()
 
-    try:
-        appspec = _load_appspec(project_path)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
-
+    appspec = _load_appspec(project_path)
     kg_store = _populate_kg_for_discovery(project_path)
 
     report = run_headless_discovery(
@@ -672,6 +671,7 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     return json.dumps(result, indent=2)
 
 
+@handler_error_json
 def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Batch verify all accepted stories against API tests.
@@ -726,9 +726,6 @@ def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     except ImportError as e:
         return json.dumps({"error": f"Module not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error verifying all stories")
-        return json.dumps({"error": f"Failed to verify stories: {e}"}, indent=2)
 
 
 def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
@@ -806,6 +803,7 @@ def _compute_coherence_score(deductions: float) -> int:
     return max(0, min(100, round(100 - deductions)))
 
 
+@handler_error_json
 def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     Run persona-by-persona authenticated UX coherence checks.
@@ -816,13 +814,9 @@ def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
     Args (via args dict):
         persona: Optional persona ID to check (default: all)
     """
-    try:
-        from dazzle.agent.missions.persona_journey import run_headless_discovery
+    from dazzle.agent.missions.persona_journey import run_headless_discovery
 
-        appspec = _load_appspec(project_path)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load project: {e}"}, indent=2)
-
+    appspec = _load_appspec(project_path)
     persona_filter = args.get("persona")
     persona_ids = [persona_filter] if persona_filter else None
 

@@ -14,9 +14,12 @@ from __future__ import annotations
 import ast
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .store import Entity, KnowledgeGraph, Relation
+from .models import Entity, Relation
+
+if TYPE_CHECKING:
+    from .store import KnowledgeGraph
 
 logger = logging.getLogger(__name__)
 

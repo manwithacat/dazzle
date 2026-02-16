@@ -10,8 +10,9 @@ These endpoints are always available in development mode (localhost).
 from __future__ import annotations
 
 import json
+from collections.abc import AsyncIterator
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 try:
     from fastapi import APIRouter, Query
@@ -25,7 +26,34 @@ except ImportError:
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from dazzle_back.events.bus import EventEnvelope
     from dazzle_back.events.framework import EventFramework
+
+
+@runtime_checkable
+class EventBusExplorer(Protocol):
+    """Protocol for the EventBus methods used by the event explorer."""
+
+    async def list_topics(self) -> list[str]: ...
+    async def list_consumer_groups(self, topic: str) -> list[str]: ...
+    async def get_topic_info(self, topic: str) -> dict[str, Any]: ...
+    def replay(
+        self,
+        topic: str,
+        *,
+        from_timestamp: datetime | None = None,
+        to_timestamp: datetime | None = None,
+        from_offset: int | None = None,
+        to_offset: int | None = None,
+        key_filter: str | None = None,
+    ) -> AsyncIterator[EventEnvelope]: ...
+    async def get_event(self, event_id: str) -> Any: ...
+    async def get_consumer_info(self, group_id: str, topic: str) -> dict[str, Any]: ...
+    async def get_dlq_count(self, topic: str | None = None) -> int: ...
+    async def get_dlq_events(
+        self, topic: str | None = None, group_id: str | None = None, limit: int = 100
+    ) -> list[dict[str, Any]]: ...
+    async def replay_dlq_event(self, event_id: str, group_id: str) -> bool: ...
 
 
 # =============================================================================
@@ -204,14 +232,15 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
                 dlq_count=0,
             )
 
-        topics = await framework.bus.list_topics()
-        consumers = await framework.bus.list_consumer_groups(topic="*")
+        bus = cast(EventBusExplorer, framework.bus)
+        topics = await bus.list_topics()
+        consumers = await bus.list_consumer_groups(topic="*")
         outbox_stats = await framework.get_outbox_stats()
-        dlq_count = await framework.bus.get_dlq_count()  # type: ignore[attr-defined]
+        dlq_count = await bus.get_dlq_count()
 
         return EventSystemStatus(
             running=True,
-            broker_type=framework.bus.__class__.__name__,
+            broker_type=bus.__class__.__name__,
             topics_count=len(topics),
             consumers_count=len(consumers),
             outbox_pending=outbox_stats.get("pending", 0),
@@ -270,11 +299,12 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
                 limit=limit,
             )
 
+        bus = cast(EventBusExplorer, framework.bus)
         events: list[EventSummary] = []
         total = 0
         current = 0
 
-        async for event in framework.bus.replay(  # type: ignore[call-arg]
+        async for event in bus.replay(  # type: ignore[call-arg]  # event_type_filter not in ABC
             topic,
             key_filter=key,
             event_type_filter=event_type,
@@ -315,7 +345,8 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
         if framework is None or framework.bus is None:
             return None
 
-        event = await framework.bus.get_event(event_id)  # type: ignore[attr-defined]
+        bus = cast(EventBusExplorer, framework.bus)
+        event = await bus.get_event(event_id)
         if event is None:
             return None
 
@@ -342,11 +373,12 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
         if framework is None or framework.bus is None:
             return ConsumersResponse(consumers=[])
 
+        bus = cast(EventBusExplorer, framework.bus)
         consumers: list[ConsumerInfo] = []
-        groups: Any = await framework.bus.list_consumer_groups(topic="*")
+        groups: Any = await bus.list_consumer_groups(topic="*")
 
         for group in groups:
-            info = await framework.bus.get_consumer_info(group["group_id"], group["topic"])  # type: ignore[attr-defined]
+            info = await bus.get_consumer_info(group["group_id"], group["topic"])
             consumers.append(
                 ConsumerInfo(
                     group_id=group["group_id"],
@@ -423,7 +455,8 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
         if framework is None or framework.bus is None:
             return DLQResponse(entries=[], total=0)
 
-        dlq_events = await framework.bus.get_dlq_events(topic=topic, limit=limit)  # type: ignore[attr-defined]
+        bus = cast(EventBusExplorer, framework.bus)
+        dlq_events = await bus.get_dlq_events(topic=topic, limit=limit)
 
         entries: list[DLQEntry] = []
         for event in dlq_events:
@@ -439,7 +472,7 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
                 )
             )
 
-        total = await framework.bus.get_dlq_count(topic=topic)  # type: ignore[attr-defined]
+        total = await bus.get_dlq_count(topic=topic)
 
         return DLQResponse(entries=entries, total=total)
 
@@ -456,8 +489,9 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
         if framework is None or framework.bus is None:
             return {"success": False, "error": "Event system not running"}
 
+        bus = cast(EventBusExplorer, framework.bus)
         try:
-            success = await framework.bus.replay_dlq_event(event_id, group_id)  # type: ignore[attr-defined]
+            success = await bus.replay_dlq_event(event_id, group_id)
             if success:
                 return {"success": True, "message": f"Event {event_id} replayed successfully"}
             else:

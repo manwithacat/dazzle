@@ -10,11 +10,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress
+from .common import extract_progress, handler_error_json
 
 logger = logging.getLogger("dazzle.mcp")
 
 
+@handler_error_json
 def get_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load and return the SiteSpec from sitespec.yaml."""
     from dazzle.core.sitespec_loader import (
@@ -111,11 +112,9 @@ def get_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except SiteSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error loading sitespec")
-        return json.dumps({"error": f"Unexpected error: {e}"}, indent=2)
 
 
+@handler_error_json
 def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate the SiteSpec for semantic correctness."""
     from dazzle.core.sitespec_loader import (
@@ -162,11 +161,9 @@ def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except SiteSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error validating sitespec")
-        return json.dumps({"error": f"Unexpected error: {e}"}, indent=2)
 
 
+@handler_error_json
 def scaffold_site_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create default site structure with templates."""
     from dazzle.core.sitespec_loader import scaffold_site as do_scaffold_site
@@ -175,51 +172,42 @@ def scaffold_site_handler(project_root: Path, args: dict[str, Any]) -> str:
     product_name = args.get("product_name", "My App")
     overwrite = args.get("overwrite", False)
 
-    try:
-        progress.log_sync("Scaffolding sitespec...")
-        result = do_scaffold_site(project_root, product_name, overwrite=overwrite)
+    progress.log_sync("Scaffolding sitespec...")
+    result = do_scaffold_site(project_root, product_name, overwrite=overwrite)
 
-        created_files: list[str] = []
-        if result["sitespec"]:
-            created_files.append(str(result["sitespec"]))
-        content_files = result["content"]
-        if isinstance(content_files, list):
-            for f in content_files:
-                created_files.append(str(f))
+    created_files: list[str] = []
+    if result["sitespec"]:
+        created_files.append(str(result["sitespec"]))
+    content_files = result["content"]
+    if isinstance(content_files, list):
+        for f in content_files:
+            created_files.append(str(f))
 
-        # Create static/images/ directory convention for project assets
-        static_images_dir = project_root / "static" / "images"
-        if not static_images_dir.exists():
-            static_images_dir.mkdir(parents=True, exist_ok=True)
-            gitkeep = static_images_dir / ".gitkeep"
-            gitkeep.touch()
-            created_files.append(str(gitkeep))
+    # Create static/images/ directory convention for project assets
+    static_images_dir = project_root / "static" / "images"
+    if not static_images_dir.exists():
+        static_images_dir.mkdir(parents=True, exist_ok=True)
+        gitkeep = static_images_dir / ".gitkeep"
+        gitkeep.touch()
+        created_files.append(str(gitkeep))
 
-        return json.dumps(
-            {
-                "success": True,
-                "product_name": product_name,
-                "created_files": created_files,
-                "message": f"Created {len(created_files)} files for site shell",
-                "static_assets": {
-                    "convention": "Place project images in static/images/",
-                    "usage": "Reference as /static/images/filename.ext in sitespec media.src",
-                    "path": str(static_images_dir),
-                },
+    return json.dumps(
+        {
+            "success": True,
+            "product_name": product_name,
+            "created_files": created_files,
+            "message": f"Created {len(created_files)} files for site shell",
+            "static_assets": {
+                "convention": "Place project images in static/images/",
+                "usage": "Reference as /static/images/filename.ext in sitespec media.src",
+                "path": str(static_images_dir),
             },
-            indent=2,
-        )
-
-    except Exception as e:
-        logger.exception("Error scaffolding site")
-        return json.dumps({"error": f"Failed to scaffold site: {e}"}, indent=2)
+        },
+        indent=2,
+    )
 
 
-# =============================================================================
-# Copy File Operations (v0.22.0)
-# =============================================================================
-
-
+@handler_error_json
 def get_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load and return the parsed copy.md content.
 
@@ -231,74 +219,70 @@ def get_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     progress = extract_progress(args)
 
-    try:
-        progress.log_sync("Loading copy...")
-        copy_path = get_copy_file_path(project_root)
-        exists = copy_file_exists(project_root)
+    progress.log_sync("Loading copy...")
+    copy_path = get_copy_file_path(project_root)
+    exists = copy_file_exists(project_root)
 
-        if not exists:
-            return json.dumps(
-                {
-                    "exists": False,
-                    "path": str(copy_path),
-                    "message": "No copy.md found. Use scaffold operation to create one.",
-                    "hint": "Run: sitespec(operation='scaffold_copy') to generate a template",
-                },
-                indent=2,
-            )
-
-        copy_data = load_copy(project_root)
-
-        if copy_data is None:
-            return json.dumps(
-                {
-                    "exists": True,
-                    "path": str(copy_path),
-                    "error": "Failed to parse copy.md",
-                },
-                indent=2,
-            )
-
-        # Format sections for easy reading
-        formatted_sections = []
-        for section in copy_data.get("sections", []):
-            formatted = {
-                "type": section.get("type"),
-                "title": section.get("title"),
-            }
-
-            # Include key metadata
-            metadata = section.get("metadata", {})
-            if metadata:
-                formatted["metadata"] = metadata
-
-            # Include subsections count and sample
-            subsections = section.get("subsections", [])
-            if subsections:
-                formatted["subsection_count"] = len(subsections)
-                # Include first subsection as preview
-                if subsections:
-                    formatted["subsection_preview"] = subsections[0]
-
-            formatted_sections.append(formatted)
-
+    if not exists:
         return json.dumps(
             {
-                "exists": True,
+                "exists": False,
                 "path": str(copy_path),
-                "section_count": len(formatted_sections),
-                "sections": formatted_sections,
-                "tip": "Edit copy.md directly to update marketing content. "
-                "Changes are merged into sitespec at runtime.",
+                "message": "No copy.md found. Use scaffold operation to create one.",
+                "hint": "Run: sitespec(operation='scaffold_copy') to generate a template",
             },
             indent=2,
         )
 
-    except Exception as e:
-        logger.exception("Error loading copy")
-        return json.dumps({"error": f"Failed to load copy: {e}"}, indent=2)
+    copy_data = load_copy(project_root)
+
+    if copy_data is None:
+        return json.dumps(
+            {
+                "exists": True,
+                "path": str(copy_path),
+                "error": "Failed to parse copy.md",
+            },
+            indent=2,
+        )
+
+    # Format sections for easy reading
+    formatted_sections = []
+    for section in copy_data.get("sections", []):
+        formatted = {
+            "type": section.get("type"),
+            "title": section.get("title"),
+        }
+
+        # Include key metadata
+        metadata = section.get("metadata", {})
+        if metadata:
+            formatted["metadata"] = metadata
+
+        # Include subsections count and sample
+        subsections = section.get("subsections", [])
+        if subsections:
+            formatted["subsection_count"] = len(subsections)
+            # Include first subsection as preview
+            if subsections:
+                formatted["subsection_preview"] = subsections[0]
+
+        formatted_sections.append(formatted)
+
+    return json.dumps(
+        {
+            "exists": True,
+            "path": str(copy_path),
+            "section_count": len(formatted_sections),
+            "sections": formatted_sections,
+            "tip": "Edit copy.md directly to update marketing content. "
+            "Changes are merged into sitespec at runtime.",
+        },
+        indent=2,
+    )
 
 
+@handler_error_json
 def scaffold_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create or regenerate the copy.md template file.
 
@@ -316,54 +300,50 @@ def scaffold_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     product_name = args.get("product_name", "My App")
     overwrite = args.get("overwrite", False)
 
-    try:
-        progress.log_sync("Scaffolding copy...")
-        copy_path = get_copy_file_path(project_root)
-        existed = copy_file_exists(project_root)
+    progress.log_sync("Scaffolding copy...")
+    copy_path = get_copy_file_path(project_root)
+    existed = copy_file_exists(project_root)
 
-        if existed and not overwrite:
-            return json.dumps(
-                {
-                    "success": False,
-                    "path": str(copy_path),
-                    "message": "copy.md already exists. Use overwrite=true to regenerate.",
-                    "warning": "Overwriting will lose existing content!",
-                },
-                indent=2,
-            )
-
-        created_path = scaffold_copy_file(project_root, product_name, overwrite=overwrite)
-
+    if existed and not overwrite:
         return json.dumps(
             {
-                "success": True,
-                "path": str(created_path or copy_path),
-                "product_name": product_name,
-                "overwritten": existed and overwrite,
-                "message": f"Created copy.md with marketing sections for '{product_name}'",
-                "sections": [
-                    "Hero",
-                    "Features",
-                    "How It Works",
-                    "Testimonials",
-                    "Pricing",
-                    "FAQ",
-                    "CTA",
-                ],
-                "next_steps": [
-                    "1. Open site/content/copy.md in your editor",
-                    "2. Replace placeholder text with your actual content",
-                    "3. Run the app to see changes reflected in the landing page",
-                ],
+                "success": False,
+                "path": str(copy_path),
+                "message": "copy.md already exists. Use overwrite=true to regenerate.",
+                "warning": "Overwriting will lose existing content!",
             },
             indent=2,
         )
 
-    except Exception as e:
-        logger.exception("Error scaffolding copy")
-        return json.dumps({"error": f"Failed to scaffold copy: {e}"}, indent=2)
+    created_path = scaffold_copy_file(project_root, product_name, overwrite=overwrite)
+
+    return json.dumps(
+        {
+            "success": True,
+            "path": str(created_path or copy_path),
+            "product_name": product_name,
+            "overwritten": existed and overwrite,
+            "message": f"Created copy.md with marketing sections for '{product_name}'",
+            "sections": [
+                "Hero",
+                "Features",
+                "How It Works",
+                "Testimonials",
+                "Pricing",
+                "FAQ",
+                "CTA",
+            ],
+            "next_steps": [
+                "1. Open site/content/copy.md in your editor",
+                "2. Replace placeholder text with your actual content",
+                "3. Run the app to see changes reflected in the landing page",
+            ],
+        },
+        indent=2,
+    )
 
 
+@handler_error_json
 def review_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Review copy.md content in a founder-friendly format.
 
@@ -376,84 +356,75 @@ def review_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     progress = extract_progress(args)
 
-    try:
-        progress.log_sync("Reviewing copy...")
-        if not copy_file_exists(project_root):
-            return json.dumps(
-                {
-                    "exists": False,
-                    "message": "No copy.md found. Create one with scaffold_copy operation.",
-                },
-                indent=2,
-            )
+    progress.log_sync("Reviewing copy...")
+    if not copy_file_exists(project_root):
+        return json.dumps(
+            {
+                "exists": False,
+                "message": "No copy.md found. Create one with scaffold_copy operation.",
+            },
+            indent=2,
+        )
 
-        copy_path = get_copy_file_path(project_root)
-        parsed = load_copy_file(project_root)
+    copy_path = get_copy_file_path(project_root)
+    parsed = load_copy_file(project_root)
 
-        if parsed is None:
-            return json.dumps({"error": "Failed to parse copy.md"}, indent=2)
+    if parsed is None:
+        return json.dumps({"error": "Failed to parse copy.md"}, indent=2)
 
-        # Build a review summary
-        section_summaries: list[dict[str, Any]] = []
-        suggestions: list[str] = []
+    # Build a review summary
+    section_summaries: list[dict[str, Any]] = []
+    suggestions: list[str] = []
 
-        section_types_found: set[str] = set()
+    section_types_found: set[str] = set()
 
-        for section in parsed.sections:
-            section_types_found.add(section.section_type)
+    for section in parsed.sections:
+        section_types_found.add(section.section_type)
 
-            summary: dict[str, Any] = {
-                "type": section.section_type,
-                "title": section.title,
-            }
-
-            # Add specific details per section type
-            if section.section_type == "hero":
-                summary["headline"] = section.metadata.get("headline")
-                summary["has_ctas"] = len(section.metadata.get("ctas", [])) > 0
-            elif section.section_type == "features":
-                summary["feature_count"] = len(section.subsections)
-            elif section.section_type == "testimonials":
-                summary["testimonial_count"] = len(section.subsections)
-            elif section.section_type == "pricing":
-                summary["tier_count"] = len(section.subsections)
-            elif section.section_type == "faq":
-                summary["question_count"] = len(section.subsections)
-
-            section_summaries.append(summary)
-
-        # Add suggestions for missing sections
-        recommended = {"hero", "features", "pricing", "cta"}
-        missing = recommended - section_types_found
-        if missing:
-            suggestions.append(f"Consider adding missing sections: {', '.join(sorted(missing))}")
-
-        # Check for placeholder content
-        if parsed.raw_markdown and "Your Tagline Here" in parsed.raw_markdown:
-            suggestions.append(
-                "Replace placeholder text (e.g., 'Your Tagline Here') with actual content"
-            )
-
-        # Build final review dict
-        review = {
-            "path": str(copy_path),
-            "section_summary": section_summaries,
-            "suggestions": suggestions,
-            "raw_content": parsed.raw_markdown,
+        summary: dict[str, Any] = {
+            "type": section.section_type,
+            "title": section.title,
         }
 
-        return json.dumps(review, indent=2)
+        # Add specific details per section type
+        if section.section_type == "hero":
+            summary["headline"] = section.metadata.get("headline")
+            summary["has_ctas"] = len(section.metadata.get("ctas", [])) > 0
+        elif section.section_type == "features":
+            summary["feature_count"] = len(section.subsections)
+        elif section.section_type == "testimonials":
+            summary["testimonial_count"] = len(section.subsections)
+        elif section.section_type == "pricing":
+            summary["tier_count"] = len(section.subsections)
+        elif section.section_type == "faq":
+            summary["question_count"] = len(section.subsections)
 
-    except Exception as e:
-        logger.exception("Error reviewing copy")
-        return json.dumps({"error": f"Failed to review copy: {e}"}, indent=2)
+        section_summaries.append(summary)
+
+    # Add suggestions for missing sections
+    recommended = {"hero", "features", "pricing", "cta"}
+    missing = recommended - section_types_found
+    if missing:
+        suggestions.append(f"Consider adding missing sections: {', '.join(sorted(missing))}")
+
+    # Check for placeholder content
+    if parsed.raw_markdown and "Your Tagline Here" in parsed.raw_markdown:
+        suggestions.append(
+            "Replace placeholder text (e.g., 'Your Tagline Here') with actual content"
+        )
+
+    # Build final review dict
+    review = {
+        "path": str(copy_path),
+        "section_summary": section_summaries,
+        "suggestions": suggestions,
+        "raw_content": parsed.raw_markdown,
+    }
+
+    return json.dumps(review, indent=2)
 
 
-# =============================================================================
-# Site Coherence Validation (v0.22.0)
-# =============================================================================
-
-
+@handler_error_json
 def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate site coherence - does it feel like a real website?
 
@@ -511,11 +482,9 @@ def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except SiteSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error validating coherence")
-        return json.dumps({"error": f"Failed to validate coherence: {e}"}, indent=2)
 
 
+@handler_error_json
 def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Live Review — page-by-page comparison of spec vs rendering status.
 
@@ -684,16 +653,9 @@ def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except SiteSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error in site review")
-        return json.dumps({"error": f"Failed to review site: {e}"}, indent=2)
 
 
-# =============================================================================
-# ThemeSpec Operations (v0.25.0)
-# =============================================================================
-
-
+@handler_error_json
 def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load and return the ThemeSpec from themespec.yaml."""
     from dazzle.core.themespec_loader import (
@@ -763,11 +725,9 @@ def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ThemeSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error loading themespec")
-        return json.dumps({"error": f"Unexpected error: {e}"}, indent=2)
 
 
+@handler_error_json
 def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create a default themespec.yaml file."""
     from dazzle.core.themespec_loader import scaffold_themespec, themespec_exists
@@ -779,59 +739,55 @@ def scaffold_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     product_name = args.get("product_name", "My App")
     overwrite = args.get("overwrite", False)
 
-    try:
-        existed = themespec_exists(project_root)
+    existed = themespec_exists(project_root)
 
-        if existed and not overwrite:
-            return json.dumps(
-                {
-                    "success": False,
-                    "message": "themespec.yaml already exists. Use overwrite=true to regenerate.",
-                },
-                indent=2,
-            )
-
-        # Try to read brand info from sitespec if available
-        try:
-            from dazzle.core.sitespec_loader import load_sitespec
-
-            sitespec = load_sitespec(project_root, use_defaults=False)
-            if product_name == "My App" and sitespec.brand.product_name:
-                product_name = sitespec.brand.product_name
-        except Exception:
-            logger.debug("Failed to extract brand info from sitespec", exc_info=True)
-
-        created_path = scaffold_themespec(
-            project_root,
-            brand_hue=brand_hue,
-            brand_chroma=brand_chroma,
-            product_name=product_name,
-            overwrite=overwrite,
-        )
-
+    if existed and not overwrite:
         return json.dumps(
             {
-                "success": True,
-                "path": str(created_path) if created_path else None,
-                "brand_hue": brand_hue,
-                "brand_chroma": brand_chroma,
-                "overwritten": existed and overwrite,
-                "message": f"Created themespec.yaml (hue={brand_hue}, chroma={brand_chroma})",
-                "next_steps": [
-                    "1. Run get_theme to inspect generated values",
-                    "2. Adjust brand_hue/brand_chroma to match your brand",
-                    "3. Run validate_theme to check for issues",
-                    "4. Run generate_tokens for DTCG tokens.json export",
-                ],
+                "success": False,
+                "message": "themespec.yaml already exists. Use overwrite=true to regenerate.",
             },
             indent=2,
         )
 
-    except Exception as e:
-        logger.exception("Error scaffolding themespec")
-        return json.dumps({"error": f"Failed to scaffold themespec: {e}"}, indent=2)
+    # Try to read brand info from sitespec if available
+    try:
+        from dazzle.core.sitespec_loader import load_sitespec
+
+        sitespec = load_sitespec(project_root, use_defaults=False)
+        if product_name == "My App" and sitespec.brand.product_name:
+            product_name = sitespec.brand.product_name
+    except Exception:
+        logger.debug("Failed to extract brand info from sitespec", exc_info=True)
+
+    created_path = scaffold_themespec(
+        project_root,
+        brand_hue=brand_hue,
+        brand_chroma=brand_chroma,
+        product_name=product_name,
+        overwrite=overwrite,
+    )
+
+    return json.dumps(
+        {
+            "success": True,
+            "path": str(created_path) if created_path else None,
+            "brand_hue": brand_hue,
+            "brand_chroma": brand_chroma,
+            "overwritten": existed and overwrite,
+            "message": f"Created themespec.yaml (hue={brand_hue}, chroma={brand_chroma})",
+            "next_steps": [
+                "1. Run get_theme to inspect generated values",
+                "2. Adjust brand_hue/brand_chroma to match your brand",
+                "3. Run validate_theme to check for issues",
+                "4. Run generate_tokens for DTCG tokens.json export",
+            ],
+        },
+        indent=2,
+    )
 
 
+@handler_error_json
 def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate the ThemeSpec for semantic correctness."""
     from dazzle.core.themespec_loader import (
@@ -860,11 +816,9 @@ def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ThemeSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error validating themespec")
-        return json.dumps({"error": f"Unexpected error: {e}"}, indent=2)
 
 
+@handler_error_json
 def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate DTCG tokens.json from themespec.yaml."""
     from dazzle.core.dtcg_export import export_dtcg_file, generate_dtcg_tokens
@@ -906,11 +860,9 @@ def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ThemeSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error generating tokens")
-        return json.dumps({"error": f"Failed to generate tokens: {e}"}, indent=2)
 
 
+@handler_error_json
 def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate imagery prompts from themespec.yaml."""
     from dazzle.core.imagery_prompts import generate_imagery_prompts
@@ -952,6 +904,3 @@ def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -
 
     except ThemeSpecError as e:
         return json.dumps({"error": str(e)}, indent=2)
-    except Exception as e:
-        logger.exception("Error generating imagery prompts")
-        return json.dumps({"error": f"Failed to generate imagery prompts: {e}"}, indent=2)

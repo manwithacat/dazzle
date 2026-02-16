@@ -45,11 +45,49 @@ def _import_stories():
 
     common_mock.extract_progress = _extract_progress
     common_mock.load_project_appspec = _load_project_appspec
+
+    def _handler_error_json(fn):
+        """Decorator that catches exceptions and returns JSON error."""
+        from functools import wraps
+
+        @wraps(fn)
+        def wrapper(*a, **kw):
+            try:
+                return fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
+    common_mock.handler_error_json = _handler_error_json
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
     sys.modules["dazzle.mcp.server.state"] = mock_state
     sys.modules.setdefault("dazzle.mcp", MagicMock(pytest_plugins=[]))
     sys.modules.setdefault("dazzle.mcp.server", MagicMock(pytest_plugins=[]))
     sys.modules.setdefault("dazzle.mcp.server.progress", MagicMock(pytest_plugins=[]))
+
+    # Pre-load the serializers module so stories.py's `from .serializers import ...` resolves
+    handlers_dir = (
+        Path(__file__).parent.parent.parent.parent
+        / "src"
+        / "dazzle"
+        / "mcp"
+        / "server"
+        / "handlers"
+    )
+    ser_path = handlers_dir / "serializers.py"
+    ser_spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.serializers",
+        ser_path,
+        submodule_search_locations=[],
+    )
+    ser_mod = importlib.util.module_from_spec(ser_spec)
+    ser_mod.__package__ = "dazzle.mcp.server.handlers"
+    sys.modules["dazzle.mcp.server.handlers.serializers"] = ser_mod
+    ser_spec.loader.exec_module(ser_mod)
+
+    # Attach serializers to the handlers mock so relative import resolves
+    sys.modules["dazzle.mcp.server.handlers"].serializers = ser_mod
 
     module_path = (
         Path(__file__).parent.parent.parent.parent
@@ -84,12 +122,14 @@ propose_stories_from_dsl_handler = _stories.propose_stories_from_dsl_handler
 save_stories_handler = _stories.save_stories_handler
 get_stories_handler = _stories.get_stories_handler
 generate_tests_from_stories_handler = _stories.generate_tests_from_stories_handler
-_serialize_story_summary = _stories._serialize_story_summary
-_serialize_story = _stories._serialize_story
-_serialize_entity_summary = _stories._serialize_entity_summary
-_serialize_entity_detail = _stories._serialize_entity_detail
-_serialize_surface_summary = _stories._serialize_surface_summary
-_serialize_surface_detail = _stories._serialize_surface_detail
+# Serializers are in the shared serializers module (loaded during _import_stories)
+_ser = sys.modules["dazzle.mcp.server.handlers.serializers"]
+_serialize_story_summary = _ser.serialize_story_summary
+_serialize_story = _ser.serialize_story
+_serialize_entity_summary = _ser.serialize_entity_summary
+_serialize_entity_detail = _ser.serialize_entity_detail
+_serialize_surface_summary = _ser.serialize_surface_summary
+_serialize_surface_detail = _ser.serialize_surface_detail
 _extract_entity_from_condition = _stories._extract_entity_from_condition
 _extract_target_from_condition = _stories._extract_target_from_condition
 

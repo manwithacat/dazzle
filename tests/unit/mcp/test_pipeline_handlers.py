@@ -16,10 +16,46 @@ from unittest.mock import MagicMock, patch
 # ---------------------------------------------------------------------------
 
 
+def _import_orchestration():
+    """Import orchestration module directly so pipeline can find it."""
+    module_path = (
+        Path(__file__).parent.parent.parent.parent
+        / "src"
+        / "dazzle"
+        / "mcp"
+        / "server"
+        / "handlers"
+        / "orchestration.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.orchestration",
+        module_path,
+        submodule_search_locations=[],
+    )
+    module = importlib.util.module_from_spec(spec)
+    module.__package__ = "dazzle.mcp.server.handlers"
+    sys.modules["dazzle.mcp.server.handlers.orchestration"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def _import_pipeline():
     """Import pipeline handlers directly to avoid MCP package init issues."""
     sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
     sys.modules.setdefault("dazzle.mcp.server.handlers.common", MagicMock())
+    # Pre-register sibling modules that _build_quality_steps lazily imports
+    for sibling in (
+        "composition",
+        "dsl",
+        "dsl_test",
+        "fidelity",
+        "process",
+        "test_design",
+        "semantics",
+        "stories",
+    ):
+        sys.modules.setdefault(f"dazzle.mcp.server.handlers.{sibling}", MagicMock())
+    _import_orchestration()
 
     module_path = (
         Path(__file__).parent.parent.parent.parent
@@ -673,7 +709,11 @@ class TestPipelineSummaryIntegration:
 
         data = json.loads(raw)
         assert data["status"] == "failed"
-        assert len(data["steps"]) == 1
+        # Execution stops after the first error, but synthetic/skipped
+        # entries are still appended as informational.
+        executed = [s for s in data["steps"] if s.get("status") not in ("skipped",)]
+        assert len(executed) == 1
+        assert executed[0]["status"] == "error"
         assert "top_issues" in data
 
 

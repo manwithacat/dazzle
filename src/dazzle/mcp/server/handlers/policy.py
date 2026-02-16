@@ -24,7 +24,7 @@ from dazzle.core.ir.domain import (
     PolicyEffect,
 )
 
-from .common import extract_progress, load_project_appspec
+from .common import extract_progress, handler_error_json, load_project_appspec
 
 logger = logging.getLogger("dazzle.mcp.policy")
 
@@ -32,6 +32,7 @@ logger = logging.getLogger("dazzle.mcp.policy")
 ALL_OPS = list(PermissionKind)
 
 
+@handler_error_json
 def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
     """Handle policy analysis operations."""
     progress = extract_progress(arguments)
@@ -40,12 +41,8 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
     persona: str | None = arguments.get("persona")
     operation_kind: str | None = arguments.get("operation_kind")
 
-    try:
-        progress.log_sync("Loading DSL...")
-        appspec = load_project_appspec(project_path)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
-
+    progress.log_sync("Loading DSL...")
+    appspec = load_project_appspec(project_path)
     if operation == "analyze":
         progress.log_sync("Analyzing policy...")
         return json.dumps(_analyze(appspec, entity_names), indent=2)

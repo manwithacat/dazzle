@@ -42,20 +42,49 @@ def _import_module():
     for k in _mocked:
         sys.modules[k] = MagicMock(pytest_plugins=[])
 
-    # Get path to process.py
     src_path = Path(__file__).parent.parent.parent / "src"
-    module_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process.py"
+    pkg_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process"
 
-    # Import module with package info for relative imports
-    spec = importlib.util.spec_from_file_location(
-        "dazzle.mcp.server.handlers.process",
-        module_path,
+    # Import _helpers first so coverage.py's `from . import _helpers` resolves
+    helpers_path = pkg_path / "_helpers.py"
+    helpers_spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.process._helpers",
+        helpers_path,
         submodule_search_locations=[],
     )
-    _process_module = importlib.util.module_from_spec(spec)
-    _process_module.__package__ = "dazzle.mcp.server.handlers"
-    sys.modules["dazzle.mcp.server.handlers.process"] = _process_module
-    spec.loader.exec_module(_process_module)
+    _helpers_mod = importlib.util.module_from_spec(helpers_spec)
+    _helpers_mod.__package__ = "dazzle.mcp.server.handlers.process"
+    sys.modules["dazzle.mcp.server.handlers.process._helpers"] = _helpers_mod
+
+    process_pkg = MagicMock(pytest_plugins=[])
+    process_pkg._helpers = _helpers_mod
+    sys.modules["dazzle.mcp.server.handlers.process"] = process_pkg
+
+    helpers_spec.loader.exec_module(_helpers_mod)
+
+    # Load coverage submodule first (proposals depends on it)
+    cov_path = pkg_path / "coverage.py"
+    cov_spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.process.coverage",
+        cov_path,
+        submodule_search_locations=[],
+    )
+    cov_mod = importlib.util.module_from_spec(cov_spec)
+    cov_mod.__package__ = "dazzle.mcp.server.handlers.process"
+    sys.modules["dazzle.mcp.server.handlers.process.coverage"] = cov_mod
+    cov_spec.loader.exec_module(cov_mod)
+
+    # Load proposals submodule
+    prop_path = pkg_path / "proposals.py"
+    prop_spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.process.proposals",
+        prop_path,
+        submodule_search_locations=[],
+    )
+    _process_module = importlib.util.module_from_spec(prop_spec)
+    _process_module.__package__ = "dazzle.mcp.server.handlers.process"
+    sys.modules["dazzle.mcp.server.handlers.process.proposals"] = _process_module
+    prop_spec.loader.exec_module(_process_module)
 
     # Restore sys.modules to prevent pollution of other tests
     for k, v in _orig.items():

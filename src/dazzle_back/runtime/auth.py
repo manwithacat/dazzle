@@ -126,118 +126,13 @@ def verify_password(password: str, password_hash: str) -> bool:
 # =============================================================================
 
 
-class AuthStore:
-    """
-    Authentication store using PostgreSQL.
+class UserStoreMixin:
+    """User CRUD, password management, and password reset tokens."""
 
-    Manages users and sessions in a separate auth database.
-    """
-
-    def __init__(
-        self,
-        database_url: str,
-        db_path: str | Path | None = None,  # Deprecated, ignored. Kept for backward compat.
-    ):
-        """
-        Initialize the auth store.
-
-        Args:
-            database_url: PostgreSQL connection URL
-            db_path: Deprecated, ignored. Kept for backward compatibility.
-        """
-        self._database_url = database_url
-        # Normalize Heroku's postgres:// to postgresql://
-        if self._database_url.startswith("postgres://"):
-            self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
-
-        self._init_db()
-
-    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
-        """Get a PostgreSQL database connection."""
-        return psycopg.connect(self._database_url, row_factory=dict_row)
-
-    def _init_db(self) -> None:
-        """Initialize database tables."""
-        conn = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id TEXT PRIMARY KEY,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    username TEXT,
-                    is_active BOOLEAN DEFAULT TRUE,
-                    is_superuser BOOLEAN DEFAULT FALSE,
-                    roles TEXT DEFAULT '[]',
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS sessions (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL REFERENCES users(id),
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    ip_address TEXT,
-                    user_agent TEXT
-                )
-            """)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS password_reset_tokens (
-                    token TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL REFERENCES users(id),
-                    created_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    used BOOLEAN DEFAULT FALSE
-                )
-            """)
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id)"
-            )
-            conn.commit()
-        finally:
-            conn.close()
-
-    def _execute(self, query: str, params: tuple[object, ...] = ()) -> list[dict[str, Any]]:
-        """Execute a query and return results as list of dicts."""
-        conn = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-            if cursor.description:
-                return [dict(row) for row in cursor.fetchall()]
-            conn.commit()
-            return []
-        finally:
-            conn.close()
-
-    def _execute_one(self, query: str, params: tuple[object, ...] = ()) -> dict[str, Any] | None:
-        """Execute a query and return single result."""
-        results = self._execute(query, params)
-        return results[0] if results else None
-
-    def _execute_modify(self, query: str, params: tuple[object, ...] = ()) -> int:
-        """Execute a modification query and return rowcount."""
-        conn = self._get_connection()
-        try:
-            cursor = conn.cursor()
-            cursor.execute(query, params)
-            rowcount: int = cursor.rowcount
-            conn.commit()
-            return rowcount
-        finally:
-            conn.close()
-
-    # =========================================================================
-    # User Operations
-    # =========================================================================
+    # These methods are provided by AuthStore.__init__ via mixin composition.
+    _execute: Any
+    _execute_one: Any
+    _execute_modify: Any
 
     def create_user(
         self,
@@ -511,25 +406,17 @@ class AuthStore:
 
         return self.get_user_by_id(user_id)
 
-    def count_active_sessions(self, user_id: UUID) -> int:
-        """
-        Count active (non-expired) sessions for a user.
 
-        Args:
-            user_id: User UUID
+class SessionStoreMixin:
+    """Session lifecycle, validation, and cleanup."""
 
-        Returns:
-            Number of active sessions
-        """
-        rows = self._execute(
-            "SELECT COUNT(*) as count FROM sessions WHERE user_id = %s AND expires_at > %s",
-            (str(user_id), datetime.now(UTC).isoformat()),
-        )
-        return rows[0]["count"] if rows else 0
+    # These methods are provided by AuthStore.__init__ via mixin composition.
+    _execute: Any
+    _execute_one: Any
+    _execute_modify: Any
 
-    # =========================================================================
-    # Session Operations
-    # =========================================================================
+    # Cross-cutting method provided by UserStoreMixin via AuthStore.
+    get_user_by_id: Any
 
     def create_session(
         self,
@@ -629,12 +516,140 @@ class AuthStore:
         """Delete all sessions for a user."""
         return self._execute_modify("DELETE FROM sessions WHERE user_id = %s", (str(user_id),))
 
+    def count_active_sessions(self, user_id: UUID) -> int:
+        """
+        Count active (non-expired) sessions for a user.
+
+        Args:
+            user_id: User UUID
+
+        Returns:
+            Number of active sessions
+        """
+        rows = self._execute(
+            "SELECT COUNT(*) as count FROM sessions WHERE user_id = %s AND expires_at > %s",
+            (str(user_id), datetime.now(UTC).isoformat()),
+        )
+        return rows[0]["count"] if rows else 0
+
     def cleanup_expired_sessions(self) -> int:
         """Delete all expired sessions."""
         return self._execute_modify(
             "DELETE FROM sessions WHERE expires_at < %s",
             (datetime.now(UTC).isoformat(),),
         )
+
+
+class AuthStore(UserStoreMixin, SessionStoreMixin):
+    """
+    Authentication store using PostgreSQL.
+
+    Manages users and sessions in a separate auth database.
+    Combines UserStoreMixin (user CRUD, passwords) and
+    SessionStoreMixin (session lifecycle, validation).
+    """
+
+    def __init__(
+        self,
+        database_url: str,
+        db_path: str | Path | None = None,  # Deprecated, ignored. Kept for backward compat.
+    ):
+        """
+        Initialize the auth store.
+
+        Args:
+            database_url: PostgreSQL connection URL
+            db_path: Deprecated, ignored. Kept for backward compatibility.
+        """
+        self._database_url = database_url
+        # Normalize Heroku's postgres:// to postgresql://
+        if self._database_url.startswith("postgres://"):
+            self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
+
+        self._init_db()
+
+    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
+        """Get a PostgreSQL database connection."""
+        return psycopg.connect(self._database_url, row_factory=dict_row)
+
+    def _init_db(self) -> None:
+        """Initialize database tables."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    username TEXT,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    is_superuser BOOLEAN DEFAULT FALSE,
+                    roles TEXT DEFAULT '[]',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS sessions (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    ip_address TEXT,
+                    user_agent TEXT
+                )
+            """)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                    token TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL,
+                    used BOOLEAN DEFAULT FALSE
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at)"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id)"
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def _execute(self, query: str, params: tuple[object, ...] = ()) -> list[dict[str, Any]]:
+        """Execute a query and return results as list of dicts."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            if cursor.description:
+                return [dict(row) for row in cursor.fetchall()]
+            conn.commit()
+            return []
+        finally:
+            conn.close()
+
+    def _execute_one(self, query: str, params: tuple[object, ...] = ()) -> dict[str, Any] | None:
+        """Execute a query and return single result."""
+        results = self._execute(query, params)
+        return results[0] if results else None
+
+    def _execute_modify(self, query: str, params: tuple[object, ...] = ()) -> int:
+        """Execute a modification query and return rowcount."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
+            rowcount: int = cursor.rowcount
+            conn.commit()
+            return rowcount
+        finally:
+            conn.close()
 
 
 # =============================================================================

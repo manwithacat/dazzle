@@ -14,7 +14,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any
 from uuid import uuid4
 
 logger = logging.getLogger("dazzle.spec_versioning")
@@ -210,7 +210,7 @@ class SpecVersionStore:
             )
             row = cursor.fetchone()
             if row and row["diff_data"]:
-                return cast(dict[str, Any], json.loads(row["diff_data"]))
+                return json.loads(row["diff_data"])  # type: ignore[no-any-return]
         return {}
 
     def get_snapshot(self, version_id: str) -> dict[str, Any] | None:
@@ -222,7 +222,7 @@ class SpecVersionStore:
             )
             row = cursor.fetchone()
             if row and row["spec_snapshot"]:
-                return cast(dict[str, Any], json.loads(row["spec_snapshot"]))
+                return json.loads(row["spec_snapshot"])  # type: ignore[no-any-return]
         return None
 
     def _get_latest_snapshot(self) -> dict[str, Any] | None:
@@ -233,13 +233,13 @@ class SpecVersionStore:
             )
             row = cursor.fetchone()
             if row and row["spec_snapshot"]:
-                return cast(dict[str, Any], json.loads(row["spec_snapshot"]))
+                return json.loads(row["spec_snapshot"])  # type: ignore[no-any-return]
         return None
 
     def _appspec_to_dict(self, appspec: Any) -> dict[str, Any]:
         """Convert AppSpec to a serializable dict."""
         if hasattr(appspec, "model_dump"):
-            return cast(dict[str, Any], appspec.model_dump())
+            return appspec.model_dump()  # type: ignore[no-any-return]
         # Fallback: extract key properties
         result: dict[str, Any] = {
             "name": getattr(appspec, "name", "unknown"),

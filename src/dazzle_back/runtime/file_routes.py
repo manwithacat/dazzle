@@ -123,7 +123,11 @@ def create_file_routes(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid file ID")
 
-        metadata = file_service.get_metadata(uuid_id)
+        try:
+            metadata = file_service.get_metadata(uuid_id)
+        except Exception as e:
+            logger.error("Failed to read file metadata for %s: %s", file_id, e)
+            raise HTTPException(status_code=500, detail="Failed to read file metadata")
         if not metadata:
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -170,7 +174,11 @@ def create_file_routes(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid file ID")
 
-        metadata = file_service.get_metadata(uuid_id)
+        try:
+            metadata = file_service.get_metadata(uuid_id)
+        except Exception as e:
+            logger.error("Failed to read file metadata for %s: %s", file_id, e)
+            raise HTTPException(status_code=500, detail="Failed to read file metadata")
         if not metadata:
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -178,6 +186,9 @@ def create_file_routes(
             stream, _ = await file_service.stream(uuid_id)
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="File not found")
+        except Exception as e:
+            logger.error("Failed to stream file %s: %s", file_id, e)
+            raise HTTPException(status_code=500, detail="Failed to stream file")
 
         return StreamingResponse(
             stream,
@@ -245,7 +256,11 @@ def create_file_routes(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid file ID")
 
-        deleted = await file_service.delete(uuid_id)
+        try:
+            deleted = await file_service.delete(uuid_id)
+        except Exception as e:
+            logger.error("Failed to delete file %s: %s", file_id, e)
+            raise HTTPException(status_code=500, detail="Failed to delete file")
         if not deleted:
             raise HTTPException(status_code=404, detail="File not found")
 
@@ -259,7 +274,11 @@ def create_file_routes(
         field: str | None = Query(None),
     ) -> dict[str, Any]:
         """Get all files associated with an entity."""
-        files = file_service.get_entity_files(entity, entity_id, field)
+        try:
+            files = file_service.get_entity_files(entity, entity_id, field)
+        except Exception as e:
+            logger.error("Failed to list files for %s/%s: %s", entity, entity_id, e)
+            raise HTTPException(status_code=500, detail="Failed to list entity files")
 
         return {
             "files": [

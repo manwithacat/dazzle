@@ -11,9 +11,10 @@ at seed time, not query time.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .store import KnowledgeGraph
+if TYPE_CHECKING:
+    from .store import KnowledgeGraph
 
 logger = logging.getLogger(__name__)
 

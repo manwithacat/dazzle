@@ -53,19 +53,37 @@ def _import_module():
     for k in _mocked:
         sys.modules[k] = MagicMock(pytest_plugins=[])
 
-    # Get path to process.py
+    # Import the diagrams submodule directly (avoids loading the full package)
     src_path = Path(__file__).parent.parent.parent / "src"
-    module_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process.py"
+    pkg_dir = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process"
 
-    # Import module with package info for relative imports
+    # Import _helpers first so diagrams.py's `from . import _helpers` resolves
+    helpers_path = pkg_dir / "_helpers.py"
+    helpers_spec = importlib.util.spec_from_file_location(
+        "dazzle.mcp.server.handlers.process._helpers",
+        helpers_path,
+        submodule_search_locations=[],
+    )
+    _helpers_module = importlib.util.module_from_spec(helpers_spec)
+    _helpers_module.__package__ = "dazzle.mcp.server.handlers.process"
+    sys.modules["dazzle.mcp.server.handlers.process._helpers"] = _helpers_module
+
+    process_pkg = MagicMock(pytest_plugins=[])
+    process_pkg._helpers = _helpers_module
+    sys.modules["dazzle.mcp.server.handlers.process"] = process_pkg
+
+    helpers_spec.loader.exec_module(_helpers_module)
+
+    module_path = pkg_dir / "diagrams.py"
+
     spec = importlib.util.spec_from_file_location(
-        "dazzle.mcp.server.handlers.process",
+        "dazzle.mcp.server.handlers.process.diagrams",
         module_path,
         submodule_search_locations=[],
     )
     _process_module = importlib.util.module_from_spec(spec)
-    _process_module.__package__ = "dazzle.mcp.server.handlers"
-    sys.modules["dazzle.mcp.server.handlers.process"] = _process_module
+    _process_module.__package__ = "dazzle.mcp.server.handlers.process"
+    sys.modules["dazzle.mcp.server.handlers.process.diagrams"] = _process_module
     spec.loader.exec_module(_process_module)
 
     # Restore sys.modules to prevent pollution of other tests

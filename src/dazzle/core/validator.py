@@ -228,6 +228,127 @@ def is_secret_field_name(name: str) -> bool:
     return False
 
 
+def _validate_entity_pk(entity: ir.EntitySpec, errors: list[str]) -> None:
+    """Check that the entity has a primary key field."""
+    if not entity.primary_key:
+        errors.append(
+            f"Entity '{entity.name}' has no primary key field. Add a field with 'pk' modifier."
+        )
+
+
+def _validate_reserved_names(entity: ir.EntitySpec, errors: list[str], warnings: list[str]) -> None:
+    """Check for SQL reserved words in entity and field names."""
+    if entity.name.lower() in SQL_RESERVED_WORDS:
+        warnings.append(
+            f"Entity '{entity.name}' uses SQL reserved word as name. "
+            f"Consider renaming (e.g., 'SalesOrder' instead of 'Order')."
+        )
+    for field in entity.fields:
+        if field.name.lower() in SQL_RESERVED_WORDS:
+            warnings.append(
+                f"Entity '{entity.name}' field '{field.name}' uses SQL reserved word. "
+                f"Consider renaming (e.g., 'sales_order' instead of 'order')."
+            )
+
+
+def _validate_field_duplicates(entity: ir.EntitySpec, errors: list[str]) -> None:
+    """Check for duplicate field names within an entity."""
+    field_names = [f.name for f in entity.fields]
+    duplicates = {name for name in field_names if field_names.count(name) > 1}
+    if duplicates:
+        errors.append(f"Entity '{entity.name}' has duplicate field names: {duplicates}")
+
+
+def _validate_field_enums(entity: ir.EntitySpec, errors: list[str]) -> None:
+    """Check that enum fields have at least one value."""
+    for field in entity.fields:
+        if field.type.kind == ir.FieldTypeKind.ENUM:
+            if not field.type.enum_values or len(field.type.enum_values) == 0:
+                errors.append(
+                    f"Entity '{entity.name}' field '{field.name}' has enum type but no values"
+                )
+
+
+def _validate_field_decimals(entity: ir.EntitySpec, errors: list[str], warnings: list[str]) -> None:
+    """Check decimal precision/scale values are valid."""
+    for field in entity.fields:
+        if field.type.kind == ir.FieldTypeKind.DECIMAL:
+            if field.type.precision is None or field.type.scale is None:
+                errors.append(
+                    f"Entity '{entity.name}' field '{field.name}' has decimal type "
+                    f"but missing precision/scale"
+                )
+            elif (
+                field.type.precision < DECIMAL_PRECISION_MIN
+                or field.type.precision > DECIMAL_PRECISION_MAX
+            ):
+                warnings.append(
+                    f"Entity '{entity.name}' field '{field.name}' has unusual "
+                    f"decimal precision: {field.type.precision}"
+                )
+            elif field.type.scale > field.type.precision:
+                errors.append(
+                    f"Entity '{entity.name}' field '{field.name}' has decimal scale "
+                    f"({field.type.scale}) greater than precision ({field.type.precision})"
+                )
+
+
+def _validate_field_strings(entity: ir.EntitySpec, errors: list[str], warnings: list[str]) -> None:
+    """Check string field max_length values are valid."""
+    for field in entity.fields:
+        if field.type.kind == ir.FieldTypeKind.STR:
+            if field.type.max_length is None:
+                errors.append(
+                    f"Entity '{entity.name}' field '{field.name}' has str type but no max_length"
+                )
+            elif field.type.max_length < STRING_MAX_LENGTH_MIN:
+                errors.append(
+                    f"Entity '{entity.name}' field '{field.name}' has invalid "
+                    f"max_length: {field.type.max_length}"
+                )
+            elif field.type.max_length > STRING_MAX_LENGTH_WARN_THRESHOLD:
+                warnings.append(
+                    f"Entity '{entity.name}' field '{field.name}' has very large "
+                    f"max_length: {field.type.max_length}. Consider using 'text' type."
+                )
+
+
+def _validate_field_modifiers(
+    entity: ir.EntitySpec, errors: list[str], warnings: list[str]
+) -> None:
+    """Check for conflicting or inappropriate field modifiers."""
+    for field in entity.fields:
+        if (
+            ir.FieldModifier.REQUIRED in field.modifiers
+            and ir.FieldModifier.OPTIONAL in field.modifiers
+        ):
+            errors.append(
+                f"Entity '{entity.name}' field '{field.name}' has both "
+                f"'required' and 'optional' modifiers"
+            )
+
+        if (
+            ir.FieldModifier.AUTO_ADD in field.modifiers
+            or ir.FieldModifier.AUTO_UPDATE in field.modifiers
+        ):
+            if field.type.kind != ir.FieldTypeKind.DATETIME:
+                warnings.append(
+                    f"Entity '{entity.name}' field '{field.name}' has auto_add/auto_update "
+                    f"modifier but is not datetime type"
+                )
+
+
+def _validate_constraints(entity: ir.EntitySpec, errors: list[str]) -> None:
+    """Check that constraint fields exist in the entity."""
+    for constraint in entity.constraints:
+        for field_name in constraint.fields:
+            if not entity.get_field(field_name):
+                errors.append(
+                    f"Entity '{entity.name}' {constraint.kind.value} constraint "
+                    f"references non-existent field '{field_name}'"
+                )
+
+
 def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     """
     Validate all entities for semantic correctness.
@@ -244,112 +365,18 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     Returns:
         Tuple of (errors, warnings)
     """
-    errors = []
-    warnings = []
+    errors: list[str] = []
+    warnings: list[str] = []
 
     for entity in appspec.domain.entities:
-        # Check for primary key
-        if not entity.primary_key:
-            errors.append(
-                f"Entity '{entity.name}' has no primary key field. Add a field with 'pk' modifier."
-            )
-
-        # Check for SQL reserved words in entity name
-        if entity.name.lower() in SQL_RESERVED_WORDS:
-            warnings.append(
-                f"Entity '{entity.name}' uses SQL reserved word as name. "
-                f"Consider renaming (e.g., 'SalesOrder' instead of 'Order')."
-            )
-
-        # Check for duplicate field names
-        field_names = [f.name for f in entity.fields]
-        duplicates = {name for name in field_names if field_names.count(name) > 1}
-        if duplicates:
-            errors.append(f"Entity '{entity.name}' has duplicate field names: {duplicates}")
-
-        # Validate each field
-        for field in entity.fields:
-            # Check for SQL reserved words in field name
-            if field.name.lower() in SQL_RESERVED_WORDS:
-                warnings.append(
-                    f"Entity '{entity.name}' field '{field.name}' uses SQL reserved word. "
-                    f"Consider renaming (e.g., 'sales_order' instead of 'order')."
-                )
-            # Check enum values
-            if field.type.kind == ir.FieldTypeKind.ENUM:
-                if not field.type.enum_values or len(field.type.enum_values) == 0:
-                    errors.append(
-                        f"Entity '{entity.name}' field '{field.name}' has enum type but no values"
-                    )
-
-            # Check decimal precision/scale
-            if field.type.kind == ir.FieldTypeKind.DECIMAL:
-                if field.type.precision is None or field.type.scale is None:
-                    errors.append(
-                        f"Entity '{entity.name}' field '{field.name}' has decimal type "
-                        f"but missing precision/scale"
-                    )
-                elif (
-                    field.type.precision < DECIMAL_PRECISION_MIN
-                    or field.type.precision > DECIMAL_PRECISION_MAX
-                ):
-                    warnings.append(
-                        f"Entity '{entity.name}' field '{field.name}' has unusual "
-                        f"decimal precision: {field.type.precision}"
-                    )
-                elif field.type.scale > field.type.precision:
-                    errors.append(
-                        f"Entity '{entity.name}' field '{field.name}' has decimal scale "
-                        f"({field.type.scale}) greater than precision ({field.type.precision})"
-                    )
-
-            # Check string max length
-            if field.type.kind == ir.FieldTypeKind.STR:
-                if field.type.max_length is None:
-                    errors.append(
-                        f"Entity '{entity.name}' field '{field.name}' has str type "
-                        f"but no max_length"
-                    )
-                elif field.type.max_length < STRING_MAX_LENGTH_MIN:
-                    errors.append(
-                        f"Entity '{entity.name}' field '{field.name}' has invalid "
-                        f"max_length: {field.type.max_length}"
-                    )
-                elif field.type.max_length > STRING_MAX_LENGTH_WARN_THRESHOLD:
-                    warnings.append(
-                        f"Entity '{entity.name}' field '{field.name}' has very large "
-                        f"max_length: {field.type.max_length}. Consider using 'text' type."
-                    )
-
-            # Check for conflicting modifiers
-            if (
-                ir.FieldModifier.REQUIRED in field.modifiers
-                and ir.FieldModifier.OPTIONAL in field.modifiers
-            ):
-                errors.append(
-                    f"Entity '{entity.name}' field '{field.name}' has both "
-                    f"'required' and 'optional' modifiers"
-                )
-
-            # Check auto modifiers on appropriate types
-            if (
-                ir.FieldModifier.AUTO_ADD in field.modifiers
-                or ir.FieldModifier.AUTO_UPDATE in field.modifiers
-            ):
-                if field.type.kind != ir.FieldTypeKind.DATETIME:
-                    warnings.append(
-                        f"Entity '{entity.name}' field '{field.name}' has auto_add/auto_update "
-                        f"modifier but is not datetime type"
-                    )
-
-        # Validate constraints
-        for constraint in entity.constraints:
-            for field_name in constraint.fields:
-                if not entity.get_field(field_name):
-                    errors.append(
-                        f"Entity '{entity.name}' {constraint.kind.value} constraint "
-                        f"references non-existent field '{field_name}'"
-                    )
+        _validate_entity_pk(entity, errors)
+        _validate_reserved_names(entity, errors, warnings)
+        _validate_field_duplicates(entity, errors)
+        _validate_field_enums(entity, errors)
+        _validate_field_decimals(entity, errors, warnings)
+        _validate_field_strings(entity, errors, warnings)
+        _validate_field_modifiers(entity, errors, warnings)
+        _validate_constraints(entity, errors)
 
     return errors, warnings
 
@@ -849,34 +876,20 @@ def validate_money_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
-def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
-    """
-    Validate TigerBeetle ledger and transaction specifications (v0.24.0).
-
-    Checks:
-    - Ledger names are unique
-    - Account codes are unique within a ledger_id
-    - Currency is valid ISO 4217 format
-    - Transaction transfers reference valid ledgers
-    - Transaction idempotency_key is defined
-    - Transfer codes are unique within a transaction
-    - Multi-leg transactions use 'linked' flag correctly
+def _validate_account_codes(
+    appspec: ir.AppSpec,
+    errors: list[str],
+    warnings: list[str],
+) -> tuple[set[str], dict[str, ir.LedgerSpec]]:
+    """Validate ledger names, account codes, currency, sync targets, and intent.
 
     Returns:
-        Tuple of (errors, warnings)
+        (ledger_names, ledger_by_name) for use by transaction validation.
     """
-    errors: list[str] = []
-    warnings: list[str] = []
-
-    if not appspec.ledgers:
-        return errors, warnings
-
-    # Build ledger lookup
-    ledger_names = set()
-    ledger_by_name = {}
+    ledger_names: set[str] = set()
+    ledger_by_name: dict[str, ir.LedgerSpec] = {}
     account_codes_by_ledger_id: dict[int, set[int]] = {}
 
-    # Validate ledgers
     for ledger in appspec.ledgers:
         # Check unique names
         if ledger.name in ledger_names:
@@ -903,7 +916,6 @@ def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
         # Check sync target if specified
         if ledger.sync:
-            # Verify sync target entity exists
             entity_name = ledger.sync.target_entity
             entity = appspec.get_entity(entity_name)
             if not entity:
@@ -911,7 +923,6 @@ def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                     f"Ledger '{ledger.name}': sync target entity '{entity_name}' not found"
                 )
             else:
-                # Verify target field exists and is numeric
                 field = entity.get_field(ledger.sync.target_field)
                 if not field:
                     errors.append(
@@ -926,74 +937,107 @@ def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                 f"to document the business purpose"
             )
 
-    # Validate transactions
+    return ledger_names, ledger_by_name
+
+
+def _validate_transaction_transfers(
+    txn: ir.TransactionSpec,
+    ledger_names: set[str],
+    ledger_by_name: dict[str, ir.LedgerSpec],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate transfers within a single transaction."""
+    transfer_codes: set[int] = set()
+    for transfer in txn.transfers:
+        # Check ledger references exist
+        if transfer.debit_ledger not in ledger_names:
+            errors.append(
+                f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                f"debit ledger '{transfer.debit_ledger}' not found"
+            )
+        if transfer.credit_ledger not in ledger_names:
+            errors.append(
+                f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                f"credit ledger '{transfer.credit_ledger}' not found"
+            )
+
+        # Validate ledgers are in same ledger_id (TigerBeetle requirement)
+        if transfer.debit_ledger in ledger_by_name and transfer.credit_ledger in ledger_by_name:
+            debit_ledger = ledger_by_name[transfer.debit_ledger]
+            credit_ledger = ledger_by_name[transfer.credit_ledger]
+            if debit_ledger.ledger_id != credit_ledger.ledger_id:
+                errors.append(
+                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                    f"debit ledger '{transfer.debit_ledger}' "
+                    f"(ledger_id={debit_ledger.ledger_id}) "
+                    f"and credit ledger '{transfer.credit_ledger}' "
+                    f"(ledger_id={credit_ledger.ledger_id}) "
+                    f"must be in the same ledger_id"
+                )
+
+            # Validate currency match
+            if debit_ledger.currency != credit_ledger.currency:
+                errors.append(
+                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                    f"currency mismatch between '{transfer.debit_ledger}' "
+                    f"({debit_ledger.currency}) and '{transfer.credit_ledger}' "
+                    f"({credit_ledger.currency})"
+                )
+
+        # Check transfer code uniqueness
+        if transfer.code in transfer_codes:
+            warnings.append(
+                f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                f"code {transfer.code} is duplicated (consider unique codes for debugging)"
+            )
+        transfer_codes.add(transfer.code)
+
+    # Multi-leg transaction validation
+    if len(txn.transfers) > 1:
+        for transfer in txn.transfers[:-1]:
+            if not transfer.is_linked:
+                warnings.append(
+                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
+                    f"multi-leg transactions should use 'linked' flag on all "
+                    f"but the last transfer "
+                    f"to ensure atomic execution"
+                )
+
+
+def validate_ledgers(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """
+    Validate TigerBeetle ledger and transaction specifications (v0.24.0).
+
+    Checks:
+    - Ledger names are unique
+    - Account codes are unique within a ledger_id
+    - Currency is valid ISO 4217 format
+    - Transaction transfers reference valid ledgers
+    - Transaction idempotency_key is defined
+    - Transfer codes are unique within a transaction
+    - Multi-leg transactions use 'linked' flag correctly
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not appspec.ledgers:
+        return errors, warnings
+
+    ledger_names, ledger_by_name = _validate_account_codes(appspec, errors, warnings)
+
     for txn in appspec.transactions:
-        # Check idempotency_key is set
         if not txn.idempotency_key:
             errors.append(
                 f"Transaction '{txn.name}': idempotency_key is required "
                 f"for TigerBeetle transfer deduplication"
             )
 
-        # Validate transfers
-        transfer_codes: set[int] = set()
-        for transfer in txn.transfers:
-            # Check ledger references exist
-            if transfer.debit_ledger not in ledger_names:
-                errors.append(
-                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                    f"debit ledger '{transfer.debit_ledger}' not found"
-                )
-            if transfer.credit_ledger not in ledger_names:
-                errors.append(
-                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                    f"credit ledger '{transfer.credit_ledger}' not found"
-                )
+        _validate_transaction_transfers(txn, ledger_names, ledger_by_name, errors, warnings)
 
-            # Validate ledgers are in same ledger_id (TigerBeetle requirement)
-            if transfer.debit_ledger in ledger_by_name and transfer.credit_ledger in ledger_by_name:
-                debit_ledger = ledger_by_name[transfer.debit_ledger]
-                credit_ledger = ledger_by_name[transfer.credit_ledger]
-                if debit_ledger.ledger_id != credit_ledger.ledger_id:
-                    errors.append(
-                        f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                        f"debit ledger '{transfer.debit_ledger}' "
-                        f"(ledger_id={debit_ledger.ledger_id}) "
-                        f"and credit ledger '{transfer.credit_ledger}' "
-                        f"(ledger_id={credit_ledger.ledger_id}) "
-                        f"must be in the same ledger_id"
-                    )
-
-                # Validate currency match
-                if debit_ledger.currency != credit_ledger.currency:
-                    errors.append(
-                        f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                        f"currency mismatch between '{transfer.debit_ledger}' "
-                        f"({debit_ledger.currency}) and '{transfer.credit_ledger}' "
-                        f"({credit_ledger.currency})"
-                    )
-
-            # Check transfer code uniqueness
-            if transfer.code in transfer_codes:
-                warnings.append(
-                    f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                    f"code {transfer.code} is duplicated (consider unique codes for debugging)"
-                )
-            transfer_codes.add(transfer.code)
-
-        # Multi-leg transaction validation
-        if len(txn.transfers) > 1:
-            # Check that all but last transfer have 'linked' flag
-            for transfer in txn.transfers[:-1]:
-                if not transfer.is_linked:
-                    warnings.append(
-                        f"Transaction '{txn.name}' transfer '{transfer.name}': "
-                        f"multi-leg transactions should use 'linked' flag on all "
-                        f"but the last transfer "
-                        f"to ensure atomic execution"
-                    )
-
-        # Warn about missing intent
         if not txn.intent:
             warnings.append(
                 f"Transaction '{txn.name}': consider adding an 'intent' field "

@@ -44,7 +44,20 @@ def _import_fidelity():
 
     common_mock.extract_progress = _extract_progress
     common_mock.load_project_appspec = _load_project_appspec
-    common_mock.handler_error_json = lambda fn: fn
+
+    def _handler_error_json(fn):
+        from functools import wraps
+
+        @wraps(fn)
+        def wrapper(*a, **kw):
+            try:
+                return fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
+    common_mock.handler_error_json = _handler_error_json
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
 
     module_path = (

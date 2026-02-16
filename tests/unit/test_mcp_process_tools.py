@@ -152,7 +152,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -178,7 +178,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -199,7 +199,7 @@ class TestStoriesCoverage:
 
         with (
             patch(
-                "dazzle.mcp.server.handlers.process._load_app_spec",
+                "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
                 return_value=mock_app_spec_no_stories,
             ),
             patch(
@@ -220,7 +220,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {"limit": 1, "offset": 0})
@@ -238,7 +238,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {"status_filter": "uncovered"})
@@ -255,7 +255,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -322,7 +322,7 @@ class TestStoriesCoverage:
         ]
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=app_spec,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -372,7 +372,7 @@ class TestStoriesCoverage:
 
         with (
             patch(
-                "dazzle.mcp.server.handlers.process._load_app_spec",
+                "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
                 return_value=app_spec,
             ),
             patch(
@@ -399,7 +399,7 @@ class TestProposeProcesses:
         from dazzle.mcp.server.handlers.process import propose_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = propose_processes_handler(tmp_path, {})
@@ -421,7 +421,7 @@ class TestProposeProcesses:
         from dazzle.mcp.server.handlers.process import propose_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = propose_processes_handler(tmp_path, {"story_ids": ["ST-001"]})
@@ -439,7 +439,7 @@ class TestProposeProcesses:
 
         with (
             patch(
-                "dazzle.mcp.server.handlers.process._load_app_spec",
+                "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
                 return_value=mock_app_spec_no_stories,
             ),
             patch(
@@ -460,7 +460,7 @@ class TestProposeProcesses:
         from dazzle.mcp.server.handlers.process import propose_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = propose_processes_handler(tmp_path, {})
@@ -479,7 +479,7 @@ class TestListProcesses:
         from dazzle.mcp.server.handlers.process import list_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = list_processes_handler(tmp_path, {})
@@ -501,7 +501,7 @@ class TestListProcesses:
         from dazzle.mcp.server.handlers.process import list_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = list_processes_handler(tmp_path, {})
@@ -522,7 +522,7 @@ class TestInspectProcess:
         from dazzle.mcp.server.handlers.process import inspect_process_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = inspect_process_handler(tmp_path, {"process_name": "order_creation"})
@@ -551,7 +551,7 @@ class TestInspectProcess:
         from dazzle.mcp.server.handlers.process import inspect_process_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = inspect_process_handler(tmp_path, {"process_name": "nonexistent"})
@@ -593,7 +593,7 @@ class TestProcessRunHandlers:
         from dazzle.mcp.server.handlers.process import _list_runs_async
 
         with patch(
-            "dazzle.mcp.server.handlers.process._get_process_adapter",
+            "dazzle.mcp.server.handlers.process._helpers._get_process_adapter",
             return_value=mock_empty_adapter,
         ):
             result = await _list_runs_async(tmp_path, {})
@@ -609,7 +609,7 @@ class TestProcessRunHandlers:
         from dazzle.mcp.server.handlers.process import _get_run_async
 
         with patch(
-            "dazzle.mcp.server.handlers.process._get_process_adapter",
+            "dazzle.mcp.server.handlers.process._helpers._get_process_adapter",
             return_value=mock_empty_adapter,
         ):
             result = await _get_run_async(tmp_path, {"run_id": "nonexistent"})

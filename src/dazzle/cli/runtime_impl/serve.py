@@ -23,16 +23,14 @@ from typing import Any
 
 import typer
 
+from dazzle.cli.utils import load_project_appspec
 from dazzle.core.environment import (
     get_dazzle_env,
     should_enable_test_endpoints,
 )
 from dazzle.core.errors import DazzleError, ParseError
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
 from dazzle.core.sitespec_loader import load_sitespec, sitespec_exists
 
 from .ports import (
@@ -337,10 +335,7 @@ def serve_command(
     root = project_root
 
     try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
+        appspec = load_project_appspec(root)
 
         errors, _ = lint_appspec(appspec)
         if errors:
@@ -427,6 +422,7 @@ def serve_command(
     typer.echo(f"Starting Dazzle server for '{appspec.name}'...")
 
     # Convert specs (pass shell config from manifest)
+    assert mf is not None, "Manifest must be loaded for combined server mode"
     backend_spec = convert_appspec_to_backend(appspec)
     ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
 

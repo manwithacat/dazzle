@@ -10,12 +10,9 @@ from typing import Any
 
 import typer
 
+from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
 
 test_app = typer.Typer(
     help=(
@@ -83,10 +80,7 @@ def test_generate(
     root = manifest_path.parent
 
     try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
+        appspec = load_project_appspec(root)
 
         errors, warnings = lint_appspec(appspec)
         for warn in warnings:
@@ -307,10 +301,7 @@ def test_run(
     root = manifest_path.parent
 
     try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
+        appspec = load_project_appspec(root)
 
         errors, _ = lint_appspec(appspec)
         if errors:
@@ -331,36 +322,7 @@ def test_run(
         testspec.flows.extend(appspec.e2e_flows)
 
     # Filter flows
-    flows_to_run = testspec.flows
-
-    if flow:
-        flows_to_run = [f for f in flows_to_run if f.id == flow]
-        if not flows_to_run:
-            typer.echo(f"Flow not found: {flow}", err=True)
-            typer.echo("Available flows:", err=True)
-            for f in testspec.flows[:10]:
-                typer.echo(f"  - {f.id}", err=True)
-            if len(testspec.flows) > 10:
-                typer.echo(f"  ... and {len(testspec.flows) - 10} more", err=True)
-            raise typer.Exit(code=1)
-
-    if priority:
-        from dazzle.core.ir import FlowPriority
-
-        try:
-            priority_enum = FlowPriority(priority)
-            flows_to_run = [f for f in flows_to_run if f.priority == priority_enum]
-        except ValueError:
-            typer.echo(f"Invalid priority: {priority}", err=True)
-            typer.echo("Valid priorities: high, medium, low", err=True)
-            raise typer.Exit(code=1)
-
-    if tag:
-        flows_to_run = [f for f in flows_to_run if tag in f.tags]
-
-    if not flows_to_run:
-        typer.echo("No flows match the specified filters.", err=True)
-        raise typer.Exit(code=1)
+    flows_to_run = _filter_flows(testspec.flows, flow_id=flow, priority=priority, tag=tag)
 
     typer.echo(f"Running {len(flows_to_run)} E2E flows for '{appspec.name}'...")
     typer.echo(f"  • Base URL: {base_url}")
@@ -472,6 +434,50 @@ def test_run(
     # Exit with error code if any failures
     if failed > 0:
         raise typer.Exit(code=1)
+
+
+def _filter_flows(
+    flows: list[Any],
+    flow_id: str | None = None,
+    priority: str | None = None,
+    tag: str | None = None,
+) -> list[Any]:
+    """Filter flows by ID, priority, and/or tag.
+
+    Raises typer.Exit on invalid input or empty results.
+    """
+    result = flows
+
+    if flow_id:
+        result = [f for f in result if f.id == flow_id]
+        if not result:
+            typer.echo(f"Flow not found: {flow_id}", err=True)
+            typer.echo("Available flows:", err=True)
+            for f in flows[:10]:
+                typer.echo(f"  - {f.id}", err=True)
+            if len(flows) > 10:
+                typer.echo(f"  ... and {len(flows) - 10} more", err=True)
+            raise typer.Exit(code=1)
+
+    if priority:
+        from dazzle.core.ir import FlowPriority
+
+        try:
+            priority_enum = FlowPriority(priority)
+            result = [f for f in result if f.priority == priority_enum]
+        except ValueError:
+            typer.echo(f"Invalid priority: {priority}", err=True)
+            typer.echo("Valid priorities: high, medium, low", err=True)
+            raise typer.Exit(code=1)
+
+    if tag:
+        result = [f for f in result if tag in f.tags]
+
+    if not result:
+        typer.echo("No flows match the specified filters.", err=True)
+        raise typer.Exit(code=1)
+
+    return result
 
 
 def _resolve_fixture_deps(
@@ -878,10 +884,7 @@ def test_list(
     root = manifest_path.parent
 
     try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
+        appspec = load_project_appspec(root)
     except (ParseError, DazzleError) as e:
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
@@ -1989,10 +1992,7 @@ def test_populate(
 
     # Load AppSpec
     try:
-        mf = load_manifest(manifest_path)
-        dsl_files = discover_dsl_files(root, mf)
-        modules = parse_modules(dsl_files)
-        appspec = build_appspec(modules, mf.project_root)
+        appspec = load_project_appspec(root)
     except (ParseError, DazzleError) as e:
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)

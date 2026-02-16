@@ -255,6 +255,109 @@ def _build_columns(
     return columns
 
 
+def _build_money_field(
+    field_name: str,
+    label: str | None,
+    field_spec: ir.FieldSpec,
+) -> FieldContext:
+    """Build a FieldContext for a money/currency field."""
+    currency_code = field_spec.type.currency_code or ""
+    currency_fixed = bool(currency_code)
+    if not currency_code:
+        currency_code = "GBP"  # default for unpinned
+    scale = get_currency_scale(currency_code)
+    symbol = CURRENCY_SYMBOLS.get(currency_code, currency_code)
+    display_label = label or field_name.replace("_", " ").title()
+    extra: dict[str, Any] = {
+        "currency_code": currency_code,
+        "currency_fixed": currency_fixed,
+        "scale": scale,
+        "symbol": symbol,
+        "currency_options": (_build_currency_options(currency_code) if not currency_fixed else []),
+    }
+    return FieldContext(
+        name=field_name,
+        label=display_label,
+        type="money",
+        required=bool(field_spec.is_required),
+        extra=extra,
+    )
+
+
+def _build_enum_field_options(
+    field_spec: ir.FieldSpec | None,
+) -> list[dict[str, str]]:
+    """Build select options for an enum field."""
+    if (
+        field_spec
+        and field_spec.type
+        and field_spec.type.kind == FieldTypeKind.ENUM
+        and field_spec.type.enum_values
+    ):
+        return [
+            {"value": v, "label": v.replace("_", " ").title()} for v in field_spec.type.enum_values
+        ]
+    return []
+
+
+def _build_state_machine_field_options(
+    field_name: str,
+    entity: ir.EntitySpec | None,
+) -> tuple[list[dict[str, str]], str | None]:
+    """Build select options for a state machine field.
+
+    Returns:
+        (options, form_type_override) — options list and "select" if matched, else ([], None).
+    """
+    if entity and entity.state_machine:
+        sm = entity.state_machine
+        if field_name == "status" or (
+            hasattr(sm, "field") and getattr(sm, "field", None) == field_name
+        ):
+            options = [{"value": s, "label": s.replace("_", " ").title()} for s in sm.states]
+            return options, "select"
+    return [], None
+
+
+def _resolve_field_source(
+    source_ref: str,
+) -> FieldSourceContext | None:
+    """Resolve a source= option (e.g. pack.operation) to a FieldSourceContext."""
+    if not source_ref or "." not in source_ref:
+        return None
+
+    # Try the centralised resolver first (uses pre-built fragment_sources)
+    source_ctx: FieldSourceContext | None = None
+    try:
+        from dazzle_ui.runtime.template_context import build_field_source_context
+
+        _fs = getattr(_build_form_fields, "_fragment_sources", {})
+        source_ctx = build_field_source_context(source_ref, _fs)
+    except Exception:
+        source_ctx = None
+
+    # Fall back to direct API pack resolution
+    if source_ctx is None:
+        pack_name, op_name = source_ref.rsplit(".", 1)
+        try:
+            from dazzle.api_kb import load_pack
+
+            pack = load_pack(pack_name)
+            if pack:
+                source_config = pack.generate_fragment_source(op_name)
+                source_ctx = FieldSourceContext(
+                    endpoint="/api/_fragments/search",
+                    display_key=source_config.get("display_key", "name"),
+                    value_key=source_config.get("value_key", "id"),
+                    secondary_key=source_config.get("secondary_key", ""),
+                    autofill=source_config.get("autofill", {}),
+                )
+        except Exception:
+            pass  # Fall back to default field type
+
+    return source_ctx
+
+
 def _build_form_fields(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
@@ -279,93 +382,26 @@ def _build_form_fields(
     for field_name, label, field_spec, element_options in fields_to_process:
         # Money fields: single widget with major-unit display + hidden minor-unit value
         if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
-            currency_code = field_spec.type.currency_code or ""
-            currency_fixed = bool(currency_code)
-            if not currency_code:
-                currency_code = "GBP"  # default for unpinned
-            scale = get_currency_scale(currency_code)
-            symbol = CURRENCY_SYMBOLS.get(currency_code, currency_code)
-            display_label = label or field_name.replace("_", " ").title()
-            extra: dict[str, Any] = {
-                "currency_code": currency_code,
-                "currency_fixed": currency_fixed,
-                "scale": scale,
-                "symbol": symbol,
-                "currency_options": (
-                    _build_currency_options(currency_code) if not currency_fixed else []
-                ),
-            }
-            fields.append(
-                FieldContext(
-                    name=field_name,
-                    label=display_label,
-                    type="money",
-                    required=bool(field_spec.is_required),
-                    extra=extra,
-                )
-            )
+            fields.append(_build_money_field(field_name, label, field_spec))
             continue
 
         display_label = label or field_name.replace("_", " ").title()
         form_type = _field_type_to_form_type(field_spec)
 
-        # Build options for select/enum fields
-        options: list[dict[str, str]] = []
-        if (
-            field_spec
-            and field_spec.type
-            and field_spec.type.kind == FieldTypeKind.ENUM
-            and field_spec.type.enum_values
-        ):
-            options = [
-                {"value": v, "label": v.replace("_", " ").title()}
-                for v in field_spec.type.enum_values
-            ]
+        options = _build_enum_field_options(field_spec)
 
-        # Check if field has state machine (also renders as select)
-        if not options and entity and entity.state_machine:
-            sm = entity.state_machine
-            if field_name == "status" or (
-                hasattr(sm, "field") and getattr(sm, "field", None) == field_name
-            ):
-                options = [{"value": s, "label": s.replace("_", " ").title()} for s in sm.states]
-                form_type = "select"
+        if not options:
+            sm_options, sm_type = _build_state_machine_field_options(field_name, entity)
+            if sm_options:
+                options = sm_options
+                form_type = sm_type or form_type
 
         is_required = bool(field_spec and field_spec.is_required)
 
-        # Build FieldSourceContext from source= option (e.g. source=pack.operation)
         source_ctx: FieldSourceContext | None = None
         source_ref = element_options.get("source")
-        if source_ref and "." in source_ref:
-            # Try the centralised resolver first (uses pre-built fragment_sources)
-            try:
-                from dazzle_ui.runtime.template_context import build_field_source_context
-
-                # fragment_sources may be attached to the module-level cache
-                _fs = getattr(_build_form_fields, "_fragment_sources", {})
-                source_ctx = build_field_source_context(source_ref, _fs)
-            except Exception:
-                source_ctx = None
-
-            # Fall back to direct API pack resolution
-            if source_ctx is None:
-                pack_name, op_name = source_ref.rsplit(".", 1)
-                try:
-                    from dazzle.api_kb import load_pack
-
-                    pack = load_pack(pack_name)
-                    if pack:
-                        source_config = pack.generate_fragment_source(op_name)
-                        source_ctx = FieldSourceContext(
-                            endpoint="/api/_fragments/search",
-                            display_key=source_config.get("display_key", "name"),
-                            value_key=source_config.get("value_key", "id"),
-                            secondary_key=source_config.get("secondary_key", ""),
-                            autofill=source_config.get("autofill", {}),
-                        )
-                except Exception:
-                    pass  # Fall back to default field type
-
+        if source_ref:
+            source_ctx = _resolve_field_source(source_ref)
             if source_ctx:
                 form_type = "search_select"
 
@@ -382,6 +418,136 @@ def _build_form_fields(
         )
 
     return fields
+
+
+def _compile_list_surface(
+    surface: ir.SurfaceSpec,
+    entity: ir.EntitySpec | None,
+    entity_name: str,
+    api_endpoint: str,
+    entity_slug: str,
+    app_prefix: str,
+) -> PageContext:
+    """Compile a LIST mode surface to a PageContext with table context."""
+    ux = surface.ux
+    columns = _build_columns(surface, entity, ux)
+    default_sort_field = ux.sort[0].field if ux and ux.sort else ""
+    default_sort_dir = ux.sort[0].direction if ux and ux.sort else "asc"
+    search_fields = list(ux.search) if ux and ux.search else []
+    empty_message = ux.empty_message if ux and ux.empty_message else "No items found."
+    table_id = f"dt-{surface.name}"
+    return PageContext(
+        page_title=surface.title or f"{entity_name} List",
+        template="components/filterable_table.html",
+        table=TableContext(
+            entity_name=entity_name,
+            title=surface.title or f"{entity_name}s",
+            columns=columns,
+            api_endpoint=api_endpoint,
+            create_url=f"{app_prefix}/{entity_slug}/create",
+            detail_url_template=f"{app_prefix}/{entity_slug}/{{id}}",
+            search_enabled=bool(search_fields),
+            default_sort_field=default_sort_field,
+            default_sort_dir=default_sort_dir,
+            sort_field=default_sort_field,
+            sort_dir=default_sort_dir,
+            search_fields=search_fields,
+            empty_message=empty_message,
+            table_id=table_id,
+        ),
+    )
+
+
+def _compile_form_surface(
+    surface: ir.SurfaceSpec,
+    entity: ir.EntitySpec | None,
+    entity_name: str,
+    api_endpoint: str,
+    entity_slug: str,
+    app_prefix: str,
+) -> PageContext:
+    """Compile a CREATE or EDIT mode surface to a PageContext with form context."""
+    fields = _build_form_fields(surface, entity)
+    if surface.mode == SurfaceMode.CREATE:
+        return PageContext(
+            page_title=surface.title or f"Create {entity_name}",
+            template="components/form.html",
+            form=FormContext(
+                entity_name=entity_name,
+                title=surface.title or f"Create {entity_name}",
+                fields=fields,
+                action_url=api_endpoint,
+                method="post",
+                mode="create",
+                cancel_url=f"{app_prefix}/{entity_slug}",
+            ),
+        )
+    else:
+        return PageContext(
+            page_title=surface.title or f"Edit {entity_name}",
+            template="components/form.html",
+            form=FormContext(
+                entity_name=entity_name,
+                title=surface.title or f"Edit {entity_name}",
+                fields=fields,
+                action_url=f"{api_endpoint}/{{id}}",
+                method="put",
+                mode="edit",
+                cancel_url=f"{app_prefix}/{entity_slug}/{{id}}",
+            ),
+        )
+
+
+def _compile_view_surface(
+    surface: ir.SurfaceSpec,
+    entity: ir.EntitySpec | None,
+    entity_name: str,
+    api_endpoint: str,
+    entity_slug: str,
+    app_prefix: str,
+) -> PageContext:
+    """Compile a VIEW mode surface to a PageContext with detail context."""
+    fields = _build_form_fields(surface, entity)
+    transitions: list[TransitionContext] = []
+    status_field = "status"
+    if entity and entity.state_machine:
+        sm = entity.state_machine
+        status_field = sm.status_field if hasattr(sm, "status_field") else "status"
+        seen_targets: set[str] = set()
+        for t in sm.transitions:
+            if t.to_state not in seen_targets:
+                seen_targets.add(t.to_state)
+                transitions.append(
+                    TransitionContext(
+                        to_state=t.to_state,
+                        label=t.to_state.replace("_", " ").title(),
+                        api_url=f"{api_endpoint}/{{id}}",
+                    )
+                )
+    return PageContext(
+        page_title=surface.title or f"{entity_name} Details",
+        template="components/detail_view.html",
+        detail=DetailContext(
+            entity_name=entity_name,
+            title=surface.title or f"{entity_name} Details",
+            fields=fields,
+            edit_url=f"{app_prefix}/{entity_slug}/{{id}}/edit",
+            delete_url=f"{api_endpoint}/{{id}}",
+            back_url=f"{app_prefix}/{entity_slug}",
+            transitions=transitions,
+            status_field=status_field,
+        ),
+    )
+
+
+def _compile_custom_surface(
+    surface: ir.SurfaceSpec,
+) -> PageContext:
+    """Compile a CUSTOM mode surface to a minimal PageContext."""
+    return PageContext(
+        page_title=surface.title or surface.name,
+        template="components/detail_view.html",
+    )
 
 
 def compile_surface_to_context(
@@ -408,107 +574,19 @@ def compile_surface_to_context(
     entity_slug = entity_name.lower().replace("_", "-")
 
     if surface.mode == SurfaceMode.LIST:
-        ux = surface.ux
-        columns = _build_columns(surface, entity, ux)
-        default_sort_field = ux.sort[0].field if ux and ux.sort else ""
-        default_sort_dir = ux.sort[0].direction if ux and ux.sort else "asc"
-        search_fields = list(ux.search) if ux and ux.search else []
-        empty_message = ux.empty_message if ux and ux.empty_message else "No items found."
-        table_id = f"dt-{surface.name}"
-        return PageContext(
-            page_title=surface.title or f"{entity_name} List",
-            template="components/filterable_table.html",
-            table=TableContext(
-                entity_name=entity_name,
-                title=surface.title or f"{entity_name}s",
-                columns=columns,
-                api_endpoint=api_endpoint,
-                create_url=f"{app_prefix}/{entity_slug}/create",
-                detail_url_template=f"{app_prefix}/{entity_slug}/{{id}}",
-                search_enabled=bool(search_fields),
-                default_sort_field=default_sort_field,
-                default_sort_dir=default_sort_dir,
-                sort_field=default_sort_field,
-                sort_dir=default_sort_dir,
-                search_fields=search_fields,
-                empty_message=empty_message,
-                table_id=table_id,
-            ),
+        return _compile_list_surface(
+            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix
         )
-
-    elif surface.mode == SurfaceMode.CREATE:
-        fields = _build_form_fields(surface, entity)
-        return PageContext(
-            page_title=surface.title or f"Create {entity_name}",
-            template="components/form.html",
-            form=FormContext(
-                entity_name=entity_name,
-                title=surface.title or f"Create {entity_name}",
-                fields=fields,
-                action_url=api_endpoint,
-                method="post",
-                mode="create",
-                cancel_url=f"{app_prefix}/{entity_slug}",
-            ),
+    elif surface.mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
+        return _compile_form_surface(
+            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix
         )
-
-    elif surface.mode == SurfaceMode.EDIT:
-        fields = _build_form_fields(surface, entity)
-        return PageContext(
-            page_title=surface.title or f"Edit {entity_name}",
-            template="components/form.html",
-            form=FormContext(
-                entity_name=entity_name,
-                title=surface.title or f"Edit {entity_name}",
-                fields=fields,
-                action_url=f"{api_endpoint}/{{id}}",
-                method="put",
-                mode="edit",
-                cancel_url=f"{app_prefix}/{entity_slug}/{{id}}",
-            ),
-        )
-
     elif surface.mode == SurfaceMode.VIEW:
-        fields = _build_form_fields(surface, entity)
-        # Build transition contexts from entity state machine
-        transitions: list[TransitionContext] = []
-        status_field = "status"
-        if entity and entity.state_machine:
-            sm = entity.state_machine
-            status_field = sm.status_field if hasattr(sm, "status_field") else "status"
-            # Collect all unique target states from transitions
-            seen_targets: set[str] = set()
-            for t in sm.transitions:
-                if t.to_state not in seen_targets:
-                    seen_targets.add(t.to_state)
-                    transitions.append(
-                        TransitionContext(
-                            to_state=t.to_state,
-                            label=t.to_state.replace("_", " ").title(),
-                            api_url=f"{api_endpoint}/{{id}}",
-                        )
-                    )
-        return PageContext(
-            page_title=surface.title or f"{entity_name} Details",
-            template="components/detail_view.html",
-            detail=DetailContext(
-                entity_name=entity_name,
-                title=surface.title or f"{entity_name} Details",
-                fields=fields,
-                edit_url=f"{app_prefix}/{entity_slug}/{{id}}/edit",
-                delete_url=f"{api_endpoint}/{{id}}",
-                back_url=f"{app_prefix}/{entity_slug}",
-                transitions=transitions,
-                status_field=status_field,
-            ),
+        return _compile_view_surface(
+            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix
         )
-
     else:
-        # CUSTOM mode — minimal page
-        return PageContext(
-            page_title=surface.title or surface.name,
-            template="components/detail_view.html",
-        )
+        return _compile_custom_surface(surface)
 
 
 def compile_appspec_to_templates(

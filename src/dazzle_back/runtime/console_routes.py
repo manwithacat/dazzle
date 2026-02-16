@@ -88,7 +88,7 @@ def create_console_routes(
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI required for console routes")
 
-    from dazzle_back.runtime.ops_routes import OpsSessionManager
+    from dazzle_back.runtime.ops_services import OpsSessionManager
 
     router = APIRouter(prefix="/_console", tags=["Founder Console"])
     session_manager = OpsSessionManager()

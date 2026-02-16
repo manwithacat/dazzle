@@ -10,11 +10,12 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress
+from .common import async_handler_error_json, extract_progress, handler_error_json
 
 logger = logging.getLogger("dazzle.mcp")
 
 
+@handler_error_json
 def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Verify a story by mapping it to entity tests, running them, and returning a verdict.
 
@@ -152,11 +153,9 @@ def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ImportError as e:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error verifying stories")
-        return json.dumps({"error": f"Failed to verify stories: {e}"}, indent=2)
 
 
+@handler_error_json
 def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate tests from DSL/AppSpec definitions."""
     try:
@@ -218,9 +217,6 @@ def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ImportError as e:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error generating DSL tests")
-        return json.dumps({"error": f"Failed to generate tests: {e}"}, indent=2)
 
 
 def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
@@ -252,6 +248,7 @@ def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
     return script
 
 
+@handler_error_json
 def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Run ALL DSL-driven tests without filtering, returning a structured batch report.
 
@@ -379,11 +376,9 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ImportError as e:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error running all DSL tests")
-        return json.dumps({"error": f"Failed to run tests: {e}"}, indent=2)
 
 
+@handler_error_json
 def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Run DSL-driven tests against a running DNR server."""
     try:
@@ -483,11 +478,9 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ImportError as e:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error running DSL tests")
-        return json.dumps({"error": f"Failed to run tests: {e}"}, indent=2)
 
 
+@async_handler_error_json
 async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create authenticated sessions for all DSL-defined personas."""
     try:
@@ -522,11 +515,9 @@ async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> s
 
     except ImportError as e:
         return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error creating sessions")
-        return json.dumps({"error": f"Failed to create sessions: {e}"}, indent=2)
 
 
+@async_handler_error_json
 async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Compare route responses across personas."""
     try:
@@ -554,11 +545,9 @@ async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str
 
     except ImportError as e:
         return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error running differential analysis")
-        return json.dumps({"error": f"Failed to diff personas: {e}"}, indent=2)
 
 
+@handler_error_json
 def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get test coverage for DSL constructs."""
     try:
@@ -659,11 +648,9 @@ def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> s
 
     except ImportError as e:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error getting DSL test coverage")
-        return json.dumps({"error": f"Failed to get coverage: {e}"}, indent=2)
 
 
+@handler_error_json
 def list_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """List available DSL-driven tests."""
     try:
@@ -730,6 +717,3 @@ def list_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     except ImportError as e:
         return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
-    except Exception as e:
-        logger.exception("Error listing DSL tests")
-        return json.dumps({"error": f"Failed to list tests: {e}"}, indent=2)

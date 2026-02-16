@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from .common import extract_progress
+from .common import extract_progress, handler_error_json
 
 
 def list_api_packs_handler(args: dict[str, Any]) -> str:
@@ -199,6 +199,7 @@ def generate_service_dsl_handler(args: dict[str, Any]) -> str:
     )
 
 
+@handler_error_json
 def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
     """Discover infrastructure requirements for services declared in DSL."""
     progress = extract_progress(args)
@@ -212,11 +213,7 @@ def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
     if project_path is None:
         return json.dumps({"error": "No active project"})
 
-    try:
-        appspec = load_project_appspec(Path(project_path))
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load project: {e}"})
-
+    appspec = load_project_appspec(Path(project_path))
     services: list[dict[str, Any]] = []
     for svc in getattr(appspec, "services", []) or []:
         spec_inline = getattr(svc, "spec_inline", None) or ""

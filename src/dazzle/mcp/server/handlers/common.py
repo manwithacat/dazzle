@@ -61,3 +61,24 @@ def handler_error_json(
             return json.dumps({"error": str(e)}, indent=2)
 
     return wrapper
+
+
+def async_handler_error_json(
+    fn: Callable[..., Any],
+) -> Callable[..., Any]:
+    """Async variant of :func:`handler_error_json`.
+
+    Wraps an ``async def`` handler so that any unhandled exception is caught,
+    logged, and returned as ``{"error": "<message>"}``.
+    """
+
+    @wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> str:
+        try:
+            result: str = await fn(*args, **kwargs)
+            return result
+        except Exception as e:
+            logger.debug("Handler %s failed: %s", fn.__name__, e, exc_info=True)
+            return json.dumps({"error": str(e)}, indent=2)
+
+    return wrapper

@@ -13,18 +13,66 @@ need the real ``load_project_appspec`` (i.e. tests that create real DSL files).
 
 from __future__ import annotations
 
+import json
 import sys
+from functools import wraps
 from types import ModuleType
 from unittest.mock import MagicMock
 
 
+def _make_handler_error_json():  # noqa: ANN202
+    """Create a ``handler_error_json`` decorator matching the real one."""
+
+    def handler_error_json(fn):  # noqa: ANN001, ANN202
+        @wraps(fn)
+        def wrapper(*a, **kw):  # noqa: ANN002, ANN003, ANN202
+            try:
+                return fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
+    return handler_error_json
+
+
+def _make_async_handler_error_json():  # noqa: ANN202
+    """Create an ``async_handler_error_json`` decorator matching the real one."""
+
+    def async_handler_error_json(fn):  # noqa: ANN001, ANN202
+        @wraps(fn)
+        async def wrapper(*a, **kw):  # noqa: ANN002, ANN003, ANN202
+            try:
+                return await fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
+    return async_handler_error_json
+
+
 def install_handlers_common_mock() -> ModuleType:
-    """Register a MagicMock-based ``handlers.common`` module.
+    """Register a minimal ``handlers.common`` module.
 
     Suitable for tests that don't depend on real DSL parsing.
+    Provides ``handler_error_json`` and ``async_handler_error_json``
+    as real decorators so decorated handlers behave correctly.
     """
-    sys.modules["dazzle.mcp.server.handlers.common"] = MagicMock()
-    return sys.modules["dazzle.mcp.server.handlers.common"]  # type: ignore[return-value]
+    common = ModuleType("dazzle.mcp.server.handlers.common")
+    common.__package__ = "dazzle.mcp.server.handlers"
+
+    def _extract_progress(args=None):  # noqa: ANN001, ANN202
+        ctx = MagicMock()
+        ctx.log_sync = MagicMock()
+        return ctx
+
+    common.extract_progress = _extract_progress  # type: ignore[attr-defined]
+    common.handler_error_json = _make_handler_error_json()  # type: ignore[attr-defined]
+    common.async_handler_error_json = _make_async_handler_error_json()  # type: ignore[attr-defined]
+
+    sys.modules["dazzle.mcp.server.handlers.common"] = common
+    return common
 
 
 def install_handlers_common_real() -> ModuleType:
@@ -32,7 +80,7 @@ def install_handlers_common_real() -> ModuleType:
 
     ``extract_progress`` returns a MagicMock progress context.
     ``load_project_appspec`` delegates to the real core modules.
-    ``handler_error_json`` is an identity decorator.
+    ``handler_error_json`` catches exceptions and returns JSON errors.
 
     Use this when tests create real ``dazzle.toml`` + ``.dsl`` files
     and expect actual parsing.
@@ -58,7 +106,8 @@ def install_handlers_common_real() -> ModuleType:
 
     common.extract_progress = _extract_progress  # type: ignore[attr-defined]
     common.load_project_appspec = _load_project_appspec  # type: ignore[attr-defined]
-    common.handler_error_json = lambda fn: fn  # type: ignore[attr-defined]
+    common.handler_error_json = _make_handler_error_json()  # type: ignore[attr-defined]
+    common.async_handler_error_json = _make_async_handler_error_json()  # type: ignore[attr-defined]
 
     sys.modules["dazzle.mcp.server.handlers.common"] = common
     return common

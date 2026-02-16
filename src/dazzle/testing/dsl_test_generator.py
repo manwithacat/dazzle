@@ -239,16 +239,16 @@ class DSLTestGenerator:
                 refs.append((fld.name, target, pk_field))
         return refs
 
-    def generate_all(self) -> GeneratedTestSuite:
-        """Generate complete test suite from AppSpec."""
-        designs = []
-
-        # Set totals
+    def _init_coverage_totals(self) -> None:
+        """Set total counts on the coverage tracker from the appspec."""
         self.coverage.entities_total = len(self.appspec.domain.entities)
         self.coverage.state_machines_total = sum(
             1 for e in self.appspec.domain.entities if e.state_machine
         )
         self.coverage.personas_total = len(self.appspec.personas) if self.appspec.personas else 0
+        self.coverage.auth_personas_total = (
+            len(self.appspec.personas) if self.appspec.personas else 0
+        )
         self.coverage.workspaces_total = (
             len(self.appspec.workspaces) if self.appspec.workspaces else 0
         )
@@ -257,34 +257,13 @@ class DSLTestGenerator:
         )
         self.coverage.processes_total = len(self.appspec.processes) if self.appspec.processes else 0
 
-        # Entity tests (CRUD + validation)
-        for entity in self.appspec.domain.entities:
-            if _entity_has_forbid_create(entity):
-                continue  # Skip CRUD tests for entities where create is forbidden
-            has_create_surface = entity.name in self._creatable_entities
-            designs.extend(
-                self._generate_entity_tests(entity, has_create_surface=has_create_surface)
-            )
-            self.coverage.entities_covered.add(entity.name)
+    def generate_all(self) -> GeneratedTestSuite:
+        """Generate complete test suite from AppSpec."""
+        self._init_coverage_totals()
 
-        # State machine tests
-        for entity in self.appspec.domain.entities:
-            if entity.state_machine:
-                designs.extend(self._generate_state_machine_tests(entity))
-                self.coverage.state_machines_covered.add(entity.name)
-
-        # Persona tests
-        if self.appspec.personas:
-            for persona in self.appspec.personas:
-                designs.extend(self._generate_persona_tests(persona))
-                self.coverage.personas_covered.add(persona.id)
-
-        # Auth lifecycle tests (login, session, logout per persona)
-        if self.appspec.personas:
-            self.coverage.auth_personas_total = len(self.appspec.personas)
-            for persona in self.appspec.personas:
-                designs.extend(self._generate_auth_lifecycle_tests(persona))
-                self.coverage.auth_personas_covered.add(persona.id)
+        designs: list[dict[str, Any]] = []
+        designs.extend(self._build_entity_coverage_designs())
+        designs.extend(self._build_persona_coverage_designs())
 
         # Workspace tests
         if self.appspec.workspaces:
@@ -312,6 +291,47 @@ class DSLTestGenerator:
             designs=designs,
             coverage=self.coverage,
         )
+
+    def _build_entity_coverage_designs(self) -> list[dict[str, Any]]:
+        """Generate entity CRUD, validation, and state machine test designs."""
+        designs: list[dict[str, Any]] = []
+
+        # Entity tests (CRUD + validation)
+        for entity in self.appspec.domain.entities:
+            if _entity_has_forbid_create(entity):
+                continue  # Skip CRUD tests for entities where create is forbidden
+            has_create_surface = entity.name in self._creatable_entities
+            designs.extend(
+                self._generate_entity_tests(entity, has_create_surface=has_create_surface)
+            )
+            self.coverage.entities_covered.add(entity.name)
+
+        # State machine tests
+        for entity in self.appspec.domain.entities:
+            if entity.state_machine:
+                designs.extend(self._generate_state_machine_tests(entity))
+                self.coverage.state_machines_covered.add(entity.name)
+
+        return designs
+
+    def _build_persona_coverage_designs(self) -> list[dict[str, Any]]:
+        """Generate persona access control and auth lifecycle test designs."""
+        designs: list[dict[str, Any]] = []
+
+        if not self.appspec.personas:
+            return designs
+
+        # Persona tests
+        for persona in self.appspec.personas:
+            designs.extend(self._generate_persona_tests(persona))
+            self.coverage.personas_covered.add(persona.id)
+
+        # Auth lifecycle tests (login, session, logout per persona)
+        for persona in self.appspec.personas:
+            designs.extend(self._generate_auth_lifecycle_tests(persona))
+            self.coverage.auth_personas_covered.add(persona.id)
+
+        return designs
 
     # =========================================================================
     # Entity Tests

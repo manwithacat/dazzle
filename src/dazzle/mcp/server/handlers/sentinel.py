@@ -11,23 +11,20 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, load_project_appspec
+from .common import extract_progress, handler_error_json, load_project_appspec
 
 # ---------------------------------------------------------------------------
 # scan
 # ---------------------------------------------------------------------------
 
 
+@handler_error_json
 def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run sentinel scan against project DSL."""
     progress = extract_progress(args)
     t0 = time.monotonic()
-    try:
-        progress.log_sync("Loading project DSL...")
-        appspec = load_project_appspec(project_path)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}", "project_path": str(project_path)})
-
+    progress.log_sync("Loading project DSL...")
+    appspec = load_project_appspec(project_path)
     from dazzle.sentinel.models import AgentId, ScanConfig, Severity
 
     agent_ids = None

@@ -17,6 +17,14 @@ def _mock_story(story_id: str, title: str, actor: str, status: str = "accepted")
     s.actor = actor
     s.status = MagicMock(value=status)
     s.scope = []
+    # serialize_story_summary calls model_dump(mode="json", include=...)
+    s.model_dump.return_value = {
+        "story_id": story_id,
+        "title": title,
+        "actor": actor,
+        "status": status,
+        "scope": [],
+    }
     return s
 
 

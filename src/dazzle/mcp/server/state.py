@@ -8,6 +8,8 @@ for project root, dev mode, active project management, and knowledge graph.
 from __future__ import annotations
 
 import logging
+import sys
+import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urlparse
@@ -20,68 +22,108 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("dazzle.mcp")
 
+
 # ============================================================================
-# Server State
+# Centralized Server State
 # ============================================================================
 
-# Store project root (set during initialization)
-_project_root: Path = Path.cwd()
 
-# Dev mode state
-_is_dev_mode: bool = False
-_active_project: str | None = None  # Name of the active example project
-_available_projects: dict[str, Path] = {}  # project_name -> project_path
+class ServerState:
+    """Centralized MCP server state.
 
-# Knowledge graph state
-_knowledge_graph: KnowledgeGraph | None = None
-_graph_db_path: Path | None = None
+    Holds all mutable server state as instance attributes instead of
+    scattered module-level globals.  A single module-level instance
+    ``_state`` is created and all existing public functions delegate to it,
+    so callers are unaffected.
+    """
 
-# Activity log state
-_activity_log: ActivityLog | None = None
-_activity_store: ActivityStore | None = None
+    _ROOTS_CACHE_MAX = 128
+
+    def __init__(self) -> None:
+        self.project_root: Path = Path.cwd()
+        self.is_dev_mode: bool = False
+        self.active_project: str | None = None
+        self.available_projects: dict[str, Path] = {}
+        self.knowledge_graph: KnowledgeGraph | None = None
+        self.graph_db_path: Path | None = None
+        self.activity_log: ActivityLog | None = None
+        self.activity_store: ActivityStore | None = None
+        self._roots_cache: dict[frozenset[str], Path] = {}
+
+    def reset(self) -> None:
+        """Reset all state to defaults."""
+        self.project_root = Path.cwd()
+        self.is_dev_mode = False
+        self.active_project = None
+        self.available_projects.clear()
+        self.knowledge_graph = None
+        self.graph_db_path = None
+        self.activity_log = None
+        self.activity_store = None
+        self._roots_cache.clear()
+
+    # -- roots cache with bounded size ------------------------------------
+
+    def roots_cache_get(self, key: frozenset[str]) -> Path | None:
+        """Look up a cached root resolution."""
+        return self._roots_cache.get(key)
+
+    def roots_cache_set(self, key: frozenset[str], value: Path) -> None:
+        """Store a root resolution, evicting oldest if cache is full."""
+        if len(self._roots_cache) >= self._ROOTS_CACHE_MAX:
+            # Evict the first (oldest-inserted) entry
+            oldest = next(iter(self._roots_cache))
+            del self._roots_cache[oldest]
+        self._roots_cache[key] = value
+
+
+_state = ServerState()
+
+
+# ============================================================================
+# Public accessor functions (signatures unchanged)
+# ============================================================================
 
 
 def set_project_root(path: Path) -> None:
     """Set the project root for the server."""
-    global _project_root
-    _project_root = path
+    _state.project_root = path
 
 
 def get_project_root() -> Path:
     """Get the current project root."""
-    return _project_root
+    return _state.project_root
 
 
 def is_dev_mode() -> bool:
     """Check if server is in dev mode."""
-    return _is_dev_mode
+    return _state.is_dev_mode
 
 
 def get_active_project() -> str | None:
     """Get the name of the active project."""
-    return _active_project
+    return _state.active_project
 
 
 def set_active_project(name: str | None) -> None:
     """Set the active project name."""
-    global _active_project
-    _active_project = name
+    _state.active_project = name
 
 
 def get_available_projects() -> dict[str, Path]:
     """Get the dictionary of available projects."""
-    return _available_projects
+    return _state.available_projects
 
 
 def get_active_project_path() -> Path | None:
     """Get the path to the active project, or None if not set."""
-    if not _is_dev_mode:
-        return _project_root
+    if not _state.is_dev_mode:
+        return _state.project_root
     # In dev mode, prefer CWD if it has a dazzle.toml
-    if (_project_root / "dazzle.toml").exists():
-        return _project_root
-    if _active_project and _active_project in _available_projects:
-        return _available_projects[_active_project]
+    if (_state.project_root / "dazzle.toml").exists():
+        return _state.project_root
+    if _state.active_project and _state.active_project in _state.available_projects:
+        return _state.available_projects[_state.active_project]
     return None
 
 
@@ -127,15 +169,7 @@ def resolve_project_path(project_path: str | None = None) -> Path:
         return active_path
 
     # Fall back to project root
-    return _project_root
-
-
-# ============================================================================
-# MCP Roots-based Resolution
-# ============================================================================
-
-# Cache: frozenset of root URIs -> resolved Path
-_roots_cache: dict[frozenset[str], Path] = {}
+    return _state.project_root
 
 
 def _path_from_file_uri(uri: str) -> Path | None:
@@ -184,20 +218,21 @@ async def resolve_project_path_from_roots(
         return resolve_project_path(None)
 
     # Check cache
-    if root_uris in _roots_cache:
-        return _roots_cache[root_uris]
+    cached = _state.roots_cache_get(root_uris)
+    if cached is not None:
+        return cached
 
     # Search roots for a dazzle.toml
     for root in roots_result.roots:
         path = _path_from_file_uri(str(root.uri))
         if path and path.is_dir() and (path / "dazzle.toml").exists():
-            _roots_cache[root_uris] = path
+            _state.roots_cache_set(root_uris, path)
             logger.info(f"Resolved project from MCP root: {path}")
             return path
 
     # No root had dazzle.toml — fall back
     fallback = resolve_project_path(None)
-    _roots_cache[root_uris] = fallback
+    _state.roots_cache_set(root_uris, fallback)
     return fallback
 
 
@@ -259,20 +294,18 @@ def _discover_example_projects(root: Path) -> dict[str, Path]:
 
 def init_dev_mode(root: Path) -> None:
     """Initialize dev mode state."""
-    global _is_dev_mode, _available_projects, _active_project
+    _state.is_dev_mode = _detect_dev_environment(root)
 
-    _is_dev_mode = _detect_dev_environment(root)
-
-    if _is_dev_mode:
-        _available_projects = _discover_example_projects(root)
+    if _state.is_dev_mode:
+        _state.available_projects = _discover_example_projects(root)
         # Auto-select first project if available
-        if _available_projects:
-            _active_project = sorted(_available_projects.keys())[0]
-            logger.info(f"Dev mode: auto-selected project '{_active_project}'")
-        logger.info(f"Dev mode enabled with {len(_available_projects)} example projects")
+        if _state.available_projects:
+            _state.active_project = sorted(_state.available_projects.keys())[0]
+            logger.info(f"Dev mode: auto-selected project '{_state.active_project}'")
+        logger.info(f"Dev mode enabled with {len(_state.available_projects)} example projects")
     else:
-        _available_projects = {}
-        _active_project = None
+        _state.available_projects = {}
+        _state.active_project = None
 
 
 # ============================================================================
@@ -287,33 +320,31 @@ def init_knowledge_graph(root: Path) -> None:
     In dev mode, uses the Dazzle source code as the graph source.
     In normal mode, uses the project's .dazzle directory.
     """
-    global _knowledge_graph, _graph_db_path
-
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
 
     # Determine database path
-    if _is_dev_mode:
+    if _state.is_dev_mode:
         # Dev mode: store in Dazzle's .dazzle directory
-        _graph_db_path = root / ".dazzle" / "knowledge_graph.db"
+        _state.graph_db_path = root / ".dazzle" / "knowledge_graph.db"
     else:
         # Normal mode: store in project's .dazzle directory
-        _graph_db_path = root / ".dazzle" / "knowledge_graph.db"
+        _state.graph_db_path = root / ".dazzle" / "knowledge_graph.db"
 
-    _graph_db_path.parent.mkdir(parents=True, exist_ok=True)
+    _state.graph_db_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Initialize the graph
-    _knowledge_graph = KnowledgeGraph(_graph_db_path)
-    logger.info(f"Knowledge graph initialized at: {_graph_db_path}")
+    _state.knowledge_graph = KnowledgeGraph(_state.graph_db_path)
+    logger.info(f"Knowledge graph initialized at: {_state.graph_db_path}")
 
     # Seed framework knowledge (concepts, patterns, inference triggers)
     from dazzle.mcp.knowledge_graph.seed import ensure_seeded
 
-    seeded = ensure_seeded(_knowledge_graph)
+    seeded = ensure_seeded(_state.knowledge_graph)
     if seeded:
         logger.info("Framework knowledge seeded into knowledge graph")
 
     # Check if graph needs population with project data
-    stats = _knowledge_graph.get_stats()
+    stats = _state.knowledge_graph.get_stats()
     # Count only non-framework entities to decide if auto-populate is needed
     framework_types = {"concept", "pattern", "inference"}
     project_entity_count = sum(
@@ -328,15 +359,15 @@ def init_knowledge_graph(root: Path) -> None:
 
 def _auto_populate_graph(root: Path) -> None:
     """Auto-populate the knowledge graph from source code."""
-    if _knowledge_graph is None:
+    if _state.knowledge_graph is None:
         return
 
     from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
 
-    handlers = KnowledgeGraphHandlers(_knowledge_graph)
+    handlers = KnowledgeGraphHandlers(_state.knowledge_graph)
 
     # In dev mode, populate from src/
-    if _is_dev_mode:
+    if _state.is_dev_mode:
         src_path = root / "src"
         if src_path.exists():
             result = handlers.handle_auto_populate(
@@ -355,12 +386,12 @@ def _auto_populate_graph(root: Path) -> None:
 
 def get_knowledge_graph() -> KnowledgeGraph | None:
     """Get the knowledge graph instance."""
-    return _knowledge_graph
+    return _state.knowledge_graph
 
 
 def get_graph_db_path() -> Path | None:
     """Get the path to the knowledge graph database."""
-    return _graph_db_path
+    return _state.graph_db_path
 
 
 def reinit_knowledge_graph(project_root: Path) -> None:
@@ -370,28 +401,26 @@ def reinit_knowledge_graph(project_root: Path) -> None:
     Used when switching projects to ensure isolation — each project
     gets its own knowledge_graph.db with framework + project data.
     """
-    global _knowledge_graph, _graph_db_path
-
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
     from dazzle.mcp.knowledge_graph.seed import ensure_seeded
 
     # Close existing DB (file-based connections are per-call, so just discard)
-    _knowledge_graph = None
+    _state.knowledge_graph = None
 
     # Open new per-project DB
-    _graph_db_path = project_root / ".dazzle" / "knowledge_graph.db"
-    _graph_db_path.parent.mkdir(parents=True, exist_ok=True)
+    _state.graph_db_path = project_root / ".dazzle" / "knowledge_graph.db"
+    _state.graph_db_path.parent.mkdir(parents=True, exist_ok=True)
 
-    _knowledge_graph = KnowledgeGraph(_graph_db_path)
-    logger.info(f"Knowledge graph re-initialized at: {_graph_db_path}")
+    _state.knowledge_graph = KnowledgeGraph(_state.graph_db_path)
+    logger.info(f"Knowledge graph re-initialized at: {_state.graph_db_path}")
 
     # Seed framework data (fast if already seeded — version check)
-    ensure_seeded(_knowledge_graph)
+    ensure_seeded(_state.knowledge_graph)
 
     # Populate project DSL data
     from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
 
-    handlers = KnowledgeGraphHandlers(_knowledge_graph)
+    handlers = KnowledgeGraphHandlers(_state.knowledge_graph)
     result = handlers.handle_populate_from_appspec(project_path=str(project_root))
     logger.info(f"Populated KG from DSL for {project_root.name}: {result}")
 
@@ -408,13 +437,11 @@ def init_activity_log(root: Path) -> None:
     clearing any stale entries from a previous session.
     Also initializes the SQLite-backed ActivityStore if the KG is available.
     """
-    global _activity_log, _activity_store
-
     from dazzle.mcp.server.activity_log import ActivityLog
 
     log_path = root / ".dazzle" / "mcp-activity.log"
-    _activity_log = ActivityLog(log_path)
-    _activity_log.clear()  # Fresh log per server session
+    _state.activity_log = ActivityLog(log_path)
+    _state.activity_log.clear()  # Fresh log per server session
     logger.info("Activity log initialized at: %s", log_path)
 
     # Also init the SQLite-backed activity store
@@ -423,9 +450,7 @@ def init_activity_log(root: Path) -> None:
 
 def init_activity_store(root: Path) -> None:
     """Initialize the SQLite-backed activity store from the KG."""
-    global _activity_store
-
-    graph = _knowledge_graph
+    graph = _state.knowledge_graph
     if graph is None:
         logger.debug("KG not available, skipping ActivityStore init")
         return
@@ -447,21 +472,21 @@ def init_activity_store(root: Path) -> None:
             project_path=str(root),
             version=version,
         )
-        _activity_store = ActivityStore(graph, session_id)
+        _state.activity_store = ActivityStore(graph, session_id)
         logger.info("Activity store initialized (session %s)", session_id[:8])
     except Exception:
         logger.debug("Failed to init ActivityStore", exc_info=True)
-        _activity_store = None
+        _state.activity_store = None
 
 
 def get_activity_log() -> ActivityLog | None:
     """Get the activity log instance."""
-    return _activity_log
+    return _state.activity_log
 
 
 def get_activity_store() -> ActivityStore | None:
     """Get the SQLite-backed activity store instance."""
-    return _activity_store
+    return _state.activity_store
 
 
 def init_browser_gate(max_concurrent: int | None = None) -> None:
@@ -489,19 +514,63 @@ def refresh_knowledge_graph(root_path: str | None = None) -> dict[str, Any]:
     Returns:
         Population statistics
     """
-    if _knowledge_graph is None:
+    if _state.knowledge_graph is None:
         return {"error": "Knowledge graph not initialized"}
 
     from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
 
-    handlers = KnowledgeGraphHandlers(_knowledge_graph)
+    handlers = KnowledgeGraphHandlers(_state.knowledge_graph)
 
-    populate_path = root_path or str(_project_root)
-    if _is_dev_mode and not root_path:
-        populate_path = str(_project_root / "src")
+    populate_path = root_path or str(_state.project_root)
+    if _state.is_dev_mode and not root_path:
+        populate_path = str(_state.project_root / "src")
 
     result = handlers.handle_auto_populate(
         root_path=populate_path,
         max_files=1000,
     )
     return result
+
+
+# ============================================================================
+# Backward-compatible module proxy
+# ============================================================================
+#
+# Some callers (tests) access old module-level globals like
+# ``state._knowledge_graph`` directly.  The mapping below lets reads
+# and writes of the old names proxy through to ``_state`` attributes.
+
+_LEGACY_ATTR_MAP: dict[str, str] = {
+    "_project_root": "project_root",
+    "_is_dev_mode": "is_dev_mode",
+    "_active_project": "active_project",
+    "_available_projects": "available_projects",
+    "_knowledge_graph": "knowledge_graph",
+    "_graph_db_path": "graph_db_path",
+    "_activity_log": "activity_log",
+    "_activity_store": "activity_store",
+    "_roots_cache": "_roots_cache",
+}
+
+
+class _StateModule(types.ModuleType):
+    """Module subclass that proxies legacy global names to ``_state``."""
+
+    def __getattr__(self, name: str) -> Any:
+        mapped = _LEGACY_ATTR_MAP.get(name)
+        if mapped is not None:
+            return getattr(_state, mapped)
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        mapped = _LEGACY_ATTR_MAP.get(name)
+        if mapped is not None:
+            setattr(_state, mapped, value)
+        else:
+            super().__setattr__(name, value)
+
+
+# Replace this module in sys.modules so attribute access is intercepted.
+_mod = _StateModule(__name__)
+_mod.__dict__.update({k: v for k, v in sys.modules[__name__].__dict__.items() if k != "__class__"})
+sys.modules[__name__] = _mod
