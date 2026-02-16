@@ -543,13 +543,13 @@ def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
             "faq": ["items"],
             "steps": ["items"],
             "testimonials": ["items"],
-            "pricing": ["plans"],
-            "card_grid": ["cards"],
+            "pricing": ["tiers"],
+            "card_grid": ["items"],
             "split_content": ["headline"],
             "trust_bar": ["items"],
-            "value_highlight": ["metric"],
+            "value_highlight": ["headline"],
             "logo_cloud": ["logos"],
-            "comparison": ["plans"],
+            "comparison": ["items"],
         }
 
         # Build issues index by location
