@@ -351,6 +351,9 @@ class TypeParserMixin:
             elif token.value == "auto_update":
                 self.advance()
                 modifiers.append(ir.FieldModifier.AUTO_UPDATE)
+            elif token.value == "sensitive":
+                self.advance()
+                modifiers.append(ir.FieldModifier.SENSITIVE)
             elif self.match(TokenType.EQUALS):
                 # default=value
                 self.advance()

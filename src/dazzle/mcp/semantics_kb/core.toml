@@ -93,6 +93,7 @@ related = [
 ]
 v0_7_changes = "Enhanced with state machines, invariants, computed fields, and access rules"
 v0_7_1_changes = "Added intent, domain/patterns tags, extends archetypes, examples block, invariant message/code"
+v0_28_3_changes = "Added sensitive modifier for PII masking and audit compliance"
 
 
 [concepts.surface]

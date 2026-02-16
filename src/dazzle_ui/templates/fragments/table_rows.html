@@ -24,6 +24,9 @@
       {{ item[col.key] | dateformat }}
     {% elif col.type == "currency" %}
       {{ item[col.key] | currency(col.currency_code or "GBP") }}
+    {% elif col.type == "sensitive" %}
+      {% set raw = item[col.key] | default("") | string %}
+      {% if raw | length > 4 %}{{ "****" ~ raw[-4:] }}{% elif raw %}****{% else %}{% endif %}
     {% elif col.type == "percentage" %}
       {{ item[col.key] | default("") }}%
     {% else %}

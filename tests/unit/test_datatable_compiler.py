@@ -273,3 +273,81 @@ class TestBackwardCompat:
         assert ctx.table is not None
         assert ctx.table.entity_name == "Task"
         assert ctx.table.table_id == "dt-task_list"
+
+
+# ---------------------------------------------------------------------------
+# Tests — sensitive field handling
+# ---------------------------------------------------------------------------
+
+
+class TestSensitiveColumn:
+    """Sensitive fields should be masked in list views and excluded from filters."""
+
+    def _employee_entity(self) -> ir.EntitySpec:
+        """Build Employee entity with a sensitive field."""
+        return ir.EntitySpec(
+            name="Employee",
+            title="Employee",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                ir.FieldSpec(
+                    name="name",
+                    type=ir.FieldType(kind=FieldTypeKind.STR, max_length=200),
+                    modifiers=[FieldModifier.REQUIRED],
+                ),
+                ir.FieldSpec(
+                    name="bank_account",
+                    type=ir.FieldType(kind=FieldTypeKind.STR, max_length=8),
+                    modifiers=[FieldModifier.SENSITIVE],
+                ),
+            ],
+        )
+
+    def _employee_surface(self, ux: ir.UXSpec | None = None) -> ir.SurfaceSpec:
+        return ir.SurfaceSpec(
+            name="employee_list",
+            title="Employees",
+            entity_ref="Employee",
+            mode=SurfaceMode.LIST,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    title="Main",
+                    elements=[
+                        ir.SurfaceElement(field_name="name", label="Name"),
+                        ir.SurfaceElement(field_name="bank_account", label="Bank Account"),
+                    ],
+                )
+            ],
+            actions=[],
+            ux=ux,
+        )
+
+    def test_sensitive_column_type(self) -> None:
+        """Sensitive fields should get column type 'sensitive'."""
+        surface = self._employee_surface()
+        entity = self._employee_entity()
+
+        ctx = compile_surface_to_context(surface, entity)
+
+        assert ctx.table is not None
+        cols_by_key = {c.key: c for c in ctx.table.columns}
+        assert cols_by_key["bank_account"].type == "sensitive"
+        assert cols_by_key["name"].type == "text"
+
+    def test_sensitive_column_not_filterable(self) -> None:
+        """Sensitive fields should not be filterable even if ux.filter requests it."""
+        ux = ir.UXSpec(filter=["name", "bank_account"])
+        surface = self._employee_surface(ux=ux)
+        entity = self._employee_entity()
+
+        ctx = compile_surface_to_context(surface, entity)
+
+        assert ctx.table is not None
+        cols_by_key = {c.key: c for c in ctx.table.columns}
+        assert cols_by_key["name"].filterable is True
+        assert cols_by_key["bank_account"].filterable is False

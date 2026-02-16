@@ -195,3 +195,43 @@ class TestOpenAPIGeneration:
 
         # Should contain expected content
         assert "openapi:" in yaml_str or '"openapi"' in yaml_str
+
+    def test_openapi_sensitive_field_extension(self) -> None:
+        """Test that sensitive fields get x-sensitive: true in OpenAPI."""
+        from dazzle.core.ir import FieldModifier, FieldType, FieldTypeKind
+        from dazzle.specs.openapi import generate_openapi
+
+        entity = EntitySpec(
+            name="Employee",
+            title="Employee",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                FieldSpec(
+                    name="name",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=200),
+                    modifiers=[FieldModifier.REQUIRED],
+                ),
+                FieldSpec(
+                    name="bank_account",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=8),
+                    modifiers=[FieldModifier.SENSITIVE],
+                ),
+            ],
+        )
+        spec = AppSpec(
+            name="Test",
+            domain=DomainSpec(entities=[entity]),
+        )
+        openapi = generate_openapi(spec)
+
+        schema = openapi["components"]["schemas"]["Employee"]
+        props = schema["properties"]
+
+        # bank_account should have x-sensitive
+        assert props["bank_account"].get("x-sensitive") is True
+        # name should NOT have x-sensitive
+        assert "x-sensitive" not in props["name"]

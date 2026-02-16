@@ -258,15 +258,16 @@ def create_debug_routes(
             elif field.type.kind == "enum" and field.type.enum_values:
                 type_str = f"enum({', '.join(field.type.enum_values)})"
 
-            fields.append(
-                {
-                    "name": field.name,
-                    "type": type_str,
-                    "required": field.required,
-                    "unique": field.unique,
-                    "indexed": field.indexed,
-                }
-            )
+            field_info: dict[str, Any] = {
+                "name": field.name,
+                "type": type_str,
+                "required": field.required,
+                "unique": field.unique,
+                "indexed": field.indexed,
+            }
+            if field.sensitive:
+                field_info["sensitive"] = True
+            fields.append(field_info)
 
         # Get sample data
         sample: list[dict[str, Any]] = []

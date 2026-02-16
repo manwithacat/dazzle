@@ -118,6 +118,7 @@ class FieldModifier(StrEnum):
     UNIQUE_NULLABLE = "unique?"
     AUTO_ADD = "auto_add"
     AUTO_UPDATE = "auto_update"
+    SENSITIVE = "sensitive"
 
 
 class FieldSpec(BaseModel):
@@ -160,6 +161,11 @@ class FieldSpec(BaseModel):
             FieldModifier.UNIQUE in self.modifiers
             or FieldModifier.UNIQUE_NULLABLE in self.modifiers
         )
+
+    @property
+    def is_sensitive(self) -> bool:
+        """Check if field contains sensitive data (PII, credentials, etc.)."""
+        return FieldModifier.SENSITIVE in self.modifiers
 
 
 def _rebuild_field_spec() -> None:

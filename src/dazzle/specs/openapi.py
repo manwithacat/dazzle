@@ -200,6 +200,10 @@ def _field_to_schema(field: FieldSpec, entity_name: str) -> dict[str, Any]:
         if "type" in schema:
             schema["type"] = [schema["type"], "null"]
 
+    # Mark sensitive fields with OpenAPI extension
+    if FieldModifier.SENSITIVE in field.modifiers:
+        schema["x-sensitive"] = True
+
     return schema
 
 

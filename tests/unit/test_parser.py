@@ -160,6 +160,31 @@ entity ClientContact "Client Contact":
         assert contacts_field.type.ref_entity == "Contact"
         assert contacts_field.type.via_entity == "ClientContact"
 
+    def test_sensitive_modifier(self):
+        """Test sensitive modifier for PII fields."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Employee "Employee":
+  id: uuid pk
+  name: str(200) required
+  bank_account: str(8) sensitive
+  ni_number: str(9) required sensitive
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        employee = fragment.entities[0]
+
+        name_field = next(f for f in employee.fields if f.name == "name")
+        bank_field = next(f for f in employee.fields if f.name == "bank_account")
+        ni_field = next(f for f in employee.fields if f.name == "ni_number")
+
+        assert not name_field.is_sensitive
+        assert bank_field.is_sensitive
+        assert not bank_field.is_required
+        assert ni_field.is_sensitive
+        assert ni_field.is_required
+
 
 class TestV025KeywordsAsIdentifiers:
     """Tests that v0.25.0 keywords can be used as enum values and identifiers."""

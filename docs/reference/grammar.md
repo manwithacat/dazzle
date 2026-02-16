@@ -277,6 +277,7 @@ field_modifier ::= "required"
                  | "unique?"
                  | "auto_add"
                  | "auto_update"
+                 | "sensitive"
                  | "=" literal ;
 
 literal       ::= STRING | NUMBER | BOOLEAN ;

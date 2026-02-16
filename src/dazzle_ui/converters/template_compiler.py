@@ -214,13 +214,16 @@ def _build_columns(
                 if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
                     col_key = f"{element.field_name}_minor"
                     col_currency = field_spec.type.currency_code or "GBP"
+                # Sensitive fields are masked in list views (show last 4 chars)
+                is_sensitive = bool(field_spec and field_spec.is_sensitive)
+                col_type = "sensitive" if is_sensitive else _field_type_to_column_type(field_spec)
                 columns.append(
                     ColumnContext(
                         key=col_key,
                         label=element.label or element.field_name.replace("_", " ").title(),
-                        type=_field_type_to_column_type(field_spec),
+                        type=col_type,
                         sortable=has_sort,
-                        filterable=filterable,
+                        filterable=filterable and not is_sensitive,
                         filter_type=filter_type,
                         filter_options=filter_options,
                         currency_code=col_currency,
@@ -229,7 +232,8 @@ def _build_columns(
     elif entity and entity.fields:
         for field in entity.fields:
             if not field.is_primary_key:
-                filterable = field.name in filter_fields
+                is_sensitive = field.is_sensitive
+                filterable = field.name in filter_fields and not is_sensitive
                 filter_type, filter_options = (
                     _infer_filter_type(field, entity, field.name) if filterable else ("text", [])
                 )
@@ -239,11 +243,12 @@ def _build_columns(
                 if field.type and field.type.kind == FieldTypeKind.MONEY:
                     col_key = f"{field.name}_minor"
                     col_currency = field.type.currency_code or "GBP"
+                col_type = "sensitive" if is_sensitive else _field_type_to_column_type(field)
                 columns.append(
                     ColumnContext(
                         key=col_key,
                         label=field.name.replace("_", " ").title(),
-                        type=_field_type_to_column_type(field),
+                        type=col_type,
                         sortable=has_sort,
                         filterable=filterable,
                         filter_type=filter_type,
