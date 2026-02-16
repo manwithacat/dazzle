@@ -307,6 +307,12 @@ class Site404Context(BaseModel):
     custom_css: bool = False
 
 
+class SiteErrorContext(Site404Context):
+    """Context for generic error page templates (403, 500, etc.)."""
+
+    message: str = ""
+
+
 def resolve_fragment_for_field(field: FieldContext) -> FragmentContext | None:
     """If *field* has a ``source``, wrap it into a FragmentContext for search_select.
 

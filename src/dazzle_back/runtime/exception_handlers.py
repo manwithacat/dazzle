@@ -115,15 +115,17 @@ def register_exception_handlers(app: FastAPI) -> None:
         return json_or_htmx_error(request, errors, error_type="validation_error")
 
 
-def register_site_404_handler(
+def register_site_error_handlers(
     app: FastAPI,
     sitespec_data: dict[str, Any],
     project_root: Path | None = None,
 ) -> None:
     """
-    Register custom 404 handler for site pages.
+    Register custom HTTP error handlers for site pages.
 
-    Returns HTML 404 pages for browser requests when a SiteSpec is configured.
+    Returns HTML error pages for browser requests when a SiteSpec is configured:
+    - 403: Access denied page
+    - 404: Page not found page
     API requests still receive JSON responses.
 
     Args:
@@ -133,7 +135,7 @@ def register_site_404_handler(
     """
     from starlette.exceptions import HTTPException as StarletteHTTPException
 
-    from dazzle_ui.runtime.site_context import build_site_404_context
+    from dazzle_ui.runtime.site_context import build_site_404_context, build_site_error_context
     from dazzle_ui.runtime.template_renderer import render_site_page
 
     has_custom_css = bool(
@@ -141,24 +143,38 @@ def register_site_404_handler(
     )
 
     @app.exception_handler(StarletteHTTPException)
-    async def custom_404_handler(request: Any, exc: StarletteHTTPException) -> Any:
-        """Custom 404 handler that renders HTML for browser requests."""
-        if exc.status_code == 404:
-            from fastapi.responses import HTMLResponse
+    async def custom_http_error_handler(request: Any, exc: StarletteHTTPException) -> Any:
+        """Custom error handler that renders HTML for browser requests."""
+        from fastapi.responses import HTMLResponse
 
-            # Only serve HTML 404 for browser requests (not API calls)
-            accept = request.headers.get("accept", "")
-            if "text/html" in accept:
-                ctx = build_site_404_context(sitespec_data, custom_css=has_custom_css)
-                return HTMLResponse(
-                    content=render_site_page("site/404.html", ctx),
-                    status_code=404,
-                )
+        accept = request.headers.get("accept", "")
+        is_browser = "text/html" in accept
 
-        # For non-404 or API requests, return default JSON response
+        if exc.status_code == 403 and is_browser:
+            message = exc.detail if isinstance(exc.detail, str) else "Access denied"
+            ctx = build_site_error_context(
+                sitespec_data, message=message, custom_css=has_custom_css
+            )
+            return HTMLResponse(
+                content=render_site_page("site/403.html", ctx),
+                status_code=403,
+            )
+
+        if exc.status_code == 404 and is_browser:
+            ctx = build_site_404_context(sitespec_data, custom_css=has_custom_css)
+            return HTMLResponse(
+                content=render_site_page("site/404.html", ctx),
+                status_code=404,
+            )
+
+        # For API requests or other status codes, return JSON
         from fastapi.responses import JSONResponse
 
         return JSONResponse(
             status_code=exc.status_code,
             content={"detail": exc.detail},
         )
+
+
+# Backward-compatible alias
+register_site_404_handler = register_site_error_handlers

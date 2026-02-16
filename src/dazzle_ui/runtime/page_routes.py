@@ -18,7 +18,7 @@ from dazzle.core import ir
 logger = logging.getLogger(__name__)
 
 try:
-    from fastapi import APIRouter, Request
+    from fastapi import APIRouter, HTTPException, Request
     from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
     FASTAPI_AVAILABLE = True
@@ -295,12 +295,18 @@ def create_page_routes(
                         except Exception:
                             logger.debug("Failed to resolve auth for workspace nav", exc_info=True)
 
-                    # Enforce workspace persona access control
-                    if ws_allowed_personas:
+                    # Enforce workspace persona access control (superusers bypass)
+                    is_superuser = (
+                        get_auth_context is not None
+                        and auth_ctx is not None  # type: ignore[possibly-undefined]
+                        and auth_ctx.user is not None
+                        and auth_ctx.user.is_superuser
+                    )
+                    if ws_allowed_personas and not is_superuser:
                         if not user_roles or not any(r in ws_allowed_personas for r in user_roles):
-                            return JSONResponse(
+                            raise HTTPException(
                                 status_code=403,
-                                content={"detail": "Access denied: insufficient role"},
+                                detail="You don't have permission to access this workspace.",
                             )
 
                     from dazzle_back.runtime.htmx_response import HtmxDetails

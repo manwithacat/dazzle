@@ -13,6 +13,7 @@ from dazzle_ui.runtime.template_context import (
     Site404Context,
     SiteAuthContext,
     SiteCTAContext,
+    SiteErrorContext,
     SiteFooterColumn,
     SiteFooterLink,
     SiteNavItem,
@@ -260,4 +261,38 @@ def build_site_404_context(
         footer_columns=_extract_footer_columns(footer),
         copyright_text=_build_copyright_text(footer, brand),
         custom_css=custom_css,
+    )
+
+
+def build_site_error_context(
+    sitespec_data: dict[str, Any],
+    *,
+    message: str = "",
+    custom_css: bool = False,
+) -> SiteErrorContext:
+    """Build a SiteErrorContext for error page templates (403, 500, etc.).
+
+    Args:
+        sitespec_data: Site specification data.
+        message: Error message to display.
+        custom_css: Include project-level custom CSS.
+
+    Returns:
+        SiteErrorContext ready for template rendering.
+    """
+    brand = sitespec_data.get("brand", {})
+    product_name = brand.get("product_name", "My App")
+    layout = sitespec_data.get("layout", {})
+    nav = layout.get("nav", {})
+    auth_config = layout.get("auth") or {}
+    footer = layout.get("footer", {})
+
+    return SiteErrorContext(
+        product_name=product_name,
+        nav_items=_extract_nav_items(nav),
+        nav_cta=_extract_nav_cta(nav, auth_config),
+        footer_columns=_extract_footer_columns(footer),
+        copyright_text=_build_copyright_text(footer, brand),
+        custom_css=custom_css,
+        message=message,
     )

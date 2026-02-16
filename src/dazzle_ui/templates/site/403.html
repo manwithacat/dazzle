@@ -1,0 +1,22 @@
+{% extends "site/site_base.html" %}
+
+{% block title %}Access Denied - {{ product_name }}{% endblock %}
+
+{% block body %}
+{% include "site/includes/nav.html" %}
+
+<main>
+  <section class="dz-section dz-section-hero">
+    <div class="dz-section-content dz-404-section">
+      <h1 class="dz-404-headline">403</h1>
+      <p class="dz-subhead">{{ message | default("You don't have permission to access this page.") }}</p>
+      <div class="dz-cta-group dz-404-cta">
+        <a href="/app" class="btn btn-primary">Go to Dashboard</a>
+        <a href="/" class="btn btn-outline">Go Home</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+{% include "site/includes/footer.html" %}
+{% endblock %}

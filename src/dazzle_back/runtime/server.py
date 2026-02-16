@@ -827,7 +827,10 @@ class DazzleBackendApp:
 
                             # RBAC: enforce workspace persona restrictions on region data
                             if _raccess and _raccess.allow_personas and auth_ctx:
-                                if not any(r in _raccess.allow_personas for r in auth_ctx.roles):
+                                is_super = auth_ctx.user and auth_ctx.user.is_superuser
+                                if not is_super and not any(
+                                    r in _raccess.allow_personas for r in auth_ctx.roles
+                                ):
                                     raise HTTPException(
                                         status_code=403,
                                         detail="Workspace access denied",
