@@ -154,36 +154,36 @@ def run_steps_sequential(
 # ---------------------------------------------------------------------------
 
 
-def _extract_validate_metrics(data: dict[str, Any]) -> dict[str, Any]:
+def _extract_validate_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     return {
-        "status": data.get("status", "unknown"),
-        "modules": data.get("module_count", data.get("modules", 0)),
-        "entities": data.get("entity_count", data.get("entities", 0)),
-        "surfaces": data.get("surface_count", data.get("surfaces", 0)),
+        "status": step_output.get("status", "unknown"),
+        "modules": step_output.get("module_count", step_output.get("modules", 0)),
+        "entities": step_output.get("entity_count", step_output.get("entities", 0)),
+        "surfaces": step_output.get("surface_count", step_output.get("surfaces", 0)),
     }
 
 
-def _extract_lint_metrics(data: dict[str, Any]) -> dict[str, Any]:
-    errs = data.get("errors", [])
-    warns = data.get("warnings", [])
+def _extract_lint_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
+    errs = step_output.get("errors", [])
+    warns = step_output.get("warnings", [])
     return {
         "errors": len(errs) if isinstance(errs, list) else errs,
         "warnings": len(warns) if isinstance(warns, list) else warns,
     }
 
 
-def _extract_fidelity_metrics(data: dict[str, Any]) -> dict[str, Any]:
-    surfaces = data.get("surfaces", [])
+def _extract_fidelity_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
+    surfaces = step_output.get("surfaces", [])
     return {
-        "overall_fidelity": data.get("overall_fidelity"),
-        "total_gaps": data.get("total_gaps", 0),
-        "story_coverage": data.get("story_coverage"),
+        "overall_fidelity": step_output.get("overall_fidelity"),
+        "total_gaps": step_output.get("total_gaps", 0),
+        "story_coverage": step_output.get("story_coverage"),
         "surfaces_with_gaps": len(surfaces),
     }
 
 
-def _extract_composition_audit_metrics(data: dict[str, Any]) -> dict[str, Any]:
-    pages = data.get("pages", [])
+def _extract_composition_audit_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
+    pages = step_output.get("pages", [])
     total_violations: dict[str, int] = {}
     for page in pages if isinstance(pages, list) else []:
         if not isinstance(page, dict):
@@ -191,83 +191,83 @@ def _extract_composition_audit_metrics(data: dict[str, Any]) -> dict[str, Any]:
         for sev, count in page.get("violations_count", {}).items():
             total_violations[sev] = total_violations.get(sev, 0) + count
     return {
-        "overall_score": data.get("overall_score", 100),
+        "overall_score": step_output.get("overall_score", 100),
         "pages_audited": len(pages) if isinstance(pages, list) else 0,
         "violations": total_violations,
     }
 
 
-def _extract_test_generate_metrics(data: dict[str, Any]) -> dict[str, Any]:
-    tests = data.get("tests", [])
+def _extract_test_generate_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
+    tests = step_output.get("tests", [])
     categories: dict[str, int] = {}
     for t in tests if isinstance(tests, list) else []:
         cat = t.get("category", "unknown") if isinstance(t, dict) else "unknown"
         categories[cat] = categories.get(cat, 0) + 1
     return {
-        "total_tests": data.get("total_tests", len(tests) if isinstance(tests, list) else 0),
-        "categories": categories or data.get("categories", {}),
+        "total_tests": step_output.get("total_tests", len(tests) if isinstance(tests, list) else 0),
+        "categories": categories or step_output.get("categories", {}),
     }
 
 
-def _extract_test_coverage_metrics(data: dict[str, Any]) -> dict[str, Any]:
+def _extract_test_coverage_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     return {
-        "overall_coverage": data.get("overall_coverage", data.get("coverage")),
-        "total_constructs": data.get("total_constructs", 0),
-        "tested_constructs": data.get("tested_constructs", 0),
+        "overall_coverage": step_output.get("overall_coverage", step_output.get("coverage")),
+        "total_constructs": step_output.get("total_constructs", 0),
+        "tested_constructs": step_output.get("tested_constructs", 0),
     }
 
 
-def _extract_story_coverage_metrics(data: dict[str, Any]) -> dict[str, Any]:
+def _extract_story_coverage_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     metrics: dict[str, Any] = {
-        "total_stories": data.get("total_stories", data.get("total", 0)),
-        "covered": data.get("covered", 0),
-        "partial": data.get("partial", 0),
-        "uncovered": data.get("uncovered", 0),
-        "coverage_percent": data.get("coverage_percent", data.get("coverage", 0)),
+        "total_stories": step_output.get("total_stories", step_output.get("total", 0)),
+        "covered": step_output.get("covered", 0),
+        "partial": step_output.get("partial", 0),
+        "uncovered": step_output.get("uncovered", 0),
+        "coverage_percent": step_output.get("coverage_percent", step_output.get("coverage", 0)),
     }
-    eff = data.get("effective_coverage_percent")
+    eff = step_output.get("effective_coverage_percent")
     if eff is not None:
         metrics["effective_coverage_percent"] = eff
     return metrics
 
 
-def _extract_test_design_gaps_metrics(data: dict[str, Any]) -> dict[str, Any]:
-    gaps = data.get("gaps", [])
+def _extract_test_design_gaps_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
+    gaps = step_output.get("gaps", [])
     by_severity: dict[str, int] = {}
     for g in gaps if isinstance(gaps, list) else []:
         sev = g.get("severity", "unknown") if isinstance(g, dict) else "unknown"
         by_severity[sev] = by_severity.get(sev, 0) + 1
     return {
-        "coverage_score": data.get("coverage_score", data.get("coverage")),
-        "gap_count": len(gaps) if isinstance(gaps, list) else data.get("gap_count", 0),
+        "coverage_score": step_output.get("coverage_score", step_output.get("coverage")),
+        "gap_count": len(gaps) if isinstance(gaps, list) else step_output.get("gap_count", 0),
         "gaps_by_severity": by_severity,
     }
 
 
-def _extract_semantics_extract_metrics(data: dict[str, Any]) -> dict[str, Any]:
+def _extract_semantics_extract_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     return {
-        "entity_count": data.get("entity_count", len(data.get("entities", []))),
-        "command_count": data.get("command_count", len(data.get("commands", []))),
-        "event_count": data.get("event_count", len(data.get("events", []))),
-        "tenancy_signal_count": data.get(
-            "tenancy_signal_count", len(data.get("tenancy_signals", []))
+        "entity_count": step_output.get("entity_count", len(step_output.get("entities", []))),
+        "command_count": step_output.get("command_count", len(step_output.get("commands", []))),
+        "event_count": step_output.get("event_count", len(step_output.get("events", []))),
+        "tenancy_signal_count": step_output.get(
+            "tenancy_signal_count", len(step_output.get("tenancy_signals", []))
         ),
-        "compliance_signal_count": data.get(
-            "compliance_signal_count", len(data.get("compliance_signals", []))
+        "compliance_signal_count": step_output.get(
+            "compliance_signal_count", len(step_output.get("compliance_signals", []))
         ),
     }
 
 
-def _extract_semantics_validate_metrics(data: dict[str, Any]) -> dict[str, Any]:
+def _extract_semantics_validate_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     return {
-        "valid": data.get("valid", data.get("status") == "valid"),
-        "error_count": data.get("error_count", len(data.get("errors", []))),
-        "warning_count": data.get("warning_count", len(data.get("warnings", []))),
+        "valid": step_output.get("valid", step_output.get("status") == "valid"),
+        "error_count": step_output.get("error_count", len(step_output.get("errors", []))),
+        "warning_count": step_output.get("warning_count", len(step_output.get("warnings", []))),
     }
 
 
-def _extract_run_all_metrics(data: dict[str, Any]) -> dict[str, Any]:
-    results = data.get("results", [])
+def _extract_run_all_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
+    results = step_output.get("results", [])
     by_cat: dict[str, dict[str, int]] = {}
     for r in results if isinstance(results, list) else []:
         if not isinstance(r, dict):
@@ -280,9 +280,9 @@ def _extract_run_all_metrics(data: dict[str, Any]) -> dict[str, Any]:
         else:
             by_cat[cat]["failed"] += 1
     return {
-        "total": data.get("total", len(results) if isinstance(results, list) else 0),
-        "passed": data.get("passed", 0),
-        "failed": data.get("failed", 0),
+        "total": step_output.get("total", len(results) if isinstance(results, list) else 0),
+        "passed": step_output.get("passed", 0),
+        "failed": step_output.get("failed", 0),
         "by_category": by_cat,
     }
 
@@ -435,25 +435,25 @@ def collect_top_issues(
 # ---------------------------------------------------------------------------
 
 
-def step_has_issues(operation: str, result: Any) -> bool:
+def step_has_issues(operation: str, step_result: Any) -> bool:
     """Check whether a step result contains actionable issues."""
-    if not isinstance(result, dict):
+    if not isinstance(step_result, dict):
         return False
 
     if operation == "dsl(lint)":
-        errs = result.get("errors", [])
+        errs = step_result.get("errors", [])
         return bool(errs)
 
     if operation == "dsl(fidelity)":
-        total_gaps: int = result.get("total_gaps", 0) or 0
+        total_gaps: int = step_result.get("total_gaps", 0) or 0
         return total_gaps > 0
 
     if operation == "composition(audit)":
-        score: int = result.get("overall_score", 100) or 100
+        score: int = step_result.get("overall_score", 100) or 100
         return score < 100
 
     if operation in ("dsl_test(coverage)", "story(coverage)", "process(coverage)"):
-        cov: float | str = result.get("coverage_percent") or result.get("coverage") or 100
+        cov: float | str = step_result.get("coverage_percent") or step_result.get("coverage") or 100
         if isinstance(cov, str):
             try:
                 cov = float(cov.rstrip("%"))
@@ -464,16 +464,16 @@ def step_has_issues(operation: str, result: Any) -> bool:
         return float(cov) < 100
 
     if operation == "test_design(gaps)":
-        gaps = result.get("gaps", [])
+        gaps = step_result.get("gaps", [])
         return len(gaps) > 0
 
     if operation == "dsl_test(run_all)":
-        failed: int = result.get("failed", 0) or 0
+        failed: int = step_result.get("failed", 0) or 0
         return failed > 0
 
     if operation == "semantics(validate_events)":
-        err_count: int = result.get("error_count", 0) or 0
-        warn_count: int = result.get("warning_count", 0) or 0
+        err_count: int = step_result.get("error_count", 0) or 0
+        warn_count: int = step_result.get("warning_count", 0) or 0
         return err_count > 0 or warn_count > 0
 
     return False
@@ -484,31 +484,31 @@ def step_has_issues(operation: str, result: Any) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def filter_issues_result(operation: str, result: Any) -> Any:
+def filter_issues_result(operation: str, step_result: Any) -> Any:
     """Trim expanded step results to only the actionable parts."""
-    if not isinstance(result, dict):
-        return result
+    if not isinstance(step_result, dict):
+        return step_result
 
     if operation in ("story(coverage)", "process(coverage)"):
-        stories = result.get("stories", [])
+        stories = step_result.get("stories", [])
         if isinstance(stories, list):
             filtered = [
                 s
                 for s in stories
                 if isinstance(s, dict) and s.get("status") in ("partial", "uncovered")
             ]
-            result = {**result, "stories": filtered}
-            result.pop("showing", None)
-            result.pop("offset", None)
-            result.pop("has_more", None)
-            result.pop("guidance", None)
-        return result
+            step_result = {**step_result, "stories": filtered}
+            step_result.pop("showing", None)
+            step_result.pop("offset", None)
+            step_result.pop("has_more", None)
+            step_result.pop("guidance", None)
+        return step_result
 
     if operation == "composition(audit)":
-        result = {k: v for k, v in result.items() if k != "markdown"}
-        return result
+        step_result = {k: v for k, v in step_result.items() if k != "markdown"}
+        return step_result
 
-    return result
+    return step_result
 
 
 # ---------------------------------------------------------------------------

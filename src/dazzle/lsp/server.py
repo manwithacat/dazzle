@@ -504,6 +504,45 @@ def definition(ls: DazzleLanguageServer, params: DefinitionParams) -> Location |
     return None
 
 
+def _detect_inline_context(prefix: str) -> str | None:
+    """Check for inline completion triggers on the current line.
+
+    Returns a context string if a trigger is found, or None.
+    """
+    if re.search(r"\bmode\s*:\s*$", prefix):
+        return "mode_value"
+    if re.search(r"\bref\s+$", prefix):
+        return "ref_target"
+    if re.search(r"\buses\s+entity\s+$", prefix):
+        return "ref_target"
+    if re.search(r"\bsource\s*:\s*$", prefix):
+        return "source_target"
+    if re.search(r"->\s*$", prefix):
+        return "transition_target"
+    return None
+
+
+def _detect_enclosing_block(lines: list[str], from_line: int) -> str:
+    """Walk backwards to find the enclosing construct keyword.
+
+    Returns a block context string: "entity_block", "surface_block",
+    "process_block", or "global".
+    """
+    for i in range(from_line, -1, -1):
+        m = _CONSTRUCT_RE.match(lines[i])
+        if m:
+            keyword = m.group(2)
+            if keyword == "entity":
+                return "entity_block"
+            elif keyword == "surface":
+                return "surface_block"
+            elif keyword == "process":
+                return "process_block"
+            else:
+                return "global"
+    return "global"
+
+
 def _detect_completion_context(text: str, line: int, character: int) -> str:
     """Detect the completion context from cursor position.
 
@@ -524,40 +563,20 @@ def _detect_completion_context(text: str, line: int, character: int) -> str:
 
     current_line = lines[line]
     prefix = current_line[:character]
-    prefix_stripped = prefix.strip()
 
     # Check current line patterns first
-    if re.search(r"\bmode\s*:\s*$", prefix):
-        return "mode_value"
-    if re.search(r"\bref\s+$", prefix):
-        return "ref_target"
-    if re.search(r"\buses\s+entity\s+$", prefix):
-        return "ref_target"
-    if re.search(r"\bsource\s*:\s*$", prefix):
-        return "source_target"
-    if re.search(r"->\s*$", prefix):
-        return "transition_target"
+    inline = _detect_inline_context(prefix)
+    if inline is not None:
+        return inline
 
     # Check indentation level — column 0 means top-level
     indent = len(current_line) - len(current_line.lstrip())
-    if indent == 0 and not prefix_stripped:
+    if indent == 0 and not prefix.strip():
         return "top_level"
 
     # Look at enclosing construct to determine block context
     if indent > 0:
-        for i in range(line - 1, -1, -1):
-            prev = lines[i]
-            m = _CONSTRUCT_RE.match(prev)
-            if m:
-                keyword = m.group(2)
-                if keyword == "entity":
-                    return "entity_block"
-                elif keyword == "surface":
-                    return "surface_block"
-                elif keyword == "process":
-                    return "process_block"
-                else:
-                    return "global"
+        return _detect_enclosing_block(lines, line - 1)
 
     return "global"
 
@@ -651,6 +670,145 @@ _PROCESS_SUBKEYWORDS = [
 ]
 
 
+NameIndex = dict[str, tuple[str, Any]]
+
+
+def _complete_top_level() -> list[CompletionItem]:
+    """Suggest construct keywords at the top level."""
+    return [
+        CompletionItem(label=kw, kind=CompletionItemKind.Keyword, detail="Construct")
+        for kw in _CONSTRUCT_KEYWORDS
+    ]
+
+
+def _complete_mode_value() -> list[CompletionItem]:
+    """Suggest mode values after 'mode:'."""
+    return [
+        CompletionItem(label=mode, kind=CompletionItemKind.EnumMember, detail="Mode")
+        for mode in _MODE_VALUES
+    ]
+
+
+def _complete_ref_target(index: NameIndex) -> list[CompletionItem]:
+    """Suggest entity names for 'ref' or 'uses entity'."""
+    return [
+        CompletionItem(
+            label=name,
+            kind=CompletionItemKind.Class,
+            detail="Entity",
+            documentation=getattr(spec, "title", name),
+        )
+        for name, (ctype, spec) in index.items()
+        if ctype == "entity"
+    ]
+
+
+def _complete_source_target(index: NameIndex) -> list[CompletionItem]:
+    """Suggest view names after 'source:'."""
+    return [
+        CompletionItem(
+            label=name,
+            kind=CompletionItemKind.TypeParameter,
+            detail="View",
+            documentation=getattr(spec, "title", name),
+        )
+        for name, (ctype, spec) in index.items()
+        if ctype == "view"
+    ]
+
+
+def _complete_transition_target(index: NameIndex) -> list[CompletionItem]:
+    """Suggest surface and experience names after '->'."""
+    return [
+        CompletionItem(
+            label=name,
+            kind=CompletionItemKind.Interface
+            if ctype == "surface"
+            else CompletionItemKind.Function,
+            detail=ctype.title(),
+            documentation=getattr(spec, "title", name),
+        )
+        for name, (ctype, spec) in index.items()
+        if ctype in ("surface", "experience")
+    ]
+
+
+def _complete_entity_block(index: NameIndex) -> list[CompletionItem]:
+    """Suggest field types, modifiers, and entity names inside an entity block."""
+    items: list[CompletionItem] = []
+    for ft in _FIELD_TYPES:
+        items.append(CompletionItem(label=ft, kind=CompletionItemKind.Keyword, detail="Field type"))
+    for mod in _FIELD_MODIFIERS:
+        items.append(CompletionItem(label=mod, kind=CompletionItemKind.Keyword, detail="Modifier"))
+    for name, (ctype, _) in index.items():
+        if ctype == "entity":
+            items.append(
+                CompletionItem(
+                    label=name, kind=CompletionItemKind.Class, detail="Entity (ref target)"
+                )
+            )
+    return items
+
+
+def _complete_surface_block(index: NameIndex) -> list[CompletionItem]:
+    """Suggest surface sub-keywords and referenceable names inside a surface block."""
+    items: list[CompletionItem] = [
+        CompletionItem(label=kw, kind=CompletionItemKind.Keyword, detail="Surface keyword")
+        for kw in _SURFACE_SUBKEYWORDS
+    ]
+    for name, (ctype, spec) in index.items():
+        if ctype in ("entity", "view", "surface", "experience"):
+            items.append(
+                CompletionItem(
+                    label=name,
+                    kind=CompletionItemKind.Class,
+                    detail=ctype.title(),
+                    documentation=getattr(spec, "title", name),
+                )
+            )
+    return items
+
+
+def _complete_process_block() -> list[CompletionItem]:
+    """Suggest process sub-keywords inside a process block."""
+    return [
+        CompletionItem(label=kw, kind=CompletionItemKind.Keyword, detail="Process keyword")
+        for kw in _PROCESS_SUBKEYWORDS
+    ]
+
+
+def _complete_global(index: NameIndex) -> list[CompletionItem]:
+    """Global fallback — all names, field types, and modifiers."""
+    items: list[CompletionItem] = []
+    for name, (ctype, spec) in index.items():
+        title = getattr(spec, "title", None) or getattr(spec, "description", None)
+        items.append(
+            CompletionItem(
+                label=name,
+                kind=CompletionItemKind.Text,
+                detail=ctype.replace("_", " ").title(),
+                documentation=title or name,
+            )
+        )
+    for ft in _FIELD_TYPES:
+        items.append(CompletionItem(label=ft, kind=CompletionItemKind.Keyword, detail="Field type"))
+    for mod in _FIELD_MODIFIERS:
+        items.append(CompletionItem(label=mod, kind=CompletionItemKind.Keyword, detail="Modifier"))
+    return items
+
+
+_COMPLETION_DISPATCHERS: dict[str, Any] = {
+    "top_level": lambda _idx: _complete_top_level(),
+    "mode_value": lambda _idx: _complete_mode_value(),
+    "ref_target": _complete_ref_target,
+    "source_target": _complete_source_target,
+    "transition_target": _complete_transition_target,
+    "entity_block": _complete_entity_block,
+    "surface_block": _complete_surface_block,
+    "process_block": lambda _idx: _complete_process_block(),
+}
+
+
 @server.feature(TEXT_DOCUMENT_COMPLETION)
 def completion(ls: DazzleLanguageServer, params: CompletionParams) -> CompletionList | None:
     """Provide context-aware completion suggestions."""
@@ -662,159 +820,9 @@ def completion(ls: DazzleLanguageServer, params: CompletionParams) -> Completion
         document.source, params.position.line, params.position.character
     )
 
-    items: list[CompletionItem] = []
     index = _build_name_index(ls.appspec)
-
-    if ctx == "top_level":
-        # Suggest construct keywords
-        for kw in _CONSTRUCT_KEYWORDS:
-            items.append(
-                CompletionItem(
-                    label=kw,
-                    kind=CompletionItemKind.Keyword,
-                    detail="Construct",
-                )
-            )
-
-    elif ctx == "mode_value":
-        for mode in _MODE_VALUES:
-            items.append(
-                CompletionItem(
-                    label=mode,
-                    kind=CompletionItemKind.EnumMember,
-                    detail="Mode",
-                )
-            )
-
-    elif ctx == "ref_target":
-        # Only entity names
-        for name, (ctype, spec) in index.items():
-            if ctype == "entity":
-                items.append(
-                    CompletionItem(
-                        label=name,
-                        kind=CompletionItemKind.Class,
-                        detail="Entity",
-                        documentation=getattr(spec, "title", name),
-                    )
-                )
-
-    elif ctx == "source_target":
-        # Only view names
-        for name, (ctype, spec) in index.items():
-            if ctype == "view":
-                items.append(
-                    CompletionItem(
-                        label=name,
-                        kind=CompletionItemKind.TypeParameter,
-                        detail="View",
-                        documentation=getattr(spec, "title", name),
-                    )
-                )
-
-    elif ctx == "transition_target":
-        # Suggest surface and experience names
-        for name, (ctype, spec) in index.items():
-            if ctype in ("surface", "experience"):
-                items.append(
-                    CompletionItem(
-                        label=name,
-                        kind=CompletionItemKind.Interface
-                        if ctype == "surface"
-                        else CompletionItemKind.Function,
-                        detail=ctype.title(),
-                        documentation=getattr(spec, "title", name),
-                    )
-                )
-
-    elif ctx == "entity_block":
-        # Field types + modifiers + entity names (for ref)
-        for ft in _FIELD_TYPES:
-            items.append(
-                CompletionItem(
-                    label=ft,
-                    kind=CompletionItemKind.Keyword,
-                    detail="Field type",
-                )
-            )
-        for mod in _FIELD_MODIFIERS:
-            items.append(
-                CompletionItem(
-                    label=mod,
-                    kind=CompletionItemKind.Keyword,
-                    detail="Modifier",
-                )
-            )
-        # Entity names for ref targets
-        for name, (ctype, _) in index.items():
-            if ctype == "entity":
-                items.append(
-                    CompletionItem(
-                        label=name,
-                        kind=CompletionItemKind.Class,
-                        detail="Entity (ref target)",
-                    )
-                )
-
-    elif ctx == "surface_block":
-        for kw in _SURFACE_SUBKEYWORDS:
-            items.append(
-                CompletionItem(
-                    label=kw,
-                    kind=CompletionItemKind.Keyword,
-                    detail="Surface keyword",
-                )
-            )
-        # Entity names for "uses entity"
-        for name, (ctype, spec) in index.items():
-            if ctype in ("entity", "view", "surface", "experience"):
-                items.append(
-                    CompletionItem(
-                        label=name,
-                        kind=CompletionItemKind.Class,
-                        detail=ctype.title(),
-                        documentation=getattr(spec, "title", name),
-                    )
-                )
-
-    elif ctx == "process_block":
-        for kw in _PROCESS_SUBKEYWORDS:
-            items.append(
-                CompletionItem(
-                    label=kw,
-                    kind=CompletionItemKind.Keyword,
-                    detail="Process keyword",
-                )
-            )
-
-    else:
-        # Global fallback — all names + types + modifiers
-        for name, (ctype, spec) in index.items():
-            title = getattr(spec, "title", None) or getattr(spec, "description", None)
-            items.append(
-                CompletionItem(
-                    label=name,
-                    kind=CompletionItemKind.Text,
-                    detail=ctype.replace("_", " ").title(),
-                    documentation=title or name,
-                )
-            )
-        for ft in _FIELD_TYPES:
-            items.append(
-                CompletionItem(
-                    label=ft,
-                    kind=CompletionItemKind.Keyword,
-                    detail="Field type",
-                )
-            )
-        for mod in _FIELD_MODIFIERS:
-            items.append(
-                CompletionItem(
-                    label=mod,
-                    kind=CompletionItemKind.Keyword,
-                    detail="Modifier",
-                )
-            )
+    dispatcher = _COMPLETION_DISPATCHERS.get(ctx)
+    items = dispatcher(index) if dispatcher else _complete_global(index)
 
     return CompletionList(is_incomplete=False, items=items)
 

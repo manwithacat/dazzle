@@ -540,7 +540,7 @@ class TestModeRouting:
         from dazzle.mcp.server.handlers.discovery import run_discovery_handler
 
         # Mock _load_appspec since we don't have a real project
-        with patch("dazzle.mcp.server.handlers.discovery._load_appspec") as mock_load:
+        with patch("dazzle.mcp.server.handlers.discovery.missions._load_appspec") as mock_load:
             result_str = asyncio.run(
                 run_discovery_handler(
                     Path("/fake/path"),

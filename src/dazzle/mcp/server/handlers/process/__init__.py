@@ -5,7 +5,7 @@ Handles process inspection, story coverage analysis, process proposal generation
 and process run monitoring.
 """
 
-from ._helpers import _get_process_adapter, _load_app_spec
+from ._helpers import get_process_adapter, load_app_spec
 from .coverage import (
     CRUD_OUTCOME_PATTERNS,
     UI_FEEDBACK_PATTERNS,
@@ -32,7 +32,6 @@ from .proposals import (
     _build_review_checklist,
     _cluster_stories_into_workflows,
     _is_crud_story,
-    _slugify,
     propose_processes_handler,
 )
 from .storage import (

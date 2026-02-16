@@ -9,17 +9,22 @@ from pathlib import Path
 
 def _import_knowledge_graph_module(module_name: str):
     """Import knowledge graph modules directly to avoid MCP package init issues."""
-    module_path = (
-        Path(__file__).parent.parent.parent
-        / "src"
-        / "dazzle"
-        / "mcp"
-        / "knowledge_graph"
-        / f"{module_name}.py"
-    )
+    base = Path(__file__).parent.parent.parent / "src" / "dazzle" / "mcp" / "knowledge_graph"
+    # Support both single-file modules and packages
+    module_file = base / f"{module_name}.py"
+    package_init = base / module_name / "__init__.py"
+    if module_file.exists():
+        module_path = module_file
+    elif package_init.exists():
+        module_path = package_init
+    else:
+        raise ImportError(f"Cannot find module {module_name} in {base}")
     spec = importlib.util.spec_from_file_location(
         f"dazzle.mcp.knowledge_graph.{module_name}",
         module_path,
+        submodule_search_locations=[str(module_path.parent)]
+        if module_path.name == "__init__.py"
+        else None,
     )
     module = importlib.util.module_from_spec(spec)
     sys.modules[f"dazzle.mcp.knowledge_graph.{module_name}"] = module
@@ -534,11 +539,13 @@ class TestKnowledgeGraphHandlers:
             "required": ["operation"],
         }
 
-        # Mock the module that get_all_tools is imported from
+        # Mock the module that get_all_consolidated_tools is imported from
         mock_tools_module = MagicMock()
-        mock_tools_module.get_all_tools = MagicMock(return_value=[mock_tool_1, mock_tool_2])
+        mock_tools_module.get_all_consolidated_tools = MagicMock(
+            return_value=[mock_tool_1, mock_tool_2]
+        )
 
-        with patch.dict(sys.modules, {"dazzle.mcp.server.tools": mock_tools_module}):
+        with patch.dict(sys.modules, {"dazzle.mcp.server.tools_consolidated": mock_tools_module}):
             result = handlers.handle_populate_mcp_tools()
 
         assert "error" not in result or result.get("tools_created", 0) > 0
@@ -557,7 +564,7 @@ class TestKnowledgeGraphHandlers:
 
         # Test the operation extraction helper directly
         description = "List, create, update, and delete users. Also supports search and query."
-        operations = handlers._extract_operations_from_description(description)
+        operations = handlers._population._extract_operations_from_description(description)
 
         assert "list" in operations
         assert "create" in operations
@@ -620,10 +627,10 @@ class TestSessionManager:
         graph = KnowledgeGraph(":memory:")
         handlers = KnowledgeGraphHandlers(graph)
 
-        assert handlers._camel_to_snake("AuthStore") == "auth_store"
-        assert handlers._camel_to_snake("HTTPClient") == "http_client"
-        assert handlers._camel_to_snake("MyClass") == "my_class"
-        assert handlers._camel_to_snake("A") == "a"
+        assert handlers._population._camel_to_snake("AuthStore") == "auth_store"
+        assert handlers._population._camel_to_snake("HTTPClient") == "http_client"
+        assert handlers._population._camel_to_snake("MyClass") == "my_class"
+        assert handlers._population._camel_to_snake("A") == "a"
 
     def test_infer_covered_modules(self) -> None:
         """Test inferring covered modules from test names."""
@@ -631,11 +638,11 @@ class TestSessionManager:
         handlers = KnowledgeGraphHandlers(graph)
 
         # From test file name
-        modules = handlers._infer_covered_modules("test_auth", [])
+        modules = handlers._population._infer_covered_modules("test_auth", [])
         assert "auth" in modules
 
         # From test class names
-        modules = handlers._infer_covered_modules(
+        modules = handlers._population._infer_covered_modules(
             "test_something", ["TestAuthStore", "TestUserManager"]
         )
         assert "auth_store" in modules

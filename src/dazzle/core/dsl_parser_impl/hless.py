@@ -394,7 +394,7 @@ class HLESSParserMixin:
             # field_name: type modifiers
             # Note: field names may be keywords (e.g., 'currency' in v0.5 ledgers)
             elif self.match(TokenType.IDENTIFIER) or self._is_keyword_as_identifier():
-                field = self._parse_schema_field()
+                field = self._parse_field_spec()  # type: ignore[attr-defined]  # mixin method from TypeParserMixin
                 fields.append(field)
 
             else:
@@ -411,26 +411,6 @@ class HLESSParserMixin:
             extends=extends,
             compatibility=compatibility,
             description=description,
-        )
-
-    def _parse_schema_field(self) -> ir.FieldSpec:
-        """Parse a field within a schema."""
-        # Field names may be keywords (e.g., 'currency' in v0.5 ledgers)
-        field_name = self.expect_identifier_or_keyword().value
-        self.expect(TokenType.COLON)
-
-        # Parse type
-        type_spec = self.parse_type_spec()
-
-        # Parse modifiers (required, optional, etc.) and default value
-        modifiers, default_value = self.parse_field_modifiers()
-
-        # Build FieldSpec
-        return ir.FieldSpec(
-            name=field_name,
-            type=type_spec,
-            modifiers=modifiers,
-            default=default_value,
         )
 
     def _parse_idempotency(self) -> ir.IdempotencyStrategy:

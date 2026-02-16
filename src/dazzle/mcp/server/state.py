@@ -14,6 +14,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urlparse
 
+from dazzle.mcp.server.paths import (
+    project_activity_log,
+    project_kg_db,
+    project_manifest,
+)
+
 if TYPE_CHECKING:
     from mcp.server.session import ServerSession
 
@@ -85,6 +91,12 @@ _state = ServerState()
 # ============================================================================
 
 
+def reset_state() -> None:
+    """Reset server state to initial values. Primarily for testing."""
+    global _state
+    _state = ServerState()
+
+
 def set_project_root(path: Path) -> None:
     """Set the project root for the server."""
     _state.project_root = path
@@ -120,7 +132,7 @@ def get_active_project_path() -> Path | None:
     if not _state.is_dev_mode:
         return _state.project_root
     # In dev mode, prefer CWD if it has a dazzle.toml
-    if (_state.project_root / "dazzle.toml").exists():
+    if project_manifest(_state.project_root).exists():
         return _state.project_root
     if _state.active_project and _state.active_project in _state.available_projects:
         return _state.available_projects[_state.active_project]
@@ -159,7 +171,7 @@ def resolve_project_path(project_path: str | None = None) -> Path:
         if not path.is_dir():
             raise ValueError(f"Project path is not a directory: {path}")
         # Check for dazzle.toml to confirm it's a valid project
-        if not (path / "dazzle.toml").exists():
+        if not project_manifest(path).exists():
             raise ValueError(f"Not a valid Dazzle project (no dazzle.toml found): {path}")
         return path
 
@@ -225,7 +237,7 @@ async def resolve_project_path_from_roots(
     # Search roots for a dazzle.toml
     for root in roots_result.roots:
         path = _path_from_file_uri(str(root.uri))
-        if path and path.is_dir() and (path / "dazzle.toml").exists():
+        if path and path.is_dir() and project_manifest(path).exists():
             _state.roots_cache_set(root_uris, path)
             logger.info(f"Resolved project from MCP root: {path}")
             return path
@@ -252,7 +264,7 @@ def _detect_dev_environment(root: Path) -> bool:
     - Has pyproject.toml with name containing "dazzle"
     """
     # If there's a dazzle.toml, it's a normal project
-    if (root / "dazzle.toml").exists():
+    if project_manifest(root).exists():
         return False
 
     # Check for dev environment markers
@@ -285,7 +297,7 @@ def _discover_example_projects(root: Path) -> dict[str, Path]:
 
     for item in examples_dir.iterdir():
         if item.is_dir():
-            manifest_path = item / "dazzle.toml"
+            manifest_path = project_manifest(item)
             if manifest_path.exists():
                 projects[item.name] = item
 
@@ -325,10 +337,10 @@ def init_knowledge_graph(root: Path) -> None:
     # Determine database path
     if _state.is_dev_mode:
         # Dev mode: store in Dazzle's .dazzle directory
-        _state.graph_db_path = root / ".dazzle" / "knowledge_graph.db"
+        _state.graph_db_path = project_kg_db(root)
     else:
         # Normal mode: store in project's .dazzle directory
-        _state.graph_db_path = root / ".dazzle" / "knowledge_graph.db"
+        _state.graph_db_path = project_kg_db(root)
 
     _state.graph_db_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -408,7 +420,7 @@ def reinit_knowledge_graph(project_root: Path) -> None:
     _state.knowledge_graph = None
 
     # Open new per-project DB
-    _state.graph_db_path = project_root / ".dazzle" / "knowledge_graph.db"
+    _state.graph_db_path = project_kg_db(project_root)
     _state.graph_db_path.parent.mkdir(parents=True, exist_ok=True)
 
     _state.knowledge_graph = KnowledgeGraph(_state.graph_db_path)
@@ -439,7 +451,7 @@ def init_activity_log(root: Path) -> None:
     """
     from dazzle.mcp.server.activity_log import ActivityLog
 
-    log_path = root / ".dazzle" / "mcp-activity.log"
+    log_path = project_activity_log(root)
     _state.activity_log = ActivityLog(log_path)
     _state.activity_log.clear()  # Fresh log per server session
     logger.info("Activity log initialized at: %s", log_path)

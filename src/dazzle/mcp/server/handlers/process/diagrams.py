@@ -51,7 +51,7 @@ def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str
 
     try:
         progress.log_sync(f"Generating {diagram_type} diagram for '{process_name}'...")
-        app_spec = _helpers._load_app_spec(project_root)
+        app_spec = _helpers.load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 

@@ -38,6 +38,7 @@ from dazzle.mcp.server.activity_log import (
     TYPE_TOOL_END,
     TYPE_TOOL_START,
 )
+from dazzle.mcp.server.paths import project_activity_log, project_kg_db
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +274,7 @@ def _db_row_to_entry(row: dict[str, Any]) -> dict[str, Any]:
 
 def _detect_db_path(project_dir: Path) -> Path | None:
     """Return the KG database path if it contains activity_events."""
-    db_path = project_dir / ".dazzle" / "knowledge_graph.db"
+    db_path = project_kg_db(project_dir)
     if not db_path.exists():
         return None
     try:
@@ -597,7 +598,7 @@ def _resolve_log_path(project_dir: Path, config: dict[str, Any]) -> Path:
     if custom:
         p = Path(custom)
         return p if p.is_absolute() else project_dir / p
-    return project_dir / ".dazzle" / "mcp-activity.log"
+    return project_activity_log(project_dir)
 
 
 def _load_project_config(project_dir: Path) -> tuple[str, str, dict[str, Any]]:
@@ -655,7 +656,7 @@ def run_workshop(
         console.print(
             "[red bold]Error:[/red bold] No activity database found.\n"
             "Run the MCP server first so it creates the SQLite activity store.\n"
-            f"Expected: {project_dir / '.dazzle' / 'knowledge_graph.db'}"
+            f"Expected: {project_kg_db(project_dir)}"
         )
         raise SystemExit(1)
 

@@ -117,7 +117,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     try:
         progress.log_sync("Loading app spec for coverage analysis...")
-        app_spec = _helpers._load_app_spec(project_root)
+        app_spec = _helpers.load_app_spec(project_root)
 
         # Use lightweight index when stories aren't in the AppSpec
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []

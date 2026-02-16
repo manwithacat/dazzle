@@ -162,7 +162,8 @@ class RedisStreamAdapter(StreamAdapter):
         try:
             await self._client.xgroup_create(stream_name, group, id="0", mkstream=True)
         except Exception:
-            pass  # Group may already exist
+            # Group may already exist — Redis raises BUSYGROUP error
+            logger.debug("Consumer group '%s' already exists or creation skipped", group)
 
         async def read_loop() -> None:
             while True:
@@ -182,7 +183,9 @@ class RedisStreamAdapter(StreamAdapter):
                                 "_stream_id": entry_id,
                                 "_stream": stream,
                                 **{
-                                    k.decode() if isinstance(k, bytes) else k: v.decode()
+                                    k.decode(errors="replace")
+                                    if isinstance(k, bytes)
+                                    else k: v.decode(errors="replace")
                                     if isinstance(v, bytes)
                                     else v
                                     for k, v in fields.items()
@@ -237,6 +240,7 @@ class RedisStreamAdapter(StreamAdapter):
             await self._client.ping()
             return True
         except Exception:
+            logger.debug("Redis health check failed", exc_info=True)
             return False
 
 
@@ -393,7 +397,7 @@ class KafkaAdapter(StreamAdapter):
                 bootstrap_servers=self._bootstrap_servers,
                 group_id=group,
                 client_id=consumer,
-                value_deserializer=lambda v: json.loads(v.decode()),
+                value_deserializer=lambda v: json.loads(v.decode(errors="replace")),
                 auto_offset_reset="earliest",
             )
 
@@ -455,6 +459,7 @@ class KafkaAdapter(StreamAdapter):
             partitions = await self._producer.partitions_for("__consumer_offsets")
             return partitions is not None
         except Exception:
+            logger.debug("Kafka health check failed", exc_info=True)
             # Try a simpler check
             return self._producer._sender.sender_task is not None
 

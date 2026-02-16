@@ -281,15 +281,12 @@ def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
 @handler_error_json
 def validate_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Validate the pitchspec.yaml."""
-    from dazzle.pitch.loader import PitchSpecError, load_pitchspec, validate_pitchspec
+    from dazzle.pitch.loader import load_pitchspec, validate_pitchspec
 
     progress = extract_progress(args)
 
-    try:
-        progress.log_sync("Validating pitchspec...")
-        spec = load_pitchspec(project_root)
-    except PitchSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    progress.log_sync("Validating pitchspec...")
+    spec = load_pitchspec(project_root)
 
     result = validate_pitchspec(spec)
 
@@ -569,7 +566,7 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
 @handler_error_json
 def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Merge a patch into pitchspec.yaml."""
-    from dazzle.pitch.loader import PitchSpecError, merge_pitchspec
+    from dazzle.pitch.loader import merge_pitchspec
 
     progress = extract_progress(args)
     progress.log_sync("Updating pitchspec...")
@@ -577,35 +574,32 @@ def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     if not patch or not isinstance(patch, dict):
         return json.dumps({"error": "patch parameter is required and must be a dict"}, indent=2)
 
-    try:
-        spec = merge_pitchspec(project_root, patch)
-        missing = _get_missing_sections(spec)
-        completeness = _completeness_score(spec)
+    spec = merge_pitchspec(project_root, patch)
+    missing = _get_missing_sections(spec)
+    completeness = _completeness_score(spec)
 
-        next_steps: list[str] = []
-        if missing:
-            next_steps.append(f"Add {', '.join(missing)} to pitchspec.yaml for a stronger deck")
-        next_steps.append("Run pitch(operation='validate') to check for issues")
-        next_steps.append("Run pitch(operation='generate', format='all') to build the deck")
+    next_steps: list[str] = []
+    if missing:
+        next_steps.append(f"Add {', '.join(missing)} to pitchspec.yaml for a stronger deck")
+    next_steps.append("Run pitch(operation='validate') to check for issues")
+    next_steps.append("Run pitch(operation='generate', format='all') to build the deck")
 
-        return json.dumps(
-            {
-                "success": True,
-                "completeness": f"{completeness}%",
-                "missing_sections": missing,
-                "next_steps": next_steps,
-            },
-            indent=2,
-        )
-    except PitchSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(
+        {
+            "success": True,
+            "completeness": f"{completeness}%",
+            "missing_sections": missing,
+            "next_steps": next_steps,
+        },
+        indent=2,
+    )
 
 
 @handler_error_json
 def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze pitchspec + DSL context and return structured enrichment tasks."""
     from dazzle.pitch.extractor import extract_pitch_context
-    from dazzle.pitch.loader import PitchSpecError, load_pitchspec, pitchspec_exists
+    from dazzle.pitch.loader import load_pitchspec, pitchspec_exists
 
     progress = extract_progress(args)
     progress.log_sync("Enriching pitch...")
@@ -619,10 +613,7 @@ def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
             indent=2,
         )
 
-    try:
-        spec = load_pitchspec(project_root)
-    except PitchSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    spec = load_pitchspec(project_root)
 
     ctx = extract_pitch_context(project_root, spec)
     missing = _get_missing_sections(spec)

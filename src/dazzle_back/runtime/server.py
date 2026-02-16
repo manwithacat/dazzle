@@ -69,6 +69,278 @@ def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     return "text"
 
 
+async def _workspace_region_handler(
+    request: Any,
+    page: int,
+    page_size: int,
+    sort: str | None,
+    dir: str,
+    *,
+    ctx_region: Any,
+    ir_region: Any,
+    source: str,
+    entity_spec: Any,
+    attention_signals: list[Any],
+    ws_access: Any,
+    repositories: dict[str, Any],
+    require_auth: bool,
+    auth_middleware: Any,
+) -> Any:
+    """Return rendered HTML for a workspace region.
+
+    Extracted from DazzleBackendApp._init_workspace_routes to reduce closure
+    complexity.  All context is passed as explicit keyword arguments.
+    """
+    from fastapi import HTTPException
+    from fastapi.responses import HTMLResponse
+
+    from dazzle_ui.runtime.template_renderer import render_fragment
+
+    # Enforce authentication (#145)
+    if require_auth:
+        auth_ctx = None
+        if auth_middleware:
+            try:
+                auth_ctx = auth_middleware.get_auth_context(request)
+            except Exception:
+                logger.debug("Failed to get auth context for region", exc_info=True)
+        if not (auth_ctx and auth_ctx.is_authenticated):
+            raise HTTPException(status_code=401, detail="Authentication required")
+
+        # RBAC: enforce workspace persona restrictions on region data
+        if ws_access and ws_access.allow_personas and auth_ctx:
+            is_super = auth_ctx.user and auth_ctx.user.is_superuser
+            if not is_super and not any(r in ws_access.allow_personas for r in auth_ctx.roles):
+                raise HTTPException(status_code=403, detail="Workspace access denied")
+
+    # Query the source entity
+    items: list[dict[str, Any]] = []
+    total = 0
+    columns: list[dict[str, Any]] = []
+
+    repo = repositories.get(source) if repositories else None
+    if repo:
+        try:
+            # Build filters from IR ConditionExpr
+            filters: dict[str, Any] | None = None
+            ir_filter = getattr(ir_region, "filter", None)
+            if ir_filter is not None:
+                try:
+                    from dazzle_back.runtime.condition_evaluator import (
+                        condition_to_sql_filter,
+                    )
+
+                    filters = condition_to_sql_filter(
+                        ir_filter.model_dump(exclude_none=True),
+                        context={},
+                    )
+                except Exception:
+                    logger.warning("Failed to evaluate condition filter", exc_info=True)
+
+            # Build sort — user sort param overrides IR sort
+            sort_list: list[str] | None = None
+            if sort:
+                sort_list = [f"-{sort}" if dir == "desc" else sort]
+            else:
+                ir_sort = getattr(ir_region, "sort", [])
+                if ir_sort:
+                    sort_list = [
+                        f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
+                        for s in ir_sort
+                    ]
+
+            # Collect interactive filters from query params
+            for param_key, param_val in request.query_params.items():
+                if param_key.startswith("filter_") and param_val:
+                    field_name = param_key[7:]  # strip "filter_"
+                    if filters is None:
+                        filters = {}
+                    filters[field_name] = param_val
+
+            limit = ctx_region.limit or page_size
+            result = await repo.list(
+                page=page,
+                page_size=limit,
+                filters=filters,
+                sort=sort_list,
+            )
+            if isinstance(result, dict):
+                raw_items = result.get("items", [])
+                total = result.get("total", 0)
+                items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
+        except Exception:
+            logger.warning("Failed to list items for workspace region", exc_info=True)
+
+    # Build columns from entity metadata when available
+    if entity_spec and hasattr(entity_spec, "fields"):
+        columns = []
+        for f in entity_spec.fields:
+            if f.name == "id":
+                continue
+            ft = getattr(f, "type", None)
+            kind = getattr(ft, "kind", None)
+            kind_val: str = (
+                kind.value  # type: ignore[union-attr]
+                if hasattr(kind, "value")
+                else str(kind)
+                if kind
+                else ""
+            )
+            # Hide relationship/FK/UUID columns
+            if kind_val in ("ref", "uuid", "has_many", "has_one", "embeds", "belongs_to"):
+                continue
+            # Hide _id suffix columns (foreign keys)
+            if f.name.endswith("_id"):
+                continue
+            col_type = _field_kind_to_col_type(f, entity_spec)
+            # Money fields: use expanded _minor column key
+            col_key = f.name
+            if kind_val == "money":
+                col_key = f"{f.name}_minor"
+            col: dict[str, Any] = {
+                "key": col_key,
+                "label": getattr(f, "label", None) or f.name.replace("_", " ").title(),
+                "type": col_type,
+                "sortable": True,
+            }
+            if kind_val == "money":
+                ft_obj = getattr(f, "type", None)
+                col["currency_code"] = getattr(ft_obj, "currency_code", None) or "GBP"
+            # Filterable: enum / state-machine badge fields
+            if col_type == "badge":
+                if kind_val == "enum":
+                    ev = getattr(ft, "enum_values", None)
+                    if ev:
+                        col["filterable"] = True
+                        col["filter_options"] = list(ev)
+                else:
+                    # State-machine status field
+                    sm = getattr(entity_spec, "state_machine", None)
+                    if sm:
+                        states = getattr(sm, "states", [])
+                        if states:
+                            col["filterable"] = True
+                            col["filter_options"] = list(states)
+            # Filterable: bool fields
+            if col_type == "bool":
+                col["filterable"] = True
+                col["filter_options"] = ["true", "false"]
+            columns.append(col)
+            if len(columns) >= 8:
+                break
+    elif items:
+        columns = [
+            {
+                "key": k,
+                "label": k.replace("_", " ").title(),
+                "type": "text",
+                "sortable": True,
+            }
+            for k in items[0].keys()
+            if k != "id"
+        ]
+
+    # Build aggregate metrics if configured
+    metrics: list[dict[str, Any]] = []
+    for metric_name, expr in ctx_region.aggregates.items():
+        value: Any = 0
+        agg_match = _AGGREGATE_RE.match(expr)
+        if agg_match:
+            func, entity_name, where_clause = agg_match.groups()
+            agg_repo = repositories.get(entity_name) if repositories else None
+            try:
+                if func == "count" and agg_repo:
+                    agg_filters: dict[str, Any] | None = None
+                    if where_clause:
+                        agg_filters = _parse_simple_where(where_clause)
+                    agg_result = await agg_repo.list(page=1, page_size=1, filters=agg_filters)
+                    if isinstance(agg_result, dict):
+                        value = agg_result.get("total", 0)
+                elif func == "sum" and agg_repo and where_clause:
+                    # Sum with where — not yet supported, use 0
+                    value = 0
+            except Exception:
+                logger.warning("Failed to compute aggregate metric", exc_info=True)
+        elif expr == "count":
+            # Legacy bare "count" — use current query total
+            value = total
+        elif expr.startswith("sum:") and items:
+            field_name = expr.split(":", 1)[1]
+            value = sum(float(i.get(field_name, 0) or 0) for i in items)
+        metrics.append(
+            {
+                "label": metric_name.replace("_", " ").title(),
+                "value": value,
+            }
+        )
+
+    # Build filter column metadata for template
+    filter_columns: list[dict[str, Any]] = [
+        {
+            "key": c["key"],
+            "label": c["label"],
+            "options": c.get("filter_options", []),
+        }
+        for c in columns
+        if c.get("filterable")
+    ]
+    active_filters: dict[str, str] = {
+        k[7:]: v for k, v in request.query_params.items() if k.startswith("filter_") and v
+    }
+
+    # Evaluate attention signals for row highlighting
+    if attention_signals and items:
+        from dazzle_back.runtime.condition_evaluator import (
+            evaluate_condition as _eval_cond,
+        )
+
+        _severity_order = {
+            "critical": 0,
+            "warning": 1,
+            "notice": 2,
+            "info": 3,
+        }
+        for item in items:
+            best: dict[str, str] | None = None
+            best_sev = 999
+            for sig in attention_signals:
+                try:
+                    cond_dict = sig.condition.model_dump(exclude_none=True)
+                    if _eval_cond(cond_dict, item, {}):
+                        lvl = sig.level.value if hasattr(sig.level, "value") else str(sig.level)
+                        sev = _severity_order.get(lvl, 99)
+                        if sev < best_sev:
+                            best_sev = sev
+                            best = {
+                                "level": lvl,
+                                "message": sig.message,
+                            }
+                except Exception:
+                    logger.debug("Failed to evaluate attention signal", exc_info=True)
+            if best:
+                item["_attention"] = best
+
+    html = render_fragment(
+        ctx_region.template,
+        title=ctx_region.title,
+        items=items,
+        total=total,
+        columns=columns,
+        metrics=metrics,
+        empty_message=ctx_region.empty_message,
+        display_key=columns[0]["key"] if columns else "name",
+        item=items[0] if items else None,
+        action_url=ctx_region.action_url,
+        sort_field=sort or "",
+        sort_dir=dir,
+        endpoint=ctx_region.endpoint,
+        region_name=ctx_region.name,
+        filter_columns=filter_columns,
+        active_filters=active_filters,
+    )
+    return HTMLResponse(content=html)
+
+
 def _parse_simple_where(where_clause: str) -> dict[str, Any]:
     """Parse simple WHERE clause to repository filter dict.
 
@@ -157,7 +429,7 @@ class ServerConfig:
 # Runtime import
 try:
     from fastapi import FastAPI as _FastAPI
-    from fastapi import HTTPException, Request
+    from fastapi import Request
     from fastapi.middleware.cors import CORSMiddleware
 
     from dazzle_back.runtime.route_generator import RouteGenerator
@@ -739,7 +1011,6 @@ class DazzleBackendApp:
             return
 
         try:
-            from dazzle_ui.runtime.template_renderer import render_fragment
             from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
             app = self._app
@@ -788,7 +1059,13 @@ class DazzleBackendApp:
                                     _attention_signals = list(ux.attention_signals)
                                     break
 
-                    _region_ws_access = _ws_access  # Capture workspace access for region
+                    # Capture all loop variables for closure
+                    _ctx_r = ctx_region
+                    _ir_r = ir_region
+                    _src = _source
+                    _esp = _entity_spec
+                    _att = _attention_signals
+                    _wsa = _ws_access
 
                     @app.get(
                         f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
@@ -800,299 +1077,29 @@ class DazzleBackendApp:
                         page_size: int = 20,
                         sort: str | None = None,
                         dir: str = "asc",
-                        _r: Any = _ctx_region,
-                        _ir: Any = _ir_region,
-                        _s: str = _source,
-                        _espec: Any = _entity_spec,
-                        _attn: list[Any] = _attention_signals,  # noqa: B006
-                        _raccess: Any = _region_ws_access,
+                        _r: Any = _ctx_r,
+                        _ir: Any = _ir_r,
+                        _s: str = _src,
+                        _espec: Any = _esp,
+                        _attn: list[Any] = _att,  # noqa: B006
+                        _raccess: Any = _wsa,
                     ) -> Any:
-                        """Return rendered HTML for a workspace region."""
-                        from fastapi.responses import HTMLResponse
-
-                        # Enforce authentication (#145)
-                        if require_auth:
-                            auth_ctx = None
-                            if auth_middleware:
-                                try:
-                                    auth_ctx = auth_middleware.get_auth_context(request)
-                                except Exception:
-                                    logger.debug(
-                                        "Failed to get auth context for region", exc_info=True
-                                    )
-                            if not (auth_ctx and auth_ctx.is_authenticated):
-                                raise HTTPException(
-                                    status_code=401, detail="Authentication required"
-                                )
-
-                            # RBAC: enforce workspace persona restrictions on region data
-                            if _raccess and _raccess.allow_personas and auth_ctx:
-                                is_super = auth_ctx.user and auth_ctx.user.is_superuser
-                                if not is_super and not any(
-                                    r in _raccess.allow_personas for r in auth_ctx.roles
-                                ):
-                                    raise HTTPException(
-                                        status_code=403,
-                                        detail="Workspace access denied",
-                                    )
-
-                        # Query the source entity
-                        items: list[dict[str, Any]] = []
-                        total = 0
-                        columns: list[dict[str, Any]] = []
-
-                        repo = repositories.get(_s) if repositories else None
-                        if repo:
-                            try:
-                                # Build filters from IR ConditionExpr
-                                filters: dict[str, Any] | None = None
-                                ir_filter = getattr(_ir, "filter", None)
-                                if ir_filter is not None:
-                                    try:
-                                        from dazzle_back.runtime.condition_evaluator import (
-                                            condition_to_sql_filter,
-                                        )
-
-                                        filters = condition_to_sql_filter(
-                                            ir_filter.model_dump(exclude_none=True),
-                                            context={},
-                                        )
-                                    except Exception:
-                                        logger.warning(
-                                            "Failed to evaluate condition filter", exc_info=True
-                                        )
-
-                                # Build sort — user sort param overrides IR sort
-                                sort_list: list[str] | None = None
-                                if sort:
-                                    sort_list = [f"-{sort}" if dir == "desc" else sort]
-                                else:
-                                    ir_sort = getattr(_ir, "sort", [])
-                                    if ir_sort:
-                                        sort_list = [
-                                            f"-{s.field}"
-                                            if getattr(s, "direction", "asc") == "desc"
-                                            else s.field
-                                            for s in ir_sort
-                                        ]
-
-                                # Collect interactive filters from query params
-                                for param_key, param_val in request.query_params.items():
-                                    if param_key.startswith("filter_") and param_val:
-                                        field_name = param_key[7:]  # strip "filter_"
-                                        if filters is None:
-                                            filters = {}
-                                        filters[field_name] = param_val
-
-                                limit = _r.limit or page_size
-                                result = await repo.list(
-                                    page=page,
-                                    page_size=limit,
-                                    filters=filters,
-                                    sort=sort_list,
-                                )
-                                if isinstance(result, dict):
-                                    raw_items = result.get("items", [])
-                                    total = result.get("total", 0)
-                                    items = [
-                                        i.model_dump() if hasattr(i, "model_dump") else dict(i)
-                                        for i in raw_items
-                                    ]
-                            except Exception:
-                                logger.warning(
-                                    "Failed to list items for workspace region", exc_info=True
-                                )
-
-                        # Build columns from entity metadata when available
-                        if _espec and hasattr(_espec, "fields"):
-                            columns = []
-                            for f in _espec.fields:
-                                if f.name == "id":
-                                    continue
-                                ft = getattr(f, "type", None)
-                                kind = getattr(ft, "kind", None)
-                                kind_val: str = (
-                                    kind.value  # type: ignore[union-attr]
-                                    if hasattr(kind, "value")
-                                    else str(kind)
-                                    if kind
-                                    else ""
-                                )
-                                # Hide relationship/FK/UUID columns
-                                if kind_val in (
-                                    "ref",
-                                    "uuid",
-                                    "has_many",
-                                    "has_one",
-                                    "embeds",
-                                    "belongs_to",
-                                ):
-                                    continue
-                                # Hide _id suffix columns (foreign keys)
-                                if f.name.endswith("_id"):
-                                    continue
-                                col_type = _field_kind_to_col_type(f, _espec)
-                                # Money fields: use expanded _minor column key
-                                col_key = f.name
-                                if kind_val == "money":
-                                    col_key = f"{f.name}_minor"
-                                col: dict[str, Any] = {
-                                    "key": col_key,
-                                    "label": getattr(f, "label", None)
-                                    or f.name.replace("_", " ").title(),
-                                    "type": col_type,
-                                    "sortable": True,
-                                }
-                                if kind_val == "money":
-                                    ft_obj = getattr(f, "type", None)
-                                    col["currency_code"] = (
-                                        getattr(ft_obj, "currency_code", None) or "GBP"
-                                    )
-                                # Filterable: enum / state-machine badge fields
-                                if col_type == "badge":
-                                    if kind_val == "enum":
-                                        ev = getattr(ft, "enum_values", None)
-                                        if ev:
-                                            col["filterable"] = True
-                                            col["filter_options"] = list(ev)
-                                    else:
-                                        # State-machine status field
-                                        sm = getattr(_espec, "state_machine", None)
-                                        if sm:
-                                            states = getattr(sm, "states", [])
-                                            if states:
-                                                col["filterable"] = True
-                                                col["filter_options"] = list(states)
-                                # Filterable: bool fields
-                                if col_type == "bool":
-                                    col["filterable"] = True
-                                    col["filter_options"] = ["true", "false"]
-                                columns.append(col)
-                                if len(columns) >= 8:
-                                    break
-                        elif items:
-                            columns = [
-                                {
-                                    "key": k,
-                                    "label": k.replace("_", " ").title(),
-                                    "type": "text",
-                                    "sortable": True,
-                                }
-                                for k in items[0].keys()
-                                if k != "id"
-                            ]
-
-                        # Build aggregate metrics if configured
-                        metrics: list[dict[str, Any]] = []
-                        for metric_name, expr in _r.aggregates.items():
-                            value: Any = 0
-                            agg_match = _AGGREGATE_RE.match(expr)
-                            if agg_match:
-                                func, entity_name, where_clause = agg_match.groups()
-                                agg_repo = repositories.get(entity_name) if repositories else None
-                                try:
-                                    if func == "count" and agg_repo:
-                                        agg_filters: dict[str, Any] | None = None
-                                        if where_clause:
-                                            agg_filters = _parse_simple_where(where_clause)
-                                        agg_result = await agg_repo.list(
-                                            page=1, page_size=1, filters=agg_filters
-                                        )
-                                        if isinstance(agg_result, dict):
-                                            value = agg_result.get("total", 0)
-                                    elif func == "sum" and agg_repo and where_clause:
-                                        # Sum with where — not yet supported, use 0
-                                        value = 0
-                                except Exception:
-                                    logger.warning(
-                                        "Failed to compute aggregate metric", exc_info=True
-                                    )
-                            elif expr == "count":
-                                # Legacy bare "count" — use current query total
-                                value = total
-                            elif expr.startswith("sum:") and items:
-                                field_name = expr.split(":", 1)[1]
-                                value = sum(float(i.get(field_name, 0) or 0) for i in items)
-                            metrics.append(
-                                {
-                                    "label": metric_name.replace("_", " ").title(),
-                                    "value": value,
-                                }
-                            )
-
-                        # Build filter column metadata for template
-                        filter_columns: list[dict[str, Any]] = [
-                            {
-                                "key": c["key"],
-                                "label": c["label"],
-                                "options": c.get("filter_options", []),
-                            }
-                            for c in columns
-                            if c.get("filterable")
-                        ]
-                        active_filters: dict[str, str] = {
-                            k[7:]: v
-                            for k, v in request.query_params.items()
-                            if k.startswith("filter_") and v
-                        }
-
-                        # Evaluate attention signals for row highlighting
-                        if _attn and items:
-                            from dazzle_back.runtime.condition_evaluator import (
-                                evaluate_condition as _eval_cond,
-                            )
-
-                            _severity_order = {
-                                "critical": 0,
-                                "warning": 1,
-                                "notice": 2,
-                                "info": 3,
-                            }
-                            for item in items:
-                                best: dict[str, str] | None = None
-                                best_sev = 999
-                                for sig in _attn:
-                                    try:
-                                        cond_dict = sig.condition.model_dump(exclude_none=True)
-                                        if _eval_cond(cond_dict, item, {}):
-                                            lvl = (
-                                                sig.level.value
-                                                if hasattr(sig.level, "value")
-                                                else str(sig.level)
-                                            )
-                                            sev = _severity_order.get(lvl, 99)
-                                            if sev < best_sev:
-                                                best_sev = sev
-                                                best = {
-                                                    "level": lvl,
-                                                    "message": sig.message,
-                                                }
-                                    except Exception:
-                                        logger.debug(
-                                            "Failed to evaluate attention signal", exc_info=True
-                                        )
-                                if best:
-                                    item["_attention"] = best
-
-                        html = render_fragment(
-                            _r.template,
-                            title=_r.title,
-                            items=items,
-                            total=total,
-                            columns=columns,
-                            metrics=metrics,
-                            empty_message=_r.empty_message,
-                            display_key=columns[0]["key"] if columns else "name",
-                            item=items[0] if items else None,
-                            action_url=_r.action_url,
-                            sort_field=sort or "",
-                            sort_dir=dir,
-                            endpoint=_r.endpoint,
-                            region_name=_r.name,
-                            filter_columns=filter_columns,
-                            active_filters=active_filters,
+                        return await _workspace_region_handler(
+                            request,
+                            page,
+                            page_size,
+                            sort,
+                            dir,
+                            ctx_region=_r,
+                            ir_region=_ir,
+                            source=_s,
+                            entity_spec=_espec,
+                            attention_signals=_attn,
+                            ws_access=_raccess,
+                            repositories=repositories,
+                            require_auth=require_auth,
+                            auth_middleware=auth_middleware,
                         )
-                        return HTMLResponse(content=html)
 
             # Workspace-prefixed entity routes (v0.20.1)
             # Register /{ws_name}/{entity_plural} → redirect to /{entity_plural}
@@ -1303,21 +1310,19 @@ class DazzleBackendApp:
             f"Wired entity events to ProcessManager for {wired_count} services"
         )
 
-    def build(self) -> FastAPI:
-        """
-        Build the FastAPI application.
+    # ------------------------------------------------------------------
+    # Build phases — called in order by build()
+    # ------------------------------------------------------------------
 
-        Returns:
-            FastAPI application instance
-        """
-        # Create FastAPI app
+    def _create_app(self) -> None:
+        """Create the FastAPI app instance and apply middleware."""
         self._app = _FastAPI(
             title=self.spec.name,
             description=self.spec.description or f"Dazzle Backend: {self.spec.name}",
             version=self.spec.version,
         )
 
-        # Add security middleware based on profile (v0.11.0)
+        # Security middleware (v0.11.0)
         from dazzle_back.runtime.security_middleware import apply_security_middleware
 
         apply_security_middleware(
@@ -1326,31 +1331,30 @@ class DazzleBackendApp:
             cors_origins=self._cors_origins,
         )
 
-        # Add metrics middleware for control plane observability (v0.27.0)
-        # Only enabled if REDIS_URL is configured
+        # Metrics middleware (v0.27.0)
         try:
             from dazzle_back.runtime.metrics import add_metrics_middleware
 
             add_metrics_middleware(self._app)
         except ImportError:
-            pass  # Metrics module not available
+            pass
 
-        # Register exception handlers (v0.28.0 - extracted to exception_handlers.py)
+        # Exception handlers (v0.28.0)
         from dazzle_back.runtime.exception_handlers import register_exception_handlers
 
         register_exception_handlers(self._app)
 
-        # Generate models
+    def _setup_models(self) -> None:
+        """Generate Pydantic models and create/update schemas from the spec."""
         self._models = generate_all_entity_models(self.spec.entities)
-
-        # Generate schemas (create/update)
         for entity in self.spec.entities:
             self._schemas[entity.name] = {
                 "create": generate_create_schema(entity),
                 "update": generate_update_schema(entity),
             }
 
-        # Initialize database (PostgreSQL required)
+    def _setup_database(self) -> None:
+        """Initialize database backend, run migrations, create repositories."""
         if not self._database_url:
             raise ValueError(
                 "database_url is required. Set DATABASE_URL environment variable "
@@ -1360,8 +1364,6 @@ class DazzleBackendApp:
         from dazzle_back.runtime.pg_backend import PostgresBackend
 
         self._db_manager = PostgresBackend(self._database_url)
-
-        # Auto-migrate: creates tables and applies schema changes
         self._last_migration = auto_migrate(
             self._db_manager,
             self.spec.entities,
@@ -1371,78 +1373,84 @@ class DazzleBackendApp:
         repo_factory = RepositoryFactory(self._db_manager, self._models)
         self._repositories = repo_factory.create_all_repositories(self.spec.entities)
 
-        # Extract state machines from entities
+    def _setup_services(self) -> None:
+        """Create CRUD services and wire them to repositories."""
         state_machines = {
             entity.name: entity.state_machine
             for entity in self.spec.entities
             if entity.state_machine
         }
-
-        # Build entity specs lookup for validation (v0.14.2)
         entity_specs = {entity.name: entity for entity in self.spec.entities}
 
-        # Create services
         factory = ServiceFactory(self._models, state_machines, entity_specs)
         self._services = factory.create_all_services(
             self.spec.services,
             self._schemas,
         )
 
-        # Wire up repositories to services
-        # Match services to repositories by their target entity
         if self._db_manager:
             for _service_name, service in self._services.items():
                 if isinstance(service, CRUDService):
-                    # Get the entity name from the service
                     entity_name = service.entity_name
                     repo = self._repositories.get(entity_name)
                     if repo:
                         service.set_repository(repo)
 
-        # Initialize auth if enabled (needed before route generation)
+    def _setup_auth(self) -> tuple[Any, Any]:
+        """Initialize auth store, middleware, and social auth.
+
+        Returns (auth_dep, optional_auth_dep) for route generation.
+        """
         auth_dep = None
         optional_auth_dep = None
-        if self._enable_auth:
-            self._auth_store = AuthStore(
-                database_url=self._database_url,
-            )
-            self._auth_middleware = AuthMiddleware(self._auth_store)
-            # Build persona → default_route mapping for post-login redirect
-            _persona_routes: dict[str, str] = {}
-            for p in self._personas:
-                route = p.get("default_route")
-                if route:
-                    _persona_routes[p["id"]] = route
-            auth_router = create_auth_routes(
-                self._auth_store,
-                persona_routes=_persona_routes or None,
-            )
-            self._app.include_router(auth_router)
-            # Create FastAPI Depends()-compatible auth dependencies
-            from dazzle_back.runtime.auth import (
-                create_auth_dependency,
-                create_optional_auth_dependency,
-            )
+        if not self._enable_auth:
+            return auth_dep, optional_auth_dep
 
-            auth_dep = create_auth_dependency(self._auth_store)
-            optional_auth_dep = create_optional_auth_dependency(self._auth_store)
+        self._auth_store = AuthStore(database_url=self._database_url)
+        self._auth_middleware = AuthMiddleware(self._auth_store)
 
-            # Initialize social auth if OAuth providers configured
-            self._init_social_auth()
+        # Build persona -> default_route mapping for post-login redirect
+        _persona_routes: dict[str, str] = {}
+        for p in self._personas:
+            route = p.get("default_route")
+            if route:
+                _persona_routes[p["id"]] = route
+        auth_router = create_auth_routes(
+            self._auth_store,
+            persona_routes=_persona_routes or None,
+        )
+        assert self._app is not None
+        self._app.include_router(auth_router)
 
-        # Extract entity access specs from entity metadata
+        from dazzle_back.runtime.auth import (
+            create_auth_dependency,
+            create_optional_auth_dependency,
+        )
+
+        auth_dep = create_auth_dependency(self._auth_store)
+        optional_auth_dep = create_optional_auth_dependency(self._auth_store)
+
+        # Social auth (OAuth providers)
+        self._init_social_auth()
+
+        return auth_dep, optional_auth_dep
+
+    def _setup_routes(self, auth_dep: Any, optional_auth_dep: Any) -> None:
+        """Generate entity CRUD routes, audit routes, file routes, and dev routes."""
+        assert self._app is not None
+
+        # Extract access specs
         entity_access_specs: dict[str, dict[str, Any]] = {}
         for entity in self.spec.entities:
             if entity.metadata and "access" in entity.metadata:
                 entity_access_specs[entity.name] = entity.metadata["access"]
 
-        # Build Cedar access specs from backend spec entities (Phase 3: row-level enforcement)
         cedar_access_specs: dict[str, Any] = {}
         for entity in self.spec.entities:
             if entity.access:
                 cedar_access_specs[entity.name] = entity.access
 
-        # Initialize audit logger for entities with access rules or audit directives
+        # Audit logger
         audit_logger = None
         _has_auditable_entities = any(
             (entity.metadata and "access" in entity.metadata)
@@ -1456,8 +1464,7 @@ class DazzleBackendApp:
             audit_logger = AuditLogger(database_url=self._database_url)
             audit_logger.start()
 
-        # Generate routes
-        # When auth is enabled, require authentication by default (deny-default)
+        # Entity CRUD routes
         service_specs = {svc.name: svc for svc in self.spec.services}
         route_generator = RouteGenerator(
             services=self._services,
@@ -1477,11 +1484,9 @@ class DazzleBackendApp:
             self.spec.endpoints,
             service_specs,
         )
-
-        # Include router
         self._app.include_router(router)
 
-        # Include audit query routes if audit is enabled
+        # Audit query routes
         if audit_logger:
             from dazzle_back.runtime.audit_routes import create_audit_routes
 
@@ -1491,7 +1496,7 @@ class DazzleBackendApp:
             )
             self._app.include_router(audit_router)
 
-        # Initialize file uploads if enabled
+        # File uploads
         if self._enable_files:
             from dazzle_back.runtime.file_storage import (
                 FileMetadataStore,
@@ -1510,9 +1515,8 @@ class DazzleBackendApp:
                 url_prefix="/files",
             )
 
-        # Initialize test routes if enabled
+        # Test routes
         if self._enable_test_mode and self._db_manager:
-            # Lazy import to avoid FastAPI dependency at module load
             from dazzle_back.runtime.test_routes import create_test_routes
 
             test_router = create_test_routes(
@@ -1523,7 +1527,7 @@ class DazzleBackendApp:
             )
             self._app.include_router(test_router)
 
-        # Initialize dev control plane if dev mode enabled
+        # Dev control plane
         if self._enable_dev_mode or self._enable_test_mode:
             from dazzle_back.runtime.control_plane import create_control_plane_routes
 
@@ -1533,14 +1537,18 @@ class DazzleBackendApp:
                 entities=self.spec.entities,
                 personas=self._personas,
                 scenarios=self._scenarios,
-                auth_store=self._auth_store,  # v0.23.0: Enable persona login
+                auth_store=self._auth_store,
             )
             self._app.include_router(control_plane_router)
 
-        # Initialize event framework (v0.18.0)
+    def _setup_optional_features(self) -> None:
+        """Initialize optional features: events, debug, site, channels, etc."""
+        assert self._app is not None
+
+        # Event framework (v0.18.0)
         self._init_event_framework()
 
-        # Initialize debug routes (always available when database is enabled)
+        # Debug routes
         if self._db_manager:
             from dazzle_back.runtime.debug_routes import create_debug_routes
 
@@ -1553,53 +1561,54 @@ class DazzleBackendApp:
             )
             self._app.include_router(debug_router)
 
-            # Initialize event explorer routes (v0.18.0)
             from dazzle_back.runtime.event_explorer import create_event_explorer_routes
 
             event_explorer_router = create_event_explorer_routes(self._event_framework)
             self._app.include_router(event_explorer_router)
 
-        # Initialize site routes (v0.16.0)
+        # Site routes (v0.16.0)
         if self._sitespec_data:
             from dazzle_back.runtime.site_routes import (
                 create_site_page_routes,
                 create_site_routes,
             )
 
-            # API routes for site data (/_site/*)
             site_router = create_site_routes(
                 sitespec_data=self._sitespec_data,
                 project_root=self._project_root,
             )
             self._app.include_router(site_router)
 
-            # HTML page routes (/, /features, /pricing, etc.)
             page_router = create_site_page_routes(
                 sitespec_data=self._sitespec_data,
                 project_root=self._project_root,
             )
             self._app.include_router(page_router)
 
-        # Initialize messaging channels (v0.9)
+        # Messaging channels (v0.9)
         if self._enable_channels and self.spec.channels:
             self._init_channel_manager()
 
-        # Initialize Founder Console (v0.26.0)
+        # Founder Console (v0.26.0)
         if self._enable_console:
             self._init_console()
 
-        # Initialize fragment routes (v0.25.0)
+        # Fragment routes (v0.25.0)
         self._init_fragment_routes()
 
-        # Initialize integration executor (v0.20.0)
+        # Integration executor (v0.20.0)
         self._init_integration_executor()
 
-        # Initialize workspace routes (v0.20.0)
+        # Workspace routes (v0.20.0)
         self._init_workspace_routes()
 
-        # Initialize process manager (v0.24.0)
+        # Process manager (v0.24.0)
         if self._enable_processes:
             self._init_process_manager()
+
+    def _setup_system_routes(self) -> None:
+        """Register domain service stubs, health check, spec, and db-info routes."""
+        assert self._app is not None
 
         # Load domain service stubs
         self._service_loader = ServiceLoader(services_dir=self._services_dir)
@@ -1608,7 +1617,6 @@ class DazzleBackendApp:
         except Exception:
             logger.warning("Failed to load domain services", exc_info=True)
 
-        # Add domain service routes if any services loaded
         if self._service_loader and self._service_loader.services:
             service_loader = self._service_loader  # Capture for closure
 
@@ -1639,17 +1647,14 @@ class DazzleBackendApp:
                 except Exception as e:
                     return {"error": str(e)}
 
-        # Add health check
         @self._app.get("/health", tags=["System"])
         async def health_check() -> dict[str, str]:
             return {"status": "healthy", "app": self.spec.name}
 
-        # Add spec endpoint
         @self._app.get("/spec", tags=["System"])
         async def get_spec() -> dict[str, Any]:
             return self.spec.model_dump()
 
-        # Add database info endpoint
         def _mask_database_url(url: str | None) -> str | None:
             """Mask password in database URL for safe display."""
             if not url:
@@ -1683,7 +1688,7 @@ class DazzleBackendApp:
                 "files_path": files_path_str,
             }
 
-        # Mount static files from project dir (images etc.) + framework dir (dz.js, dz.css)
+        # Mount static files from project dir + framework dir
         try:
             from pathlib import Path
 
@@ -1700,9 +1705,30 @@ class DazzleBackendApp:
         except (ImportError, Exception):
             pass  # dazzle_ui not installed — static files served externally
 
+    # ------------------------------------------------------------------
+    # Public build orchestrator
+    # ------------------------------------------------------------------
+
+    def build(self) -> FastAPI:
+        """
+        Build the FastAPI application.
+
+        Returns:
+            FastAPI application instance
+        """
+        self._create_app()
+        self._setup_models()
+        self._setup_database()
+        self._setup_services()
+        auth_dep, optional_auth_dep = self._setup_auth()
+        self._setup_routes(auth_dep, optional_auth_dep)
+        self._setup_optional_features()
+        self._setup_system_routes()
+
         # Validate routes for conflicts
         from dazzle_back.runtime.route_validator import validate_routes
 
+        assert self._app is not None
         validate_routes(self._app)
 
         return self._app

@@ -36,11 +36,23 @@ def _import_module():
         "dazzle.mcp.server",
         "dazzle.mcp.server.handlers",
         "dazzle.mcp.server.handlers.common",
+        "dazzle.mcp.server.handlers.utils",
         "dazzle.mcp.server.progress",
     ]
     _orig = {k: sys.modules.get(k) for k in _mocked}
     for k in _mocked:
         sys.modules[k] = MagicMock(pytest_plugins=[])
+
+    # Provide a real slugify so proposals.py's `from ..utils import slugify` works
+    import re
+
+    def _real_slugify(text: str) -> str:
+        text = text.lower().strip()
+        text = re.sub(r"[^\w\s-]", "", text)
+        text = re.sub(r"[-\s]+", "_", text)
+        return text[:30]
+
+    sys.modules["dazzle.mcp.server.handlers.utils"].slugify = _real_slugify
 
     src_path = Path(__file__).parent.parent.parent / "src"
     pkg_path = src_path / "dazzle" / "mcp" / "server" / "handlers" / "process"

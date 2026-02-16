@@ -312,8 +312,8 @@ class TestCheckMcpServer:
         with patch.object(_setup_module, "get_claude_config_path", return_value=config_path):
             status = _setup_module.check_mcp_server()
 
-        # Should have at least the core tools
+        # Should have at least the core consolidated tools
         assert len(status["tools"]) > 0
-        assert "validate_dsl" in status["tools"]
-        assert "lint_project" in status["tools"]  # v0.14.2: build tool removed
-        assert "inspect_entity" in status["tools"]
+        assert "dsl" in status["tools"]
+        assert "story" in status["tools"]
+        assert "status" in status["tools"]

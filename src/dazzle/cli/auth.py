@@ -52,7 +52,7 @@ def _get_auth_store(database_url: str | None = None) -> Any:
     Resolves URL via: explicit arg → CLI callback → dazzle.toml → env → default.
     """
     from dazzle.core.manifest import load_manifest, resolve_database_url
-    from dazzle_back.runtime.auth import AuthStore
+    from dazzle_back.runtime.auth import AuthStore  # Intentional layer crossing: CLI entry point
 
     explicit = database_url or _database_url_override or ""
 

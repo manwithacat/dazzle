@@ -42,9 +42,9 @@ def test_tool_definitions() -> bool:
     """Test that tool definitions are valid."""
     print("Testing tool definitions...")
     try:
-        from dazzle.mcp.server.tools import get_all_tools
+        from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
 
-        tools = get_all_tools()
+        tools = get_all_consolidated_tools()
         if not tools:
             print("  ✗ No tools defined")
             return False

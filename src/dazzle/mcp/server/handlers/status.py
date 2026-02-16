@@ -11,6 +11,7 @@ import logging
 from typing import Any
 
 from dazzle.mcp.semantics import get_mcp_version
+from dazzle.mcp.server.paths import project_log_dir, project_manifest
 
 from ..state import (
     get_active_project,
@@ -41,10 +42,10 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
 
     # Determine the effective active project — roots wins over internal state
     resolved = args.get("_resolved_project_path")
-    if isinstance(resolved, Path) and (resolved / "dazzle.toml").exists():
+    if isinstance(resolved, Path) and project_manifest(resolved).exists():
         active: dict[str, Any] = {"path": str(resolved)}
         try:
-            manifest = load_manifest(resolved / "dazzle.toml")
+            manifest = load_manifest(project_manifest(resolved))
             active["manifest_name"] = manifest.name
             active["version"] = manifest.version
         except Exception:
@@ -239,7 +240,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
         project_path = resolved
     else:
         project_path = get_active_project_path() or get_project_root()
-    log_dir = project_path / ".dazzle" / "logs"
+    log_dir = project_log_dir(project_path)
     log_file = log_dir / "dazzle.log"
 
     result: dict[str, Any] = {

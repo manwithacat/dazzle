@@ -364,21 +364,7 @@ class ServiceParserMixin:
 
             # field_name: type [modifiers...]
             else:
-                field_name = self.expect_identifier_or_keyword().value
-                self.expect(TokenType.COLON)
-
-                field_type = self.parse_type_spec()
-                modifiers, default = self.parse_field_modifiers()
-
-                fields.append(
-                    ir.FieldSpec(
-                        name=field_name,
-                        type=field_type,
-                        modifiers=modifiers,
-                        default=default,
-                    )
-                )
-
+                fields.append(self._parse_field_spec())  # type: ignore[attr-defined]  # mixin method from TypeParserMixin
                 self.skip_newlines()
 
         self.expect(TokenType.DEDENT)

@@ -32,7 +32,7 @@ def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     try:
         progress.log_sync(f"Inspecting process '{process_name}'...")
-        app_spec = _helpers._load_app_spec(project_root)
+        app_spec = _helpers.load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
@@ -187,7 +187,7 @@ def list_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     try:
         progress.log_sync("Loading processes...")
-        app_spec = _helpers._load_app_spec(project_root)
+        app_spec = _helpers.load_app_spec(project_root)
 
         processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 

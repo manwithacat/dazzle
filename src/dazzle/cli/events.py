@@ -43,6 +43,7 @@ def tail_events(
 
 async def _tail_events(topic: str, follow: bool, limit: int, db_path: str) -> None:
     """Async implementation of tail command."""
+    # Intentional layer crossing: CLI entry point into event system
     from dazzle_back.events import DevBrokerSQLite
 
     async with DevBrokerSQLite(db_path) as bus:

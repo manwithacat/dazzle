@@ -23,8 +23,11 @@ import warnings
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    import aiosqlite
 
 from dazzle_back.events.bus import EventBus, PublishError
 from dazzle_back.events.outbox import EventOutbox, OutboxEntry
@@ -118,7 +121,7 @@ class OutboxPublisher:
                 stacklevel=2,
             )
 
-            async def _aiosqlite_connect() -> Any:
+            async def _aiosqlite_connect() -> aiosqlite.Connection:
                 import aiosqlite
 
                 return await aiosqlite.connect(db_path)

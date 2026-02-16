@@ -7,6 +7,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.paths import project_test_results_dir
+
 from ..common import extract_progress, handler_error_json, load_project_appspec
 
 logger = logging.getLogger("dazzle.mcp")
@@ -301,7 +303,7 @@ def get_runtime_coverage_gaps_handler(project_root: Path, args: dict[str, Any]) 
         # Default locations
         candidates = [
             project_root / "dsl" / "tests" / "runtime_coverage.json",
-            project_root / ".dazzle" / "test_results" / "ux_coverage.json",
+            project_test_results_dir(project_root) / "ux_coverage.json",
         ]
         report_path = None
         for candidate in candidates:

@@ -79,7 +79,7 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         progress.log_sync("Validating story and entity references...")
         # Validate story references exist
-        app_spec = _helpers._load_app_spec(project_root)
+        app_spec = _helpers.load_app_spec(project_root)
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
         if not stories:
             from dazzle.core.stories_persistence import load_stories
@@ -132,7 +132,7 @@ async def _list_runs_async(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     try:
         progress.log_sync("Loading process runs...")
-        adapter = _helpers._get_process_adapter(project_root)
+        adapter = _helpers.get_process_adapter(project_root)
         await adapter.initialize()
 
         process_name = args.get("process_name")
@@ -190,7 +190,7 @@ async def _get_run_async(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     try:
         progress.log_sync("Fetching process run details...")
-        adapter = _helpers._get_process_adapter(project_root)
+        adapter = _helpers.get_process_adapter(project_root)
         await adapter.initialize()
 
         run_id = args.get("run_id")

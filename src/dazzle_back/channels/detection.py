@@ -193,7 +193,7 @@ async def check_docker_container(image_pattern: str) -> dict[str, Any] | None:
         )
         stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=5.0)
 
-        for line in stdout.decode().strip().split("\n"):
+        for line in stdout.decode(errors="replace").strip().split("\n"):
             if not line:
                 continue
             parts = line.split("\t")

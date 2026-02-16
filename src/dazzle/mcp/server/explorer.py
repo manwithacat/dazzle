@@ -20,6 +20,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from dazzle.mcp.server.paths import project_kg_db
+
 
 def _open_db(db_path: Path) -> sqlite3.Connection:
     """Open the KG database read-only."""
@@ -208,7 +210,7 @@ def run_explorer(
     from rich.console import Console
 
     console = Console()
-    db_path = project_dir / ".dazzle" / "knowledge_graph.db"
+    db_path = project_kg_db(project_dir)
 
     if not db_path.exists():
         console.print(f"[red]Database not found:[/red] {db_path}")

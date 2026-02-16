@@ -6,7 +6,7 @@ Converts Dazzle AppSpec (IR) to UISpec.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, cast
 
 from dazzle.core import ir
 from dazzle_ui.converters.surface_converter import (
@@ -74,7 +74,7 @@ def convert_shell_config(
     # If we have manifest config, use it
     if shell_config is not None:
         nav = NavSpec(
-            style=shell_config.nav.style,  # type: ignore[arg-type]
+            style=cast(Literal["sidebar", "topbar", "tabs"], shell_config.nav.style),
             items=nav_items,  # Auto-generated from workspaces
             brand=app_name.replace("_", " ").title(),
         )
@@ -111,7 +111,7 @@ def convert_shell_config(
         ]
 
         return ShellSpec(
-            layout=shell_config.layout,  # type: ignore[arg-type]
+            layout=cast(Literal["app-shell", "minimal"], shell_config.layout),
             nav=nav,
             header=header,
             footer=footer,

@@ -7,6 +7,7 @@ Each handler routes the 'operation' parameter to existing handler functions.
 
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 import time
@@ -100,6 +101,78 @@ def _dispatch_standalone_ops(
     if handler is None:
         return json.dumps({"error": f"Unknown {tool_label} operation: {operation}"})
     return handler(arguments)
+
+
+# ---------------------------------------------------------------------------
+# Handler factory — eliminates repeated import/dispatch boilerplate
+# ---------------------------------------------------------------------------
+
+
+def _lazy_import(ref: str) -> Callable[..., Any]:
+    """Import *module_path:attr_name* on first call, then cache the callable."""
+    module_path, attr_name = ref.rsplit(":", 1)
+    fn: Callable[..., Any] | None = None
+
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        nonlocal fn
+        if fn is None:
+            mod = importlib.import_module(module_path)
+            fn = getattr(mod, attr_name)
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+def _resolve_ops(
+    raw: dict[str, str | Callable[..., Any]],
+) -> dict[str, Callable[..., Any]]:
+    """Turn a mixed dict of *"module:attr"* strings and callables into a pure callable dict."""
+    resolved: dict[str, Callable[..., Any]] = {}
+    for op, ref in raw.items():
+        if isinstance(ref, str):
+            resolved[op] = _lazy_import(ref)
+        else:
+            resolved[op] = ref
+    return resolved
+
+
+def _make_project_handler(
+    tool_label: str,
+    operations: dict[str, str | Callable[..., Any]],
+) -> Callable[[dict[str, Any]], str]:
+    """Create a sync handler that resolves project path and dispatches by operation."""
+    ops = _resolve_ops(operations)
+
+    def handler(arguments: dict[str, Any]) -> str:
+        return _dispatch_project_ops(arguments, ops, tool_label)
+
+    return handler
+
+
+def _make_project_handler_async(
+    tool_label: str,
+    operations: dict[str, str | Callable[..., Any]],
+) -> Callable[[dict[str, Any]], Any]:
+    """Create an async handler that resolves project path and dispatches by operation."""
+    ops = _resolve_ops(operations)
+
+    async def handler(arguments: dict[str, Any]) -> str:
+        return await _dispatch_project_ops_async(arguments, ops, tool_label)
+
+    return handler
+
+
+def _make_standalone_handler(
+    tool_label: str,
+    operations: dict[str, str | Callable[..., Any]],
+) -> Callable[[dict[str, Any]], str]:
+    """Create a sync handler that dispatches by operation without project resolution."""
+    ops = _resolve_ops(operations)
+
+    def handler(arguments: dict[str, Any]) -> str:
+        return _dispatch_standalone_ops(arguments, ops, tool_label)
+
+    return handler
 
 
 # =============================================================================
@@ -237,98 +310,47 @@ def handle_story(arguments: dict[str, Any]) -> str:
 # Demo Data Handler
 # =============================================================================
 
+_MOD_DEMO = "dazzle.mcp.server.handlers.demo_data"
 
-def handle_demo_data(arguments: dict[str, Any]) -> str:
-    """Handle consolidated demo data operations."""
-    from .handlers.demo_data import (
-        generate_demo_data_handler,
-        get_demo_blueprint_handler,
-        propose_demo_blueprint_handler,
-        save_demo_blueprint_handler,
-    )
-
-    ops: dict[str, Callable[..., str]] = {
-        "propose": propose_demo_blueprint_handler,
-        "save": save_demo_blueprint_handler,
-        "get": get_demo_blueprint_handler,
-        "generate": generate_demo_data_handler,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "demo data")
+handle_demo_data: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "demo data",
+    {
+        "propose": f"{_MOD_DEMO}:propose_demo_blueprint_handler",
+        "save": f"{_MOD_DEMO}:save_demo_blueprint_handler",
+        "get": f"{_MOD_DEMO}:get_demo_blueprint_handler",
+        "generate": f"{_MOD_DEMO}:generate_demo_data_handler",
+    },
+)
 
 
-# =============================================================================
-# Test Design Handler
-# =============================================================================
-
-
-def handle_test_design(arguments: dict[str, Any]) -> str:
-    """Handle consolidated test design operations."""
-    from .handlers.test_design import (
-        get_coverage_actions_handler,
-        get_runtime_coverage_gaps_handler,
-        get_test_designs_handler,
-        get_test_gaps_handler,
-        propose_persona_tests_handler,
-        save_runtime_coverage_handler,
-        save_test_designs_handler,
-    )
-
-    ops: dict[str, Callable[..., str]] = {
-        "propose_persona": propose_persona_tests_handler,
-        "gaps": get_test_gaps_handler,
-        "save": save_test_designs_handler,
-        "get": get_test_designs_handler,
-        "coverage_actions": get_coverage_actions_handler,
-        "runtime_gaps": get_runtime_coverage_gaps_handler,
-        "save_runtime": save_runtime_coverage_handler,
-        "auto_populate": _auto_populate_tests,
-        "improve_coverage": _improve_coverage,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "test design")
+# NOTE: handle_test_design is defined after _auto_populate_tests / _improve_coverage
+# because those local helpers must exist before the factory assignment executes.
 
 
 # =============================================================================
 # SiteSpec Handler
 # =============================================================================
 
+_MOD_SITE = "dazzle.mcp.server.handlers.sitespec"
 
-def handle_sitespec(arguments: dict[str, Any]) -> str:
-    """Handle consolidated sitespec operations."""
-    from .handlers.sitespec import (
-        coherence_handler,
-        generate_imagery_prompts_handler,
-        generate_tokens_handler,
-        get_copy_handler,
-        get_sitespec_handler,
-        get_theme_handler,
-        review_copy_handler,
-        review_sitespec_handler,
-        scaffold_copy_handler,
-        scaffold_site_handler,
-        scaffold_theme_handler,
-        validate_sitespec_handler,
-        validate_theme_handler,
-    )
-
-    ops: dict[str, Callable[..., str]] = {
-        "get": get_sitespec_handler,
-        "validate": validate_sitespec_handler,
-        "scaffold": scaffold_site_handler,
-        "get_copy": get_copy_handler,
-        "scaffold_copy": scaffold_copy_handler,
-        "review_copy": review_copy_handler,
-        "coherence": coherence_handler,
-        "get_theme": get_theme_handler,
-        "scaffold_theme": scaffold_theme_handler,
-        "validate_theme": validate_theme_handler,
-        "generate_tokens": generate_tokens_handler,
-        "generate_imagery_prompts": generate_imagery_prompts_handler,
-        "review": review_sitespec_handler,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "sitespec")
+handle_sitespec: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "sitespec",
+    {
+        "get": f"{_MOD_SITE}:get_sitespec_handler",
+        "validate": f"{_MOD_SITE}:validate_sitespec_handler",
+        "scaffold": f"{_MOD_SITE}:scaffold_site_handler",
+        "get_copy": f"{_MOD_SITE}:get_copy_handler",
+        "scaffold_copy": f"{_MOD_SITE}:scaffold_copy_handler",
+        "review_copy": f"{_MOD_SITE}:review_copy_handler",
+        "coherence": f"{_MOD_SITE}:coherence_handler",
+        "get_theme": f"{_MOD_SITE}:get_theme_handler",
+        "scaffold_theme": f"{_MOD_SITE}:scaffold_theme_handler",
+        "validate_theme": f"{_MOD_SITE}:validate_theme_handler",
+        "generate_tokens": f"{_MOD_SITE}:generate_tokens_handler",
+        "generate_imagery_prompts": f"{_MOD_SITE}:generate_imagery_prompts_handler",
+        "review": f"{_MOD_SITE}:review_sitespec_handler",
+    },
+)
 
 
 # =============================================================================
@@ -370,64 +392,42 @@ def handle_semantics(arguments: dict[str, Any]) -> str:
 # Process Handler
 # =============================================================================
 
+_MOD_PROC = "dazzle.mcp.server.handlers.process"
 
-async def handle_process(arguments: dict[str, Any]) -> str:
-    """Handle consolidated process operations."""
-    from .handlers.process import (
-        get_process_diagram_handler,
-        get_process_run_handler,
-        inspect_process_handler,
-        list_process_runs_handler,
-        list_processes_handler,
-        propose_processes_handler,
-        save_processes_handler,
-        stories_coverage_handler,
-    )
-
-    ops: dict[str, Callable[..., Any]] = {
-        "propose": propose_processes_handler,
-        "save": save_processes_handler,
-        "list": list_processes_handler,
-        "inspect": inspect_process_handler,
-        "list_runs": list_process_runs_handler,
-        "get_run": get_process_run_handler,
-        "diagram": get_process_diagram_handler,
-        "coverage": stories_coverage_handler,
-    }
-
-    return await _dispatch_project_ops_async(arguments, ops, "process")
+handle_process: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
+    "process",
+    {
+        "propose": f"{_MOD_PROC}:propose_processes_handler",
+        "save": f"{_MOD_PROC}:save_processes_handler",
+        "list": f"{_MOD_PROC}:list_processes_handler",
+        "inspect": f"{_MOD_PROC}:inspect_process_handler",
+        "list_runs": f"{_MOD_PROC}:list_process_runs_handler",
+        "get_run": f"{_MOD_PROC}:get_process_run_handler",
+        "diagram": f"{_MOD_PROC}:get_process_diagram_handler",
+        "coverage": f"{_MOD_PROC}:stories_coverage_handler",
+    },
+)
 
 
 # =============================================================================
 # DSL Test Handler
 # =============================================================================
 
+_MOD_DT = "dazzle.mcp.server.handlers.dsl_test"
 
-async def handle_dsl_test(arguments: dict[str, Any]) -> str:
-    """Handle consolidated DSL test operations."""
-    from .handlers.dsl_test import (
-        create_sessions_handler,
-        diff_personas_handler,
-        generate_dsl_tests_handler,
-        get_dsl_test_coverage_handler,
-        list_dsl_tests_handler,
-        run_all_dsl_tests_handler,
-        run_dsl_tests_handler,
-        verify_story_handler,
-    )
-
-    ops: dict[str, Callable[..., Any]] = {
-        "generate": generate_dsl_tests_handler,
-        "run": run_dsl_tests_handler,
-        "run_all": run_all_dsl_tests_handler,
-        "coverage": get_dsl_test_coverage_handler,
-        "list": list_dsl_tests_handler,
-        "create_sessions": create_sessions_handler,
-        "diff_personas": diff_personas_handler,
-        "verify_story": verify_story_handler,
-    }
-
-    return await _dispatch_project_ops_async(arguments, ops, "DSL test")
+handle_dsl_test: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
+    "DSL test",
+    {
+        "generate": f"{_MOD_DT}:generate_dsl_tests_handler",
+        "run": f"{_MOD_DT}:run_dsl_tests_handler",
+        "run_all": f"{_MOD_DT}:run_all_dsl_tests_handler",
+        "coverage": f"{_MOD_DT}:get_dsl_test_coverage_handler",
+        "list": f"{_MOD_DT}:list_dsl_tests_handler",
+        "create_sessions": f"{_MOD_DT}:create_sessions_handler",
+        "diff_personas": f"{_MOD_DT}:diff_personas_handler",
+        "verify_story": f"{_MOD_DT}:verify_story_handler",
+    },
+)
 
 
 # =============================================================================
@@ -1240,59 +1240,63 @@ def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Test Design Handler (placed here because it references local helpers above)
+# =============================================================================
+
+_MOD_TD = "dazzle.mcp.server.handlers.test_design"
+
+handle_test_design: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "test design",
+    {
+        "propose_persona": f"{_MOD_TD}:propose_persona_tests_handler",
+        "gaps": f"{_MOD_TD}:get_test_gaps_handler",
+        "save": f"{_MOD_TD}:save_test_designs_handler",
+        "get": f"{_MOD_TD}:get_test_designs_handler",
+        "coverage_actions": f"{_MOD_TD}:get_coverage_actions_handler",
+        "runtime_gaps": f"{_MOD_TD}:get_runtime_coverage_gaps_handler",
+        "save_runtime": f"{_MOD_TD}:save_runtime_coverage_handler",
+        "auto_populate": _auto_populate_tests,
+        "improve_coverage": _improve_coverage,
+    },
+)
+
+
+# =============================================================================
 # Pitch Handler
 # =============================================================================
 
+_MOD_PITCH = "dazzle.mcp.server.handlers.pitch"
 
-def handle_pitch(arguments: dict[str, Any]) -> str:
-    """Handle consolidated pitch operations."""
-    from .handlers.pitch import (
-        enrich_pitchspec_handler,
-        generate_pitch_handler,
-        get_pitchspec_handler,
-        init_assets_handler,
-        review_pitchspec_handler,
-        scaffold_pitchspec_handler,
-        update_pitchspec_handler,
-        validate_pitchspec_handler,
-    )
-
-    ops: dict[str, Callable[..., str]] = {
-        "scaffold": scaffold_pitchspec_handler,
-        "generate": generate_pitch_handler,
-        "validate": validate_pitchspec_handler,
-        "get": get_pitchspec_handler,
-        "review": review_pitchspec_handler,
-        "update": update_pitchspec_handler,
-        "enrich": enrich_pitchspec_handler,
-        "init_assets": init_assets_handler,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "pitch")
+handle_pitch: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "pitch",
+    {
+        "scaffold": f"{_MOD_PITCH}:scaffold_pitchspec_handler",
+        "generate": f"{_MOD_PITCH}:generate_pitch_handler",
+        "validate": f"{_MOD_PITCH}:validate_pitchspec_handler",
+        "get": f"{_MOD_PITCH}:get_pitchspec_handler",
+        "review": f"{_MOD_PITCH}:review_pitchspec_handler",
+        "update": f"{_MOD_PITCH}:update_pitchspec_handler",
+        "enrich": f"{_MOD_PITCH}:enrich_pitchspec_handler",
+        "init_assets": f"{_MOD_PITCH}:init_assets_handler",
+    },
+)
 
 
 # =============================================================================
 # Contribution Handler
 # =============================================================================
 
+_MOD_CONTRIB = "dazzle.mcp.server.handlers.contribution"
 
-def handle_contribution(arguments: dict[str, Any]) -> str:
-    """Handle consolidated contribution packaging operations."""
-    from .handlers.contribution import (
-        create_handler,
-        examples_handler,
-        templates_handler,
-        validate_handler,
-    )
-
-    ops: dict[str, Callable[..., str]] = {
-        "templates": templates_handler,
-        "create": create_handler,
-        "validate": validate_handler,
-        "examples": examples_handler,
-    }
-
-    return _dispatch_standalone_ops(arguments, ops, "contribution")
+handle_contribution: Callable[[dict[str, Any]], str] = _make_standalone_handler(
+    "contribution",
+    {
+        "templates": f"{_MOD_CONTRIB}:templates_handler",
+        "create": f"{_MOD_CONTRIB}:create_handler",
+        "validate": f"{_MOD_CONTRIB}:validate_handler",
+        "examples": f"{_MOD_CONTRIB}:examples_handler",
+    },
+)
 
 
 # =============================================================================
@@ -1504,30 +1508,20 @@ def handle_graph(arguments: dict[str, Any]) -> str:
 # Discovery Handler
 # =============================================================================
 
+_MOD_DISC = "dazzle.mcp.server.handlers.discovery"
 
-async def handle_discovery(arguments: dict[str, Any]) -> str:
-    """Handle capability discovery operations."""
-    from .handlers.discovery import (
-        app_coherence_handler,
-        compile_discovery_handler,
-        discovery_status_handler,
-        emit_discovery_handler,
-        get_discovery_report_handler,
-        run_discovery_handler,
-        verify_all_stories_handler,
-    )
-
-    ops: dict[str, Callable[..., Any]] = {
-        "run": run_discovery_handler,
-        "report": get_discovery_report_handler,
-        "compile": compile_discovery_handler,
-        "emit": emit_discovery_handler,
-        "status": discovery_status_handler,
-        "verify_all_stories": verify_all_stories_handler,
-        "coherence": app_coherence_handler,
-    }
-
-    return await _dispatch_project_ops_async(arguments, ops, "discovery")
+handle_discovery: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
+    "discovery",
+    {
+        "run": f"{_MOD_DISC}:run_discovery_handler",
+        "report": f"{_MOD_DISC}:get_discovery_report_handler",
+        "compile": f"{_MOD_DISC}:compile_discovery_handler",
+        "emit": f"{_MOD_DISC}:emit_discovery_handler",
+        "status": f"{_MOD_DISC}:discovery_status_handler",
+        "verify_all_stories": f"{_MOD_DISC}:verify_all_stories_handler",
+        "coherence": f"{_MOD_DISC}:app_coherence_handler",
+    },
+)
 
 
 # =============================================================================
@@ -1562,107 +1556,75 @@ def handle_policy(arguments: dict[str, Any]) -> str:
 # Pipeline Handler
 # =============================================================================
 
-
-def handle_pipeline(arguments: dict[str, Any]) -> str:
-    """Handle pipeline operations."""
-    from .handlers.pipeline import run_pipeline_handler
-
-    ops: dict[str, Callable[..., str]] = {
-        "run": run_pipeline_handler,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "pipeline")
+handle_pipeline: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "pipeline",
+    {"run": "dazzle.mcp.server.handlers.pipeline:run_pipeline_handler"},
+)
 
 
 # =============================================================================
 # Nightly Handler
 # =============================================================================
 
-
-def handle_nightly(arguments: dict[str, Any]) -> str:
-    """Handle nightly parallel quality operations."""
-    from .handlers.nightly import run_nightly_handler
-
-    ops: dict[str, Callable[..., str]] = {
-        "run": run_nightly_handler,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "nightly")
+handle_nightly: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "nightly",
+    {"run": "dazzle.mcp.server.handlers.nightly:run_nightly_handler"},
+)
 
 
 # =============================================================================
 # Pulse (founder-ready health report)
 # =============================================================================
 
+_MOD_PULSE = "dazzle.mcp.server.handlers.pulse"
 
-def handle_pulse(arguments: dict[str, Any]) -> str:
-    """Handle pulse (founder-ready health report) operations."""
-    from .handlers.pulse import (
-        decisions_pulse_handler,
-        persona_pulse_handler,
-        radar_pulse_handler,
-        run_pulse_handler,
-        timeline_pulse_handler,
-    )
-
-    ops: dict[str, Callable[..., str]] = {
-        "run": run_pulse_handler,
-        "radar": radar_pulse_handler,
-        "persona": persona_pulse_handler,
-        "timeline": timeline_pulse_handler,
-        "decisions": decisions_pulse_handler,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "pulse")
+handle_pulse: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "pulse",
+    {
+        "run": f"{_MOD_PULSE}:run_pulse_handler",
+        "radar": f"{_MOD_PULSE}:radar_pulse_handler",
+        "persona": f"{_MOD_PULSE}:persona_pulse_handler",
+        "timeline": f"{_MOD_PULSE}:timeline_pulse_handler",
+        "decisions": f"{_MOD_PULSE}:decisions_pulse_handler",
+    },
+)
 
 
-async def handle_composition(arguments: dict[str, Any]) -> str:
-    """Handle composition analysis operations."""
-    from .handlers.composition import (
-        analyze_composition_handler,
-        audit_composition_handler,
-        bootstrap_composition_handler,
-        capture_composition_handler,
-        inspect_styles_handler,
-        report_composition_handler,
-    )
+# =============================================================================
+# Composition Handler
+# =============================================================================
 
-    ops: dict[str, Callable[..., Any]] = {
-        "audit": audit_composition_handler,
-        "capture": capture_composition_handler,
-        "analyze": analyze_composition_handler,
-        "report": report_composition_handler,
-        "bootstrap": bootstrap_composition_handler,
-        "inspect_styles": inspect_styles_handler,
-    }
+_MOD_COMP = "dazzle.mcp.server.handlers.composition"
 
-    return await _dispatch_project_ops_async(arguments, ops, "composition")
+handle_composition: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
+    "composition",
+    {
+        "audit": f"{_MOD_COMP}:audit_composition_handler",
+        "capture": f"{_MOD_COMP}:capture_composition_handler",
+        "analyze": f"{_MOD_COMP}:analyze_composition_handler",
+        "report": f"{_MOD_COMP}:report_composition_handler",
+        "bootstrap": f"{_MOD_COMP}:bootstrap_composition_handler",
+        "inspect_styles": f"{_MOD_COMP}:inspect_styles_handler",
+    },
+)
 
 
 # =============================================================================
 # Sentinel Handler
 # =============================================================================
 
+_MOD_SENT = "dazzle.mcp.server.handlers.sentinel"
 
-def handle_sentinel(arguments: dict[str, Any]) -> str:
-    """Handle sentinel operations."""
-    from .handlers.sentinel import (
-        findings_handler,
-        history_handler,
-        scan_handler,
-        status_handler,
-        suppress_handler,
-    )
-
-    ops: dict[str, Callable[..., str]] = {
-        "scan": scan_handler,
-        "findings": findings_handler,
-        "suppress": suppress_handler,
-        "status": status_handler,
-        "history": history_handler,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "sentinel")
+handle_sentinel: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "sentinel",
+    {
+        "scan": f"{_MOD_SENT}:scan_handler",
+        "findings": f"{_MOD_SENT}:findings_handler",
+        "suppress": f"{_MOD_SENT}:suppress_handler",
+        "status": f"{_MOD_SENT}:status_handler",
+        "history": f"{_MOD_SENT}:history_handler",
+    },
+)
 
 
 # =============================================================================

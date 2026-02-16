@@ -29,7 +29,11 @@ import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import aiosqlite
+    import psycopg
 
 from dazzle_back.events.bus import EventBus, EventHandler
 from dazzle_back.events.consumer import ConsumerConfig, IdempotentConsumer
@@ -154,7 +158,7 @@ class EventFramework:
             if url.startswith("postgres://"):
                 url = url.replace("postgres://", "postgresql://", 1)
 
-            async def _pg_connect() -> Any:
+            async def _pg_connect() -> psycopg.AsyncConnection[dict[str, Any]]:
                 import psycopg
                 from psycopg.rows import dict_row
 
@@ -164,7 +168,7 @@ class EventFramework:
         else:
             db_path = self._config.db_path
 
-            async def _sqlite_connect() -> Any:
+            async def _sqlite_connect() -> aiosqlite.Connection:
                 import aiosqlite
 
                 return await aiosqlite.connect(db_path)

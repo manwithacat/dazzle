@@ -26,18 +26,17 @@ import asyncio
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 import aiosqlite
 
+from dazzle_back.events.base_event_bus import ActiveSubscription, BaseEventBus
 from dazzle_back.events.bus import (
     ConsumerNotFoundError,
     ConsumerStatus,
-    EventBus,
     EventHandler,
     EventNotFoundError,
     NackReason,
@@ -111,17 +110,7 @@ CREATE TABLE IF NOT EXISTS _dazzle_topic_sequences (
 """
 
 
-@dataclass
-class ActiveSubscription:
-    """An active subscription in the broker."""
-
-    topic: str
-    group_id: str
-    handler: EventHandler
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-
-
-class DevBrokerSQLite(EventBus):
+class DevBrokerSQLite(BaseEventBus):
     """
     SQLite-backed EventBus implementation for development.
 
@@ -159,13 +148,10 @@ class DevBrokerSQLite(EventBus):
             DeprecationWarning,
             stacklevel=2,
         )
+        self._init_base()
         self._db_path = Path(db_path)
         self._auto_create = auto_create
         self._conn: aiosqlite.Connection | None = None
-        self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}
-        self._lock = asyncio.Lock()
-        self._consumer_tasks: dict[tuple[str, str], asyncio.Task[None]] = {}
-        self._running = False
 
     async def connect(self) -> None:
         """Connect to the database and create tables if needed."""
@@ -177,17 +163,7 @@ class DevBrokerSQLite(EventBus):
 
     async def close(self) -> None:
         """Close the database connection and stop consumers."""
-        self._running = False
-
-        # Cancel consumer tasks
-        for task in self._consumer_tasks.values():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
-        self._consumer_tasks.clear()
+        await self._cancel_consumer_tasks()
 
         if self._conn:
             await self._conn.close()
@@ -318,28 +294,6 @@ class DevBrokerSQLite(EventBus):
                 group_id=group_id,
                 handler=handler,
             )
-
-    async def unsubscribe(
-        self,
-        topic: str,
-        group_id: str,
-    ) -> None:
-        """Unsubscribe a consumer group from a topic."""
-        async with self._lock:
-            key = (topic, group_id)
-            if key not in self._subscriptions:
-                raise ConsumerNotFoundError(topic, group_id)
-
-            # Stop consumer task if running
-            if key in self._consumer_tasks:
-                self._consumer_tasks[key].cancel()
-                try:
-                    await self._consumer_tasks[key]
-                except asyncio.CancelledError:
-                    pass
-                del self._consumer_tasks[key]
-
-            del self._subscriptions[key]
 
     async def ack(
         self,
@@ -694,17 +648,6 @@ class DevBrokerSQLite(EventBus):
                     self._consumer_loop(sub.topic, sub.group_id, poll_interval)
                 )
                 self._consumer_tasks[key] = task
-
-    async def stop_consumer_loop(self) -> None:
-        """Stop all consumer loops."""
-        self._running = False
-        for task in self._consumer_tasks.values():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        self._consumer_tasks.clear()
 
     async def _consumer_loop(
         self,

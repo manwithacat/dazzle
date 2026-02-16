@@ -152,7 +152,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -178,7 +178,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -199,7 +199,7 @@ class TestStoriesCoverage:
 
         with (
             patch(
-                "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+                "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
                 return_value=mock_app_spec_no_stories,
             ),
             patch(
@@ -220,7 +220,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {"limit": 1, "offset": 0})
@@ -238,7 +238,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {"status_filter": "uncovered"})
@@ -255,7 +255,7 @@ class TestStoriesCoverage:
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -322,7 +322,7 @@ class TestStoriesCoverage:
         ]
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=app_spec,
         ):
             result = stories_coverage_handler(tmp_path, {})
@@ -372,7 +372,7 @@ class TestStoriesCoverage:
 
         with (
             patch(
-                "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+                "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
                 return_value=app_spec,
             ),
             patch(
@@ -399,7 +399,7 @@ class TestProposeProcesses:
         from dazzle.mcp.server.handlers.process import propose_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = propose_processes_handler(tmp_path, {})
@@ -421,7 +421,7 @@ class TestProposeProcesses:
         from dazzle.mcp.server.handlers.process import propose_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = propose_processes_handler(tmp_path, {"story_ids": ["ST-001"]})
@@ -439,7 +439,7 @@ class TestProposeProcesses:
 
         with (
             patch(
-                "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+                "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
                 return_value=mock_app_spec_no_stories,
             ),
             patch(
@@ -460,7 +460,7 @@ class TestProposeProcesses:
         from dazzle.mcp.server.handlers.process import propose_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = propose_processes_handler(tmp_path, {})
@@ -479,7 +479,7 @@ class TestListProcesses:
         from dazzle.mcp.server.handlers.process import list_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = list_processes_handler(tmp_path, {})
@@ -501,7 +501,7 @@ class TestListProcesses:
         from dazzle.mcp.server.handlers.process import list_processes_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_no_processes,
         ):
             result = list_processes_handler(tmp_path, {})
@@ -522,7 +522,7 @@ class TestInspectProcess:
         from dazzle.mcp.server.handlers.process import inspect_process_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = inspect_process_handler(tmp_path, {"process_name": "order_creation"})
@@ -551,7 +551,7 @@ class TestInspectProcess:
         from dazzle.mcp.server.handlers.process import inspect_process_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._load_app_spec",
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
             return_value=mock_app_spec_with_coverage,
         ):
             result = inspect_process_handler(tmp_path, {"process_name": "nonexistent"})
@@ -593,7 +593,7 @@ class TestProcessRunHandlers:
         from dazzle.mcp.server.handlers.process import _list_runs_async
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._get_process_adapter",
+            "dazzle.mcp.server.handlers.process._helpers.get_process_adapter",
             return_value=mock_empty_adapter,
         ):
             result = await _list_runs_async(tmp_path, {})
@@ -609,7 +609,7 @@ class TestProcessRunHandlers:
         from dazzle.mcp.server.handlers.process import _get_run_async
 
         with patch(
-            "dazzle.mcp.server.handlers.process._helpers._get_process_adapter",
+            "dazzle.mcp.server.handlers.process._helpers.get_process_adapter",
             return_value=mock_empty_adapter,
         ):
             result = await _get_run_async(tmp_path, {"run_id": "nonexistent"})
@@ -633,37 +633,44 @@ class TestProcessRunHandlers:
 class TestToolSchemas:
     """Test that tool schemas are properly defined."""
 
-    def test_process_tools_exist(self) -> None:
-        """Test that process tools are defined in get_process_tools."""
-        from dazzle.mcp.server.tools import get_process_tools
+    def test_process_tool_exists_in_consolidated(self) -> None:
+        """Test that the consolidated 'process' tool is defined."""
+        from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 
-        tools = get_process_tools()
+        tools = get_consolidated_tools()
         tool_names = [t.name for t in tools]
 
-        assert "stories_coverage" in tool_names
-        assert "propose_processes_from_stories" in tool_names
-        assert "list_processes" in tool_names
-        assert "inspect_process" in tool_names
-        assert "list_process_runs" in tool_names
-        assert "get_process_run" in tool_names
+        assert "process" in tool_names
 
-    def test_tools_in_all_tools(self) -> None:
-        """Test that process tools are included in get_all_tools."""
-        from dazzle.mcp.server.tools import get_all_tools
+    def test_process_tool_has_expected_operations(self) -> None:
+        """Test that the consolidated process tool includes expected operations."""
+        from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 
-        tools = get_all_tools()
+        tools = get_consolidated_tools()
+        process_tool = next(t for t in tools if t.name == "process")
+        schema = process_tool.inputSchema
+        operations = schema["properties"]["operation"]["enum"]
+
+        assert "propose" in operations
+        assert "save" in operations
+        assert "list" in operations
+        assert "inspect" in operations
+        assert "coverage" in operations
+
+    def test_process_tool_in_all_consolidated_tools(self) -> None:
+        """Test that process tool is included in get_all_consolidated_tools."""
+        from dazzle.mcp.server.tools_consolidated import get_all_consolidated_tools
+
+        tools = get_all_consolidated_tools()
         tool_names = [t.name for t in tools]
 
-        assert "stories_coverage" in tool_names
-        assert "propose_processes_from_stories" in tool_names
-        assert "list_processes" in tool_names
-        assert "inspect_process" in tool_names
+        assert "process" in tool_names
 
     def test_tool_schemas_valid(self) -> None:
-        """Test that tool input schemas are valid."""
-        from dazzle.mcp.server.tools import get_process_tools
+        """Test that consolidated tool input schemas are valid."""
+        from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 
-        for tool in get_process_tools():
+        for tool in get_consolidated_tools():
             assert tool.inputSchema is not None
             assert tool.inputSchema["type"] == "object"
             assert "properties" in tool.inputSchema
@@ -674,7 +681,7 @@ class TestHelperFunctions:
 
     def test_slugify(self) -> None:
         """Test _slugify function."""
-        from dazzle.mcp.server.handlers.process import _slugify
+        from dazzle.mcp.server.handlers.utils import slugify as _slugify
 
         assert _slugify("Hello World") == "hello_world"
         assert _slugify("Test-123-Value") == "test_123_value"

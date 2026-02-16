@@ -207,7 +207,9 @@ def generate_test_data(
     """
     import uuid as uuid_module
 
-    from dazzle_back.specs.entity import ScalarType
+    from dazzle_back.specs.entity import (
+        ScalarType,  # Intentional layer crossing: test data generation
+    )
 
     data: dict[str, Any] = {}
     created_entities = created_entities or {}

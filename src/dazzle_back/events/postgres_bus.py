@@ -21,15 +21,15 @@ import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+from dazzle_back.events.base_event_bus import ActiveSubscription, BaseEventBus
 from dazzle_back.events.bus import (
     ConsumerNotFoundError,
     ConsumerStatus,
-    EventBus,
     EventHandler,
     EventNotFoundError,
     NackReason,
@@ -139,17 +139,7 @@ class PostgresConfig:
     """Maximum connection pool size."""
 
 
-@dataclass
-class ActiveSubscription:
-    """An active subscription in the broker."""
-
-    topic: str
-    group_id: str
-    handler: EventHandler
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-
-
-class PostgresBus(EventBus):
+class PostgresBus(BaseEventBus):
     """
     PostgreSQL-backed EventBus implementation.
 
@@ -182,15 +172,12 @@ class PostgresBus(EventBus):
                 "psycopg is required for PostgresBus. Install with: pip install dazzle"
             )
 
+        self._init_base()
         self._config = config
         self._prefix = config.table_prefix
         # typed Any because row_factory=dict_row is passed via kwargs at runtime
         # but psycopg_pool generics don't propagate that to mypy
         self._pool: Any = None
-        self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}
-        self._lock = asyncio.Lock()
-        self._consumer_tasks: dict[tuple[str, str], asyncio.Task[None]] = {}
-        self._running = False
         self._listen_conn: psycopg.AsyncConnection | None = None
         self._listen_task: asyncio.Task[None] | None = None
         self._notify_event = asyncio.Event()
@@ -209,17 +196,7 @@ class PostgresBus(EventBus):
 
     async def close(self) -> None:
         """Close the database connection and stop consumers."""
-        self._running = False
-
-        # Cancel consumer tasks
-        for task in self._consumer_tasks.values():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
-        self._consumer_tasks.clear()
+        await self._cancel_consumer_tasks()
 
         # Cancel listen task
         if self._listen_task:
@@ -405,28 +382,6 @@ class PostgresBus(EventBus):
                 group_id=group_id,
                 handler=handler,
             )
-
-    async def unsubscribe(
-        self,
-        topic: str,
-        group_id: str,
-    ) -> None:
-        """Unsubscribe a consumer group from a topic."""
-        async with self._lock:
-            key = (topic, group_id)
-            if key not in self._subscriptions:
-                raise ConsumerNotFoundError(topic, group_id)
-
-            # Stop consumer task if running
-            if key in self._consumer_tasks:
-                self._consumer_tasks[key].cancel()
-                try:
-                    await self._consumer_tasks[key]
-                except asyncio.CancelledError:
-                    pass
-                del self._consumer_tasks[key]
-
-            del self._subscriptions[key]
 
     async def ack(
         self,
@@ -732,17 +687,6 @@ class PostgresBus(EventBus):
             if key not in self._consumer_tasks:
                 task = asyncio.create_task(self._consumer_loop(sub.topic, sub.group_id, interval))
                 self._consumer_tasks[key] = task
-
-    async def stop_consumer_loop(self) -> None:
-        """Stop all consumer loops."""
-        self._running = False
-        for task in self._consumer_tasks.values():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        self._consumer_tasks.clear()
 
     async def _consumer_loop(
         self,

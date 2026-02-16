@@ -141,6 +141,7 @@ class MailpitAdapter(EmailAdapter):
                 smtp.noop()
             return True
         except Exception:
+            logger.debug("Health check failed", exc_info=True)
             return False
 
 

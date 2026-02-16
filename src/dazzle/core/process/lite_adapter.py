@@ -25,41 +25,30 @@ import json
 import logging
 import uuid
 from collections.abc import Callable, Coroutine
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import aiosqlite
 
 from dazzle.core.ir.process import (
-    CompensationSpec,
     OverlapPolicy,
     ProcessSpec,
-    ProcessStepSpec,
-    RetryBackoff,
-    RetryConfig,
     ScheduleSpec,
     StepKind,
 )
 
 from .adapter import ProcessAdapter, ProcessRun, ProcessStatus, ProcessTask, TaskStatus
 from .context import ProcessContext
+from .lite_helpers import (
+    CompensationRunner,
+    ProcessCancelled,
+    ProcessStepFailed,
+    SchedulePoller,
+    StepExecutor,
+)
 
 logger = logging.getLogger(__name__)
-
-
-class ProcessStepFailed(Exception):
-    """Raised when a process step fails after all retries."""
-
-    def __init__(self, step_name: str, message: str):
-        self.step_name = step_name
-        super().__init__(f"Step '{step_name}' failed: {message}")
-
-
-class ProcessCancelled(Exception):
-    """Raised when a process is cancelled."""
-
-    pass
 
 
 # Type alias for service handlers
@@ -132,6 +121,11 @@ class LiteProcessAdapter(ProcessAdapter):
         # Shutdown flag
         self._shutting_down = False
 
+        # Delegate helpers
+        self._step_executor = StepExecutor(self)
+        self._compensation_runner = CompensationRunner(self)
+        self._schedule_poller = SchedulePoller(self)
+
     # Handler injection
     def set_service_handler(self, service_name: str, handler: ServiceHandler) -> None:
         """Register a handler for a service call."""
@@ -196,7 +190,7 @@ class LiteProcessAdapter(ProcessAdapter):
                 await self._db.commit()
 
         # Start scheduler
-        self._scheduler_task = asyncio.create_task(self._run_scheduler())
+        self._scheduler_task = asyncio.create_task(self._schedule_poller.run())
 
         # Resume suspended processes
         await self._resume_suspended_processes()
@@ -624,7 +618,7 @@ class LiteProcessAdapter(ProcessAdapter):
                 await self._update_run(run_id, current_step=step.name, context=context)
 
                 # Execute the step
-                result = await self._execute_step(run_id, step, context, spec)
+                result = await self._step_executor.execute_step(run_id, step, context, spec)
                 completed_steps.append(step.name)
 
                 # Record step output
@@ -679,7 +673,9 @@ class LiteProcessAdapter(ProcessAdapter):
             logger.error(f"Process {run_id} failed: {error_msg}")
 
             # Run compensations
-            await self._run_compensations(run_id, spec, completed_steps, context)
+            await self._compensation_runner.run_compensations(
+                run_id, spec, completed_steps, context
+            )
 
             # Update status
             await self._fail_run(run_id, error_msg)
@@ -694,411 +690,6 @@ class LiteProcessAdapter(ProcessAdapter):
             # Remove from running tasks
             if run_id in self._running:
                 del self._running[run_id]
-
-    async def _execute_step(
-        self,
-        run_id: str,
-        step: ProcessStepSpec,
-        context: ProcessContext,
-        spec: ProcessSpec,
-    ) -> dict[str, Any]:
-        """Execute a single step with retry logic."""
-        retry = step.retry or RetryConfig()
-        last_error: str | None = None
-
-        for attempt in range(retry.max_attempts):
-            try:
-                # Apply timeout
-                result = await asyncio.wait_for(
-                    self._execute_step_impl(run_id, step, context, spec),
-                    timeout=step.timeout_seconds,
-                )
-                return result
-
-            except TimeoutError:
-                last_error = f"Step timed out after {step.timeout_seconds}s"
-
-            except ProcessStepFailed:
-                raise
-
-            except Exception as e:
-                last_error = str(e)
-
-            # Record failed attempt
-            await self._record_step_execution(
-                run_id, step.name, step.kind.value, "failed", error=last_error, attempt=attempt + 1
-            )
-
-            # Retry if not last attempt
-            if attempt < retry.max_attempts - 1:
-                delay = self._calculate_backoff(retry, attempt)
-                logger.debug(f"Step {step.name} attempt {attempt + 1} failed, retrying in {delay}s")
-                await asyncio.sleep(delay)
-
-        raise ProcessStepFailed(step.name, last_error or "Unknown error")
-
-    async def _execute_step_impl(
-        self,
-        run_id: str,
-        step: ProcessStepSpec,
-        context: ProcessContext,
-        spec: ProcessSpec,
-    ) -> dict[str, Any]:
-        """Execute step implementation by kind."""
-        # Build step inputs
-        step_inputs: dict[str, Any] = {}
-        for mapping in step.inputs:
-            value = context.resolve(mapping.source)
-            step_inputs[mapping.target] = value
-
-        if step.kind == StepKind.SERVICE:
-            return await self._execute_service_step(step, step_inputs, context)
-
-        elif step.kind == StepKind.SEND:
-            return await self._execute_send_step(step, step_inputs, context)
-
-        elif step.kind == StepKind.WAIT:
-            return await self._execute_wait_step(step, context)
-
-        elif step.kind == StepKind.HUMAN_TASK:
-            return await self._execute_human_task_step(run_id, step, context)
-
-        elif step.kind == StepKind.SUBPROCESS:
-            return await self._execute_subprocess_step(step, step_inputs)
-
-        elif step.kind == StepKind.PARALLEL:
-            return await self._execute_parallel_step(run_id, step, context, spec)
-
-        else:
-            return {}
-
-    async def _execute_service_step(
-        self,
-        step: ProcessStepSpec,
-        inputs: dict[str, Any],
-        context: ProcessContext,
-    ) -> dict[str, Any]:
-        """Execute a service call step."""
-        service_name = step.service
-        if not service_name:
-            raise ProcessStepFailed(step.name, "No service specified")
-
-        handler = self._service_handlers.get(service_name)
-        if not handler:
-            logger.warning(f"No handler for service {service_name}, using no-op")
-            return {}
-
-        return await handler(inputs)
-
-    async def _execute_send_step(
-        self,
-        step: ProcessStepSpec,
-        inputs: dict[str, Any],
-        context: ProcessContext,
-    ) -> dict[str, Any]:
-        """Execute a message send step."""
-        if not step.channel or not step.message:
-            raise ProcessStepFailed(step.name, "No channel or message specified")
-
-        if self._send_handler:
-            await self._send_handler(step.channel, step.message, inputs)
-
-        return {"sent": True, "channel": step.channel, "message": step.message}
-
-    async def _execute_wait_step(
-        self,
-        step: ProcessStepSpec,
-        context: ProcessContext,
-    ) -> dict[str, Any]:
-        """Execute a wait step (duration or signal)."""
-        if step.wait_duration_seconds:
-            await asyncio.sleep(step.wait_duration_seconds)
-            return {"waited_seconds": step.wait_duration_seconds}
-
-        if step.wait_for_signal:
-            # Poll for signal
-            run_id = context.get_variable("run_id")
-            deadline = datetime.now(UTC) + timedelta(seconds=step.timeout_seconds)
-            while datetime.now(UTC) < deadline:
-                signal = await self._check_signal(run_id, step.wait_for_signal)
-                if signal:
-                    return {"signal": step.wait_for_signal, "payload": signal}
-                await asyncio.sleep(self._poll_interval)
-
-            raise ProcessStepFailed(
-                step.name, f"Timeout waiting for signal: {step.wait_for_signal}"
-            )
-
-        return {}
-
-    async def _execute_human_task_step(
-        self,
-        run_id: str,
-        step: ProcessStepSpec,
-        context: ProcessContext,
-    ) -> dict[str, Any]:
-        """Execute a human task step."""
-        if not step.human_task:
-            raise ProcessStepFailed(step.name, "No human_task configuration")
-
-        task_config = step.human_task
-
-        # Resolve assignee
-        assignee_id = None
-        if task_config.assignee_expression:
-            assignee_id = context.resolve(task_config.assignee_expression)
-
-        # Resolve entity path
-        entity_id = ""
-        entity_name = ""
-        if task_config.entity_path:
-            entity_id = context.resolve(f"{task_config.entity_path}.id") or ""
-            # Extract entity name from path (e.g., "inputs.expense_report" -> "expense_report")
-            parts = task_config.entity_path.split(".")
-            entity_name = parts[-1] if parts else ""
-
-        # Create task
-        task_id = str(uuid.uuid4())
-        due_at = datetime.now(UTC) + timedelta(seconds=step.timeout_seconds)
-
-        await self._create_task(
-            task_id=task_id,
-            run_id=run_id,
-            step_name=step.name,
-            surface_name=task_config.surface,
-            entity_name=entity_name,
-            entity_id=entity_id,
-            assignee_id=assignee_id,
-            assignee_role=task_config.assignee_role,
-            due_at=due_at,
-        )
-
-        await self._emit_event(
-            "HumanTaskAssigned",
-            run_id,
-            task_id=task_id,
-            step_name=step.name,
-            surface=task_config.surface,
-        )
-
-        # Poll for completion
-        escalation_seconds = task_config.escalation_timeout_seconds or step.timeout_seconds
-        escalation_time = datetime.now(UTC) + timedelta(seconds=escalation_seconds)
-
-        while datetime.now(UTC) < due_at:
-            task = await self.get_task(task_id)
-            if not task:
-                raise ProcessStepFailed(step.name, "Task not found")
-
-            if task.status == TaskStatus.COMPLETED:
-                # Apply outcome
-                outcome = task.outcome or "completed"
-                outcome_data = task.outcome_data or {}
-
-                # Find matching outcome config and apply sets
-                for outcome_config in task_config.outcomes:
-                    if outcome_config.name == outcome:
-                        for _assignment in outcome_config.sets:
-                            # Apply field assignment (would need entity service integration)
-                            pass
-                        break
-
-                return {"outcome": outcome, "task_id": task_id, **outcome_data}
-
-            # Check escalation
-            if datetime.now(UTC) > escalation_time and not task.escalated_at:
-                await self._escalate_task(task_id)
-
-            await asyncio.sleep(self._poll_interval)
-
-        raise ProcessStepFailed(step.name, "Human task timed out")
-
-    async def _execute_subprocess_step(
-        self,
-        step: ProcessStepSpec,
-        inputs: dict[str, Any],
-    ) -> dict[str, Any]:
-        """Execute a subprocess step."""
-        if not step.subprocess:
-            raise ProcessStepFailed(step.name, "No subprocess specified")
-
-        # Start subprocess and wait for completion
-        run_id = await self.start_process(step.subprocess, inputs)
-
-        # Poll for completion
-        while True:
-            run = await self.get_run(run_id)
-            if not run:
-                raise ProcessStepFailed(step.name, "Subprocess not found")
-
-            if run.status == ProcessStatus.COMPLETED:
-                return {"subprocess_run_id": run_id, "outputs": run.outputs or {}}
-
-            if run.status in (ProcessStatus.FAILED, ProcessStatus.CANCELLED):
-                raise ProcessStepFailed(step.name, f"Subprocess {run.status.value}: {run.error}")
-
-            await asyncio.sleep(self._poll_interval)
-
-    async def _execute_parallel_step(
-        self,
-        run_id: str,
-        step: ProcessStepSpec,
-        context: ProcessContext,
-        spec: ProcessSpec,
-    ) -> dict[str, Any]:
-        """Execute parallel steps."""
-        if not step.parallel_steps:
-            return {}
-
-        # Create tasks for each parallel step
-        tasks = []
-        for parallel_step in step.parallel_steps:
-            task = asyncio.create_task(self._execute_step(run_id, parallel_step, context, spec))
-            tasks.append((parallel_step.name, task))
-
-        # Wait for all with policy
-        results: dict[str, Any] = {}
-        errors: list[str] = []
-
-        if step.parallel_policy.value == "fail_fast":
-            # Fail on first error
-            done, pending = await asyncio.wait(
-                [t for _, t in tasks],
-                return_when=asyncio.FIRST_EXCEPTION,
-            )
-
-            # Cancel pending
-            for task in pending:
-                task.cancel()
-
-            # Collect results
-            for name, task in tasks:
-                if task.done():
-                    try:
-                        results[name] = task.result()
-                    except Exception as e:
-                        errors.append(f"{name}: {e}")
-        else:
-            # Wait for all
-            await asyncio.gather(*[t for _, t in tasks], return_exceptions=True)
-
-            for name, task in tasks:
-                try:
-                    results[name] = task.result()
-                except Exception as e:
-                    errors.append(f"{name}: {e}")
-
-        if errors:
-            raise ProcessStepFailed(step.name, f"Parallel failures: {'; '.join(errors)}")
-
-        return results
-
-    # Internal: Compensation
-    async def _run_compensations(
-        self,
-        run_id: str,
-        spec: ProcessSpec,
-        completed_steps: list[str],
-        context: ProcessContext,
-    ) -> None:
-        """Run compensation handlers for completed steps in reverse order."""
-        if not spec.compensations:
-            return
-
-        await self._update_run_status(run_id, ProcessStatus.COMPENSATING)
-
-        # Build compensation map
-        comp_map: dict[str, CompensationSpec] = {}
-        for comp in spec.compensations:
-            comp_map[comp.name] = comp
-
-        # Run compensations in reverse order
-        for step_name in reversed(completed_steps):
-            step = spec.get_step(step_name)
-            if step and step.compensate_with:
-                compensation = comp_map.get(step.compensate_with)
-                if compensation:
-                    try:
-                        await self._run_compensation(run_id, compensation, context)
-                    except Exception as e:
-                        logger.error(f"Compensation {compensation.name} failed: {e}")
-
-    async def _run_compensation(
-        self,
-        run_id: str,
-        comp: CompensationSpec,
-        context: ProcessContext,
-    ) -> None:
-        """Run a single compensation handler."""
-        if comp.service:
-            handler = self._service_handlers.get(comp.service)
-            if handler:
-                # Build inputs
-                inputs: dict[str, Any] = {}
-                for mapping in comp.inputs:
-                    inputs[mapping.target] = context.resolve(mapping.source)
-
-                await asyncio.wait_for(
-                    handler(inputs),
-                    timeout=comp.timeout_seconds,
-                )
-
-    # Internal: Scheduling
-    async def _run_scheduler(self) -> None:
-        """Background task to check and run scheduled processes."""
-        while True:
-            try:
-                await asyncio.sleep(self._scheduler_interval)
-                if self._shutting_down:
-                    break
-
-                now = datetime.now(UTC)
-
-                # Check scheduled processes
-                for name, spec in self._schedule_registry.items():
-                    if await self._should_run_schedule(spec, now):
-                        try:
-                            run_id = await self.start_process(name, {})
-                            await self._update_schedule_run(name, run_id)
-                        except Exception as e:
-                            await self._record_schedule_error(name, str(e))
-
-                # Check for task escalations
-                await self._check_pending_escalations()
-
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.error(f"Scheduler error: {e}")
-
-    async def _should_run_schedule(self, spec: ScheduleSpec, now: datetime) -> bool:
-        """Check if a schedule should run now."""
-        if not self._db:
-            return False
-
-        async with self._db.execute(
-            "SELECT last_run_at, next_run_at FROM schedule_runs WHERE schedule_name = ?",
-            (spec.name,),
-        ) as cursor:
-            row = await cursor.fetchone()
-
-        if not row:
-            return True
-
-        last_run = row["last_run_at"]
-        if last_run:
-            last_run = datetime.fromisoformat(last_run)
-
-            # Check interval
-            if spec.interval_seconds:
-                return (now - last_run).total_seconds() >= spec.interval_seconds
-
-            # Cron would need croniter library
-            if spec.cron:
-                # Simplified: just check if enough time has passed (minimum 1 hour)
-                return (now - last_run).total_seconds() >= 3600
-
-        return True
 
     # Internal: Database Operations
     async def _save_run(self, run: ProcessRun) -> None:
@@ -1453,18 +1044,6 @@ class LiteProcessAdapter(ProcessAdapter):
                 logger.error(f"Event handler error: {e}")
 
     # Helpers
-    def _calculate_backoff(self, retry: RetryConfig, attempt: int) -> float:
-        """Calculate backoff delay for retry."""
-        if retry.backoff == RetryBackoff.FIXED:
-            return float(retry.initial_interval_seconds)
-
-        elif retry.backoff == RetryBackoff.LINEAR:
-            return float(retry.initial_interval_seconds * (attempt + 1))
-
-        else:  # EXPONENTIAL
-            delay = retry.initial_interval_seconds * (retry.backoff_coefficient**attempt)
-            return min(delay, retry.max_interval_seconds)
-
     def _row_to_run(self, row: aiosqlite.Row) -> ProcessRun:
         """Convert database row to ProcessRun."""
         return ProcessRun(

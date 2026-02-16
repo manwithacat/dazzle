@@ -5,12 +5,12 @@ Process proposal generation — workflow design briefs from uncovered stories.
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ..common import extract_progress, handler_error_json
+from ..utils import slugify as _slugify
 from . import _helpers
 from .coverage import (
     CRUD_OUTCOME_PATTERNS,
@@ -48,14 +48,6 @@ class WorkflowProposal:
 # =============================================================================
 
 
-def _slugify(text: str) -> str:
-    """Convert text to snake_case slug."""
-    text = text.lower().strip()
-    text = re.sub(r"[^\w\s-]", "", text)
-    text = re.sub(r"[-\s]+", "_", text)
-    return text[:30]
-
-
 # =============================================================================
 # Process Proposal Handler
 # =============================================================================
@@ -72,7 +64,7 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     try:
         progress.log_sync("Loading app spec and stories...")
-        app_spec = _helpers._load_app_spec(project_root)
+        app_spec = _helpers.load_app_spec(project_root)
         story_ids = args.get("story_ids")
 
         stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []

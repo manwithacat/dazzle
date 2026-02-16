@@ -215,17 +215,27 @@ class DockerRunner:
 
         # Stop existing containers
         print("[Dazzle] Stopping any existing containers...")
-        subprocess.run(
-            ["docker", "compose", "-f", str(compose_file), "down"],
-            capture_output=True,
-        )
+        try:
+            subprocess.run(
+                ["docker", "compose", "-f", str(compose_file), "down"],
+                capture_output=True,
+                timeout=60,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError):
+            print("[Dazzle] ERROR: Docker is not available")
+            return 1
 
         # Build and run
         print("[Dazzle] Building container...")
-        build_result = subprocess.run(
-            ["docker", "compose", "-f", str(compose_file), "build"],
-            cwd=str(build_dir),
-        )
+        try:
+            build_result = subprocess.run(
+                ["docker", "compose", "-f", str(compose_file), "build"],
+                cwd=str(build_dir),
+                timeout=600,
+            )
+        except (FileNotFoundError, subprocess.SubprocessError) as exc:
+            print(f"[Dazzle] ERROR: Docker compose build failed: {exc}")
+            return 1
         if build_result.returncode != 0:
             print("[Dazzle] ERROR: Docker compose build failed")
             return 1
@@ -237,10 +247,15 @@ class DockerRunner:
 
         if self.config.detach:
             print("[Dazzle] Running in background...")
-            result = subprocess.run(
-                ["docker", "compose", "-f", str(compose_file), "up", "-d"],
-                cwd=str(build_dir),
-            )
+            try:
+                result = subprocess.run(
+                    ["docker", "compose", "-f", str(compose_file), "up", "-d"],
+                    cwd=str(build_dir),
+                    timeout=120,
+                )
+            except (FileNotFoundError, subprocess.SubprocessError) as exc:
+                print(f"[Dazzle] ERROR: Failed to start container: {exc}")
+                return 1
             if result.returncode == 0:
                 print(f"[Dazzle] Container started: {self.container_name}")
                 print(f"[Dazzle] Stop with: docker compose -f {compose_file} down")
@@ -261,8 +276,12 @@ class DockerRunner:
                 subprocess.run(
                     ["docker", "compose", "-f", str(compose_file), "down"],
                     cwd=str(build_dir),
+                    timeout=60,
                 )
                 return 0
+            except (FileNotFoundError, subprocess.SubprocessError) as exc:
+                print(f"[Dazzle] ERROR: Failed to run container: {exc}")
+                return 1
 
 
 # =============================================================================

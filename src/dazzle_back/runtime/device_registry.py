@@ -15,6 +15,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
+    import psycopg
     from fastapi import APIRouter
 
 
@@ -83,7 +84,7 @@ class DeviceRegistry:
         self._database_url = database_url
         self._init_db()
 
-    def _get_connection(self) -> Any:
+    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
         """Get a PostgreSQL database connection."""
         import psycopg
         from psycopg.rows import dict_row

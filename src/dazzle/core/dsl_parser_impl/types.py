@@ -412,6 +412,24 @@ class TypeParserMixin:
 
         return modifiers, default
 
+    def _parse_field_spec(self) -> ir.FieldSpec:
+        """Parse a single field: ``name: type [modifiers] [=default]``.
+
+        Shared across entity, archetype, foreign_model, and stream schema
+        parsers.  The caller is responsible for the surrounding loop and
+        INDENT/DEDENT handling.
+        """
+        field_name = self.expect_identifier_or_keyword().value
+        self.expect(TokenType.COLON)
+        field_type = self.parse_type_spec()
+        modifiers, default = self.parse_field_modifiers()
+        return ir.FieldSpec(
+            name=field_name,
+            type=field_type,
+            modifiers=modifiers,
+            default=default,
+        )
+
     def _parse_field_path(self) -> list[str]:
         """
         Parse a field path like 'field' or 'relation.field' or 'relation.subrelation.field'.

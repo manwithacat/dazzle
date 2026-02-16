@@ -172,7 +172,11 @@ class RabbitMQAdapter(QueueAdapter):
 
             async with asyncio.timeout(timeout):
                 async for incoming in queue.iterator():
-                    body = json.loads(incoming.body.decode())
+                    try:
+                        body = json.loads(incoming.body.decode())
+                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                        logger.warning(f"Skipping malformed message: {e}")
+                        continue
                     body["_delivery_tag"] = incoming.delivery_tag
                     messages.append(body)
                     self._pending_acks[body.get("id", str(incoming.delivery_tag))] = incoming

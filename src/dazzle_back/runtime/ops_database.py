@@ -24,8 +24,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
+if TYPE_CHECKING:
+    import psycopg
 
 
 def _utcnow() -> datetime:
@@ -181,7 +184,7 @@ class OpsDatabase:
         self.retention = retention or RetentionConfig()
         self._init_schema()
 
-    def _get_connection(self) -> Any:
+    def _get_connection(self) -> psycopg.Connection[dict[str, Any]]:
         """Get a PostgreSQL database connection."""
         import psycopg
         from psycopg.rows import dict_row

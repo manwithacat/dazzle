@@ -12,6 +12,7 @@ This package provides the core event infrastructure for Dazzle applications:
 - Topology drift detection (v0.18.0 Phase I)
 """
 
+from dazzle_back.events.base_event_bus import BaseEventBus
 from dazzle_back.events.bus import (
     ConsumerNotFoundError,
     ConsumerStatus,
@@ -130,6 +131,7 @@ __all__ = [
     "ConsumerStatus",
     "NackReason",
     # Bus implementations
+    "BaseEventBus",
     "DevBusMemory",
     "DevBrokerSQLite",
     # Outbox (transactional publishing)

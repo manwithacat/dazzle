@@ -114,7 +114,7 @@ class TestRunDiscovery:
 
         with (
             patch.dict("os.environ", {}, clear=True),
-            patch("dazzle.mcp.server.handlers.discovery._load_appspec") as mock_load,
+            patch("dazzle.mcp.server.handlers.discovery.missions._load_appspec") as mock_load,
         ):
             mock_load.side_effect = Exception("Parse error")
             # Should get past the preflight and hit the DSL load error,
@@ -135,7 +135,7 @@ class TestRunDiscovery:
         assert "error" in result
         assert "not reachable" in result["error"]
 
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
+    @patch("dazzle.mcp.server.handlers.discovery.missions._load_appspec")
     @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable")
     def test_run_handles_dsl_error(
         self,
@@ -152,9 +152,9 @@ class TestRunDiscovery:
         assert "error" in result
         assert "Parse error" in result["error"]
 
-    @patch("dazzle.mcp.server.handlers.discovery._get_persona_session_info")
-    @patch("dazzle.mcp.server.handlers.discovery._populate_kg_for_discovery")
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
+    @patch("dazzle.mcp.server.handlers.discovery.missions._get_persona_session_info")
+    @patch("dazzle.mcp.server.handlers.discovery.missions._populate_kg_for_discovery")
+    @patch("dazzle.mcp.server.handlers.discovery.missions._load_appspec")
     @patch("dazzle.mcp.server.handlers.preflight.check_server_reachable")
     def test_run_executes_agent_and_returns_result(
         self,
@@ -217,7 +217,7 @@ class TestRunDiscovery:
         from dazzle.mcp.server.handlers.discovery import run_discovery_handler
 
         with patch(
-            "dazzle.mcp.server.handlers.discovery.run_headless_discovery_handler"
+            "dazzle.mcp.server.handlers.discovery.missions.run_headless_discovery_handler"
         ) as mock_headless:
             mock_headless.return_value = '{"status": "completed", "mode": "headless"}'
             result = json.loads(
@@ -391,7 +391,7 @@ class TestCompileDiscovery:
 
 
 class TestDiscoveryStatus:
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
+    @patch("dazzle.mcp.server.handlers.discovery.status._load_appspec")
     def test_status_with_valid_dsl(
         self,
         mock_load: MagicMock,
@@ -407,7 +407,7 @@ class TestDiscoveryStatus:
         assert result["entities"] == 1
         assert result["surfaces"] == 1
 
-    @patch("dazzle.mcp.server.handlers.discovery._load_appspec")
+    @patch("dazzle.mcp.server.handlers.discovery.status._load_appspec")
     def test_status_with_invalid_dsl(
         self,
         mock_load: MagicMock,
@@ -429,7 +429,7 @@ class TestDiscoveryStatus:
         (report_dir / "session_1.json").write_text("{}")
         (report_dir / "session_2.json").write_text("{}")
 
-        with patch("dazzle.mcp.server.handlers.discovery._load_appspec") as mock_load:
+        with patch("dazzle.mcp.server.handlers.discovery.status._load_appspec") as mock_load:
             mock_load.side_effect = Exception("skip")
             result = json.loads(discovery_status_handler(tmp_project, {}))
 

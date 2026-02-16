@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator
 from dazzle.core.ir.domain import (
@@ -30,6 +30,15 @@ logger = logging.getLogger("dazzle.mcp.policy")
 
 # All CRUD operations we expect coverage for
 ALL_OPS = list(PermissionKind)
+
+
+class AnalyzeResult(TypedDict):
+    """Return shape of _analyze()."""
+
+    entities_without_rules: list[str]
+    uncovered_operations: list[dict[str, Any]]
+    total_entities: int
+    entities_with_full_coverage: int
 
 
 @handler_error_json
@@ -71,7 +80,7 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _analyze(appspec: Any, entity_names: list[str] | None) -> dict[str, Any]:
+def _analyze(appspec: Any, entity_names: list[str] | None) -> AnalyzeResult:
     """Find entities without access rules and operations without permit coverage."""
     entities = _filter_entities(appspec, entity_names)
 

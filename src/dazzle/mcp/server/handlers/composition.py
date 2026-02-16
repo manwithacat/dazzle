@@ -19,6 +19,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.paths import project_composition_captures, project_composition_references
+
 from .common import async_handler_error_json, extract_progress, handler_error_json
 
 logger = logging.getLogger(__name__)
@@ -84,7 +86,7 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
 
     routes_filter: list[str] | None = args.get("pages")
     viewports: list[str] | None = args.get("viewports")
-    output_dir = project_path / ".dazzle" / "composition" / "captures"
+    output_dir = project_composition_captures(project_path)
 
     t0 = time.monotonic()
     try:
@@ -148,7 +150,7 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
     progress.log_sync("Analyzing composition screenshots...")
     focus: list[str] | None = args.get("focus")
     token_budget: int = args.get("token_budget", 50_000)
-    captures_dir = project_path / ".dazzle" / "composition" / "captures"
+    captures_dir = project_composition_captures(project_path)
 
     if not captures_dir.exists():
         return json.dumps(
@@ -414,7 +416,7 @@ async def _run_visual_pipeline(
         evaluate_captures,
     )
 
-    output_dir = project_path / ".dazzle" / "composition" / "captures"
+    output_dir = project_composition_captures(project_path)
 
     # Capture
     captures = await capture_page_sections(
@@ -527,7 +529,7 @@ def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> s
     from dazzle.core.composition_references_bootstrap import bootstrap_references
 
     overwrite = args.get("overwrite", False)
-    ref_dir = project_path / ".dazzle" / "composition" / "references"
+    ref_dir = project_composition_references(project_path)
 
     # Check if references already exist
     if ref_dir.exists() and not overwrite:

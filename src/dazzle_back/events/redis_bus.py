@@ -27,10 +27,10 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+from dazzle_back.events.base_event_bus import BaseEventBus
 from dazzle_back.events.bus import (
     ConsumerNotFoundError,
     ConsumerStatus,
-    EventBus,
     EventHandler,
     NackReason,
     SubscriptionInfo,
@@ -90,7 +90,7 @@ class ActiveSubscription:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
-class RedisBus(EventBus):
+class RedisBus(BaseEventBus):
     """
     Redis Streams EventBus implementation.
 
@@ -122,12 +122,11 @@ class RedisBus(EventBus):
         if not REDIS_AVAILABLE:
             raise ImportError("redis is required for RedisBus. Install with: pip install redis")
 
+        self._init_base()
         self._config = config
         self._redis: aioredis.Redis | None = None
-        self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}
-        self._lock = asyncio.Lock()
-        self._consumer_tasks: dict[tuple[str, str], asyncio.Task[None]] = {}
-        self._running = False
+        # Override with Redis-specific ActiveSubscription (has consumer_name)
+        self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}  # type: ignore[assignment]
 
     def _stream_key(self, topic: str) -> str:
         """Get Redis key for a stream."""
@@ -152,17 +151,7 @@ class RedisBus(EventBus):
 
     async def close(self) -> None:
         """Close the Redis connection and stop consumers."""
-        self._running = False
-
-        # Cancel consumer tasks
-        for task in self._consumer_tasks.values():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-
-        self._consumer_tasks.clear()
+        await self._cancel_consumer_tasks()
 
         # Close Redis connection
         if self._redis:
@@ -265,28 +254,6 @@ class RedisBus(EventBus):
                 group_id=group_id,
                 handler=handler,
             )
-
-    async def unsubscribe(
-        self,
-        topic: str,
-        group_id: str,
-    ) -> None:
-        """Unsubscribe a consumer group from a topic."""
-        async with self._lock:
-            key = (topic, group_id)
-            if key not in self._subscriptions:
-                raise ConsumerNotFoundError(topic, group_id)
-
-            # Stop consumer task if running
-            if key in self._consumer_tasks:
-                self._consumer_tasks[key].cancel()
-                try:
-                    await self._consumer_tasks[key]
-                except asyncio.CancelledError:
-                    pass
-                del self._consumer_tasks[key]
-
-            del self._subscriptions[key]
 
     async def ack(
         self,
@@ -600,17 +567,6 @@ class RedisBus(EventBus):
                     self._consumer_loop(sub.topic, sub.group_id, sub.consumer_name)
                 )
                 self._consumer_tasks[key] = task
-
-    async def stop_consumer_loop(self) -> None:
-        """Stop all consumer loops."""
-        self._running = False
-        for task in self._consumer_tasks.values():
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
-        self._consumer_tasks.clear()
 
     async def _consumer_loop(
         self,

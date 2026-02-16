@@ -13,6 +13,8 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from dazzle.mcp.server.paths import project_discovery_dir, project_processes_db
+
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
     from dazzle.core.process import ProcessAdapter
@@ -47,11 +49,9 @@ def load_app_spec(project_root: Path) -> AppSpec:
     call-site compatibility — callers may also import
     ``load_project_appspec`` from ``common`` directly.
 
-    Duplicated in:
-    - process.py (_load_app_spec)
-    - process/storage.py (_load_app_spec)
-    - process/coverage.py (_load_app_spec)
-    - discovery.py (_load_appspec)
+    # TODO: This is identical to common.load_project_appspec(). Consider
+    # migrating call-sites to import from common directly and removing this
+    # wrapper.
     """
     from .common import load_project_appspec
 
@@ -72,7 +72,7 @@ def get_process_adapter(project_root: Path) -> ProcessAdapter:
     """
     from dazzle.core.process import LiteProcessAdapter
 
-    db_path = project_root / ".dazzle" / "processes.db"
+    db_path = project_processes_db(project_root)
     return LiteProcessAdapter(db_path=db_path)
 
 
@@ -119,7 +119,7 @@ def load_report_data(
     """
     import json
 
-    report_dir = project_path / ".dazzle" / "discovery"
+    report_dir = project_discovery_dir(project_path)
 
     if session_id:
         report_file = report_dir / f"{session_id}.json"

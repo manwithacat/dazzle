@@ -24,6 +24,7 @@ from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.runtime_tools import set_backend_spec
 from dazzle.mcp.semantics import get_mcp_version, lookup_concept
 
+from .paths import project_log_dir
 from .state import (
     get_active_project,
     get_active_project_path,
@@ -718,7 +719,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
 
     # Get project path
     project_path = get_active_project_path() or get_project_root()
-    log_dir = project_path / ".dazzle" / "logs"
+    log_dir = project_log_dir(project_path)
     log_file = log_dir / "dazzle.log"
 
     result: dict[str, Any] = {

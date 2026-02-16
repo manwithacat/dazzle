@@ -7,6 +7,7 @@ TestDesignSpec, EntitySpec, and SurfaceSpec used across all MCP handlers.
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -194,3 +195,22 @@ def serialize_surface_detail(surface: Any) -> dict[str, Any]:
     if hasattr(surface, "ux") and surface.ux:
         info["ux"] = serialize_ux_summary(surface.ux)
     return info
+
+
+# =============================================================================
+# Generic response helpers
+# =============================================================================
+
+
+def list_response(items: list[Any], **extra: Any) -> str:
+    """Build standard JSON list response with count."""
+    payload: dict[str, Any] = {"count": len(items), "items": items}
+    payload.update(extra)
+    return json.dumps(payload, indent=2)
+
+
+def success_response(data: Any, **extra: Any) -> str:
+    """Build standard JSON success response."""
+    payload: dict[str, Any] = {"result": data}
+    payload.update(extra)
+    return json.dumps(payload, indent=2)
