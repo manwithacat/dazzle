@@ -345,7 +345,7 @@ def create_page_routes(
             _persona_ws_routes: dict[str, str] = {}
             for persona in appspec.personas:
                 if persona.default_workspace:
-                    _persona_ws_routes[persona.name] = (
+                    _persona_ws_routes[persona.id] = (
                         f"{app_prefix}/workspaces/{persona.default_workspace}"
                     )
             _fallback_ws_route = f"{app_prefix}/workspaces/{workspaces[0].name}"
