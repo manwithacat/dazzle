@@ -42,7 +42,10 @@ def _import_orchestration():
 def _import_pipeline():
     """Import pipeline handlers directly to avoid MCP package init issues."""
     sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
-    sys.modules.setdefault("dazzle.mcp.server.handlers.common", MagicMock())
+    _mock_common = MagicMock()
+    _mock_common.handler_error_json = lambda fn: fn  # identity — don't wrap handlers
+    _mock_common.extract_progress = MagicMock(return_value=MagicMock())
+    sys.modules.setdefault("dazzle.mcp.server.handlers.common", _mock_common)
     # Pre-register sibling modules that _build_quality_steps lazily imports
     for sibling in (
         "composition",
@@ -728,7 +731,10 @@ class TestFidelityGapsOnly:
     def _import_fidelity_fresh(self) -> Any:
         """Import fidelity handlers directly."""
         sys.modules.setdefault("dazzle.mcp.server.handlers", MagicMock(pytest_plugins=[]))
-        sys.modules.setdefault("dazzle.mcp.server.handlers.common", MagicMock())
+        _mock_common = MagicMock()
+        _mock_common.handler_error_json = lambda fn: fn
+        _mock_common.extract_progress = MagicMock(return_value=MagicMock())
+        sys.modules.setdefault("dazzle.mcp.server.handlers.common", _mock_common)
         module_path = (
             Path(__file__).parent.parent.parent.parent
             / "src"
