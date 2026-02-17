@@ -1488,6 +1488,47 @@ class DazzleBackendApp:
                     if repo:
                         service.set_repository(repo)
 
+        # Wire project-level service hooks (v0.29.0)
+        self._wire_service_hooks()
+
+    def _wire_service_hooks(self) -> None:
+        """Discover and register project-level service hooks."""
+        if not self._project_root:
+            return
+        hooks_dir = self._project_root / "hooks"
+        if not hooks_dir.is_dir():
+            return
+
+        try:
+            from dazzle_back.runtime.hook_registry import build_registry
+        except ImportError:
+            return
+
+        registry = build_registry(hooks_dir)
+        if registry.count == 0:
+            return
+
+        logger.info("Registered %d service hook(s): %s", registry.count, registry.summary())
+
+        # Wire hooks to CRUD services
+        for _service_name, service in self._services.items():
+            if not isinstance(service, CRUDService):
+                continue
+            entity_name = service.entity_name
+
+            for h in registry.get_hooks("entity.pre_create", entity_name):
+                service.add_pre_create_hook(h.function)
+            for h in registry.get_hooks("entity.pre_update", entity_name):
+                service.add_pre_update_hook(h.function)
+            for h in registry.get_hooks("entity.pre_delete", entity_name):
+                service.add_pre_delete_hook(h.function)
+            for h in registry.get_hooks("entity.post_create", entity_name):
+                service.on_created(h.function)
+            for h in registry.get_hooks("entity.post_update", entity_name):
+                service.on_updated(h.function)
+            for h in registry.get_hooks("entity.post_delete", entity_name):
+                service.on_deleted(h.function)
+
     def _setup_auth(self) -> tuple[Any, Any]:
         """Initialize auth store, middleware, and social auth.
 

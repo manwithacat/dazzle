@@ -102,6 +102,11 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         self._on_updated_callbacks: list[EntityEventCallback] = []
         self._on_deleted_callbacks: list[EntityEventCallback] = []
 
+        # Pre-operation hooks (v0.29.0 — can modify data or cancel operations)
+        self._pre_create_hooks: list[Callable[..., Any]] = []
+        self._pre_update_hooks: list[Callable[..., Any]] = []
+        self._pre_delete_hooks: list[Callable[..., Any]] = []
+
     def on_created(self, callback: EntityEventCallback) -> None:
         """Register a callback to be called after entity creation."""
         self._on_created_callbacks.append(callback)
@@ -113,6 +118,18 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
     def on_deleted(self, callback: EntityEventCallback) -> None:
         """Register a callback to be called after entity deletion."""
         self._on_deleted_callbacks.append(callback)
+
+    def add_pre_create_hook(self, hook: Callable[..., Any]) -> None:
+        """Register a pre-create hook. Hook receives (entity_name, data) → data."""
+        self._pre_create_hooks.append(hook)
+
+    def add_pre_update_hook(self, hook: Callable[..., Any]) -> None:
+        """Register a pre-update hook. Hook receives (entity_name, id, data, old_data) → data."""
+        self._pre_update_hooks.append(hook)
+
+    def add_pre_delete_hook(self, hook: Callable[..., Any]) -> None:
+        """Register a pre-delete hook. Hook receives (entity_name, id, data) → bool."""
+        self._pre_delete_hooks.append(hook)
 
     async def _notify_callbacks(
         self,
@@ -196,8 +213,20 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         # Generate ID
         entity_id = uuid4()
 
+        # Run pre-create hooks (v0.29.0)
+        data_dict = data.model_dump()
+        for hook in self._pre_create_hooks:
+            try:
+                result = hook(self.entity_name, data_dict)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                if isinstance(result, dict):
+                    data_dict = result
+            except Exception as e:
+                logger.warning("Pre-create hook failed for %s: %s", self.entity_name, e)
+
         # Build entity data
-        entity_data = {"id": entity_id, **data.model_dump()}
+        entity_data = {"id": entity_id, **data_dict}
 
         # Inject auto_add timestamps (v0.25 - #132)
         if self.entity_spec:
@@ -298,6 +327,17 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         current_data = current.model_dump() if hasattr(current, "model_dump") else dict(current)
 
+        # Run pre-update hooks (v0.29.0)
+        for hook in self._pre_update_hooks:
+            try:
+                result = hook(self.entity_name, str(id), update_data, current_data)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                if isinstance(result, dict):
+                    update_data = result
+            except Exception as e:
+                logger.warning("Pre-update hook failed for %s: %s", self.entity_name, e)
+
         # Validate state machine transition if entity has a state machine
         if self.state_machine:
             result = validate_status_update(
@@ -355,6 +395,18 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             return False
 
         entity_data = entity.model_dump() if hasattr(entity, "model_dump") else dict(entity)
+
+        # Run pre-delete hooks (v0.29.0) — can cancel deletion
+        for hook in self._pre_delete_hooks:
+            try:
+                result = hook(self.entity_name, str(id), entity_data)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                if result is False:
+                    logger.info("Pre-delete hook cancelled deletion of %s %s", self.entity_name, id)
+                    return False
+            except Exception as e:
+                logger.warning("Pre-delete hook failed for %s: %s", self.entity_name, e)
 
         if self._repository:
             deleted = await self._repository.delete(id)
