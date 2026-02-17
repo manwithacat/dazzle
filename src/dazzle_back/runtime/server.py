@@ -1802,12 +1802,33 @@ class DazzleBackendApp:
 
         # Configure project-level template overrides (v0.29.0)
         try:
-            from dazzle_ui.runtime.template_renderer import configure_project_templates
+            from dazzle_ui.runtime.template_renderer import (
+                TEMPLATES_DIR,
+                configure_project_templates,
+            )
 
             if self._project_root:
                 project_templates = self._project_root / "templates"
                 if project_templates.is_dir():
                     configure_project_templates(project_templates)
+
+                    # Build override registry if project has declaration headers
+                    try:
+                        from dazzle import __version__ as dz_version
+                        from dazzle_ui.runtime.override_registry import (
+                            build_registry,
+                            save_registry,
+                        )
+
+                        registry = build_registry(
+                            project_templates, TEMPLATES_DIR, framework_version=dz_version
+                        )
+                        if registry.get("template_overrides"):
+                            from dazzle.mcp.server.paths import project_overrides_file
+
+                            save_registry(registry, project_overrides_file(self._project_root))
+                    except Exception:
+                        logger.debug("Override registry build skipped", exc_info=True)
         except ImportError:
             pass  # dazzle_ui not installed
 

@@ -26,6 +26,9 @@ REFERENCES_DIR = "references"
 LOGS_DIR = "logs"
 TEST_RESULTS_DIR = "test_results"
 
+# -- Override registry -------------------------------------------------------
+OVERRIDES_FILE = "overrides.json"
+
 # -- Log files ---------------------------------------------------------------
 ACTIVITY_LOG_FILE = "mcp-activity.log"
 DNR_LOG_FILE = "dazzle.log"
@@ -82,3 +85,8 @@ def project_activity_log(project_root: Path) -> Path:
 def project_test_results_dir(project_root: Path) -> Path:
     """Return the test results directory for a project."""
     return project_dazzle_dir(project_root) / TEST_RESULTS_DIR
+
+
+def project_overrides_file(project_root: Path) -> Path:
+    """Return the overrides registry path for a project."""
+    return project_dazzle_dir(project_root) / OVERRIDES_FILE
