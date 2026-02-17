@@ -161,7 +161,7 @@ class TestRequiredFieldInclusion:
 
 
 class TestEdgeCases:
-    def test_surface_without_view_ref_ignored(self) -> None:
+    def test_surface_without_view_ref_or_sections_not_projected(self) -> None:
         entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
         surface = ir.SurfaceSpec(
             name="task_list", entity_ref="Task", view_ref=None, mode=ir.SurfaceMode.LIST
@@ -188,5 +188,135 @@ class TestEdgeCases:
         view = ir.ViewSpec(name="task_view", fields=[])
 
         result = build_entity_list_projections([entity], [surface], [view])
+
+        assert result == {}
+
+
+# ── Surface-section-based projection (query pre-planning #281) ───────
+
+
+def _section_surface(name: str, entity_ref: str, field_names: list[str]) -> ir.SurfaceSpec:
+    """Create a list surface with sections containing named fields."""
+    elements = [ir.SurfaceElement(field_name=fn) for fn in field_names]
+    section = ir.SurfaceSection(name="main", elements=elements)
+    return ir.SurfaceSpec(
+        name=name,
+        entity_ref=entity_ref,
+        view_ref=None,
+        mode=ir.SurfaceMode.LIST,
+        sections=[section],
+    )
+
+
+class TestSurfaceSectionProjection:
+    """Pre-plan projections from surface section field declarations."""
+
+    def test_surface_sections_produce_projection(self) -> None:
+        entity = _entity(
+            "Task",
+            [
+                _pk(),
+                _field("title", ir.FieldTypeKind.STR),
+                _field("completed", ir.FieldTypeKind.BOOL),
+                _field("notes", ir.FieldTypeKind.TEXT),
+            ],
+        )
+        surface = _section_surface("task_list", "Task", ["title", "completed"])
+
+        result = build_entity_list_projections([entity], [surface], [])
+
+        assert "id" in result["Task"]
+        assert "title" in result["Task"]
+        assert "completed" in result["Task"]
+        # notes is not in surface sections — should not appear
+        assert "notes" not in result["Task"]
+
+    def test_surface_section_money_field_expanded(self) -> None:
+        entity = _entity(
+            "Invoice",
+            [
+                _pk(),
+                _field("amount", ir.FieldTypeKind.MONEY),
+                _field("status", ir.FieldTypeKind.STR),
+            ],
+        )
+        surface = _section_surface("inv_list", "Invoice", ["amount", "status"])
+
+        result = build_entity_list_projections([entity], [surface], [])
+
+        assert "amount_minor" in result["Invoice"]
+        assert "amount_currency" in result["Invoice"]
+        assert "status" in result["Invoice"]
+
+    def test_surface_section_includes_required_fields(self) -> None:
+        entity = _entity(
+            "Order",
+            [
+                _pk(),
+                _field("title", ir.FieldTypeKind.STR, required=True),
+                _field("total", ir.FieldTypeKind.INT),
+            ],
+        )
+        # Surface only declares "total" but "title" is required
+        surface = _section_surface("order_list", "Order", ["total"])
+
+        result = build_entity_list_projections([entity], [surface], [])
+
+        assert "title" in result["Order"]  # Required field included
+        assert "total" in result["Order"]
+
+    def test_view_takes_priority_over_sections(self) -> None:
+        entity = _entity(
+            "Task",
+            [
+                _pk(),
+                _field("title", ir.FieldTypeKind.STR),
+                _field("done", ir.FieldTypeKind.BOOL),
+            ],
+        )
+        # Surface has both view_ref AND sections — view should win
+        surface = ir.SurfaceSpec(
+            name="task_list",
+            entity_ref="Task",
+            view_ref="task_view",
+            mode=ir.SurfaceMode.LIST,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[ir.SurfaceElement(field_name="title")],
+                )
+            ],
+        )
+        view = _view("task_view", ["done"])
+
+        result = build_entity_list_projections([entity], [surface], [view])
+
+        assert "done" in result["Task"]
+
+    def test_non_list_surface_not_projected(self) -> None:
+        entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
+        # Create mode surface — should not produce projection
+        elements = [ir.SurfaceElement(field_name="title")]
+        section = ir.SurfaceSection(name="main", elements=elements)
+        surface = ir.SurfaceSpec(
+            name="task_create",
+            entity_ref="Task",
+            mode=ir.SurfaceMode.CREATE,
+            sections=[section],
+        )
+
+        result = build_entity_list_projections([entity], [surface], [])
+
+        assert result == {}
+
+    def test_surface_without_entity_ref_not_projected(self) -> None:
+        entity = _entity("Task", [_pk(), _field("title", ir.FieldTypeKind.STR)])
+        surface = ir.SurfaceSpec(
+            name="custom_page",
+            entity_ref=None,
+            mode=ir.SurfaceMode.CUSTOM,
+        )
+
+        result = build_entity_list_projections([entity], [surface], [])
 
         assert result == {}

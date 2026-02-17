@@ -2347,17 +2347,28 @@ def create_app_from_json(json_path: str) -> FastAPI:
 # =============================================================================
 
 
+def _expand_money_field(fname: str) -> list[str]:
+    """Expand a money field name to its database column pair."""
+    return [f"{fname}_minor", f"{fname}_currency"]
+
+
 def build_entity_list_projections(
     entities: list[EntitySpec],
     surfaces: list[SurfaceSpec],
     views: list[ViewSpec],
 ) -> dict[str, list[str]]:
-    """Build column projections for view-backed list surfaces.
+    """Pre-plan column projections for list surfaces (query pre-planning).
 
-    When a surface has ``view_ref``, only the view's fields are SELECTed.
-    Money fields are stored as ``_minor``/``_currency`` column pairs in the
-    database, so they must be expanded here to avoid ``UndefinedColumn``
-    errors at query time.
+    Determines the minimal SELECT field set for each entity's list endpoint
+    at startup, eliminating per-request field derivation.
+
+    Projection sources (in priority order):
+    1. View-backed surfaces (``view_ref``) — explicit field list from the view
+    2. Surface sections — fields declared in ``section.elements[].field_name``
+    3. Fallback — no projection (SELECT * via repository default)
+
+    Money fields are expanded to ``_minor``/``_currency`` column pairs.
+    Required fields are always included (Pydantic model validation needs them).
 
     Returns a mapping of ``{entity_name: [column_names]}``.
     """
@@ -2371,31 +2382,55 @@ def build_entity_list_projections(
 
     projections: dict[str, list[str]] = {}
     for surface in surfaces:
-        if surface.view_ref and surface.entity_ref:
+        if not surface.entity_ref:
+            continue
+        entity_ref = surface.entity_ref
+
+        # Already have a projection for this entity — keep the wider one
+        if entity_ref in projections:
+            continue
+
+        fields_meta = entity_fields_meta.get(entity_ref, {})
+
+        # Source 1: View-backed projection
+        if surface.view_ref:
             view = views_by_name.get(surface.view_ref)
             if view and view.fields:
-                fields_meta = entity_fields_meta.get(surface.entity_ref, {})
                 view_field_names = {f.name for f in view.fields}
                 columns: list[str] = []
-                # First add all required fields not in the view (Pydantic needs them)
+                # Required fields not in view (Pydantic needs them)
                 for fname, (fkind, freq) in fields_meta.items():
                     if freq and fname not in view_field_names and fname != "id":
-                        if fkind == "money":
-                            columns.append(f"{fname}_minor")
-                            columns.append(f"{fname}_currency")
-                        else:
-                            columns.append(fname)
-                # Then add the view's explicit fields
+                        columns.extend(_expand_money_field(fname) if fkind == "money" else [fname])
+                # View's explicit fields
                 for f in view.fields:
                     kind = fields_meta.get(f.name, ("scalar", False))[0]
-                    if kind == "money":
-                        columns.append(f"{f.name}_minor")
-                        columns.append(f"{f.name}_currency")
-                    else:
-                        columns.append(f.name)
+                    columns.extend(_expand_money_field(f.name) if kind == "money" else [f.name])
                 if "id" not in columns:
                     columns.insert(0, "id")
-                projections[surface.entity_ref] = columns
+                projections[entity_ref] = columns
+                continue
+
+        # Source 2: Surface section fields (list mode)
+        if surface.mode == "list" and surface.sections:
+            surface_field_names: set[str] = set()
+            for section in surface.sections:
+                for element in section.elements:
+                    surface_field_names.add(element.field_name)
+            if surface_field_names:
+                columns = []
+                # Required fields not explicitly listed
+                for fname, (fkind, freq) in fields_meta.items():
+                    if freq and fname not in surface_field_names and fname != "id":
+                        columns.extend(_expand_money_field(fname) if fkind == "money" else [fname])
+                # Surface's declared fields
+                for fname in surface_field_names:
+                    kind = fields_meta.get(fname, ("scalar", False))[0]
+                    columns.extend(_expand_money_field(fname) if kind == "money" else [fname])
+                if "id" not in columns:
+                    columns.insert(0, "id")
+                projections[entity_ref] = columns
+
     return projections
 
 
