@@ -1,5 +1,6 @@
 {# Table rows fragment — no Alpine, column visibility via data-dz-col #}
 {% if table and table.rows %}
+{% set _row_label_key = table.columns[0].key if table.columns else "id" %}
 {% for item in table.rows %}
 <tr id="row-{{ item.id }}" class="hover cursor-pointer" data-dazzle-row="{{ table.entity_name }}" data-dz-row-id="{{ item.id }}"
     {% if table.detail_url_template %}
@@ -11,7 +12,7 @@
   {% if table.bulk_actions %}
   <td>
     <input type="checkbox" class="checkbox checkbox-sm" data-dz-row-select
-           aria-label="Select {{ item[table.columns[0].key] | default(item.id) }}" />
+           aria-label="Select {{ item[_row_label_key] | default(item.id) }}" />
   </td>
   {% endif %}
   {% for col in table.columns %}
@@ -37,13 +38,13 @@
   <td>
     {# Row action dropdown — uses DaisyUI details-based dropdown, no JS #}
     <details class="dropdown dropdown-end" onclick="event.stopPropagation()">
-      <summary class="btn btn-ghost btn-xs list-none" aria-label="Actions for {{ item[table.columns[0].key] | default(item.id) }}">
+      <summary class="btn btn-ghost btn-xs list-none" aria-label="Actions for {{ item[_row_label_key] | default(item.id) }}">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
       </summary>
       <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50" role="menu">
         {% if table.detail_url_template %}
-        <li role="none"><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}" role="menuitem">View<span class="sr-only"> {{ item[table.columns[0].key] | default('') }}</span></a></li>
-        <li role="none"><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit" class="text-warning" data-dazzle-action="{{ table.entity_name }}.edit" role="menuitem">Edit<span class="sr-only"> {{ item[table.columns[0].key] | default('') }}</span></a></li>
+        <li role="none"><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}" role="menuitem">View<span class="sr-only"> {{ item[_row_label_key] | default('') }}</span></a></li>
+        <li role="none"><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit" class="text-warning" data-dazzle-action="{{ table.entity_name }}.edit" role="menuitem">Edit<span class="sr-only"> {{ item[_row_label_key] | default('') }}</span></a></li>
         {% endif %}
         <li role="none">
           <button class="text-error"
@@ -53,7 +54,7 @@
                   hx-confirm="Delete this {{ table.entity_name | lower }}?"
                   hx-target="closest tr"
                   hx-swap="outerHTML swap:300ms">
-            Delete<span class="sr-only"> {{ item[table.columns[0].key] | default('') }}</span>
+            Delete<span class="sr-only"> {{ item[_row_label_key] | default('') }}</span>
           </button>
         </li>
       </ul>

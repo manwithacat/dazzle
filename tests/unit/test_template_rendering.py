@@ -411,6 +411,24 @@ class TestRendering:
         # Should contain row markup
         assert "<tr" in fragment or "title" in fragment.lower()
 
+    def test_render_table_rows_empty_columns(self) -> None:
+        """Table rows with empty columns should not crash (issue #270)."""
+        fragment = render_fragment(
+            "fragments/table_rows.html",
+            table=TableContext(
+                entity_name="Task",
+                title="Tasks",
+                columns=[],
+                api_endpoint="/tasks",
+                detail_url_template="/task/{id}",
+                rows=[{"id": "1", "title": "Hello"}],
+                total=1,
+            ),
+        )
+        assert "<tr" in fragment
+        # Should fall back to item.id for accessibility labels
+        assert "1" in fragment
+
     def test_render_form_page(self) -> None:
         ctx = PageContext(
             page_title="Create Task",
