@@ -31,7 +31,7 @@ cd examples/simple_task && dazzle serve
 
 - [The Core Idea](#the-core-idea)
 - [Quick Start](#quick-start)
-- [How Dazzle Works: The Seven Layers](#how-dazzle-works-the-seven-layers)
+- [How Dazzle Works: The Eight Layers](#how-dazzle-works-the-eight-layers)
   - [Layer 1: Entities](#layer-1-entities-your-data-model)
   - [Layer 2: Surfaces](#layer-2-surfaces-your-ui)
   - [Layer 3: Workspaces](#layer-3-workspaces-your-dashboards)
@@ -39,6 +39,7 @@ cd examples/simple_task && dazzle serve
   - [Layer 5: Services](#layer-5-services-your-custom-code)
   - [Layer 6: The Public Site](#layer-6-the-public-site)
   - [Layer 7: Experiences](#layer-7-experiences-multi-step-user-flows)
+  - [Layer 8: Islands](#layer-8-islands-client-side-interactivity)
 - [How the Layers Work Together](#how-the-layers-work-together)
 - [The Pipeline: Determinism and Cognition](#the-pipeline-determinism-and-cognition)
 - [DSL Constructs Reference](#dsl-constructs-reference)
@@ -125,9 +126,9 @@ Save this as `app.dsl`, run `dazzle serve`, and you have a working application w
 
 ---
 
-## How Dazzle Works: The Seven Layers
+## How Dazzle Works: The Eight Layers
 
-Dazzle has seven conceptual layers, each handling a different concern. Understanding these layers — and knowing which one is responsible for what — is the key to working effectively with the system.
+Dazzle has eight conceptual layers, each handling a different concern. Understanding these layers — and knowing which one is responsible for what — is the key to working effectively with the system.
 
 ### Layer 1: Entities (Your Data Model)
 
@@ -236,6 +237,24 @@ entity Invoice "Invoice":
   extends Auditable
   ...
 ```
+
+#### Sensitive Fields
+
+Fields containing PII or credentials can be marked `sensitive` for automatic masking and compliance:
+
+```dsl
+entity Employee "Employee":
+  id: uuid pk
+  name: str(200) required
+  bank_account: str(8) sensitive
+  ni_number: str(9) required sensitive
+```
+
+This modifier:
+- **Masks values in list views** — displays `****1234` (last 4 characters visible)
+- **Excludes from filters** — sensitive fields cannot be used as filter criteria
+- **Marks in OpenAPI** — adds `x-sensitive: true` extension to the schema
+- **Flags in entity schema** — available for compliance scanning and audit tooling
 
 #### Semantic Metadata
 
@@ -523,6 +542,35 @@ Each step references a surface, and transitions are driven by user events (`cont
 
 The experience layer handles navigation state; the surfaces handle data display; the processes handle data manipulation.
 
+### Layer 8: Islands (Client-Side Interactivity)
+
+Dazzle's default UI is fully server-rendered with HTMX. But sometimes you need a chart, a drag-and-drop board, or a real-time widget that genuinely requires client-side JavaScript. That is what **islands** are for — self-contained interactive components embedded within server-rendered pages.
+
+```dsl
+island task_chart "Task Progress Chart":
+  entity: Task
+  src: "islands/task-chart/index.js"
+  fallback: "Loading task chart..."
+
+  prop chart_type: str = "bar"
+  prop date_range: str = "30d"
+
+  event chart_clicked:
+    detail: [task_id, series]
+```
+
+What Dazzle does with this:
+- **Renders a container** in the page with server-side fallback content shown before JS loads
+- **Loads the JS entry point** from `src` (defaults to `/static/islands/{name}/index.js`)
+- **Passes typed props** as `data-island-props` JSON attributes
+- **Auto-generates a data endpoint** at `/api/islands/{island_name}/data` when `entity:` is declared, proxying to the entity's CRUD service with pagination
+
+Islands are intentionally opt-in and isolated. The server-rendered HTMX approach handles 90%+ of UI needs; islands handle the remaining cases where client-side rendering adds genuine value (charts, maps, rich editors, real-time dashboards).
+
+**Props**: Typed key-value pairs passed to the island (`str`, `int`, `bool`, `float` with optional defaults)
+
+**Events**: CustomEvent schemas the island may emit, with typed detail fields. The server can listen for these via HTMX's `hx-on` or standard `addEventListener`.
+
 ---
 
 ## How the Layers Work Together
@@ -536,6 +584,7 @@ Here is a concrete example: a staff member onboards a new limited company client
 5. **Service layer**: Each process step calls a service. `OnboardingFlow.complete` sets completed_at, updates completion_percentage, marks Contact.onboarding_complete. `Notification.send_portal_access` sends the welcome email.
 6. **Workspace layer**: After onboarding, the admin_dashboard workspace shows updated metrics — `total_clients` count increments, the `onboarding_pipeline` region drops the completed flow.
 7. **Site layer**: Meanwhile, the public site at `/pricing` shows the service packages available for new clients, driven entirely by sitespec.yaml + copy.md.
+8. **Island layer**: A chart on the admin dashboard shows onboarding completion rates over time — rendered client-side with Chart.js, fed by an auto-generated data endpoint.
 
 Each layer does one thing well and delegates everything else:
 
@@ -548,6 +597,7 @@ Each layer does one thing well and delegates everything else:
 | Custom logic | Service stub | Framework boilerplate, dependency injection |
 | A marketing site | sitespec.yaml + copy.md | Landing page HTML, CSS, routing |
 | A multi-step wizard | Experience DSL | Router configuration, step state management |
+| A chart or rich widget | Island DSL + JS file | Data-fetching boilerplate, container plumbing |
 
 ---
 
@@ -636,6 +686,7 @@ Complete reference: [docs/reference/](docs/reference/)
 | Construct | Purpose |
 |-----------|---------|
 | `entity` | Domain models with typed fields, relationships, state machines, invariants, and access control |
+| `enum` | Shared enum definitions reusable across entities (e.g., `OrderStatus` with labeled values) |
 | `archetype` | Reusable field templates (e.g., `Timestamped`, `Auditable`) |
 | `foreign_model` | External API data structures (read-only, event-driven, or batch-imported) |
 
@@ -643,7 +694,7 @@ Complete reference: [docs/reference/](docs/reference/)
 
 **Relationship Types**: `ref`, `has_many`, `has_one`, `belongs_to`, `embeds`
 
-**Field Modifiers**: `required`, `optional`, `pk`, `unique`, `unique?`, `auto_add`, `auto_update`, `=default`
+**Field Modifiers**: `required`, `optional`, `pk`, `unique`, `unique?`, `auto_add`, `auto_update`, `sensitive`, `=default`
 
 **Entity Blocks**: `transitions` (state machine), `invariants` (business rules), `access` (role/owner/tenant permissions), `computed` (derived fields), `examples` (fixture data), `publishes` (event declarations)
 
@@ -654,6 +705,8 @@ Complete reference: [docs/reference/](docs/reference/)
 | `surface` | UI screens and forms (list, view, create, edit, custom modes) |
 | `workspace` | Dashboards with regions, filters, aggregates, and layout stages |
 | `experience` | Multi-step wizards and user flows |
+| `island` | Client-side interactive components (charts, maps, rich editors) with typed props, events, and optional entity data binding |
+| `view` | Read-only projections with grouping and aggregates (`sum`, `count`, `avg`) for dashboards and reports |
 
 **Surface Elements**: `section`, `field`, `action`, `outcome`
 
@@ -726,6 +779,14 @@ transaction RecordPayment "Record Payment":
 
 **Account Types**: `asset`, `liability`, `equity`, `revenue`, `expense`
 
+### Governance and Automation
+
+| Construct | Purpose |
+|-----------|---------|
+| `webhook` | Outbound HTTP notifications on entity events with HMAC/bearer/basic auth and retry policies |
+| `approval` | Approval gates with quorum, threshold conditions, time-based escalation, and auto-approve rules |
+| `sla` | Service level agreements with deadline tiers, business hours, pause conditions, and breach actions |
+
 ### Personas and Scenarios
 
 | Construct | Purpose |
@@ -760,7 +821,7 @@ scenario busy_sprint "Busy Sprint":
 
 ## The MCP Tooling Pipeline
 
-Dazzle is not just a runtime — it is also an AI-assisted development environment accessed through MCP (Model Context Protocol) tools. When you use Claude Code with a Dazzle project, you get access to **24 tools with 163+ operations** spanning every stage from natural-language spec to visual regression testing.
+Dazzle is not just a runtime — it is also an AI-assisted development environment accessed through MCP (Model Context Protocol) tools. When you use Claude Code with a Dazzle project, you get access to **26 tools with 170+ operations** spanning every stage from natural-language spec to visual regression testing.
 
 ### 1. Spec to DSL
 
@@ -792,7 +853,9 @@ Deterministic quality checks, agent-powered gap discovery, visual composition an
 | Tool | Operations | Purpose |
 |------|-----------|---------|
 | `pipeline` | run | Full quality audit in one call — chains validate, lint, fidelity, composition audit, test/story/process coverage, test design gaps, and semantics. Adaptive detail levels (`metrics`/`issues`/`full`) |
+| `nightly` | run | Same quality steps as pipeline but fans out independent steps in parallel for ~50% wall-clock speedup. Uses dependency graph to run validate first, then lint/fidelity/composition/coverage concurrently |
 | `discovery` | run, report, compile, emit, status, verify_all_stories, coherence | Agent-powered capability discovery in 4 modes: `persona`, `entity_completeness`, `workflow_coherence`, `headless` (pure DSL/KG analysis without a running app). Includes authenticated UX coherence scoring |
+| `sentinel` | scan, findings, suppress, status, history | Static failure-mode detection — scans DSL for anti-patterns across dependency integrity, accessibility, mapping track, and boundary layer agents |
 | `composition` | audit, capture, analyze, report, bootstrap, inspect_styles | Visual hierarchy audit (5-factor attention model), Playwright screenshot capture, Claude vision evaluation, CSS `getComputedStyle()` inspection |
 | `semantics` | extract, validate_events, tenancy, compliance, analytics, extract_guards | Semantic analysis — tenancy isolation, compliance/PII detection, event validation, guard extraction |
 | `policy` | analyze, conflicts, coverage, simulate | RBAC policy analysis — find unprotected entities, detect contradictory rules, generate permission matrices, trace rule evaluation |
@@ -1030,6 +1093,9 @@ dazzle test agent                # Tier 3: LLM-powered tests
 # Info
 dazzle info                      # Project information
 dazzle status                    # Service status
+
+# Monitor
+dazzle workshop                  # Live MCP activity display (progress, timing, errors)
 ```
 
 ---
@@ -1128,7 +1194,7 @@ my_project/
 src/
 ├── dazzle/
 │   ├── core/                # Parser, IR types, linker, validation
-│   │   ├── ir/              # ~40 modules, ~150+ Pydantic IR types
+│   │   ├── ir/              # ~45 modules, ~150+ Pydantic IR types
 │   │   └── dsl_parser_impl/ # Parser mixins for each construct
 │   ├── mcp/                 # MCP server with 24 tool handlers
 │   │   ├── server/handlers/ # One handler per tool

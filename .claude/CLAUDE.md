@@ -85,7 +85,7 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `view`, `webhook`, `approval`, `sla`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `view`, `webhook`, `approval`, `sla`
 
 ### TigerBeetle Ledgers
 
@@ -143,7 +143,7 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 
 ## MCP Server
 
-The DAZZLE MCP server (`dazzle mcp`) provides 23 consolidated tools:
+The DAZZLE MCP server (`dazzle mcp`) provides 26 consolidated tools:
 
 | Tool | Operations |
 |------|-----------|
@@ -155,6 +155,8 @@ The DAZZLE MCP server (`dazzle mcp`) provides 23 consolidated tools:
 | `e2e_test` | check_infra, run, run_agent, coverage, run_viewport |
 | `discovery` | run, report, compile, emit, status, verify_all_stories, coherence |
 | `pipeline` | run (full deterministic quality audit in one call) |
+| `nightly` | run (parallel pipeline with dependency-aware fan-out) |
+| `sentinel` | scan, findings, suppress, status, history |
 | `graph` | query, dependencies, neighbourhood, concept, inference, export, import |
 | `status` | mcp, logs, telemetry, activity |
 | `knowledge` | concept, examples, workflow, inference |

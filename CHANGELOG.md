@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `sensitive` field modifier for PII masking — auto-masks values in list views, excludes from filters, adds `x-sensitive: true` to OpenAPI schemas ([#263](https://github.com/manwithacat/dazzle/issues/263))
+- UI Islands (`island` DSL construct) — self-contained client-side interactive components with typed props, events, entity data binding, and auto-generated API endpoints
+- `nightly` MCP tool — parallel quality pipeline with dependency-aware fan-out for faster CI runs
+- `sentinel` MCP tool — static failure-mode detection across dependency integrity, accessibility, mapping track, and boundary layer
+
+### Fixed
+- Test runner cross-run unique collisions — replaced timestamp-based suffixes with UUID4, regenerate unique fields after design-time overrides ([#262](https://github.com/manwithacat/dazzle/issues/262))
+- Persona discovery agent stuck in click loop — extract href from CSS selectors, include element attributes in prompt, start at `/app` not public homepage ([#261](https://github.com/manwithacat/dazzle/issues/261))
+- `/_site/nav` authenticated routes returning 404 — fixed double-prefixed page routes and singular slug mismatch ([#260](https://github.com/manwithacat/dazzle/issues/260))
+- Entity surface links added to workspace sidebar navigation ([#259](https://github.com/manwithacat/dazzle/issues/259))
+- Sitespec review false positives for card_grid, pricing, value_highlight sections ([#258](https://github.com/manwithacat/dazzle/issues/258))
+- Visual evaluator false positives from preprocessed images and budget exhaustion ([#257](https://github.com/manwithacat/dazzle/issues/257))
+- Sentinel suppress writing invalid status that crashes next scan ([#256](https://github.com/manwithacat/dazzle/issues/256))
+
 ## [0.28.2] - 2026-02-16
 
 ### Changed
