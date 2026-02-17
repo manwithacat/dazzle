@@ -79,8 +79,8 @@ def create_island_routes(
 
         @sub.get("/data", dependencies=deps)
         async def get_island_data(
-            limit: int = Query(default=100, ge=1, le=1000),
-            offset: int = Query(default=0, ge=0),
+            page: int = Query(default=1, ge=1),
+            page_size: int = Query(default=100, ge=1, le=1000),
             _entity: str = entity_name,
             _island: str = island_name,
         ) -> dict[str, Any]:
@@ -92,8 +92,12 @@ def create_island_routes(
                     detail=f"No service found for entity '{_entity}'",
                 )
             try:
-                items = await svc.list(limit=limit, offset=offset)
-                return {"items": items, "island": _island}
+                result = await svc.list(page=page, page_size=page_size)
+                return {
+                    "items": result.get("items", []),
+                    "total": result.get("total", 0),
+                    "island": _island,
+                }
             except Exception as exc:
                 logger.exception("Island data fetch failed for %s", _entity)
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
