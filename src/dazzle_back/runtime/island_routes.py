@@ -24,6 +24,22 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dazzle.islands")
 
 
+def _build_entity_service_map(services: dict[str, Any]) -> dict[str, Any]:
+    """Build a mapping from entity name to its CRUD service.
+
+    The services dict is keyed by service name (e.g. ``list_tasks``,
+    ``create_task``).  Island routes need to look up by entity name
+    (e.g. ``Task``).  We iterate once and pick the first CRUDService
+    for each entity.
+    """
+    entity_map: dict[str, Any] = {}
+    for svc in services.values():
+        ename = getattr(svc, "entity_name", None)
+        if ename and ename not in entity_map:
+            entity_map[ename] = svc
+    return entity_map
+
+
 def create_island_routes(
     islands: list[IslandSpec],
     services: dict[str, Any],
@@ -34,7 +50,7 @@ def create_island_routes(
 
     Args:
         islands: Island specs from the AppSpec.
-        services: Service registry keyed by entity name.
+        services: Service registry keyed by service name.
         auth_dep: Required auth dependency (if auth is enabled).
         optional_auth_dep: Optional auth dependency.
 
@@ -42,6 +58,10 @@ def create_island_routes(
         FastAPI APIRouter mounted at ``/api/islands``.
     """
     router = APIRouter(prefix="/api/islands", tags=["Islands"])
+
+    # Services are keyed by service name (e.g. "list_tasks"), not entity
+    # name.  Build a reverse lookup from entity name → CRUDService.
+    entity_services = _build_entity_service_map(services)
 
     for island in islands:
         if not island.entity:
@@ -65,7 +85,7 @@ def create_island_routes(
             _island: str = island_name,
         ) -> dict[str, Any]:
             """Fetch data for island from its bound entity."""
-            svc = services.get(_entity)
+            svc = entity_services.get(_entity)
             if not svc:
                 raise HTTPException(
                     status_code=404,
