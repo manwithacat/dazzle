@@ -483,8 +483,8 @@ def step_has_issues(operation: str, step_result: Any) -> bool:
         return score < 100
 
     if operation == "story(scope_fidelity)":
-        gaps: int = step_result.get("total_scope_gaps", 0) or 0
-        return gaps > 0
+        scope_gaps: int = step_result.get("total_scope_gaps", 0) or 0
+        return scope_gaps > 0
 
     if operation in ("dsl_test(coverage)", "story(coverage)", "process(coverage)"):
         cov: float | str = step_result.get("coverage_percent") or step_result.get("coverage") or 100

@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-02-17
+
 ### Added
 - `sensitive` field modifier for PII masking — auto-masks values in list views, excludes from filters, adds `x-sensitive: true` to OpenAPI schemas ([#263](https://github.com/manwithacat/dazzle/issues/263))
 - UI Islands (`island` DSL construct) — self-contained client-side interactive components with typed props, events, entity data binding, and auto-generated API endpoints
 - `nightly` MCP tool — parallel quality pipeline with dependency-aware fan-out for faster CI runs
 - `sentinel` MCP tool — static failure-mode detection across dependency integrity, accessibility, mapping track, and boundary layer
+- `story(scope_fidelity)` operation — verifies implementing processes exercise all entities in story scope, integrated into quality pipeline ([#266](https://github.com/manwithacat/dazzle/issues/266))
+- htmx SPA-like UX enhancements: View Transitions API, preload extension, response-targets, loading-states, SSE real-time updates, infinite scroll pagination, optimistic UI feedback, skeleton loading placeholders
+- htmx fragment targeting for app navigation — `hx-target="#main-content"` replaces full-body swap for smoother transitions ([#265](https://github.com/manwithacat/dazzle/issues/265))
 
 ### Fixed
 - Test runner cross-run unique collisions — replaced timestamp-based suffixes with UUID4, regenerate unique fields after design-time overrides ([#262](https://github.com/manwithacat/dazzle/issues/262))
