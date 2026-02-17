@@ -179,7 +179,7 @@ class BusinessLogicAgent(DetectionAgent):
             has_covering_test = any(entity_name_lower in tn for tn in test_names_lower)
 
             if not has_covering_test:
-                invariant_strs = [str(inv.expression) for inv in entity.invariants]
+                invariant_strs = [str(inv) for inv in entity.invariants]
                 findings.append(
                     Finding(
                         agent=AgentId.BL,

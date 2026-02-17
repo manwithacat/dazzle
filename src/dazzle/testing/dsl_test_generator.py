@@ -42,21 +42,43 @@ def _invariant_required_fields(entity: EntitySpec) -> list[str]:
     For invariants like ``uprn != null or canonical_text != null``, returns
     the first field from each OR clause so that at least one is non-null.
     """
+    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp
     from dazzle.core.ir.invariant import LogicalExpr
 
     fields: list[str] = []
     for inv in entity.invariants:
-        expr = inv.expression
-        # Match: field != null OR field != null
-        if isinstance(expr, LogicalExpr) and expr.operator.value == "or":
-            field_name = _extract_not_null_field(expr.left)
-            if field_name:
-                fields.append(field_name)
+        # Try unified Expr first, then legacy
+        if inv.invariant_expr is not None:
+            uexpr = inv.invariant_expr
+            if isinstance(uexpr, BinaryExpr) and uexpr.op == BinaryOp.OR:
+                field_name = _extract_not_null_field_expr(uexpr.left)
+                if field_name:
+                    fields.append(field_name)
+        elif inv.expression is not None:
+            expr = inv.expression
+            if isinstance(expr, LogicalExpr) and expr.operator.value == "or":
+                field_name = _extract_not_null_field(expr.left)
+                if field_name:
+                    fields.append(field_name)
     return fields
 
 
+def _extract_not_null_field_expr(expr: Any) -> str | None:
+    """Extract field name from ``field != null`` in unified Expr AST."""
+    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
+
+    if not isinstance(expr, BinaryExpr) or expr.op != BinaryOp.NE:
+        return None
+    left, right = expr.left, expr.right
+    if isinstance(left, FieldRef) and isinstance(right, Literal) and right.value is None:
+        return left.path[0] if left.path else None
+    if isinstance(right, FieldRef) and isinstance(left, Literal) and left.value is None:
+        return right.path[0] if right.path else None
+    return None
+
+
 def _extract_not_null_field(expr: Any) -> str | None:
-    """Extract the field name from a ``field != null`` comparison."""
+    """Extract the field name from a ``field != null`` comparison (legacy)."""
     from dazzle.core.ir.invariant import ComparisonExpr, InvariantFieldRef, InvariantLiteral
 
     if not isinstance(expr, ComparisonExpr):

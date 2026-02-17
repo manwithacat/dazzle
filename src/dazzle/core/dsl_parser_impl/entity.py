@@ -171,7 +171,8 @@ class EntityParserMixin:
             if self.match(TokenType.INVARIANT):
                 self.advance()
                 self.expect(TokenType.COLON)
-                expr = self._parse_invariant_expr()
+                # v0.30.0: Use unified expression language
+                inv_expr = self.collect_line_as_expr()
                 self.skip_newlines()
 
                 # v0.7.1: Check for optional message: and code: on next lines
@@ -201,7 +202,11 @@ class EntityParserMixin:
                         self.advance()
 
                 invariants.append(
-                    ir.InvariantSpec(expression=expr, message=inv_message, code=inv_code)
+                    ir.InvariantSpec(
+                        invariant_expr=inv_expr,
+                        message=inv_message,
+                        code=inv_code,
+                    )
                 )
                 continue
 

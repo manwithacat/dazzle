@@ -241,6 +241,15 @@ class BaseParser:
             TokenType.LESS_EQUAL: "<=",
             TokenType.ARROW: "->",
         }
+        # Map DSL word-form durations to compact notation for expression parser
+        _DURATION_WORDS = {
+            "days": "d",
+            "hours": "h",
+            "minutes": "min",
+            "weeks": "w",
+            "months": "m",
+            "years": "y",
+        }
 
         parts: list[str] = []
         while self.current_token().type not in _STOP_TOKENS:
@@ -249,6 +258,9 @@ class BaseParser:
                 parts.append(f'"{tok.value}"')
             elif tok.type in _OP_TEXT:
                 parts.append(_OP_TEXT[tok.type])
+            elif tok.value in _DURATION_WORDS and parts and parts[-1].isdigit():
+                # Merge "14 days" → "14d"
+                parts[-1] = parts[-1] + _DURATION_WORDS[tok.value]
             else:
                 parts.append(tok.value)
             self.advance()

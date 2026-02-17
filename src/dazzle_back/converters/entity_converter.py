@@ -5,6 +5,8 @@ This module handles the transformation of Dazzle's domain entities into
 DNR's framework-agnostic BackendSpec format.
 """
 
+from typing import Any
+
 from dazzle.core import ir
 from dazzle_back.specs import (
     AccessAuthContext,
@@ -431,10 +433,79 @@ def _convert_invariant_expr(expr: ir.InvariantExpr) -> InvariantExprSpec:
         raise ValueError(f"Unknown invariant expression type: {type(expr)}")
 
 
+def _convert_unified_expr_to_invariant(expr: Any) -> InvariantExprSpec:
+    """Convert unified Expr AST to BackendSpec InvariantExprSpec."""
+    from dazzle.core.ir.expressions import (
+        BinaryExpr,
+        BinaryOp,
+        DurationLiteral,
+        FieldRef,
+        Literal,
+        UnaryExpr,
+        UnaryOp,
+    )
+
+    if isinstance(expr, FieldRef):
+        return InvariantExprSpec(kind="field_ref", path=expr.path)
+    elif isinstance(expr, Literal):
+        return InvariantExprSpec(kind="literal", value=expr.value)
+    elif isinstance(expr, DurationLiteral):
+        unit_map = {
+            "d": DurationUnitKind.DAYS,
+            "h": DurationUnitKind.HOURS,
+            "min": DurationUnitKind.MINUTES,
+            "w": DurationUnitKind.WEEKS,
+            "m": DurationUnitKind.MONTHS,
+            "y": DurationUnitKind.YEARS,
+        }
+        return InvariantExprSpec(
+            kind="duration",
+            duration_value=expr.value,
+            duration_unit=unit_map.get(expr.unit, DurationUnitKind.DAYS),
+        )
+    elif isinstance(expr, BinaryExpr):
+        if expr.op in (BinaryOp.AND, BinaryOp.OR):
+            op = InvariantLogicalKind.AND if expr.op == BinaryOp.AND else InvariantLogicalKind.OR
+            return InvariantExprSpec(
+                kind="logical",
+                logical_left=_convert_unified_expr_to_invariant(expr.left),
+                logical_op=op,
+                logical_right=_convert_unified_expr_to_invariant(expr.right),
+            )
+        else:
+            op_map = {
+                BinaryOp.EQ: InvariantComparisonKind.EQ,
+                BinaryOp.NE: InvariantComparisonKind.NE,
+                BinaryOp.GT: InvariantComparisonKind.GT,
+                BinaryOp.LT: InvariantComparisonKind.LT,
+                BinaryOp.GE: InvariantComparisonKind.GE,
+                BinaryOp.LE: InvariantComparisonKind.LE,
+            }
+            return InvariantExprSpec(
+                kind="comparison",
+                comparison_left=_convert_unified_expr_to_invariant(expr.left),
+                comparison_op=op_map.get(expr.op, InvariantComparisonKind.EQ),
+                comparison_right=_convert_unified_expr_to_invariant(expr.right),
+            )
+    elif isinstance(expr, UnaryExpr) and expr.op == UnaryOp.NOT:
+        return InvariantExprSpec(
+            kind="not",
+            not_operand=_convert_unified_expr_to_invariant(expr.operand),
+        )
+    else:
+        return InvariantExprSpec(kind="literal", value=str(expr))
+
+
 def _convert_invariant(inv: ir.InvariantSpec) -> InvariantSpec:
     """Convert IR InvariantSpec to BackendSpec InvariantSpec."""
+    if inv.invariant_expr is not None:
+        expr_spec = _convert_unified_expr_to_invariant(inv.invariant_expr)
+    elif inv.expression is not None:
+        expr_spec = _convert_invariant_expr(inv.expression)
+    else:
+        expr_spec = InvariantExprSpec(kind="literal", value=True)
     return InvariantSpec(
-        expression=_convert_invariant_expr(inv.expression),
+        expression=expr_spec,
         message=inv.message,
     )
 

@@ -1,9 +1,22 @@
-"""Tests for entity invariant parsing."""
+"""Tests for entity invariant parsing using unified expression language."""
 
 from pathlib import Path
 
-from dazzle.core import ir
 from dazzle.core.dsl_parser_impl import parse_dsl
+from dazzle.core.ir.expressions import (
+    BinaryExpr,
+    BinaryOp,
+    DurationLiteral,
+    FieldRef,
+    Literal,
+    UnaryExpr,
+    UnaryOp,
+)
+
+
+def _parse(dsl: str):
+    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+    return fragment
 
 
 class TestSimpleInvariantParsing:
@@ -21,18 +34,19 @@ entity Item "Item":
 
   invariant: quantity > 0
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
-        assert len(fragment.entities) == 1
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         assert len(entity.invariants) == 1
 
         inv = entity.invariants[0]
-        assert isinstance(inv.expression, ir.ComparisonExpr)
-        assert inv.expression.operator == ir.InvariantComparisonOperator.GT
-        assert isinstance(inv.expression.left, ir.InvariantFieldRef)
-        assert inv.expression.left.path == ["quantity"]
-        assert isinstance(inv.expression.right, ir.InvariantLiteral)
-        assert inv.expression.right.value == 0
+        assert inv.invariant_expr is not None
+        expr = inv.invariant_expr
+        assert isinstance(expr, BinaryExpr)
+        assert expr.op == BinaryOp.GT
+        assert isinstance(expr.left, FieldRef)
+        assert expr.left.path == ["quantity"]
+        assert isinstance(expr.right, Literal)
+        assert expr.right.value == 0
 
     def test_simple_comparison_eq(self) -> None:
         """Test parsing an equality comparison invariant."""
@@ -46,28 +60,30 @@ entity Task "Task":
 
   invariant: status == "active"
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         assert len(entity.invariants) == 1
 
         inv = entity.invariants[0]
-        assert isinstance(inv.expression, ir.ComparisonExpr)
-        assert inv.expression.operator == ir.InvariantComparisonOperator.EQ
-        assert isinstance(inv.expression.right, ir.InvariantLiteral)
-        assert inv.expression.right.value == "active"
+        assert inv.invariant_expr is not None
+        expr = inv.invariant_expr
+        assert isinstance(expr, BinaryExpr)
+        assert expr.op == BinaryOp.EQ
+        assert isinstance(expr.right, Literal)
+        assert expr.right.value == "active"
 
     def test_comparison_operators(self) -> None:
         """Test parsing all comparison operators."""
         operators = [
-            ("==", ir.InvariantComparisonOperator.EQ),
-            ("!=", ir.InvariantComparisonOperator.NE),
-            (">", ir.InvariantComparisonOperator.GT),
-            ("<", ir.InvariantComparisonOperator.LT),
-            (">=", ir.InvariantComparisonOperator.GE),
-            ("<=", ir.InvariantComparisonOperator.LE),
+            ("==", BinaryOp.EQ),
+            ("!=", BinaryOp.NE),
+            (">", BinaryOp.GT),
+            ("<", BinaryOp.LT),
+            (">=", BinaryOp.GE),
+            ("<=", BinaryOp.LE),
         ]
 
-        for dsl_op, ir_op in operators:
+        for dsl_op, expected_op in operators:
             dsl = f"""
 module test
 app test "Test"
@@ -78,11 +94,12 @@ entity Item "Item":
 
   invariant: value {dsl_op} 10
 """
-            _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+            fragment = _parse(dsl)
             entity = fragment.entities[0]
             inv = entity.invariants[0]
-            assert isinstance(inv.expression, ir.ComparisonExpr), f"Failed for {dsl_op}"
-            assert inv.expression.operator == ir_op, f"Failed for {dsl_op}"
+            assert inv.invariant_expr is not None, f"Failed for {dsl_op}"
+            assert isinstance(inv.invariant_expr, BinaryExpr), f"Failed for {dsl_op}"
+            assert inv.invariant_expr.op == expected_op, f"Failed for {dsl_op}"
 
 
 class TestFieldComparisonParsing:
@@ -101,16 +118,18 @@ entity Event "Event":
 
   invariant: end_date > start_date
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         assert len(entity.invariants) == 1
 
         inv = entity.invariants[0]
-        assert isinstance(inv.expression, ir.ComparisonExpr)
-        assert isinstance(inv.expression.left, ir.InvariantFieldRef)
-        assert inv.expression.left.path == ["end_date"]
-        assert isinstance(inv.expression.right, ir.InvariantFieldRef)
-        assert inv.expression.right.path == ["start_date"]
+        assert inv.invariant_expr is not None
+        expr = inv.invariant_expr
+        assert isinstance(expr, BinaryExpr)
+        assert isinstance(expr.left, FieldRef)
+        assert expr.left.path == ["end_date"]
+        assert isinstance(expr.right, FieldRef)
+        assert expr.right.path == ["start_date"]
 
 
 class TestDurationParsing:
@@ -128,14 +147,16 @@ entity Task "Task":
 
   invariant: due_date > 14 days
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.ComparisonExpr)
-        assert isinstance(inv.expression.right, ir.DurationExpr)
-        assert inv.expression.right.value == 14
-        assert inv.expression.right.unit == ir.DurationUnit.DAYS
+        assert inv.invariant_expr is not None
+        expr = inv.invariant_expr
+        assert isinstance(expr, BinaryExpr)
+        assert isinstance(expr.right, DurationLiteral)
+        assert expr.right.value == 14
+        assert expr.right.unit == "d"
 
     def test_duration_hours(self) -> None:
         """Test parsing a duration in hours."""
@@ -149,13 +170,15 @@ entity Reminder "Reminder":
 
   invariant: notify_at > 2 hours
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression.right, ir.DurationExpr)
-        assert inv.expression.right.value == 2
-        assert inv.expression.right.unit == ir.DurationUnit.HOURS
+        assert inv.invariant_expr is not None
+        assert isinstance(inv.invariant_expr, BinaryExpr)
+        assert isinstance(inv.invariant_expr.right, DurationLiteral)
+        assert inv.invariant_expr.right.value == 2
+        assert inv.invariant_expr.right.unit == "h"
 
     def test_duration_minutes(self) -> None:
         """Test parsing a duration in minutes."""
@@ -169,13 +192,15 @@ entity Alert "Alert":
 
   invariant: trigger_at > 30 minutes
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression.right, ir.DurationExpr)
-        assert inv.expression.right.value == 30
-        assert inv.expression.right.unit == ir.DurationUnit.MINUTES
+        assert inv.invariant_expr is not None
+        assert isinstance(inv.invariant_expr, BinaryExpr)
+        assert isinstance(inv.invariant_expr.right, DurationLiteral)
+        assert inv.invariant_expr.right.value == 30
+        assert inv.invariant_expr.right.unit == "min"
 
 
 class TestLogicalOperatorParsing:
@@ -194,14 +219,16 @@ entity Order "Order":
 
   invariant: quantity > 0 and price > 0
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.LogicalExpr)
-        assert inv.expression.operator == ir.InvariantLogicalOperator.AND
-        assert isinstance(inv.expression.left, ir.ComparisonExpr)
-        assert isinstance(inv.expression.right, ir.ComparisonExpr)
+        assert inv.invariant_expr is not None
+        expr = inv.invariant_expr
+        assert isinstance(expr, BinaryExpr)
+        assert expr.op == BinaryOp.AND
+        assert isinstance(expr.left, BinaryExpr)
+        assert isinstance(expr.right, BinaryExpr)
 
     def test_or_operator(self) -> None:
         """Test parsing OR logical operator."""
@@ -216,12 +243,13 @@ entity User "User":
 
   invariant: is_admin or is_owner
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.LogicalExpr)
-        assert inv.expression.operator == ir.InvariantLogicalOperator.OR
+        assert inv.invariant_expr is not None
+        assert isinstance(inv.invariant_expr, BinaryExpr)
+        assert inv.invariant_expr.op == BinaryOp.OR
 
     def test_not_operator(self) -> None:
         """Test parsing NOT logical operator."""
@@ -235,13 +263,15 @@ entity Record "Record":
 
   invariant: not is_deleted
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.NotExpr)
-        assert isinstance(inv.expression.operand, ir.InvariantFieldRef)
-        assert inv.expression.operand.path == ["is_deleted"]
+        assert inv.invariant_expr is not None
+        assert isinstance(inv.invariant_expr, UnaryExpr)
+        assert inv.invariant_expr.op == UnaryOp.NOT
+        assert isinstance(inv.invariant_expr.operand, FieldRef)
+        assert inv.invariant_expr.operand.path == ["is_deleted"]
 
 
 class TestComplexInvariantParsing:
@@ -262,15 +292,17 @@ entity Item "Item":
   invariant: a or b and c
 """
         # Should parse as: a or (b and c)
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.LogicalExpr)
-        assert inv.expression.operator == ir.InvariantLogicalOperator.OR
+        assert inv.invariant_expr is not None
+        expr = inv.invariant_expr
+        assert isinstance(expr, BinaryExpr)
+        assert expr.op == BinaryOp.OR
         # Right side should be the AND expression
-        assert isinstance(inv.expression.right, ir.LogicalExpr)
-        assert inv.expression.right.operator == ir.InvariantLogicalOperator.AND
+        assert isinstance(expr.right, BinaryExpr)
+        assert expr.right.op == BinaryOp.AND
 
     def test_parentheses_override_precedence(self) -> None:
         """Test that parentheses override operator precedence."""
@@ -287,15 +319,17 @@ entity Item "Item":
   invariant: (a or b) and c
 """
         # Should parse as: (a or b) and c
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.LogicalExpr)
-        assert inv.expression.operator == ir.InvariantLogicalOperator.AND
+        assert inv.invariant_expr is not None
+        expr = inv.invariant_expr
+        assert isinstance(expr, BinaryExpr)
+        assert expr.op == BinaryOp.AND
         # Left side should be the OR expression
-        assert isinstance(inv.expression.left, ir.LogicalExpr)
-        assert inv.expression.left.operator == ir.InvariantLogicalOperator.OR
+        assert isinstance(expr.left, BinaryExpr)
+        assert expr.left.op == BinaryOp.OR
 
     def test_multiple_invariants(self) -> None:
         """Test parsing multiple invariants in one entity."""
@@ -314,7 +348,7 @@ entity Order "Order":
   invariant: discount >= 0
   invariant: discount <= price
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         assert len(entity.invariants) == 4
 
@@ -330,13 +364,14 @@ entity Setting "Setting":
 
   invariant: enabled == true
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.ComparisonExpr)
-        assert isinstance(inv.expression.right, ir.InvariantLiteral)
-        assert inv.expression.right.value is True
+        assert inv.invariant_expr is not None
+        assert isinstance(inv.invariant_expr, BinaryExpr)
+        assert isinstance(inv.invariant_expr.right, Literal)
+        assert inv.invariant_expr.right.value is True
 
     def test_string_literal_in_comparison(self) -> None:
         """Test parsing string literal in comparison."""
@@ -350,11 +385,12 @@ entity Status "Status":
 
   invariant: value != "deleted"
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
         entity = fragment.entities[0]
         inv = entity.invariants[0]
 
-        assert isinstance(inv.expression, ir.ComparisonExpr)
-        assert inv.expression.operator == ir.InvariantComparisonOperator.NE
-        assert isinstance(inv.expression.right, ir.InvariantLiteral)
-        assert inv.expression.right.value == "deleted"
+        assert inv.invariant_expr is not None
+        assert isinstance(inv.invariant_expr, BinaryExpr)
+        assert inv.invariant_expr.op == BinaryOp.NE
+        assert isinstance(inv.invariant_expr.right, Literal)
+        assert inv.invariant_expr.right.value == "deleted"
