@@ -115,6 +115,7 @@ class DazzleClient:
         self.client = httpx.Client(timeout=timeout)
         self._auth_token: str | None = None
         self._test_routes_available: bool | None = None  # None = unknown
+        self._created_entities: list[tuple[str, str]] = []  # (entity_name, entity_id)
 
     def close(self) -> None:
         self.client.close()
@@ -347,7 +348,10 @@ class DazzleClient:
                 if resp.status_code == 200:
                     result: dict[str, Any] = resp.json()
                     created: dict[str, Any] = result.get("created", {})
-                    return created.get(fixture_id)
+                    created_entity = created.get(fixture_id)
+                    if created_entity and "id" in created_entity:
+                        self._created_entities.append((entity_name, str(created_entity["id"])))
+                    return created_entity
                 if resp.status_code == 404:
                     self._test_routes_available = False
 
@@ -357,7 +361,10 @@ class DazzleClient:
                 f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
             )
             if resp.status_code in (200, 201):
-                return dict(resp.json())
+                result_data = dict(resp.json())
+                if "id" in result_data:
+                    self._created_entities.append((entity_name, str(result_data["id"])))
+                return result_data
             return None
         except Exception as e:
             print(f"    Create error: {e}")
@@ -387,6 +394,54 @@ class DazzleClient:
             return None
         except Exception:
             return None
+
+    def delete_entity(self, entity_name: str, entity_id: str) -> bool:
+        """Delete an entity by ID. Tries __test__ route first, then standard REST."""
+        try:
+            if self._test_routes_available is not False:
+                resp = self.client.delete(
+                    f"{self.api_url}/__test__/entity/{entity_name}/{entity_id}"
+                )
+                if resp.status_code == 200:
+                    return True
+                if resp.status_code == 404 and "Unknown entity" not in resp.text:
+                    self._test_routes_available = False
+
+            endpoint = self._entity_endpoint(entity_name)
+            resp = self.client.delete(
+                f"{self.api_url}{endpoint}/{entity_id}",
+                headers=self._auth_headers(),
+            )
+            return resp.status_code in (200, 204)
+        except Exception:
+            return False
+
+    def cleanup_created_entities(self) -> tuple[int, int]:
+        """Delete all tracked entities in reverse creation order (LIFO).
+
+        Uses multi-pass to handle FK constraint ordering.
+        Returns (deleted_count, failed_count).
+        """
+        if not self._created_entities:
+            return (0, 0)
+
+        pending = list(reversed(self._created_entities))
+        deleted = 0
+        max_passes = 3
+
+        for _pass_num in range(max_passes):
+            still_pending: list[tuple[str, str]] = []
+            for entity_name, entity_id in pending:
+                if self.delete_entity(entity_name, entity_id):
+                    deleted += 1
+                else:
+                    still_pending.append((entity_name, entity_id))
+            pending = still_pending
+            if not pending:
+                break
+
+        self._created_entities.clear()
+        return (deleted, len(pending))
 
     def get_spec(self) -> dict[str, Any] | None:
         """Get the app spec."""
@@ -545,6 +600,7 @@ class TestRunner:
         api_url: str | None = None,
         ui_url: str | None = None,
         persona: str | None = None,
+        cleanup: bool = False,
     ):
         self.project_path = project_path
         self.api_port = api_port
@@ -555,6 +611,7 @@ class TestRunner:
         self.client: DazzleClient | None = None
         self._server_process: subprocess.Popen[str] | None = None
         self._persona = persona
+        self._cleanup = cleanup
 
     def _inject_persona_session(self) -> None:
         """Inject stored persona session cookie into the client."""
@@ -788,7 +845,15 @@ class TestRunner:
             if on_progress is not None:
                 on_progress(msg)
 
-        # Cleanup
+        # Cleanup created entities
+        if self._cleanup and self.client:
+            deleted, failed = self.client.cleanup_created_entities()
+            if deleted or failed:
+                msg = f"Cleanup: {deleted} deleted, {failed} failed"
+                print(f"    {msg}")
+                if on_progress is not None:
+                    on_progress(msg)
+
         self.client.close()
         result.completed_at = datetime.now()
 

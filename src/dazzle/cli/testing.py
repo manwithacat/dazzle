@@ -1558,6 +1558,11 @@ def dsl_run(
         "-f",
         help="Output format: table (default) or json",
     ),
+    cleanup: bool = typer.Option(
+        False,
+        "--cleanup",
+        help="Delete entities created during test run (prevents cross-run collisions)",
+    ),
 ) -> None:
     """
     [Tier 1] Run API-based tests against a DNR server.
@@ -1630,7 +1635,9 @@ def dsl_run(
         from dazzle.cli.activity import cli_activity
 
         with cli_activity(root, "dsl_test", "run_all") as progress:
-            runner = UnifiedTestRunner(root, server_timeout=timeout, base_url=base_url)
+            runner = UnifiedTestRunner(
+                root, server_timeout=timeout, base_url=base_url, cleanup=cleanup
+            )
 
             def _on_progress(msg: str) -> None:
                 progress.log_sync(msg)

@@ -163,6 +163,7 @@ class UnifiedTestRunner:
         project_path: Path,
         server_timeout: int = 30,
         base_url: str | None = None,
+        cleanup: bool = False,
     ):
         self.project_path = project_path.resolve()
         self.designs_path = self.project_path / "dsl" / "tests" / "dsl_generated_tests.json"
@@ -172,6 +173,7 @@ class UnifiedTestRunner:
         self.ui_port = 3000
         self.server_timeout = server_timeout
         self.base_url = base_url
+        self._cleanup = cleanup
         self.api_url: str | None = None
         self.ui_url: str | None = None
         if base_url:
@@ -422,6 +424,7 @@ class UnifiedTestRunner:
             api_url=self.api_url,
             ui_url=self.ui_url,
             persona=persona,
+            cleanup=self._cleanup,
         )
 
         # Merge generated tests with existing tests
