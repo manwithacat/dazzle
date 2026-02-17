@@ -253,6 +253,8 @@ def create_debug_routes(
             type_str = (
                 str(field.type.scalar_type.value) if field.type.scalar_type else field.type.kind
             )
+            if field.type.max_length is not None and field.type.scalar_type:
+                type_str = f"{field.type.scalar_type.value}({field.type.max_length})"
             if field.type.kind == "ref" and field.type.ref_entity:
                 type_str = f"ref({field.type.ref_entity})"
             elif field.type.kind == "enum" and field.type.enum_values:
@@ -265,6 +267,8 @@ def create_debug_routes(
                 "unique": field.unique,
                 "indexed": field.indexed,
             }
+            if field.type.max_length is not None:
+                field_info["max_length"] = field.type.max_length
             if field.sensitive:
                 field_info["sensitive"] = True
             fields.append(field_info)

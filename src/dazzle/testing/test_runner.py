@@ -465,7 +465,11 @@ class DazzleClient:
             return None
 
     def generate_entity_data(
-        self, entity_name: str, overrides: dict[str, Any] | None = None, create_refs: bool = True
+        self,
+        entity_name: str,
+        overrides: dict[str, Any] | None = None,
+        create_refs: bool = True,
+        _ref_depth: int = 0,
     ) -> dict[str, Any]:
         """Generate valid test data for an entity based on its schema.
 
@@ -473,6 +477,7 @@ class DazzleClient:
             entity_name: The entity type to generate data for
             overrides: Field values to override the generated ones
             create_refs: If True, create referenced entities and include their IDs
+            _ref_depth: Internal recursion depth counter (max 3 levels)
         """
         import re
 
@@ -487,6 +492,12 @@ class DazzleClient:
             field_type = field_type_orig.lower()
             required = fld.get("required", False)
             unique = fld.get("unique", False)
+            max_length = fld.get("max_length")
+            # Fallback: parse max_length from type string like "str(8)"
+            if max_length is None and "str" in field_type:
+                ml_match = re.search(r"str\((\d+)\)", field_type)
+                if ml_match:
+                    max_length = int(ml_match.group(1))
 
             # Skip auto-generated fields
             if name in ("id", "created_at", "updated_at"):
@@ -494,14 +505,16 @@ class DazzleClient:
 
             # Handle reference fields
             if "ref" in field_type:
-                if required and create_refs:
+                if required and create_refs and _ref_depth < 3:
                     # Extract the referenced entity name from "ref(EntityName)"
                     # Use original case field_type to preserve entity name case
                     ref_match = re.search(r"ref\((\w+)\)", field_type_orig)
                     if ref_match:
                         ref_entity = ref_match.group(1)
-                        # Create the referenced entity
-                        ref_data = self.generate_entity_data(ref_entity, create_refs=False)
+                        # Create the referenced entity (with depth-limited recursion)
+                        ref_data = self.generate_entity_data(
+                            ref_entity, create_refs=True, _ref_depth=_ref_depth + 1
+                        )
                         ref_result = self.create_entity(ref_entity, ref_data)
                         if ref_result and "id" in ref_result:
                             # Use the field name directly (the ref stores the ID)
@@ -509,7 +522,7 @@ class DazzleClient:
                 continue
 
             if required:
-                data[name] = self._generate_field_value(name, field_type, unique)
+                data[name] = self._generate_field_value(name, field_type, unique, max_length)
 
         # Apply overrides
         if overrides:
@@ -523,18 +536,23 @@ class DazzleClient:
                 fname = fld.get("name", "")
                 if fld.get("unique", False) and fname in overrides and fname not in ("id",):
                     ftype = fld.get("type", "").lower()
-                    data[fname] = self._generate_field_value(fname, ftype, unique=True)
+                    ml = fld.get("max_length")
+                    if ml is None and "str" in ftype:
+                        ml_m = re.search(r"str\((\d+)\)", ftype)
+                        if ml_m:
+                            ml = int(ml_m.group(1))
+                    data[fname] = self._generate_field_value(
+                        fname, ftype, unique=True, max_length=ml
+                    )
 
         return data
 
-    def _generate_field_value(self, name: str, field_type: str, unique: bool = False) -> Any:
-        """Generate a test value for a field type."""
+    def _generate_field_value(
+        self, name: str, field_type: str, unique: bool = False, max_length: int | None = None
+    ) -> Any:
+        """Generate a test value for a field type, respecting max_length."""
         import re
         import uuid as uuid_module
-
-        # Generate unique suffix for unique fields — use UUID4 hex to
-        # guarantee no collisions across runs or parallel execution.
-        unique_suffix = f"_{uuid_module.uuid4().hex[:8]}" if unique else ""
 
         # Handle enum types
         enum_match = re.search(r"enum\(([^)]+)\)", field_type)
@@ -542,21 +560,28 @@ class DazzleClient:
             values = enum_match.group(1).split(",")
             return values[0].strip()
 
+        # For short max_length fields, use hex-only values to fit
+        if max_length is not None and max_length <= 16 and unique:
+            return uuid_module.uuid4().hex[:max_length]
+
+        # Generate unique suffix for unique fields — use UUID4 hex to
+        # guarantee no collisions across runs or parallel execution.
+        unique_suffix = f"_{uuid_module.uuid4().hex[:8]}" if unique else ""
+
         # Handle by field name first (for common patterns)
         name_lower = name.lower()
         if name_lower == "email" or "email" in field_type:
-            return f"test{unique_suffix}@example.com"
+            value = f"test{unique_suffix}@example.com"
         elif name_lower in ("serial_number", "serialnumber", "serial"):
-            return f"SN{unique_suffix or '_' + uuid_module.uuid4().hex[:8]}"
+            value = f"SN{unique_suffix or '_' + uuid_module.uuid4().hex[:8]}"
         elif name_lower == "version":
-            return f"1.0.{uuid_module.uuid4().hex[:6]}"
-
-        if "uuid" in field_type:
+            value = f"1.0.{uuid_module.uuid4().hex[:6]}"
+        elif "uuid" in field_type:
             return str(uuid_module.uuid4())
         elif "str" in field_type:
-            return f"Test {name}{unique_suffix}"
+            value = f"Test {name}{unique_suffix}"
         elif "text" in field_type:
-            return f"Test description for {name}{unique_suffix}"
+            value = f"Test description for {name}{unique_suffix}"
         elif "int" in field_type:
             return 1
         elif "decimal" in field_type or "float" in field_type:
@@ -572,7 +597,23 @@ class DazzleClient:
 
             return datetime.now().isoformat()
         else:
-            return f"test_{name}{unique_suffix}"
+            value = f"test_{name}{unique_suffix}"
+
+        # Truncate to max_length if specified (preserving unique suffix)
+        if max_length is not None and isinstance(value, str) and len(value) > max_length:
+            if unique:
+                # Keep the unique suffix, truncate the prefix
+                suffix = unique_suffix
+                prefix_budget = max_length - len(suffix)
+                if prefix_budget > 0:
+                    value = value[:prefix_budget] + suffix
+                else:
+                    # Field is too short even for suffix — use hex only
+                    value = uuid_module.uuid4().hex[:max_length]
+            else:
+                value = value[:max_length]
+
+        return value
 
     def check_ui_loads(self) -> bool:
         """Check if the UI loads successfully."""
