@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-02-17
+
+### Added
+- Typed expression language: tokenizer, recursive descent parser, tree-walking evaluator, and type checker for pure-function expressions over entity fields (`src/dazzle/core/expression_lang/`) ([#275](https://github.com/manwithacat/dazzle/issues/275))
+- Expression AST types: `Literal`, `FieldRef`, `DurationLiteral`, `BinaryExpr`, `UnaryExpr`, `FuncCall`, `InExpr`, `IfExpr` with full operator precedence ([#275](https://github.com/manwithacat/dazzle/issues/275))
+- Field expression defaults: `total: int = subtotal + tax` — computed default values using typed expressions on entity fields ([#275](https://github.com/manwithacat/dazzle/issues/275))
+- Cross-entity predicate guards on state transitions with FK arrow path syntax: `guard: self->signatory->aml_status == "completed"` ([#275](https://github.com/manwithacat/dazzle/issues/275))
+- Guard message support: `message: "Signatory must pass AML checks"` sub-clause on transition guards ([#275](https://github.com/manwithacat/dazzle/issues/275))
+- Block-mode transition parsing: transitions now support indented sub-blocks alongside existing inline syntax ([#275](https://github.com/manwithacat/dazzle/issues/275))
+- Process-aware task inbox with step context enrichment showing position in workflows ([#274](https://github.com/manwithacat/dazzle/issues/274))
+- Built-in expression functions: `today()`, `now()`, `days_until()`, `days_since()`, `concat()`, `coalesce()`, `abs()`, `min()`, `max()`, `round()`, `len()` ([#275](https://github.com/manwithacat/dazzle/issues/275))
+
 ## [0.29.0] - 2026-02-17
 
 ### Added
