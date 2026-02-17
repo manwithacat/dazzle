@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-02-17
+
+### Added
+- Dead construct detection lint pass — warns on unreachable surfaces, entities with no surfaces, orphaned views, and undefined service references (#279)
+- Source locations on IR nodes — parser attaches file/line/column to all major constructs for source-mapped diagnostics (#280)
+- Query pre-planning at startup — projection pushdown from surface section fields, not just view-backed surfaces (#281)
+- Template constant folding — pre-compute workspace column metadata at startup instead of per-request (#282)
+- Workspace query batching — concurrent aggregate metric queries via asyncio.gather (#283)
+- `dazzle build --target` codegen pipeline — SQL DDL, OpenAPI, and AsyncAPI code generation targets with `--check` validation-only mode (#284)
+
 ## [0.31.0] - 2026-02-17
 
 ## [0.30.0] - 2026-02-17
