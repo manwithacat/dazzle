@@ -978,3 +978,244 @@ class TestFunnelChartTemplate:
         from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
 
         assert "FUNNEL_CHART" in DISPLAY_TEMPLATE_MAP
+
+
+# ---------------------------------------------------------------------------
+# Step 11 — Aggregate metric batching (#283)
+# ---------------------------------------------------------------------------
+
+
+class TestComputeAggregateMetrics:
+    """_compute_aggregate_metrics batches independent DB queries concurrently."""
+
+    @pytest.fixture(autouse=True)
+    def _skip_if_no_fastapi(self) -> None:
+        pytest.importorskip("fastapi")
+
+    @pytest.mark.asyncio
+    async def test_count_metrics_batched_concurrently(self) -> None:
+        """Multiple count() aggregates should run concurrently via gather."""
+        import asyncio
+
+        from dazzle_back.runtime.server import _compute_aggregate_metrics
+
+        call_order: list[str] = []
+
+        class MockRepo:
+            def __init__(self, name: str, total: int) -> None:
+                self.name = name
+                self.total = total
+
+            async def list(self, **kwargs: Any) -> dict[str, Any]:
+                call_order.append(f"start_{self.name}")
+                await asyncio.sleep(0.01)
+                call_order.append(f"end_{self.name}")
+                return {"items": [], "total": self.total}
+
+        repos = {
+            "Task": MockRepo("Task", 42),
+            "Invoice": MockRepo("Invoice", 7),
+        }
+        aggregates = {
+            "open_tasks": "count(Task where status = open)",
+            "unpaid_invoices": "count(Invoice where status != paid)",
+        }
+
+        metrics = await _compute_aggregate_metrics(aggregates, repos, 0, [])
+
+        assert len(metrics) == 2
+        assert metrics[0]["label"] == "Open Tasks"
+        assert metrics[0]["value"] == 42
+        assert metrics[1]["label"] == "Unpaid Invoices"
+        assert metrics[1]["value"] == 7
+
+        # Verify concurrent execution: both should start before either ends
+        assert call_order[0].startswith("start_")
+        assert call_order[1].startswith("start_")
+
+    @pytest.mark.asyncio
+    async def test_sync_metrics_not_batched(self) -> None:
+        """Legacy 'count' and 'sum:field' metrics compute synchronously."""
+        from dazzle_back.runtime.server import _compute_aggregate_metrics
+
+        items = [
+            {"amount": 100},
+            {"amount": 200},
+            {"amount": 50},
+        ]
+        aggregates = {
+            "total_items": "count",
+            "total_amount": "sum:amount",
+        }
+
+        metrics = await _compute_aggregate_metrics(aggregates, None, 99, items)
+
+        assert len(metrics) == 2
+        assert metrics[0]["value"] == 99  # Legacy count uses total
+        assert metrics[1]["value"] == 350.0  # Sum of amounts
+
+    @pytest.mark.asyncio
+    async def test_mixed_sync_and_async_metrics(self) -> None:
+        """Mix of count(), legacy count, and sum: metrics."""
+        from dazzle_back.runtime.server import _compute_aggregate_metrics
+
+        class MockRepo:
+            async def list(self, **kwargs: Any) -> dict[str, Any]:
+                return {"items": [], "total": 15}
+
+        repos = {"Task": MockRepo()}
+        items = [{"value": 10}, {"value": 20}]
+        aggregates = {
+            "db_count": "count(Task)",
+            "legacy_count": "count",
+            "field_sum": "sum:value",
+        }
+
+        metrics = await _compute_aggregate_metrics(aggregates, repos, 50, items)
+
+        assert len(metrics) == 3
+        assert metrics[0]["value"] == 15  # DB count
+        assert metrics[1]["value"] == 50  # Legacy total
+        assert metrics[2]["value"] == 30.0  # Sum
+
+    @pytest.mark.asyncio
+    async def test_order_preserved(self) -> None:
+        """Metrics should be returned in the same order as aggregates dict."""
+        from dazzle_back.runtime.server import _compute_aggregate_metrics
+
+        aggregates = {
+            "alpha": "count",
+            "beta": "count",
+            "gamma": "count",
+        }
+
+        metrics = await _compute_aggregate_metrics(aggregates, None, 10, [])
+
+        assert [m["label"] for m in metrics] == ["Alpha", "Beta", "Gamma"]
+
+    @pytest.mark.asyncio
+    async def test_db_error_returns_zero(self) -> None:
+        """A failing DB query should return 0 for that metric, not crash."""
+        from dazzle_back.runtime.server import _compute_aggregate_metrics
+
+        class FailingRepo:
+            async def list(self, **kwargs: Any) -> dict[str, Any]:
+                raise RuntimeError("DB connection lost")
+
+        repos = {"Task": FailingRepo()}
+        aggregates = {"broken": "count(Task)"}
+
+        metrics = await _compute_aggregate_metrics(aggregates, repos, 0, [])
+
+        assert len(metrics) == 1
+        assert metrics[0]["value"] == 0
+
+    @pytest.mark.asyncio
+    async def test_empty_aggregates(self) -> None:
+        """Empty aggregates dict returns empty list."""
+        from dazzle_back.runtime.server import _compute_aggregate_metrics
+
+        metrics = await _compute_aggregate_metrics({}, None, 0, [])
+        assert metrics == []
+
+
+# ---------------------------------------------------------------------------
+# Step 12 — Workspace batch endpoint (#283)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _FASTAPI_AVAILABLE, reason="FastAPI required")
+class TestWorkspaceBatchEndpoint:
+    """Batch endpoint fetches all regions concurrently."""
+
+    def _make_spec_with_aggregates(self) -> Any:
+        """Build a BackendSpec with a workspace that has multiple regions."""
+        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+        from dazzle_back.specs import BackendSpec, EntitySpec, FieldSpec, FieldType, ScalarType
+
+        return BackendSpec(
+            name="test_app",
+            version="1.0.0",
+            entities=[
+                EntitySpec(
+                    name="Task",
+                    fields=[
+                        FieldSpec(
+                            name="id",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                            required=True,
+                        ),
+                        FieldSpec(
+                            name="title",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
+                            required=True,
+                        ),
+                    ],
+                ),
+                EntitySpec(
+                    name="Invoice",
+                    fields=[
+                        FieldSpec(
+                            name="id",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                            required=True,
+                        ),
+                        FieldSpec(
+                            name="amount",
+                            type=FieldType(kind="scalar", scalar_type=ScalarType.INT),
+                            required=True,
+                        ),
+                    ],
+                ),
+            ],
+            workspaces=[
+                WorkspaceSpec(
+                    name="overview",
+                    title="Overview",
+                    regions=[
+                        WorkspaceRegion(name="tasks", source="Task"),
+                        WorkspaceRegion(name="invoices", source="Invoice"),
+                    ],
+                ),
+            ],
+        )
+
+    @pytest.fixture
+    def batch_app(self, tmp_path: Any) -> Any:
+        """Build a FastAPI app with a multi-region workspace."""
+        from unittest.mock import patch
+
+        from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
+
+        config = ServerConfig(
+            database_url="postgresql://mock/test",
+            enable_auth=False,
+            enable_test_mode=False,
+        )
+        with (
+            patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
+            patch("dazzle_back.runtime.server.auto_migrate"),
+        ):
+            builder = DazzleBackendApp(self._make_spec_with_aggregates(), config=config)
+            return builder.build()
+
+    def test_batch_endpoint_registered(self, batch_app: Any) -> None:
+        """Batch endpoint should be registered for the workspace."""
+        from fastapi.testclient import TestClient
+
+        client = TestClient(batch_app, raise_server_exceptions=False)
+        resp = client.get("/api/workspaces/overview/batch")
+        assert resp.status_code == 200
+
+    def test_batch_returns_all_regions(self, batch_app: Any) -> None:
+        """Batch endpoint should return data for all regions."""
+        from fastapi.testclient import TestClient
+
+        client = TestClient(batch_app, raise_server_exceptions=False)
+        resp = client.get("/api/workspaces/overview/batch")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "regions" in data
+        region_names = [r["region"] for r in data["regions"]]
+        assert "tasks" in region_names
+        assert "invoices" in region_names

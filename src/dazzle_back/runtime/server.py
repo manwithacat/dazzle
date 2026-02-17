@@ -6,6 +6,7 @@ This module provides the main entry point for running a Dazzle backend applicati
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
@@ -283,36 +284,9 @@ async def _workspace_region_handler(
 
     # Build aggregate metrics if configured
     metrics: list[dict[str, Any]] = []
-    for metric_name, expr in ctx.ctx_region.aggregates.items():
-        value: Any = 0
-        agg_match = _AGGREGATE_RE.match(expr)
-        if agg_match:
-            func, entity_name, where_clause = agg_match.groups()
-            agg_repo = ctx.repositories.get(entity_name) if ctx.repositories else None
-            try:
-                if func == "count" and agg_repo:
-                    agg_filters: dict[str, Any] | None = None
-                    if where_clause:
-                        agg_filters = _parse_simple_where(where_clause)
-                    agg_result = await agg_repo.list(page=1, page_size=1, filters=agg_filters)
-                    if isinstance(agg_result, dict):
-                        value = agg_result.get("total", 0)
-                elif func == "sum" and agg_repo and where_clause:
-                    # Sum with where — not yet supported, use 0
-                    value = 0
-            except Exception:
-                logger.warning("Failed to compute aggregate metric", exc_info=True)
-        elif expr == "count":
-            # Legacy bare "count" — use current query total
-            value = total
-        elif expr.startswith("sum:") and items:
-            field_name = expr.split(":", 1)[1]
-            value = sum(float(i.get(field_name, 0) or 0) for i in items)
-        metrics.append(
-            {
-                "label": metric_name.replace("_", " ").title(),
-                "value": value,
-            }
+    if ctx.ctx_region.aggregates:
+        metrics = await _compute_aggregate_metrics(
+            ctx.ctx_region.aggregates, ctx.repositories, total, items
         )
 
     # Build filter column metadata for template
@@ -403,6 +377,176 @@ async def _workspace_region_handler(
         kanban_columns=kanban_columns,
     )
     return HTMLResponse(content=html)
+
+
+async def _fetch_region_json(
+    request: Any,
+    page: int,
+    page_size: int,
+    ctx: WorkspaceRegionContext,
+) -> dict[str, Any]:
+    """Fetch a single region's data as JSON for batch responses."""
+    repo = ctx.repositories.get(ctx.source) if ctx.repositories else None
+    items: list[dict[str, Any]] = []
+    total = 0
+
+    if repo:
+        try:
+            filters: dict[str, Any] | None = None
+            ir_filter = getattr(ctx.ir_region, "filter", None)
+            if ir_filter is not None:
+                try:
+                    from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+
+                    filters = condition_to_sql_filter(
+                        ir_filter.model_dump(exclude_none=True), context={}
+                    )
+                except Exception:
+                    pass
+
+            sort_list: list[str] | None = None
+            ir_sort = getattr(ctx.ir_region, "sort", [])
+            if ir_sort:
+                sort_list = [
+                    f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
+                    for s in ir_sort
+                ]
+
+            limit = ctx.ctx_region.limit or page_size
+            result = await repo.list(page=page, page_size=limit, filters=filters, sort=sort_list)
+            if isinstance(result, dict):
+                raw_items = result.get("items", [])
+                total = result.get("total", 0)
+                items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
+        except Exception:
+            logger.warning(
+                "Batch: failed to list items for region %s", ctx.ctx_region.name, exc_info=True
+            )
+
+    metrics: list[dict[str, Any]] = []
+    if ctx.ctx_region.aggregates:
+        metrics = await _compute_aggregate_metrics(
+            ctx.ctx_region.aggregates, ctx.repositories, total, items
+        )
+
+    return {
+        "region": ctx.ctx_region.name,
+        "items": items,
+        "total": total,
+        "metrics": metrics,
+    }
+
+
+async def _workspace_batch_handler(
+    request: Any,
+    page: int,
+    page_size: int,
+    region_ctxs: list[WorkspaceRegionContext],
+) -> dict[str, Any]:
+    """Fetch all workspace regions concurrently and return combined JSON."""
+    from fastapi import HTTPException
+
+    # Enforce auth on any region that requires it
+    for ctx in region_ctxs:
+        if ctx.require_auth:
+            auth_ctx = None
+            if ctx.auth_middleware:
+                try:
+                    auth_ctx = ctx.auth_middleware.get_auth_context(request)
+                except Exception:
+                    pass
+            if not (auth_ctx and auth_ctx.is_authenticated):
+                raise HTTPException(status_code=401, detail="Authentication required")
+            if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
+                is_super = auth_ctx.user and auth_ctx.user.is_superuser
+                if not is_super and not any(
+                    r in ctx.ws_access.allow_personas for r in auth_ctx.roles
+                ):
+                    raise HTTPException(status_code=403, detail="Workspace access denied")
+            break  # All regions share the same workspace access
+
+    results = await asyncio.gather(
+        *(_fetch_region_json(request, page, page_size, ctx) for ctx in region_ctxs),
+        return_exceptions=True,
+    )
+
+    regions: list[dict[str, Any]] = []
+    for result in results:
+        if isinstance(result, dict):
+            regions.append(result)
+        elif isinstance(result, BaseException):
+            logger.warning("Batch region query failed: %s", result)
+
+    return {"regions": regions}
+
+
+async def _fetch_count_metric(
+    metric_name: str,
+    agg_repo: Any,
+    where_clause: str | None,
+) -> tuple[str, Any]:
+    """Fetch a single count aggregate metric from a repository."""
+    try:
+        agg_filters: dict[str, Any] | None = None
+        if where_clause:
+            agg_filters = _parse_simple_where(where_clause)
+        agg_result = await agg_repo.list(page=1, page_size=1, filters=agg_filters)
+        if isinstance(agg_result, dict):
+            return metric_name, agg_result.get("total", 0)
+    except Exception:
+        logger.warning("Failed to compute aggregate metric %s", metric_name, exc_info=True)
+    return metric_name, 0
+
+
+async def _compute_aggregate_metrics(
+    aggregates: dict[str, str],
+    repositories: dict[str, Any] | None,
+    total: int,
+    items: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Compute aggregate metrics, batching independent DB queries concurrently."""
+    # Separate metrics into async (need DB query) and sync (computed from existing data)
+    async_tasks: list[tuple[str, Any]] = []  # (metric_name, coroutine)
+    sync_results: dict[str, Any] = {}  # metric_name -> value
+    metric_order: list[str] = []
+
+    for metric_name, expr in aggregates.items():
+        metric_order.append(metric_name)
+        agg_match = _AGGREGATE_RE.match(expr)
+        if agg_match:
+            func, entity_name, where_clause = agg_match.groups()
+            agg_repo = repositories.get(entity_name) if repositories else None
+            if func == "count" and agg_repo:
+                async_tasks.append(
+                    (metric_name, _fetch_count_metric(metric_name, agg_repo, where_clause))
+                )
+            else:
+                sync_results[metric_name] = 0
+        elif expr == "count":
+            sync_results[metric_name] = total
+        elif expr.startswith("sum:") and items:
+            field_name = expr.split(":", 1)[1]
+            sync_results[metric_name] = sum(float(i.get(field_name, 0) or 0) for i in items)
+        else:
+            sync_results[metric_name] = 0
+
+    # Fire all async queries concurrently
+    if async_tasks:
+        results = await asyncio.gather(*(coro for _, coro in async_tasks), return_exceptions=True)
+        for result in results:
+            if isinstance(result, tuple):
+                sync_results[result[0]] = result[1]
+            elif isinstance(result, BaseException):
+                logger.warning("Aggregate metric query failed: %s", result)
+
+    # Build output in original order
+    return [
+        {
+            "label": name.replace("_", " ").title(),
+            "value": sync_results.get(name, 0),
+        }
+        for name in metric_order
+    ]
 
 
 def _parse_simple_where(where_clause: str) -> dict[str, Any]:
@@ -712,6 +856,51 @@ class WorkspaceRouteBuilder:
                             dir,
                             ctx=_rctx,
                         )
+
+                # Batch endpoint: fetch all regions concurrently in a single request
+                _all_region_ctxs = [
+                    rc
+                    for ir_r, ctx_r in zip(workspace.regions, ws_ctx.regions, strict=False)
+                    if ctx_r.source
+                    for rc in [
+                        WorkspaceRegionContext(
+                            ctx_region=ctx_r,
+                            ir_region=ir_r,
+                            source=ctx_r.source,
+                            entity_spec=next(
+                                (
+                                    e
+                                    for e in (
+                                        spec.domain.entities
+                                        if spec and hasattr(spec, "domain") and spec.domain
+                                        else []
+                                    )
+                                    if e.name == ctx_r.source
+                                ),
+                                None,
+                            ),
+                            attention_signals=[],
+                            ws_access=_ws_access,
+                            repositories=repositories,
+                            require_auth=require_auth,
+                            auth_middleware=auth_middleware,
+                        )
+                    ]
+                ]
+
+                _batch_ctxs = list(_all_region_ctxs)
+
+                @app.get(
+                    f"/api/workspaces/{ws_name}/batch",
+                    tags=["Workspaces"],
+                )
+                async def workspace_batch(
+                    request: Request,
+                    page: int = 1,
+                    page_size: int = 20,
+                    _ctxs: list[WorkspaceRegionContext] = _batch_ctxs,
+                ) -> Any:
+                    return await _workspace_batch_handler(request, page, page_size, _ctxs)
 
                 self._init_workspace_entity_routes(workspaces, app)
 
