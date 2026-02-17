@@ -10,6 +10,9 @@ from .. import ir
 from ..errors import make_parse_error
 from ..lexer import TokenType
 
+if TYPE_CHECKING:
+    from ..ir.expressions import Expr as _Expr
+
 # Type alias for default values (scalars or date expressions)
 DefaultValue = str | int | float | bool | ir.DateLiteral | ir.DateArithmeticExpr | None
 
@@ -37,6 +40,8 @@ class TypeParserMixin:
         match: Any
         current_token: Any
         expect_identifier_or_keyword: Any
+        peek_token: Any
+        collect_line_as_expr: Any
         file: Any
         _is_keyword_as_identifier: Any
 
@@ -314,17 +319,19 @@ class TypeParserMixin:
 
     def parse_field_modifiers(
         self,
-    ) -> tuple[list[ir.FieldModifier], DefaultValue]:
+    ) -> tuple[list[ir.FieldModifier], DefaultValue, "_Expr | None"]:
         """
         Parse field modifiers and default value.
 
         Returns:
-            Tuple of (modifiers, default_value)
+            Tuple of (modifiers, default_value, default_expr)
 
         v0.10.2: default can now be a date expression (DateLiteral, DateArithmeticExpr)
+        v0.29.0: default_expr for typed expression defaults (e.g., = box1 + box2)
         """
         modifiers = []
         default: DefaultValue = None
+        default_expr: _Expr | None = None
 
         while True:
             token = self.current_token()
@@ -357,8 +364,12 @@ class TypeParserMixin:
             elif self.match(TokenType.EQUALS):
                 # default=value
                 self.advance()
+                # v0.29.0: Check if this is a typed expression (identifier followed
+                # by an operator, or function call)
+                if self._is_expression_default():
+                    default_expr = self.collect_line_as_expr()
                 # v0.10.2: Check for date expressions first (today, now)
-                if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
+                elif self.match(TokenType.TODAY) or self.match(TokenType.NOW):
                     default = self._parse_date_expr()
                 elif self.match(TokenType.STRING):
                     default = self.advance().value
@@ -413,7 +424,51 @@ class TypeParserMixin:
             else:
                 break
 
-        return modifiers, default
+        return modifiers, default, default_expr
+
+    def _is_expression_default(self) -> bool:
+        """Check if the default value starting at current position is a typed expression.
+
+        An expression default is detected when an identifier (or keyword-as-identifier)
+        is followed by an arithmetic/comparison operator or '(' (function call).
+        """
+        _EXPR_OPERATORS = {
+            TokenType.PLUS,
+            TokenType.MINUS,
+            TokenType.STAR,
+            TokenType.SLASH,
+            TokenType.PERCENT,
+            TokenType.DOUBLE_EQUALS,
+            TokenType.NOT_EQUALS,
+            TokenType.GREATER_THAN,
+            TokenType.LESS_THAN,
+            TokenType.GREATER_EQUAL,
+            TokenType.LESS_EQUAL,
+            TokenType.DOT,
+            TokenType.ARROW,
+        }
+        is_ident = self.match(TokenType.IDENTIFIER) or self._is_keyword_as_identifier()
+        if not is_ident:
+            # Check for 'if' keyword (conditional expression)
+            return bool(self.current_token().value == "if")
+
+        # Identifier followed by operator → expression
+        next_tok = self.peek_token()
+        if next_tok.type in _EXPR_OPERATORS:
+            return True
+        # Identifier followed by '(' → function call
+        if next_tok.type == TokenType.LPAREN:
+            return True
+        # Identifier followed by 'and', 'or', 'in', 'is', 'not' → expression
+        if next_tok.type in (
+            TokenType.AND,
+            TokenType.OR,
+            TokenType.IN,
+            TokenType.IS,
+            TokenType.NOT,
+        ):
+            return True
+        return False
 
     def _parse_field_spec(self) -> ir.FieldSpec:
         """Parse a single field: ``name: type [modifiers] [=default]``.
@@ -425,12 +480,13 @@ class TypeParserMixin:
         field_name = self.expect_identifier_or_keyword().value
         self.expect(TokenType.COLON)
         field_type = self.parse_type_spec()
-        modifiers, default = self.parse_field_modifiers()
+        modifiers, default, default_expr = self.parse_field_modifiers()
         return ir.FieldSpec(
             name=field_name,
             type=field_type,
             modifiers=modifiers,
             default=default,
+            default_expr=default_expr,
         )
 
     def _parse_field_path(self) -> list[str]:

@@ -428,7 +428,7 @@ class EntityParserMixin:
                 )
             else:
                 field_type = self.parse_type_spec()
-                modifiers, default = self.parse_field_modifiers()
+                modifiers, default, default_expr = self.parse_field_modifiers()
 
                 fields.append(
                     ir.FieldSpec(
@@ -436,6 +436,7 @@ class EntityParserMixin:
                         type=field_type,
                         modifiers=modifiers,
                         default=default,
+                        default_expr=default_expr,
                     )
                 )
 
@@ -1244,7 +1245,7 @@ class EntityParserMixin:
                 )
             else:
                 field_type = self.parse_type_spec()
-                modifiers, default = self.parse_field_modifiers()
+                modifiers, default, default_expr = self.parse_field_modifiers()
 
                 fields.append(
                     ir.FieldSpec(
@@ -1252,6 +1253,7 @@ class EntityParserMixin:
                         type=field_type,
                         modifiers=modifiers,
                         default=default,
+                        default_expr=default_expr,
                     )
                 )
 

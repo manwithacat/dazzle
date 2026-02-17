@@ -32,6 +32,7 @@
           'fields': list([
             dict({
               'default': None,
+              'default_expr': None,
               'modifiers': list([
                 <FieldModifier.PK: 'pk'>,
               ]),
@@ -51,6 +52,7 @@
             }),
             dict({
               'default': None,
+              'default_expr': None,
               'modifiers': list([
                 <FieldModifier.REQUIRED: 'required'>,
               ]),
@@ -70,6 +72,7 @@
             }),
             dict({
               'default': None,
+              'default_expr': None,
               'modifiers': list([
               ]),
               'name': 'description',
@@ -88,6 +91,7 @@
             }),
             dict({
               'default': 'todo',
+              'default_expr': None,
               'modifiers': list([
               ]),
               'name': 'status',
@@ -110,6 +114,7 @@
             }),
             dict({
               'default': None,
+              'default_expr': None,
               'modifiers': list([
                 <FieldModifier.AUTO_ADD: 'auto_add'>,
               ]),

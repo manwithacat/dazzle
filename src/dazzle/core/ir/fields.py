@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 if TYPE_CHECKING:
     from .dates import DateArithmeticExpr, DateLiteral
+    from .expressions import Expr
 
 
 class FieldTypeKind(StrEnum):
@@ -134,6 +135,10 @@ class FieldSpec(BaseModel):
     v0.10.2: default can now be a date expression for date/datetime fields:
         - today, now (literals)
         - today + 7d, now - 24h (arithmetic)
+
+    v0.29.0: default_expr for typed expression defaults:
+        - field box3: money GBP = box1 + box2
+        - field urgency: enum[red,amber,green] = if days < 0: "red" else: "green"
     """
 
     name: str
@@ -141,6 +146,8 @@ class FieldSpec(BaseModel):
     modifiers: list[FieldModifier] = Field(default_factory=list)
     # Default can be a scalar or a date expression (DateLiteral, DateArithmeticExpr)
     default: str | int | float | bool | DateLiteral | DateArithmeticExpr | None = None
+    # v0.29.0: Typed expression default (evaluated at read time)
+    default_expr: Expr | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -169,12 +176,17 @@ class FieldSpec(BaseModel):
 
 
 def _rebuild_field_spec() -> None:
-    """Rebuild FieldSpec model to resolve forward references to date types."""
+    """Rebuild FieldSpec model to resolve forward references to date and expression types."""
     # Import here to avoid circular imports
     from .dates import DateArithmeticExpr, DateLiteral
+    from .expressions import Expr
 
     FieldSpec.model_rebuild(
-        _types_namespace={"DateLiteral": DateLiteral, "DateArithmeticExpr": DateArithmeticExpr}
+        _types_namespace={
+            "DateLiteral": DateLiteral,
+            "DateArithmeticExpr": DateArithmeticExpr,
+            "Expr": Expr,
+        }
     )
 
 

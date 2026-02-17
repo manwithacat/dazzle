@@ -12,6 +12,7 @@ from ..lexer import Token, TokenType
 
 if TYPE_CHECKING:
     from .. import ir
+    from ..ir.expressions import Expr
 
 
 @runtime_checkable
@@ -220,6 +221,46 @@ class BaseParser:
         """Skip any NEWLINE tokens."""
         while self.match(TokenType.NEWLINE):
             self.advance()
+
+    def collect_line_as_expr(self) -> "Expr | None":
+        """Collect remaining tokens on current line and parse as typed expression.
+
+        Consumes tokens until NEWLINE/INDENT/DEDENT/EOF, reconstructs text,
+        and delegates to the expression parser. Returns None on parse failure.
+        """
+        from ..expression_lang.parser import ExpressionParseError, parse_expr
+
+        _STOP_TOKENS = {TokenType.NEWLINE, TokenType.INDENT, TokenType.DEDENT, TokenType.EOF}
+        # Map DSL token types to text representation
+        _OP_TEXT = {
+            TokenType.DOUBLE_EQUALS: "==",
+            TokenType.NOT_EQUALS: "!=",
+            TokenType.GREATER_THAN: ">",
+            TokenType.LESS_THAN: "<",
+            TokenType.GREATER_EQUAL: ">=",
+            TokenType.LESS_EQUAL: "<=",
+            TokenType.ARROW: "->",
+        }
+
+        parts: list[str] = []
+        while self.current_token().type not in _STOP_TOKENS:
+            tok = self.current_token()
+            if tok.type == TokenType.STRING:
+                parts.append(f'"{tok.value}"')
+            elif tok.type in _OP_TEXT:
+                parts.append(_OP_TEXT[tok.type])
+            else:
+                parts.append(tok.value)
+            self.advance()
+
+        text = " ".join(parts).strip()
+        if not text:
+            return None
+
+        try:
+            return parse_expr(text)
+        except ExpressionParseError:
+            return None
 
     def parse_module_header(
         self,
