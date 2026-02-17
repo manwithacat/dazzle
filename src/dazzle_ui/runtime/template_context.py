@@ -102,6 +102,14 @@ class TableContext(BaseModel):
     pagination_mode: str = "pages"  # "pages" (default) or "infinite"
 
 
+class FormSectionContext(BaseModel):
+    """Context for a form section (wizard stage)."""
+
+    name: str
+    title: str
+    fields: list[FieldContext]
+
+
 class FormContext(BaseModel):
     """Context for rendering a form."""
 
@@ -113,6 +121,7 @@ class FormContext(BaseModel):
     mode: str = "create"  # create or edit
     cancel_url: str = "/"
     initial_values: dict[str, Any] = Field(default_factory=dict)
+    sections: list[FormSectionContext] = Field(default_factory=list)
 
 
 class TransitionContext(BaseModel):

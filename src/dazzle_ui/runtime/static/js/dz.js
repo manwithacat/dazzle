@@ -699,6 +699,79 @@ const dz = (() => {
     });
   }
 
+  // ── Wizard Form Navigation ───────────────────────────────────────────
+
+  function initWizardForms() {
+    document.querySelectorAll("form[data-dz-wizard]").forEach(function (form) {
+      var stages = form.querySelectorAll("[data-dz-stage]");
+      var stepper = form.closest(".max-w-2xl").querySelector("[data-dz-stepper]");
+      var steps = stepper ? stepper.querySelectorAll("[data-dz-step]") : [];
+      var prevBtn = form.querySelector("[data-dz-wizard-prev]");
+      var nextBtn = form.querySelector("[data-dz-wizard-next]");
+      var submitBtn = form.querySelector("[data-dz-wizard-submit]");
+      var current = 0;
+      var total = stages.length;
+
+      function showStage(idx) {
+        stages.forEach(function (s, i) {
+          /** @type {HTMLElement} */ (s).style.display = i === idx ? "" : "none";
+        });
+        steps.forEach(function (s, i) {
+          if (i <= idx) {
+            s.classList.add("step-primary");
+          } else {
+            s.classList.remove("step-primary");
+          }
+        });
+        if (prevBtn) prevBtn.style.display = idx > 0 ? "" : "none";
+        if (nextBtn) nextBtn.style.display = idx < total - 1 ? "" : "none";
+        if (submitBtn) submitBtn.style.display = idx === total - 1 ? "" : "none";
+        current = idx;
+      }
+
+      function validateStage(idx) {
+        var stage = stages[idx];
+        var inputs = stage.querySelectorAll("input[required], select[required], textarea[required]");
+        var valid = true;
+        inputs.forEach(function (input) {
+          if (!/** @type {HTMLInputElement} */ (input).value) {
+            /** @type {HTMLInputElement} */ (input).reportValidity();
+            valid = false;
+          }
+        });
+        return valid;
+      }
+
+      if (nextBtn) {
+        nextBtn.addEventListener("click", function () {
+          if (validateStage(current) && current < total - 1) {
+            showStage(current + 1);
+          }
+        });
+      }
+      if (prevBtn) {
+        prevBtn.addEventListener("click", function () {
+          if (current > 0) showStage(current - 1);
+        });
+      }
+
+      // Allow clicking stepper steps to navigate
+      steps.forEach(function (step, idx) {
+        step.style.cursor = "pointer";
+        step.addEventListener("click", function () {
+          // Only allow going back or to current; going forward requires validation
+          if (idx <= current) {
+            showStage(idx);
+          } else if (idx === current + 1 && validateStage(current)) {
+            showStage(idx);
+          }
+        });
+      });
+
+      showStage(0);
+    });
+  }
+
   // ── Utilities ────────────────────────────────────────────────────────
 
   /** @param {string} str */
@@ -722,6 +795,7 @@ const dz = (() => {
     initSearchInputs();
     initFormLoading();
     initMoneyInputs();
+    initWizardForms();
 
     // Auto-init data tables
     document.querySelectorAll("[data-dz-table]").forEach((el) => {
@@ -748,6 +822,10 @@ const dz = (() => {
           initMoneyField(/** @type {HTMLElement} */ (el));
         }
       });
+      // Reinit wizard forms after HTMX swap
+      if (target.querySelector("form[data-dz-wizard]")) {
+        initWizardForms();
+      }
     });
   }
 

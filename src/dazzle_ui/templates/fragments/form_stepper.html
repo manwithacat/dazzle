@@ -1,0 +1,15 @@
+{# Form stepper — visual progress indicator for multi-section forms #}
+{# Renders a DaisyUI steps component with stage navigation #}
+{# Requires: form.sections (list of FormSectionContext) #}
+
+<div class="mb-6" data-dz-stepper>
+  <ul class="steps steps-horizontal w-full">
+    {% for section in form.sections %}
+    <li class="step {% if loop.first %}step-primary{% endif %}"
+        data-dz-step="{{ loop.index0 }}"
+        data-dz-step-label="{{ section.title }}">
+      <span class="text-sm">{{ section.title }}</span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>

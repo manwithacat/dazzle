@@ -20,6 +20,7 @@ from dazzle_ui.runtime.template_context import (
     FieldContext,
     FieldSourceContext,
     FormContext,
+    FormSectionContext,
     NavItemContext,
     PageContext,
     TableContext,
@@ -426,6 +427,73 @@ def _build_form_fields(
     return fields
 
 
+def _build_form_sections(
+    surface: ir.SurfaceSpec,
+    entity: ir.EntitySpec | None,
+) -> list[FormSectionContext]:
+    """Build form section contexts when surface has multiple sections.
+
+    Each section becomes a wizard stage with its own field group.
+    Only returns sections when the surface defines 2+ sections
+    (single-section forms render normally without a stepper).
+    """
+    if not surface.sections or len(surface.sections) < 2:
+        return []
+
+    sections: list[FormSectionContext] = []
+    for section in surface.sections:
+        section_fields: list[FieldContext] = []
+        for element in section.elements:
+            field_spec = _get_field_spec(entity, element.field_name)
+
+            if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
+                section_fields.append(
+                    _build_money_field(element.field_name, element.label, field_spec)
+                )
+                continue
+
+            display_label = element.label or element.field_name.replace("_", " ").title()
+            form_type = _field_type_to_form_type(field_spec)
+            options = _build_enum_field_options(field_spec)
+
+            if not options:
+                sm_options, sm_type = _build_state_machine_field_options(element.field_name, entity)
+                if sm_options:
+                    options = sm_options
+                    form_type = sm_type or form_type
+
+            is_required = bool(field_spec and field_spec.is_required)
+
+            source_ctx: FieldSourceContext | None = None
+            source_ref = element.options.get("source")
+            if source_ref:
+                source_ctx = _resolve_field_source(source_ref)
+                if source_ctx:
+                    form_type = "search_select"
+
+            section_fields.append(
+                FieldContext(
+                    name=element.field_name,
+                    label=display_label,
+                    type=form_type,
+                    required=is_required,
+                    placeholder=display_label if form_type not in ("checkbox", "select") else "",
+                    options=options,
+                    source=source_ctx,
+                )
+            )
+
+        sections.append(
+            FormSectionContext(
+                name=section.name,
+                title=section.title or section.name.replace("_", " ").title(),
+                fields=section_fields,
+            )
+        )
+
+    return sections
+
+
 def _compile_list_surface(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
@@ -474,6 +542,7 @@ def _compile_form_surface(
 ) -> PageContext:
     """Compile a CREATE or EDIT mode surface to a PageContext with form context."""
     fields = _build_form_fields(surface, entity)
+    sections = _build_form_sections(surface, entity)
     if surface.mode == SurfaceMode.CREATE:
         return PageContext(
             page_title=surface.title or f"Create {entity_name}",
@@ -486,6 +555,7 @@ def _compile_form_surface(
                 method="post",
                 mode="create",
                 cancel_url=f"{app_prefix}/{entity_slug}",
+                sections=sections,
             ),
         )
     else:
@@ -500,6 +570,7 @@ def _compile_form_surface(
                 method="put",
                 mode="edit",
                 cancel_url=f"{app_prefix}/{entity_slug}/{{id}}",
+                sections=sections,
             ),
         )
 

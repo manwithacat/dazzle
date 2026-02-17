@@ -10,8 +10,14 @@
   </div>
   {% endblock form_header %}
 
+  {# Stepper indicator for multi-section forms #}
+  {% if form.sections %}
+    {% include 'fragments/form_stepper.html' %}
+  {% endif %}
+
   {# Form — data-dz-form enables automatic submit button loading state #}
   <form data-dz-form data-dazzle-form="{{ form.entity_name }}" data-dazzle-form-mode="{{ form.mode }}"
+        {% if form.sections %}data-dz-wizard data-dz-wizard-steps="{{ form.sections | length }}"{% endif %}
         hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
         hx-target="body"
         hx-swap="innerHTML"
@@ -26,15 +32,45 @@
       {% include 'fragments/form_errors.html' %}
     </div>
 
-    {# Fields #}
+    {# Fields — sectioned (wizard) or flat #}
     {% block form_fields %}
-    {% for field in form.fields %}
-      {{ render_field(field, form.initial_values) }}
-    {% endfor %}
+    {% if form.sections %}
+      {% for section in form.sections %}
+      <div class="dz-wizard-stage" data-dz-stage="{{ loop.index0 }}"
+           {% if not loop.first %}style="display:none"{% endif %}>
+        <h3 class="text-lg font-semibold mb-3">{{ section.title }}</h3>
+        {% for field in section.fields %}
+          {{ render_field(field, form.initial_values) }}
+        {% endfor %}
+      </div>
+      {% endfor %}
+    {% else %}
+      {% for field in form.fields %}
+        {{ render_field(field, form.initial_values) }}
+      {% endfor %}
+    {% endif %}
     {% endblock form_fields %}
 
-    {# Actions — loading state handled by dz.js via htmx events #}
+    {# Actions — wizard nav or standard submit #}
     {% block form_actions %}
+    {% if form.sections %}
+    <div class="flex gap-3 pt-4" data-dz-wizard-nav>
+      <button type="button" class="btn btn-ghost" data-dz-wizard-prev style="display:none">
+        Back
+      </button>
+      <button type="button" class="btn btn-primary" data-dz-wizard-next>
+        Next
+      </button>
+      <button type="submit" class="btn btn-primary" style="display:none"
+              data-dz-wizard-submit
+              data-dazzle-action="{{ form.entity_name }}.save"
+              data-loading-class="loading"
+              data-loading-disable>
+        {% if form.mode == "edit" %}Save{% else %}Create{% endif %}
+      </button>
+      <a href="{{ form.cancel_url }}" class="btn btn-ghost">Cancel</a>
+    </div>
+    {% else %}
     <div class="flex gap-3 pt-4">
       <button type="submit" class="btn btn-primary"
               data-dazzle-action="{{ form.entity_name }}.save"
@@ -44,6 +80,7 @@
       </button>
       <a href="{{ form.cancel_url }}" class="btn btn-ghost">Cancel</a>
     </div>
+    {% endif %}
     {% endblock form_actions %}
   </form>
 </div>
