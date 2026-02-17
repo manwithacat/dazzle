@@ -14,6 +14,20 @@ def simple_test_dsl_path() -> Path:
     return Path(__file__).parent.parent / "fixtures" / "dsl" / "simple_test.dsl"
 
 
+def _strip_source_files(obj: object) -> object:
+    """Recursively strip absolute file paths from source locations for CI portability."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "source" and isinstance(v, dict) and "file" in v:
+                v = {**v, "file": Path(v["file"]).name}
+            result[k] = _strip_source_files(v)
+        return result
+    if isinstance(obj, list):
+        return [_strip_source_files(item) for item in obj]
+    return obj
+
+
 def test_simple_dsl_to_ir_snapshot(simple_test_dsl_path: Path, snapshot):
     """Test that simple_test.dsl produces consistent IR (snapshot test)."""
     # Parse DSL to IR
@@ -26,6 +40,9 @@ def test_simple_dsl_to_ir_snapshot(simple_test_dsl_path: Path, snapshot):
     # Remove metadata that might vary (timestamps, etc.)
     if "metadata" in appspec_dict:
         appspec_dict.pop("metadata")
+
+    # Normalize source file paths to just filenames for CI portability
+    appspec_dict = _strip_source_files(appspec_dict)
 
     # Compare against snapshot
     assert appspec_dict == snapshot

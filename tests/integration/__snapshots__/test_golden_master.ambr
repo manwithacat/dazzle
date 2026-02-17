@@ -145,7 +145,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/fixtures/dsl/simple_test.dsl',
+            'file': 'simple_test.dsl',
             'line': 5,
           }),
           'state_machine': None,
@@ -245,7 +245,7 @@
         ]),
         'source': dict({
           'column': 1,
-          'file': '/Volumes/SSD/Dazzle/tests/fixtures/dsl/simple_test.dsl',
+          'file': 'simple_test.dsl',
           'line': 12,
         }),
         'title': 'Task List',
@@ -291,7 +291,7 @@
         ]),
         'source': dict({
           'column': 1,
-          'file': '/Volumes/SSD/Dazzle/tests/fixtures/dsl/simple_test.dsl',
+          'file': 'simple_test.dsl',
           'line': 20,
         }),
         'title': 'Task Detail',
@@ -330,7 +330,7 @@
         ]),
         'source': dict({
           'column': 1,
-          'file': '/Volumes/SSD/Dazzle/tests/fixtures/dsl/simple_test.dsl',
+          'file': 'simple_test.dsl',
           'line': 29,
         }),
         'title': 'Create Task',
@@ -376,7 +376,7 @@
         ]),
         'source': dict({
           'column': 1,
-          'file': '/Volumes/SSD/Dazzle/tests/fixtures/dsl/simple_test.dsl',
+          'file': 'simple_test.dsl',
           'line': 37,
         }),
         'title': 'Edit Task',
