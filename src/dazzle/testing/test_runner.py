@@ -531,11 +531,15 @@ class DazzleClient:
         # Regenerate unique fields after overrides — design-time values
         # from test JSON files are generated once and become stale across
         # runs, causing unique-constraint collisions in the database.
+        # Skip ref fields: their override values are $ref:-resolved UUIDs
+        # pointing to real parent entities, not stale strings.
         if overrides:
             for fld in schema.get("fields", []):
                 fname = fld.get("name", "")
+                ftype = fld.get("type", "").lower()
                 if fld.get("unique", False) and fname in overrides and fname not in ("id",):
-                    ftype = fld.get("type", "").lower()
+                    if "ref" in ftype:
+                        continue
                     ml = fld.get("max_length")
                     if ml is None and "str" in ftype:
                         ml_m = re.search(r"str\((\d+)\)", ftype)

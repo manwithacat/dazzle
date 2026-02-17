@@ -454,14 +454,27 @@ class EntityParserMixin:
         # Build state machine spec if transitions were defined
         state_machine = None
         if transitions:
-            # Find the status field - look for enum field named 'status'
+            # Find the enum field whose values contain all transition states.
+            # This handles entities where the state machine field is not named
+            # "status" (e.g. dunning_stage on SubscriptionInvoice).
             status_field_name = None
             states: list[str] = []
+            all_transition_states = {t.from_state for t in transitions} | {
+                t.to_state for t in transitions
+            }
             for field in fields:
-                if field.name == "status" and field.type.kind == ir.FieldTypeKind.ENUM:
-                    status_field_name = field.name
-                    states = field.type.enum_values or []
-                    break
+                if field.type.kind == ir.FieldTypeKind.ENUM and field.type.enum_values:
+                    if all_transition_states.issubset(set(field.type.enum_values)):
+                        status_field_name = field.name
+                        states = field.type.enum_values
+                        break
+            # Fallback: field named "status" (backward compat)
+            if not status_field_name:
+                for field in fields:
+                    if field.name == "status" and field.type.kind == ir.FieldTypeKind.ENUM:
+                        status_field_name = field.name
+                        states = field.type.enum_values or []
+                        break
 
             if status_field_name:
                 state_machine = ir.StateMachineSpec(
