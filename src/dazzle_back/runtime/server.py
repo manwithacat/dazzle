@@ -165,12 +165,27 @@ async def _workspace_region_handler(
                         filters = {}
                     filters[field_name] = param_val
 
+            # Build include list for eager-loading ref fields (#272)
+            include_rels: list[str] = []
+            if ctx.entity_spec and hasattr(ctx.entity_spec, "fields"):
+                for f in ctx.entity_spec.fields:
+                    ft = getattr(f, "type", None)
+                    kind = getattr(ft, "kind", None)
+                    kind_val_str: str = (
+                        kind.value if hasattr(kind, "value") else str(kind) if kind else ""
+                    )
+                    if kind_val_str == "ref":
+                        # Relation name is the field name without _id suffix
+                        rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+                        include_rels.append(rel_name)
+
             limit = ctx.ctx_region.limit or page_size
             result = await repo.list(
                 page=page,
                 page_size=limit,
                 filters=filters,
                 sort=sort_list,
+                include=include_rels or None,
             )
             if isinstance(result, dict):
                 raw_items = result.get("items", [])
@@ -194,10 +209,21 @@ async def _workspace_region_handler(
                 if kind
                 else ""
             )
-            # Hide relationship/FK/UUID columns
-            if kind_val in ("ref", "uuid", "has_many", "has_one", "embeds", "belongs_to"):
+            # Show ref columns with resolved display name; hide other relation types
+            if kind_val == "ref":
+                # Ref fields are eager-loaded — show display name column
+                rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+                col = {
+                    "key": rel_name,
+                    "label": getattr(f, "label", None) or rel_name.replace("_", " ").title(),
+                    "type": "ref",
+                    "sortable": False,
+                }
+                columns.append(col)
                 continue
-            # Hide _id suffix columns (foreign keys)
+            if kind_val in ("uuid", "has_many", "has_one", "embeds", "belongs_to"):
+                continue
+            # Hide _id suffix columns (foreign keys shown via ref above)
             if f.name.endswith("_id"):
                 continue
             col_type = _field_kind_to_col_type(f, ctx.entity_spec)

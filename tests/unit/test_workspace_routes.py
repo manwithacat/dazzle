@@ -429,3 +429,67 @@ class TestWorkspaceAuthEnforcement:
         client = TestClient(app_without_auth, raise_server_exceptions=False)
         resp = client.get("/api/workspaces/admin_dashboard/regions/tasks")
         assert resp.status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# Step 6 — Workspace list template handles ref columns (#272)
+# ---------------------------------------------------------------------------
+
+try:
+    from dazzle_ui.runtime.template_renderer import render_fragment
+
+    HAS_TEMPLATE_RENDERER = True
+except ImportError:
+    HAS_TEMPLATE_RENDERER = False
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestWorkspaceListRefColumn:
+    """Workspace list template renders ref columns with resolved display names."""
+
+    def test_ref_column_shows_name(self) -> None:
+        html = render_fragment(
+            "workspace/regions/list.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+                {"key": "assigned_to", "label": "Assigned To", "type": "ref", "sortable": False},
+            ],
+            items=[
+                {"id": "1", "title": "Fix bug", "assigned_to": {"id": "u1", "name": "Alice"}},
+                {"id": "2", "title": "Review PR", "assigned_to": None},
+            ],
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            total=2,
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            action_url="",
+            empty_message="No tasks.",
+        )
+        assert "Alice" in html
+        assert "-" in html  # None ref shows dash
+
+    def test_ref_column_uses_title_fallback(self) -> None:
+        html = render_fragment(
+            "workspace/regions/list.html",
+            title="Items",
+            columns=[
+                {"key": "company", "label": "Company", "type": "ref", "sortable": False},
+            ],
+            items=[
+                {"id": "1", "company": {"id": "c1", "title": "Acme Corp"}},
+            ],
+            endpoint="/api/workspaces/ws/regions/items",
+            region_name="items",
+            total=1,
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            action_url="",
+            empty_message="No items.",
+        )
+        assert "Acme Corp" in html
