@@ -273,7 +273,7 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
 
 def handle_story(arguments: dict[str, Any]) -> str:
     """Handle consolidated story operations."""
-    from .handlers.process import stories_coverage_handler
+    from .handlers.process import scope_fidelity_handler, stories_coverage_handler
     from .handlers.stories import (
         generate_tests_from_stories_handler,
         get_stories_handler,
@@ -298,6 +298,7 @@ def handle_story(arguments: dict[str, Any]) -> str:
         "get": get_stories_handler,
         "generate_tests": generate_tests_from_stories_handler,
         "coverage": stories_coverage_handler,
+        "scope_fidelity": scope_fidelity_handler,
     }
 
     handler = ops.get(operation)  # type: ignore[arg-type]

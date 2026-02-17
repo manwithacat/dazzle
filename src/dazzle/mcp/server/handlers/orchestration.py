@@ -231,6 +231,18 @@ def _extract_story_coverage_metrics(step_output: dict[str, Any]) -> dict[str, An
     return metrics
 
 
+def _extract_scope_fidelity_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "total_stories": step_output.get("total_stories", 0),
+        "stories_with_scope": step_output.get("stories_with_scope", 0),
+        "full": step_output.get("full", 0),
+        "partial": step_output.get("partial", 0),
+        "no_process": step_output.get("no_process", 0),
+        "scope_coverage_percent": step_output.get("scope_coverage_percent", 100),
+        "total_scope_gaps": step_output.get("total_scope_gaps", 0),
+    }
+
+
 def _extract_test_design_gaps_metrics(step_output: dict[str, Any]) -> dict[str, Any]:
     gaps = step_output.get("gaps", [])
     by_severity: dict[str, int] = {}
@@ -295,6 +307,7 @@ _METRICS_EXTRACTORS: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
     "dsl_test(generate)": _extract_test_generate_metrics,
     "dsl_test(coverage)": _extract_test_coverage_metrics,
     "story(coverage)": _extract_story_coverage_metrics,
+    "story(scope_fidelity)": _extract_scope_fidelity_metrics,
     "process(coverage)": _extract_story_coverage_metrics,
     "test_design(gaps)": _extract_test_design_gaps_metrics,
     "semantics(extract)": _extract_semantics_extract_metrics,
@@ -415,6 +428,23 @@ def collect_top_issues(
                         }
                     )
 
+        if op == "story(scope_fidelity)":
+            for story in (
+                result.get("stories", []) if isinstance(result.get("stories"), list) else []
+            ):
+                if isinstance(story, dict) and story.get("status") in ("partial", "no_process"):
+                    missing = story.get("missing_entities", [])
+                    issues.append(
+                        {
+                            "source": "scope_fidelity",
+                            "severity": "warning",
+                            "message": (
+                                f"{story.get('story_id', '?')}: "
+                                f"scope gap — missing {', '.join(missing)}"
+                            ),
+                        }
+                    )
+
         if op == "test_design(gaps)":
             for gap in result.get("gaps", []) if isinstance(result.get("gaps"), list) else []:
                 if isinstance(gap, dict):
@@ -452,6 +482,10 @@ def step_has_issues(operation: str, step_result: Any) -> bool:
         score: int = step_result.get("overall_score", 100) or 100
         return score < 100
 
+    if operation == "story(scope_fidelity)":
+        gaps: int = step_result.get("total_scope_gaps", 0) or 0
+        return gaps > 0
+
     if operation in ("dsl_test(coverage)", "story(coverage)", "process(coverage)"):
         cov: float | str = step_result.get("coverage_percent") or step_result.get("coverage") or 100
         if isinstance(cov, str):
@@ -487,6 +521,21 @@ def step_has_issues(operation: str, step_result: Any) -> bool:
 def filter_issues_result(operation: str, step_result: Any) -> Any:
     """Trim expanded step results to only the actionable parts."""
     if not isinstance(step_result, dict):
+        return step_result
+
+    if operation == "story(scope_fidelity)":
+        stories = step_result.get("stories", [])
+        if isinstance(stories, list):
+            filtered = [
+                s
+                for s in stories
+                if isinstance(s, dict) and s.get("status") in ("partial", "no_process")
+            ]
+            step_result = {**step_result, "stories": filtered}
+            step_result.pop("showing", None)
+            step_result.pop("offset", None)
+            step_result.pop("has_more", None)
+            step_result.pop("guidance", None)
         return step_result
 
     if operation in ("story(coverage)", "process(coverage)"):

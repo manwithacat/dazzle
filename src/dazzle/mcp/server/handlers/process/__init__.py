@@ -34,6 +34,11 @@ from .proposals import (
     _is_crud_story,
     propose_processes_handler,
 )
+from .scope_fidelity import (
+    ScopeGap,
+    StoryScopeFidelity,
+    scope_fidelity_handler,
+)
 from .storage import (
     ProcessRunSummary,
     _get_run_async,
@@ -76,4 +81,8 @@ __all__ = [
     "get_process_run_handler",
     "_list_runs_async",
     "_get_run_async",
+    # Scope Fidelity
+    "ScopeGap",
+    "StoryScopeFidelity",
+    "scope_fidelity_handler",
 ]

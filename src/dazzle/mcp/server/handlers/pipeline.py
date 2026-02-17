@@ -47,10 +47,11 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
       5. dsl_test(generate)
       6. dsl_test(coverage)
       7. story(coverage)
-      8. process(coverage)
-      9. test_design(gaps)
-     10. semantics(extract)
-     11. semantics(validate_events)
+      8. story(scope_fidelity)
+      9. process(coverage)
+     10. test_design(gaps)
+     11. semantics(extract)
+     12. semantics(validate_events)
 
     Each step runs regardless of prior failures (unless stop_on_error=True).
     Returns a structured JSON report with per-step results and overall summary.
@@ -100,7 +101,7 @@ def _build_quality_steps(
     from .dsl import lint_project, validate_dsl
     from .dsl_test import generate_dsl_tests_handler, get_dsl_test_coverage_handler
     from .fidelity import score_fidelity_handler
-    from .process import stories_coverage_handler
+    from .process import scope_fidelity_handler, stories_coverage_handler
     from .test_design import get_test_gaps_handler
 
     steps: list[QualityStep] = [
@@ -137,6 +138,11 @@ def _build_quality_steps(
         QualityStep(
             name="story(coverage)",
             handler=stories_coverage_handler,
+            handler_args=(project_path, {}),
+        ),
+        QualityStep(
+            name="story(scope_fidelity)",
+            handler=scope_fidelity_handler,
             handler_args=(project_path, {}),
         ),
         QualityStep(

@@ -194,7 +194,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="story",
-            description="Story operations: propose, save, get, generate_tests, coverage. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started).",
+            description="Story operations: propose, save, get, generate_tests, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). scope_fidelity checks that implementing processes exercise all entities in story scope.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -206,6 +206,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "get",
                             "generate_tests",
                             "coverage",
+                            "scope_fidelity",
                         ],
                         "description": "Operation to perform",
                     },
