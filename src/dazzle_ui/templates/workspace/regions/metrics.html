@@ -28,8 +28,10 @@
         </thead>
         <tbody>
           {% for item in items %}
-          <tr{% if action_url %} class="cursor-pointer hover"
-              hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+          {% set attn = item.get("_attention") if item.get is defined else none %}
+          <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-error/10{% elif attn.level == 'warning' %}bg-warning/10{% elif attn.level == 'notice' %}bg-info/10{% endif %} {% endif %}{% if action_url %}cursor-pointer hover{% endif %}"
+              {% if attn %}title="{{ attn.message }}"{% endif %}
+              {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
               hx-push-url="true" hx-target="body"{% endif %}>
             {% for col in columns %}
             <td>
@@ -41,6 +43,9 @@
                 {{ item[col.key] | dateformat }}
               {% elif col.type == "currency" %}
                 {{ item[col.key] | currency }}
+              {% elif col.type == "ref" %}
+                {% set ref = item[col.key] %}
+                {% if ref is mapping %}{{ ref.get("name") or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
               {% else %}
                 {{ item[col.key] | default("") | truncate_text }}
               {% endif %}
