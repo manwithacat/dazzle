@@ -224,12 +224,14 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
               dict({
                 'field_name': 'status',
                 'label': 'Status',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
             ]),
             'name': 'main',
@@ -256,18 +258,21 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
               dict({
                 'field_name': 'description',
                 'label': 'Description',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
               dict({
                 'field_name': 'status',
                 'label': 'Status',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
             ]),
             'name': 'main',
@@ -294,12 +299,14 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
               dict({
                 'field_name': 'description',
                 'label': 'Description',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
             ]),
             'name': 'main',
@@ -326,18 +333,21 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
               dict({
                 'field_name': 'description',
                 'label': 'Description',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
               dict({
                 'field_name': 'status',
                 'label': 'Status',
                 'options': dict({
                 }),
+                'when_expr': None,
               }),
             ]),
             'name': 'main',

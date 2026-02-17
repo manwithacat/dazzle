@@ -29,6 +29,7 @@ class SurfaceParserMixin:
         parse_ux_block: Any
         parse_persona_variant: Any  # From UXParserMixin
         _parse_workspace_access: Any  # From WorkspaceParserMixin
+        collect_line_as_expr: Any  # From BaseParser
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""
@@ -235,11 +236,19 @@ class SurfaceParserMixin:
                             opt_val += "." + self.expect_identifier_or_keyword().value
                     options[opt_key] = opt_val
 
+                # v0.30.0: Parse optional when: condition
+                when_expr = None
+                if self.match(TokenType.WHEN):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    when_expr = self.collect_line_as_expr()
+
                 elements.append(
                     ir.SurfaceElement(
                         field_name=field_name,
                         label=label,
                         options=options,
+                        when_expr=when_expr,
                     )
                 )
 

@@ -8,11 +8,14 @@ including modes, elements, sections, actions, and access control.
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from .ux import UXSpec
+
+if TYPE_CHECKING:
+    from .expressions import Expr
 
 
 class BusinessPriority(StrEnum):
@@ -73,11 +76,15 @@ class SurfaceElement(BaseModel):
         field_name: Name of the field from the entity
         label: Human-readable label
         options: Additional options for rendering
+        when_expr: Conditional visibility expression (v0.30.0).
+            When present, the field is only shown if the expression
+            evaluates to true for the current record.
     """
 
     field_name: str
     label: str | None = None
     options: dict[str, Any] = Field(default_factory=dict)
+    when_expr: Expr | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -169,3 +176,13 @@ class SurfaceSpec(BaseModel):
     priority: BusinessPriority = BusinessPriority.MEDIUM
 
     model_config = ConfigDict(frozen=True)
+
+
+def _rebuild_surface_element() -> None:
+    """Rebuild SurfaceElement to resolve forward reference to Expr."""
+    from .expressions import Expr
+
+    SurfaceElement.model_rebuild(_types_namespace={"Expr": Expr})
+
+
+_rebuild_surface_element()

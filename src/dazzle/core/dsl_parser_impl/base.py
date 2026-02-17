@@ -531,6 +531,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.OWNER,
     # v0.29.0 Expression Guard keywords
     TokenType.GUARD,
+    # v0.30.0 Surface when clause
+    TokenType.WHEN,
     # v0.7.1 LLM Cognition keywords
     TokenType.INTENT,
     TokenType.EXAMPLES,
