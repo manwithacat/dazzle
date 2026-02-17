@@ -41,6 +41,8 @@ class EntityParserMixin:
         _parse_duration_literal: Any
         # v0.18.0: Publish directive from EventingParserMixin
         parse_publish_directive: Any
+        # v0.29.0: Expression bridge from BaseParser
+        collect_line_as_expr: Any
 
     def parse_entity(self) -> ir.EntitySpec:
         """Parse entity declaration."""
@@ -738,15 +740,130 @@ class EntityParserMixin:
             token.column,
         )
 
+    def _parse_transition_inline_guard(
+        self,
+    ) -> tuple[
+        list[ir.TransitionGuard],
+        ir.TransitionTrigger,
+        ir.AutoTransitionSpec | None,
+    ]:
+        """Parse inline guards/triggers on a single transition line.
+
+        Returns (guards, trigger, auto_spec).
+        """
+        trigger = ir.TransitionTrigger.MANUAL
+        guards: list[ir.TransitionGuard] = []
+        auto_spec: ir.AutoTransitionSpec | None = None
+
+        while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+            # requires field_name
+            if self.match(TokenType.REQUIRES):
+                self.advance()
+                field_name = self.expect_identifier_or_keyword().value
+                guards.append(ir.TransitionGuard(requires_field=field_name))
+
+            # role(role_name)
+            elif self.match(TokenType.ROLE):
+                self.advance()
+                self.expect(TokenType.LPAREN)
+                role_name = self.expect_identifier_or_keyword().value
+                self.expect(TokenType.RPAREN)
+                guards.append(ir.TransitionGuard(requires_role=role_name))
+
+            # auto after N days/hours/minutes
+            elif self.match(TokenType.AUTO):
+                self.advance()
+                trigger = ir.TransitionTrigger.AUTO
+
+                if self.match(TokenType.AFTER):
+                    self.advance()
+                    delay_value = int(self.expect(TokenType.NUMBER).value)
+
+                    if self.match(TokenType.DAYS):
+                        self.advance()
+                        delay_unit = ir.TimeUnit.DAYS
+                    elif self.match(TokenType.HOURS):
+                        self.advance()
+                        delay_unit = ir.TimeUnit.HOURS
+                    elif self.match(TokenType.MINUTES):
+                        self.advance()
+                        delay_unit = ir.TimeUnit.MINUTES
+                    else:
+                        delay_unit = ir.TimeUnit.DAYS
+
+                    allow_manual = False
+                    if self.match(TokenType.OR):
+                        self.advance()
+                        if self.match(TokenType.MANUAL):
+                            self.advance()
+                            allow_manual = True
+
+                    auto_spec = ir.AutoTransitionSpec(
+                        delay_value=delay_value,
+                        delay_unit=delay_unit,
+                        allow_manual=allow_manual,
+                    )
+
+            # manual
+            elif self.match(TokenType.MANUAL):
+                self.advance()
+                trigger = ir.TransitionTrigger.MANUAL
+
+            # OR connector
+            elif self.match(TokenType.OR):
+                self.advance()
+                continue
+
+            else:
+                token = self.current_token()
+                if token.type in (
+                    TokenType.NOT_EQUALS,
+                    TokenType.DOUBLE_EQUALS,
+                    TokenType.LESS_THAN,
+                    TokenType.GREATER_THAN,
+                ):
+                    raise make_parse_error(
+                        f"Transition conditions don't support comparison operators "
+                        f"like '{token.value}'.\n"
+                        f"  Supported syntax:\n"
+                        f"    requires field_name     # Field must not be null\n"
+                        f"    role(role_name)         # User must have role\n"
+                        f"    auto after N days       # Auto-transition with delay\n"
+                        f"    guard: <expression>     # Expression guard (v0.29.0)\n"
+                        f"  Example: open -> assigned: requires assignee",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                elif token.type == TokenType.IDENTIFIER:
+                    raise make_parse_error(
+                        f"Unexpected identifier '{token.value}' in transition condition.\n"
+                        f"  Did you mean: requires {token.value}\n"
+                        f"  Supported syntax:\n"
+                        f"    requires field_name     # Field must not be null\n"
+                        f"    role(role_name)         # User must have role",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                break
+
+        return guards, trigger, auto_spec
+
     def _parse_state_transition(self) -> ir.StateTransition:
         """
         Parse a state transition rule.
 
-        Syntax:
+        Syntax (inline):
             open -> assigned: requires assignee
-            assigned -> resolved: requires resolution_note
             resolved -> closed: auto after 7 days OR manual
             * -> open: role(admin)
+
+        Syntax (block, v0.29.0):
+            sent -> signed:
+              guard: self->signatory->aml_status == "completed"
+                message: "Signatory must pass AML checks"
+              requires assignee
         """
         # Parse from_state (* for wildcard, or identifier)
         if self.match(TokenType.STAR):
@@ -769,106 +886,17 @@ class EntityParserMixin:
         if self.match(TokenType.COLON):
             self.advance()
 
-            # Parse guard/trigger specifications
-            while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
-                # requires field_name
-                if self.match(TokenType.REQUIRES):
+            # v0.29.0: Check for indented block (guard: expression syntax)
+            if self.match(TokenType.NEWLINE):
+                self.skip_newlines()
+                if self.match(TokenType.INDENT):
                     self.advance()
-                    field_name = self.expect_identifier_or_keyword().value
-                    guards.append(ir.TransitionGuard(requires_field=field_name))
-
-                # role(role_name)
-                elif self.match(TokenType.ROLE):
-                    self.advance()
-                    self.expect(TokenType.LPAREN)
-                    role_name = self.expect_identifier_or_keyword().value
-                    self.expect(TokenType.RPAREN)
-                    guards.append(ir.TransitionGuard(requires_role=role_name))
-
-                # auto after N days/hours/minutes
-                elif self.match(TokenType.AUTO):
-                    self.advance()
-                    trigger = ir.TransitionTrigger.AUTO
-
-                    if self.match(TokenType.AFTER):
-                        self.advance()
-                        # Parse delay: N days/hours/minutes
-                        delay_value = int(self.expect(TokenType.NUMBER).value)
-
-                        # Parse time unit
-                        if self.match(TokenType.DAYS):
-                            self.advance()
-                            delay_unit = ir.TimeUnit.DAYS
-                        elif self.match(TokenType.HOURS):
-                            self.advance()
-                            delay_unit = ir.TimeUnit.HOURS
-                        elif self.match(TokenType.MINUTES):
-                            self.advance()
-                            delay_unit = ir.TimeUnit.MINUTES
-                        else:
-                            # Default to days
-                            delay_unit = ir.TimeUnit.DAYS
-
-                        # Check for OR manual
-                        allow_manual = False
-                        if self.match(TokenType.OR):
-                            self.advance()
-                            if self.match(TokenType.MANUAL):
-                                self.advance()
-                                allow_manual = True
-
-                        auto_spec = ir.AutoTransitionSpec(
-                            delay_value=delay_value,
-                            delay_unit=delay_unit,
-                            allow_manual=allow_manual,
-                        )
-
-                # manual
-                elif self.match(TokenType.MANUAL):
-                    self.advance()
-                    trigger = ir.TransitionTrigger.MANUAL
-
-                # OR connector
-                elif self.match(TokenType.OR):
-                    self.advance()
-                    continue
-
-                else:
-                    # v0.14.1: Provide helpful error for unsupported syntax
-                    token = self.current_token()
-                    # Check for common unsupported patterns
-                    if token.type in (
-                        TokenType.NOT_EQUALS,
-                        TokenType.DOUBLE_EQUALS,
-                        TokenType.LESS_THAN,
-                        TokenType.GREATER_THAN,
-                    ):
-                        raise make_parse_error(
-                            f"Transition conditions don't support comparison operators "
-                            f"like '{token.value}'.\n"
-                            f"  Supported syntax:\n"
-                            f"    requires field_name     # Field must not be null\n"
-                            f"    role(role_name)         # User must have role\n"
-                            f"    auto after N days       # Auto-transition with delay\n"
-                            f"  Example: open -> assigned: requires assignee",
-                            self.file,
-                            token.line,
-                            token.column,
-                        )
-                    elif token.type == TokenType.IDENTIFIER:
-                        # User might be trying to use field name directly
-                        raise make_parse_error(
-                            f"Unexpected identifier '{token.value}' in transition condition.\n"
-                            f"  Did you mean: requires {token.value}\n"
-                            f"  Supported syntax:\n"
-                            f"    requires field_name     # Field must not be null\n"
-                            f"    role(role_name)         # User must have role",
-                            self.file,
-                            token.line,
-                            token.column,
-                        )
-                    # For other unexpected tokens, break (might be end of transition)
-                    break
+                    guards, trigger, auto_spec = self._parse_transition_block()
+                    self.expect(TokenType.DEDENT)
+                # else: empty transition body, no guards
+            else:
+                # Inline guards on same line
+                guards, trigger, auto_spec = self._parse_transition_inline_guard()
 
         return ir.StateTransition(
             from_state=from_state,
@@ -877,6 +905,119 @@ class EntityParserMixin:
             guards=guards,
             auto_spec=auto_spec,
         )
+
+    def _parse_transition_block(
+        self,
+    ) -> tuple[
+        list[ir.TransitionGuard],
+        ir.TransitionTrigger,
+        ir.AutoTransitionSpec | None,
+    ]:
+        """Parse an indented transition sub-block with guard: expressions.
+
+        Supports:
+            guard: <expression>
+              message: "human-readable failure message"
+            requires <field>
+            role(<role_name>)
+            auto after N days [OR manual]
+            manual
+        """
+        trigger = ir.TransitionTrigger.MANUAL
+        guards: list[ir.TransitionGuard] = []
+        auto_spec: ir.AutoTransitionSpec | None = None
+
+        while not self.match(TokenType.DEDENT, TokenType.EOF):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT, TokenType.EOF):
+                break
+
+            # v0.29.0: guard: <expression>
+            if self.match(TokenType.GUARD):
+                self.advance()
+                self.expect(TokenType.COLON)
+                guard_expr = self.collect_line_as_expr()
+                guard_message: str | None = None
+
+                # Check for optional indented message:
+                self.skip_newlines()
+                if self.match(TokenType.INDENT):
+                    self.advance()
+                    if self.match(TokenType.MESSAGE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        if self.match(TokenType.STRING):
+                            guard_message = self.advance().value
+                    self.skip_newlines()
+                    self.expect(TokenType.DEDENT)
+
+                guards.append(
+                    ir.TransitionGuard(
+                        guard_expr=guard_expr,
+                        guard_message=guard_message,
+                    )
+                )
+
+            # requires field_name
+            elif self.match(TokenType.REQUIRES):
+                self.advance()
+                field_name = self.expect_identifier_or_keyword().value
+                guards.append(ir.TransitionGuard(requires_field=field_name))
+
+            # role(role_name)
+            elif self.match(TokenType.ROLE):
+                self.advance()
+                self.expect(TokenType.LPAREN)
+                role_name = self.expect_identifier_or_keyword().value
+                self.expect(TokenType.RPAREN)
+                guards.append(ir.TransitionGuard(requires_role=role_name))
+
+            # auto after N days/hours/minutes
+            elif self.match(TokenType.AUTO):
+                self.advance()
+                trigger = ir.TransitionTrigger.AUTO
+
+                if self.match(TokenType.AFTER):
+                    self.advance()
+                    delay_value = int(self.expect(TokenType.NUMBER).value)
+
+                    if self.match(TokenType.DAYS):
+                        self.advance()
+                        delay_unit = ir.TimeUnit.DAYS
+                    elif self.match(TokenType.HOURS):
+                        self.advance()
+                        delay_unit = ir.TimeUnit.HOURS
+                    elif self.match(TokenType.MINUTES):
+                        self.advance()
+                        delay_unit = ir.TimeUnit.MINUTES
+                    else:
+                        delay_unit = ir.TimeUnit.DAYS
+
+                    allow_manual = False
+                    if self.match(TokenType.OR):
+                        self.advance()
+                        if self.match(TokenType.MANUAL):
+                            self.advance()
+                            allow_manual = True
+
+                    auto_spec = ir.AutoTransitionSpec(
+                        delay_value=delay_value,
+                        delay_unit=delay_unit,
+                        allow_manual=allow_manual,
+                    )
+
+            # manual
+            elif self.match(TokenType.MANUAL):
+                self.advance()
+                trigger = ir.TransitionTrigger.MANUAL
+
+            else:
+                # Skip unknown tokens within block
+                break
+
+            self.skip_newlines()
+
+        return guards, trigger, auto_spec
 
     def _parse_computed_expr(self) -> ir.ComputedExpr:
         """

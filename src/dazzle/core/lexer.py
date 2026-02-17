@@ -154,6 +154,8 @@ class TokenType(Enum):
     AFTER = "after"
     ROLE = "role"
     MANUAL = "manual"
+    # v0.29.0 Expression Guard Keywords
+    GUARD = "guard"
     DAYS = "days"
     HOURS = "hours"
     MINUTES = "minutes"

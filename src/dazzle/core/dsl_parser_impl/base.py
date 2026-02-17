@@ -517,6 +517,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.HOURS,
     TokenType.MINUTES,
     TokenType.OWNER,
+    # v0.29.0 Expression Guard keywords
+    TokenType.GUARD,
     # v0.7.1 LLM Cognition keywords
     TokenType.INTENT,
     TokenType.EXAMPLES,

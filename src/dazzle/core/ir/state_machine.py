@@ -18,8 +18,12 @@ Example DSL:
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from .expressions import Expr
 
 # Time conversion constants
 SECONDS_PER_MINUTE = 60
@@ -50,6 +54,7 @@ class TransitionGuard(BaseModel):
     - Field requirements: requires assignee (field must be set)
     - Role requirements: role(admin) (user must have role)
     - Custom conditions: when condition_expr
+    - Expression guards (v0.29.0): guard: self->signatory->aml_status == "completed"
     """
 
     # Field that must be set for the transition
@@ -60,6 +65,11 @@ class TransitionGuard(BaseModel):
 
     # Custom condition expression (string for now, can be ConditionExpr later)
     condition: str | None = None
+
+    # v0.29.0: Typed expression guard (cross-entity predicates)
+    guard_expr: Expr | None = None
+    # Optional human-readable message for guard failure
+    guard_message: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -72,6 +82,11 @@ class TransitionGuard(BaseModel):
     def is_role_guard(self) -> bool:
         """Check if this is a role-based guard."""
         return self.requires_role is not None
+
+    @property
+    def is_expr_guard(self) -> bool:
+        """Check if this is a typed expression guard."""
+        return self.guard_expr is not None
 
 
 class AutoTransitionSpec(BaseModel):
@@ -176,3 +191,15 @@ class StateMachineSpec(BaseModel):
             if (t.from_state == from_state or t.from_state == "*") and t.to_state == to_state:
                 return t
         return None
+
+
+def _rebuild_transition_guard() -> None:
+    """Rebuild TransitionGuard to resolve forward reference to Expr."""
+    from .expressions import Expr
+
+    TransitionGuard.model_rebuild(
+        _types_namespace={"Expr": Expr},
+    )
+
+
+_rebuild_transition_guard()
