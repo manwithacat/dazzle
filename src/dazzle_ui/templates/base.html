@@ -19,6 +19,10 @@
   <script src="https://unpkg.com/htmx.org@2.0.8"></script>
   <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
   <script src="https://unpkg.com/idiomorph@0.7.4/dist/idiomorph-ext.min.js"></script>
+  <script src="https://unpkg.com/htmx-ext-preload@2.1.0/preload.js"></script>
+  <script src="https://unpkg.com/htmx-ext-response-targets@2.0.2/response-targets.js"></script>
+  <script src="https://unpkg.com/htmx-ext-loading-states@2.0.0/loading-states.js"></script>
+  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
 
   {# Dazzle micro-runtime — replaces Alpine.js #}
   <link rel="stylesheet" href="/static/css/dz.css">
@@ -56,7 +60,7 @@
   {% block head_extra %}{% endblock %}
 </head>
 {% endif %}
-<body class="min-h-screen bg-base-200" style="font-family: var(--font-sans)" hx-boost="true" hx-ext="morph">
+<body class="min-h-screen bg-base-200" style="font-family: var(--font-sans)" hx-boost="true" hx-ext="morph,preload,response-targets,loading-states">
   {% block body %}
   {% endblock %}
 

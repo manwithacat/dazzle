@@ -99,6 +99,115 @@
   }
 }
 
+/* ── Optimistic UI feedback ─────────────────────────────────────────── */
+
+/* Row fades out during delete swap (swap:300ms on hx-swap) */
+tr.htmx-swapping {
+  opacity: 0;
+  transform: translateX(1rem);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* Row highlights briefly after creation or update */
+tr.htmx-added,
+tr.htmx-settling {
+  animation: dz-row-highlight 600ms ease-out;
+}
+
+@keyframes dz-row-highlight {
+  from { background-color: oklch(0.85 0.1 145 / 0.3); }
+  to   { background-color: transparent; }
+}
+
+/* Form button feedback on successful submit */
+.btn.htmx-request {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* ── Skeleton loading placeholders ──────────────────────────────────── */
+
+.dz-skeleton {
+  background: linear-gradient(90deg, oklch(0.8 0 0 / 0.3) 25%, oklch(0.85 0 0 / 0.5) 50%, oklch(0.8 0 0 / 0.3) 75%);
+  background-size: 200% 100%;
+  animation: dz-shimmer 1.5s ease-in-out infinite;
+  border-radius: 0.25rem;
+}
+
+.dz-skeleton-text {
+  height: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.dz-skeleton-text-lg {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+  width: 60%;
+}
+
+.dz-skeleton-cell {
+  height: 1rem;
+}
+
+@keyframes dz-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── View transitions for fragment navigation ──────────────────────── */
+
+@view-transition {
+  navigation: auto;
+}
+
+#main-content {
+  view-transition-name: main-content;
+}
+
+::view-transition-old(main-content) {
+  animation: dz-fade-out 150ms ease-in forwards;
+}
+
+::view-transition-new(main-content) {
+  animation: dz-fade-in 200ms ease-out;
+}
+
+@keyframes dz-fade-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes dz-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* Reduce motion for accessibility */
+/* Respect reduced motion for all Dazzle animations */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(main-content),
+  ::view-transition-new(main-content) {
+    animation: none;
+  }
+
+  tr.htmx-swapping {
+    transition: none;
+  }
+
+  tr.htmx-added,
+  tr.htmx-settling {
+    animation: none;
+  }
+
+  .dz-skeleton {
+    animation: none;
+  }
+}
+
 /* ── Native dialog backdrop ─────────────────────────────────────────── */
 
 dialog::backdrop {

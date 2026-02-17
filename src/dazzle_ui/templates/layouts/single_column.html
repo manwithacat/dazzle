@@ -9,7 +9,13 @@
     </div>
     <div class="flex-none gap-2">
       {% for nav_item in nav_items | default([]) %}
-      <a href="{{ nav_item.route }}" class="btn btn-ghost btn-sm" hx-boost="true">
+      <a href="{{ nav_item.route }}" class="btn btn-ghost btn-sm"
+         hx-get="{{ nav_item.route }}"
+         hx-target="#main-content"
+         hx-swap="morph:innerHTML transition:true"
+         hx-push-url="true"
+         preload="mousedown"
+         data-dazzle-nav="{{ nav_item.route }}">
         {{ nav_item.label }}
       </a>
       {% endfor %}
@@ -17,7 +23,7 @@
   </div>
 
   {# Page content #}
-  <main class="flex-1 container mx-auto p-4 lg:p-6 max-w-5xl">
+  <main id="main-content" class="flex-1 container mx-auto p-4 lg:p-6 max-w-5xl" tabindex="-1">
     {% block content %}{% endblock %}
   </main>
 

@@ -317,10 +317,22 @@ async def _list_handler_body(
             # Render table rows
             html = render_fragment("fragments/table_rows.html", table=table_dict)
 
-            # Append OOB pagination so buttons stay in sync after
-            # sort/filter/search/page changes
-            pagination_html = render_fragment("fragments/table_pagination.html", table=table_dict)
-            html += f'<div id="{table_id}-pagination" hx-swap-oob="true">{pagination_html}</div>'
+            # Check if table uses infinite scroll mode
+            pagination_mode = getattr(request.state, "htmx_pagination_mode", "pages")
+
+            if pagination_mode == "infinite":
+                # Append sentinel row for infinite scroll (triggers on revealed)
+                sentinel_html = render_fragment("fragments/table_sentinel.html", table=table_dict)
+                html += sentinel_html
+            else:
+                # Append OOB pagination so buttons stay in sync after
+                # sort/filter/search/page changes
+                pagination_html = render_fragment(
+                    "fragments/table_pagination.html", table=table_dict
+                )
+                html += (
+                    f'<div id="{table_id}-pagination" hx-swap-oob="true">{pagination_html}</div>'
+                )
 
             return HTMLResponse(content=html)
         except ImportError:

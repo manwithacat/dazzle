@@ -57,10 +57,23 @@
   {% endwith %}
   {% endif %}
 
-  {# Loading indicator #}
-  <div id="{{ table.table_id or 'dt-table' }}-loading" class="htmx-indicator flex justify-center py-4"
+  {# Skeleton loading indicator #}
+  <div id="{{ table.table_id or 'dt-table' }}-loading" class="htmx-indicator"
        role="status" aria-label="Loading">
-    <span class="loading loading-spinner loading-md" aria-hidden="true"></span>
+    <div class="overflow-x-auto">
+      <table class="table table-zebra w-full" aria-hidden="true">
+        <tbody>
+          {% for _ in range(5) %}
+          <tr>
+            {% for col in table.columns %}
+            <td data-dz-col="{{ col.key }}"><div class="dz-skeleton dz-skeleton-cell" style="width: {{ range(50, 90) | random }}%"></div></td>
+            {% endfor %}
+            <td><div class="dz-skeleton dz-skeleton-cell" style="width: 40%"></div></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     <span class="sr-only">Loading data...</span>
   </div>
 
@@ -113,10 +126,14 @@
     </table>
   </div>
 
-  {# Pagination — wrapper has stable ID for OOB swap updates #}
+  {# Pagination — pages mode uses numbered buttons, infinite mode uses sentinel #}
+  {% if table.pagination_mode == "infinite" %}
+  {# Sentinel appended after table rows via hx-trigger="revealed" #}
+  {% else %}
   <div id="{{ table.table_id or 'dt-table' }}-pagination">
     {% include 'fragments/table_pagination.html' %}
   </div>
+  {% endif %}
 
   {# Slide-over panel for detail views #}
   {% if table.slide_over %}

@@ -13,6 +13,8 @@
         hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
         hx-target="body"
         hx-swap="innerHTML"
+        hx-target-422="#form-errors"
+        hx-target-5*="#form-errors"
         hx-headers='{"Content-Type": "application/json"}'
         hx-ext="json-enc"
         class="space-y-4">
@@ -30,7 +32,9 @@
     {# Actions — loading state handled by dz.js via htmx events #}
     <div class="flex gap-3 pt-4">
       <button type="submit" class="btn btn-primary"
-              data-dazzle-action="{{ form.entity_name }}.save">
+              data-dazzle-action="{{ form.entity_name }}.save"
+              data-loading-class="loading"
+              data-loading-disable>
         {% if form.mode == "edit" %}Save{% else %}Create{% endif %}
       </button>
       <a href="{{ form.cancel_url }}" class="btn btn-ghost">Cancel</a>

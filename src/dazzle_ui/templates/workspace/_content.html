@@ -3,22 +3,27 @@
   <p class="text-sm opacity-60 mb-4">{{ workspace.purpose }}</p>
   {% endif %}
 
-  <div class="{{ workspace.grid_class }}">
+  <div class="{{ workspace.grid_class }}"
+       hx-ext="sse"
+       sse-connect="/_ops/sse/events">
     {% for region in workspace.regions %}
     <div class="{{ region.grid_class }}"
          id="region-{{ region.name }}"
          {% if region.endpoint %}
          hx-get="{{ region.endpoint }}"
-         hx-trigger="load"
+         hx-trigger="load, sse:entity.created, sse:entity.updated, sse:entity.deleted"
          hx-swap="innerHTML"
          {% endif %}>
-      {# Initial skeleton while loading #}
+      {# Skeleton placeholder while loading #}
       <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
           <h3 class="card-title text-sm">{{ region.title }}</h3>
           {% if region.endpoint %}
-          <div class="flex justify-center py-8">
-            <span class="loading loading-spinner loading-sm"></span>
+          <div class="space-y-3 py-2">
+            <div class="dz-skeleton dz-skeleton-text-lg"></div>
+            <div class="dz-skeleton dz-skeleton-text" style="width: 90%"></div>
+            <div class="dz-skeleton dz-skeleton-text" style="width: 75%"></div>
+            <div class="dz-skeleton dz-skeleton-text" style="width: 85%"></div>
           </div>
           {% else %}
           <p class="text-sm opacity-50">{{ region.empty_message }}</p>

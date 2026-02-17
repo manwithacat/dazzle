@@ -1,0 +1,15 @@
+{# Infinite scroll sentinel — triggers loading more rows when visible #}
+{% if table and table.total > (table.page * table.page_size) %}
+{% set next_page = table.page + 1 %}
+<tr class="dz-sentinel"
+    hx-get="{{ table.api_endpoint }}?page={{ next_page }}&page_size={{ table.page_size }}{% if table.sort_field %}&sort={{ table.sort_field }}&dir={{ table.sort_dir }}{% endif %}{% if table.filter_values %}{% for k, v in table.filter_values.items() %}&filter[{{ k }}]={{ v }}{% endfor %}{% endif %}"
+    hx-trigger="revealed"
+    hx-swap="afterend"
+    hx-headers='{"Accept": "text/html"}'
+    hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
+  <td colspan="{{ table.columns | length + 1 }}" class="text-center py-4">
+    <span class="loading loading-spinner loading-sm"></span>
+    <span class="sr-only">Loading more...</span>
+  </td>
+</tr>
+{% endif %}

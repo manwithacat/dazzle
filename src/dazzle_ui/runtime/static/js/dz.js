@@ -402,30 +402,9 @@ const dz = (() => {
   // ── Form Loading State ───────────────────────────────────────────────
 
   function initFormLoading() {
-    // HTMX fires htmx:beforeRequest and htmx:afterRequest on the form element
-    document.addEventListener("htmx:beforeRequest", (e) => {
-      const form = /** @type {HTMLElement} */ (e.target).closest(
-        "[data-dz-form]",
-      );
-      if (!form) return;
-      const btn = form.querySelector("[type=submit]");
-      if (btn) {
-        btn.setAttribute("disabled", "");
-        btn.classList.add("loading");
-      }
-    });
-
-    document.addEventListener("htmx:afterRequest", (e) => {
-      const form = /** @type {HTMLElement} */ (e.target).closest(
-        "[data-dz-form]",
-      );
-      if (!form) return;
-      const btn = form.querySelector("[type=submit]");
-      if (btn) {
-        btn.removeAttribute("disabled");
-        btn.classList.remove("loading");
-      }
-    });
+    // Form submit button loading/disable is now handled declaratively by
+    // the htmx loading-states extension via data-loading-class and
+    // data-loading-disable attributes on the button element.
   }
 
   // ── Data Table ───────────────────────────────────────────────────────

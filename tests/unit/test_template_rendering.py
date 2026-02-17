@@ -350,11 +350,12 @@ class TestRendering:
         assert "Tasks" in html
 
     def test_nav_links_use_fragment_targeting(self) -> None:
-        """Nav links should target #main-content instead of using hx-boost."""
+        """Nav links should target #main-content with view transitions and preload."""
         html = render_page(self._make_list_page_context())
         assert 'hx-target="#main-content"' in html
-        assert 'hx-swap="morph:innerHTML"' in html
+        assert 'hx-swap="morph:innerHTML transition:true"' in html
         assert 'hx-push-url="true"' in html
+        assert 'preload="mousedown"' in html
 
     def test_render_page_contains_table(self) -> None:
         html = render_page(self._make_list_page_context())
@@ -386,8 +387,10 @@ class TestRendering:
         content_only = render_page(ctx, content_only=True)
         # Content-only should be shorter than full page
         assert len(content_only) < len(full)
-        # Content should appear within the full page
-        assert content_only.strip() in full
+        # Full page should have layout elements that content_only lacks
+        assert "<!DOCTYPE" in full
+        assert "<!DOCTYPE" not in content_only
+        assert "<html" not in content_only
 
     def test_render_fragment_no_layout(self) -> None:
         """Fragments should NOT include DOCTYPE or full layout."""

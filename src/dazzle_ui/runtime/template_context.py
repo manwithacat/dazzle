@@ -99,6 +99,7 @@ class TableContext(BaseModel):
     empty_message: str = "No items found."
     filter_values: dict[str, str] = Field(default_factory=dict)
     table_id: str = ""
+    pagination_mode: str = "pages"  # "pages" (default) or "infinite"
 
 
 class FormContext(BaseModel):

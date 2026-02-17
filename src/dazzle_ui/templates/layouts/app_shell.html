@@ -78,8 +78,9 @@
           <a href="{{ nav_item.route }}"
              hx-get="{{ nav_item.route }}"
              hx-target="#main-content"
-             hx-swap="morph:innerHTML"
+             hx-swap="morph:innerHTML transition:true"
              hx-push-url="true"
+             preload="mousedown"
              class="{% if current_route == nav_item.route %}active{% endif %}"
              {% if current_route == nav_item.route %}aria-current="page"{% endif %}
              data-dazzle-nav="{{ nav_item.route }}">
