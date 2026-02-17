@@ -4,14 +4,14 @@
   {% endif %}
 
   <div class="{{ workspace.grid_class }}"
-       hx-ext="sse"
-       sse-connect="/_ops/sse/events">
+       {% if workspace.sse_url %}hx-ext="sse"
+       sse-connect="{{ workspace.sse_url }}"{% endif %}>
     {% for region in workspace.regions %}
     <div class="{{ region.grid_class }}"
          id="region-{{ region.name }}"
          {% if region.endpoint %}
          hx-get="{{ region.endpoint }}"
-         hx-trigger="load, sse:entity.created, sse:entity.updated, sse:entity.deleted"
+         hx-trigger="load{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
          hx-swap="innerHTML"
          {% endif %}>
       {# Skeleton placeholder while loading #}

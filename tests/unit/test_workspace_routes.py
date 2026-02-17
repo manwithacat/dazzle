@@ -493,3 +493,51 @@ class TestWorkspaceListRefColumn:
             empty_message="No items.",
         )
         assert "Acme Corp" in html
+
+
+# ---------------------------------------------------------------------------
+# Step 7 — SSE connection is conditional (#273)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestWorkspaceSSEConditional:
+    """SSE attributes in _content.html must only appear when sse_url is set."""
+
+    def _make_workspace_ctx(self, sse_url: str = "") -> Any:
+        from dazzle_ui.runtime.workspace_renderer import RegionContext, WorkspaceContext
+
+        return WorkspaceContext(
+            name="dashboard",
+            title="Dashboard",
+            sse_url=sse_url,
+            regions=[
+                RegionContext(
+                    name="tasks",
+                    title="Tasks",
+                    source="Task",
+                    endpoint="/api/workspaces/dashboard/regions/tasks",
+                ),
+            ],
+        )
+
+    def test_no_sse_attributes_when_sse_url_empty(self) -> None:
+        ws = self._make_workspace_ctx(sse_url="")
+        html = render_fragment("workspace/_content.html", workspace=ws)
+        assert "sse-connect" not in html
+        assert 'hx-ext="sse"' not in html
+        assert "sse:entity.created" not in html
+
+    def test_sse_attributes_present_when_sse_url_set(self) -> None:
+        ws = self._make_workspace_ctx(sse_url="/_ops/sse/events")
+        html = render_fragment("workspace/_content.html", workspace=ws)
+        assert 'sse-connect="/_ops/sse/events"' in html
+        assert 'hx-ext="sse"' in html
+        assert "sse:entity.created" in html
+
+    def test_regions_still_load_without_sse(self) -> None:
+        """Regions should still have hx-get and load trigger even without SSE."""
+        ws = self._make_workspace_ctx(sse_url="")
+        html = render_fragment("workspace/_content.html", workspace=ws)
+        assert "hx-get=" in html
+        assert 'hx-trigger="load"' in html

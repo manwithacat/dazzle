@@ -56,6 +56,7 @@ class WorkspaceContext(BaseModel):
     grid_class: str = "grid grid-cols-1 gap-4"  # Outer grid CSS
     regions: list[RegionContext] = Field(default_factory=list)
     endpoint: str = ""  # Base API endpoint for workspace data
+    sse_url: str = ""  # SSE stream URL (empty = no live updates)
 
 
 # =============================================================================
