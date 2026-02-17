@@ -143,6 +143,42 @@ from .experiences import (
     StepTransition,
     TransitionEvent,
 )
+
+# Expressions (v0.29.0 Typed Expression Language)
+from .expressions import (
+    BinaryExpr as ExprBinaryExpr,
+)
+from .expressions import (
+    BinaryOp as ExprBinaryOp,
+)
+from .expressions import (
+    DurationLiteral as ExprDurationLiteral,
+)
+from .expressions import (
+    Expr,
+    ExprType,
+)
+from .expressions import (
+    FieldRef as ExprFieldRef,
+)
+from .expressions import (
+    FuncCall as ExprFuncCall,
+)
+from .expressions import (
+    IfExpr as ExprIfExpr,
+)
+from .expressions import (
+    InExpr as ExprInExpr,
+)
+from .expressions import (
+    Literal as ExprLiteral,
+)
+from .expressions import (
+    UnaryExpr as ExprUnaryExpr,
+)
+from .expressions import (
+    UnaryOp as ExprUnaryOp,
+)
 from .fidelity import (
     FidelityGap,
     FidelityGapCategory,
