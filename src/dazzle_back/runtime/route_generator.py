@@ -350,6 +350,7 @@ def create_read_handler(
     audit_logger: Any | None = None,
     cedar_access_spec: Any | None = None,
     optional_auth_dep: Callable[..., Any] | None = None,
+    auto_include: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for read operations with optional Cedar-style access control."""
 
@@ -368,7 +369,7 @@ def create_read_handler(
             )
             from dazzle_back.specs.auth import AccessOperationKind
 
-            result = await service.execute(operation="read", id=id)
+            result = await service.execute(operation="read", id=id, include=auto_include)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
 
@@ -426,7 +427,7 @@ def create_read_handler(
         async def _read_auth(
             id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
         ) -> Any:
-            result = await service.execute(operation="read", id=id)
+            result = await service.execute(operation="read", id=id, include=auto_include)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
             if audit_logger:
@@ -460,7 +461,7 @@ def create_read_handler(
         return _read_auth
 
     async def _read_noauth(id: UUID, request: Request) -> Any:
-        result = await service.execute(operation="read", id=id)
+        result = await service.execute(operation="read", id=id, include=auto_include)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
         return result
@@ -1030,6 +1031,7 @@ class RouteGenerator:
         elif (
             endpoint.method == HttpMethod.GET and "{id}" in endpoint.path
         ) or operation_kind == OperationKind.READ:
+            includes = self.entity_auto_includes.get(entity_name or "")
             handler = create_read_handler(
                 service,
                 model,
@@ -1039,8 +1041,9 @@ class RouteGenerator:
                 audit_logger=_audit,
                 cedar_access_spec=_cedar_spec,
                 optional_auth_dep=self.optional_auth_dep,
+                auto_include=includes,
             )
-            self._add_route(endpoint, handler, response_model=model)
+            self._add_route(endpoint, handler, response_model=None)
 
         # GET without {id} -> LIST
         elif (

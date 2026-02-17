@@ -63,6 +63,8 @@
               {{ value | dateformat }}
             {% elif field.type == "currency" or field.type == "money" %}
               {{ value | currency(field.extra.get('currency_code', 'GBP') if field.extra else 'GBP') }}
+            {% elif field.type == "ref" %}
+              {% if value is mapping %}{{ value.get("name") or value.get("title") or value.get("label") or value.get("email") or value.get("id", "—") }}{% elif value %}{{ value }}{% else %}—{% endif %}
             {% else %}
               {{ value | default("—") }}
             {% endif %}

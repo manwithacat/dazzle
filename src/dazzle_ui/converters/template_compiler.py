@@ -141,6 +141,7 @@ def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
         FieldTypeKind.EMAIL: "email",
         FieldTypeKind.URL: "text",
         FieldTypeKind.ENUM: "select",
+        FieldTypeKind.REF: "ref",
     }
     return type_map.get(kind, "text")
 

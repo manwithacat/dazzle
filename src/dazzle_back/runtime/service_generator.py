@@ -266,10 +266,10 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         return entity
 
-    async def read(self, id: UUID) -> T | dict[str, Any] | None:
-        """Read an entity by ID."""
+    async def read(self, id: UUID, include: list[str] | None = None) -> T | dict[str, Any] | None:
+        """Read an entity by ID, optionally eager-loading relations."""
         if self._repository:
-            return await self._repository.read(id)
+            return await self._repository.read(id, include=include)
         return self._store.get(id)
 
     async def update(

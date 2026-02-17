@@ -2,10 +2,21 @@
 {# Uses native focus/blur + HTMX. Dropdown closes on click-outside via focusout. #}
 {# ARIA combobox pattern for screen reader accessibility. #}
 
+{# Resolve initial value for edit mode: ref objects have display names #}
+{% set init_id = "" %}
+{% set init_display = "" %}
+{% if value is mapping %}
+  {% set init_id = value.get("id", "") %}
+  {% set init_display = value.get("name") or value.get("title") or value.get("label") or value.get("email") or value.get("id", "") %}
+{% elif value %}
+  {% set init_id = value %}
+  {% set init_display = value %}
+{% endif %}
+
 <div class="relative w-full" data-dz-toggleable>
   {# Hidden input stores the selected value #}
   <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}"
-         data-dazzle-field="{{ field.name }}" value="" />
+         data-dazzle-field="{{ field.name }}" value="{{ init_id }}" />
 
   {# Visible search input with HTMX debounced search #}
   <input type="text"
@@ -18,6 +29,7 @@
          aria-controls="search-results-{{ field.name }}"
          aria-autocomplete="list"
          aria-haspopup="listbox"
+         value="{{ init_display }}"
          hx-get="{{ field.source.endpoint }}"
          hx-trigger="keyup changed delay:{{ field.source.debounce_ms }}ms"
          hx-target="#search-results-{{ field.name }}"
