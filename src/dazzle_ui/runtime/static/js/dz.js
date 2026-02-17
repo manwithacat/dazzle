@@ -749,8 +749,9 @@ const dz = (() => {
       initTable(/** @type {HTMLElement} */ (el));
     });
 
-    // Re-init after HTMX swaps (hx-boost replaces body innerHTML,
-    // destroying sidebar/dark-mode DOM state — restore from localStorage)
+    // Re-init after HTMX swaps.  Navigation uses fragment targeting
+    // (#main-content) so sidebar/dark-mode state is preserved.  These
+    // restores still fire for full-body swaps (forms, entity row clicks).
     document.addEventListener("htmx:afterSettle", (e) => {
       applySidebar(persist("dz-sidebar", true));
       applyDarkMode(persist("dz-dark-mode", false));

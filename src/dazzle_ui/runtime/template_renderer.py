@@ -217,7 +217,12 @@ def get_jinja_env() -> Environment:
     return _env
 
 
-def render_page(context: PageContext, *, partial: bool = False) -> str:
+def render_page(
+    context: PageContext,
+    *,
+    partial: bool = False,
+    content_only: bool = False,
+) -> str:
     """
     Render a full page from a PageContext.
 
@@ -229,18 +234,13 @@ def render_page(context: PageContext, *, partial: bool = False) -> str:
         context: Page context with all data needed for rendering.
         partial: When True, injects ``_htmx_partial=True`` into template
             variables so ``base.html`` omits the ``<html><head>`` wrapper.
+        content_only: When True, renders only the content template without
+            the layout wrapper — used for htmx fragment targeting.
 
     Returns:
         Rendered HTML string.
     """
     env = get_jinja_env()
-
-    # Select layout
-    layout_map = {
-        "app_shell": "layouts/app_shell.html",
-        "single_column": "layouts/single_column.html",
-    }
-    layout_template_name = layout_map.get(context.layout, "layouts/app_shell.html")
 
     # Build template variables from context
     template_vars = context.model_dump()
@@ -250,6 +250,17 @@ def render_page(context: PageContext, *, partial: bool = False) -> str:
     # Render the content template first (standalone fragment)
     content_template = env.get_template(context.template)
     rendered_content = content_template.render(**template_vars)
+
+    # Fragment targeting: return just the content, no layout wrapper
+    if content_only:
+        return rendered_content
+
+    # Select layout
+    layout_map = {
+        "app_shell": "layouts/app_shell.html",
+        "single_column": "layouts/single_column.html",
+    }
+    layout_template_name = layout_map.get(context.layout, "layouts/app_shell.html")
 
     # Build a wrapper template string that extends the layout and injects content
     # Use % formatting because the string contains Jinja2 delimiters that conflict with f-strings

@@ -349,6 +349,13 @@ class TestRendering:
         assert "<nav" in html or "navbar" in html.lower()
         assert "Tasks" in html
 
+    def test_nav_links_use_fragment_targeting(self) -> None:
+        """Nav links should target #main-content instead of using hx-boost."""
+        html = render_page(self._make_list_page_context())
+        assert 'hx-target="#main-content"' in html
+        assert 'hx-swap="morph:innerHTML"' in html
+        assert 'hx-push-url="true"' in html
+
     def test_render_page_contains_table(self) -> None:
         html = render_page(self._make_list_page_context())
         assert "<table" in html or "hx-get" in html
@@ -361,6 +368,26 @@ class TestRendering:
         """Rendered pages should include HTMX attributes or script."""
         html = render_page(self._make_list_page_context())
         assert "hx-" in html or "htmx" in html.lower()
+
+    def test_render_page_content_only(self) -> None:
+        """content_only=True returns just the content template, no layout."""
+        html = render_page(self._make_list_page_context(), content_only=True)
+        # Should NOT include layout elements
+        assert "<!DOCTYPE" not in html
+        assert "<html" not in html
+        assert "<nav" not in html
+        # Should still contain the content (table markup)
+        assert "<table" in html or "hx-get" in html
+
+    def test_render_page_content_only_vs_full(self) -> None:
+        """content_only output should be a subset of the full page output."""
+        ctx = self._make_list_page_context()
+        full = render_page(ctx)
+        content_only = render_page(ctx, content_only=True)
+        # Content-only should be shorter than full page
+        assert len(content_only) < len(full)
+        # Content should appear within the full page
+        assert content_only.strip() in full
 
     def test_render_fragment_no_layout(self) -> None:
         """Fragments should NOT include DOCTYPE or full layout."""

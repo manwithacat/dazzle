@@ -84,10 +84,23 @@
     }
   });
 
+  // ── Page title update for fragment navigation ────────────────────────
+  //
+  // Fragment-targeted navigation (hx-target="#main-content") doesn't
+  // include <title> in the response. The server sends the page title
+  // via an HX-Trigger event instead.
+
+  document.addEventListener("dz:titleUpdate", function (evt) {
+    var title = /** @type {CustomEvent} */ (evt).detail.value;
+    if (title) {
+      document.title = title;
+    }
+  });
+
   // ── aria-current update after navigation ──────────────────────────────
   //
-  // After hx-boost navigation, update aria-current="page" on nav links
-  // to reflect the new active page.
+  // After hx-boost or fragment navigation, update aria-current="page"
+  // on nav links to reflect the new active page.
 
   document.addEventListener("htmx:pushedIntoHistory", function () {
     requestAnimationFrame(function () {

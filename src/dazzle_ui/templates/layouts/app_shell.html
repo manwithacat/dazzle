@@ -76,10 +76,13 @@
         {% for nav_item in nav_items | default([]) %}
         <li>
           <a href="{{ nav_item.route }}"
+             hx-get="{{ nav_item.route }}"
+             hx-target="#main-content"
+             hx-swap="morph:innerHTML"
+             hx-push-url="true"
              class="{% if current_route == nav_item.route %}active{% endif %}"
              {% if current_route == nav_item.route %}aria-current="page"{% endif %}
-             data-dazzle-nav="{{ nav_item.route }}"
-             hx-boost="true">
+             data-dazzle-nav="{{ nav_item.route }}">
             {{ nav_item.label }}
           </a>
         </li>

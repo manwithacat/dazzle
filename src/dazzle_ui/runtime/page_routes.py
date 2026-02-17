@@ -218,6 +218,15 @@ def create_page_routes(
 
                 ctx.current_route = urlparse(htmx.current_url).path
 
+            # Fragment targeting: nav links target #main-content directly,
+            # so return only the content template (no layout wrapper).
+            if htmx.wants_fragment:
+                import json
+
+                html = render_page(ctx, content_only=True)
+                headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ctx.page_title})}
+                return HTMLResponse(content=html, headers=headers)
+
             # Any HTMX request can receive body-only HTML — the client
             # extracts <body> content anyway.  History-restore is the one
             # exception: the browser needs a full document for cache misses.
@@ -355,6 +364,19 @@ def create_page_routes(
                         from urllib.parse import urlparse
 
                         effective_route = urlparse(htmx.current_url).path
+
+                    ws_title = ws_context.title or ws_context.name.replace("_", " ").title()
+
+                    # Fragment targeting: return only the workspace content
+                    if htmx.wants_fragment:
+                        import json
+
+                        html = render_fragment(
+                            "workspace/_content.html",
+                            workspace=ws_context,
+                        )
+                        headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
+                        return HTMLResponse(content=html, headers=headers)
 
                     html = render_fragment(
                         "workspace/workspace.html",

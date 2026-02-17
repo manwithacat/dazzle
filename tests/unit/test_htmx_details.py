@@ -105,6 +105,30 @@ class TestWantsPartial:
         assert HtmxDetails(is_boosted=True, is_history_restore=True).wants_partial is False
 
 
+class TestWantsFragment:
+    """Property logic for wants_fragment (navigation targeting #main-content)."""
+
+    def test_targeting_main_content(self) -> None:
+        d = HtmxDetails(is_htmx=True, target="main-content")
+        assert d.wants_fragment is True
+
+    def test_targeting_body(self) -> None:
+        d = HtmxDetails(is_htmx=True, target="body")
+        assert d.wants_fragment is False
+
+    def test_targeting_main_content_with_history_restore(self) -> None:
+        d = HtmxDetails(is_htmx=True, target="main-content", is_history_restore=True)
+        assert d.wants_fragment is False
+
+    def test_non_htmx_with_main_content_target(self) -> None:
+        d = HtmxDetails(is_htmx=False, target="main-content")
+        assert d.wants_fragment is False
+
+    def test_no_target(self) -> None:
+        d = HtmxDetails(is_htmx=True, target="")
+        assert d.wants_fragment is False
+
+
 class TestPartialRendering:
     """Broader partial rendering logic used by page handlers.
 

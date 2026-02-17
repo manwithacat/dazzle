@@ -53,6 +53,11 @@ class HtmxDetails:
         """Boosted navigation that is NOT a history restore → body-only."""
         return self.is_boosted and not self.is_history_restore
 
+    @property
+    def wants_fragment(self) -> bool:
+        """Navigation targeting #main-content → content-only response."""
+        return self.is_htmx and self.target == "main-content" and not self.is_history_restore
+
 
 def htmx_response(
     content: str,
