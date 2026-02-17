@@ -166,6 +166,7 @@ from dazzle.cli.lsp import lsp_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
 from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.nightly import nightly_app  # noqa: E402
+from dazzle.cli.overrides import overrides_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
 from dazzle.cli.sentinel import sentinel_app  # noqa: E402
@@ -198,6 +199,7 @@ app.add_typer(kg_app, name="kg")
 app.add_typer(lsp_app, name="lsp")
 app.add_typer(mcp_app, name="mcp")
 app.add_typer(sentinel_app, name="sentinel")
+app.add_typer(overrides_app, name="overrides")
 
 
 # =============================================================================
