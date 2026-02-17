@@ -235,18 +235,24 @@ def create_page_routes(
 
         return page_handler
 
-    # Register routes
-    for route_path, ctx in page_contexts.items():
+    # Register routes — sort by specificity so FastAPI matches the most-specific
+    # route first.  Rules: (1) more segments first, (2) static paths before
+    # dynamic ones at the same depth (e.g. /item/create before /item/{id}).
+    def _route_sort_key(kv: tuple[str, Any]) -> tuple[int, int]:
+        path = kv[0]
+        return (-path.count("/"), 0 if "{" not in path else 1)
+
+    sorted_routes = sorted(page_contexts.items(), key=_route_sort_key)
+    for route_path, ctx in sorted_routes:
         # Route paths include app_prefix for URL generation (nav highlighting,
         # cross-references).  Strip it for registration since the router is
         # mounted with the same prefix — otherwise routes get double-prefixed.
         reg_path = route_path
         if app_prefix and reg_path.startswith(app_prefix):
             reg_path = reg_path[len(app_prefix) :] or "/"
-        fastapi_path = reg_path.replace("{id}", "{id:path}")
 
         handler = _make_page_handler(route_path, ctx, view_name=getattr(ctx, "view_name", None))
-        router.get(fastapi_path, response_class=HTMLResponse)(handler)
+        router.get(reg_path, response_class=HTMLResponse)(handler)
 
     # Register workspace routes — workspaces use their own template, not the
     # surface page template, so they get separate handlers.

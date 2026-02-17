@@ -274,3 +274,120 @@ class TestHtmxFragments:
         resp = client.get("/task", headers={"HX-Request": "true"})
         assert resp.status_code == 200
         assert "text/html" in resp.headers["content-type"]
+
+
+class TestEditRouteOrdering:
+    """Verify edit routes render forms, not detail views (issue #269).
+
+    When both VIEW and EDIT surfaces exist, the edit route must be
+    registered before the detail route so FastAPI matches it first.
+    """
+
+    @pytest.fixture()
+    def edit_client(self) -> TestClient:
+        """Client with an app that has LIST, CREATE, VIEW, and EDIT surfaces."""
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        task = EntitySpec(
+            name="Item",
+            title="Item",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                FieldSpec(
+                    name="name",
+                    type=FieldType(kind=FieldTypeKind.STR, max_length=100),
+                    modifiers=[FieldModifier.REQUIRED],
+                ),
+            ],
+        )
+        spec = AppSpec(
+            name="edit_test",
+            title="Edit Test",
+            domain=DomainSpec(entities=[task]),
+            surfaces=[
+                SurfaceSpec(
+                    name="item_list",
+                    title="Items",
+                    entity_ref="Item",
+                    mode=SurfaceMode.LIST,
+                    sections=[
+                        SurfaceSection(
+                            name="main",
+                            title="Main",
+                            elements=[SurfaceElement(field_name="name", label="Name")],
+                        )
+                    ],
+                ),
+                SurfaceSpec(
+                    name="item_view",
+                    title="Item Detail",
+                    entity_ref="Item",
+                    mode=SurfaceMode.VIEW,
+                    sections=[
+                        SurfaceSection(
+                            name="main",
+                            title="Main",
+                            elements=[SurfaceElement(field_name="name", label="Name")],
+                        )
+                    ],
+                ),
+                SurfaceSpec(
+                    name="item_create",
+                    title="Create Item",
+                    entity_ref="Item",
+                    mode=SurfaceMode.CREATE,
+                    sections=[
+                        SurfaceSection(
+                            name="main",
+                            title="Main",
+                            elements=[SurfaceElement(field_name="name", label="Name")],
+                        )
+                    ],
+                ),
+                SurfaceSpec(
+                    name="item_edit",
+                    title="Edit Item",
+                    entity_ref="Item",
+                    mode=SurfaceMode.EDIT,
+                    sections=[
+                        SurfaceSection(
+                            name="main",
+                            title="Main",
+                            elements=[SurfaceElement(field_name="name", label="Name")],
+                        )
+                    ],
+                ),
+            ],
+        )
+        app = FastAPI()
+        router = create_page_routes(spec, backend_url="http://127.0.0.1:9999")
+        app.include_router(router)
+        return TestClient(app)
+
+    def test_edit_route_renders_form(self, edit_client: TestClient) -> None:
+        """The /item/{id}/edit route must render a form, not a detail view."""
+        resp = edit_client.get("/item/abc-123/edit")
+        assert resp.status_code == 200
+        assert "<form" in resp.text
+
+    def test_edit_route_has_input_fields(self, edit_client: TestClient) -> None:
+        """Edit page must contain input elements."""
+        resp = edit_client.get("/item/abc-123/edit")
+        assert "<input" in resp.text
+
+    def test_detail_route_no_form(self, edit_client: TestClient) -> None:
+        """The /item/{id} detail route should NOT render a form."""
+        resp = edit_client.get("/item/abc-123")
+        assert resp.status_code == 200
+        assert "<form" not in resp.text
+
+    def test_create_route_still_works(self, edit_client: TestClient) -> None:
+        """The /item/create route should render a form."""
+        resp = edit_client.get("/item/create")
+        assert resp.status_code == 200
+        assert "<form" in resp.text
