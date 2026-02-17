@@ -71,6 +71,76 @@ def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     return "text"
 
 
+def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
+    """Pre-compute column metadata from an entity spec (constant-folded at startup).
+
+    This replaces per-request column derivation with a one-time computation.
+    All data comes from IR (field types, enum values, state machines) and
+    never changes during the lifetime of the server.
+    """
+    columns: list[dict[str, Any]] = []
+    if not entity_spec or not hasattr(entity_spec, "fields"):
+        return columns
+
+    for f in entity_spec.fields:
+        if f.name == "id":
+            continue
+        ft = getattr(f, "type", None)
+        kind = getattr(ft, "kind", None)
+        kind_val: str = (
+            kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
+        )
+        # Show ref columns with resolved display name; hide other relation types
+        if kind_val == "ref":
+            rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+            columns.append(
+                {
+                    "key": rel_name,
+                    "label": getattr(f, "label", None) or rel_name.replace("_", " ").title(),
+                    "type": "ref",
+                    "sortable": False,
+                }
+            )
+            continue
+        if kind_val in ("uuid", "has_many", "has_one", "embeds", "belongs_to"):
+            continue
+        if f.name.endswith("_id"):
+            continue
+        col_type = _field_kind_to_col_type(f, entity_spec)
+        col_key = f.name
+        if kind_val == "money":
+            col_key = f"{f.name}_minor"
+        col: dict[str, Any] = {
+            "key": col_key,
+            "label": getattr(f, "label", None) or f.name.replace("_", " ").title(),
+            "type": col_type,
+            "sortable": True,
+        }
+        if kind_val == "money":
+            ft_obj = getattr(f, "type", None)
+            col["currency_code"] = getattr(ft_obj, "currency_code", None) or "GBP"
+        if col_type == "badge":
+            if kind_val == "enum":
+                ev = getattr(ft, "enum_values", None)
+                if ev:
+                    col["filterable"] = True
+                    col["filter_options"] = list(ev)
+            else:
+                sm = getattr(entity_spec, "state_machine", None)
+                if sm:
+                    states = getattr(sm, "states", [])
+                    if states:
+                        col["filterable"] = True
+                        col["filter_options"] = list(states)
+        if col_type == "bool":
+            col["filterable"] = True
+            col["filter_options"] = ["true", "false"]
+        columns.append(col)
+        if len(columns) >= 8:
+            break
+    return columns
+
+
 @dataclass
 class WorkspaceRegionContext:
     """Bundles the non-request, non-pagination context for a workspace region handler."""
@@ -84,6 +154,8 @@ class WorkspaceRegionContext:
     repositories: dict[str, Any]
     require_auth: bool
     auth_middleware: Any
+    # Pre-computed at startup (constant-folded from IR)
+    precomputed_columns: list[dict[str, Any]] = field(default_factory=list)
 
 
 async def _workspace_region_handler(
@@ -202,74 +274,9 @@ async def _workspace_region_handler(
         except Exception:
             logger.warning("Failed to list items for workspace region", exc_info=True)
 
-    # Build columns from entity metadata when available
-    if ctx.entity_spec and hasattr(ctx.entity_spec, "fields"):
-        columns = []
-        for f in ctx.entity_spec.fields:
-            if f.name == "id":
-                continue
-            ft = getattr(f, "type", None)
-            kind = getattr(ft, "kind", None)
-            kind_val: str = (
-                kind.value  # type: ignore[union-attr]
-                if hasattr(kind, "value")
-                else str(kind)
-                if kind
-                else ""
-            )
-            # Show ref columns with resolved display name; hide other relation types
-            if kind_val == "ref":
-                # Ref fields are eager-loaded — show display name column
-                rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-                col = {
-                    "key": rel_name,
-                    "label": getattr(f, "label", None) or rel_name.replace("_", " ").title(),
-                    "type": "ref",
-                    "sortable": False,
-                }
-                columns.append(col)
-                continue
-            if kind_val in ("uuid", "has_many", "has_one", "embeds", "belongs_to"):
-                continue
-            # Hide _id suffix columns (foreign keys shown via ref above)
-            if f.name.endswith("_id"):
-                continue
-            col_type = _field_kind_to_col_type(f, ctx.entity_spec)
-            # Money fields: use expanded _minor column key
-            col_key = f.name
-            if kind_val == "money":
-                col_key = f"{f.name}_minor"
-            col: dict[str, Any] = {
-                "key": col_key,
-                "label": getattr(f, "label", None) or f.name.replace("_", " ").title(),
-                "type": col_type,
-                "sortable": True,
-            }
-            if kind_val == "money":
-                ft_obj = getattr(f, "type", None)
-                col["currency_code"] = getattr(ft_obj, "currency_code", None) or "GBP"
-            # Filterable: enum / state-machine badge fields
-            if col_type == "badge":
-                if kind_val == "enum":
-                    ev = getattr(ft, "enum_values", None)
-                    if ev:
-                        col["filterable"] = True
-                        col["filter_options"] = list(ev)
-                else:
-                    # State-machine status field
-                    sm = getattr(ctx.entity_spec, "state_machine", None)
-                    if sm:
-                        states = getattr(sm, "states", [])
-                        if states:
-                            col["filterable"] = True
-                            col["filter_options"] = list(states)
-            # Filterable: bool fields
-            if col_type == "bool":
-                col["filterable"] = True
-                col["filter_options"] = ["true", "false"]
-            columns.append(col)
-            if len(columns) >= 8:
-                break
+    # Use pre-computed columns from startup (constant-folded from IR)
+    if ctx.precomputed_columns:
+        columns = ctx.precomputed_columns
     elif items:
         columns = [
             {
@@ -799,6 +806,7 @@ class WorkspaceRouteBuilder:
                 ws_name = workspace.name
 
                 _ws_access = workspace.access
+                _ws_region_ctxs: list[WorkspaceRegionContext] = []
 
                 for ir_region, ctx_region in zip(workspace.regions, ws_ctx.regions, strict=False):
                     if not ctx_region.source:
@@ -834,7 +842,9 @@ class WorkspaceRouteBuilder:
                         repositories=repositories,
                         require_auth=require_auth,
                         auth_middleware=auth_middleware,
+                        precomputed_columns=_build_entity_columns(_entity_spec),
                     )
+                    _ws_region_ctxs.append(_region_ctx)
 
                     @app.get(
                         f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
@@ -857,38 +867,8 @@ class WorkspaceRouteBuilder:
                             ctx=_rctx,
                         )
 
-                # Batch endpoint: fetch all regions concurrently in a single request
-                _all_region_ctxs = [
-                    rc
-                    for ir_r, ctx_r in zip(workspace.regions, ws_ctx.regions, strict=False)
-                    if ctx_r.source
-                    for rc in [
-                        WorkspaceRegionContext(
-                            ctx_region=ctx_r,
-                            ir_region=ir_r,
-                            source=ctx_r.source,
-                            entity_spec=next(
-                                (
-                                    e
-                                    for e in (
-                                        spec.domain.entities
-                                        if spec and hasattr(spec, "domain") and spec.domain
-                                        else []
-                                    )
-                                    if e.name == ctx_r.source
-                                ),
-                                None,
-                            ),
-                            attention_signals=[],
-                            ws_access=_ws_access,
-                            repositories=repositories,
-                            require_auth=require_auth,
-                            auth_middleware=auth_middleware,
-                        )
-                    ]
-                ]
-
-                _batch_ctxs = list(_all_region_ctxs)
+                # Batch endpoint: collect all region contexts (already built above)
+                _batch_ctxs = list(_ws_region_ctxs)
 
                 @app.get(
                     f"/api/workspaces/{ws_name}/batch",

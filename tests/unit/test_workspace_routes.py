@@ -981,7 +981,194 @@ class TestFunnelChartTemplate:
 
 
 # ---------------------------------------------------------------------------
-# Step 11 — Aggregate metric batching (#283)
+# Step 11 — Template constant folding: pre-computed columns (#282)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildEntityColumns:
+    """_build_entity_columns() pre-computes column metadata from entity spec."""
+
+    def test_basic_columns(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="title",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="str")),
+                ),
+                SimpleNamespace(
+                    name="completed",
+                    label="Done",
+                    type=SimpleNamespace(kind=SimpleNamespace(value="bool")),
+                ),
+            ],
+            state_machine=None,
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 2  # id is skipped
+        assert cols[0]["key"] == "title"
+        assert cols[0]["type"] == "text"
+        assert cols[0]["sortable"] is True
+        assert cols[1]["key"] == "completed"
+        assert cols[1]["type"] == "bool"
+        assert cols[1]["filterable"] is True
+        assert cols[1]["filter_options"] == ["true", "false"]
+
+    def test_enum_column_has_filter_options(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="priority",
+                    label="Priority",
+                    type=SimpleNamespace(
+                        kind=SimpleNamespace(value="enum"),
+                        enum_values=["low", "medium", "high"],
+                    ),
+                ),
+            ],
+            state_machine=None,
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 1
+        assert cols[0]["type"] == "badge"
+        assert cols[0]["filterable"] is True
+        assert cols[0]["filter_options"] == ["low", "medium", "high"]
+
+    def test_ref_column(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="project_id",
+                    label="Project",
+                    type=SimpleNamespace(kind=SimpleNamespace(value="ref")),
+                ),
+            ],
+            state_machine=None,
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 1
+        assert cols[0]["key"] == "project"
+        assert cols[0]["type"] == "ref"
+        assert cols[0]["sortable"] is False
+
+    def test_state_machine_column(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="status",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="str")),
+                ),
+            ],
+            state_machine=SimpleNamespace(
+                status_field="status",
+                states=["draft", "active", "closed"],
+            ),
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 1
+        assert cols[0]["type"] == "badge"
+        assert cols[0]["filterable"] is True
+        assert cols[0]["filter_options"] == ["draft", "active", "closed"]
+
+    def test_money_column(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="amount",
+                    label="Amount",
+                    type=SimpleNamespace(kind=SimpleNamespace(value="money"), currency_code="USD"),
+                ),
+            ],
+            state_machine=None,
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 1
+        assert cols[0]["key"] == "amount_minor"
+        assert cols[0]["type"] == "currency"
+        assert cols[0]["currency_code"] == "USD"
+
+    def test_max_8_columns(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        fields = [
+            SimpleNamespace(name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid")))
+        ]
+        for i in range(12):
+            fields.append(
+                SimpleNamespace(
+                    name=f"field_{i}",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="str")),
+                )
+            )
+        entity = SimpleNamespace(fields=fields, state_machine=None)
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 8
+
+    def test_none_entity_returns_empty(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        assert _build_entity_columns(None) == []
+
+    def test_hidden_relation_types(self) -> None:
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="items",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="has_many")),
+                ),
+                SimpleNamespace(
+                    name="parent",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="belongs_to")),
+                ),
+                SimpleNamespace(
+                    name="title",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="str")),
+                ),
+            ],
+            state_machine=None,
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 1
+        assert cols[0]["key"] == "title"
+
+
+# ---------------------------------------------------------------------------
+# Step 12 — Aggregate metric batching (#283)
 # ---------------------------------------------------------------------------
 
 
@@ -1207,7 +1394,7 @@ class TestWorkspaceBatchEndpoint:
         resp = client.get("/api/workspaces/overview/batch")
         assert resp.status_code == 200
 
-    def test_batch_returns_all_regions(self, batch_app: Any) -> None:
+    def test_batch_returns_region_data(self, batch_app: Any) -> None:
         """Batch endpoint should return data for all regions."""
         from fastapi.testclient import TestClient
 
