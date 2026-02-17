@@ -844,13 +844,17 @@ def create_auth_routes(
         if session_id:
             auth_store.delete_session(session_id)
 
-        # Detect HTML form submission (browser) vs API call
+        # Detect request type: htmx (boosted form), browser, or API
         accept = request.headers.get("accept", "")
+        is_htmx = request.headers.get("hx-request") == "true"
         is_browser = "text/html" in accept and "application/json" not in accept
 
         response: Response
-        if is_browser:
-            response = RedirectResponse(url="/login", status_code=303)
+        if is_htmx:
+            # htmx: use HX-Redirect for full-page navigation (clears client state)
+            response = Response(status_code=200, headers={"HX-Redirect": "/"})
+        elif is_browser:
+            response = RedirectResponse(url="/", status_code=303)
         else:
             response = JSONResponse(content={"message": "Logout successful"})
         response.delete_cookie(cookie_name)
