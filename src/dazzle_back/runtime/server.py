@@ -179,7 +179,11 @@ async def _workspace_region_handler(
                         rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
                         include_rels.append(rel_name)
 
-            limit = ctx.ctx_region.limit or page_size
+            # Kanban needs all items to group across columns
+            if ctx.ctx_region.display == "KANBAN" and not ctx.ctx_region.limit:
+                limit = 200
+            else:
+                limit = ctx.ctx_region.limit or page_size
             result = await repo.list(
                 page=page,
                 page_size=limit,
@@ -354,6 +358,26 @@ async def _workspace_region_handler(
             if best:
                 item["_attention"] = best
 
+    # Kanban: extract column values from group_by field's enum/state-machine values
+    kanban_columns: list[str] = []
+    group_by = ctx.ctx_region.group_by
+    if group_by and ctx.ctx_region.display == "KANBAN" and ctx.entity_spec:
+        # Try enum values first, then state machine states
+        for f in getattr(ctx.entity_spec, "fields", []):
+            if f.name == group_by:
+                ft = getattr(f, "type", None)
+                ev = getattr(ft, "enum_values", None)
+                if ev:
+                    kanban_columns = list(ev)
+                break
+        if not kanban_columns:
+            sm = getattr(ctx.entity_spec, "state_machine", None)
+            if sm and getattr(sm, "status_field", "") == group_by:
+                states = getattr(sm, "states", [])
+                kanban_columns = [
+                    s if isinstance(s, str) else getattr(s, "name", str(s)) for s in states
+                ]
+
     html = render_fragment(
         ctx.ctx_region.template,
         title=ctx.ctx_region.title,
@@ -371,6 +395,8 @@ async def _workspace_region_handler(
         region_name=ctx.ctx_region.name,
         filter_columns=filter_columns,
         active_filters=active_filters,
+        group_by=group_by,
+        kanban_columns=kanban_columns,
     )
     return HTMLResponse(content=html)
 

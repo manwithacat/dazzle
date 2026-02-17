@@ -31,7 +31,7 @@ class RegionContext(BaseModel):
     name: str
     title: str = ""
     source: str = ""  # Entity or surface name
-    display: str = "LIST"  # LIST, GRID, METRICS, SUMMARY, DETAIL
+    display: str = "LIST"  # LIST, GRID, METRICS, SUMMARY, DETAIL, KANBAN
     endpoint: str = ""  # HTMX data endpoint
     filter_expr: str = ""  # Serialised filter for query params
     sort: list[dict[str, str]] = Field(default_factory=list)
@@ -77,6 +77,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "METRICS": "workspace/regions/metrics.html",
     "SUMMARY": "workspace/regions/metrics.html",
     "DETAIL": "workspace/regions/detail.html",
+    "KANBAN": "workspace/regions/kanban.html",
 }
 
 # Region span classes for command_center stage

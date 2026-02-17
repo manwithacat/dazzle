@@ -541,3 +541,188 @@ class TestWorkspaceSSEConditional:
         html = render_fragment("workspace/_content.html", workspace=ws)
         assert "hx-get=" in html
         assert 'hx-trigger="load"' in html
+
+
+# ---------------------------------------------------------------------------
+# Step 8 — Kanban display mode (#274)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestKanbanTemplate:
+    """Kanban template renders items grouped into columns by a field."""
+
+    def test_kanban_renders_columns(self) -> None:
+        html = render_fragment(
+            "workspace/regions/kanban.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+                {"key": "status", "label": "Status", "type": "badge", "sortable": False},
+            ],
+            items=[
+                {"id": "1", "title": "Fix bug", "status": "todo"},
+                {"id": "2", "title": "Write docs", "status": "in_progress"},
+                {"id": "3", "title": "Ship it", "status": "todo"},
+            ],
+            kanban_columns=["todo", "in_progress", "done"],
+            group_by="status",
+            display_key="title",
+            total=3,
+            action_url="",
+            empty_message="No tasks.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        # Verify column headers are rendered
+        assert "todo" in html
+        assert "in_progress" in html
+        assert "done" in html
+        # Verify items are present
+        assert "Fix bug" in html
+        assert "Write docs" in html
+        assert "Ship it" in html
+
+    def test_kanban_empty_column_shows_placeholder(self) -> None:
+        html = render_fragment(
+            "workspace/regions/kanban.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+            ],
+            items=[
+                {"id": "1", "title": "Fix bug", "status": "todo"},
+            ],
+            kanban_columns=["todo", "done"],
+            group_by="status",
+            display_key="title",
+            total=1,
+            action_url="",
+            empty_message="No tasks.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        # "done" column should show empty placeholder
+        assert "No items" in html
+
+    def test_kanban_with_action_url(self) -> None:
+        html = render_fragment(
+            "workspace/regions/kanban.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+            ],
+            items=[
+                {"id": "abc-123", "title": "Fix bug", "status": "todo"},
+            ],
+            kanban_columns=["todo"],
+            group_by="status",
+            display_key="title",
+            total=1,
+            action_url="/tasks/{id}",
+            empty_message="No tasks.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "/tasks/abc-123" in html
+        assert "hx-get" in html
+
+    def test_kanban_ref_column_resolved(self) -> None:
+        html = render_fragment(
+            "workspace/regions/kanban.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+                {"key": "assigned_to", "label": "Assigned", "type": "ref", "sortable": False},
+            ],
+            items=[
+                {
+                    "id": "1",
+                    "title": "Review PR",
+                    "status": "todo",
+                    "assigned_to": {"id": "u1", "name": "Alice"},
+                },
+            ],
+            kanban_columns=["todo"],
+            group_by="status",
+            display_key="title",
+            total=1,
+            action_url="",
+            empty_message="No tasks.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "Alice" in html
+
+    def test_kanban_no_items(self) -> None:
+        html = render_fragment(
+            "workspace/regions/kanban.html",
+            title="Tasks",
+            columns=[],
+            items=[],
+            kanban_columns=[],
+            group_by="status",
+            display_key="title",
+            total=0,
+            action_url="",
+            empty_message="No tasks yet.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "No tasks yet." in html
+
+
+class TestKanbanTemplateMapping:
+    """KANBAN display mode maps to kanban.html template."""
+
+    def test_kanban_in_display_template_map(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert "KANBAN" in DISPLAY_TEMPLATE_MAP
+        assert DISPLAY_TEMPLATE_MAP["KANBAN"] == "workspace/regions/kanban.html"
+
+    def test_build_workspace_context_selects_kanban_template(self) -> None:
+        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(
+            name="board",
+            title="Task Board",
+            regions=[
+                WorkspaceRegion(
+                    name="tasks_by_status",
+                    source="Task",
+                    display="kanban",
+                    group_by="status",
+                ),
+            ],
+        )
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[0].template == "workspace/regions/kanban.html"
+        assert ctx.regions[0].display == "KANBAN"
+        assert ctx.regions[0].group_by == "status"

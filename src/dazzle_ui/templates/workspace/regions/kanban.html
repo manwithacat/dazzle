@@ -1,0 +1,64 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if items and kanban_columns %}
+    <div class="flex gap-3 overflow-x-auto pb-2" style="min-height: 200px;">
+      {% for col_value in kanban_columns %}
+      {% set col_items = items | selectattr(group_by, "equalto", col_value) | list %}
+      <div class="flex-shrink-0 bg-base-200 rounded-lg p-2" style="width: 260px; min-width: 260px;">
+        <div class="flex items-center justify-between mb-2 px-1">
+          <span class="badge badge-sm {{ col_value | badge_class }}">{{ col_value }}</span>
+          <span class="text-xs opacity-50">{{ col_items | length }}</span>
+        </div>
+        <div class="space-y-2 max-h-[60vh] overflow-y-auto">
+          {% for item in col_items %}
+          <div class="card card-compact bg-base-100 shadow-sm{% if action_url %} cursor-pointer hover:shadow-md transition-shadow{% endif %}"
+               {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+               hx-push-url="true" hx-target="body"{% endif %}>
+            <div class="card-body p-2">
+              <h4 class="text-sm font-medium">{{ item[display_key] | default(item.get("name", "Item")) }}</h4>
+              {% for meta_col in columns %}
+              {% if meta_col.key != display_key and meta_col.key != group_by %}
+              <p class="text-xs">
+                <span class="opacity-60">{{ meta_col.label }}:</span>
+                {% if meta_col.type == "badge" %}
+                  <span class="badge badge-xs {{ item[meta_col.key] | badge_class }}">{{ item[meta_col.key] | default("") }}</span>
+                {% elif meta_col.type == "bool" %}
+                  {{ item[meta_col.key] | bool_icon }}
+                {% elif meta_col.type == "date" %}
+                  {{ item[meta_col.key] | timeago }}
+                {% elif meta_col.type == "currency" %}
+                  {{ item[meta_col.key] | currency }}
+                {% elif meta_col.type == "ref" %}
+                  {% set ref = item[meta_col.key] %}
+                  {% if ref is mapping %}{{ ref.get("name") or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
+                {% else %}
+                  {{ item[meta_col.key] | default("") | truncate_text }}
+                {% endif %}
+              </p>
+              {% endif %}
+              {% endfor %}
+              {% set attn = item.get("_attention") if item.get is defined else none %}
+              {% if attn %}
+              <p class="text-xs {% if attn.level == 'critical' %}text-error{% elif attn.level == 'warning' %}text-warning{% else %}text-info{% endif %}">
+                {{ attn.message }}
+              </p>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+          {% if not col_items %}
+          <p class="text-xs opacity-40 text-center py-4">No items</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% if total > items | length %}
+    <p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
+    {% endif %}
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% endif %}
+  </div>
+</div>
