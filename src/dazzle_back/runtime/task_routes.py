@@ -23,6 +23,17 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 
 # Request/Response Models
+class ProcessStepContext(BaseModel):
+    """Process context for a task — where it sits in the workflow."""
+
+    process_name: str
+    step_index: int = 0
+    total_steps: int = 0
+    previous_step: str | None = None
+    next_step: str | None = None
+    next_step_kind: str | None = None
+
+
 class TaskSummary(BaseModel):
     """Summary of a task for listing."""
 
@@ -39,6 +50,7 @@ class TaskSummary(BaseModel):
     due_at: str
     is_overdue: bool = False
     created_at: str
+    process_context: ProcessStepContext | None = None
 
 
 class TaskOutcomeResponse(BaseModel):
@@ -69,6 +81,7 @@ class TaskDetailResponse(BaseModel):
     completed_at: str | None
     created_at: str
     outcomes: list[TaskOutcomeResponse] = Field(default_factory=list)
+    process_context: ProcessStepContext | None = None
 
 
 class CompleteTaskRequest(BaseModel):
@@ -116,7 +129,60 @@ def get_process_manager() -> Any:
     return _process_manager
 
 
-def _task_to_summary(task: ProcessTask, process_name: str | None = None) -> TaskSummary:
+def _build_process_context(
+    process_name: str,
+    step_name: str,
+    manager: Any,
+) -> ProcessStepContext | None:
+    """Build process step context showing where a task sits in the workflow."""
+    process_spec = manager.get_process_spec(process_name)
+    if not process_spec or not process_spec.steps:
+        return None
+
+    steps = process_spec.steps
+    total = len(steps)
+    step_index = 0
+    prev_step = None
+    next_step = None
+    next_kind = None
+
+    for i, s in enumerate(steps):
+        if s.name == step_name:
+            step_index = i
+            if i > 0:
+                prev_step = steps[i - 1].name
+            # Use on_success if defined, otherwise next sequential step
+            if s.on_success:
+                next_step = s.on_success
+                target = process_spec.get_step(s.on_success)
+                if target:
+                    next_kind = (
+                        target.kind.value if hasattr(target.kind, "value") else str(target.kind)
+                    )
+            elif i + 1 < total:
+                next_step = steps[i + 1].name
+                next_kind = (
+                    steps[i + 1].kind.value
+                    if hasattr(steps[i + 1].kind, "value")
+                    else str(steps[i + 1].kind)
+                )
+            break
+
+    return ProcessStepContext(
+        process_name=process_name,
+        step_index=step_index,
+        total_steps=total,
+        previous_step=prev_step,
+        next_step=next_step,
+        next_step_kind=next_kind,
+    )
+
+
+def _task_to_summary(
+    task: ProcessTask,
+    process_name: str | None = None,
+    process_context: ProcessStepContext | None = None,
+) -> TaskSummary:
     """Convert ProcessTask to TaskSummary."""
     from datetime import datetime
 
@@ -139,6 +205,7 @@ def _task_to_summary(task: ProcessTask, process_name: str | None = None) -> Task
         due_at=task.due_at.isoformat(),
         is_overdue=now > due_at,
         created_at=task.created_at.isoformat(),
+        process_context=process_context,
     )
 
 
@@ -146,6 +213,7 @@ def _task_to_detail(
     task: ProcessTask,
     process_name: str | None = None,
     outcomes: list[TaskOutcomeResponse] | None = None,
+    process_context: ProcessStepContext | None = None,
 ) -> TaskDetailResponse:
     """Convert ProcessTask to TaskDetailResponse."""
     return TaskDetailResponse(
@@ -165,6 +233,7 @@ def _task_to_detail(
         completed_at=task.completed_at.isoformat() if task.completed_at else None,
         created_at=task.created_at.isoformat(),
         outcomes=outcomes or [],
+        process_context=process_context,
     )
 
 
@@ -197,12 +266,15 @@ async def list_tasks(
         limit=limit,
     )
 
-    # Get process names for each task
+    # Get process names and context for each task
     summaries = []
     for task in tasks:
         run = await manager.get_run(task.run_id)
         process_name = run.process_name if run else None
-        summaries.append(_task_to_summary(task, process_name))
+        ctx = (
+            _build_process_context(process_name, task.step_name, manager) if process_name else None
+        )
+        summaries.append(_task_to_summary(task, process_name, ctx))
 
     return TaskListResponse(tasks=summaries, total=len(summaries))
 
@@ -242,7 +314,10 @@ async def get_task(task_id: str) -> TaskDetailResponse:
                         )
                     )
 
-    return _task_to_detail(task, process_name, outcomes)
+    # Build process step context
+    ctx = _build_process_context(process_name, task.step_name, manager) if process_name else None
+
+    return _task_to_detail(task, process_name, outcomes, ctx)
 
 
 @router.post("/{task_id}/complete", response_model=CompleteTaskResponse)
