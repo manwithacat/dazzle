@@ -1451,9 +1451,12 @@ class DazzleBackendApp:
             route = p.get("default_route")
             if route:
                 _persona_routes[p["id"]] = route
+        # Default signup role: first persona ID (public-facing persona by convention)
+        _default_signup_roles = [self._personas[0]["id"]] if self._personas else None
         auth_router = create_auth_routes(
             self._auth_store,
             persona_routes=_persona_routes or None,
+            default_signup_roles=_default_signup_roles,
         )
         assert self._app is not None
         self._app.include_router(auth_router)

@@ -746,6 +746,7 @@ def create_auth_routes(
     cookie_name: str = "dazzle_session",
     session_expires_days: int = 7,
     persona_routes: dict[str, str] | None = None,
+    default_signup_roles: list[str] | None = None,
 ) -> APIRouter:
     """
     Create authentication routes for FastAPI.
@@ -759,6 +760,8 @@ def create_auth_routes(
         persona_routes: Mapping of persona/role ID to default route URL.
             Used to include ``redirect_url`` in the login response so the
             client can navigate to the persona's landing page.
+        default_signup_roles: Roles to assign to newly registered users.
+            Typically the first persona ID (e.g. ``["customer"]``).
     """
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is required for auth routes")
@@ -874,12 +877,13 @@ def create_auth_routes(
         if auth_store.get_user_by_email(data.email):
             raise HTTPException(status_code=400, detail="Email already registered")
 
-        # Create user
+        # Create user with default signup roles
         try:
             user = auth_store.create_user(
                 email=data.email,
                 password=data.password,
                 username=data.username,
+                roles=list(default_signup_roles) if default_signup_roles else None,
             )
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
@@ -892,6 +896,15 @@ def create_auth_routes(
             user_agent=request.headers.get("user-agent"),
         )
 
+        # Resolve persona landing page from assigned roles
+        redirect_url = "/app"
+        if persona_routes and user.roles:
+            for role in user.roles:
+                route = persona_routes.get(role)
+                if route:
+                    redirect_url = route
+                    break
+
         response = JSONResponse(
             content={
                 "user": {
@@ -900,6 +913,7 @@ def create_auth_routes(
                     "username": user.username,
                     "roles": user.roles,
                 },
+                "redirect_url": redirect_url,
                 "message": "Registration successful",
             },
             status_code=201,
