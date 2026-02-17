@@ -1601,6 +1601,17 @@ class DazzleBackendApp:
             audit_logger = AuditLogger(database_url=self._database_url)
             audit_logger.start()
 
+        # Project route overrides — registered first for priority (v0.29.0)
+        if self._project_root:
+            try:
+                from dazzle_back.runtime.route_overrides import build_override_router
+
+                override_router = build_override_router(self._project_root / "routes")
+                if override_router is not None:
+                    self._app.include_router(override_router)
+            except Exception:
+                logger.debug("Route override discovery skipped", exc_info=True)
+
         # Entity CRUD routes
         service_specs = {svc.name: svc for svc in self.spec.services}
         route_generator = RouteGenerator(
