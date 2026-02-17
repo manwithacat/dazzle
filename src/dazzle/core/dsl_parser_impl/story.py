@@ -45,6 +45,7 @@ class StoryParserMixin:
         expect_identifier_or_keyword: Any
         current_token: Any
         file: Any
+        _source_location: Any
 
     def _parse_compound_id(self) -> str:
         """
@@ -82,6 +83,7 @@ class StoryParserMixin:
         """
         # story ST-001 "Title":
         # Story ID can be compound like ST-001, so read tokens until we hit STRING
+        loc = self._source_location()
         story_id = self._parse_compound_id()
         title = self.expect(TokenType.STRING).value
         self.expect(TokenType.COLON)
@@ -192,6 +194,7 @@ class StoryParserMixin:
             when=when,
             then=then,
             unless=unless,
+            source=loc,
         )
 
     def _parse_story_trigger(self, trigger_str: str) -> ir.StoryTrigger:

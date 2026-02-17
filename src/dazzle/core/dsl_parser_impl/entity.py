@@ -43,9 +43,12 @@ class EntityParserMixin:
         parse_publish_directive: Any
         # v0.29.0: Expression bridge from BaseParser
         collect_line_as_expr: Any
+        # v0.31.0: Source location helper from BaseParser
+        _source_location: Any
 
     def parse_entity(self) -> ir.EntitySpec:
         """Parse entity declaration."""
+        loc = self._source_location()
         self.expect(TokenType.ENTITY)
 
         name = self.expect(TokenType.IDENTIFIER).value
@@ -509,6 +512,7 @@ class EntityParserMixin:
             state_machine=state_machine,
             examples=examples,
             publishes=publishes,
+            source=loc,
         )
 
     def _map_archetype_kind(self, value: str) -> ir.ArchetypeKind:

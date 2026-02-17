@@ -30,9 +30,11 @@ class SurfaceParserMixin:
         parse_persona_variant: Any  # From UXParserMixin
         _parse_workspace_access: Any  # From WorkspaceParserMixin
         collect_line_as_expr: Any  # From BaseParser
+        _source_location: Any  # v0.31.0: Source location helper from BaseParser
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""
+        loc = self._source_location()
         self.expect(TokenType.SURFACE)
 
         name = self.expect(TokenType.IDENTIFIER).value
@@ -149,6 +151,7 @@ class SurfaceParserMixin:
             actions=actions,
             ux=ux_spec,
             access=access_spec,
+            source=loc,
         )
 
     def _parse_surface_access(self) -> ir.SurfaceAccessSpec:

@@ -1117,7 +1117,9 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
 
     # --- Collect all defined constructs ---
     all_entities = {e.name for e in appspec.domain.entities}
+    entity_locs = {e.name: e.source for e in appspec.domain.entities}
     all_surfaces = {s.name for s in appspec.surfaces}
+    surface_locs = {s.name: s.source for s in appspec.surfaces}
     # --- Collect all entity references ---
     used_entities: set[str] = set()
 
@@ -1152,7 +1154,9 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
     unused_entities = all_entities - used_entities
     if unused_entities:
         for name in sorted(unused_entities):
-            warnings.append(f"Dead construct: entity '{name}' is never referenced")
+            loc = entity_locs.get(name)
+            loc_suffix = f" (defined at {loc})" if loc else ""
+            warnings.append(f"Dead construct: entity '{name}' is never referenced{loc_suffix}")
 
     # --- Collect all surface references ---
     used_surfaces: set[str] = set()
@@ -1181,9 +1185,11 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
     unused_surfaces = all_surfaces - used_surfaces
     if unused_surfaces:
         for name in sorted(unused_surfaces):
+            loc = surface_locs.get(name)
+            loc_suffix = f" (defined at {loc})" if loc else ""
             warnings.append(
                 f"Dead construct: surface '{name}' is not referenced by any "
-                f"workspace, experience, or process"
+                f"workspace, experience, or process{loc_suffix}"
             )
 
     # --- Collect all experience references ---

@@ -81,6 +81,7 @@ class ProcessParserMixin:
         expect_identifier_or_keyword: Any
         current_token: Any
         file: Any
+        _source_location: Any
 
     def parse_process(self) -> ir.ProcessSpec:
         """
@@ -102,6 +103,7 @@ class ProcessParserMixin:
         Returns:
             ProcessSpec with parsed values
         """
+        loc = self._source_location()
         self.expect(TokenType.PROCESS)
         name = self.expect_identifier_or_keyword().value
 
@@ -215,6 +217,7 @@ class ProcessParserMixin:
             timeout_seconds=timeout_seconds,
             overlap_policy=overlap_policy,
             events=events,
+            source=loc,
         )
 
     def parse_schedule(self) -> ir.ScheduleSpec:

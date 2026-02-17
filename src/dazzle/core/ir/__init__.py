@@ -359,6 +359,9 @@ from .llm_events import (
     get_all_llm_streams,
 )
 
+# Source locations (v0.31.0)
+from .location import SourceLocation
+
 # Messaging Channels (v0.9.0)
 from .messaging import (
     AssetKind,
@@ -763,6 +766,8 @@ __all__ = [
     "LayoutSurface",
     "LayoutPlan",
     "UXLayouts",
+    # Source locations
+    "SourceLocation",
     # Module
     "AppConfigSpec",
     "ModuleFragment",

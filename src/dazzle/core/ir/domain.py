@@ -17,6 +17,7 @@ from .conditions import ConditionExpr
 from .eventing import PublishSpec
 from .fields import FieldSpec
 from .invariant import InvariantSpec
+from .location import SourceLocation
 from .state_machine import StateMachineSpec
 
 
@@ -220,6 +221,8 @@ class EntitySpec(BaseModel):
     examples: list[ExampleRecord] = Field(default_factory=list)
     # v0.18.0: Event publishing
     publishes: list[PublishSpec] = Field(default_factory=list)
+    # v0.31.0: Source location for error reporting
+    source: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)
 

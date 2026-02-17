@@ -21,6 +21,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .location import SourceLocation
+
 
 class StoryTrigger(StrEnum):
     """
@@ -204,6 +206,8 @@ class StorySpec(BaseModel):
     status: StoryStatus = Field(default=StoryStatus.DRAFT, description="Acceptance status")
     created_at: str | None = Field(default=None, description="ISO 8601 timestamp when created")
     accepted_at: str | None = Field(default=None, description="ISO 8601 timestamp when accepted")
+    # v0.31.0: Source location for error reporting
+    source: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)
 

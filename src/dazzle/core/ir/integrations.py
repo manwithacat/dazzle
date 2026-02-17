@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .location import SourceLocation
+
 if TYPE_CHECKING:
     from .expressions import Expr
 
@@ -305,5 +307,7 @@ class IntegrationSpec(BaseModel):
     actions: list[IntegrationAction] = Field(default_factory=list)
     syncs: list[IntegrationSync] = Field(default_factory=list)
     mappings: list[IntegrationMapping] = Field(default_factory=list)
+    # v0.31.0: Source location for error reporting
+    source: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)

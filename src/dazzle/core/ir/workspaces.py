@@ -12,6 +12,7 @@ from enum import StrEnum
 from pydantic import BaseModel, ConfigDict, Field
 
 from .conditions import ConditionExpr
+from .location import SourceLocation
 from .ux import SortSpec, UXSpec
 
 
@@ -120,6 +121,8 @@ class WorkspaceSpec(BaseModel):
     regions: list[WorkspaceRegion] = Field(default_factory=list)
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
+    # v0.31.0: Source location for error reporting
+    source: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)
 

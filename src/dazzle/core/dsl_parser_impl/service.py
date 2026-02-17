@@ -29,6 +29,7 @@ class ServiceParserMixin:
         parse_type_spec: Any
         parse_field_modifiers: Any
         _parse_surface_access: Any  # From SurfaceParserMixin
+        _source_location: Any  # v0.31.0: Source location helper from BaseParser
 
     def parse_service(self) -> ir.APISpec | ir.DomainServiceSpec:
         """Parse service declaration (external API or domain service).
@@ -380,6 +381,7 @@ class ServiceParserMixin:
 
     def parse_experience(self) -> ir.ExperienceSpec:
         """Parse experience declaration."""
+        loc = self._source_location()
         self.expect(TokenType.EXPERIENCE)
 
         name = self.expect(TokenType.IDENTIFIER).value
@@ -437,6 +439,7 @@ class ServiceParserMixin:
             steps=steps,
             access=access_spec,
             priority=priority,
+            source=loc,
         )
 
     def parse_experience_step(self) -> ir.ExperienceStep:

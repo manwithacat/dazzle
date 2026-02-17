@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .location import SourceLocation
 from .ux import UXSpec
 
 if TYPE_CHECKING:
@@ -174,6 +175,8 @@ class SurfaceSpec(BaseModel):
     ux: UXSpec | None = None  # UX Semantic Layer extension
     access: SurfaceAccessSpec | None = None  # Auth/RBAC access control
     priority: BusinessPriority = BusinessPriority.MEDIUM
+    # v0.31.0: Source location for error reporting
+    source: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)
 

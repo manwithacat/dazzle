@@ -2209,5 +2209,114 @@ process TicketFlow "Ticket Flow":
         assert len(fragment.processes) == 1
 
 
+class TestSourceLocations:
+    """Tests for source location tracking on IR nodes (v0.31.0)."""
+
+    def test_entity_has_source_location(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+        assert task.source is not None
+        assert task.source.file == "test.dsl"
+        assert task.source.line == 5
+        assert task.source.column == 1
+
+    def test_surface_has_source_location(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.source is not None
+        assert surface.source.file == "test.dsl"
+        assert surface.source.line == 9
+
+    def test_workspace_has_source_location(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  purpose: "Overview"
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        workspace = fragment.workspaces[0]
+        assert workspace.source is not None
+        assert workspace.source.file == "test.dsl"
+        assert workspace.source.line == 8
+
+    def test_process_has_source_location(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[draft,confirmed]=draft
+  transitions:
+    draft -> confirmed
+
+process order_flow "Order Flow":
+  trigger:
+    when: entity Order status -> confirmed
+  steps:
+    - name: validate
+      kind: service
+      service: OrderService.validate
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        process = fragment.processes[0]
+        assert process.source is not None
+        assert process.source.file == "test.dsl"
+
+    def test_source_location_str(self):
+        """Test __str__ representation."""
+        from dazzle.core.ir import SourceLocation
+
+        loc = SourceLocation(file="dsl/app.dsl", line=42, column=5)
+        assert str(loc) == "dsl/app.dsl:42:5"
+
+    def test_multiple_constructs_have_distinct_locations(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+entity User "User":
+  id: uuid pk
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        task = fragment.entities[0]
+        user = fragment.entities[1]
+        assert task.source is not None
+        assert user.source is not None
+        assert task.source.line != user.source.line
+
+
 if __name__ == "__main__":
     main()

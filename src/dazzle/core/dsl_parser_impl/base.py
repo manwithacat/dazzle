@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from ..errors import make_parse_error
+from ..ir.location import SourceLocation
 from ..lexer import Token, TokenType
 
 if TYPE_CHECKING:
@@ -32,6 +33,7 @@ class ParserProtocol(Protocol):
     def peek_token(self, offset: int = 1) -> Token: ...
     def advance(self) -> Token: ...
     def expect(self, token_type: TokenType) -> Token: ...
+    def _source_location(self, token: Token | None = None) -> SourceLocation: ...
     def expect_identifier_or_keyword(self) -> Token: ...
     def match(self, *token_types: TokenType) -> bool: ...
     def skip_newlines(self) -> None: ...
@@ -67,6 +69,11 @@ class BaseParser:
         self.tokens = tokens
         self.file = file
         self.pos = 0
+
+    def _source_location(self, token: Token | None = None) -> SourceLocation:
+        """Create a SourceLocation from a token (defaults to current token)."""
+        t = token or self.current_token()
+        return SourceLocation(file=str(self.file), line=t.line, column=t.column)
 
     def current_token(self) -> Token:
         """Get current token."""

@@ -38,6 +38,7 @@ class WorkspaceParserMixin:
         parse_ux_block: Any
         current_token: Any
         file: Any
+        _source_location: Any
 
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """
@@ -59,6 +60,7 @@ class WorkspaceParserMixin:
               ux:
                 ...
         """
+        loc = self._source_location()
         self.expect(TokenType.WORKSPACE)
 
         name = self.expect_identifier_or_keyword().value
@@ -126,6 +128,7 @@ class WorkspaceParserMixin:
             regions=regions,
             ux=ux_spec,
             access=access_spec,
+            source=loc,
         )
 
     def _parse_workspace_access(self) -> ir.WorkspaceAccessSpec:

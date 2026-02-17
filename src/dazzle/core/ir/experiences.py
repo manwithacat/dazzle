@@ -11,6 +11,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .location import SourceLocation
 from .surfaces import BusinessPriority, SurfaceAccessSpec
 
 
@@ -95,6 +96,8 @@ class ExperienceSpec(BaseModel):
     steps: list[ExperienceStep] = Field(default_factory=list)
     access: SurfaceAccessSpec | None = None
     priority: BusinessPriority = BusinessPriority.MEDIUM
+    # v0.31.0: Source location for error reporting
+    source: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)
 

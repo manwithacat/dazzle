@@ -17,6 +17,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .location import SourceLocation
+
 
 class ProcessTriggerKind(StrEnum):
     """Types of events that can trigger a process."""
@@ -335,6 +337,8 @@ class ProcessSpec(BaseModel):
         default_factory=ProcessEventEmission,
         description="HLESS events to emit",
     )
+    # v0.31.0: Source location for error reporting
+    source: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)
 

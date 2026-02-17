@@ -56,9 +56,11 @@ class IntegrationParserMixin:
         skip_newlines: Any
         file: Any
         collect_line_as_expr: Any
+        _source_location: Any
 
     def parse_integration(self) -> ir.IntegrationSpec:
         """Parse integration declaration."""
+        loc = self._source_location()
         self.expect(TokenType.INTEGRATION)
 
         name = self.expect(TokenType.IDENTIFIER).value
@@ -173,6 +175,7 @@ class IntegrationParserMixin:
             actions=actions,
             syncs=syncs,
             mappings=mappings,
+            source=loc,
         )
 
     # --- v0.30.0: Declarative mapping blocks ---
