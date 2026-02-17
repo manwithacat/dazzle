@@ -726,3 +726,97 @@ class TestKanbanTemplateMapping:
         assert ctx.regions[0].template == "workspace/regions/kanban.html"
         assert ctx.regions[0].display == "KANBAN"
         assert ctx.regions[0].group_by == "status"
+
+
+# ---------------------------------------------------------------------------
+# Step 9 — Timeline display mode (#274)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestTimelineTemplate:
+    """Timeline template renders items as a vertical timeline."""
+
+    def test_timeline_renders_items(self) -> None:
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            title="Audit Log",
+            columns=[
+                {"key": "action", "label": "Action", "type": "text", "sortable": True},
+                {"key": "status", "label": "Status", "type": "badge", "sortable": False},
+                {"key": "created_at", "label": "When", "type": "date", "sortable": True},
+            ],
+            items=[
+                {
+                    "id": "1",
+                    "action": "Created company",
+                    "status": "complete",
+                    "created_at": "2026-01-15T10:30:00",
+                },
+                {
+                    "id": "2",
+                    "action": "Started CDD",
+                    "status": "in_progress",
+                    "created_at": "2026-01-15T10:35:00",
+                },
+            ],
+            display_key="action",
+            total=2,
+            action_url="",
+            empty_message="No events.",
+            endpoint="/api/workspaces/ws/regions/log",
+            region_name="log",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "Created company" in html
+        assert "Started CDD" in html
+        assert "timeline" in html
+
+    def test_timeline_empty(self) -> None:
+        html = render_fragment(
+            "workspace/regions/timeline.html",
+            title="Events",
+            columns=[],
+            items=[],
+            display_key="action",
+            total=0,
+            action_url="",
+            empty_message="Nothing happened yet.",
+            endpoint="/api/workspaces/ws/regions/events",
+            region_name="events",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "Nothing happened yet." in html
+
+    def test_timeline_in_display_template_map(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert "TIMELINE" in DISPLAY_TEMPLATE_MAP
+        assert DISPLAY_TEMPLATE_MAP["TIMELINE"] == "workspace/regions/timeline.html"
+
+    def test_build_workspace_context_selects_timeline_template(self) -> None:
+        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(
+            name="history",
+            title="History",
+            regions=[
+                WorkspaceRegion(
+                    name="audit_log",
+                    source="AuditLog",
+                    display="timeline",
+                ),
+            ],
+        )
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[0].template == "workspace/regions/timeline.html"
+        assert ctx.regions[0].display == "TIMELINE"

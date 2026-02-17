@@ -1,0 +1,64 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if items %}
+    <ul class="timeline timeline-vertical timeline-compact">
+      {% for item in items %}
+      <li>
+        {% if not loop.first %}<hr class="bg-base-300"/>{% endif %}
+        <div class="timeline-start text-xs opacity-60 min-w-[80px]">
+          {% for col in columns %}
+          {% if col.type == "date" %}
+          {{ item[col.key] | timeago }}
+          {% endif %}
+          {% endfor %}
+        </div>
+        <div class="timeline-middle">
+          {% set attn = item.get("_attention") if item.get is defined else none %}
+          {% set status_col = none %}
+          {% for col in columns %}{% if col.type == "badge" %}{% set status_col = col %}{% endif %}{% endfor %}
+          {% if attn and attn.level == "critical" %}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-error"><circle cx="10" cy="10" r="6"/></svg>
+          {% elif attn and attn.level == "warning" %}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-warning"><circle cx="10" cy="10" r="6"/></svg>
+          {% else %}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 text-primary"><circle cx="10" cy="10" r="6"/></svg>
+          {% endif %}
+        </div>
+        <div class="timeline-end timeline-box py-1 px-2{% if action_url %} cursor-pointer hover:bg-base-200 transition-colors{% endif %}"
+             {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+             hx-push-url="true" hx-target="body"{% endif %}
+             {% if attn %}title="{{ attn.message }}"{% endif %}>
+          <p class="text-sm font-medium">{{ item[display_key] | default(item.get("name", "Event")) }}</p>
+          {% for col in columns %}
+          {% if col.key != display_key and col.type != "date" %}
+          <p class="text-xs">
+            <span class="opacity-60">{{ col.label }}:</span>
+            {% if col.type == "badge" %}
+              <span class="badge badge-xs {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+            {% elif col.type == "bool" %}
+              {{ item[col.key] | bool_icon }}
+            {% elif col.type == "currency" %}
+              {{ item[col.key] | currency }}
+            {% elif col.type == "ref" %}
+              {% set ref = item[col.key] %}
+              {% if ref is mapping %}{{ ref.get("name") or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
+            {% else %}
+              {{ item[col.key] | default("") | truncate_text }}
+            {% endif %}
+          </p>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% if not loop.last %}<hr class="bg-base-300"/>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% if total > items | length %}
+    <p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
+    {% endif %}
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No events yet.") }}</p>
+    {% endif %}
+  </div>
+</div>
