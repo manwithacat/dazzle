@@ -252,6 +252,31 @@ class TestAggregateRegex:
         m = _AGGREGATE_RE.match("count")
         assert m is None
 
+    def test_spaces_around_parens(self) -> None:
+        """DSL parser joins tokens with spaces — regex must tolerate this (#271)."""
+        from dazzle_back.runtime.server import _AGGREGATE_RE
+
+        m = _AGGREGATE_RE.match("count ( Task )")
+        assert m is not None
+        assert m.group(1) == "count"
+        assert m.group(2) == "Task"
+
+    def test_spaces_in_where_clause(self) -> None:
+        from dazzle_back.runtime.server import _AGGREGATE_RE
+
+        m = _AGGREGATE_RE.match("count ( Task where status = open )")
+        assert m is not None
+        assert m.group(1) == "count"
+        assert m.group(2) == "Task"
+        assert m.group(3).strip() == "status = open"
+
+    def test_leading_spaces(self) -> None:
+        from dazzle_back.runtime.server import _AGGREGATE_RE
+
+        m = _AGGREGATE_RE.match("  count(Task)")
+        assert m is not None
+        assert m.group(2) == "Task"
+
 
 # ---------------------------------------------------------------------------
 # Sort spec → repo format

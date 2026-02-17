@@ -39,7 +39,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Regex for aggregate expressions like count(Task) or count(Task where status = open)
-_AGGREGATE_RE = re.compile(r"(count|sum|avg|min|max)\((\w+)(?:\s+where\s+(.+))?\)")
+# Tolerates whitespace around parens and entity name (DSL parser joins tokens with spaces).
+_AGGREGATE_RE = re.compile(r"\s*(count|sum|avg|min|max)\s*\(\s*(\w+)\s*(?:where\s+(.+?))?\s*\)")
 
 
 def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
