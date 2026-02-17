@@ -109,7 +109,7 @@ surface <surface_name> "<Display Name>":
   mode: <list|view|create|edit>
 
   section <section_name> ["Section Title"]:
-    field <field_name> ["Field Label"]
+    field <field_name> ["Field Label"] [when: <expression>]
     ...
 
   [ux:]
@@ -130,10 +130,21 @@ surface task_list "Tasks":
     purpose: "Track team task progress"
     sort: status asc
     filter: status, assigned_to
+
+# Conditional field visibility (v0.30.0)
+surface task_detail "Task Detail":
+  uses entity Task
+  mode: view
+
+  section main:
+    field title "Title"
+    field resolution "Resolution" when: status == "resolved"
+    field urgent_note "Urgent" when: days_until(due_date) < 3
 """
 
 related = ["entity", "ux_block", "surface_modes", "datatable"]
 v0_2_changes = "Added optional ux: block for semantic layer. List surfaces render as DataTables — add sort/filter/search in ux: block for interactive features."
+v0_30_0_changes = "Added when: clause on surface fields for conditional visibility using typed expressions."
 
 
 [concepts.workspace]
