@@ -185,7 +185,7 @@
           'name': 'Task',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/complex_workspace.dsl',
+            'file': 'complex_workspace.dsl',
             'line': 13,
           }),
           'title': 'Task',
@@ -239,7 +239,7 @@
           'name': 'Report',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/complex_workspace.dsl',
+            'file': 'complex_workspace.dsl',
             'line': 21,
           }),
           'title': 'Report',
@@ -292,7 +292,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/complex_workspace.dsl',
+            'file': 'complex_workspace.dsl',
             'line': 27,
           }),
           'title': 'Task Board',
@@ -327,7 +327,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/complex_workspace.dsl',
+            'file': 'complex_workspace.dsl',
             'line': 36,
           }),
           'title': 'New Task',
@@ -354,7 +354,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/complex_workspace.dsl',
+            'file': 'complex_workspace.dsl',
             'line': 45,
           }),
           'title': 'Reports',
@@ -387,7 +387,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/complex_workspace.dsl',
+            'file': 'complex_workspace.dsl',
             'line': 52,
           }),
           'title': 'Admin Dashboard',
@@ -413,7 +413,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/complex_workspace.dsl',
+            'file': 'complex_workspace.dsl',
             'line': 62,
           }),
           'title': 'User Home',
@@ -472,7 +472,7 @@
           'name': 'Task',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/edge_comments.dsl',
+            'file': 'edge_comments.dsl',
             'line': 7,
           }),
           'title': 'Task',
@@ -501,7 +501,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/edge_comments.dsl',
+            'file': 'edge_comments.dsl',
             'line': 17,
           }),
           'title': 'Tasks',
@@ -535,7 +535,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/edge_comments.dsl',
+            'file': 'edge_comments.dsl',
             'line': 28,
           }),
           'title': 'Create',
@@ -592,7 +592,7 @@
           'name': 'Item',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/edge_whitespace.dsl',
+            'file': 'edge_whitespace.dsl',
             'line': 5,
           }),
           'title': 'Item',
@@ -621,7 +621,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/edge_whitespace.dsl',
+            'file': 'edge_whitespace.dsl',
             'line': 11,
           }),
           'title': 'Items',
@@ -751,7 +751,7 @@
           'name': 'Item',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/minimal_entity.dsl',
+            'file': 'minimal_entity.dsl',
             'line': 5,
           }),
           'title': 'Item',
@@ -798,7 +798,7 @@
           'name': 'Task',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/minimal_surface.dsl',
+            'file': 'minimal_surface.dsl',
             'line': 5,
           }),
           'title': 'Task',
@@ -823,7 +823,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/minimal_surface.dsl',
+            'file': 'minimal_surface.dsl',
             'line': 9,
           }),
           'title': 'Task List',
@@ -917,7 +917,7 @@
           'name': 'Ticket',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/state_machine.dsl',
+            'file': 'state_machine.dsl',
             'line': 5,
           }),
           'state_machine': dict({
@@ -1036,7 +1036,7 @@
           'name': 'Order',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/state_machine.dsl',
+            'file': 'state_machine.dsl',
             'line': 21,
           }),
           'state_machine': dict({
@@ -1117,7 +1117,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/state_machine.dsl',
+            'file': 'state_machine.dsl',
             'line': 35,
           }),
           'title': 'Tickets',
@@ -1148,7 +1148,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/state_machine.dsl',
+            'file': 'state_machine.dsl',
             'line': 43,
           }),
           'title': 'Orders',
@@ -1238,7 +1238,7 @@
           'name': 'Contact',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_crud_app.dsl',
+            'file': 'typical_crud_app.dsl',
             'line': 5,
           }),
           'title': 'Contact',
@@ -1271,7 +1271,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_crud_app.dsl',
+            'file': 'typical_crud_app.dsl',
             'line': 13,
           }),
           'title': 'Contact List',
@@ -1310,7 +1310,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_crud_app.dsl',
+            'file': 'typical_crud_app.dsl',
             'line': 21,
           }),
           'title': 'Contact Detail',
@@ -1352,7 +1352,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_crud_app.dsl',
+            'file': 'typical_crud_app.dsl',
             'line': 31,
           }),
           'title': 'Create Contact',
@@ -1398,7 +1398,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_crud_app.dsl',
+            'file': 'typical_crud_app.dsl',
             'line': 41,
           }),
           'title': 'Edit Contact',
@@ -1456,7 +1456,7 @@
           'name': 'Company',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_multi_entity.dsl',
+            'file': 'typical_multi_entity.dsl',
             'line': 5,
           }),
           'title': 'Company',
@@ -1535,7 +1535,7 @@
           'name': 'Person',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_multi_entity.dsl',
+            'file': 'typical_multi_entity.dsl',
             'line': 10,
           }),
           'title': 'Person',
@@ -1627,7 +1627,7 @@
           'name': 'Project',
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_multi_entity.dsl',
+            'file': 'typical_multi_entity.dsl',
             'line': 18,
           }),
           'title': 'Project',
@@ -1656,7 +1656,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_multi_entity.dsl',
+            'file': 'typical_multi_entity.dsl',
             'line': 27,
           }),
           'title': 'Companies',
@@ -1695,7 +1695,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_multi_entity.dsl',
+            'file': 'typical_multi_entity.dsl',
             'line': 34,
           }),
           'title': 'People',
@@ -1730,7 +1730,7 @@
           ]),
           'source': dict({
             'column': 1,
-            'file': '/Volumes/SSD/Dazzle/tests/corpora/appspec/valid/typical_multi_entity.dsl',
+            'file': 'typical_multi_entity.dsl',
             'line': 44,
           }),
           'title': 'Projects',

@@ -244,9 +244,7 @@ async def _workspace_region_handler(
                 for f in ctx.entity_spec.fields:
                     ft = getattr(f, "type", None)
                     kind = getattr(ft, "kind", None)
-                    kind_val_str: str = (
-                        kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-                    )
+                    kind_val_str: str = getattr(kind, "value", str(kind)) if kind else ""
                     if kind_val_str == "ref":
                         # Relation name is the field name without _id suffix
                         rel_name = f.name[:-3] if f.name.endswith("_id") else f.name

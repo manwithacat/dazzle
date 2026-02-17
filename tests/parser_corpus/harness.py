@@ -110,12 +110,27 @@ def _canonicalize_fragment(fragment: ModuleFragment) -> dict[str, Any]:
     - Uses mode="json" for JSON-serializable output
     - Sorts keys for deterministic ordering
     - Excludes None/empty values to reduce noise
+    - Normalizes source file paths to basenames for CI portability
     """
     # Get JSON-serializable dict
     raw = fragment.model_dump(mode="json")
 
     # Canonicalize by sorting keys and removing empty values
-    return _sort_keys_recursive(_remove_empty(raw))
+    return _sort_keys_recursive(_strip_source_paths(_remove_empty(raw)))
+
+
+def _strip_source_paths(obj: Any) -> Any:
+    """Recursively normalize source.file to basename for CI portability."""
+    if isinstance(obj, dict):
+        result = {}
+        for k, v in obj.items():
+            if k == "source" and isinstance(v, dict) and "file" in v:
+                v = {**v, "file": Path(v["file"]).name}
+            result[k] = _strip_source_paths(v)
+        return result
+    if isinstance(obj, list):
+        return [_strip_source_paths(item) for item in obj]
+    return obj
 
 
 def _remove_empty(obj: Any) -> Any:
