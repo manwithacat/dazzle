@@ -11,7 +11,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader, select_autoescape
 from markupsafe import Markup
 
 if TYPE_CHECKING:
@@ -184,10 +184,33 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
     return text[:length] + "..."
 
 
-def create_jinja_env() -> Environment:
-    """Create and configure the Jinja2 environment."""
+def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
+    """Create and configure the Jinja2 environment.
+
+    Args:
+        project_templates_dir: Optional path to project-level templates.
+            When provided, project templates take priority over framework
+            templates.  Framework originals remain accessible via the
+            ``dz://`` prefix (e.g. ``{% extends "dz://layouts/app_shell.html" %}``).
+    """
+    framework_loader = FileSystemLoader(str(TEMPLATES_DIR))
+
+    if project_templates_dir and project_templates_dir.is_dir():
+        project_loader = FileSystemLoader(str(project_templates_dir))
+        # Project templates searched first, framework as fallback
+        main_loader = ChoiceLoader([project_loader, framework_loader])
+    else:
+        main_loader = ChoiceLoader([framework_loader])
+
+    # "dz://" prefix always resolves to framework templates, allowing
+    # project overrides to extend the originals they replace:
+    #   {% extends "dz://layouts/app_shell.html" %}
+    loader = PrefixLoader({"dz": framework_loader}, delimiter="://")
+    # Combine: unprefixed paths go through ChoiceLoader, "dz://" goes to framework
+    combined = ChoiceLoader([loader, main_loader])
+
     env = Environment(
-        loader=FileSystemLoader(str(TEMPLATES_DIR)),
+        loader=combined,
         autoescape=select_autoescape(["html"]),
         trim_blocks=True,
         lstrip_blocks=True,
@@ -215,6 +238,16 @@ def get_jinja_env() -> Environment:
     if _env is None:
         _env = create_jinja_env()
     return _env
+
+
+def configure_project_templates(project_templates_dir: Path) -> None:
+    """Reconfigure the Jinja2 environment with project-level template overrides.
+
+    Call this during app startup to enable project templates that override
+    framework defaults.  Framework templates remain accessible via ``dz://``.
+    """
+    global _env
+    _env = create_jinja_env(project_templates_dir)
 
 
 def render_page(

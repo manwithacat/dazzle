@@ -9,6 +9,7 @@
   {# Main content area #}
   <div class="drawer-content flex flex-col">
     {# Top bar (mobile + desktop when sidebar collapsed) #}
+    {% block navbar %}
     <div class="navbar bg-base-100/85 backdrop-blur-md shadow-sm border-b border-base-300/50 sticky top-0 z-30"
          data-dz-sidebar-navbar>
       <div class="flex-none">
@@ -47,6 +48,7 @@
         </button>
       </div>
     </div>
+    {% endblock navbar %}
 
     {# Page content #}
     <main id="main-content" class="flex-1 p-4 lg:p-6" tabindex="-1"
@@ -56,10 +58,12 @@
   </div>
 
   {# Sidebar #}
+  {% block sidebar %}
   <div class="drawer-side z-40">
     <label for="dz-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
     <aside class="bg-base-100 w-64 min-h-full border-r border-base-300 flex flex-col">
       {# Brand + collapse toggle #}
+      {% block sidebar_brand %}
       <div class="p-4 border-b border-base-300 flex items-center justify-between">
         <h1 class="text-xl font-bold tracking-tight">{{ app_name | default("Dazzle") }}</h1>
         <button class="btn btn-ghost btn-sm btn-square hidden lg:flex"
@@ -69,8 +73,10 @@
           </svg>
         </button>
       </div>
+      {% endblock sidebar_brand %}
 
       {# Navigation #}
+      {% block sidebar_nav %}
       <nav aria-label="Main navigation">
       <ul class="menu p-4 gap-1 flex-1">
         {% for nav_item in nav_items | default([]) %}
@@ -90,8 +96,10 @@
         {% endfor %}
       </ul>
       </nav>
+      {% endblock sidebar_nav %}
 
       {# User section + dark mode toggle #}
+      {% block sidebar_footer %}
       <div class="mt-auto border-t border-base-300">
         {% if is_authenticated %}
         <div class="p-4 pb-2">
@@ -121,7 +129,9 @@
           </button>
         </div>
       </div>
+      {% endblock sidebar_footer %}
     </aside>
   </div>
+  {% endblock sidebar %}
 </div>
 {% endblock %}

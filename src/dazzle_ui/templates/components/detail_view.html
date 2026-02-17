@@ -2,6 +2,7 @@
 {% if detail %}
 <div class="max-w-3xl" data-dazzle-entity="{{ detail.entity_name }}">
   {# Header with actions #}
+  {% block detail_header %}
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-3">
       <a href="{{ detail.back_url }}" class="btn btn-ghost btn-sm">&larr; Back</a>
@@ -23,8 +24,10 @@
       {% endif %}
     </div>
   </div>
+  {% endblock detail_header %}
 
   {# Transition buttons (state machine) #}
+  {% block detail_transitions %}
   {% if detail.transitions %}
   <div class="flex gap-2 mb-4" data-dazzle-transitions="{{ detail.entity_name }}">
     {% for transition in detail.transitions %}
@@ -40,8 +43,10 @@
     {% endfor %}
   </div>
   {% endif %}
+  {% endblock detail_transitions %}
 
   {# Detail card #}
+  {% block detail_fields %}
   <div class="card bg-base-100 shadow-sm">
     <div class="card-body">
       <dl class="divide-y divide-base-200">
@@ -67,5 +72,6 @@
       </dl>
     </div>
   </div>
+  {% endblock detail_fields %}
 </div>
 {% endif %}

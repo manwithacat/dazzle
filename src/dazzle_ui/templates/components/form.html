@@ -4,9 +4,11 @@
 {% if form %}
 <div class="max-w-2xl">
   {# Header #}
+  {% block form_header %}
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-2xl font-bold">{{ form.title }}</h2>
   </div>
+  {% endblock form_header %}
 
   {# Form — data-dz-form enables automatic submit button loading state #}
   <form data-dz-form data-dazzle-form="{{ form.entity_name }}" data-dazzle-form-mode="{{ form.mode }}"
@@ -25,11 +27,14 @@
     </div>
 
     {# Fields #}
+    {% block form_fields %}
     {% for field in form.fields %}
       {{ render_field(field, form.initial_values) }}
     {% endfor %}
+    {% endblock form_fields %}
 
     {# Actions — loading state handled by dz.js via htmx events #}
+    {% block form_actions %}
     <div class="flex gap-3 pt-4">
       <button type="submit" class="btn btn-primary"
               data-dazzle-action="{{ form.entity_name }}.save"
@@ -39,6 +44,7 @@
       </button>
       <a href="{{ form.cancel_url }}" class="btn btn-ghost">Cancel</a>
     </div>
+    {% endblock form_actions %}
   </form>
 </div>
 {% endif %}

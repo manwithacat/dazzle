@@ -1800,6 +1800,17 @@ class DazzleBackendApp:
                 "files_path": files_path_str,
             }
 
+        # Configure project-level template overrides (v0.29.0)
+        try:
+            from dazzle_ui.runtime.template_renderer import configure_project_templates
+
+            if self._project_root:
+                project_templates = self._project_root / "templates"
+                if project_templates.is_dir():
+                    configure_project_templates(project_templates)
+        except ImportError:
+            pass  # dazzle_ui not installed
+
         # Mount static files from project dir + framework dir
         try:
             from pathlib import Path
