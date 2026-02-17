@@ -1208,7 +1208,189 @@ class TestRunner:
                     duration_ms=(time.time() - start_time) * 1000,
                 )
 
+            # ── Auth lifecycle action handlers ──────────────────────────
+
+            elif action == "post":
+                # HTTP POST request (used by auth login/logout tests)
+                url = f"{self.client.ui_url}{target}"
+                resp = self.client.client.post(url, data=resolved_data, follow_redirects=False)
+                context["last_response"] = resp
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED,
+                    message=f"POST {target} → {resp.status_code}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "get":
+                # HTTP GET request (used by session/post-logout tests)
+                url = f"{self.client.ui_url}{target}"
+                resp = self.client.client.get(url, follow_redirects=False)
+                context["last_response"] = resp
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED,
+                    message=f"GET {target} → {resp.status_code}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "get_with_cookie":
+                # GET with a specific cookie value (e.g. invalid session token)
+                cookie_name = resolved_data.get("cookie", "dazzle_session")
+                cookie_value = resolved_data.get("value", "invalid-token")
+                url = f"{self.client.ui_url}{target}"
+                resp = self.client.client.get(
+                    url,
+                    cookies={cookie_name: cookie_value},
+                    follow_redirects=False,
+                )
+                context["last_response"] = resp
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED,
+                    message=f"GET {target} with {cookie_name}={cookie_value} → {resp.status_code}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "assert_status":
+                # Verify HTTP status code of last response
+                last_resp = context.get("last_response")
+                if last_resp is None:
+                    return StepResult(
+                        action=action,
+                        target=target,
+                        result=TestResult.FAILED,
+                        message="No previous response to check",
+                        duration_ms=(time.time() - start_time) * 1000,
+                    )
+                expected = resolved_data.get("status", 200)
+                actual = last_resp.status_code
+                success = actual == expected
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED if success else TestResult.FAILED,
+                    message=f"Expected {expected}, got {actual}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "assert_cookie_set":
+                # Verify a cookie exists in the response or client jar
+                last_resp = context.get("last_response")
+                cookie_name = resolved_data.get("cookie", "dazzle_session")
+                # Check both the response cookies and the client cookie jar
+                has_cookie = False
+                if last_resp is not None and cookie_name in last_resp.cookies:
+                    has_cookie = True
+                elif self.client.client.cookies.get(cookie_name):
+                    has_cookie = True
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED if has_cookie else TestResult.FAILED,
+                    message=f"Cookie '{cookie_name}' {'present' if has_cookie else 'missing'}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "assert_no_cookie":
+                # Verify a cookie is NOT present
+                last_resp = context.get("last_response")
+                cookie_name = resolved_data.get("cookie", "dazzle_session")
+                has_cookie = False
+                if last_resp is not None and cookie_name in last_resp.cookies:
+                    has_cookie = True
+                elif self.client.client.cookies.get(cookie_name):
+                    has_cookie = True
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED if not has_cookie else TestResult.FAILED,
+                    message=f"Cookie '{cookie_name}' {'absent (good)' if not has_cookie else 'unexpectedly present'}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "assert_cookie_cleared":
+                # Verify a cookie has been deleted (empty value or max-age=0)
+                last_resp = context.get("last_response")
+                cookie_name = resolved_data.get("cookie", "dazzle_session")
+                cleared = True
+                if last_resp is not None:
+                    # Check if response set the cookie to empty or with max-age=0
+                    cookie_val = last_resp.cookies.get(cookie_name)
+                    if cookie_val and cookie_val != "":
+                        cleared = False
+                # Also check the client jar — after a clear, it should be gone
+                jar_val = self.client.client.cookies.get(cookie_name)
+                if jar_val and jar_val != "":
+                    cleared = False
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED if cleared else TestResult.FAILED,
+                    message=f"Cookie '{cookie_name}' {'cleared' if cleared else 'still set'}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "assert_redirect_url":
+                # Verify redirect destination (Location header or JSON redirect_url)
+                last_resp = context.get("last_response")
+                if last_resp is None:
+                    return StepResult(
+                        action=action,
+                        target=target,
+                        result=TestResult.FAILED,
+                        message="No previous response to check",
+                        duration_ms=(time.time() - start_time) * 1000,
+                    )
+                expected_url = resolved_data.get("redirect_url", "/app")
+                # Check Location header for 3xx redirects
+                actual_url = last_resp.headers.get("location", "")
+                if not actual_url:
+                    # Check JSON body for redirect_url field
+                    try:
+                        body = last_resp.json()
+                        actual_url = body.get("redirect_url", body.get("redirect", ""))
+                    except Exception:
+                        actual_url = ""
+                # Also check HX-Redirect header (htmx response)
+                if not actual_url:
+                    actual_url = last_resp.headers.get("hx-redirect", "")
+                success = actual_url.rstrip("/") == expected_url.rstrip("/")
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED if success else TestResult.FAILED,
+                    message=f"Expected redirect to '{expected_url}', got '{actual_url}'",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "assert_unauthenticated":
+                # Verify response indicates unauthenticated (401 or 302 redirect)
+                last_resp = context.get("last_response")
+                if last_resp is None:
+                    return StepResult(
+                        action=action,
+                        target=target,
+                        result=TestResult.FAILED,
+                        message="No previous response to check",
+                        duration_ms=(time.time() - start_time) * 1000,
+                    )
+                expected_codes = resolved_data.get("expect", [401, 302])
+                actual = last_resp.status_code
+                success = actual in expected_codes
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED if success else TestResult.FAILED,
+                    message=f"Status {actual} {'matches' if success else 'not in'} {expected_codes}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
             else:
+                logger.warning("Unknown test action '%s' — step skipped", action)
                 return StepResult(
                     action=action,
                     target=target,
