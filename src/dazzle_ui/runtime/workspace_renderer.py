@@ -79,6 +79,8 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "DETAIL": "workspace/regions/detail.html",
     "KANBAN": "workspace/regions/kanban.html",
     "TIMELINE": "workspace/regions/timeline.html",
+    "BAR_CHART": "workspace/regions/bar_chart.html",
+    "FUNNEL_CHART": "workspace/regions/funnel_chart.html",
 }
 
 # Region span classes for command_center stage

@@ -820,3 +820,161 @@ class TestTimelineTemplate:
         ctx = build_workspace_context(ws)
         assert ctx.regions[0].template == "workspace/regions/timeline.html"
         assert ctx.regions[0].display == "TIMELINE"
+
+
+# ---------------------------------------------------------------------------
+# Step 10 — Bar chart and funnel chart display modes (#274)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestBarChartTemplate:
+    """Bar chart template renders items grouped by a field as horizontal bars."""
+
+    def test_bar_chart_renders_bars(self) -> None:
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            title="Tasks by Status",
+            columns=[],
+            items=[
+                {"id": "1", "status": "todo"},
+                {"id": "2", "status": "todo"},
+                {"id": "3", "status": "in_progress"},
+                {"id": "4", "status": "done"},
+            ],
+            group_by="status",
+            kanban_columns=[],
+            display_key="id",
+            total=4,
+            action_url="",
+            empty_message="No tasks.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "todo" in html
+        assert "in_progress" in html
+        assert "done" in html
+        assert "4 total" in html
+
+    def test_bar_chart_metrics_fallback(self) -> None:
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            title="Overview",
+            columns=[],
+            items=[],
+            group_by="",
+            kanban_columns=[],
+            display_key="id",
+            total=0,
+            action_url="",
+            empty_message="No data.",
+            endpoint="/api/workspaces/ws/regions/overview",
+            region_name="overview",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[
+                {"label": "Open Tasks", "value": 12},
+                {"label": "Closed Tasks", "value": 8},
+            ],
+        )
+        assert "Open Tasks" in html
+        assert "Closed Tasks" in html
+
+    def test_bar_chart_empty(self) -> None:
+        html = render_fragment(
+            "workspace/regions/bar_chart.html",
+            title="Empty",
+            columns=[],
+            items=[],
+            group_by="",
+            kanban_columns=[],
+            display_key="id",
+            total=0,
+            action_url="",
+            empty_message="Nothing here.",
+            endpoint="/api/workspaces/ws/regions/empty",
+            region_name="empty",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "Nothing here." in html
+
+    def test_bar_chart_in_template_map(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert "BAR_CHART" in DISPLAY_TEMPLATE_MAP
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestFunnelChartTemplate:
+    """Funnel chart template renders ordered stages as narrowing bars."""
+
+    def test_funnel_renders_stages(self) -> None:
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            title="Onboarding Pipeline",
+            columns=[],
+            items=[
+                {"id": "1", "stage": "started"},
+                {"id": "2", "stage": "started"},
+                {"id": "3", "stage": "started"},
+                {"id": "4", "stage": "basics"},
+                {"id": "5", "stage": "basics"},
+                {"id": "6", "stage": "complete"},
+            ],
+            kanban_columns=["started", "basics", "complete"],
+            group_by="stage",
+            display_key="id",
+            total=6,
+            action_url="",
+            empty_message="No data.",
+            endpoint="/api/workspaces/ws/regions/pipeline",
+            region_name="pipeline",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "started" in html
+        assert "basics" in html
+        assert "complete" in html
+        assert "(3)" in html  # 3 in started
+        assert "(1)" in html  # 1 in complete
+
+    def test_funnel_empty(self) -> None:
+        html = render_fragment(
+            "workspace/regions/funnel_chart.html",
+            title="Empty Funnel",
+            columns=[],
+            items=[],
+            kanban_columns=[],
+            group_by="stage",
+            display_key="id",
+            total=0,
+            action_url="",
+            empty_message="No pipeline data.",
+            endpoint="/api/workspaces/ws/regions/funnel",
+            region_name="funnel",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "No pipeline data." in html
+
+    def test_funnel_in_template_map(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert "FUNNEL_CHART" in DISPLAY_TEMPLATE_MAP

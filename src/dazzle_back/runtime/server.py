@@ -179,8 +179,11 @@ async def _workspace_region_handler(
                         rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
                         include_rels.append(rel_name)
 
-            # Kanban needs all items to group across columns
-            if ctx.ctx_region.display == "KANBAN" and not ctx.ctx_region.limit:
+            # Grouped views need all items to distribute across columns
+            if (
+                ctx.ctx_region.display in ("KANBAN", "BAR_CHART", "FUNNEL_CHART")
+                and not ctx.ctx_region.limit
+            ):
                 limit = 200
             else:
                 limit = ctx.ctx_region.limit or page_size
@@ -358,10 +361,11 @@ async def _workspace_region_handler(
             if best:
                 item["_attention"] = best
 
-    # Kanban: extract column values from group_by field's enum/state-machine values
+    # Grouped displays: extract column values from group_by field's enum/state-machine
     kanban_columns: list[str] = []
     group_by = ctx.ctx_region.group_by
-    if group_by and ctx.ctx_region.display == "KANBAN" and ctx.entity_spec:
+    _grouped_modes = {"KANBAN", "BAR_CHART", "FUNNEL_CHART"}
+    if group_by and ctx.ctx_region.display in _grouped_modes and ctx.entity_spec:
         # Try enum values first, then state machine states
         for f in getattr(ctx.entity_spec, "fields", []):
             if f.name == group_by:

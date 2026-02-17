@@ -1,0 +1,52 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if items and group_by %}
+    {% set grouped = {} %}
+    {% for item in items %}
+    {% set key = item[group_by] | default("Unknown") %}
+    {% if key in grouped %}
+    {% set _ = grouped.update({key: grouped[key] + 1}) %}
+    {% else %}
+    {% set _ = grouped.update({key: 1}) %}
+    {% endif %}
+    {% endfor %}
+    {% set max_count = grouped.values() | max if grouped.values() | list else 1 %}
+    <div class="space-y-2 mt-2">
+      {% for label, count in grouped.items() %}
+      <div class="flex items-center gap-2">
+        <span class="text-xs w-24 truncate text-right">
+          <span class="badge badge-xs {{ label | badge_class }}">{{ label }}</span>
+        </span>
+        <div class="flex-1 bg-base-200 rounded-full h-5 overflow-hidden">
+          <div class="h-full rounded-full bg-primary transition-all"
+               style="width: {{ (count / max_count * 100) | int }}%">
+          </div>
+        </div>
+        <span class="text-xs font-mono w-8 text-right">{{ count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-xs opacity-50 mt-2">{{ total }} total</p>
+    {% elif metrics %}
+    {# Fallback: render aggregate metrics as bars #}
+    {% set max_val = metrics | map(attribute='value') | max if metrics else 1 %}
+    {% set max_val = max_val if max_val > 0 else 1 %}
+    <div class="space-y-2 mt-2">
+      {% for metric in metrics %}
+      <div class="flex items-center gap-2">
+        <span class="text-xs w-28 truncate text-right">{{ metric.label }}</span>
+        <div class="flex-1 bg-base-200 rounded-full h-5 overflow-hidden">
+          <div class="h-full rounded-full bg-primary transition-all"
+               style="width: {{ (metric.value / max_val * 100) | int }}%">
+          </div>
+        </div>
+        <span class="text-xs font-mono w-10 text-right">{{ metric.value }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% endif %}
+  </div>
+</div>
