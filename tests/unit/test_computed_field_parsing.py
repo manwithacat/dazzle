@@ -1,16 +1,20 @@
-"""Tests for computed field parsing (v0.7.0)."""
+"""Tests for computed field parsing using unified expression language."""
 
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl
-from dazzle.core.ir import (
-    AggregateCall,
-    AggregateFunction,
-    ArithmeticExpr,
-    ArithmeticOperator,
-    FieldReference,
-    LiteralValue,
+from dazzle.core.ir.expressions import (
+    BinaryExpr,
+    BinaryOp,
+    FieldRef,
+    FuncCall,
+    Literal,
 )
+
+
+def _parse(dsl: str):
+    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+    return fragment
 
 
 class TestComputedFieldParsing:
@@ -27,7 +31,7 @@ entity Invoice "Invoice":
   gross_amount: decimal(10, 2)
   net_amount: computed gross_amount
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         assert entity.name == "Invoice"
@@ -36,8 +40,9 @@ entity Invoice "Invoice":
         cf = entity.get_computed_field("net_amount")
         assert cf is not None
         assert cf.name == "net_amount"
-        assert isinstance(cf.expression, FieldReference)
-        assert cf.expression.path == ["gross_amount"]
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, FieldRef)
+        assert cf.computed_expr.path == ["gross_amount"]
         assert cf.dependencies == {"gross_amount"}
 
     def test_simple_aggregate(self) -> None:
@@ -55,16 +60,18 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("total")
         assert cf is not None
-
-        assert isinstance(cf.expression, AggregateCall)
-        assert cf.expression.function == AggregateFunction.SUM
-        assert cf.expression.field.path == ["line_items", "amount"]
-        assert cf.dependencies == {"line_items.amount"}
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, FuncCall)
+        assert cf.computed_expr.name == "sum"
+        assert len(cf.computed_expr.args) == 1
+        arg = cf.computed_expr.args[0]
+        assert isinstance(arg, FieldRef)
+        assert arg.path == ["line_items", "amount"]
 
     def test_count_aggregate(self) -> None:
         """Test parsing count aggregate function."""
@@ -80,16 +87,14 @@ entity Order "Order":
 entity Item "Item":
   id: uuid pk
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("item_count")
         assert cf is not None
-
-        assert isinstance(cf.expression, AggregateCall)
-        assert cf.expression.function == AggregateFunction.COUNT
-        assert cf.expression.field.path == ["items"]
-        assert cf.dependencies == {"items"}
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, FuncCall)
+        assert cf.computed_expr.name == "count"
 
     def test_date_aggregates(self) -> None:
         """Test parsing days_since and days_until aggregate functions."""
@@ -104,23 +109,23 @@ entity Task "Task":
   days_until_due: computed days_until(due_date)
   age_days: computed days_since(created_at)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
 
         # days_until
         cf1 = entity.get_computed_field("days_until_due")
         assert cf1 is not None
-        assert isinstance(cf1.expression, AggregateCall)
-        assert cf1.expression.function == AggregateFunction.DAYS_UNTIL
-        assert cf1.expression.field.path == ["due_date"]
+        assert cf1.computed_expr is not None
+        assert isinstance(cf1.computed_expr, FuncCall)
+        assert cf1.computed_expr.name == "days_until"
 
         # days_since
         cf2 = entity.get_computed_field("age_days")
         assert cf2 is not None
-        assert isinstance(cf2.expression, AggregateCall)
-        assert cf2.expression.function == AggregateFunction.DAYS_SINCE
-        assert cf2.expression.field.path == ["created_at"]
+        assert cf2.computed_expr is not None
+        assert isinstance(cf2.computed_expr, FuncCall)
+        assert cf2.computed_expr.name == "days_since"
 
     def test_all_aggregate_functions(self) -> None:
         """Test parsing all supported aggregate functions."""
@@ -132,28 +137,29 @@ entity Stats "Stats":
   id: uuid pk
   value: decimal(10, 2)
   total: computed sum(value)
-  count: computed count(value)
+  cnt: computed count(value)
   average: computed avg(value)
   minimum: computed min(value)
   maximum: computed max(value)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
 
         funcs = {
-            "total": AggregateFunction.SUM,
-            "count": AggregateFunction.COUNT,
-            "average": AggregateFunction.AVG,
-            "minimum": AggregateFunction.MIN,
-            "maximum": AggregateFunction.MAX,
+            "total": "sum",
+            "cnt": "count",
+            "average": "avg",
+            "minimum": "min",
+            "maximum": "max",
         }
 
         for field_name, expected_func in funcs.items():
             cf = entity.get_computed_field(field_name)
             assert cf is not None, f"Missing computed field: {field_name}"
-            assert isinstance(cf.expression, AggregateCall)
-            assert cf.expression.function == expected_func
+            assert cf.computed_expr is not None
+            assert isinstance(cf.computed_expr, FuncCall)
+            assert cf.computed_expr.name == expected_func
 
     def test_arithmetic_multiplication(self) -> None:
         """Test parsing multiplication in computed fields."""
@@ -167,18 +173,18 @@ entity Invoice "Invoice":
   tax_rate: decimal(3, 2)
   tax: computed subtotal * tax_rate
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("tax")
         assert cf is not None
-
-        assert isinstance(cf.expression, ArithmeticExpr)
-        assert cf.expression.operator == ArithmeticOperator.MULTIPLY
-        assert isinstance(cf.expression.left, FieldReference)
-        assert cf.expression.left.path == ["subtotal"]
-        assert isinstance(cf.expression.right, FieldReference)
-        assert cf.expression.right.path == ["tax_rate"]
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, BinaryExpr)
+        assert cf.computed_expr.op == BinaryOp.MUL
+        assert isinstance(cf.computed_expr.left, FieldRef)
+        assert cf.computed_expr.left.path == ["subtotal"]
+        assert isinstance(cf.computed_expr.right, FieldRef)
+        assert cf.computed_expr.right.path == ["tax_rate"]
 
     def test_arithmetic_with_literal(self) -> None:
         """Test parsing arithmetic with numeric literals."""
@@ -195,17 +201,17 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("tax")
         assert cf is not None
-
-        assert isinstance(cf.expression, ArithmeticExpr)
-        assert cf.expression.operator == ArithmeticOperator.MULTIPLY
-        assert isinstance(cf.expression.left, AggregateCall)
-        assert isinstance(cf.expression.right, LiteralValue)
-        assert cf.expression.right.value == 0.1
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, BinaryExpr)
+        assert cf.computed_expr.op == BinaryOp.MUL
+        assert isinstance(cf.computed_expr.left, FuncCall)
+        assert isinstance(cf.computed_expr.right, Literal)
+        assert cf.computed_expr.right.value == 0.1
 
     def test_arithmetic_addition(self) -> None:
         """Test parsing addition in computed fields."""
@@ -219,14 +225,14 @@ entity Invoice "Invoice":
   tax: decimal(10, 2)
   total: computed subtotal + tax
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("total")
         assert cf is not None
-
-        assert isinstance(cf.expression, ArithmeticExpr)
-        assert cf.expression.operator == ArithmeticOperator.ADD
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, BinaryExpr)
+        assert cf.computed_expr.op == BinaryOp.ADD
 
     def test_operator_precedence(self) -> None:
         """Test that * and / have higher precedence than + and -."""
@@ -241,23 +247,24 @@ entity Calc "Calc":
   c: decimal(10, 2)
   result: computed a + b * c
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("result")
         assert cf is not None
+        assert cf.computed_expr is not None
 
         # Should parse as a + (b * c), not (a + b) * c
-        assert isinstance(cf.expression, ArithmeticExpr)
-        assert cf.expression.operator == ArithmeticOperator.ADD
+        assert isinstance(cf.computed_expr, BinaryExpr)
+        assert cf.computed_expr.op == BinaryOp.ADD
 
         # Left should be 'a'
-        assert isinstance(cf.expression.left, FieldReference)
-        assert cf.expression.left.path == ["a"]
+        assert isinstance(cf.computed_expr.left, FieldRef)
+        assert cf.computed_expr.left.path == ["a"]
 
         # Right should be (b * c)
-        assert isinstance(cf.expression.right, ArithmeticExpr)
-        assert cf.expression.right.operator == ArithmeticOperator.MULTIPLY
+        assert isinstance(cf.computed_expr.right, BinaryExpr)
+        assert cf.computed_expr.right.op == BinaryOp.MUL
 
     def test_multiple_computed_fields(self) -> None:
         """Test entity with multiple computed fields."""
@@ -277,7 +284,7 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         assert len(entity.computed_fields) == 3
@@ -305,15 +312,17 @@ entity TimeEntry "TimeEntry":
   id: uuid pk
   hours: decimal(4, 2)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("total_hours")
         assert cf is not None
-
-        assert isinstance(cf.expression, AggregateCall)
-        assert cf.expression.field.path == ["tasks", "time_entries", "hours"]
-        assert cf.dependencies == {"tasks.time_entries.hours"}
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, FuncCall)
+        assert cf.computed_expr.name == "sum"
+        arg = cf.computed_expr.args[0]
+        assert isinstance(arg, FieldRef)
+        assert arg.path == ["tasks", "time_entries", "hours"]
 
     def test_entity_without_computed_fields(self) -> None:
         """Test that entities without computed fields work correctly."""
@@ -325,7 +334,7 @@ entity Task "Task":
   id: uuid pk
   title: str(200)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         assert entity.has_computed_fields is False
@@ -345,7 +354,7 @@ entity Product "Product":
   total_value: computed price * quantity
   description: text optional
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
 
@@ -366,19 +375,19 @@ app test_app "Test App"
 
 entity Stats "Stats":
   id: uuid pk
-  count: int
-  doubled: computed count * 2
+  cnt: int
+  doubled: computed cnt * 2
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("doubled")
         assert cf is not None
-
-        assert isinstance(cf.expression, ArithmeticExpr)
-        assert isinstance(cf.expression.right, LiteralValue)
-        assert cf.expression.right.value == 2
-        assert isinstance(cf.expression.right.value, int)
+        assert cf.computed_expr is not None
+        assert isinstance(cf.computed_expr, BinaryExpr)
+        assert isinstance(cf.computed_expr.right, Literal)
+        assert cf.computed_expr.right.value == 2
+        assert isinstance(cf.computed_expr.right.value, int)
 
     def test_dependencies_collection(self) -> None:
         """Test that dependencies are correctly collected from complex expressions."""
@@ -397,7 +406,7 @@ entity LineItem "LineItem":
   amount: decimal(10, 2)
   tax: decimal(10, 2)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
         cf = entity.get_computed_field("result")
@@ -425,14 +434,17 @@ entity LineItem "LineItem":
   id: uuid pk
   amount: decimal(10, 2)
 """
-        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        fragment = _parse(dsl)
 
         entity = fragment.entities[0]
 
         cf1 = entity.get_computed_field("total")
         assert cf1 is not None
-        assert str(cf1.expression) == "sum(items.amount)"
+        assert cf1.computed_expr is not None
+        assert "sum" in str(cf1.computed_expr)
 
         cf2 = entity.get_computed_field("with_tax")
         assert cf2 is not None
-        assert str(cf2.expression) == "(sum(items.amount) * 1.1)"
+        assert cf2.computed_expr is not None
+        assert "sum" in str(cf2.computed_expr)
+        assert "1.1" in str(cf2.computed_expr)

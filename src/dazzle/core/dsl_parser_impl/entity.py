@@ -426,11 +426,12 @@ class EntityParserMixin:
             # Check for computed field
             if self.match(TokenType.COMPUTED):
                 self.advance()
-                computed_expr = self._parse_computed_expr()
+                # v0.30.0: Use unified expression language
+                comp_expr = self.collect_line_as_expr()
                 computed_fields.append(
                     ir.ComputedFieldSpec(
                         name=field_name,
-                        expression=computed_expr,
+                        computed_expr=comp_expr,
                     )
                 )
             else:
@@ -1382,11 +1383,12 @@ class EntityParserMixin:
             # Check for computed field
             if self.match(TokenType.COMPUTED):
                 self.advance()
-                computed_expr = self._parse_computed_expr()
+                # v0.30.0: Use unified expression language
+                comp_expr = self.collect_line_as_expr()
                 computed_fields.append(
                     ir.ComputedFieldSpec(
                         name=field_name,
-                        expression=computed_expr,
+                        computed_expr=comp_expr,
                     )
                 )
             else:

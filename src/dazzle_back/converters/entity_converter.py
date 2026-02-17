@@ -344,11 +344,61 @@ def _convert_computed_expr(expr: ir.ComputedExpr) -> ComputedExprSpec:
         raise ValueError(f"Unknown computed expression type: {type(expr)}")
 
 
+def _convert_unified_expr_to_computed(expr: Any) -> ComputedExprSpec:
+    """Convert unified Expr AST to BackendSpec ComputedExprSpec."""
+    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, FuncCall, Literal
+
+    if isinstance(expr, FieldRef):
+        return ComputedExprSpec(kind="field_ref", path=expr.path)
+    elif isinstance(expr, Literal):
+        val = expr.value if isinstance(expr.value, (int, float)) else None
+        return ComputedExprSpec(kind="literal", value=val)
+    elif isinstance(expr, FuncCall):
+        func_map = {
+            "count": AggregateFunctionKind.COUNT,
+            "sum": AggregateFunctionKind.SUM,
+            "avg": AggregateFunctionKind.AVG,
+            "min": AggregateFunctionKind.MIN,
+            "max": AggregateFunctionKind.MAX,
+            "days_until": AggregateFunctionKind.DAYS_UNTIL,
+            "days_since": AggregateFunctionKind.DAYS_SINCE,
+        }
+        func = func_map.get(expr.name)
+        if func and expr.args:
+            field_spec = _convert_unified_expr_to_computed(expr.args[0])
+            return ComputedExprSpec(kind="aggregate", function=func, field=field_spec)
+        return ComputedExprSpec(kind="literal", value=None)
+    elif isinstance(expr, BinaryExpr):
+        op_map = {
+            BinaryOp.ADD: ArithmeticOperatorKind.ADD,
+            BinaryOp.SUB: ArithmeticOperatorKind.SUBTRACT,
+            BinaryOp.MUL: ArithmeticOperatorKind.MULTIPLY,
+            BinaryOp.DIV: ArithmeticOperatorKind.DIVIDE,
+        }
+        arith_op = op_map.get(expr.op)
+        if arith_op:
+            return ComputedExprSpec(
+                kind="arithmetic",
+                left=_convert_unified_expr_to_computed(expr.left),
+                operator=arith_op,
+                right=_convert_unified_expr_to_computed(expr.right),
+            )
+        return ComputedExprSpec(kind="literal", value=None)
+    else:
+        return ComputedExprSpec(kind="literal", value=None)
+
+
 def _convert_computed_field(cf: ir.ComputedFieldSpec) -> ComputedFieldSpec:
     """Convert IR ComputedFieldSpec to BackendSpec ComputedFieldSpec."""
+    if cf.computed_expr is not None:
+        expr_spec = _convert_unified_expr_to_computed(cf.computed_expr)
+    elif cf.expression is not None:
+        expr_spec = _convert_computed_expr(cf.expression)
+    else:
+        expr_spec = ComputedExprSpec(kind="literal", value=None)
     return ComputedFieldSpec(
         name=cf.name,
-        expression=_convert_computed_expr(cf.expression),
+        expression=expr_spec,
     )
 
 
