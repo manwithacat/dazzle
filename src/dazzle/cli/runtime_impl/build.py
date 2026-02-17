@@ -7,6 +7,7 @@ Commands for generating UI artifacts, API specs, and production bundles.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -377,26 +378,37 @@ def migrate_command(
 def build_command(
     manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
     out: str = typer.Option("./dist", "--out", "-o", help="Output directory"),
+    target: str = typer.Option(
+        "bundle",
+        "--target",
+        "-t",
+        help="Build target: bundle (default), sql, openapi, asyncapi, all",
+    ),
+    check: bool = typer.Option(False, "--check", help="Validate only, do not write files"),
     docker: bool = typer.Option(True, "--docker/--no-docker", help="Generate Dockerfile"),
     env_template: bool = typer.Option(True, "--env/--no-env", help="Generate environment template"),
     frontend: bool = typer.Option(True, "--frontend/--no-frontend", help="Include frontend"),
     _minify: bool = typer.Option(True, "--minify/--no-minify", help="Minify frontend assets"),
 ) -> None:
     """
-    Build a production-ready deployment bundle.
+    Build production artifacts from DSL specifications.
 
-    Creates a complete deployment package with:
-    - Backend: FastAPI server with production settings
-    - Frontend: Built static assets (optional)
-    - Dockerfile: Multi-stage Docker build
-    - Environment: Template for configuration
-    - Entry point: Production-ready main.py
+    Targets:
+        bundle  — Full deployment package (Docker, main.py, requirements)
+        sql     — SQL schema DDL (CREATE TABLE statements)
+        openapi — OpenAPI 3.1 specification
+        asyncapi — AsyncAPI 3.0 specification
+        all     — Generate all codegen targets
 
     Examples:
-        dazzle build                    # Full bundle in ./dist
-        dazzle build -o deploy          # Output to ./deploy
-        dazzle build --no-frontend      # Backend only
-        dazzle build --no-docker        # Skip Dockerfile
+        dazzle build                        # Full bundle in ./dist
+        dazzle build --target sql           # SQL schema only
+        dazzle build --target openapi       # OpenAPI spec
+        dazzle build --target all           # All codegen targets
+        dazzle build --check                # Validate without writing
+        dazzle build -o deploy              # Output to ./deploy
+        dazzle build --no-frontend          # Backend bundle only
+        dazzle build --no-docker            # Skip Dockerfile
 
     To deploy:
         cd dist && docker build -t myapp . && docker run -p 8000:8000 myapp
@@ -431,6 +443,28 @@ def build_command(
     except (ParseError, DazzleError) as e:
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
+
+    # --check mode: validate without generating
+    if check:
+        typer.echo(f"Validation passed for '{appspec.name}'")
+        typer.echo(f"  {len(appspec.domain.entities)} entities")
+        typer.echo(f"  {len(appspec.surfaces)} surfaces")
+        typer.echo(f"  {len(appspec.workspaces)} workspaces")
+        raise typer.Exit(code=0)
+
+    # Dispatch codegen targets
+    valid_targets = {"bundle", "sql", "openapi", "asyncapi", "all"}
+    if target not in valid_targets:
+        typer.echo(
+            f"Unknown target '{target}'. Valid: {', '.join(sorted(valid_targets))}", err=True
+        )
+        raise typer.Exit(code=1)
+
+    if target != "bundle":
+        output_dir = Path(out).resolve()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        _run_codegen_targets(appspec, output_dir, target)
+        raise typer.Exit(code=0)
 
     typer.echo(f"Building production bundle for '{appspec.name}'...")
 
@@ -527,3 +561,111 @@ def build_command(
     if frontend:
         typer.echo("  cd frontend && npm install && npm run build && cd ..")
     typer.echo("  python main.py")
+
+
+# =============================================================================
+# Codegen target pipeline
+# =============================================================================
+
+
+def _run_codegen_targets(appspec: Any, output_dir: Path, target: str) -> None:
+    """Run codegen targets: sql, openapi, asyncapi, or all."""
+
+    targets = ["sql", "openapi", "asyncapi"] if target == "all" else [target]
+
+    typer.echo(f"Generating codegen artifacts for '{appspec.name}'...")
+
+    for t in targets:
+        if t == "sql":
+            _generate_sql_target(appspec, output_dir)
+        elif t == "openapi":
+            _generate_openapi_target(appspec, output_dir)
+        elif t == "asyncapi":
+            _generate_asyncapi_target(appspec, output_dir)
+
+    typer.echo(f"\nArtifacts written to: {output_dir}")
+
+
+def _generate_sql_target(appspec: Any, output_dir: Path) -> None:
+    """Generate SQL DDL schema from AppSpec."""
+    try:
+        from dazzle_back.converters import convert_appspec_to_backend
+        from dazzle_back.runtime.sa_schema import build_metadata
+    except ImportError as e:
+        typer.echo(f"  SQL target requires dazzle-app-back: {e}", err=True)
+        return
+
+    backend_spec = convert_appspec_to_backend(appspec)
+    metadata = build_metadata(backend_spec.entities)
+
+    lines: list[str] = []
+    lines.append(f"-- SQL schema for {appspec.name}")
+    lines.append("-- Generated by dazzle build --target sql")
+    lines.append(f"-- {len(backend_spec.entities)} tables\n")
+
+    for table in metadata.sorted_tables:
+        lines.append(f'CREATE TABLE IF NOT EXISTS "{table.name}" (')
+        col_defs: list[str] = []
+        for col in table.columns:
+            parts = [f'  "{col.name}"']
+            # Map SQLAlchemy type to SQL type string
+            sa_type = type(col.type).__name__.upper()
+            type_map = {
+                "TEXT": "TEXT",
+                "INTEGER": "INTEGER",
+                "FLOAT": "REAL",
+                "BOOLEAN": "BOOLEAN",
+            }
+            parts.append(type_map.get(sa_type, "TEXT"))
+            if col.primary_key:
+                parts.append("PRIMARY KEY")
+            if not col.nullable and not col.primary_key:
+                parts.append("NOT NULL")
+            if col.default is not None and hasattr(col.default, "arg"):
+                parts.append(f"DEFAULT {col.default.arg!r}")
+            col_defs.append(" ".join(parts))
+        lines.append(",\n".join(col_defs))
+        lines.append(");\n")
+
+    sql_content = "\n".join(lines)
+    sql_file = output_dir / "schema.sql"
+    sql_file.write_text(sql_content)
+    typer.echo(f"  SQL schema -> {sql_file} ({len(backend_spec.entities)} tables)")
+
+
+def _generate_openapi_target(appspec: Any, output_dir: Path) -> None:
+    """Generate OpenAPI 3.1 spec from AppSpec."""
+    try:
+        from dazzle.specs import generate_openapi, openapi_to_json, openapi_to_yaml
+    except ImportError as e:
+        typer.echo(f"  OpenAPI target requires dazzle specs: {e}", err=True)
+        return
+
+    openapi = generate_openapi(appspec)
+
+    yaml_file = output_dir / "openapi.yaml"
+    yaml_file.write_text(openapi_to_yaml(openapi))
+
+    json_file = output_dir / "openapi.json"
+    json_file.write_text(openapi_to_json(openapi))
+
+    typer.echo(f"  OpenAPI -> {yaml_file}, {json_file}")
+
+
+def _generate_asyncapi_target(appspec: Any, output_dir: Path) -> None:
+    """Generate AsyncAPI 3.0 spec from AppSpec."""
+    try:
+        from dazzle.specs import asyncapi_to_json, asyncapi_to_yaml, generate_asyncapi
+    except ImportError as e:
+        typer.echo(f"  AsyncAPI target requires dazzle specs: {e}", err=True)
+        return
+
+    asyncapi = generate_asyncapi(appspec)
+
+    yaml_file = output_dir / "asyncapi.yaml"
+    yaml_file.write_text(asyncapi_to_yaml(asyncapi))
+
+    json_file = output_dir / "asyncapi.json"
+    json_file.write_text(asyncapi_to_json(asyncapi))
+
+    typer.echo(f"  AsyncAPI -> {yaml_file}, {json_file}")
