@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Computed fields consolidated to unified Expr type with `ComputedFieldSpec.computed_expr` field ([#275](https://github.com/manwithacat/dazzle/issues/275))
 - Surface field `when:` clause for conditional visibility: `field notes "Notes" when: status == "pending"` ([#275](https://github.com/manwithacat/dazzle/issues/275))
 - Duration word-form mapping in expression parser: `14 days` → `14d`, `2 hours` → `2h` ([#275](https://github.com/manwithacat/dazzle/issues/275))
+- Declarative integration mappings: `base_url`, `auth`, `mapping` blocks with HTTP requests, lifecycle triggers, response field mapping, and error strategies ([#275](https://github.com/manwithacat/dazzle/issues/275))
 
 ## [0.29.0] - 2026-02-17
 

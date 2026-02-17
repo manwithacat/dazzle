@@ -343,19 +343,62 @@ related = ["llm_model", "llm_intent"]
 
 [concepts.integration]
 category = "Extensibility"
-definition = "External service integration declaration. Defines API connections, actions, and data sync points for external systems."
+definition = """
+External service integration declaration. Defines API connections, actions,
+data sync points, and declarative field mappings for external systems.
+
+v0.30.0 adds declarative mapping blocks: base_url, auth, mapping with triggers,
+HTTP requests, request/response field mappings, and error handling strategies.
+"""
 syntax = '''
-integration <name> "<Title>":
-  provider: <provider_name>
-  action <action_name> "<Label>":
-    method: <GET|POST|PUT|DELETE>
-    endpoint: "<url>"
-    maps_to: <EntityName>
-  [sync:]
-    direction: <inbound|outbound|bidirectional>
-    entity: <EntityName>
+integration <name> ["<Title>"]:
+  [base_url: "<url>"]
+  [auth: <api_key|oauth2|bearer|basic> from env("<KEY>")[, env("<KEY2>")]]
+
+  [mapping <mapping_name> on <EntityName>:]
+    [trigger: on_create [when <expr>]]
+    [trigger: on_update [when <expr>]]
+    [trigger: on_transition <from> -> <to>]
+    [trigger: manual "<Label>"]
+    request: <GET|POST|PUT|DELETE|PATCH> "<url_template>"
+    [map_request:]
+      <field> <- <source.path>
+    [map_response:]
+      <field> <- <source.path>
+    [on_error: <ignore|log_warning|revert_transition|retry>]
+    [on_error: set <field> = "<value>", <action>]
 '''
-related = ["domain_service", "foreign_model"]
+example = '''
+integration companies_house:
+  base_url: "https://api.company-information.service.gov.uk"
+  auth: api_key from env("COMPANIES_HOUSE_API_KEY")
+
+  mapping fetch_company on Company:
+    trigger: on_create when company_number != null
+    trigger: manual "Look up company"
+    request: GET "/company/{self.company_number}"
+    map_response:
+      company_name <- response.company_name
+      company_type <- response.type
+      incorporation_date <- response.date_of_creation
+    on_error: set company_status = "lookup_failed", log_warning
+
+integration hmrc_mtd:
+  base_url: "https://api.service.hmrc.gov.uk"
+  auth: oauth2 from env("HMRC_CLIENT_ID"), env("HMRC_CLIENT_SECRET")
+
+  mapping submit_vat on VATReturn:
+    trigger: on_transition reviewed -> submitted
+    request: POST "/organisations/vat/returns"
+    map_request:
+      periodKey <- self.period_key
+      vatDueSales <- self.box1_vat_due_sales
+    map_response:
+      hmrc_receipt_id <- response.formBundleNumber
+    on_error: revert_transition
+'''
+related = ["domain_service", "foreign_model", "entity"]
+v0_30_0_changes = "Added declarative mapping blocks with base_url, auth, triggers, HTTP requests, field mappings, and error strategies."
 
 [concepts.unique_constraint]
 category = "Entity Performance"
