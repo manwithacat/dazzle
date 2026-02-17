@@ -617,6 +617,8 @@ def compile_appspec_to_templates(
     # and per-persona variants using workspace access declarations.
     nav_items: list[NavItemContext] = []
     nav_by_persona: dict[str, list[NavItemContext]] = {}
+    # Track which personas each workspace allows (for entity nav below)
+    _ws_personas: dict[str, list[str]] = {}
     for ws in appspec.workspaces:
         route = f"{app_prefix}/workspaces/{ws.name}"
         item = NavItemContext(
@@ -634,21 +636,56 @@ def compile_appspec_to_templates(
             level = str(getattr(ws_access, "level", ""))
             if allow and "persona" in level.lower():
                 # Only add to allowed personas
+                _ws_personas[ws.name] = list(allow)
                 for persona_id in allow:
                     nav_by_persona.setdefault(persona_id, []).append(item)
                 continue
             if deny:
                 # Add to all personas except denied ones
+                matched: list[str] = []
                 for p in getattr(appspec, "personas", []) or []:
                     pid = getattr(p, "name", None) or getattr(p, "id", "")
                     if pid and pid not in deny:
                         nav_by_persona.setdefault(pid, []).append(item)
+                        matched.append(pid)
+                _ws_personas[ws.name] = matched
                 continue
         # No access restriction — add to all personas
+        all_pids: list[str] = []
         for p in getattr(appspec, "personas", []) or []:
             pid = getattr(p, "name", None) or getattr(p, "id", "")
             if pid:
                 nav_by_persona.setdefault(pid, []).append(item)
+                all_pids.append(pid)
+        _ws_personas[ws.name] = all_pids
+
+    # Add entity surface links derived from workspace regions so that
+    # entity pages show the same nav items as workspace pages.
+    _list_surfaces_by_entity: dict[str, Any] = {}
+    for surface in appspec.surfaces:
+        if surface.mode.value == "list" and surface.entity_ref:
+            _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
+
+    _seen_entity_nav: set[str] = set()
+    for ws in appspec.workspaces:
+        ws_pids = _ws_personas.get(ws.name, [])
+        for region in getattr(ws, "regions", []) or []:
+            source = getattr(region, "source", None)
+            if not source or source in _seen_entity_nav:
+                continue
+            list_surface = _list_surfaces_by_entity.get(source)
+            if not list_surface:
+                continue
+            _seen_entity_nav.add(source)
+            entity_slug = source.lower().replace("_", "-")
+            entity_item = NavItemContext(
+                label=list_surface.title or source.replace("_", " ").title(),
+                route=f"{app_prefix}/{entity_slug}",
+            )
+            nav_items.append(entity_item)
+            # Add to same personas as the parent workspace
+            for pid in ws_pids:
+                nav_by_persona.setdefault(pid, []).append(entity_item)
 
     for surface in appspec.surfaces:
         entity: ir.EntitySpec | None = None
