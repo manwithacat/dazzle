@@ -749,8 +749,12 @@ const dz = (() => {
       initTable(/** @type {HTMLElement} */ (el));
     });
 
-    // Re-init after HTMX swaps (new content may contain data tables or money inputs)
+    // Re-init after HTMX swaps (hx-boost replaces body innerHTML,
+    // destroying sidebar/dark-mode DOM state — restore from localStorage)
     document.addEventListener("htmx:afterSettle", (e) => {
+      applySidebar(persist("dz-sidebar", true));
+      applyDarkMode(persist("dz-dark-mode", false));
+
       const target = /** @type {HTMLElement} */ (
         /** @type {CustomEvent} */ (e).detail.elt
       );
