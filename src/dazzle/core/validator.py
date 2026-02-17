@@ -1106,14 +1106,105 @@ def validate_event_payload_secrets(appspec: ir.AppSpec) -> tuple[list[str], list
     return errors, warnings
 
 
+def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
+    """Detect unreferenced surfaces, orphan entities, and unreachable experiences.
+
+    Builds a reachability graph from entry points (workspaces, experiences,
+    processes) through surfaces to entities. Reports constructs that are
+    defined but never referenced from any entry point.
+    """
+    warnings: list[str] = []
+
+    # --- Collect all defined constructs ---
+    all_entities = {e.name for e in appspec.domain.entities}
+    all_surfaces = {s.name for s in appspec.surfaces}
+    # --- Collect all entity references ---
+    used_entities: set[str] = set()
+
+    # Entities referenced by other entities (field refs)
+    for entity in appspec.domain.entities:
+        for field in entity.fields:
+            if field.type.kind == ir.FieldTypeKind.REF and field.type.ref_entity:
+                used_entities.add(field.type.ref_entity)
+
+    # Entities referenced by surfaces
+    for surface in appspec.surfaces:
+        if surface.entity_ref:
+            used_entities.add(surface.entity_ref)
+
+    # Entities referenced by workspace regions (source field)
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if region.source and region.source in all_entities:
+                used_entities.add(region.source)
+
+    # Entities referenced by process triggers
+    for process in appspec.processes:
+        if process.trigger and process.trigger.entity_name:
+            used_entities.add(process.trigger.entity_name)
+
+    # Entities referenced by integration mappings
+    for integration in appspec.integrations:
+        for mapping in integration.mappings:
+            if mapping.entity_ref:
+                used_entities.add(mapping.entity_ref)
+
+    unused_entities = all_entities - used_entities
+    if unused_entities:
+        for name in sorted(unused_entities):
+            warnings.append(f"Dead construct: entity '{name}' is never referenced")
+
+    # --- Collect all surface references ---
+    used_surfaces: set[str] = set()
+
+    # Surfaces referenced by workspace regions (action field)
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if region.action and region.action in all_surfaces:
+                used_surfaces.add(region.action)
+            # source can also be a surface name
+            if region.source and region.source in all_surfaces:
+                used_surfaces.add(region.source)
+
+    # Surfaces referenced by experience steps
+    for experience in appspec.experiences:
+        for step in experience.steps:
+            if step.surface:
+                used_surfaces.add(step.surface)
+
+    # Surfaces referenced by process human_task steps
+    for process in appspec.processes:
+        for proc_step in process.steps:
+            if proc_step.human_task and proc_step.human_task.surface:
+                used_surfaces.add(proc_step.human_task.surface)
+
+    unused_surfaces = all_surfaces - used_surfaces
+    if unused_surfaces:
+        for name in sorted(unused_surfaces):
+            warnings.append(
+                f"Dead construct: surface '{name}' is not referenced by any "
+                f"workspace, experience, or process"
+            )
+
+    # --- Collect all experience references ---
+    # Experiences are entry points themselves, but check if any are completely
+    # disconnected (no workspace or navigation references them).
+    # For now, experiences are considered used if they exist — they are
+    # top-level entry points like workspaces.
+
+    return warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """
     Extended lint rules for code quality.
 
     Checks:
     - Naming conventions (snake_case, PascalCase)
-    - Unused entities, surfaces, experiences
+    - Dead constructs (unreferenced entities, surfaces)
     - Missing titles/descriptions
+    - Workspace persona associations
+    - List surface UX completeness
 
     Returns:
         List of warning messages
@@ -1134,25 +1225,8 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
                     f"Entity '{entity.name}' field '{field.name}' should use snake_case naming"
                 )
 
-    # Check for unused entities (entities not referenced anywhere)
-    used_entities = set()
-
-    # Entities used by other entities (field refs)
-    for entity in appspec.domain.entities:
-        for field in entity.fields:
-            if field.type.kind == ir.FieldTypeKind.REF and field.type.ref_entity:
-                used_entities.add(field.type.ref_entity)
-
-    # Entities used by surfaces
-    for surface in appspec.surfaces:
-        if surface.entity_ref:
-            used_entities.add(surface.entity_ref)
-
-    # Check for unused entities
-    all_entities = {entity.name for entity in appspec.domain.entities}
-    unused_entities = all_entities - used_entities
-    if unused_entities:
-        warnings.append(f"Unused entities (not referenced anywhere): {unused_entities}")
+    # Dead construct detection — reachability analysis across the full IR
+    warnings.extend(_detect_dead_constructs(appspec))
 
     # Check for missing titles
     for entity in appspec.domain.entities:

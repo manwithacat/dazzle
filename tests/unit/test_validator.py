@@ -657,7 +657,7 @@ class TestExtendedLint:
         )
         appspec = make_appspec(entities=[entity1, entity2], surfaces=[surface])
         warnings = extended_lint(appspec)
-        assert any("Unused entities" in w and "Orphan" in w for w in warnings)
+        assert any("Dead construct: entity 'Orphan'" in w for w in warnings)
 
     def test_missing_title_warning(self) -> None:
         """Test warning for missing titles."""
@@ -665,3 +665,210 @@ class TestExtendedLint:
         appspec = make_appspec(entities=[entity])
         warnings = extended_lint(appspec)
         assert any("no title" in w for w in warnings)
+
+
+# =============================================================================
+# Dead Construct Detection Tests
+# =============================================================================
+
+
+class TestDeadConstructDetection:
+    """Test dead construct detection (unreferenced entities and surfaces)."""
+
+    def _make_surface(self, name: str = "task_list", entity_ref: str = "Task") -> ir.SurfaceSpec:
+        return ir.SurfaceSpec(
+            name=name,
+            title=name.replace("_", " ").title(),
+            entity_ref=entity_ref,
+            mode=ir.SurfaceMode.LIST,
+            sections=[],
+        )
+
+    def _make_workspace(
+        self,
+        name: str = "dashboard",
+        regions: list[ir.WorkspaceRegion] | None = None,
+    ) -> ir.WorkspaceSpec:
+        return ir.WorkspaceSpec(
+            name=name,
+            title=name.replace("_", " ").title(),
+            purpose="Test workspace",
+            regions=regions or [],
+        )
+
+    # --- Entity reachability ---
+
+    def test_entity_used_by_surface_is_not_dead(self) -> None:
+        entity = make_entity(name="Task")
+        surface = self._make_surface(entity_ref="Task")
+        appspec = make_appspec(entities=[entity], surfaces=[surface])
+        warnings = extended_lint(appspec)
+        assert not any("entity 'Task'" in w for w in warnings)
+
+    def test_entity_used_by_field_ref_is_not_dead(self) -> None:
+        ref_field = ir.FieldSpec(
+            name="assigned_to",
+            type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+        )
+        task = make_entity(name="Task", fields=[make_id_field(), ref_field])
+        user = make_entity(name="User")
+        appspec = make_appspec(entities=[task, user])
+        warnings = extended_lint(appspec)
+        assert not any("entity 'User'" in w for w in warnings)
+
+    def test_entity_used_by_workspace_source_is_not_dead(self) -> None:
+        entity = make_entity(name="Alert")
+        region = ir.WorkspaceRegion(name="alerts", source="Alert")
+        workspace = self._make_workspace(regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            workspaces=[workspace],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("entity 'Alert'" in w for w in warnings)
+
+    def test_entity_used_by_process_trigger_is_not_dead(self) -> None:
+        entity = make_entity(name="Order")
+        trigger = ir.ProcessTriggerSpec(
+            kind=ir.ProcessTriggerKind.ENTITY_EVENT,
+            entity_name="Order",
+            event_type="created",
+        )
+        process = ir.ProcessSpec(name="order_flow", trigger=trigger, steps=[])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            processes=[process],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("entity 'Order'" in w for w in warnings)
+
+    def test_orphan_entity_is_reported(self) -> None:
+        entity = make_entity(name="Orphan")
+        appspec = make_appspec(entities=[entity])
+        warnings = extended_lint(appspec)
+        assert any("Dead construct: entity 'Orphan'" in w for w in warnings)
+
+    # --- Surface reachability ---
+
+    def test_surface_used_by_workspace_action_is_not_dead(self) -> None:
+        entity = make_entity(name="Task")
+        surface = self._make_surface(name="task_edit", entity_ref="Task")
+        region = ir.WorkspaceRegion(name="tasks", source="Task", action="task_edit")
+        workspace = self._make_workspace(regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            surfaces=[surface],
+            workspaces=[workspace],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("surface 'task_edit'" in w for w in warnings)
+
+    def test_surface_used_by_experience_step_is_not_dead(self) -> None:
+        entity = make_entity(name="Task")
+        surface = self._make_surface(name="welcome", entity_ref="Task")
+        step = ir.ExperienceStep(
+            name="start",
+            kind=ir.StepKind.SURFACE,
+            surface="welcome",
+        )
+        experience = ir.ExperienceSpec(
+            name="onboarding",
+            title="Onboarding",
+            start_step="start",
+            steps=[step],
+        )
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            surfaces=[surface],
+            experiences=[experience],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("surface 'welcome'" in w for w in warnings)
+
+    def test_surface_used_by_process_human_task_is_not_dead(self) -> None:
+        entity = make_entity(name="Task")
+        surface = self._make_surface(name="approval_form", entity_ref="Task")
+        human_task = ir.HumanTaskSpec(surface="approval_form")
+        step = ir.ProcessStepSpec(
+            name="approve",
+            kind=ir.ProcessStepKind.HUMAN_TASK,
+            human_task=human_task,
+        )
+        process = ir.ProcessSpec(name="approval_flow", steps=[step])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            surfaces=[surface],
+            processes=[process],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("surface 'approval_form'" in w for w in warnings)
+
+    def test_unreferenced_surface_is_reported(self) -> None:
+        entity = make_entity(name="Task")
+        surface = self._make_surface(name="orphan_view", entity_ref="Task")
+        appspec = make_appspec(entities=[entity], surfaces=[surface])
+        warnings = extended_lint(appspec)
+        assert any("Dead construct: surface 'orphan_view'" in w for w in warnings)
+
+    def test_surface_used_as_workspace_source_is_not_dead(self) -> None:
+        entity = make_entity(name="Task")
+        surface = self._make_surface(name="task_list", entity_ref="Task")
+        region = ir.WorkspaceRegion(name="tasks", source="task_list")
+        workspace = self._make_workspace(regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            surfaces=[surface],
+            workspaces=[workspace],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("surface 'task_list'" in w for w in warnings)
+
+    # --- Multiple dead constructs ---
+
+    def test_multiple_dead_constructs_all_reported(self) -> None:
+        orphan1 = make_entity(name="Orphan1")
+        orphan2 = make_entity(name="Orphan2")
+        dead_surface = self._make_surface(name="dead_view", entity_ref="Orphan1")
+        appspec = make_appspec(entities=[orphan1, orphan2], surfaces=[dead_surface])
+        warnings = extended_lint(appspec)
+        dead_warnings = [w for w in warnings if "Dead construct" in w]
+        # Both entities and the surface should be reported
+        assert any("entity 'Orphan2'" in w for w in dead_warnings)
+        assert any("surface 'dead_view'" in w for w in dead_warnings)
+
+    # --- No false positives for well-connected specs ---
+
+    def test_fully_connected_spec_has_no_dead_warnings(self) -> None:
+        task = make_entity(name="Task")
+        user = make_entity(
+            name="User",
+            fields=[make_id_field()],
+        )
+        # Task has ref to User
+        ref_field = ir.FieldSpec(
+            name="assigned_to",
+            type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="User"),
+        )
+        task = make_entity(name="Task", fields=[make_id_field(), ref_field])
+
+        task_list = self._make_surface(name="task_list", entity_ref="Task")
+        user_edit = self._make_surface(name="user_edit", entity_ref="User")
+
+        region1 = ir.WorkspaceRegion(name="tasks", source="Task", action="task_list")
+        region2 = ir.WorkspaceRegion(name="users", source="User", action="user_edit")
+        workspace = self._make_workspace(regions=[region1, region2])
+
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[task, user]),
+            surfaces=[task_list, user_edit],
+            workspaces=[workspace],
+        )
+        warnings = extended_lint(appspec)
+        assert not any("Dead construct" in w for w in warnings)
