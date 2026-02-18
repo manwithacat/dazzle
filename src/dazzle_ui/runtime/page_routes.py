@@ -163,34 +163,47 @@ def create_page_routes(
                         content={"detail": e.reason},
                     )
 
-            # For detail/edit pages, extract {id} from path params
+            # For detail/edit pages, extract {id} from path params.
+            # IMPORTANT: use per-request copies of detail/form contexts
+            # because URL templates contain {id} placeholders that get
+            # replaced with actual IDs.  Mutating the shared ctx would
+            # corrupt templates for subsequent requests (#291).
             path_id = request.path_params.get("id")
+            _ctx_overrides: dict[str, Any] = {}
             if path_id and ctx.detail:
-                # Fetch item data from backend API
-                ctx.detail.item = await _fetch_json(
+                req_detail = ctx.detail.model_copy(deep=True)
+
+                # Fetch item data using the *original* URL template
+                req_detail.item = await _fetch_json(
                     backend_url, ctx.detail.delete_url or ctx.detail.back_url, path_id
                 )
 
-                # Fix URLs with actual ID
-                if ctx.detail.edit_url:
-                    ctx.detail.edit_url = ctx.detail.edit_url.replace("{id}", str(path_id))
-                if ctx.detail.delete_url:
-                    ctx.detail.delete_url = ctx.detail.delete_url.replace("{id}", str(path_id))
-                for _t in ctx.detail.transitions:
+                # Substitute {id} in the per-request copy only
+                if req_detail.edit_url:
+                    req_detail.edit_url = req_detail.edit_url.replace("{id}", str(path_id))
+                if req_detail.delete_url:
+                    req_detail.delete_url = req_detail.delete_url.replace("{id}", str(path_id))
+                for _t in req_detail.transitions:
                     if _t.api_url and "{id}" in _t.api_url:
                         _t.api_url = _t.api_url.replace("{id}", str(path_id))
 
+                _ctx_overrides["detail"] = req_detail
+
             if path_id and ctx.form and ctx.form.mode == "edit":
-                # Fetch existing data for edit form
+                req_form = ctx.form.model_copy(deep=True)
+
+                # Fetch existing data using the *original* URL template
                 form_data = await _fetch_json(backend_url, ctx.form.action_url, path_id)
                 if "error" not in form_data:
-                    ctx.form.initial_values = form_data
+                    req_form.initial_values = form_data
                 else:
                     logger.warning("Failed to fetch initial form values for %s", path_id)
 
-                ctx.form.action_url = ctx.form.action_url.replace("{id}", str(path_id))
-                if ctx.form.cancel_url:
-                    ctx.form.cancel_url = ctx.form.cancel_url.replace("{id}", str(path_id))
+                req_form.action_url = req_form.action_url.replace("{id}", str(path_id))
+                if req_form.cancel_url:
+                    req_form.cancel_url = req_form.cancel_url.replace("{id}", str(path_id))
+
+                _ctx_overrides["form"] = req_form
 
             if ctx.table:
                 # Fetch list data from backend
@@ -241,19 +254,25 @@ def create_page_routes(
 
                 ctx.current_route = urlparse(htmx.current_url).path
 
+            # Build per-request context with detail/form overrides (#291).
+            # Table and nav mutations on the shared ctx are safe (fully
+            # overwritten each request), but detail/form URL templates
+            # degrade after substitution so they use copies.
+            render_ctx = ctx.model_copy(update=_ctx_overrides) if _ctx_overrides else ctx
+
             # Fragment targeting: nav links target #main-content directly,
             # so return only the content template (no layout wrapper).
             if htmx.wants_fragment:
                 import json
 
-                html = render_page(ctx, content_only=True)
-                headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ctx.page_title})}
+                html = render_page(render_ctx, content_only=True)
+                headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": render_ctx.page_title})}
                 return HTMLResponse(content=html, headers=headers)
 
             # Any HTMX request can receive body-only HTML — the client
             # extracts <body> content anyway.  History-restore is the one
             # exception: the browser needs a full document for cache misses.
-            html = render_page(ctx, partial=htmx.is_htmx and not htmx.is_history_restore)
+            html = render_page(render_ctx, partial=htmx.is_htmx and not htmx.is_history_restore)
             return HTMLResponse(content=html)
 
         return page_handler
