@@ -703,8 +703,11 @@ const dz = (() => {
 
   function initWizardForms() {
     document.querySelectorAll("form[data-dz-wizard]").forEach(function (form) {
+      if (form.dataset.dzWizardInit) return; // Already initialized
+      form.dataset.dzWizardInit = "1";
       var stages = form.querySelectorAll("[data-dz-stage]");
-      var stepper = form.closest(".max-w-2xl").querySelector("[data-dz-stepper]");
+      var wrapper = form.closest(".max-w-2xl") || form.parentElement;
+      var stepper = wrapper ? wrapper.querySelector("[data-dz-stepper]") : null;
       var steps = stepper ? stepper.querySelectorAll("[data-dz-step]") : [];
       var prevBtn = form.querySelector("[data-dz-wizard-prev]");
       var nextBtn = form.querySelector("[data-dz-wizard-next]");
