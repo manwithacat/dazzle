@@ -350,6 +350,30 @@ class TestHxRedirectHeader:
         # Non-HTMX should return the raw result, not a JSONResponse
         assert resp is result
 
+    def test_dict_with_uuid_values_serializes(self) -> None:
+        """Regression test for #297: UUID values in dict results must serialize."""
+        request = self._htmx_request()
+        uid = uuid4()
+        result = {"id": uid, "parent_id": uuid4(), "title": "Test"}
+        resp = _with_htmx_triggers(request, result, "Task", "updated")
+        # Should not raise TypeError: Object of type UUID is not JSON serializable
+        import json
+
+        body = json.loads(resp.body)
+        assert body["id"] == str(uid)
+        assert body["title"] == "Test"
+
+    def test_dict_with_nested_uuid_serializes(self) -> None:
+        """UUID values nested in sub-dicts/lists also serialize."""
+        request = self._htmx_request()
+        uid = uuid4()
+        result = {"id": str(uuid4()), "refs": [{"target_id": uid}]}
+        resp = _with_htmx_triggers(request, result, "Task", "updated")
+        import json
+
+        body = json.loads(resp.body)
+        assert body["refs"][0]["target_id"] == str(uid)
+
 
 class TestCreateHandlerRedirect:
     """Test that create handler generates HX-Redirect to detail page."""

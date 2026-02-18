@@ -96,6 +96,13 @@ def _with_htmx_triggers(
     # Serialize Pydantic models
     if hasattr(result, "model_dump"):
         body = result.model_dump(mode="json")
+    elif isinstance(result, dict):
+        # Plain dicts may contain UUID or other non-JSON-serializable values
+        # from the CRUD service layer.  Pre-convert via jsonable_encoder so
+        # Starlette's JSONResponse (which uses stdlib json.dumps) doesn't crash.
+        from fastapi.encoders import jsonable_encoder
+
+        body = jsonable_encoder(result)
     else:
         body = result
 
