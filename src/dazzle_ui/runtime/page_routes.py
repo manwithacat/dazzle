@@ -48,6 +48,23 @@ async def _fetch_url(url: str) -> dict[str, Any]:
     return result
 
 
+def _resolve_backend_url(request: Any, fallback: str) -> str:
+    """Derive the backend URL from the incoming request.
+
+    On platforms like Heroku the port is dynamic, so the hardcoded fallback
+    (``http://127.0.0.1:8000``) may not match.  Using the request's own
+    ``base_url`` ensures we hit the same process that received the page
+    request.
+    """
+    try:
+        base = str(request.base_url).rstrip("/")
+        if base:
+            return base
+    except Exception:
+        pass
+    return fallback
+
+
 async def _fetch_json(backend_url: str, api_pattern: str | None, path_id: Any) -> dict[str, Any]:
     """Fetch a single entity record from the backend API.
 
@@ -65,7 +82,7 @@ async def _fetch_json(backend_url: str, api_pattern: str | None, path_id: Any) -
     try:
         return await _fetch_url(url)
     except Exception:
-        logger.debug("Failed to fetch %s", url, exc_info=True)
+        logger.warning("Failed to fetch entity data from %s", url, exc_info=True)
         return {"id": str(path_id), "error": "Failed to load"}
 
 
@@ -163,6 +180,10 @@ def create_page_routes(
                         content={"detail": e.reason},
                     )
 
+            # Derive backend URL from request so it works on dynamic-port
+            # platforms (Heroku, Railway, etc.) where the default 8000 is wrong.
+            effective_backend_url = _resolve_backend_url(request, backend_url)
+
             # For detail/edit pages, extract {id} from path params.
             # IMPORTANT: use per-request copies of detail/form contexts
             # because URL templates contain {id} placeholders that get
@@ -175,8 +196,15 @@ def create_page_routes(
 
                 # Fetch item data using the *original* URL template
                 req_detail.item = await _fetch_json(
-                    backend_url, ctx.detail.delete_url or ctx.detail.back_url, path_id
+                    effective_backend_url, ctx.detail.delete_url or ctx.detail.back_url, path_id
                 )
+                if "error" in req_detail.item:
+                    logger.warning(
+                        "Detail page data fetch failed for %s/%s: %s",
+                        ctx.detail.entity_name,
+                        path_id,
+                        req_detail.item.get("error"),
+                    )
 
                 # Substitute {id} in the per-request copy only
                 if req_detail.edit_url:
@@ -193,7 +221,7 @@ def create_page_routes(
                 req_form = ctx.form.model_copy(deep=True)
 
                 # Fetch existing data using the *original* URL template
-                form_data = await _fetch_json(backend_url, ctx.form.action_url, path_id)
+                form_data = await _fetch_json(effective_backend_url, ctx.form.action_url, path_id)
                 if "error" not in form_data:
                     req_form.initial_values = form_data
                 else:
@@ -221,7 +249,7 @@ def create_page_routes(
                 api_params.setdefault("page", "1")
 
                 query_string = urllib.parse.urlencode(api_params)
-                fetch_url = f"{backend_url}{ctx.table.api_endpoint}?{query_string}"
+                fetch_url = f"{effective_backend_url}{ctx.table.api_endpoint}?{query_string}"
 
                 try:
                     data = await _fetch_url(fetch_url)
@@ -230,6 +258,7 @@ def create_page_routes(
                         ctx.table.rows = items
                     ctx.table.total = data.get("total", len(items))
                 except Exception:
+                    logger.warning("Failed to fetch list data from %s", fetch_url, exc_info=True)
                     ctx.table.rows = []
                     ctx.table.total = 0
 
