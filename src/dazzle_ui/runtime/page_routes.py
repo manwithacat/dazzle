@@ -12,6 +12,7 @@ Each workspace+surface combination gets a GET route that:
 import asyncio
 import json
 import logging
+import os
 import urllib.request
 from collections.abc import Callable
 from typing import Any
@@ -29,33 +30,38 @@ except ImportError:
     FASTAPI_AVAILABLE = False
 
 
-def _sync_fetch(url: str, timeout: int = 5) -> bytes:
+def _sync_fetch(url: str, cookies: dict[str, str] | None = None, timeout: int = 5) -> bytes:
     """Synchronous HTTP GET — runs in a thread to avoid blocking the event loop."""
     req = urllib.request.Request(url)
+    if cookies:
+        req.add_header("Cookie", "; ".join(f"{k}={v}" for k, v in cookies.items()))
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         data: bytes = resp.read()
         return data
 
 
-async def _fetch_url(url: str) -> dict[str, Any]:
+async def _fetch_url(url: str, cookies: dict[str, str] | None = None) -> dict[str, Any]:
     """Async-safe HTTP GET that returns parsed JSON.
 
     Uses asyncio.to_thread so the blocking urllib call doesn't stall
     the event loop — critical when the backend runs in the same process.
     """
-    raw = await asyncio.to_thread(_sync_fetch, url)
+    raw = await asyncio.to_thread(_sync_fetch, url, cookies)
     result: dict[str, Any] = json.loads(raw)
     return result
 
 
 def _resolve_backend_url(request: Any, fallback: str) -> str:
-    """Derive the backend URL from the incoming request.
+    """Derive the backend URL for internal API calls.
 
     On platforms like Heroku the port is dynamic, so the hardcoded fallback
-    (``http://127.0.0.1:8000``) may not match.  Using the request's own
-    ``base_url`` ensures we hit the same process that received the page
-    request.
+    (``http://127.0.0.1:8000``) may not match.  Prefer the ``PORT`` env var
+    to stay on localhost (no SSL overhead, no external router hop).  Fall back
+    to ``request.base_url`` for platforms that don't set PORT.
     """
+    port = os.environ.get("PORT")
+    if port:
+        return f"http://127.0.0.1:{port}"
     try:
         base = str(request.base_url).rstrip("/")
         if base:
@@ -65,13 +71,19 @@ def _resolve_backend_url(request: Any, fallback: str) -> str:
     return fallback
 
 
-async def _fetch_json(backend_url: str, api_pattern: str | None, path_id: Any) -> dict[str, Any]:
+async def _fetch_json(
+    backend_url: str,
+    api_pattern: str | None,
+    path_id: Any,
+    cookies: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Fetch a single entity record from the backend API.
 
     Args:
         backend_url: Base URL of the backend (e.g. "http://127.0.0.1:8000").
         api_pattern: URL pattern with ``{id}`` placeholder (e.g. "/contacts/{id}").
         path_id: The entity ID to substitute.
+        cookies: Optional cookies to forward (e.g. session cookie for auth).
 
     Returns:
         Parsed JSON dict, or a fallback dict with ``error`` key on failure.
@@ -80,7 +92,7 @@ async def _fetch_json(backend_url: str, api_pattern: str | None, path_id: Any) -
         return {"id": str(path_id), "error": "No API pattern"}
     url = f"{backend_url}{api_pattern.replace('{id}', str(path_id))}"
     try:
-        return await _fetch_url(url)
+        return await _fetch_url(url, cookies)
     except Exception:
         logger.warning("Failed to fetch entity data from %s", url, exc_info=True)
         return {"id": str(path_id), "error": "Failed to load"}
@@ -184,6 +196,10 @@ def create_page_routes(
             # platforms (Heroku, Railway, etc.) where the default 8000 is wrong.
             effective_backend_url = _resolve_backend_url(request, backend_url)
 
+            # Forward session cookies so internal API calls are authenticated.
+            # Without this, CRUD endpoints return 404 (auth-required routes).
+            _cookies = dict(request.cookies) if request.cookies else None
+
             # For detail/edit pages, extract {id} from path params.
             # IMPORTANT: use per-request copies of detail/form contexts
             # because URL templates contain {id} placeholders that get
@@ -196,7 +212,10 @@ def create_page_routes(
 
                 # Fetch item data using the *original* URL template
                 req_detail.item = await _fetch_json(
-                    effective_backend_url, ctx.detail.delete_url or ctx.detail.back_url, path_id
+                    effective_backend_url,
+                    ctx.detail.delete_url or ctx.detail.back_url,
+                    path_id,
+                    _cookies,
                 )
                 if "error" in req_detail.item:
                     logger.warning(
@@ -221,7 +240,9 @@ def create_page_routes(
                 req_form = ctx.form.model_copy(deep=True)
 
                 # Fetch existing data using the *original* URL template
-                form_data = await _fetch_json(effective_backend_url, ctx.form.action_url, path_id)
+                form_data = await _fetch_json(
+                    effective_backend_url, ctx.form.action_url, path_id, _cookies
+                )
                 if "error" not in form_data:
                     req_form.initial_values = form_data
                 else:
@@ -252,7 +273,7 @@ def create_page_routes(
                 fetch_url = f"{effective_backend_url}{ctx.table.api_endpoint}?{query_string}"
 
                 try:
-                    data = await _fetch_url(fetch_url)
+                    data = await _fetch_url(fetch_url, _cookies)
                     items = data.get("items", [])
                     if items and isinstance(items[0], dict):
                         ctx.table.rows = items

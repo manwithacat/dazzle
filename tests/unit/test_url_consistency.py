@@ -7,6 +7,7 @@ detail page.
 
 from __future__ import annotations
 
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -446,3 +447,85 @@ class TestHtmxParentUrl:
         request = MagicMock()
         request.headers = {}
         assert _htmx_parent_url(request) is None
+
+
+# ===================================================================
+# 5. Internal fetch cookie forwarding & backend URL resolution
+# ===================================================================
+
+from dazzle_ui.runtime.page_routes import (  # noqa: E402
+    _resolve_backend_url,
+    _sync_fetch,
+)
+
+
+class TestResolveBackendUrl:
+    """Test _resolve_backend_url prefers PORT env var for localhost."""
+
+    def test_uses_port_env_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("PORT", "12345")
+        request = MagicMock()
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:12345"
+
+    def test_falls_back_to_base_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("PORT", raising=False)
+        request = MagicMock()
+        request.base_url = "http://localhost:3000/"
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://localhost:3000"
+
+    def test_falls_back_to_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("PORT", raising=False)
+        request = MagicMock()
+        request.base_url = ""
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:8000"
+
+
+class TestSyncFetchCookies:
+    """Test that _sync_fetch forwards cookies as Cookie header."""
+
+    def test_cookie_header_set(self) -> None:
+        """Verify Cookie header is added to the request object."""
+        import urllib.request as urlreq
+
+        calls: list[urlreq.Request] = []
+        original_urlopen = urlreq.urlopen
+
+        def mock_urlopen(req: urlreq.Request, **kwargs: Any) -> Any:
+            calls.append(req)
+            resp = MagicMock()
+            resp.read.return_value = b'{"ok": true}'
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = lambda s, *a: None
+            return resp
+
+        urlreq.urlopen = mock_urlopen  # type: ignore[assignment]
+        try:
+            _sync_fetch("http://localhost/test", cookies={"session": "abc123"})
+            assert len(calls) == 1
+            cookie_header = calls[0].get_header("Cookie")
+            assert cookie_header == "session=abc123"
+        finally:
+            urlreq.urlopen = original_urlopen  # type: ignore[assignment]
+
+    def test_no_cookie_header_when_none(self) -> None:
+        """Verify no Cookie header when cookies is None."""
+        import urllib.request as urlreq
+
+        calls: list[urlreq.Request] = []
+
+        def mock_urlopen(req: urlreq.Request, **kwargs: Any) -> Any:
+            calls.append(req)
+            resp = MagicMock()
+            resp.read.return_value = b'{"ok": true}'
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = lambda s, *a: None
+            return resp
+
+        original_urlopen = urlreq.urlopen
+        urlreq.urlopen = mock_urlopen  # type: ignore[assignment]
+        try:
+            _sync_fetch("http://localhost/test")
+            assert len(calls) == 1
+            assert calls[0].get_header("Cookie") is None
+        finally:
+            urlreq.urlopen = original_urlopen  # type: ignore[assignment]
