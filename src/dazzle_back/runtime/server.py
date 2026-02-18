@@ -313,41 +313,52 @@ class WorkspaceRouteBuilder:
                     )
                     _ws_region_ctxs.append(_region_ctx)
 
-                    @app.get(
+                    # Use a factory to bind each region context via closure
+                    # instead of a default parameter — FastAPI deepcopies
+                    # defaults, which fails on non-picklable PGconn objects (#290).
+                    def _make_region_route(rctx: WorkspaceRegionContext) -> Any:
+                        async def workspace_region_data(
+                            request: Request,
+                            page: int = 1,
+                            page_size: int = 20,
+                            sort: str | None = None,
+                            dir: str = "asc",
+                        ) -> Any:
+                            return await _workspace_region_handler(
+                                request,
+                                page,
+                                page_size,
+                                sort,
+                                dir,
+                                ctx=rctx,
+                            )
+
+                        return workspace_region_data
+
+                    app.get(
                         f"/api/workspaces/{ws_name}/regions/{ctx_region.name}",
                         tags=["Workspaces"],
-                    )
-                    async def workspace_region_data(
-                        request: Request,
-                        page: int = 1,
-                        page_size: int = 20,
-                        sort: str | None = None,
-                        dir: str = "asc",
-                        _rctx: Any = _region_ctx,
-                    ) -> Any:
-                        return await _workspace_region_handler(
-                            request,
-                            page,
-                            page_size,
-                            sort,
-                            dir,
-                            ctx=_rctx,
-                        )
+                    )(_make_region_route(_region_ctx))
 
                 # Batch endpoint: collect all region contexts (already built above)
                 _batch_ctxs = list(_ws_region_ctxs)
 
-                @app.get(
+                def _make_batch_route(
+                    ctxs: list[WorkspaceRegionContext],
+                ) -> Any:
+                    async def workspace_batch(
+                        request: Request,
+                        page: int = 1,
+                        page_size: int = 20,
+                    ) -> Any:
+                        return await _workspace_batch_handler(request, page, page_size, ctxs)
+
+                    return workspace_batch
+
+                app.get(
                     f"/api/workspaces/{ws_name}/batch",
                     tags=["Workspaces"],
-                )
-                async def workspace_batch(
-                    request: Request,
-                    page: int = 1,
-                    page_size: int = 20,
-                    _ctxs: list[WorkspaceRegionContext] = _batch_ctxs,
-                ) -> Any:
-                    return await _workspace_batch_handler(request, page, page_size, _ctxs)
+                )(_make_batch_route(_batch_ctxs))
 
                 self._init_workspace_entity_routes(workspaces, app)
 
