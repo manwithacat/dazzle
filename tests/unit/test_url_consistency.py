@@ -293,6 +293,8 @@ pytest.importorskip("fastapi")
 
 from dazzle_back.runtime.route_generator import (  # noqa: E402
     _extract_result_id,
+    _htmx_current_url,
+    _htmx_parent_url,
     _with_htmx_triggers,
     create_create_handler,
 )
@@ -400,3 +402,47 @@ class TestCreateHandlerRedirect:
 
         resp = await handler(request)
         assert "HX-Redirect" not in resp.headers
+
+
+class TestHtmxCurrentUrl:
+    """Test _htmx_current_url helper."""
+
+    def test_returns_url_for_htmx_request(self) -> None:
+        request = MagicMock()
+        request.headers = {
+            "HX-Request": "true",
+            "hx-current-url": "http://localhost:3000/tasks/abc",
+        }
+        assert _htmx_current_url(request) == "http://localhost:3000/tasks/abc"
+
+    def test_returns_none_for_non_htmx(self) -> None:
+        request = MagicMock()
+        request.headers = {}
+        assert _htmx_current_url(request) is None
+
+    def test_returns_none_when_header_missing(self) -> None:
+        request = MagicMock()
+        request.headers = {"HX-Request": "true"}
+        assert _htmx_current_url(request) is None
+
+
+class TestHtmxParentUrl:
+    """Test _htmx_parent_url helper for post-delete redirect."""
+
+    def test_strips_trailing_id_segment(self) -> None:
+        request = MagicMock()
+        request.headers = {
+            "HX-Request": "true",
+            "hx-current-url": "http://localhost:3000/tasks/abc-123",
+        }
+        assert _htmx_parent_url(request) == "/tasks"
+
+    def test_returns_root_for_single_segment(self) -> None:
+        request = MagicMock()
+        request.headers = {"HX-Request": "true", "hx-current-url": "http://localhost:3000/tasks"}
+        assert _htmx_parent_url(request) == "/"
+
+    def test_returns_none_for_non_htmx(self) -> None:
+        request = MagicMock()
+        request.headers = {}
+        assert _htmx_parent_url(request) is None

@@ -54,6 +54,24 @@ def _is_htmx_request(request: Any) -> bool:
     return False
 
 
+def _htmx_current_url(request: Any) -> str | None:
+    """Return the HX-Current-URL header if this is an HTMX request, else None."""
+    return request.headers.get("hx-current-url") if _is_htmx_request(request) else None
+
+
+def _htmx_parent_url(request: Any) -> str | None:
+    """Return the parent of HX-Current-URL (e.g. /tasks/abc → /tasks) for post-delete redirect."""
+    url = _htmx_current_url(request)
+    if not url:
+        return None
+    # Strip trailing ID segment to get list page URL
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url)
+    parent = parsed.path.rsplit("/", 1)[0] or "/"
+    return parent
+
+
 def _with_htmx_triggers(
     request: Any, result: Any, entity_name: str, action: str, redirect_url: str | None = None
 ) -> Any:
@@ -705,7 +723,9 @@ def create_update_handler(
             result = await service.execute(operation="update", id=id, data=data)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
-            return _with_htmx_triggers(request, result, entity_name, "updated")
+            return _with_htmx_triggers(
+                request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
+            )
 
         _update_cedar.__annotations__ = {
             "id": UUID,
@@ -745,7 +765,9 @@ def create_update_handler(
                     else None,
                     **ctx,
                 )
-            return _with_htmx_triggers(request, result, entity_name, "updated")
+            return _with_htmx_triggers(
+                request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
+            )
 
         _update_auth.__annotations__ = {
             "id": UUID,
@@ -761,7 +783,9 @@ def create_update_handler(
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
-        return _with_htmx_triggers(request, result, entity_name, "updated")
+        return _with_htmx_triggers(
+            request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
+        )
 
     _update_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
     return _update_noauth
@@ -837,7 +861,13 @@ def create_delete_handler(
             result = await service.execute(operation="delete", id=id)
             if not result:
                 raise HTTPException(status_code=404, detail="Not found")
-            return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
+            return _with_htmx_triggers(
+                request,
+                {"deleted": True},
+                entity_name,
+                "deleted",
+                redirect_url=_htmx_parent_url(request),
+            )
 
         _delete_cedar.__annotations__ = {
             "id": UUID,
@@ -875,7 +905,13 @@ def create_delete_handler(
                     else None,
                     **ctx,
                 )
-            return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
+            return _with_htmx_triggers(
+                request,
+                {"deleted": True},
+                entity_name,
+                "deleted",
+                redirect_url=_htmx_parent_url(request),
+            )
 
         _delete_auth.__annotations__ = {
             "id": UUID,
@@ -889,7 +925,13 @@ def create_delete_handler(
         result = await service.execute(operation="delete", id=id)
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
-        return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
+        return _with_htmx_triggers(
+            request,
+            {"deleted": True},
+            entity_name,
+            "deleted",
+            redirect_url=_htmx_parent_url(request),
+        )
 
     _delete_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
     return _delete_noauth
@@ -1283,7 +1325,9 @@ def generate_crud_routes(
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
-        return _with_htmx_triggers(request, result, entity_name, "updated")
+        return _with_htmx_triggers(
+            request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
+        )
 
     # Delete
     @router.delete(f"{prefix}/{{id}}", tags=tags, summary=f"Delete {entity_name}")
@@ -1291,6 +1335,12 @@ def generate_crud_routes(
         result = await service.execute(operation="delete", id=id)
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
-        return _with_htmx_triggers(request, {"deleted": True}, entity_name, "deleted")
+        return _with_htmx_triggers(
+            request,
+            {"deleted": True},
+            entity_name,
+            "deleted",
+            redirect_url=_htmx_parent_url(request),
+        )
 
     return router
