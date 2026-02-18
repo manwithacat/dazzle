@@ -1629,7 +1629,21 @@ class DazzleBackendApp:
             record_history=True,
         )
 
-        repo_factory = RepositoryFactory(self._db_manager, self._models)
+        # Build relation loader for nested ref resolution (#272)
+        from dazzle_back.runtime.relation_loader import RelationLoader, RelationRegistry
+
+        relation_registry = RelationRegistry.from_entities(self.spec.entities)
+        relation_loader = RelationLoader(
+            registry=relation_registry,
+            entities=self.spec.entities,
+            conn_factory=self._db_manager.get_persistent_connection,
+        )
+
+        repo_factory = RepositoryFactory(
+            self._db_manager,
+            self._models,
+            relation_loader=relation_loader,
+        )
         self._repositories = repo_factory.create_all_repositories(self.spec.entities)
 
     def _setup_services(self) -> None:

@@ -236,7 +236,8 @@ class RelationLoader:
 
         # Batch load related entities
         placeholders = ", ".join(self._placeholder for _ in fk_values)
-        sql = f"SELECT * FROM {relation.to_entity} WHERE id IN ({placeholders})"
+        table = quote_identifier(relation.to_entity)
+        sql = f"SELECT * FROM {table} WHERE id IN ({placeholders})"
 
         cursor = conn.execute(sql, list(fk_values))
         related_rows = cursor.fetchall()
@@ -276,7 +277,9 @@ class RelationLoader:
         # The FK on the related entity points back to us
         fk_field = relation.foreign_key_field
         placeholders = ", ".join(self._placeholder for _ in ids)
-        sql = f"SELECT * FROM {relation.to_entity} WHERE {fk_field} IN ({placeholders})"
+        table = quote_identifier(relation.to_entity)
+        fk_col = quote_identifier(fk_field)
+        sql = f"SELECT * FROM {table} WHERE {fk_col} IN ({placeholders})"
 
         cursor = conn.execute(sql, list(ids))
         related_rows = cursor.fetchall()
