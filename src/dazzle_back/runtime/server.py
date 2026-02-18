@@ -815,11 +815,11 @@ class WorkspaceRouteBuilder:
                     _source = ctx_region.source
 
                     _entity_spec = None
-                    if spec and hasattr(spec, "domain") and spec.domain:
-                        for _e in spec.domain.entities:
-                            if _e.name == _source:
-                                _entity_spec = _e
-                                break
+                    _entities = getattr(spec, "entities", [])
+                    for _e in _entities:
+                        if _e.name == _source:
+                            _entity_spec = _e
+                            break
 
                     _attention_signals: list[Any] = []
                     if spec and hasattr(spec, "surfaces"):
