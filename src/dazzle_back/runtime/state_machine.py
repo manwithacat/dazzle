@@ -7,11 +7,16 @@ including guard evaluation and error handling.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
+from datetime import date, datetime, timedelta
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from dazzle_back.specs.entity import StateMachineSpec, StateTransitionSpec
+
+logger = logging.getLogger(__name__)
 
 
 # =============================================================================
@@ -98,6 +103,217 @@ class TransitionValidationResult:
 
 
 # =============================================================================
+# Guard Expression Evaluator
+# =============================================================================
+
+
+def evaluate_guard_expr(expr: dict[str, Any], entity_data: dict[str, Any]) -> bool:
+    """Evaluate a serialized Expr AST against entity data.
+
+    The ``expr`` dict is a JSON-serialized form of ``dazzle.core.ir.expressions.Expr``.
+    We dispatch on the Pydantic discriminator field to determine the node type.
+
+    Returns True if the guard passes (transition allowed), False otherwise.
+    """
+    return bool(_eval_node(expr, entity_data))
+
+
+def _eval_node(node: dict[str, Any], data: dict[str, Any]) -> Any:
+    """Recursively evaluate an expression AST node.
+
+    Dispatch order matters: more specific node shapes are checked first
+    to avoid ambiguity (e.g. InExpr has "value" but is not a Literal).
+    """
+    # InExpr — {"value": ..., "items": [...]}  (check before Literal)
+    if "items" in node:
+        return _eval_in(node, data)
+
+    # IfExpr — {"condition": ..., "then_expr": ..., "else_expr": ...}
+    if "condition" in node and "then_expr" in node:
+        return _eval_if(node, data)
+
+    # FieldRef — {"path": [...]}
+    if "path" in node:
+        return _eval_field_ref(node["path"], data)
+
+    # DurationLiteral — {"value": int, "unit": str}
+    if "unit" in node:
+        return _eval_duration(node.get("value", 0), node["unit"])
+
+    # BinaryExpr — {"op": str, "left": ..., "right": ...}
+    if "op" in node and "left" in node and "right" in node:
+        return _eval_binary(node, data)
+
+    # UnaryExpr — {"op": str, "operand": ...}
+    if "op" in node and "operand" in node:
+        return _eval_unary(node, data)
+
+    # FuncCall — {"name": str, "args": [...]}
+    if "name" in node and "args" in node:
+        return _eval_func(node, data)
+
+    # Literal — {"value": ...}  (catch-all for simple value nodes)
+    if "value" in node:
+        return node["value"]
+
+    return None
+
+
+def _eval_field_ref(path: list[str], data: dict[str, Any]) -> Any:
+    """Resolve a field path against entity data.
+
+    Strips leading ``self`` since entity_data already represents the entity.
+    """
+    segments = list(path)
+    if segments and segments[0] == "self":
+        segments = segments[1:]
+
+    value: Any = data
+    for segment in segments:
+        if isinstance(value, dict):
+            value = value.get(segment)
+        else:
+            return None
+        if value is None:
+            return None
+    return value
+
+
+def _eval_duration(value: int, unit: str) -> timedelta:
+    """Convert a duration literal to timedelta."""
+    if unit == "h":
+        return timedelta(hours=value)
+    if unit == "min":
+        return timedelta(minutes=value)
+    if unit == "w":
+        return timedelta(weeks=value)
+    return timedelta(days=value)  # d, m, y all default to days for simplicity
+
+
+def _normalize_value(value: Any) -> Any:
+    """Normalize a value for comparison."""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        try:
+            if "T" in value:
+                return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+            elif len(value) == 10 and value[4] == "-":
+                return date.fromisoformat(value)
+        except ValueError:
+            pass
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def _eval_binary(node: dict[str, Any], data: dict[str, Any]) -> Any:
+    """Evaluate a binary expression."""
+    op = node["op"]
+    left = _eval_node(node["left"], data)
+    right = _eval_node(node["right"], data)
+
+    # Short-circuit logical operators
+    if op == "and":
+        return bool(left) and bool(right)
+    if op == "or":
+        return bool(left) or bool(right)
+
+    # Handle None comparisons
+    if left is None or right is None:
+        if op == "==":
+            return left is None and right is None
+        if op == "!=":
+            return not (left is None and right is None)
+        return False
+
+    left = _normalize_value(left)
+    right = _normalize_value(right)
+
+    # Date + timedelta arithmetic
+    if isinstance(left, date) and isinstance(right, timedelta):
+        right = date.today() + right
+    elif isinstance(left, timedelta) and isinstance(right, date):
+        left = date.today() + left
+
+    try:
+        if op == "==":
+            return left == right
+        if op == "!=":
+            return left != right
+        if op == "<":
+            return left < right
+        if op == ">":
+            return left > right
+        if op == "<=":
+            return left <= right
+        if op == ">=":
+            return left >= right
+        if op == "+":
+            return left + right
+        if op == "-":
+            return left - right
+        if op == "*":
+            return left * right
+        if op == "/":
+            return left / right if right != 0 else None
+        if op == "%":
+            return left % right if right != 0 else None
+    except TypeError:
+        return False
+
+    return None
+
+
+def _eval_unary(node: dict[str, Any], data: dict[str, Any]) -> Any:
+    """Evaluate a unary expression."""
+    operand = _eval_node(node["operand"], data)
+    if node["op"] == "not":
+        return not bool(operand)
+    if node["op"] == "-":
+        try:
+            return -operand
+        except TypeError:
+            return None
+    return None
+
+
+def _eval_func(node: dict[str, Any], data: dict[str, Any]) -> Any:
+    """Evaluate a function call."""
+    name = node["name"]
+    args = [_eval_node(a, data) for a in node.get("args", [])]
+
+    if name == "today":
+        return date.today()
+    if name == "len" and args:
+        try:
+            return len(args[0])
+        except TypeError:
+            return 0
+    return None
+
+
+def _eval_in(node: dict[str, Any], data: dict[str, Any]) -> bool:
+    """Evaluate a membership test (in / not in)."""
+    value = _eval_node(node["value"], data)
+    items = [_eval_node(i, data) for i in node.get("items", [])]
+    result = value in items
+    if node.get("negated", False):
+        return not result
+    return result
+
+
+def _eval_if(node: dict[str, Any], data: dict[str, Any]) -> Any:
+    """Evaluate a conditional expression."""
+    if bool(_eval_node(node["condition"], data)):
+        return _eval_node(node["then_expr"], data)
+    for cond, val in node.get("elif_branches", []):
+        if bool(_eval_node(cond, data)):
+            return _eval_node(val, data)
+    return _eval_node(node["else_expr"], data)
+
+
+# =============================================================================
 # Transition Validator
 # =============================================================================
 
@@ -110,6 +326,7 @@ class TransitionValidator:
     1. The transition is defined in the state machine
     2. Required field guards are satisfied (field has a value)
     3. Role guards are satisfied (user has required role)
+    4. Expression guards are satisfied (typed expression evaluates to true)
     """
 
     def __init__(self, state_machine: StateMachineSpec):
@@ -176,6 +393,33 @@ class TransitionValidator:
                             guard.requires_role,
                             f"User must have role '{guard.requires_role}' "
                             f"for transition '{from_state}' -> '{to_state}'",
+                        )
+                    )
+
+            # Check expression guard
+            if guard.guard_expr:
+                try:
+                    result = evaluate_guard_expr(guard.guard_expr, entity_data)
+                except Exception:
+                    logger.warning(
+                        "Guard expression evaluation failed for %s -> %s",
+                        from_state,
+                        to_state,
+                        exc_info=True,
+                    )
+                    result = False
+
+                if not result:
+                    message = guard.guard_message or (
+                        f"Guard condition not met for transition '{from_state}' -> '{to_state}'"
+                    )
+                    return TransitionValidationResult.failure(
+                        GuardNotSatisfiedError(
+                            from_state,
+                            to_state,
+                            "expression",
+                            str(guard.guard_expr),
+                            message,
                         )
                     )
 

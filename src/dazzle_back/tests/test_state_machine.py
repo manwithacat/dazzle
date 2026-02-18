@@ -6,6 +6,7 @@ from dazzle_back.runtime.state_machine import (
     GuardNotSatisfiedError,
     InvalidTransitionError,
     TransitionValidator,
+    evaluate_guard_expr,
     validate_status_update,
 )
 from dazzle_back.specs.entity import (
@@ -406,3 +407,305 @@ class TestAutoTransitionSpec:
         """Test delay calculation for days."""
         auto = AutoTransitionSpec(delay_value=7, delay_unit=TimeUnit.DAYS)
         assert auto.delay_seconds == 7 * 86400
+
+
+# =============================================================================
+# Expression Guard Tests
+# =============================================================================
+
+
+class TestEvaluateGuardExpr:
+    """Tests for evaluate_guard_expr — typed expression evaluation."""
+
+    def test_simple_field_equality(self) -> None:
+        """reviewer != preparer (four-eye rule)."""
+        expr = {
+            "op": "!=",
+            "left": {"path": ["reviewer"]},
+            "right": {"path": ["preparer"]},
+        }
+        assert evaluate_guard_expr(expr, {"reviewer": "alice", "preparer": "bob"}) is True
+        assert evaluate_guard_expr(expr, {"reviewer": "alice", "preparer": "alice"}) is False
+
+    def test_field_equals_literal(self) -> None:
+        """status == 'completed'."""
+        expr = {
+            "op": "==",
+            "left": {"path": ["status"]},
+            "right": {"value": "completed"},
+        }
+        assert evaluate_guard_expr(expr, {"status": "completed"}) is True
+        assert evaluate_guard_expr(expr, {"status": "pending"}) is False
+
+    def test_self_prefix_stripped(self) -> None:
+        """self->reviewer != self->preparer — 'self' prefix ignored."""
+        expr = {
+            "op": "!=",
+            "left": {"path": ["self", "reviewer"]},
+            "right": {"path": ["self", "preparer"]},
+        }
+        assert evaluate_guard_expr(expr, {"reviewer": "alice", "preparer": "bob"}) is True
+
+    def test_nested_field_ref(self) -> None:
+        """self->contact->aml_status == 'completed'."""
+        expr = {
+            "op": "==",
+            "left": {"path": ["self", "contact", "aml_status"]},
+            "right": {"value": "completed"},
+        }
+        data = {"contact": {"aml_status": "completed"}}
+        assert evaluate_guard_expr(expr, data) is True
+        data = {"contact": {"aml_status": "pending"}}
+        assert evaluate_guard_expr(expr, data) is False
+
+    def test_and_expression(self) -> None:
+        """reviewer != preparer and status == 'review'."""
+        expr = {
+            "op": "and",
+            "left": {
+                "op": "!=",
+                "left": {"path": ["reviewer"]},
+                "right": {"path": ["preparer"]},
+            },
+            "right": {
+                "op": "==",
+                "left": {"path": ["status"]},
+                "right": {"value": "review"},
+            },
+        }
+        data = {"reviewer": "alice", "preparer": "bob", "status": "review"}
+        assert evaluate_guard_expr(expr, data) is True
+        data = {"reviewer": "alice", "preparer": "alice", "status": "review"}
+        assert evaluate_guard_expr(expr, data) is False
+
+    def test_or_expression(self) -> None:
+        """role == 'admin' or role == 'manager'."""
+        expr = {
+            "op": "or",
+            "left": {"op": "==", "left": {"path": ["role"]}, "right": {"value": "admin"}},
+            "right": {"op": "==", "left": {"path": ["role"]}, "right": {"value": "manager"}},
+        }
+        assert evaluate_guard_expr(expr, {"role": "admin"}) is True
+        assert evaluate_guard_expr(expr, {"role": "manager"}) is True
+        assert evaluate_guard_expr(expr, {"role": "viewer"}) is False
+
+    def test_not_expression(self) -> None:
+        """not is_locked."""
+        expr = {"op": "not", "operand": {"path": ["is_locked"]}}
+        assert evaluate_guard_expr(expr, {"is_locked": False}) is True
+        assert evaluate_guard_expr(expr, {"is_locked": True}) is False
+
+    def test_numeric_comparison(self) -> None:
+        """amount > 0."""
+        expr = {
+            "op": ">",
+            "left": {"path": ["amount"]},
+            "right": {"value": 0},
+        }
+        assert evaluate_guard_expr(expr, {"amount": 100}) is True
+        assert evaluate_guard_expr(expr, {"amount": 0}) is False
+        assert evaluate_guard_expr(expr, {"amount": -5}) is False
+
+    def test_null_field_handling(self) -> None:
+        """reviewer != null (field must be set)."""
+        expr = {
+            "op": "!=",
+            "left": {"path": ["reviewer"]},
+            "right": {"value": None},
+        }
+        assert evaluate_guard_expr(expr, {"reviewer": "alice"}) is True
+        assert evaluate_guard_expr(expr, {"reviewer": None}) is False
+        assert evaluate_guard_expr(expr, {}) is False
+
+    def test_in_expression(self) -> None:
+        """status in ['approved', 'verified']."""
+        expr = {
+            "value": {"path": ["status"]},
+            "items": [{"value": "approved"}, {"value": "verified"}],
+            "negated": False,
+        }
+        assert evaluate_guard_expr(expr, {"status": "approved"}) is True
+        assert evaluate_guard_expr(expr, {"status": "pending"}) is False
+
+    def test_not_in_expression(self) -> None:
+        """status not in ['draft', 'cancelled']."""
+        expr = {
+            "value": {"path": ["status"]},
+            "items": [{"value": "draft"}, {"value": "cancelled"}],
+            "negated": True,
+        }
+        assert evaluate_guard_expr(expr, {"status": "active"}) is True
+        assert evaluate_guard_expr(expr, {"status": "draft"}) is False
+
+    def test_literal_true(self) -> None:
+        """Literal true always passes."""
+        assert evaluate_guard_expr({"value": True}, {}) is True
+
+    def test_literal_false(self) -> None:
+        """Literal false always fails."""
+        assert evaluate_guard_expr({"value": False}, {}) is False
+
+
+class TestExpressionGuardInValidator:
+    """Tests for expression guards integrated into TransitionValidator."""
+
+    def _four_eye_guard(self) -> TransitionGuardSpec:
+        """Create a 'reviewer != preparer' expression guard."""
+        return TransitionGuardSpec(
+            guard_expr={
+                "op": "!=",
+                "left": {"path": ["reviewer"]},
+                "right": {"path": ["preparer"]},
+            },
+            guard_message="Reviewer must differ from the preparer (four-eye rule)",
+        )
+
+    def test_expr_guard_passes(self) -> None:
+        """Expression guard passes when condition is true."""
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["review", "closed"],
+            transitions=[
+                StateTransitionSpec(
+                    from_state="review",
+                    to_state="closed",
+                    guards=[self._four_eye_guard()],
+                ),
+            ],
+        )
+        validator = TransitionValidator(sm)
+        result = validator.validate_transition(
+            "review", "closed", {"reviewer": "alice", "preparer": "bob"}
+        )
+        assert result.is_valid
+
+    def test_expr_guard_fails(self) -> None:
+        """Expression guard fails when condition is false."""
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["review", "closed"],
+            transitions=[
+                StateTransitionSpec(
+                    from_state="review",
+                    to_state="closed",
+                    guards=[self._four_eye_guard()],
+                ),
+            ],
+        )
+        validator = TransitionValidator(sm)
+        result = validator.validate_transition(
+            "review", "closed", {"reviewer": "alice", "preparer": "alice"}
+        )
+        assert not result.is_valid
+        assert isinstance(result.error, GuardNotSatisfiedError)
+        assert result.error.guard_type == "expression"
+        assert "four-eye" in str(result.error)
+
+    def test_expr_guard_uses_custom_message(self) -> None:
+        """Guard message is the custom message from DSL."""
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["review", "closed"],
+            transitions=[
+                StateTransitionSpec(
+                    from_state="review",
+                    to_state="closed",
+                    guards=[self._four_eye_guard()],
+                ),
+            ],
+        )
+        validator = TransitionValidator(sm)
+        result = validator.validate_transition(
+            "review", "closed", {"reviewer": "alice", "preparer": "alice"}
+        )
+        assert not result.is_valid
+        assert "Reviewer must differ from the preparer" in str(result.error)
+
+    def test_expr_guard_combined_with_field_guard(self) -> None:
+        """Expression + field guards both checked."""
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["review", "closed"],
+            transitions=[
+                StateTransitionSpec(
+                    from_state="review",
+                    to_state="closed",
+                    guards=[
+                        TransitionGuardSpec(requires_field="reviewer"),
+                        self._four_eye_guard(),
+                    ],
+                ),
+            ],
+        )
+        validator = TransitionValidator(sm)
+
+        # Field guard fails (no reviewer)
+        result = validator.validate_transition("review", "closed", {"preparer": "bob"})
+        assert not result.is_valid
+        assert result.error.guard_type == "requires"  # type: ignore[union-attr]
+
+        # Field guard passes but expr guard fails (same person)
+        result = validator.validate_transition(
+            "review", "closed", {"reviewer": "alice", "preparer": "alice"}
+        )
+        assert not result.is_valid
+        assert result.error.guard_type == "expression"  # type: ignore[union-attr]
+
+        # Both pass
+        result = validator.validate_transition(
+            "review", "closed", {"reviewer": "alice", "preparer": "bob"}
+        )
+        assert result.is_valid
+
+    def test_expr_guard_default_message(self) -> None:
+        """Without custom message, a default is used."""
+        guard = TransitionGuardSpec(
+            guard_expr={
+                "op": ">",
+                "left": {"path": ["amount"]},
+                "right": {"value": 0},
+            },
+            # No guard_message
+        )
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["pending", "approved"],
+            transitions=[
+                StateTransitionSpec(from_state="pending", to_state="approved", guards=[guard]),
+            ],
+        )
+        validator = TransitionValidator(sm)
+        result = validator.validate_transition("pending", "approved", {"amount": 0})
+        assert not result.is_valid
+        assert "Guard condition not met" in str(result.error)
+
+    def test_validate_status_update_with_expr_guard(self) -> None:
+        """Expression guards work through the validate_status_update entry point."""
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["review", "closed"],
+            transitions=[
+                StateTransitionSpec(
+                    from_state="review",
+                    to_state="closed",
+                    guards=[self._four_eye_guard()],
+                ),
+            ],
+        )
+        # Different people — should pass
+        result = validate_status_update(
+            sm,
+            current_data={"status": "review", "reviewer": "alice", "preparer": "bob"},
+            update_data={"status": "closed"},
+        )
+        assert result is not None
+        assert result.is_valid
+
+        # Same person — should fail
+        result = validate_status_update(
+            sm,
+            current_data={"status": "review", "reviewer": "alice", "preparer": "alice"},
+            update_data={"status": "closed"},
+        )
+        assert result is not None
+        assert not result.is_valid

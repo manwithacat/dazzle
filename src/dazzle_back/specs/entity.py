@@ -300,10 +300,17 @@ class TransitionGuardSpec(BaseModel):
     Guards can be:
     - Field requirements: requires assignee (field must be set)
     - Role requirements: role(admin) (user must have role)
+    - Expression guards: guard: reviewer != preparer (typed expression)
     """
 
     requires_field: str | None = Field(default=None, description="Field that must be set")
     requires_role: str | None = Field(default=None, description="Role user must have")
+    guard_expr: dict[str, Any] | None = Field(
+        default=None, description="Typed expression AST (serialized IR Expr)"
+    )
+    guard_message: str | None = Field(
+        default=None, description="Human-readable message when guard fails"
+    )
 
     model_config = ConfigDict(frozen=True)
 

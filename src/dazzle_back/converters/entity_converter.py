@@ -250,9 +250,14 @@ def _convert_trigger(ir_trigger: ir.TransitionTrigger) -> TransitionTrigger:
 
 def _convert_guard(ir_guard: ir.TransitionGuard) -> TransitionGuardSpec:
     """Convert IR TransitionGuard to BackendSpec TransitionGuardSpec."""
+    guard_expr_dict = None
+    if ir_guard.guard_expr is not None:
+        guard_expr_dict = ir_guard.guard_expr.model_dump(mode="json")
     return TransitionGuardSpec(
         requires_field=ir_guard.requires_field,
         requires_role=ir_guard.requires_role,
+        guard_expr=guard_expr_dict,
+        guard_message=ir_guard.guard_message,
     )
 
 
