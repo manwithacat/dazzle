@@ -31,7 +31,7 @@
                   {{ item[meta_col.key] | currency }}
                 {% elif meta_col.type == "ref" %}
                   {% set ref = item[meta_col.key] %}
-                  {% if ref is mapping %}{{ ref.get("name") or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
+                  {% if ref is mapping %}{{ ref.get("name") or ref.get("company_name") or ((ref.get("first_name", "") ~ " " ~ ref.get("last_name", "")) | trim) or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
                 {% else %}
                   {{ item[meta_col.key] | default("") | truncate_text }}
                 {% endif %}

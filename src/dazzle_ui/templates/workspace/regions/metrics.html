@@ -45,7 +45,7 @@
                 {{ item[col.key] | currency }}
               {% elif col.type == "ref" %}
                 {% set ref = item[col.key] %}
-                {% if ref is mapping %}{{ ref.get("name") or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
+                {% if ref is mapping %}{{ ref.get("name") or ref.get("company_name") or ((ref.get("first_name", "") ~ " " ~ ref.get("last_name", "")) | trim) or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
               {% else %}
                 {{ item[col.key] | default("") | truncate_text }}
               {% endif %}
