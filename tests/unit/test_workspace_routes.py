@@ -1680,3 +1680,163 @@ class TestTransitionUrlSubstitution:
         assert "Start" in html
         assert 'hx-put="/tasks/t1"' in html
         assert "{id}" not in html
+
+
+# ---------------------------------------------------------------------------
+# HTMX Column Injection Tests (issue #286)
+# ---------------------------------------------------------------------------
+
+
+class TestHtmxColumnInjection:
+    """create_list_handler should inject HTMX metadata into request.state."""
+
+    @pytest.mark.asyncio
+    async def test_htmx_columns_set_on_request_state(self) -> None:
+        """When htmx_columns is provided, it's set on request.state."""
+        from dazzle_back.runtime.route_generator import create_list_handler
+
+        columns = [{"key": "name", "label": "Name", "type": "text"}]
+
+        async def mock_service_execute(**kwargs: Any) -> dict[str, Any]:
+            return {"items": [], "total": 0}
+
+        service = SimpleNamespace(execute=mock_service_execute)
+        handler = create_list_handler(
+            service,
+            htmx_columns=columns,
+            htmx_detail_url="/app/tasks/{id}",
+            htmx_entity_name="Task",
+        )
+
+        request = SimpleNamespace(
+            state=SimpleNamespace(),
+            headers={},
+            query_params={},
+        )
+
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        assert request.state.htmx_columns == columns
+        assert request.state.htmx_detail_url == "/app/tasks/{id}"
+        assert request.state.htmx_entity_name == "Task"
+
+    @pytest.mark.asyncio
+    async def test_htmx_columns_default_empty_when_not_provided(self) -> None:
+        """When htmx_columns is not provided, htmx_columns is not set on state."""
+        from dazzle_back.runtime.route_generator import create_list_handler
+
+        async def mock_service_execute(**kwargs: Any) -> dict[str, Any]:
+            return {"items": [], "total": 0}
+
+        service = SimpleNamespace(execute=mock_service_execute)
+        handler = create_list_handler(service)
+
+        request = SimpleNamespace(
+            state=SimpleNamespace(),
+            headers={},
+            query_params={},
+        )
+
+        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+
+        assert not hasattr(request.state, "htmx_columns")
+
+
+class TestHtmxTableRowRendering:
+    """Table rows rendered by HTMX should include data cells when columns are present."""
+
+    def test_table_rows_with_columns_render_data_cells(self) -> None:
+        """When columns are provided, table rows render <td> elements with data."""
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        table = {
+            "rows": [
+                {"id": "1", "first_name": "Jane", "email": "jane@test.com"},
+                {"id": "2", "first_name": "John", "email": "john@test.com"},
+            ],
+            "columns": [
+                {"key": "first_name", "label": "First Name", "type": "text"},
+                {"key": "email", "label": "Email", "type": "text"},
+            ],
+            "detail_url_template": "/app/contact/{id}",
+            "entity_name": "Contact",
+            "api_endpoint": "/contacts",
+            "table_id": "dt-contacts",
+            "sort_field": "",
+            "sort_dir": "asc",
+            "filter_values": {},
+            "page": 1,
+            "page_size": 20,
+            "total": 2,
+            "empty_message": "No contacts found.",
+            "bulk_actions": False,
+        }
+
+        html = render_fragment("fragments/table_rows.html", table=table)
+
+        # Should contain actual data values
+        assert "Jane" in html
+        assert "jane@test.com" in html
+        assert "John" in html
+
+    def test_table_rows_without_columns_render_no_data(self) -> None:
+        """When columns is empty, table rows render no <td> data cells."""
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        table = {
+            "rows": [
+                {"id": "1", "first_name": "Jane", "email": "jane@test.com"},
+            ],
+            "columns": [],
+            "detail_url_template": "/app/contact/{id}",
+            "entity_name": "Contact",
+            "api_endpoint": "/contacts",
+            "table_id": "dt-contacts",
+            "sort_field": "",
+            "sort_dir": "asc",
+            "filter_values": {},
+            "page": 1,
+            "page_size": 20,
+            "total": 1,
+            "empty_message": "No contacts found.",
+            "bulk_actions": False,
+        }
+
+        html = render_fragment("fragments/table_rows.html", table=table)
+
+        # Without columns, data values should NOT appear
+        assert "Jane" not in html
+
+
+# ---------------------------------------------------------------------------
+# Async fetch helper tests (issue #286)
+# ---------------------------------------------------------------------------
+
+
+class TestAsyncFetch:
+    """The async fetch helpers should not block the event loop."""
+
+    @pytest.mark.asyncio
+    async def test_fetch_json_returns_error_on_bad_pattern(self) -> None:
+        """_fetch_json returns error dict when api_pattern has no {id}."""
+        from dazzle_ui.runtime.page_routes import _fetch_json
+
+        result = await _fetch_json("http://localhost:8000", "/contacts", "abc")
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_fetch_json_returns_error_on_none_pattern(self) -> None:
+        """_fetch_json returns error dict when api_pattern is None."""
+        from dazzle_ui.runtime.page_routes import _fetch_json
+
+        result = await _fetch_json("http://localhost:8000", None, "abc")
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_fetch_json_returns_error_on_network_failure(self) -> None:
+        """_fetch_json returns error dict when the HTTP request fails."""
+        from dazzle_ui.runtime.page_routes import _fetch_json
+
+        result = await _fetch_json("http://127.0.0.1:1", "/contacts/{id}", "abc")
+        assert "error" in result
+        assert result["id"] == "abc"

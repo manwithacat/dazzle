@@ -1801,6 +1801,19 @@ class DazzleBackendApp:
 
         # Entity CRUD routes
         service_specs = {svc.name: svc for svc in self.spec.services}
+
+        # Pre-compute HTMX metadata per entity so list API endpoints can
+        # render table row fragments with correct column definitions.
+        entity_htmx_meta: dict[str, dict[str, Any]] = {}
+        app_prefix = "/app"
+        for entity in self.spec.entities:
+            entity_slug = entity.name.lower().replace("_", "-")
+            entity_htmx_meta[entity.name] = {
+                "columns": _build_entity_columns(entity),
+                "detail_url": f"{app_prefix}/{entity_slug}/{{id}}",
+                "entity_name": entity.name,
+            }
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -1814,6 +1827,7 @@ class DazzleBackendApp:
             cedar_access_specs=cedar_access_specs,
             entity_list_projections=self._entity_list_projections,
             entity_auto_includes=self._entity_auto_includes,
+            entity_htmx_meta=entity_htmx_meta,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,

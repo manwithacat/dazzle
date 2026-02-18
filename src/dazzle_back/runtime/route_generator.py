@@ -121,6 +121,10 @@ def create_list_handler(
     require_auth_by_default: bool = False,
     select_fields: list[str] | None = None,
     auto_include: list[str] | None = None,
+    htmx_columns: list[dict[str, Any]] | None = None,
+    htmx_detail_url: str | None = None,
+    htmx_entity_name: str = "Item",
+    htmx_empty_message: str = "No items found.",
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -132,7 +136,20 @@ def create_list_handler(
         require_auth_by_default: If True, require authentication when no access_spec is defined
         select_fields: Optional field projection for SQL queries
         auto_include: Optional relation names to auto-eager-load (prevents N+1)
+        htmx_columns: Column definitions for HTMX table row rendering
+        htmx_detail_url: Detail URL template for row click navigation
+        htmx_entity_name: Entity name for HTMX rendering context
+        htmx_empty_message: Message when no items found
     """
+
+    def _inject_htmx_meta(request: Request) -> None:
+        """Set HTMX rendering metadata on request.state for table row fragments."""
+        if htmx_columns is not None:
+            request.state.htmx_columns = htmx_columns
+        if htmx_detail_url is not None:
+            request.state.htmx_detail_url = htmx_detail_url
+        request.state.htmx_entity_name = htmx_entity_name
+        request.state.htmx_empty_message = htmx_empty_message
 
     if optional_auth_dep is not None:
 
@@ -155,6 +172,7 @@ def create_list_handler(
                     detail="Authentication required",
                 )
 
+            _inject_htmx_meta(request)
             return await _list_handler_body(
                 service,
                 access_spec,
@@ -190,6 +208,7 @@ def create_list_handler(
         dir: str = Query("asc", description="Sort direction (asc/desc)"),
         search: str | None = Query(None, description="Search query"),
     ) -> Any:
+        _inject_htmx_meta(request)
         return await _list_handler_body(
             service,
             access_spec,
@@ -928,6 +947,7 @@ class RouteGenerator:
         cedar_access_specs: dict[str, Any] | None = None,
         entity_list_projections: dict[str, list[str]] | None = None,
         entity_auto_includes: dict[str, list[str]] | None = None,
+        entity_htmx_meta: dict[str, dict[str, Any]] | None = None,
     ):
         """
         Initialize the route generator.
@@ -945,6 +965,7 @@ class RouteGenerator:
             cedar_access_specs: Optional dict of entity_name -> EntityAccessSpec for Cedar evaluation
             entity_list_projections: Optional dict mapping entity names to projected field lists
             entity_auto_includes: Optional dict mapping entity names to auto-eager-loaded relations
+            entity_htmx_meta: Optional dict mapping entity names to HTMX rendering metadata
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -961,6 +982,7 @@ class RouteGenerator:
         self.cedar_access_specs = cedar_access_specs or {}
         self.entity_list_projections = entity_list_projections or {}
         self.entity_auto_includes = entity_auto_includes or {}
+        self.entity_htmx_meta = entity_htmx_meta or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -1055,6 +1077,8 @@ class RouteGenerator:
             projection = self.entity_list_projections.get(entity_name or "")
             # Get auto-include refs for this entity (prevents N+1 queries)
             includes = self.entity_auto_includes.get(entity_name or "")
+            # Get HTMX rendering metadata (columns, detail URL, etc.)
+            _htmx = self.entity_htmx_meta.get(entity_name or "", {})
             handler = create_list_handler(
                 service,
                 model,
@@ -1063,6 +1087,10 @@ class RouteGenerator:
                 require_auth_by_default=self.require_auth_by_default,
                 select_fields=projection,
                 auto_include=includes,
+                htmx_columns=_htmx.get("columns"),
+                htmx_detail_url=_htmx.get("detail_url"),
+                htmx_entity_name=_htmx.get("entity_name", entity_name or "Item"),
+                htmx_empty_message=_htmx.get("empty_message", "No items found."),
             )
             self._add_route(endpoint, handler, response_model=None)
 

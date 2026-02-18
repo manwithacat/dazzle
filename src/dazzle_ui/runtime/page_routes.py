@@ -9,7 +9,10 @@ Each workspace+surface combination gets a GET route that:
 4. Returns an HTMLResponse
 """
 
+import asyncio
+import json
 import logging
+import urllib.request
 from collections.abc import Callable
 from typing import Any
 
@@ -24,6 +27,46 @@ try:
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
+
+
+def _sync_fetch(url: str, timeout: int = 5) -> bytes:
+    """Synchronous HTTP GET — runs in a thread to avoid blocking the event loop."""
+    req = urllib.request.Request(url)
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        data: bytes = resp.read()
+        return data
+
+
+async def _fetch_url(url: str) -> dict[str, Any]:
+    """Async-safe HTTP GET that returns parsed JSON.
+
+    Uses asyncio.to_thread so the blocking urllib call doesn't stall
+    the event loop — critical when the backend runs in the same process.
+    """
+    raw = await asyncio.to_thread(_sync_fetch, url)
+    result: dict[str, Any] = json.loads(raw)
+    return result
+
+
+async def _fetch_json(backend_url: str, api_pattern: str | None, path_id: Any) -> dict[str, Any]:
+    """Fetch a single entity record from the backend API.
+
+    Args:
+        backend_url: Base URL of the backend (e.g. "http://127.0.0.1:8000").
+        api_pattern: URL pattern with ``{id}`` placeholder (e.g. "/contacts/{id}").
+        path_id: The entity ID to substitute.
+
+    Returns:
+        Parsed JSON dict, or a fallback dict with ``error`` key on failure.
+    """
+    if not api_pattern or "{id}" not in api_pattern:
+        return {"id": str(path_id), "error": "No API pattern"}
+    url = f"{backend_url}{api_pattern.replace('{id}', str(path_id))}"
+    try:
+        return await _fetch_url(url)
+    except Exception:
+        logger.debug("Failed to fetch %s", url, exc_info=True)
+        return {"id": str(path_id), "error": "Failed to load"}
 
 
 def create_page_routes(
@@ -124,22 +167,9 @@ def create_page_routes(
             path_id = request.path_params.get("id")
             if path_id and ctx.detail:
                 # Fetch item data from backend API
-                import json
-                import urllib.request
-
-                entity_api = ctx.detail.delete_url or ctx.detail.back_url
-                if entity_api and "{id}" in entity_api:
-                    fetch_url = f"{backend_url}{entity_api.replace('{id}', str(path_id))}"
-                else:
-                    fetch_url = None
-
-                if fetch_url:
-                    try:
-                        req = urllib.request.Request(fetch_url)
-                        with urllib.request.urlopen(req, timeout=5) as resp:
-                            ctx.detail.item = json.loads(resp.read())
-                    except Exception:
-                        ctx.detail.item = {"id": path_id, "error": "Failed to load"}
+                ctx.detail.item = await _fetch_json(
+                    backend_url, ctx.detail.delete_url or ctx.detail.back_url, path_id
+                )
 
                 # Fix URLs with actual ID
                 if ctx.detail.edit_url:
@@ -152,16 +182,11 @@ def create_page_routes(
 
             if path_id and ctx.form and ctx.form.mode == "edit":
                 # Fetch existing data for edit form
-                import json
-                import urllib.request
-
-                fetch_url = f"{backend_url}{ctx.form.action_url.replace('{id}', str(path_id))}"
-                try:
-                    req = urllib.request.Request(fetch_url)
-                    with urllib.request.urlopen(req, timeout=5) as resp:
-                        ctx.form.initial_values = json.loads(resp.read())
-                except Exception:
-                    logger.warning("Failed to fetch initial form values", exc_info=True)
+                form_data = await _fetch_json(backend_url, ctx.form.action_url, path_id)
+                if "error" not in form_data:
+                    ctx.form.initial_values = form_data
+                else:
+                    logger.warning("Failed to fetch initial form values for %s", path_id)
 
                 ctx.form.action_url = ctx.form.action_url.replace("{id}", str(path_id))
                 if ctx.form.cancel_url:
@@ -169,9 +194,7 @@ def create_page_routes(
 
             if ctx.table:
                 # Fetch list data from backend
-                import json
                 import urllib.parse
-                import urllib.request
 
                 # Forward all DataTable query params to backend API
                 api_params: dict[str, str] = {}
@@ -188,14 +211,11 @@ def create_page_routes(
                 fetch_url = f"{backend_url}{ctx.table.api_endpoint}?{query_string}"
 
                 try:
-                    req = urllib.request.Request(fetch_url)
-                    with urllib.request.urlopen(req, timeout=5) as resp:
-                        data = json.loads(resp.read())
-                        items = data.get("items", [])
-                        # Convert Pydantic-serialized items to plain dicts
-                        if items and isinstance(items[0], dict):
-                            ctx.table.rows = items
-                        ctx.table.total = data.get("total", len(items))
+                    data = await _fetch_url(fetch_url)
+                    items = data.get("items", [])
+                    if items and isinstance(items[0], dict):
+                        ctx.table.rows = items
+                    ctx.table.total = data.get("total", len(items))
                 except Exception:
                     ctx.table.rows = []
                     ctx.table.total = 0
