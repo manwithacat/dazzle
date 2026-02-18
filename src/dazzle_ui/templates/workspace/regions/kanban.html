@@ -16,7 +16,13 @@
                {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
                hx-push-url="true" hx-target="body"{% endif %}>
             <div class="card-body p-2">
-              <h4 class="text-sm font-medium">{{ item.get("title") or item.get("name") or item.get("company_name") or ((item.get("first_name", "") ~ " " ~ item.get("last_name", "")) | trim) or item.get("label") or item.get("email") or item[display_key] | default("Item") }}</h4>
+              {% set _dk_val = item[display_key] if display_key else none %}
+              {% if _dk_val is mapping %}
+                {% set _dk_display = _dk_val.get("name") or _dk_val.get("company_name") or ((_dk_val.get("first_name", "") ~ " " ~ _dk_val.get("last_name", "")) | trim) or _dk_val.get("title") or _dk_val.get("label") or _dk_val.get("email") or _dk_val.get("id", "Item") %}
+              {% else %}
+                {% set _dk_display = _dk_val %}
+              {% endif %}
+              <h4 class="text-sm font-medium">{{ item.get("title") or item.get("name") or item.get("company_name") or ((item.get("first_name", "") ~ " " ~ item.get("last_name", "")) | trim) or item.get("label") or item.get("email") or _dk_display | default("Item") }}</h4>
               {% for meta_col in columns %}
               {% if meta_col.key != display_key and meta_col.key != group_by %}
               <p class="text-xs">
