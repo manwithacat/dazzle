@@ -460,23 +460,101 @@ from dazzle_ui.runtime.page_routes import (  # noqa: E402
 
 
 class TestResolveBackendUrl:
-    """Test _resolve_backend_url prefers PORT env var for localhost."""
+    """Test _resolve_backend_url across deployment topologies.
 
-    def test_uses_port_env_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("PORT", "12345")
-        request = MagicMock()
-        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:12345"
+    Resolution priority:
+    1. DAZZLE_BACKEND_URL env var (explicit split-service override)
+    2. PORT env var (single-dyno platforms like Heroku)
+    3. request.base_url (same-origin setups)
+    4. fallback parameter (local dev default)
+    """
 
-    def test_falls_back_to_base_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _clean_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Ensure neither env var is set for a clean baseline."""
+        monkeypatch.delenv("DAZZLE_BACKEND_URL", raising=False)
         monkeypatch.delenv("PORT", raising=False)
+
+    # --- Topology 1: Local dev (no env vars) ---
+
+    def test_local_dev_uses_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Local dev: no env vars, base_url empty → hardcoded fallback."""
+        self._clean_env(monkeypatch)
+        request = MagicMock()
+        request.base_url = ""
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:8000"
+
+    def test_local_dev_uses_base_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Local dev: no env vars, base_url available → use it."""
+        self._clean_env(monkeypatch)
         request = MagicMock()
         request.base_url = "http://localhost:3000/"
         assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://localhost:3000"
 
-    def test_falls_back_to_default(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.delenv("PORT", raising=False)
+    # --- Topology 2: Single dyno (Heroku, Railway) ---
+
+    def test_single_dyno_uses_port(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Single dyno: PORT set → localhost with dynamic port."""
+        self._clean_env(monkeypatch)
+        monkeypatch.setenv("PORT", "12345")
         request = MagicMock()
-        request.base_url = ""
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:12345"
+
+    def test_single_dyno_port_beats_base_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Single dyno: PORT takes priority over request.base_url."""
+        self._clean_env(monkeypatch)
+        monkeypatch.setenv("PORT", "5000")
+        request = MagicMock()
+        request.base_url = "https://myapp.herokuapp.com/"
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:5000"
+
+    # --- Topology 3: Split services (frontend ≠ backend) ---
+
+    def test_split_service_explicit_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Split services: DAZZLE_BACKEND_URL set → use it directly."""
+        self._clean_env(monkeypatch)
+        monkeypatch.setenv("DAZZLE_BACKEND_URL", "https://api.example.com")
+        request = MagicMock()
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "https://api.example.com"
+
+    def test_split_service_strips_trailing_slash(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Trailing slash on DAZZLE_BACKEND_URL is stripped."""
+        self._clean_env(monkeypatch)
+        monkeypatch.setenv("DAZZLE_BACKEND_URL", "https://api.example.com/")
+        request = MagicMock()
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "https://api.example.com"
+
+    def test_split_service_beats_port(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """DAZZLE_BACKEND_URL takes priority over PORT."""
+        self._clean_env(monkeypatch)
+        monkeypatch.setenv("DAZZLE_BACKEND_URL", "http://backend:9000")
+        monkeypatch.setenv("PORT", "3000")
+        request = MagicMock()
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://backend:9000"
+
+    def test_split_service_internal_url(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Split services with internal network URL (AWS VPC, Docker network)."""
+        self._clean_env(monkeypatch)
+        monkeypatch.setenv("DAZZLE_BACKEND_URL", "http://backend.internal:8000")
+        request = MagicMock()
+        assert (
+            _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://backend.internal:8000"
+        )
+
+    # --- Edge cases ---
+
+    def test_empty_dazzle_backend_url_ignored(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Empty DAZZLE_BACKEND_URL falls through to next strategy."""
+        self._clean_env(monkeypatch)
+        monkeypatch.setenv("DAZZLE_BACKEND_URL", "")
+        monkeypatch.setenv("PORT", "8080")
+        request = MagicMock()
+        assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:8080"
+
+    def test_base_url_exception_handled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """If request.base_url raises, fall through gracefully."""
+        self._clean_env(monkeypatch)
+        request = MagicMock()
+        type(request).base_url = property(lambda self: (_ for _ in ()).throw(RuntimeError("boom")))
         assert _resolve_backend_url(request, "http://127.0.0.1:8000") == "http://127.0.0.1:8000"
 
 
@@ -529,3 +607,163 @@ class TestSyncFetchCookies:
             assert calls[0].get_header("Cookie") is None
         finally:
             urlreq.urlopen = original_urlopen  # type: ignore[assignment]
+
+    def test_multiple_cookies_joined(self) -> None:
+        """Verify multiple cookies are semicolon-separated."""
+        import urllib.request as urlreq
+
+        calls: list[urlreq.Request] = []
+        original_urlopen = urlreq.urlopen
+
+        def mock_urlopen(req: urlreq.Request, **kwargs: Any) -> Any:
+            calls.append(req)
+            resp = MagicMock()
+            resp.read.return_value = b'{"ok": true}'
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = lambda s, *a: None
+            return resp
+
+        urlreq.urlopen = mock_urlopen  # type: ignore[assignment]
+        try:
+            _sync_fetch(
+                "http://localhost/test",
+                cookies={"dazzle_session": "tok1", "csrf": "tok2"},
+            )
+            assert len(calls) == 1
+            cookie_header = calls[0].get_header("Cookie")
+            assert "dazzle_session=tok1" in cookie_header
+            assert "csrf=tok2" in cookie_header
+        finally:
+            urlreq.urlopen = original_urlopen  # type: ignore[assignment]
+
+
+# ===================================================================
+# 6. Integration: _fetch_json across deployment topologies
+# ===================================================================
+
+from dazzle_ui.runtime.page_routes import _fetch_json  # noqa: E402
+
+
+class TestFetchJsonTopologies:
+    """Verify _fetch_json sends correct URL and cookies for each topology.
+
+    Uses a mock urlopen to capture the actual request made, then asserts
+    the URL and Cookie header match what the topology would produce.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _patch_urlopen(self) -> Any:
+        """Patch urllib.request.urlopen to capture requests."""
+        import urllib.request as urlreq
+
+        self.captured: list[urlreq.Request] = []
+        self._original = urlreq.urlopen
+
+        def _mock(req: urlreq.Request, **kwargs: Any) -> Any:
+            self.captured.append(req)
+            resp = MagicMock()
+            resp.read.return_value = b'{"id": "abc", "title": "Test"}'
+            resp.__enter__ = lambda s: s
+            resp.__exit__ = lambda s, *a: None
+            return resp
+
+        urlreq.urlopen = _mock  # type: ignore[assignment]
+        yield
+        urlreq.urlopen = self._original  # type: ignore[assignment]
+
+    @pytest.mark.asyncio
+    async def test_local_dev_no_cookies(self) -> None:
+        """Local dev: localhost URL, no cookies needed (no auth)."""
+        result = await _fetch_json("http://127.0.0.1:8000", "/tasks/{id}", "uuid-1")
+        assert result["id"] == "abc"
+        assert self.captured[0].full_url == "http://127.0.0.1:8000/tasks/uuid-1"
+        assert self.captured[0].get_header("Cookie") is None
+
+    @pytest.mark.asyncio
+    async def test_heroku_single_dyno_with_cookies(self) -> None:
+        """Single dyno: localhost with PORT, session cookie forwarded."""
+        result = await _fetch_json(
+            "http://127.0.0.1:5000",
+            "/companies/{id}",
+            "uuid-2",
+            cookies={"dazzle_session": "heroku-tok"},
+        )
+        assert result["id"] == "abc"
+        assert self.captured[0].full_url == "http://127.0.0.1:5000/companies/uuid-2"
+        assert self.captured[0].get_header("Cookie") == "dazzle_session=heroku-tok"
+
+    @pytest.mark.asyncio
+    async def test_split_service_with_cookies(self) -> None:
+        """Split services: external backend URL with cookies."""
+        result = await _fetch_json(
+            "https://api.example.com",
+            "/contacts/{id}",
+            "uuid-3",
+            cookies={"dazzle_session": "split-tok", "csrf": "ct"},
+        )
+        assert result["id"] == "abc"
+        assert self.captured[0].full_url == "https://api.example.com/contacts/uuid-3"
+        cookie = self.captured[0].get_header("Cookie")
+        assert "dazzle_session=split-tok" in cookie
+        assert "csrf=ct" in cookie
+
+    @pytest.mark.asyncio
+    async def test_no_api_pattern_returns_error(self) -> None:
+        """Missing API pattern returns error without making a request."""
+        result = await _fetch_json("http://localhost:8000", None, "id-1")
+        assert "error" in result
+        assert len(self.captured) == 0
+
+    @pytest.mark.asyncio
+    async def test_pattern_without_id_placeholder_returns_error(self) -> None:
+        """API pattern without {id} returns error without making a request."""
+        result = await _fetch_json("http://localhost:8000", "/tasks", "id-1")
+        assert "error" in result
+        assert len(self.captured) == 0
+
+
+class TestFetchJsonHttpServer:
+    """Integration test with a real HTTP server to verify cookie forwarding end-to-end."""
+
+    @pytest.mark.asyncio
+    async def test_real_http_cookie_forwarding(self) -> None:
+        """Start a real HTTP server, verify cookies arrive in the request."""
+        import http.server
+        import threading
+
+        received_cookies: list[str | None] = []
+        received_paths: list[str] = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                received_cookies.append(self.headers.get("Cookie"))
+                received_paths.append(self.path)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"id": "test-id", "name": "Test Entity"}')
+
+            def log_message(self, format: str, *args: Any) -> None:
+                pass  # Suppress server logs during tests
+
+        server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+        port = server.server_address[1]
+        thread = threading.Thread(target=server.serve_forever)
+        thread.daemon = True
+        thread.start()
+
+        try:
+            result = await _fetch_json(
+                f"http://127.0.0.1:{port}",
+                "/entities/{id}",
+                "abc-123",
+                cookies={"dazzle_session": "real-session-token"},
+            )
+
+            assert result["id"] == "test-id"
+            assert result["name"] == "Test Entity"
+            assert len(received_paths) == 1
+            assert received_paths[0] == "/entities/abc-123"
+            assert received_cookies[0] == "dazzle_session=real-session-token"
+        finally:
+            server.shutdown()

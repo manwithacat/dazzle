@@ -54,11 +54,21 @@ async def _fetch_url(url: str, cookies: dict[str, str] | None = None) -> dict[st
 def _resolve_backend_url(request: Any, fallback: str) -> str:
     """Derive the backend URL for internal API calls.
 
-    On platforms like Heroku the port is dynamic, so the hardcoded fallback
-    (``http://127.0.0.1:8000``) may not match.  Prefer the ``PORT`` env var
-    to stay on localhost (no SSL overhead, no external router hop).  Fall back
-    to ``request.base_url`` for platforms that don't set PORT.
+    Resolution order (first non-empty wins):
+
+    1. ``DAZZLE_BACKEND_URL`` env var — explicit override for split-service
+       deployments where the frontend can't discover the backend from its
+       own request (e.g. frontend on Cloudflare, backend on AWS).
+    2. ``PORT`` env var — single-dyno platforms (Heroku, Railway) where the
+       port is dynamic.  Stays on localhost to avoid SSL/router overhead.
+    3. ``request.base_url`` — same-origin setups where the page request
+       already hit the correct host:port.
+    4. ``fallback`` — hardcoded default (``http://127.0.0.1:8000``), used
+       during local development.
     """
+    explicit = os.environ.get("DAZZLE_BACKEND_URL", "").rstrip("/")
+    if explicit:
+        return explicit
     port = os.environ.get("PORT")
     if port:
         return f"http://127.0.0.1:{port}"
