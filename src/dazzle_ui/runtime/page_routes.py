@@ -146,6 +146,9 @@ def create_page_routes(
                     ctx.detail.edit_url = ctx.detail.edit_url.replace("{id}", str(path_id))
                 if ctx.detail.delete_url:
                     ctx.detail.delete_url = ctx.detail.delete_url.replace("{id}", str(path_id))
+                for _t in ctx.detail.transitions:
+                    if _t.api_url and "{id}" in _t.api_url:
+                        _t.api_url = _t.api_url.replace("{id}", str(path_id))
 
             if path_id and ctx.form and ctx.form.mode == "edit":
                 # Fetch existing data for edit form

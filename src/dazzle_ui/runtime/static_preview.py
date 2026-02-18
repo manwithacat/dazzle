@@ -114,6 +114,9 @@ def generate_preview_files(
                         ctx.detail.edit_url = ctx.detail.edit_url.replace("{id}", str(item_id))
                     if ctx.detail.delete_url:
                         ctx.detail.delete_url = ctx.detail.delete_url.replace("{id}", str(item_id))
+                    for _t in ctx.detail.transitions:
+                        if _t.api_url and "{id}" in _t.api_url:
+                            _t.api_url = _t.api_url.replace("{id}", str(item_id))
 
             html = render_page(ctx)
             file_path = output_path / f"{slug}-detail.html"

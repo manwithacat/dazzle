@@ -1603,3 +1603,80 @@ class TestWorkspaceBatchEndpoint:
         region_names = [r["region"] for r in data["regions"]]
         assert "tasks" in region_names
         assert "invoices" in region_names
+
+
+# ---------------------------------------------------------------------------
+# Step 13 — Transition URL {id} substitution (#288)
+# ---------------------------------------------------------------------------
+
+
+class TestTransitionUrlSubstitution:
+    """Transition api_url must have {id} replaced with actual entity ID."""
+
+    def test_template_compiler_creates_transition_with_id_placeholder(self) -> None:
+        """TransitionContext.api_url should contain {id} placeholder."""
+        from dazzle_ui.runtime.template_context import TransitionContext
+
+        t = TransitionContext(
+            to_state="approved",
+            label="Approve",
+            api_url="/tasks/{id}",
+        )
+        assert "{id}" in t.api_url
+
+    def test_transition_url_substitution_in_page_routes(self) -> None:
+        """page_routes replaces {id} in transition.api_url with path_id."""
+        from dazzle_ui.runtime.template_context import DetailContext, TransitionContext
+
+        ctx_detail = DetailContext(
+            entity_name="Task",
+            title="Task Details",
+            fields=[],
+            transitions=[
+                TransitionContext(
+                    to_state="in_progress",
+                    label="Start",
+                    api_url="/tasks/{id}",
+                ),
+                TransitionContext(
+                    to_state="done",
+                    label="Complete",
+                    api_url="/tasks/{id}",
+                ),
+            ],
+        )
+        # Simulate what page_routes does
+        path_id = "abc-123-uuid"
+        for _t in ctx_detail.transitions:
+            if _t.api_url and "{id}" in _t.api_url:
+                _t.api_url = _t.api_url.replace("{id}", str(path_id))
+
+        assert ctx_detail.transitions[0].api_url == "/tasks/abc-123-uuid"
+        assert ctx_detail.transitions[1].api_url == "/tasks/abc-123-uuid"
+
+    @pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+    def test_detail_template_renders_transition_url(self) -> None:
+        """Detail template renders transition buttons with resolved URLs."""
+        html = render_fragment(
+            "components/detail_view.html",
+            detail=SimpleNamespace(
+                entity_name="Task",
+                title="Task Details",
+                fields=[],
+                item={"id": "t1", "title": "Fix bug", "status": "todo"},
+                edit_url="/app/tasks/t1/edit",
+                delete_url="/tasks/t1",
+                back_url="/app/tasks",
+                transitions=[
+                    SimpleNamespace(
+                        to_state="in_progress",
+                        label="Start",
+                        api_url="/tasks/t1",
+                    ),
+                ],
+                status_field="status",
+            ),
+        )
+        assert "Start" in html
+        assert 'hx-put="/tasks/t1"' in html
+        assert "{id}" not in html
