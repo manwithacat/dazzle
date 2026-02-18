@@ -915,7 +915,9 @@ class TestRunner:
         step_results: list[StepResult] = []
 
         # Context for storing step results (e.g., created entity IDs)
-        context: dict[str, Any] = {}
+        context: dict[str, Any] = {
+            "_persona": design.get("persona", "admin"),
+        }
 
         try:
             # Reset database before each test
@@ -1200,6 +1202,17 @@ class TestRunner:
                 # Read entity list
                 entity_name = target.replace("entity:", "")
                 entities = self.client.get_entities(entity_name)
+                # Store a synthetic response-like object for assert_status compatibility
+                context["last_response"] = type(
+                    "Response",
+                    (),
+                    {
+                        "status_code": 200,
+                        "cookies": {},
+                        "headers": {},
+                        "json": lambda: entities,
+                    },
+                )()
                 return StepResult(
                     action=action,
                     target=target,
@@ -1220,6 +1233,30 @@ class TestRunner:
                     target=target,
                     result=TestResult.PASSED,
                     message=f"POST {target} → {resp.status_code}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "post_json":
+                # HTTP POST request with JSON body (used by auth login tests)
+                url = f"{self.client.api_url}{target}"
+                resp = self.client.client.post(url, json=resolved_data, follow_redirects=False)
+                context["last_response"] = resp
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED,
+                    message=f"POST(json) {target} → {resp.status_code}",
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+
+            elif action == "clear_cookies":
+                # Clear all cookies from the httpx client jar
+                self.client.client.cookies.clear()
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED,
+                    message="Cookies cleared",
                     duration_ms=(time.time() - start_time) * 1000,
                 )
 
@@ -1296,14 +1333,16 @@ class TestRunner:
                 )
 
             elif action == "assert_no_cookie":
-                # Verify a cookie is NOT present
+                # Verify the RESPONSE did not set a cookie (ignore client jar
+                # which may retain cookies from prior tests)
                 last_resp = context.get("last_response")
                 cookie_name = resolved_data.get("cookie", "dazzle_session")
                 has_cookie = False
                 if last_resp is not None and cookie_name in last_resp.cookies:
-                    has_cookie = True
-                elif self.client.client.cookies.get(cookie_name):
-                    has_cookie = True
+                    cookie_val = last_resp.cookies.get(cookie_name)
+                    # Empty value or Max-Age=0 means the server is clearing, not setting
+                    if cookie_val and cookie_val != "":
+                        has_cookie = True
                 return StepResult(
                     action=action,
                     target=target,
@@ -1316,16 +1355,25 @@ class TestRunner:
                 # Verify a cookie has been deleted (empty value or max-age=0)
                 last_resp = context.get("last_response")
                 cookie_name = resolved_data.get("cookie", "dazzle_session")
-                cleared = True
+                cleared = False
+
                 if last_resp is not None:
-                    # Check if response set the cookie to empty or with max-age=0
+                    # Check Set-Cookie header for explicit clearing (Max-Age=0)
+                    set_cookie_hdr = last_resp.headers.get("set-cookie", "")
+                    if cookie_name in set_cookie_hdr and "Max-Age=0" in set_cookie_hdr:
+                        cleared = True
+
+                    # Also check if cookie value is empty in response
                     cookie_val = last_resp.cookies.get(cookie_name)
-                    if cookie_val and cookie_val != "":
-                        cleared = False
-                # Also check the client jar — after a clear, it should be gone
-                jar_val = self.client.client.cookies.get(cookie_name)
-                if jar_val and jar_val != "":
-                    cleared = False
+                    if cookie_val is not None and (cookie_val == "" or cookie_val == '""'):
+                        cleared = True
+
+                if not cleared:
+                    # Fallback: check the client jar — after a clear, it should be gone
+                    jar_val = self.client.client.cookies.get(cookie_name)
+                    if not jar_val or jar_val == "":
+                        cleared = True
+
                 return StepResult(
                     action=action,
                     target=target,
@@ -1368,7 +1416,9 @@ class TestRunner:
                 )
 
             elif action == "assert_unauthenticated":
-                # Verify response indicates unauthenticated (401 or 302 redirect)
+                # Verify response indicates unauthenticated (401, 302, or 403)
+                # 403 is included because workspace RBAC returns 403 for
+                # unauthenticated users who lack the required persona role.
                 last_resp = context.get("last_response")
                 if last_resp is None:
                     return StepResult(
@@ -1378,7 +1428,7 @@ class TestRunner:
                         message="No previous response to check",
                         duration_ms=(time.time() - start_time) * 1000,
                     )
-                expected_codes = resolved_data.get("expect", [401, 302])
+                expected_codes = resolved_data.get("expect", [401, 302, 403])
                 actual = last_resp.status_code
                 success = actual in expected_codes
                 return StepResult(
@@ -1408,11 +1458,52 @@ class TestRunner:
                 duration_ms=(time.time() - start_time) * 1000,
             )
 
+    def _resolve_credential(self, persona: str, field: str) -> str:
+        """Resolve a persona credential (email or password) from test config.
+
+        Looks up credentials from (in priority order):
+        1. DAZZLE_TEST_EMAIL / DAZZLE_TEST_PASSWORD env vars (admin only)
+        2. .dazzle/test_credentials.json personas.<persona> section
+        3. .dazzle/test_credentials.json top-level (admin fallback)
+        """
+        # Admin: prefer env vars
+        if persona == "admin" and field == "email":
+            val = os.environ.get("DAZZLE_TEST_EMAIL")
+            if val:
+                return val
+        if persona == "admin" and field == "password":
+            val = os.environ.get("DAZZLE_TEST_PASSWORD")
+            if val:
+                return val
+
+        # Credentials file
+        creds_path = Path(".dazzle/test_credentials.json")
+        if creds_path.exists():
+            try:
+                creds = json.loads(creds_path.read_text())
+                personas = creds.get("personas", {})
+                persona_creds = personas.get(persona, {})
+                val = persona_creds.get(field)
+                if val:
+                    return val
+                # Admin fallback to top-level
+                if persona == "admin":
+                    val = creds.get(field)
+                    if val:
+                        return val
+            except Exception:
+                pass
+
+        return f"__PERSONA_{field.upper()}__"  # unresolved
+
     def _resolve_refs(self, data: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-        """Resolve $ref: placeholders in data using stored context values.
+        """Resolve $ref: placeholders and __PERSONA_*__ markers in data.
 
         Placeholders have the format: $ref:stored_name.field_name
         For example: $ref:parent_task.id -> context["parent_task"]["id"]
+
+        Credential markers: __PERSONA_EMAIL__ and __PERSONA_PASSWORD__
+        are resolved from test_credentials.json using the test's persona.
 
         Args:
             data: Dictionary potentially containing $ref: placeholders
@@ -1425,6 +1516,7 @@ class TestRunner:
 
         resolved = {}
         ref_pattern = re.compile(r"^\$ref:(\w+)\.(\w+)$")
+        persona = context.get("_persona", "admin")
 
         for key, value in data.items():
             if isinstance(value, str) and value.startswith("$ref:"):
@@ -1445,6 +1537,10 @@ class TestRunner:
                 else:
                     # Pattern didn't match, keep original
                     resolved[key] = value
+            elif isinstance(value, str) and value == "__PERSONA_EMAIL__":
+                resolved[key] = self._resolve_credential(persona, "email")
+            elif isinstance(value, str) and value == "__PERSONA_PASSWORD__":
+                resolved[key] = self._resolve_credential(persona, "password")
             elif isinstance(value, dict):
                 # Recursively resolve nested dicts
                 resolved[key] = self._resolve_refs(value, context)

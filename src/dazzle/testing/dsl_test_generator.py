@@ -784,11 +784,11 @@ class PersonaTestBuilder:
                 persona=persona_id,
                 steps=[
                     {
-                        "action": "post",
+                        "action": "post_json",
                         "target": "/auth/login",
                         "data": {
-                            "email": f"{persona_id}@example.com",
-                            "password": "valid_password",
+                            "email": "__PERSONA_EMAIL__",
+                            "password": "__PERSONA_PASSWORD__",
                         },
                         "rationale": f"Login as {persona_label}",
                     },
@@ -819,11 +819,11 @@ class PersonaTestBuilder:
                 persona=persona_id,
                 steps=[
                     {
-                        "action": "post",
+                        "action": "post_json",
                         "target": "/auth/login",
                         "data": {
-                            "email": f"{persona_id}@example.com",
-                            "password": "wrong_password",
+                            "email": "__PERSONA_EMAIL__",
+                            "password": "deliberately_wrong_password_for_test",
                         },
                         "rationale": f"Attempt login as {persona_label} with wrong password",
                     },
@@ -857,11 +857,11 @@ class PersonaTestBuilder:
                 persona=persona_id,
                 steps=[
                     {
-                        "action": "post",
+                        "action": "post_json",
                         "target": "/auth/login",
                         "data": {
-                            "email": f"{persona_id}@example.com",
-                            "password": "valid_password",
+                            "email": "__PERSONA_EMAIL__",
+                            "password": "__PERSONA_PASSWORD__",
                         },
                         "rationale": f"Login as {persona_label}",
                     },
@@ -916,6 +916,11 @@ class PersonaTestBuilder:
                 persona=persona_id,
                 steps=[
                     {
+                        "action": "clear_cookies",
+                        "target": "",
+                        "rationale": "Clear any session cookies from prior tests",
+                    },
+                    {
                         "action": "get_with_cookie",
                         "target": redirect_route,
                         "data": {"cookie": "dazzle_session", "value": "invalid-token"},
@@ -924,8 +929,8 @@ class PersonaTestBuilder:
                     {
                         "action": "assert_unauthenticated",
                         "target": "last_response",
-                        "data": {"expect": [401, 302]},
-                        "rationale": "Verify 401 or redirect to login",
+                        "data": {"expect": [401, 302, 403]},
+                        "rationale": "Verify 401, redirect to login, or 403 forbidden",
                     },
                 ],
                 tags=["auth", "session", "negative", "generated", "dsl-derived"],
@@ -954,6 +959,11 @@ class PersonaTestBuilder:
                         "rationale": "Verify session cookie is cleared",
                     },
                     {
+                        "action": "clear_cookies",
+                        "target": "",
+                        "rationale": "Clear httpx cookie jar after logout",
+                    },
+                    {
                         "action": "get",
                         "target": redirect_route,
                         "rationale": "Attempt access after logout",
@@ -961,7 +971,7 @@ class PersonaTestBuilder:
                     {
                         "action": "assert_unauthenticated",
                         "target": "last_response",
-                        "data": {"expect": [401, 302]},
+                        "data": {"expect": [401, 302, 403]},
                         "rationale": "Verify session is invalid after logout",
                     },
                 ],
