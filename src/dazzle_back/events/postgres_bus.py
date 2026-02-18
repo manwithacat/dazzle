@@ -217,13 +217,6 @@ class PostgresBus(BaseEventBus):
             await self._pool.close()
             self._pool = None
 
-    async def __aenter__(self) -> PostgresBus:
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        await self.close()
-
     def _get_pool(self) -> Any:
         """Get database pool with error handling."""
         if self._pool is None:
@@ -672,21 +665,13 @@ class PostgresBus(BaseEventBus):
     # Consumer loop methods
 
     async def start_consumer_loop(self, poll_interval: float | None = None) -> None:
-        """
-        Start consumer loops for all subscriptions.
+        await super().start_consumer_loop(poll_interval)
 
-        This runs until stop_consumer_loop() is called or the bus is closed.
-
-        Args:
-            poll_interval: Seconds between polls (defaults to config value)
-        """
-        self._running = True
+    async def _create_consumer_task(
+        self, sub: ActiveSubscription, poll_interval: float | None
+    ) -> asyncio.Task[None]:
         interval = poll_interval or self._config.poll_interval
-
-        for key, sub in self._subscriptions.items():
-            if key not in self._consumer_tasks:
-                task = asyncio.create_task(self._consumer_loop(sub.topic, sub.group_id, interval))
-                self._consumer_tasks[key] = task
+        return asyncio.create_task(self._consumer_loop(sub.topic, sub.group_id, interval))
 
     async def _consumer_loop(
         self,

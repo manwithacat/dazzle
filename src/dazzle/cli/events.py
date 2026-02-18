@@ -43,22 +43,21 @@ def tail_events(
 
 async def _tail_events(topic: str, follow: bool, limit: int, db_path: str) -> None:
     """Async implementation of tail command."""
-    # Intentional layer crossing: CLI entry point into event system
-    from dazzle_back.events import DevBrokerSQLite
+    from dazzle.cli.services.event_service import EventService
 
-    async with DevBrokerSQLite(db_path) as bus:
-        count = 0
-        async for event in bus.replay(topic):
-            if count >= limit and not follow:
-                break
+    svc = EventService(db_path)
+    count = 0
+    async for event in svc.replay(topic):
+        if count >= limit and not follow:
+            break
 
-            typer.echo(f"[{event.timestamp.isoformat()}] {event.event_type} (key={event.key})")
-            typer.echo(f"  payload: {json.dumps(event.payload, default=str)[:100]}")
-            count += 1
+        typer.echo(f"[{event.timestamp.isoformat()}] {event.event_type} (key={event.key})")
+        typer.echo(f"  payload: {json.dumps(event.payload, default=str)[:100]}")
+        count += 1
 
-        if follow:
-            typer.echo("(Following new events, Ctrl+C to stop)")
-            # In a real implementation, would poll for new events
+    if follow:
+        typer.echo("(Following new events, Ctrl+C to stop)")
+        # In a real implementation, would poll for new events
 
 
 @events_app.command("status")
@@ -71,27 +70,27 @@ def event_status(
 
 async def _event_status(db_path: str) -> None:
     """Async implementation of status command."""
-    from dazzle_back.events import DevBrokerSQLite
+    from dazzle.cli.services.event_service import EventService
 
     if not Path(db_path).exists():
         typer.echo(f"Database not found: {db_path}")
         return
 
-    async with DevBrokerSQLite(db_path) as bus:
-        topics = await bus.list_topics()
+    svc = EventService(db_path)
+    topics = await svc.list_topics()
 
-        typer.echo("Event System Status")
-        typer.echo("=" * 40)
-        typer.echo(f"Topics: {len(topics)}")
+    typer.echo("Event System Status")
+    typer.echo("=" * 40)
+    typer.echo(f"Topics: {len(topics)}")
+    typer.echo()
+
+    for topic in topics:
+        info = await svc.get_topic_info(topic)
+        typer.echo(f"Topic: {topic}")
+        typer.echo(f"  Events: {info['event_count']}")
+        typer.echo(f"  Consumers: {', '.join(info['consumer_groups']) or 'none'}")
+        typer.echo(f"  DLQ: {info['dlq_count']}")
         typer.echo()
-
-        for topic in topics:
-            info = await bus.get_topic_info(topic)
-            typer.echo(f"Topic: {topic}")
-            typer.echo(f"  Events: {info['event_count']}")
-            typer.echo(f"  Consumers: {', '.join(info['consumer_groups']) or 'none'}")
-            typer.echo(f"  DLQ: {info['dlq_count']}")
-            typer.echo()
 
 
 @events_app.command("replay")
@@ -120,26 +119,26 @@ async def _replay_events(
     db_path: str,
 ) -> None:
     """Async implementation of replay command."""
-    from dazzle_back.events import DevBrokerSQLite
+    from dazzle.cli.services.event_service import EventService
 
     from_ts = datetime.fromisoformat(from_time) if from_time else None
     to_ts = datetime.fromisoformat(to_time) if to_time else None
 
-    async with DevBrokerSQLite(db_path) as bus:
-        count = 0
-        async for event in bus.replay(
-            topic,
-            from_timestamp=from_ts,
-            to_timestamp=to_ts,
-            key_filter=key,
-        ):
-            count += 1
-            if dry_run:
-                typer.echo(f"Would replay: {event.event_type} ({event.event_id})")
-            else:
-                typer.echo(f"Replayed: {event.event_type} ({event.event_id})")
+    svc = EventService(db_path)
+    count = 0
+    async for event in svc.replay(
+        topic,
+        from_timestamp=from_ts,
+        to_timestamp=to_ts,
+        key_filter=key,
+    ):
+        count += 1
+        if dry_run:
+            typer.echo(f"Would replay: {event.event_type} ({event.event_id})")
+        else:
+            typer.echo(f"Replayed: {event.event_type} ({event.event_id})")
 
-        typer.echo(f"\nTotal: {count} events")
+    typer.echo(f"\nTotal: {count} events")
 
 
 # =============================================================================
@@ -161,26 +160,26 @@ def dlq_list(
 
 async def _dlq_list(topic: str | None, limit: int, db_path: str) -> None:
     """Async implementation of dlq list command."""
-    from dazzle_back.events import DevBrokerSQLite
+    from dazzle.cli.services.event_service import EventService
 
-    async with DevBrokerSQLite(db_path) as bus:
-        events = await bus.get_dlq_events(topic=topic, limit=limit)
+    svc = EventService(db_path)
+    events = await svc.get_dlq_events(topic=topic, limit=limit)
 
-        if not events:
-            typer.echo("No events in dead letter queue")
-            return
+    if not events:
+        typer.echo("No events in dead letter queue")
+        return
 
-        typer.echo("Dead Letter Queue Events")
-        typer.echo("=" * 60)
+    typer.echo("Dead Letter Queue Events")
+    typer.echo("=" * 60)
 
-        for entry in events:
-            typer.echo(f"Event ID: {entry['event_id']}")
-            typer.echo(f"  Topic: {entry['topic']}")
-            typer.echo(f"  Consumer: {entry['group_id']}")
-            typer.echo(f"  Reason: {entry['reason_code']} - {entry['reason_message']}")
-            typer.echo(f"  Attempts: {entry['attempts']}")
-            typer.echo(f"  Added: {entry['created_at']}")
-            typer.echo()
+    for entry in events:
+        typer.echo(f"Event ID: {entry['event_id']}")
+        typer.echo(f"  Topic: {entry['topic']}")
+        typer.echo(f"  Consumer: {entry['group_id']}")
+        typer.echo(f"  Reason: {entry['reason_code']} - {entry['reason_message']}")
+        typer.echo(f"  Attempts: {entry['attempts']}")
+        typer.echo(f"  Added: {entry['created_at']}")
+        typer.echo()
 
 
 @dlq_app.command("replay")
@@ -195,17 +194,17 @@ def dlq_replay(
 
 async def _dlq_replay(event_id: str, group: str, db_path: str) -> None:
     """Async implementation of dlq replay command."""
-    from dazzle_back.events import DevBrokerSQLite
+    from dazzle.cli.services.event_service import EventService
 
-    async with DevBrokerSQLite(db_path) as bus:
-        try:
-            success = await bus.replay_dlq_event(event_id, group)
-            if success:
-                typer.echo(f"Successfully replayed event {event_id}")
-            else:
-                typer.echo(f"Event not found in DLQ: {event_id}")
-        except Exception as e:
-            typer.echo(f"Failed to replay event: {e}")
+    svc = EventService(db_path)
+    try:
+        success = await svc.replay_dlq_event(event_id, group)
+        if success:
+            typer.echo(f"Successfully replayed event {event_id}")
+        else:
+            typer.echo(f"Event not found in DLQ: {event_id}")
+    except Exception as e:
+        typer.echo(f"Failed to replay event: {e}")
 
 
 @dlq_app.command("clear")
@@ -226,11 +225,11 @@ def dlq_clear(
 
 async def _dlq_clear(topic: str | None, db_path: str) -> None:
     """Async implementation of dlq clear command."""
-    from dazzle_back.events import DevBrokerSQLite
+    from dazzle.cli.services.event_service import EventService
 
-    async with DevBrokerSQLite(db_path) as bus:
-        count = await bus.clear_dlq(topic=topic)
-        typer.echo(f"Cleared {count} events from DLQ")
+    svc = EventService(db_path)
+    count = await svc.clear_dlq(topic=topic)
+    typer.echo(f"Cleared {count} events from DLQ")
 
 
 # =============================================================================
@@ -250,25 +249,20 @@ def outbox_status(
 
 async def _outbox_status(db_path: str) -> None:
     """Async implementation of outbox status command."""
-    import aiosqlite
+    from dazzle.cli.services.event_service import EventService
 
-    from dazzle_back.events import EventOutbox
+    svc = EventService(db_path)
+    stats = await svc.outbox_status()
 
-    outbox = EventOutbox()
+    typer.echo("Outbox Status")
+    typer.echo("=" * 40)
+    typer.echo(f"Pending: {stats.get('pending', 0)}")
+    typer.echo(f"Publishing: {stats.get('publishing', 0)}")
+    typer.echo(f"Published: {stats.get('published', 0)}")
+    typer.echo(f"Failed: {stats.get('failed', 0)}")
 
-    async with aiosqlite.connect(db_path) as conn:
-        await outbox.create_table(conn)
-        stats = await outbox.get_stats(conn)
-
-        typer.echo("Outbox Status")
-        typer.echo("=" * 40)
-        typer.echo(f"Pending: {stats.get('pending', 0)}")
-        typer.echo(f"Publishing: {stats.get('publishing', 0)}")
-        typer.echo(f"Published: {stats.get('published', 0)}")
-        typer.echo(f"Failed: {stats.get('failed', 0)}")
-
-        if stats.get("oldest_pending"):
-            typer.echo(f"Oldest pending: {stats['oldest_pending']}")
+    if stats.get("oldest_pending"):
+        typer.echo(f"Oldest pending: {stats['oldest_pending']}")
 
 
 @outbox_app.command("drain")
@@ -282,18 +276,11 @@ def outbox_drain(
 
 async def _outbox_drain(timeout: int, db_path: str) -> None:
     """Async implementation of outbox drain command."""
-    from dazzle_back.events import (
-        DevBrokerSQLite,
-        EventOutbox,
-        OutboxPublisher,
-    )
+    from dazzle.cli.services.event_service import EventService
 
-    outbox = EventOutbox()
-
-    async with DevBrokerSQLite(db_path) as bus:
-        publisher = OutboxPublisher(db_path, bus, outbox)
-        count = await publisher.drain(timeout=float(timeout))
-        typer.echo(f"Drained {count} events from outbox")
+    svc = EventService(db_path)
+    count = await svc.outbox_drain(timeout=float(timeout))
+    typer.echo(f"Drained {count} events from outbox")
 
 
 @outbox_app.command("failed")
@@ -307,27 +294,23 @@ def outbox_failed(
 
 async def _outbox_failed(limit: int, db_path: str) -> None:
     """Async implementation of outbox failed command."""
-    import aiosqlite
+    from dazzle.cli.services.event_service import EventService
 
-    from dazzle_back.events import EventOutbox
+    svc = EventService(db_path)
+    entries = await svc.outbox_failed_entries(limit=limit)
 
-    outbox = EventOutbox()
+    if not entries:
+        typer.echo("No failed entries in outbox")
+        return
 
-    async with aiosqlite.connect(db_path) as conn:
-        entries = await outbox.get_failed_entries(conn, limit=limit)
+    typer.echo("Failed Outbox Entries")
+    typer.echo("=" * 60)
 
-        if not entries:
-            typer.echo("No failed entries in outbox")
-            return
-
-        typer.echo("Failed Outbox Entries")
-        typer.echo("=" * 60)
-
-        for entry in entries:
-            typer.echo(f"ID: {entry.id}")
-            typer.echo(f"  Topic: {entry.topic}")
-            typer.echo(f"  Type: {entry.event_type}")
-            typer.echo(f"  Attempts: {entry.attempts}")
-            typer.echo(f"  Error: {entry.last_error}")
-            typer.echo(f"  Created: {entry.created_at}")
-            typer.echo()
+    for entry in entries:
+        typer.echo(f"ID: {entry.id}")
+        typer.echo(f"  Topic: {entry.topic}")
+        typer.echo(f"  Type: {entry.event_type}")
+        typer.echo(f"  Attempts: {entry.attempts}")
+        typer.echo(f"  Error: {entry.last_error}")
+        typer.echo(f"  Created: {entry.created_at}")
+        typer.echo()

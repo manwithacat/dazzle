@@ -41,10 +41,10 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from dazzle_back.events.base_event_bus import BaseEventBus
 from dazzle_back.events.bus import (
     ConsumerNotFoundError,
     ConsumerStatus,
-    EventBus,
     EventBusError,
     EventHandler,
     NackReason,
@@ -160,7 +160,7 @@ class ActiveSubscription:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
-class KafkaBus(EventBus):
+class KafkaBus(BaseEventBus):
     """
     Kafka-backed EventBus implementation for production.
 
@@ -190,18 +190,19 @@ class KafkaBus(EventBus):
         """
         _check_kafka_available()
 
+        self._init_base()
         self._config = config or KafkaConfig.from_env()
         self._producer: AIOKafkaProducer | None = None
         self._admin: AIOKafkaAdminClient | None = None
-        self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}
-        self._lock = asyncio.Lock()
+        # Override with Kafka-specific ActiveSubscription (has consumer, task fields)
+        self._subscriptions: dict[tuple[str, str], ActiveSubscription] = {}  # type: ignore[assignment]
         self._started = False
 
         # Track pending acks for manual offset commit
         self._pending_offsets: dict[tuple[str, str], dict[int, int]] = {}
 
-    async def start(self) -> None:
-        """Start the Kafka bus (connect producer and admin client)."""
+    async def connect(self) -> None:
+        """Connect to Kafka (start producer and admin client)."""
         if self._started:
             return
 
@@ -224,8 +225,8 @@ class KafkaBus(EventBus):
         self._started = True
         logger.info(f"KafkaBus started, connected to {self._config.bootstrap_servers}")
 
-    async def stop(self) -> None:
-        """Stop the Kafka bus (disconnect all clients)."""
+    async def close(self) -> None:
+        """Close the Kafka bus (disconnect all clients)."""
         if not self._started:
             return
 
@@ -246,15 +247,6 @@ class KafkaBus(EventBus):
 
         self._started = False
         logger.info("KafkaBus stopped")
-
-    async def __aenter__(self) -> KafkaBus:
-        """Async context manager entry."""
-        await self.start()
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        """Async context manager exit."""
-        await self.stop()
 
     def _ensure_started(self) -> None:
         """Ensure the bus is started."""

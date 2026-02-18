@@ -12,9 +12,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.paths import project_stories_dir
+
 from .ir.stories import StoriesContainer, StorySpec, StoryStatus
 
-STORIES_DIR = ".dazzle/stories"
 SEEDS_STORIES_DIR = "dsl/seeds/stories"
 STORIES_FILE = "stories.json"
 
@@ -28,7 +29,7 @@ def get_stories_dir(project_root: Path) -> Path:
     Returns:
         Path to the stories directory.
     """
-    return project_root / STORIES_DIR
+    return project_stories_dir(project_root)
 
 
 def get_seeds_stories_dir(project_root: Path) -> Path:

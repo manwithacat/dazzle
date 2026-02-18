@@ -13,9 +13,10 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.mcp.server.paths import project_processes_dir
+
 from .ir.process import ProcessesContainer, ProcessSpec
 
-PROCESSES_DIR = ".dazzle/processes"
 SEEDS_PROCESSES_DIR = "dsl/seeds/processes"
 PROCESSES_FILE = "processes.json"
 
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def get_processes_dir(project_root: Path) -> Path:
     """Get the .dazzle/processes/ directory path (runtime location)."""
-    return project_root / PROCESSES_DIR
+    return project_processes_dir(project_root)
 
 
 def get_processes_file(project_root: Path) -> Path:

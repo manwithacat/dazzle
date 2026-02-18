@@ -26,6 +26,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger("dazzle.channels.adapters.stream")
 
 
+def _safe_json_loads(raw: bytes) -> dict[str, Any]:
+    """Decode JSON from bytes, returning error dict on failure."""
+    try:
+        return dict(json.loads(raw.decode(errors="replace")))
+    except (json.JSONDecodeError, AttributeError) as exc:
+        logger.warning("Malformed message payload: %s", exc)
+        return {"_error": "malformed_payload", "_raw": raw.decode(errors="replace")[:200]}
+
+
 class RedisStreamAdapter(StreamAdapter):
     """Adapter for Redis Streams.
 
@@ -161,9 +170,11 @@ class RedisStreamAdapter(StreamAdapter):
         # Create consumer group if it doesn't exist
         try:
             await self._client.xgroup_create(stream_name, group, id="0", mkstream=True)
-        except Exception:
-            # Group may already exist — Redis raises BUSYGROUP error
-            logger.debug("Consumer group '%s' already exists or creation skipped", group)
+        except Exception as exc:
+            if "BUSYGROUP" not in str(exc):
+                logger.warning("Redis consumer group creation failed: %s", exc)
+            else:
+                logger.debug("Consumer group '%s' already exists", group)
 
         async def read_loop() -> None:
             while True:
@@ -397,7 +408,7 @@ class KafkaAdapter(StreamAdapter):
                 bootstrap_servers=self._bootstrap_servers,
                 group_id=group,
                 client_id=consumer,
-                value_deserializer=lambda v: json.loads(v.decode(errors="replace")),
+                value_deserializer=lambda v: _safe_json_loads(v),
                 auto_offset_reset="earliest",
             )
 
@@ -460,8 +471,7 @@ class KafkaAdapter(StreamAdapter):
             return partitions is not None
         except Exception:
             logger.debug("Kafka health check failed", exc_info=True)
-            # Try a simpler check
-            return self._producer._sender.sender_task is not None
+            return False
 
 
 class InMemoryStreamAdapter(StreamAdapter):

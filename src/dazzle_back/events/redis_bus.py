@@ -160,13 +160,6 @@ class RedisBus(BaseEventBus):
             await self._redis.aclose()
             self._redis = None
 
-    async def __aenter__(self) -> RedisBus:
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        await self.close()
-
     def _get_redis(self) -> aioredis.Redis:
         """Get Redis connection with error handling."""
         if self._redis is None:
@@ -555,20 +548,15 @@ class RedisBus(BaseEventBus):
 
     # Consumer loop methods
 
-    async def start_consumer_loop(self) -> None:
-        """
-        Start consumer loops for all subscriptions.
+    async def start_consumer_loop(self) -> None:  # type: ignore[override]
+        await super().start_consumer_loop()
 
-        This runs until stop_consumer_loop() is called or the bus is closed.
-        """
-        self._running = True
-
-        for key, sub in self._subscriptions.items():
-            if key not in self._consumer_tasks:
-                task = asyncio.create_task(
-                    self._consumer_loop(sub.topic, sub.group_id, sub.consumer_name)
-                )
-                self._consumer_tasks[key] = task
+    async def _create_consumer_task(  # type: ignore[override]
+        self,
+        sub: ActiveSubscription,
+        poll_interval: float | None,
+    ) -> asyncio.Task[None]:
+        return asyncio.create_task(self._consumer_loop(sub.topic, sub.group_id, sub.consumer_name))
 
     async def _consumer_loop(
         self,

@@ -62,6 +62,31 @@ class BaseEventBus(EventBus):
         self._consumer_tasks: dict[tuple[str, str], asyncio.Task[None]] = {}
         self._running = False
 
+    async def __aenter__(self) -> BaseEventBus:
+        await self.connect()
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        await self.close()
+
+    async def start_consumer_loop(self, poll_interval: float | None = None) -> None:
+        """Start consumer tasks for all active subscriptions.
+
+        Subclasses should override _create_consumer_task() to provide
+        backend-specific consumer loop creation.
+        """
+        self._running = True
+        for key, sub in self._subscriptions.items():
+            if key not in self._consumer_tasks:
+                task = await self._create_consumer_task(sub, poll_interval)
+                self._consumer_tasks[key] = task
+
+    async def _create_consumer_task(
+        self, sub: ActiveSubscription, poll_interval: float | None
+    ) -> asyncio.Task[None]:
+        """Create a backend-specific consumer task. Subclasses must override."""
+        raise NotImplementedError
+
     async def stop_consumer_loop(self) -> None:
         """Stop all consumer loops."""
         self._running = False

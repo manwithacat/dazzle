@@ -25,6 +25,9 @@ CAPTURES_DIR = "captures"
 REFERENCES_DIR = "references"
 LOGS_DIR = "logs"
 TEST_RESULTS_DIR = "test_results"
+STORIES_DIR = "stories"
+DEMO_DATA_DIR = "demo_data"
+PROCESSES_DIR = "processes"
 
 # -- Override registry -------------------------------------------------------
 OVERRIDES_FILE = "overrides.json"
@@ -85,6 +88,21 @@ def project_activity_log(project_root: Path) -> Path:
 def project_test_results_dir(project_root: Path) -> Path:
     """Return the test results directory for a project."""
     return project_dazzle_dir(project_root) / TEST_RESULTS_DIR
+
+
+def project_stories_dir(project_root: Path) -> Path:
+    """Return the stories directory for a project."""
+    return project_dazzle_dir(project_root) / STORIES_DIR
+
+
+def project_demo_data_dir(project_root: Path) -> Path:
+    """Return the demo data directory for a project."""
+    return project_dazzle_dir(project_root) / DEMO_DATA_DIR
+
+
+def project_processes_dir(project_root: Path) -> Path:
+    """Return the processes directory for a project."""
+    return project_dazzle_dir(project_root) / PROCESSES_DIR
 
 
 def project_overrides_file(project_root: Path) -> Path:

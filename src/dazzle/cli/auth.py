@@ -11,7 +11,6 @@ import json
 import secrets
 import string
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -47,22 +46,14 @@ def auth_callback(
 
 
 def _get_auth_store(database_url: str | None = None) -> Any:
-    """Get an AuthStore instance.
+    """Get an AuthService instance.
 
     Resolves URL via: explicit arg → CLI callback → dazzle.toml → env → default.
     """
-    from dazzle.core.manifest import load_manifest, resolve_database_url
-    from dazzle_back.runtime.auth import AuthStore  # Intentional layer crossing: CLI entry point
+    from dazzle.cli.services.auth_service import AuthService
 
     explicit = database_url or _database_url_override or ""
-
-    manifest = None
-    manifest_path = Path("dazzle.toml").resolve()
-    if manifest_path.exists():
-        manifest = load_manifest(manifest_path)
-
-    url = resolve_database_url(manifest, explicit_url=explicit)
-    return AuthStore(database_url=url)
+    return AuthService.from_manifest(database_url_override=explicit or None)
 
 
 def _generate_temp_password(length: int = 16) -> str:
@@ -429,7 +420,7 @@ def list_sessions(
     query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT %s"
     params.append(limit)
 
-    rows = store._execute(query, tuple(params))
+    rows = store.execute_raw(query, tuple(params))
 
     if output_json:
         console.print_json(json.dumps(rows))
@@ -481,20 +472,20 @@ def config(
     store = _get_auth_store()
 
     # Counts
-    user_rows = store._execute("SELECT COUNT(*) as count FROM users")
+    user_rows = store.execute_raw("SELECT COUNT(*) as count FROM users")
     total_users = user_rows[0]["count"] if user_rows else 0
 
-    active_rows = store._execute("SELECT COUNT(*) as count FROM users WHERE is_active = TRUE")
+    active_rows = store.execute_raw("SELECT COUNT(*) as count FROM users WHERE is_active = TRUE")
     active_users = active_rows[0]["count"] if active_rows else 0
 
-    session_rows = store._execute(
+    session_rows = store.execute_raw(
         "SELECT COUNT(*) as count FROM sessions WHERE expires_at > %s",
         (datetime.now(UTC).isoformat(),),
     )
     active_sessions = session_rows[0]["count"] if session_rows else 0
 
     # Roles in use
-    roles_result = store._execute("SELECT DISTINCT roles FROM users")
+    roles_result = store.execute_raw("SELECT DISTINCT roles FROM users")
     all_roles: set[str] = set()
     for row in roles_result:
         parsed = json.loads(row["roles"]) if row["roles"] else []

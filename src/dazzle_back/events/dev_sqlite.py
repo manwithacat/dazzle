@@ -169,13 +169,6 @@ class DevBrokerSQLite(BaseEventBus):
             await self._conn.close()
             self._conn = None
 
-    async def __aenter__(self) -> DevBrokerSQLite:
-        await self.connect()
-        return self
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        await self.close()
-
     @asynccontextmanager
     async def _get_conn(self) -> AsyncIterator[aiosqlite.Connection]:
         """Get database connection with error handling."""
@@ -631,23 +624,14 @@ class DevBrokerSQLite(BaseEventBus):
 
     # Consumer loop methods
 
-    async def start_consumer_loop(self, poll_interval: float = 0.5) -> None:
-        """
-        Start consumer loops for all subscriptions.
+    async def start_consumer_loop(self, poll_interval: float = 0.5) -> None:  # type: ignore[override]
+        await super().start_consumer_loop(poll_interval)
 
-        This runs until stop_consumer_loop() is called or the broker is closed.
-
-        Args:
-            poll_interval: Seconds between polls for new events
-        """
-        self._running = True
-
-        for key, sub in self._subscriptions.items():
-            if key not in self._consumer_tasks:
-                task = asyncio.create_task(
-                    self._consumer_loop(sub.topic, sub.group_id, poll_interval)
-                )
-                self._consumer_tasks[key] = task
+    async def _create_consumer_task(
+        self, sub: ActiveSubscription, poll_interval: float | None
+    ) -> asyncio.Task[None]:
+        interval = poll_interval or 0.5
+        return asyncio.create_task(self._consumer_loop(sub.topic, sub.group_id, interval))
 
     async def _consumer_loop(
         self,

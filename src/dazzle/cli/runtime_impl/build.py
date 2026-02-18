@@ -11,9 +11,7 @@ from typing import Any
 
 import typer
 
-from dazzle.cli.utils import load_project_appspec
 from dazzle.core.errors import DazzleError, ParseError
-from dazzle.core.lint import lint_appspec
 
 from .docker import (
     generate_docker_compose,
@@ -46,23 +44,23 @@ def build_ui_command(
         dazzle build-ui                         # Preview files in ./dnr-ui
         dazzle build-ui -o out                   # Output to ./out
     """
+    from dazzle.cli.services.build_service import BuildService
+
     try:
-        # Import Dazzle UI components
-        from dazzle_ui.runtime.static_preview import generate_preview_files
+        # Verify UI package is available
+        from dazzle_ui.runtime.static_preview import generate_preview_files as _check  # noqa: F401
     except ImportError as e:
         typer.echo(f"Dazzle UI not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-app-ui", err=True)
         raise typer.Exit(code=1)
 
-    # Load and build AppSpec
     manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
+    svc = BuildService(manifest_path)
 
     try:
-        appspec = load_project_appspec(root)
+        appspec = svc.load_appspec()
 
-        # Validate
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings = svc.lint(appspec)
         if errors:
             typer.echo("Cannot generate UI; spec has validation errors:", err=True)
             for err in errors:
@@ -81,7 +79,7 @@ def build_ui_command(
 
     typer.echo(f"\nGenerating static preview HTML → {output_dir}")
     output_dir.mkdir(parents=True, exist_ok=True)
-    files = generate_preview_files(appspec, str(output_dir))
+    files = svc.generate_preview_files(appspec, str(output_dir))
     typer.echo(f"  ✓ Generated {len(files)} files")
     typer.echo("\nTo preview:")
     if files:
@@ -107,8 +105,9 @@ def build_api_command(
         dazzle build-api                        # JSON spec in ./dazzle-api
         dazzle build-api --format python        # Python module stub
     """
+    from dazzle.cli.services.build_service import BuildService
+
     try:
-        from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_back.specs import BackendSpec as _BackendSpec  # noqa: F401
     except ImportError as e:
         typer.echo(f"Dazzle Backend not available: {e}", err=True)
@@ -116,14 +115,13 @@ def build_api_command(
         raise typer.Exit(code=1)
     del _BackendSpec  # Used only to verify import availability
 
-    # Load and build AppSpec
     manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
+    svc = BuildService(manifest_path)
 
     try:
-        appspec = load_project_appspec(root)
+        appspec = svc.load_appspec()
 
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings = svc.lint(appspec)
         if errors:
             typer.echo("Cannot generate API; spec has validation errors:", err=True)
             for err in errors:
@@ -139,7 +137,7 @@ def build_api_command(
 
     # Convert to BackendSpec
     typer.echo(f"Converting AppSpec '{appspec.name}' to BackendSpec...")
-    backend_spec = convert_appspec_to_backend(appspec)
+    backend_spec = svc.convert_to_backend(appspec)
     typer.echo(f"  • {len(backend_spec.entities)} entities")
     typer.echo(f"  • {len(backend_spec.services)} services")
     typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
@@ -232,14 +230,10 @@ def migrate_command(
     """
     import os
 
+    from dazzle.cli.services.build_service import BuildService
+
     try:
-        from dazzle_back.converters import convert_appspec_to_backend
-        from dazzle_back.runtime.migrations import (
-            MigrationAction,
-            auto_migrate,
-            plan_migrations,
-        )
-        from dazzle_back.runtime.pg_backend import PostgresBackend
+        from dazzle_back.runtime.migrations import MigrationAction
     except ImportError as e:
         typer.echo(f"Dazzle packages not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-app-back", err=True)
@@ -247,12 +241,12 @@ def migrate_command(
 
     # Load and build AppSpec
     manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
+    svc = BuildService(manifest_path)
 
     try:
-        appspec = load_project_appspec(root)
+        appspec = svc.load_appspec()
 
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings = svc.lint(appspec)
         if errors:
             typer.echo("Cannot migrate; spec has validation errors:", err=True)
             for err in errors:
@@ -267,16 +261,16 @@ def migrate_command(
         raise typer.Exit(code=1)
 
     # Convert to backend spec
-    backend_spec = convert_appspec_to_backend(appspec)
+    backend_spec = svc.convert_to_backend(appspec)
 
     # Resolve database URL: CLI flag → env → dazzle.toml → default
-    from dazzle.core.manifest import _DEFAULT_DATABASE_URL, load_manifest, resolve_database_url
+    from dazzle.core.manifest import _DEFAULT_DATABASE_URL, load_manifest
 
     mf = load_manifest(manifest_path)
     had_explicit_source = bool(
         database_url or os.environ.get("DATABASE_URL") or mf.database.url != _DEFAULT_DATABASE_URL
     )
-    database_url = resolve_database_url(mf, explicit_url=database_url)
+    database_url = svc.resolve_database_url(explicit_url=database_url)
     if not had_explicit_source:
         typer.echo("DATABASE_URL is required for migrations.", err=True)
         typer.echo(
@@ -286,16 +280,13 @@ def migrate_command(
         typer.echo("  export DATABASE_URL=postgresql://localhost:5432/dazzle_dev", err=True)
         raise typer.Exit(code=1)
 
-    # Create database backend
-    db_manager = PostgresBackend(database_url)
-
     if dry_run:
         # Plan only, don't apply
         typer.echo(f"Analyzing database: {database_url}")
         typer.echo(f"Entities: {len(backend_spec.entities)}")
         typer.echo()
 
-        plan = plan_migrations(db_manager, backend_spec.entities)
+        plan = svc.plan_migrations(database_url, backend_spec.entities)
 
         if plan.is_empty:
             typer.echo("No migrations needed. Database is up to date.")
@@ -349,8 +340,8 @@ def migrate_command(
             typer.echo("  require manual SQL execution for safety.", err=True)
             typer.echo()
 
-        plan = auto_migrate(
-            db_manager,
+        plan = svc.auto_migrate(
+            database_url,
             backend_spec.entities,
             record_history=True,
         )
@@ -415,22 +406,23 @@ def build_command(
         # Or without Docker:
         cd dist && pip install -r requirements.txt && python main.py
     """
+    from dazzle.cli.services.build_service import BuildService
+
     try:
-        from dazzle_back.converters import convert_appspec_to_backend
-        from dazzle_ui.runtime.static_preview import generate_preview_files
+        from dazzle_back.converters import convert_appspec_to_backend as _check1  # noqa: F401
+        from dazzle_ui.runtime.static_preview import generate_preview_files as _check2  # noqa: F401
     except ImportError as e:
         typer.echo(f"Dazzle packages not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-app-back dazzle-app-ui", err=True)
         raise typer.Exit(code=1)
 
-    # Load and build AppSpec
     manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
+    svc = BuildService(manifest_path)
 
     try:
-        appspec = load_project_appspec(root)
+        appspec = svc.load_appspec()
 
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings = svc.lint(appspec)
         if errors:
             typer.echo("Cannot build; spec has validation errors:", err=True)
             for err in errors:
@@ -474,7 +466,7 @@ def build_command(
 
     # 1. Generate BackendSpec
     typer.echo("\n[1/5] Generating backend...")
-    backend_spec = convert_appspec_to_backend(appspec)
+    backend_spec = svc.convert_to_backend(appspec)
     typer.echo(f"  • {len(backend_spec.entities)} entities")
     typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
 
@@ -487,7 +479,7 @@ def build_command(
     if frontend:
         typer.echo("\n[2/5] Generating frontend...")
         frontend_dir = output_dir / "frontend"
-        files = generate_preview_files(appspec, str(frontend_dir))
+        files = svc.generate_preview_files(appspec, str(frontend_dir))
         typer.echo(f"  • {len(files)} preview files generated")
     else:
         typer.echo("\n[2/5] Skipping frontend (--no-frontend)")
@@ -589,13 +581,15 @@ def _run_codegen_targets(appspec: Any, output_dir: Path, target: str) -> None:
 def _generate_sql_target(appspec: Any, output_dir: Path) -> None:
     """Generate SQL DDL schema from AppSpec."""
     try:
-        from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_back.runtime.sa_schema import build_metadata
     except ImportError as e:
         typer.echo(f"  SQL target requires dazzle-app-back: {e}", err=True)
         return
 
-    backend_spec = convert_appspec_to_backend(appspec)
+    from dazzle.cli.services.build_service import BuildService
+
+    svc = BuildService()
+    backend_spec = svc.convert_to_backend(appspec)
     metadata = build_metadata(backend_spec.entities)
 
     lines: list[str] = []

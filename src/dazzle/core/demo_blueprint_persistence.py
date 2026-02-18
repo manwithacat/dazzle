@@ -12,10 +12,11 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from dazzle.mcp.server.paths import project_demo_data_dir
+
 if TYPE_CHECKING:
     from dazzle.core.ir.demo_blueprint import DemoDataBlueprint
 
-BLUEPRINT_DIR = ".dazzle/demo_data"
 SEEDS_BLUEPRINT_DIR = "dsl/seeds/demo_data"
 BLUEPRINT_FILE = "blueprint.json"
 
@@ -29,7 +30,7 @@ def get_blueprint_dir(project_root: Path) -> Path:
     Returns:
         Path to the demo_data directory
     """
-    return project_root / BLUEPRINT_DIR
+    return project_demo_data_dir(project_root)
 
 
 def get_seeds_blueprint_dir(project_root: Path) -> Path:
