@@ -501,6 +501,158 @@ class TestWorkspaceListRefColumn:
 
 
 @pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
+class TestWorkspaceRefLinks:
+    """Workspace templates render ref columns as clickable links (#285)."""
+
+    def test_list_ref_link_rendered(self) -> None:
+        """List template renders ref column with ref_route as a clickable link."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+                {
+                    "key": "assigned_to",
+                    "label": "Assigned To",
+                    "type": "ref",
+                    "sortable": False,
+                    "ref_route": "/users/{id}",
+                },
+            ],
+            items=[
+                {
+                    "id": "t1",
+                    "title": "Fix bug",
+                    "assigned_to": {"id": "u1", "name": "Alice"},
+                },
+            ],
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            total=1,
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            action_url="",
+            empty_message="No tasks.",
+        )
+        assert "Alice" in html
+        assert "/users/u1" in html
+        assert "link-primary" in html
+
+    def test_list_ref_no_link_without_ref_route(self) -> None:
+        """Ref column without ref_route renders display name without link."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            title="Tasks",
+            columns=[
+                {
+                    "key": "owner",
+                    "label": "Owner",
+                    "type": "ref",
+                    "sortable": False,
+                },
+            ],
+            items=[
+                {"id": "t1", "owner": {"id": "u1", "name": "Bob"}},
+            ],
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            total=1,
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            action_url="",
+            empty_message="No tasks.",
+        )
+        assert "Bob" in html
+        assert "<a " not in html or "/users/" not in html
+
+    def test_detail_ref_link_rendered(self) -> None:
+        """Detail template renders ref column with clickable link."""
+        html = render_fragment(
+            "workspace/regions/detail.html",
+            title="Task Detail",
+            columns=[
+                {
+                    "key": "company",
+                    "label": "Company",
+                    "type": "ref",
+                    "sortable": False,
+                    "ref_route": "/companies/{id}",
+                },
+            ],
+            item={"id": "t1", "company": {"id": "c1", "name": "Acme Corp"}},
+            empty_message="No record.",
+        )
+        assert "Acme Corp" in html
+        assert "/companies/c1" in html
+
+    def test_ref_link_with_uuid_id(self) -> None:
+        """Ref link works with UUID-style IDs."""
+        from uuid import uuid4
+
+        uid = str(uuid4())
+        html = render_fragment(
+            "workspace/regions/list.html",
+            title="Tasks",
+            columns=[
+                {
+                    "key": "owner",
+                    "label": "Owner",
+                    "type": "ref",
+                    "sortable": False,
+                    "ref_route": "/users/{id}",
+                },
+            ],
+            items=[
+                {"id": "t1", "owner": {"id": uid, "name": "Charlie"}},
+            ],
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            total=1,
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            action_url="",
+            empty_message="No tasks.",
+        )
+        assert "Charlie" in html
+        assert f"/users/{uid}" in html
+
+    def test_ref_null_value_shows_dash(self) -> None:
+        """Null ref value shows dash, not error."""
+        html = render_fragment(
+            "workspace/regions/list.html",
+            title="Tasks",
+            columns=[
+                {
+                    "key": "owner",
+                    "label": "Owner",
+                    "type": "ref",
+                    "sortable": False,
+                    "ref_route": "/users/{id}",
+                },
+            ],
+            items=[
+                {"id": "t1", "owner": None},
+            ],
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            total=1,
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            action_url="",
+            empty_message="No tasks.",
+        )
+        assert "-" in html
+
+
+@pytest.mark.skipif(not HAS_TEMPLATE_RENDERER, reason="dazzle_ui not installed")
 class TestWorkspaceSSEConditional:
     """SSE attributes in _content.html must only appear when sse_url is set."""
 
@@ -1065,6 +1217,51 @@ class TestBuildEntityColumns:
         assert cols[0]["key"] == "project"
         assert cols[0]["type"] == "ref"
         assert cols[0]["sortable"] is False
+
+    def test_ref_column_with_ref_entity(self) -> None:
+        """ref_route should be a plain string with the entity's API plural."""
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="assigned_to_id",
+                    label="Assigned To",
+                    type=SimpleNamespace(kind=SimpleNamespace(value="ref"), ref_entity="User"),
+                ),
+            ],
+            state_machine=None,
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 1
+        assert cols[0]["key"] == "assigned_to"
+        assert cols[0]["ref_route"] == "/users/{id}"
+        # Ensure ref_route is a plain string (no pydantic/Cython objects)
+        assert type(cols[0]["ref_route"]) is str
+
+    def test_ref_column_without_ref_entity(self) -> None:
+        """ref_route should be empty when ref_entity is not set."""
+        from dazzle_back.runtime.server import _build_entity_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="owner_id",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="ref"), ref_entity=None),
+                ),
+            ],
+            state_machine=None,
+        )
+        cols = _build_entity_columns(entity)
+        assert len(cols) == 1
+        assert cols[0]["ref_route"] == ""
 
     def test_state_machine_column(self) -> None:
         from dazzle_back.runtime.server import _build_entity_columns

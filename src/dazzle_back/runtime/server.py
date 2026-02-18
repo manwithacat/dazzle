@@ -96,7 +96,8 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
         if kind_val == "ref":
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
-            ref_route = f"/{to_api_plural(ref_entity)}/{{id}}" if ref_entity else ""
+            # Ensure ref_entity is a plain string (not a pydantic/Cython object)
+            ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
             columns.append(
                 {
                     "key": rel_name,

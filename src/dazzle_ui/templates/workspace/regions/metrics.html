@@ -48,7 +48,7 @@
                 {% if ref is mapping %}
                   {% set ref_display = ref.get("name") or ref.get("company_name") or ((ref.get("first_name", "") ~ " " ~ ref.get("last_name", "")) | trim) or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") %}
                   {% if col.ref_route and ref.get("id") %}
-                    <a href="{{ col.ref_route | replace('{id}', ref.id|string) }}" class="link link-hover link-primary" onclick="event.stopPropagation()">{{ ref_display }}</a>
+                    <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary" onclick="event.stopPropagation()">{{ ref_display }}</a>
                   {% else %}{{ ref_display }}{% endif %}
                 {% elif ref %}{{ ref }}{% else %}-{% endif %}
               {% else %}
