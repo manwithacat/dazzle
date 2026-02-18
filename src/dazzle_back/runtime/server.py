@@ -78,6 +78,8 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
     All data comes from IR (field types, enum values, state machines) and
     never changes during the lifetime of the server.
     """
+    from dazzle.core.strings import to_api_plural
+
     columns: list[dict[str, Any]] = []
     if not entity_spec or not hasattr(entity_spec, "fields"):
         return columns
@@ -93,12 +95,15 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
         # Show ref columns with resolved display name; hide other relation types
         if kind_val == "ref":
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+            ref_entity = getattr(ft, "ref_entity", None)
+            ref_route = f"/{to_api_plural(ref_entity)}/{{id}}" if ref_entity else ""
             columns.append(
                 {
                     "key": rel_name,
                     "label": getattr(f, "label", None) or rel_name.replace("_", " ").title(),
                     "type": "ref",
                     "sortable": False,
+                    "ref_route": ref_route,
                 }
             )
             continue
