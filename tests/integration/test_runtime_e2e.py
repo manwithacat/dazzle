@@ -16,6 +16,7 @@ import os
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -34,8 +35,10 @@ DAZZLE_EXAMPLES = [
 
 # Timeout for server startup (120s for slow CI runners)
 SERVER_STARTUP_TIMEOUT = 120
-# Request timeout
-REQUEST_TIMEOUT = 10
+# Request timeout (30s for CI under load)
+REQUEST_TIMEOUT = 30
+# Number of retries for transient request failures
+REQUEST_RETRIES = 3
 
 
 @pytest.fixture(scope="module")
@@ -60,16 +63,39 @@ def wait_for_server(url: str, timeout: int = SERVER_STARTUP_TIMEOUT) -> bool:
     return False
 
 
+def _request_with_retry(
+    method: str,
+    url: str,
+    retries: int = REQUEST_RETRIES,
+    timeout: int = REQUEST_TIMEOUT,
+    **kwargs: object,
+) -> requests.Response:
+    """Make an HTTP request with retry on timeout/connection errors."""
+    last_exc: Exception | None = None
+    for attempt in range(retries):
+        try:
+            resp = requests.request(method, url, timeout=timeout, **kwargs)
+            return resp
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last_exc = e
+            if attempt < retries - 1:
+                time.sleep(1)
+    raise last_exc  # type: ignore[misc]
+
+
 class DazzleLocalServerManager:
     """Context manager for running Dazzle server locally.
 
-    This is the default and most reliable mode for E2E tests.
+    Redirects stdout/stderr to temp files instead of pipes to avoid
+    pipe buffer deadlock (64KB limit blocks the server's event loop).
     """
 
     def __init__(self, example_dir: Path, port: int = 3000):
         self.example_dir = example_dir
         self.port = port
         self.process: subprocess.Popen | None = None
+        self._stdout_file: tempfile._TemporaryFileWrapper | None = None
+        self._stderr_file: tempfile._TemporaryFileWrapper | None = None
         # Unified server: API and UI on the same port
         self.api_url = f"http://127.0.0.1:{port}"
         self.ui_url = f"http://127.0.0.1:{port}"
@@ -97,6 +123,16 @@ class DazzleLocalServerManager:
         else:
             kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
 
+        # Redirect to temp files instead of pipes to avoid pipe buffer
+        # deadlock. Pipes have a 64KB buffer; when full, the server's
+        # write() blocks, freezing the uvicorn event loop.
+        self._stdout_file = tempfile.NamedTemporaryFile(
+            mode="w", prefix="dazzle-e2e-stdout-", suffix=".log", delete=False
+        )
+        self._stderr_file = tempfile.NamedTemporaryFile(
+            mode="w", prefix="dazzle-e2e-stderr-", suffix=".log", delete=False
+        )
+
         self.process = subprocess.Popen(
             [
                 sys.executable,
@@ -111,8 +147,8 @@ class DazzleLocalServerManager:
                 "--test-mode",
             ],
             cwd=self.example_dir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=self._stdout_file,
+            stderr=self._stderr_file,
             env=env,
             **kwargs,
         )
@@ -136,21 +172,39 @@ class DazzleLocalServerManager:
 
         # Wait for API to be ready
         if not wait_for_server(f"{self.api_url}/health"):
-            # Get any error output
-            if self.process:
-                self.process.terminate()
-                _, stderr = self.process.communicate(timeout=5)
-                raise RuntimeError(
-                    f"Dazzle server failed to start within {SERVER_STARTUP_TIMEOUT}s. "
-                    f"stderr: {stderr.decode()}"
-                )
-            raise RuntimeError(f"Dazzle server failed to start within {SERVER_STARTUP_TIMEOUT}s.")
+            stderr_log = self._read_log(self._stderr_file)
+            self._terminate()
+            raise RuntimeError(
+                f"Dazzle server failed to start within {SERVER_STARTUP_TIMEOUT}s.\n"
+                f"stderr:\n{stderr_log}"
+            )
 
         return self
 
-    def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: object) -> None:
+    def _read_log(self, f: tempfile._TemporaryFileWrapper | None) -> str:
+        """Read contents of a log temp file."""
+        if f is None:
+            return "(no log file)"
+        try:
+            f.flush()
+            return Path(f.name).read_text(errors="replace")[-4096:]
+        except OSError:
+            return "(could not read log)"
+
+    def get_server_logs(self) -> str:
+        """Get combined server logs for debugging."""
+        stdout = self._read_log(self._stdout_file)
+        stderr = self._read_log(self._stderr_file)
+        parts = []
+        if stdout.strip():
+            parts.append(f"=== stdout ===\n{stdout}")
+        if stderr.strip():
+            parts.append(f"=== stderr ===\n{stderr}")
+        return "\n".join(parts) if parts else "(no output)"
+
+    def _terminate(self) -> None:
+        """Terminate the server process and clean up log files."""
         if self.process:
-            # Kill the process and its children
             try:
                 if sys.platform != "win32":
                     os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
@@ -163,6 +217,18 @@ class DazzleLocalServerManager:
             except subprocess.TimeoutExpired:
                 self.process.kill()
                 self.process.wait(timeout=2)
+
+        # Clean up temp files
+        for f in (self._stdout_file, self._stderr_file):
+            if f is not None:
+                try:
+                    f.close()
+                    os.unlink(f.name)
+                except OSError:
+                    pass
+
+    def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: object) -> None:
+        self._terminate()
 
 
 @pytest.fixture(scope="module")
@@ -185,14 +251,14 @@ class TestSimpleTaskE2E:
     @pytest.mark.e2e
     def test_api_docs_available(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that OpenAPI docs are served."""
-        resp = requests.get(f"{simple_task_server.api_url}/docs", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{simple_task_server.api_url}/docs")
         assert resp.status_code == 200
         assert "swagger" in resp.text.lower() or "openapi" in resp.text.lower()
 
     @pytest.mark.e2e
     def test_openapi_schema_available(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that OpenAPI JSON schema is available."""
-        resp = requests.get(f"{simple_task_server.api_url}/openapi.json", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{simple_task_server.api_url}/openapi.json")
         assert resp.status_code == 200
         data = resp.json()
         assert "openapi" in data
@@ -204,11 +270,11 @@ class TestSimpleTaskE2E:
         api = simple_task_server.api_url
 
         # Test health endpoint
-        resp = requests.get(f"{api}/health", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{api}/health")
         assert resp.status_code == 200, f"Health check failed: {resp.text}"
 
         # Test list endpoint returns paginated response
-        resp = requests.get(f"{api}/tasks", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{api}/tasks")
         assert resp.status_code == 200, f"List failed: {resp.text}"
         data = resp.json()
         assert "items" in data or isinstance(data, list)
@@ -219,7 +285,7 @@ class TestSimpleTaskE2E:
         task_data = {
             "title": "E2E Test Task",
         }
-        resp = requests.post(f"{api}/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("POST", f"{api}/tasks", json=task_data)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
         created = resp.json()
         assert "id" in created, "Response should have an ID"
@@ -237,28 +303,28 @@ class TestSimpleTaskE2E:
             "status": "todo",
             "priority": "high",
         }
-        resp = requests.post(f"{api}/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("POST", f"{api}/tasks", json=task_data)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
         created = resp.json()
         task_id = created.get("id")
         assert task_id is not None, "Created task should have an ID"
 
         # Read the task (GET /tasks/{id})
-        resp = requests.get(f"{api}/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{api}/tasks/{task_id}")
         assert resp.status_code == 200, f"Read failed: {resp.text}"
         fetched = resp.json()
         assert fetched["title"] == "E2E Test Task"
 
         # Update the task (PUT /tasks/{id})
         update_data = {"title": "Updated E2E Task", "priority": "medium"}
-        resp = requests.put(f"{api}/tasks/{task_id}", json=update_data, timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("PUT", f"{api}/tasks/{task_id}", json=update_data)
         assert resp.status_code == 200, f"Update failed: {resp.text}"
         updated = resp.json()
         assert updated["title"] == "Updated E2E Task"
         assert updated["priority"] == "medium"
 
         # List tasks - should include our task (GET /tasks)
-        resp = requests.get(f"{api}/tasks", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{api}/tasks")
         assert resp.status_code == 200, f"List failed: {resp.text}"
         data = resp.json()
         # Runtime returns paginated response with 'items' key or list directly
@@ -267,7 +333,7 @@ class TestSimpleTaskE2E:
         assert any(t["id"] == task_id for t in tasks)
 
         # Verify persistence: read again to confirm data persisted
-        resp = requests.get(f"{api}/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{api}/tasks/{task_id}")
         assert resp.status_code == 200, f"Re-read failed: {resp.text}"
         persisted = resp.json()
         assert persisted["title"] == "Updated E2E Task"
@@ -276,12 +342,12 @@ class TestSimpleTaskE2E:
     @pytest.mark.e2e
     def test_frontend_serves_html(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that frontend serves server-rendered HTMX HTML content."""
-        resp = requests.get(simple_task_server.ui_url, timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", simple_task_server.ui_url)
         # Frontend might be served at root, or at a subpath
         if resp.status_code == 404:
             # Try common fallback paths
             for path in ["/index.html", "/static/", "/app/"]:
-                resp = requests.get(f"{simple_task_server.ui_url}{path}", timeout=REQUEST_TIMEOUT)
+                resp = _request_with_retry("GET", f"{simple_task_server.ui_url}{path}")
                 if resp.status_code in (200, 302, 304):
                     break
             # If still 404, skip - UI serving varies by mode
@@ -356,7 +422,7 @@ class TestAuthDisabled:
 
         Acceptable responses: 401 (unauthorized), 200 (stub user), or 404 (no auth routes).
         """
-        resp = requests.get(f"{simple_task_server.api_url}/auth/me", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{simple_task_server.api_url}/auth/me")
         # When auth is enabled: returns user info (200) or requires login (401)
         # When auth is disabled: endpoint may not exist (404) or stub returns 401
         # All of these are acceptable - just not 500 errors
@@ -375,15 +441,15 @@ class TestAuthDisabled:
 
         # Create should work
         task_data = {"title": "No Auth Test Task", "status": "todo"}
-        resp = requests.post(f"{api}/tasks", json=task_data, timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("POST", f"{api}/tasks", json=task_data)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
         created = resp.json()
         task_id = created["id"]
 
         # Read should work
-        resp = requests.get(f"{api}/tasks/{task_id}", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{api}/tasks/{task_id}")
         assert resp.status_code == 200, f"Read failed: {resp.text}"
 
         # List should work
-        resp = requests.get(f"{api}/tasks", timeout=REQUEST_TIMEOUT)
+        resp = _request_with_retry("GET", f"{api}/tasks")
         assert resp.status_code == 200, f"List failed: {resp.text}"
