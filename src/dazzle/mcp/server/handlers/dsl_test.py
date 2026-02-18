@@ -248,6 +248,106 @@ def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
     return script
 
 
+def _persist_test_results(
+    result: Any,
+    by_category: dict[str, dict[str, int]],
+    failed_tests: list[dict[str, Any]],
+    passed_tests: list[str],
+    trigger: str = "manual",
+) -> str | None:
+    """Persist test run results to the knowledge graph. Returns run_id or None."""
+    import time
+    import uuid
+
+    from ..state import get_knowledge_graph
+
+    graph = get_knowledge_graph()
+    if graph is None:
+        return None
+
+    from dazzle.mcp.knowledge_graph.failure_classifier import classify_failure
+
+    run_id = str(uuid.uuid4())
+    total = len(passed_tests) + len(failed_tests)
+    passed_count = len(passed_tests)
+    failed_count = len(failed_tests)
+    success_rate = (passed_count / total * 100) if total > 0 else 0.0
+
+    # Check previous run's dsl_hash
+    previous_runs = graph.get_test_runs(project_name=result.project_name, limit=1)
+    previous_dsl_hash = previous_runs[0]["dsl_hash"] if previous_runs else None
+
+    now = time.time()
+    graph.save_test_run(
+        run_id=run_id,
+        project_name=result.project_name,
+        dsl_hash=result.dsl_hash,
+        previous_dsl_hash=previous_dsl_hash,
+        started_at=now,
+        completed_at=now,
+        total_tests=total,
+        passed=passed_count,
+        failed=failed_count,
+        success_rate=success_rate,
+        tests_generated=result.tests_generated,
+        trigger=trigger,
+    )
+
+    # Build test case rows
+    cases: list[dict[str, Any]] = []
+
+    for test_id in passed_tests:
+        cases.append(
+            {
+                "test_id": test_id,
+                "title": test_id,
+                "category": _infer_category(test_id),
+                "result": "passed",
+            }
+        )
+
+    for ft in failed_tests:
+        failed_step = ft.get("failed_step")
+        failure_type = classify_failure(
+            test_id=ft.get("test_id", ""),
+            category=ft.get("category", "other"),
+            error_message=ft.get("error", ""),
+            failed_step=failed_step,
+        )
+        cases.append(
+            {
+                "test_id": ft.get("test_id", ""),
+                "title": ft.get("title", ft.get("test_id", "")),
+                "category": ft.get("category", "other"),
+                "result": ft.get("result", "failed"),
+                "error_message": ft.get("error"),
+                "failure_type": failure_type,
+                "entities": ft.get("entities"),
+                "failed_step_json": json.dumps(failed_step) if failed_step else None,
+            }
+        )
+
+    if cases:
+        graph.save_test_cases_batch(run_id, cases)
+
+    return run_id
+
+
+def _infer_category(test_id: str) -> str:
+    """Infer test category from test_id prefix."""
+    if test_id.startswith("CRUD_"):
+        return "crud"
+    if test_id.startswith("SM_"):
+        return "state_machine"
+    if test_id.startswith("VAL_"):
+        return "validation"
+    if test_id.startswith("ACL_"):
+        return "persona"
+    if test_id.startswith("WS_"):
+        return "workspace"
+    return "other"
+
+
 @wrap_handler_errors
 def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Run ALL DSL-driven tests without filtering, returning a structured batch report.
@@ -371,6 +471,16 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         if failed_tests:
             response["failed_tests"] = failed_tests
         response["passed_count"] = len(passed_tests)
+
+        # Persist test results to knowledge graph
+        try:
+            run_id = _persist_test_results(
+                result, by_category, failed_tests, passed_tests, trigger="run_all"
+            )
+            if run_id:
+                response["run_id"] = run_id
+        except Exception:
+            logger.debug("Failed to persist test results", exc_info=True)
 
         return json.dumps(response, indent=2)
 

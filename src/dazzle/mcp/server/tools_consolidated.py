@@ -1602,6 +1602,64 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # Test Intelligence (test history and failure patterns)
+        # =====================================================================
+        Tool(
+            name="test_intelligence",
+            description=(
+                "Query persisted test result history. Operations: "
+                "summary (recent runs overview), "
+                "failures (failure patterns, flaky tests, persistent failures), "
+                "regression (tests that went pass→fail between last two runs), "
+                "coverage (success rate trend across recent runs), "
+                "context (single-call AI-ready snapshot combining all above). "
+                "Results are automatically persisted by dsl_test run_all."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "summary",
+                            "failures",
+                            "regression",
+                            "coverage",
+                            "context",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Number of recent runs to analyze (default: 10)",
+                    },
+                    "run_id": {
+                        "type": "string",
+                        "description": "Specific run ID to query test cases for",
+                    },
+                    "failure_type": {
+                        "type": "string",
+                        "enum": [
+                            "rbac_denied",
+                            "validation_error",
+                            "dsl_surface_gap",
+                            "state_machine",
+                            "timeout",
+                            "framework_bug",
+                            "unknown",
+                        ],
+                        "description": "Filter by failure type (for failures)",
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Filter by test category (for failures)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Sentinel (SaaS failure-mode detection)
         # =====================================================================
         Tool(

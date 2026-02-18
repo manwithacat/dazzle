@@ -157,6 +157,7 @@ The DAZZLE MCP server (`dazzle mcp`) provides 26 consolidated tools:
 | `pipeline` | run (full deterministic quality audit in one call) |
 | `nightly` | run (parallel pipeline with dependency-aware fan-out) |
 | `sentinel` | scan, findings, suppress, status, history |
+| `test_intelligence` | summary, failures, regression, coverage, context |
 | `graph` | query, dependencies, neighbourhood, concept, inference, export, import |
 | `status` | mcp, logs, telemetry, activity |
 | `knowledge` | concept, examples, workflow, inference |

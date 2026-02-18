@@ -1611,6 +1611,24 @@ handle_composition: Callable[[dict[str, Any]], Any] = _make_project_handler_asyn
 
 
 # =============================================================================
+# Test Intelligence Handler
+# =============================================================================
+
+_MOD_TI = "dazzle.mcp.server.handlers.test_intelligence"
+
+handle_test_intelligence: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "test intelligence",
+    {
+        "summary": f"{_MOD_TI}:test_summary_handler",
+        "failures": f"{_MOD_TI}:test_failures_handler",
+        "regression": f"{_MOD_TI}:test_regression_handler",
+        "coverage": f"{_MOD_TI}:test_coverage_handler",
+        "context": f"{_MOD_TI}:test_context_handler",
+    },
+)
+
+
+# =============================================================================
 # Sentinel Handler
 # =============================================================================
 
@@ -1660,6 +1678,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "pulse": handle_pulse,
     "composition": handle_composition,
     "sentinel": handle_sentinel,
+    "test_intelligence": handle_test_intelligence,
 }
 
 
