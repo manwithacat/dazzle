@@ -8,6 +8,7 @@ that can be directly rendered by Jinja2 templates.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
@@ -29,6 +30,8 @@ from dazzle_ui.runtime.template_context import (
 
 if TYPE_CHECKING:
     pass
+
+logger = logging.getLogger(__name__)
 
 # ── Currency metadata ─────────────────────────────────────────────────
 
@@ -764,6 +767,8 @@ def compile_appspec_to_templates(
                 if entity_item not in persona_nav:
                     persona_nav.append(entity_item)
 
+    _route_surfaces: dict[str, ir.SurfaceSpec] = {}
+
     for surface in appspec.surfaces:
         entity: ir.EntitySpec | None = None
         if domain and surface.entity_ref:
@@ -786,7 +791,31 @@ def compile_appspec_to_templates(
             SurfaceMode.VIEW: f"{app_prefix}/{entity_slug}/{{id}}",
         }
         route = route_map.get(surface.mode, f"/{surface.name}")
-        contexts[route] = ctx
+
+        if route in contexts:
+            # Route collision: two surfaces produce the same URL.
+            # Prefer the surface with explicit sections (more specific field
+            # definitions) over one that relies on entity-field fallback.
+            prev = _route_surfaces[route]
+            if surface.sections and not prev.sections:
+                logger.debug(
+                    "Route %s: preferring surface '%s' (has sections) over '%s'",
+                    route,
+                    surface.name,
+                    prev.name,
+                )
+                contexts[route] = ctx
+                _route_surfaces[route] = surface
+            else:
+                logger.debug(
+                    "Route %s: keeping surface '%s' over '%s'",
+                    route,
+                    prev.name,
+                    surface.name,
+                )
+        else:
+            contexts[route] = ctx
+            _route_surfaces[route] = surface
 
     # Register a "/" fallback only for simple apps (no workspaces).
     # When workspaces exist, the page router adds a redirect to the first
