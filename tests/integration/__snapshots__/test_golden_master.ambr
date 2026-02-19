@@ -20,6 +20,7 @@
           'access': None,
           'archetype_kind': None,
           'audit': None,
+          'bulk': None,
           'computed_fields': list([
           ]),
           'constraints': list([
@@ -143,6 +144,7 @@
           ]),
           'publishes': list([
           ]),
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'simple_test.dsl',
@@ -183,6 +185,8 @@
     'messages': list([
     ]),
     'name': 'simple_test',
+    'notifications': list([
+    ]),
     'personas': list([
     ]),
     'policies': None,
@@ -221,6 +225,8 @@
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': 'task_list',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'search_fields': list([
+        ]),
         'sections': list([
           dict({
             'elements': list([
@@ -260,6 +266,8 @@
         'mode': <SurfaceMode.VIEW: 'view'>,
         'name': 'task_detail',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'search_fields': list([
+        ]),
         'sections': list([
           dict({
             'elements': list([
@@ -306,6 +314,8 @@
         'mode': <SurfaceMode.CREATE: 'create'>,
         'name': 'task_create',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'search_fields': list([
+        ]),
         'sections': list([
           dict({
             'elements': list([
@@ -345,6 +355,8 @@
         'mode': <SurfaceMode.EDIT: 'edit'>,
         'name': 'task_edit',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'search_fields': list([
+        ]),
         'sections': list([
           dict({
             'elements': list([
