@@ -136,6 +136,14 @@ def compile_experience_context(
 
         if surface:
             page_context = compile_surface_to_context(surface, entity, app_prefix=app_prefix)
+            # Filter form fields to only those listed in step.fields
+            if page_context.form and current_step.fields is not None:
+                allowed = set(current_step.fields)
+                page_context.form = page_context.form.model_copy(
+                    update={
+                        "fields": [f for f in page_context.form.fields if f.name in allowed],
+                    }
+                )
             # Rewrite form action URL to point to the experience transition endpoint
             if page_context.form:
                 page_context.form = page_context.form.model_copy(

@@ -90,6 +90,7 @@ class ExperienceStep(BaseModel):
     integration: str | None = None
     action: str | None = None
     saves_to: str | None = None  # e.g. "context.company"
+    fields: list[str] | None = None  # Restrict form to these entity fields
     prefills: list[StepPrefill] = Field(default_factory=list)
     when: str | None = None  # raw condition string e.g. "context.company.is_vat_registered = true"
     transitions: list[StepTransition] = Field(default_factory=list)

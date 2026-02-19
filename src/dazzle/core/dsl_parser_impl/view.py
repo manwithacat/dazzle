@@ -123,6 +123,13 @@ class ViewParserMixin:
                     fields = self._parse_view_fields()
                 else:
                     self.skip_newlines()
+            elif self.match(TokenType.FIELDS):
+                # fields: block (keyword token)
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                fields = self._parse_view_fields()
             else:
                 # Try identifier as "fields:" without keyword
                 token = self.current_token()

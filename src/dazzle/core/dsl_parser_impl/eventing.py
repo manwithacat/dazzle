@@ -217,6 +217,13 @@ class EventingParserMixin:
                     self.expect(TokenType.DEDENT)
                 else:
                     self.advance()
+            elif self.match(TokenType.FIELDS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                custom_fields = self._parse_event_fields()
+                self.expect(TokenType.DEDENT)
             else:
                 self.advance()
 

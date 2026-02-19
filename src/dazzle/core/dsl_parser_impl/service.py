@@ -533,6 +533,18 @@ class ServiceParserMixin:
             saves_to = f"context.{creates_var}"
             self.skip_newlines()
 
+        # fields: field1, field2, ... (restrict form to listed entity fields)
+        step_fields: list[str] | None = None
+        if self.match(TokenType.FIELDS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            step_fields = []
+            step_fields.append(self.expect_identifier_or_keyword().value)
+            while self.match(TokenType.COMMA):
+                self.advance()
+                step_fields.append(self.expect_identifier_or_keyword().value)
+            self.skip_newlines()
+
         # defaults: block (shorthand for prefill with $var → context.var.id)
         if self.match(TokenType.DEFAULTS):
             self.advance()
@@ -645,6 +657,7 @@ class ServiceParserMixin:
             integration=integration,
             action=action,
             saves_to=saves_to,
+            fields=step_fields,
             prefills=prefills,
             when=when,
             transitions=transitions,

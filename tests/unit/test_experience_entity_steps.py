@@ -508,6 +508,223 @@ class TestEntityStepCompiler:
 
 
 # ---------------------------------------------------------------------------
+# Field Filtering Tests (issue #335)
+# ---------------------------------------------------------------------------
+
+
+class TestFieldFiltering:
+    """Verify fields: attribute restricts entity step forms."""
+
+    def test_fields_parses_comma_separated(self) -> None:
+        """fields: name, email parses to step.fields list."""
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Contact "Contact":
+  id: uuid pk
+  name: str(200) required
+  email: email
+  phone: str(50)
+
+experience onboarding "Onboarding":
+  start at step add_contact
+
+  step add_contact:
+    entity: Contact
+    fields: name, email
+    on success -> step done
+
+  step done:
+    entity: Contact
+"""
+        frag = _parse_fragment(dsl)
+        exp = frag.experiences[0]
+        step = exp.get_step("add_contact")
+        assert step is not None
+        assert step.fields == ["name", "email"]
+
+    def test_fields_single_field(self) -> None:
+        """fields: name with a single field works."""
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Contact "Contact":
+  id: uuid pk
+  name: str(200) required
+
+experience onboarding "Onboarding":
+  start at step add_contact
+
+  step add_contact:
+    entity: Contact
+    fields: name
+    on success -> step done
+
+  step done:
+    entity: Contact
+"""
+        frag = _parse_fragment(dsl)
+        step = frag.experiences[0].get_step("add_contact")
+        assert step is not None
+        assert step.fields == ["name"]
+
+    def test_fields_with_creates_and_defaults(self) -> None:
+        """fields: works alongside creates: and defaults:."""
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+
+entity Contact "Contact":
+  id: uuid pk
+  name: str(200) required
+  email: email
+  phone: str(50)
+  company_id: ref Company
+
+experience onboarding "Onboarding":
+  start at step add_company
+
+  step add_company:
+    entity: Company
+    creates: company
+    on success -> step add_contact
+
+  step add_contact:
+    entity: Contact
+    creates: contact
+    fields: name, email
+    defaults:
+      company_id: $company
+    on success -> step done
+
+  step done:
+    entity: Contact
+"""
+        frag = _parse_fragment(dsl)
+        step = frag.experiences[0].get_step("add_contact")
+        assert step is not None
+        assert step.fields == ["name", "email"]
+        assert step.saves_to == "context.contact"
+        assert step.prefills[0].field == "company_id"
+
+    def test_no_fields_returns_none(self) -> None:
+        """Step without fields: has fields=None (show all)."""
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Contact "Contact":
+  id: uuid pk
+  name: str(200) required
+
+experience onboarding "Onboarding":
+  start at step add_contact
+
+  step add_contact:
+    entity: Contact
+    on success -> step done
+
+  step done:
+    entity: Contact
+"""
+        frag = _parse_fragment(dsl)
+        step = frag.experiences[0].get_step("add_contact")
+        assert step is not None
+        assert step.fields is None
+
+    def test_fields_filter_in_compiler(self) -> None:
+        """Compiler filters form fields to only those in step.fields."""
+        entity = _make_entity(
+            "Contact",
+            extra_fields=[FieldSpec(name="phone", type=FieldType(kind="str"))],
+        )
+        experience = ExperienceSpec(
+            name="onboarding",
+            title="Onboarding",
+            start_step="add_contact",
+            steps=[
+                ExperienceStep(
+                    name="add_contact",
+                    kind=StepKind.SURFACE,
+                    entity_ref="Contact",
+                    fields=["name", "email"],
+                    transitions=[StepTransition(event="success", next_step="done")],
+                ),
+                ExperienceStep(
+                    name="done",
+                    kind=StepKind.SURFACE,
+                    entity_ref="Contact",
+                    transitions=[],
+                ),
+            ],
+        )
+        appspec = AppSpec(
+            name="test_app",
+            title="Test",
+            domain=DomainSpec(entities=[entity]),
+            experiences=[experience],
+        )
+        state = ExperienceState(step="add_contact")
+
+        ctx = compile_experience_context(experience, state, appspec, app_prefix="/app")
+
+        assert ctx.page_context is not None
+        assert ctx.page_context.form is not None
+        field_names = [f.name for f in ctx.page_context.form.fields]
+        assert "name" in field_names
+        assert "email" in field_names
+        assert "phone" not in field_names
+
+    def test_no_fields_shows_all(self) -> None:
+        """Without fields filter, all entity fields are shown."""
+        entity = _make_entity(
+            "Contact",
+            extra_fields=[FieldSpec(name="phone", type=FieldType(kind="str"))],
+        )
+        experience = ExperienceSpec(
+            name="onboarding",
+            title="Onboarding",
+            start_step="add_contact",
+            steps=[
+                ExperienceStep(
+                    name="add_contact",
+                    kind=StepKind.SURFACE,
+                    entity_ref="Contact",
+                    transitions=[StepTransition(event="success", next_step="done")],
+                ),
+                ExperienceStep(
+                    name="done",
+                    kind=StepKind.SURFACE,
+                    entity_ref="Contact",
+                    transitions=[],
+                ),
+            ],
+        )
+        appspec = AppSpec(
+            name="test_app",
+            title="Test",
+            domain=DomainSpec(entities=[entity]),
+            experiences=[experience],
+        )
+        state = ExperienceState(step="add_contact")
+
+        ctx = compile_experience_context(experience, state, appspec, app_prefix="/app")
+
+        assert ctx.page_context is not None
+        assert ctx.page_context.form is not None
+        field_names = [f.name for f in ctx.page_context.form.fields]
+        assert "name" in field_names
+        assert "email" in field_names
+        assert "phone" in field_names
+
+
+# ---------------------------------------------------------------------------
 # Routes Tests
 # ---------------------------------------------------------------------------
 

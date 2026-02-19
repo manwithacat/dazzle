@@ -67,6 +67,7 @@ class TokenType(Enum):
     PREFILL = "prefill"
     SAVES_TO = "saves_to"
     CREATES = "creates"
+    FIELDS = "fields"
 
     # Integration Keywords
     OPERATION = "operation"

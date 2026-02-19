@@ -722,6 +722,7 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.SAVES_TO,
     TokenType.CREATES,
     TokenType.DEFAULTS,
+    TokenType.FIELDS,
     # v0.34.0 Platform Capability Keywords
     TokenType.SOFT_DELETE,
     TokenType.SEARCHABLE,
