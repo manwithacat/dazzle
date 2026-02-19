@@ -918,6 +918,47 @@ class DazzleBackendApp:
         if self._integration_mgr:
             self._integration_mgr.init_integration_executor()
 
+    def _init_mapping_executor(self) -> None:
+        """Initialize declarative integration mapping executor (v0.30.0).
+
+        Scans integrations for ``IntegrationMapping`` blocks and registers
+        handlers on the global entity event bus to fire HTTP requests on
+        entity lifecycle events.
+        """
+        try:
+            # Check if any integrations have mappings
+            has_mappings = False
+            for integration in getattr(self.spec, "integrations", []):
+                if getattr(integration, "mappings", []):
+                    has_mappings = True
+                    break
+
+            if not has_mappings:
+                return
+
+            from dazzle_back.runtime.event_bus import get_event_bus
+            from dazzle_back.runtime.mapping_executor import MappingExecutor
+
+            event_bus = get_event_bus()
+            repositories = self._repositories
+
+            async def update_entity(
+                entity_name: str, entity_id: str, fields: dict[str, Any]
+            ) -> None:
+                repo = repositories.get(entity_name)
+                if repo:
+                    from uuid import UUID
+
+                    await repo.update(UUID(entity_id), fields)
+
+            executor = MappingExecutor(self.spec, event_bus, update_entity=update_entity)
+            executor.register_all()
+
+        except Exception as e:
+            import logging
+
+            logging.getLogger("dazzle.server").warning(f"Failed to init mapping executor: {e}")
+
     def _init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""
         if self._workspace_builder:
@@ -1571,6 +1612,9 @@ class DazzleBackendApp:
 
         # Integration executor (v0.20.0)
         self._init_integration_executor()
+
+        # Mapping executor (v0.30.0)
+        self._init_mapping_executor()
 
         # Workspace routes (v0.20.0)
         self._init_workspace_routes()
