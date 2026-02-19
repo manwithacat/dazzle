@@ -1,110 +1,99 @@
-"""Centralized path constants for the MCP server.
+"""Centralized path constants — re-exported from ``dazzle.core.paths``.
 
-All hardcoded directory and file names that appear across handlers are
-collected here so they can be changed in one place.
+This shim preserves backward compatibility for the 15+ MCP-layer callers
+that import from ``dazzle.mcp.server.paths``.  The canonical definitions
+now live in ``dazzle.core.paths`` so that core persistence modules can
+use them without a core→mcp dependency.
 """
 
-from __future__ import annotations
-
-from pathlib import Path
-
-# -- Top-level project files -------------------------------------------------
-MANIFEST_FILE = "dazzle.toml"
-
-# -- .dazzle runtime directory -----------------------------------------------
-DAZZLE_DIR = ".dazzle"
-
-# -- Database files ----------------------------------------------------------
-KG_DB_FILE = "knowledge_graph.db"
-PROCESSES_DB_FILE = "processes.db"
-
-# -- Subdirectory names under .dazzle ----------------------------------------
-DISCOVERY_DIR = "discovery"
-COMPOSITION_DIR = "composition"
-CAPTURES_DIR = "captures"
-REFERENCES_DIR = "references"
-LOGS_DIR = "logs"
-TEST_RESULTS_DIR = "test_results"
-STORIES_DIR = "stories"
-DEMO_DATA_DIR = "demo_data"
-PROCESSES_DIR = "processes"
-
-# -- Override registry -------------------------------------------------------
-OVERRIDES_FILE = "overrides.json"
-
-# -- Log files ---------------------------------------------------------------
-ACTIVITY_LOG_FILE = "mcp-activity.log"
-DNR_LOG_FILE = "dazzle.log"
-
-
-# -- Helper functions --------------------------------------------------------
-
-
-def project_dazzle_dir(project_root: Path) -> Path:
-    """Return the .dazzle directory for a project."""
-    return project_root / DAZZLE_DIR
-
-
-def project_manifest(project_root: Path) -> Path:
-    """Return the path to dazzle.toml for a project."""
-    return project_root / MANIFEST_FILE
-
-
-def project_kg_db(project_root: Path) -> Path:
-    """Return the knowledge graph database path for a project."""
-    return project_dazzle_dir(project_root) / KG_DB_FILE
-
-
-def project_processes_db(project_root: Path) -> Path:
-    """Return the processes database path for a project."""
-    return project_dazzle_dir(project_root) / PROCESSES_DB_FILE
-
-
-def project_discovery_dir(project_root: Path) -> Path:
-    """Return the discovery reports directory for a project."""
-    return project_dazzle_dir(project_root) / DISCOVERY_DIR
-
-
-def project_composition_captures(project_root: Path) -> Path:
-    """Return the composition captures directory for a project."""
-    return project_dazzle_dir(project_root) / COMPOSITION_DIR / CAPTURES_DIR
-
-
-def project_composition_references(project_root: Path) -> Path:
-    """Return the composition references directory for a project."""
-    return project_dazzle_dir(project_root) / COMPOSITION_DIR / REFERENCES_DIR
-
-
-def project_log_dir(project_root: Path) -> Path:
-    """Return the logs directory for a project."""
-    return project_dazzle_dir(project_root) / LOGS_DIR
-
-
-def project_activity_log(project_root: Path) -> Path:
-    """Return the activity log path for a project."""
-    return project_dazzle_dir(project_root) / ACTIVITY_LOG_FILE
-
-
-def project_test_results_dir(project_root: Path) -> Path:
-    """Return the test results directory for a project."""
-    return project_dazzle_dir(project_root) / TEST_RESULTS_DIR
-
-
-def project_stories_dir(project_root: Path) -> Path:
-    """Return the stories directory for a project."""
-    return project_dazzle_dir(project_root) / STORIES_DIR
-
-
-def project_demo_data_dir(project_root: Path) -> Path:
-    """Return the demo data directory for a project."""
-    return project_dazzle_dir(project_root) / DEMO_DATA_DIR
-
-
-def project_processes_dir(project_root: Path) -> Path:
-    """Return the processes directory for a project."""
-    return project_dazzle_dir(project_root) / PROCESSES_DIR
-
-
-def project_overrides_file(project_root: Path) -> Path:
-    """Return the overrides registry path for a project."""
-    return project_dazzle_dir(project_root) / OVERRIDES_FILE
+from dazzle.core.paths import *  # noqa: F401, F403
+from dazzle.core.paths import (
+    ACTIVITY_LOG_FILE as ACTIVITY_LOG_FILE,
+)
+from dazzle.core.paths import (
+    CAPTURES_DIR as CAPTURES_DIR,
+)
+from dazzle.core.paths import (
+    COMPOSITION_DIR as COMPOSITION_DIR,
+)
+from dazzle.core.paths import (
+    DAZZLE_DIR as DAZZLE_DIR,
+)
+from dazzle.core.paths import (
+    DEMO_DATA_DIR as DEMO_DATA_DIR,
+)
+from dazzle.core.paths import (
+    DISCOVERY_DIR as DISCOVERY_DIR,
+)
+from dazzle.core.paths import (
+    DNR_LOG_FILE as DNR_LOG_FILE,
+)
+from dazzle.core.paths import (
+    KG_DB_FILE as KG_DB_FILE,
+)
+from dazzle.core.paths import (
+    LOGS_DIR as LOGS_DIR,
+)
+from dazzle.core.paths import (
+    MANIFEST_FILE as MANIFEST_FILE,
+)
+from dazzle.core.paths import (
+    OVERRIDES_FILE as OVERRIDES_FILE,
+)
+from dazzle.core.paths import (
+    PROCESSES_DB_FILE as PROCESSES_DB_FILE,
+)
+from dazzle.core.paths import (
+    PROCESSES_DIR as PROCESSES_DIR,
+)
+from dazzle.core.paths import (
+    REFERENCES_DIR as REFERENCES_DIR,
+)
+from dazzle.core.paths import (
+    STORIES_DIR as STORIES_DIR,
+)
+from dazzle.core.paths import (
+    TEST_RESULTS_DIR as TEST_RESULTS_DIR,
+)
+from dazzle.core.paths import (
+    project_activity_log as project_activity_log,
+)
+from dazzle.core.paths import (
+    project_composition_captures as project_composition_captures,
+)
+from dazzle.core.paths import (
+    project_composition_references as project_composition_references,
+)
+from dazzle.core.paths import (
+    project_dazzle_dir as project_dazzle_dir,
+)
+from dazzle.core.paths import (
+    project_demo_data_dir as project_demo_data_dir,
+)
+from dazzle.core.paths import (
+    project_discovery_dir as project_discovery_dir,
+)
+from dazzle.core.paths import (
+    project_kg_db as project_kg_db,
+)
+from dazzle.core.paths import (
+    project_log_dir as project_log_dir,
+)
+from dazzle.core.paths import (
+    project_manifest as project_manifest,
+)
+from dazzle.core.paths import (
+    project_overrides_file as project_overrides_file,
+)
+from dazzle.core.paths import (
+    project_processes_db as project_processes_db,
+)
+from dazzle.core.paths import (
+    project_processes_dir as project_processes_dir,
+)
+from dazzle.core.paths import (
+    project_stories_dir as project_stories_dir,
+)
+from dazzle.core.paths import (
+    project_test_results_dir as project_test_results_dir,
+)

@@ -8,7 +8,6 @@ Commands:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import typer
@@ -63,15 +62,10 @@ def nightly_run(
         dazzle nightly run --stop-on-error           # Stop on first failure
         dazzle nightly run --base-url http://localhost:8000  # Include live tests
     """
+    from dazzle.cli.common import resolve_project, run_mcp_handler
     from dazzle.mcp.server.handlers.nightly import run_nightly_handler
 
-    manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
-
-    if not (root / "dazzle.toml").exists():
-        typer.echo(f"No dazzle.toml found in {root}", err=True)
-        raise typer.Exit(code=1)
-
+    root = resolve_project(manifest)
     args: dict[str, object] = {
         "detail": detail,
         "stop_on_error": stop_on_error,
@@ -80,18 +74,20 @@ def nightly_run(
     if base_url:
         args["base_url"] = base_url
 
-    try:
-        from dazzle.cli.activity import cli_activity
+    def _inject_activity_store(a: dict[str, object]) -> None:
         from dazzle.mcp.server.state import get_activity_store
 
-        with cli_activity(root, "nightly", "run") as progress:
-            args["_progress"] = progress
-            args["_activity_store"] = get_activity_store()
-            raw = run_nightly_handler(root, args)
-        data = json.loads(raw)
-    except Exception as e:
-        typer.echo(f"Nightly error: {e}", err=True)
-        raise typer.Exit(code=1)
+        a["_activity_store"] = get_activity_store()
+
+    data = run_mcp_handler(
+        root,
+        "nightly",
+        "run",
+        run_nightly_handler,
+        args,
+        error_label="Nightly",
+        setup=_inject_activity_store,
+    )
 
     if format == "json":
         typer.echo(json.dumps(data, indent=2))

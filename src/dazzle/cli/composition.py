@@ -45,29 +45,22 @@ def composition_audit(
         dazzle composition audit --format json         # JSON for CI
         dazzle composition audit --pages /,/tasks      # Specific pages
     """
+    from dazzle.cli.common import resolve_project, run_mcp_handler
     from dazzle.mcp.server.handlers.composition import audit_composition_handler
 
-    manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
-
-    if not (root / "dazzle.toml").exists():
-        typer.echo(f"No dazzle.toml found in {root}", err=True)
-        raise typer.Exit(code=1)
-
+    root = resolve_project(manifest)
     args: dict[str, object] = {}
     if pages:
         args["pages"] = [p.strip() for p in pages.split(",")]
 
-    try:
-        from dazzle.cli.activity import cli_activity
-
-        with cli_activity(root, "composition", "audit") as progress:
-            args["_progress"] = progress
-            raw = audit_composition_handler(root, args)
-        data = json.loads(raw)
-    except Exception as e:
-        typer.echo(f"Composition audit error: {e}", err=True)
-        raise typer.Exit(code=1)
+    data = run_mcp_handler(
+        root,
+        "composition",
+        "audit",
+        audit_composition_handler,
+        args,
+        error_label="Composition audit",
+    )
 
     if "error" in data:
         typer.echo(f"Error: {data['error']}", err=True)

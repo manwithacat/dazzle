@@ -455,7 +455,7 @@ class MappingExecutor:
                     return left_val is not None and right_val is not None and left_val > right_val
                 elif expr.op == BinaryOp.LT:
                     return left_val is not None and right_val is not None and left_val < right_val
-        except (ImportError, Exception) as e:
+        except Exception as e:
             logger.debug("Condition evaluation failed: %s", e)
 
         return True  # Default to matching if evaluation fails

@@ -74,8 +74,10 @@ class AuditLogger:
 
             conn = psycopg.connect(self._database_url, row_factory=dict_row)
             return conn, "postgresql"
-        except (ImportError, Exception):
-            pass
+        except ImportError:
+            logger.info("psycopg not installed, falling back to SQLite")
+        except Exception:
+            logger.warning("PostgreSQL connection failed, falling back to SQLite", exc_info=True)
 
         import sqlite3
 

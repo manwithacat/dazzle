@@ -480,7 +480,8 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
             if run_id:
                 response["run_id"] = run_id
         except Exception:
-            logger.debug("Failed to persist test results", exc_info=True)
+            logger.warning("Failed to persist test results", exc_info=True)
+            response["persistence_error"] = "Test results could not be saved to knowledge graph"
 
         return json.dumps(response, indent=2)
 

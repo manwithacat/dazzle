@@ -1,96 +1,125 @@
-Analyse the codebase for code smells, anti-patterns, and structural problems. Produce a prioritised report with concrete recommendations.
+Run a two-phase code smells analysis: regression checks against established rules, then a scan for new systemic patterns. This is a read-only analysis — do NOT make any code changes.
 
 ## Scope
 
-Focus on `src/dazzle/` and `src/dazzle_back/` and `src/dazzle_ui/`. Ignore `tests/`, `examples/`, and auto-generated files.
+Focus on `src/dazzle/`, `src/dazzle_back/`, and `src/dazzle_ui/`. Ignore `tests/`, `examples/`, and auto-generated files.
 
-## Analysis categories
+---
 
-Work through each category systematically. For each finding, note the file path, line range, severity (high/medium/low), and a one-sentence fix suggestion.
+## Phase 1 — Regression Checks
 
-### 1. Complexity smells
+Run each grep-able check and report **PASS** or **FAIL** with counts. These are rules established by previous smells rounds — regressions here mean a fix was undone.
 
-- Functions longer than ~80 lines
-- Deeply nested conditionals (3+ levels)
-- Functions with more than 5 parameters
-- God classes (classes with 10+ methods or 500+ lines)
-- Cyclomatic complexity hotspots
+### 1.1 No swallowed exceptions
+```bash
+grep -rn "except Exception: pass" src/ --include="*.py"
+grep -rn "except Exception:$" src/ --include="*.py"  # (check next line is just pass)
+```
+**PASS** = 0 bare `except Exception: pass` patterns. Note: `except Exception:` followed by logging is fine.
 
-### 2. Coupling and cohesion
+### 1.2 No redundant except tuples
+```bash
+grep -rn "except (ImportError, Exception)" src/ --include="*.py"
+grep -rn "except (json.JSONDecodeError, Exception)" src/ --include="*.py"
+grep -rn "except (JSONDecodeError, Exception)" src/ --include="*.py"
+```
+**PASS** = 0 results across all three.
 
-- Circular imports or tightly coupled modules
-- Classes/modules that import from too many siblings (fan-in > 8)
-- Feature envy — functions that use another module's internals more than their own
-- Inappropriate intimacy between modules (reaching into private attributes)
+### 1.3 Core→MCP isolation
+```bash
+grep -rn "from dazzle\.mcp" src/dazzle/core/
+```
+**PASS** = 0 results. Core modules must not import from the MCP layer.
 
-### 3. Duplication
+### 1.4 No `project_path: Any` in handlers
+```bash
+grep -rn "project_path: Any" src/dazzle/mcp/server/handlers/
+```
+**PASS** = 0 results. Handler signatures should use `Path | None`.
 
-- Near-duplicate functions or blocks (>10 lines substantially similar)
-- Copy-paste patterns across handler files
-- Repeated boilerplate that should be extracted to a helper
+### 1.5 All fallback paths log at WARNING or above
+Spot-check the patterns from 1.1 and 1.2. If a fallback catches a connection/runtime error, it must log at WARNING+ (not debug or silent). INFO is acceptable only for expected conditions like ImportError for optional dependencies.
 
-### 4. Naming and clarity
+### 1.6 Function length (aspirational)
+```bash
+# Count functions >150 lines in src/
+```
+Use AST-aware analysis or line counting between `def` statements. Report the count and list the top 5 longest functions. **Track** = report count (no pass/fail yet).
 
-- Misleading names (function does more/less than the name suggests)
-- Inconsistent naming conventions within a module
-- Single-letter variables outside of comprehensions/lambdas
-- Overly generic names (`data`, `result`, `info`, `item`, `obj`) in non-trivial scopes
+### 1.7 Class length (aspirational)
+```bash
+# Count classes >800 lines in src/
+```
+Report the count and list any offenders. **Track** = report count.
 
-### 5. Error handling
+---
 
-- Bare `except:` or `except Exception:` that swallows errors silently
-- Missing error handling on I/O operations (file, network, subprocess)
-- Inconsistent error propagation patterns
+## Phase 2 — New Pattern Scan
 
-### 6. Architecture smells
+Scan for **new systemic patterns** across the same categories below. Do NOT re-report issues already covered by Phase 1 regression checks.
 
-- Layers violated (e.g. CLI importing directly from runtime internals)
-- Business logic in CLI commands or route handlers instead of service layer
-- Mutable global state or hidden singletons
-- Configuration scattered across modules instead of centralised
+Group findings into **patterns** (a pattern is a recurring structural issue with ≥2 instances), not individual instances. For each pattern found, provide:
 
-### 7. Dead code
+| Field | Description |
+|-------|-------------|
+| **Pattern name** | Short descriptive name |
+| **Category** | One of the categories below |
+| **Instance count** | How many occurrences |
+| **Root cause** | Why this pattern keeps appearing |
+| **Canonical fix** | The one correct way to fix all instances |
+| **Done criteria** | A grep command or check that verifies the fix |
+| **Enforcement** | How to prevent recurrence (lint rule, CI check, convention) |
 
-- Unused imports (beyond what ruff catches)
-- Unreachable branches
-- Functions/classes defined but never called
-- Commented-out code blocks
+### Categories to scan
 
-### 8. Type safety
+1. **Error handling** — silent failures, inconsistent exception strategy, missing retries on I/O
+2. **Coupling** — layer violations, circular imports, inappropriate intimacy, fan-in >8
+3. **Duplication** — near-duplicate blocks >10 lines, copy-paste across handlers
+4. **Type safety** — `Any` where concrete types are known, `# type: ignore` masking real issues
+5. **Complexity** — functions >80 lines, deeply nested conditionals (3+ levels), god classes
+6. **Mutable globals** — hidden singletons, module-level mutable state, thread-unsafe patterns
 
-- `Any` used where a concrete type is known
-- `# type: ignore` comments that mask real issues
-- Missing return type annotations on public functions
+### Approach
 
-## Approach
+1. Use `wc -l` on source files to find the largest files (complexity hotspots).
+2. Use Grep/Glob to scan systematically — don't read every file line by line.
+3. Compare structurally similar files (e.g. MCP handlers, CLI commands) for duplication.
+4. Focus on patterns with ≥2 instances. One-off issues are not patterns.
 
-1. Use Grep and Glob to scan systematically — don't try to read every file line by line.
-2. Start with the largest files (likely complexity hotspots): `wc -l src/dazzle/**/*.py | sort -rn | head -30`.
-3. For duplication, compare structurally similar files (e.g. MCP handlers, CLI commands).
-4. Prioritise findings by impact: things that actively cause bugs or block development rank higher than style nits.
+---
 
-## Output
+## Phase 3 — Summary Report
 
-Produce a structured report in this format:
+Produce a structured report:
 
 ```
-## Code Smell Report
+## Code Smells Report — [date]
 
-### Critical (fix soon)
-| # | Category | File | Lines | Description | Suggestion |
-|---|----------|------|-------|-------------|------------|
-| 1 | complexity | path | L100-180 | 80-line function with 4 nested ifs | Extract into smaller helpers |
+### Regression Check Results
+| # | Check | Status | Details |
+|---|-------|--------|---------|
+| 1.1 | Swallowed exceptions | PASS/FAIL | count |
+| 1.2 | Redundant except tuples | PASS/FAIL | count |
+| 1.3 | Core→MCP isolation | PASS/FAIL | count |
+| 1.4 | project_path: Any | PASS/FAIL | count |
+| 1.5 | Fallback logging | PASS/FAIL | notes |
+| 1.6 | Functions >150 lines | TRACK | count, top 5 |
+| 1.7 | Classes >800 lines | TRACK | count, top offenders |
 
-### Moderate (fix when touching)
-...
+### New Patterns Found
+[Table of patterns from Phase 2, ordered by severity × instance count]
 
-### Minor (nice to have)
-...
+### Recommended Next Actions
+1. [Highest priority pattern to fix]
+2. [Second priority]
+3. [Third priority]
 
-### Summary
-- X critical, Y moderate, Z minor findings
-- Top 3 areas needing attention: ...
-- Estimated effort: ...
+### Comparison with Previous Round
+- Regressions: X checks regressed
+- New patterns: Y new patterns found
+- Resolved since last round: [list any that are gone]
 ```
+
+Save the report to `dev_docs/smells-report.md`.
 
 Do NOT make any changes to the code. This is a read-only analysis.

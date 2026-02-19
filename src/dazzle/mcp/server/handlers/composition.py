@@ -240,7 +240,8 @@ def _load_captures_from_dir(captures_dir: Path) -> list[Any]:
 
                 with Image.open(f) as img:
                     w, h = img.size
-            except (ImportError, Exception):
+            except Exception:
+                logger.debug("PIL not available, using fallback image dimensions")
                 w, h = 1280, 400  # fallback
 
             from dazzle.core.composition_capture import estimate_tokens

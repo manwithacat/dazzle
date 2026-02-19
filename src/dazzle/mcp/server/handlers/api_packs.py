@@ -7,6 +7,7 @@ Handles API pack listing, searching, details, and DSL generation.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from .common import extract_progress, wrap_handler_errors
@@ -204,12 +205,10 @@ def generate_service_dsl_handler(args: dict[str, Any]) -> str:
 
 
 @wrap_handler_errors
-def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
+def infrastructure_handler(project_path: Path | None, args: dict[str, Any]) -> str:
     """Discover infrastructure requirements for services declared in DSL."""
     progress = extract_progress(args)
     progress.log_sync("Discovering infrastructure requirements...")
-    from pathlib import Path
-
     from dazzle.api_kb import load_pack
 
     from .common import load_project_appspec
@@ -262,6 +261,80 @@ def infrastructure_handler(project_path: Any, args: dict[str, Any]) -> str:
             "cloud_only_count": len(cloud_only),
             "unknown_count": len(unknown),
             "services": services,
+        },
+        indent=2,
+    )
+
+
+@wrap_handler_errors
+def scaffold_pack_handler(project_path: Path | None, args: dict[str, Any]) -> str:
+    """Scaffold a new API pack TOML from OpenAPI spec or blank template."""
+    progress = extract_progress(args)
+    progress.log_sync("Scaffolding API pack...")
+
+    from dazzle.api_kb.openapi_importer import import_from_openapi, scaffold_blank
+
+    openapi_spec = args.get("openapi_spec")
+    openapi_url = args.get("openapi_url")
+    provider = args.get("provider", "MyVendor")
+    category = args.get("category", "api")
+    pack_name = args.get("pack_name", "")
+
+    toml_content: str
+
+    if openapi_spec:
+        # Convert OpenAPI spec dict to TOML
+        toml_content = import_from_openapi(openapi_spec)
+    elif openapi_url:
+        # Fetch and convert
+        import json as _json
+
+        import httpx
+
+        try:
+            resp = httpx.get(openapi_url, timeout=30.0, follow_redirects=True)
+            resp.raise_for_status()
+            content_type = resp.headers.get("content-type", "")
+            if "yaml" in content_type or openapi_url.endswith((".yaml", ".yml")):
+                try:
+                    import yaml
+
+                    spec_data = yaml.safe_load(resp.text)
+                except ImportError:
+                    return _json.dumps(
+                        {
+                            "error": "PyYAML required for YAML OpenAPI specs. Install with: pip install pyyaml"
+                        }
+                    )
+            else:
+                spec_data = resp.json()
+            toml_content = import_from_openapi(spec_data)
+        except Exception as e:
+            return _json.dumps({"error": f"Failed to fetch OpenAPI spec: {e}"})
+    else:
+        # Blank template
+        if not pack_name:
+            pack_name = f"{provider.lower().replace(' ', '_')}_{category}"
+        toml_content = scaffold_blank(provider, category, pack_name)
+
+    # Determine save path
+    if not pack_name:
+        # Extract from generated TOML
+        import re
+
+        match = re.search(r'name\s*=\s*"([^"]+)"', toml_content)
+        pack_name = match.group(1) if match else "custom_pack"
+
+    # Derive provider directory from pack_name
+    parts = pack_name.split("_", 1)
+    vendor_dir = parts[0] if len(parts) > 1 else pack_name
+    save_path = f".dazzle/api_packs/{vendor_dir}/{pack_name}.toml"
+
+    return json.dumps(
+        {
+            "toml": toml_content,
+            "save_path": save_path,
+            "hint": f'Save to {save_path} in your project directory, then reference with spec: inline "pack:{pack_name}"',
         },
         indent=2,
     )

@@ -1757,8 +1757,10 @@ class DazzleBackendApp:
                     dirs.append(self._project_root / "static")
                 dirs.append(framework_static)
                 self._app.mount("/static", CombinedStaticFiles(directories=dirs), name="static")
-        except (ImportError, Exception):
+        except ImportError:
             pass  # dazzle_ui not installed — static files served externally
+        except Exception:
+            logger.warning("Failed to mount static files", exc_info=True)
 
     # ------------------------------------------------------------------
     # Public build orchestrator

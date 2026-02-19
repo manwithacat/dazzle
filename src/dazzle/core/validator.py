@@ -1201,28 +1201,12 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
-def extended_lint(appspec: ir.AppSpec) -> list[str]:
-    """
-    Extended lint rules for code quality.
-
-    Checks:
-    - Naming conventions (snake_case, PascalCase)
-    - Dead constructs (unreferenced entities, surfaces)
-    - Missing titles/descriptions
-    - Workspace persona associations
-    - List surface UX completeness
-
-    Returns:
-        List of warning messages
-    """
-    warnings = []
-
-    # Check entity naming (should be PascalCase)
+def _lint_naming_conventions(appspec: ir.AppSpec) -> list[str]:
+    """Check entity PascalCase and field snake_case naming."""
+    warnings: list[str] = []
     for entity in appspec.domain.entities:
         if not entity.name[0].isupper():
             warnings.append(f"Entity '{entity.name}' should use PascalCase naming")
-
-        # Check field naming (should be snake_case)
         for field in entity.fields:
             if field.name != field.name.lower():
                 if "_" in field.name or not any(c.isupper() for c in field.name[1:]):
@@ -1230,171 +1214,202 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
                 warnings.append(
                     f"Entity '{entity.name}' field '{field.name}' should use snake_case naming"
                 )
+    return warnings
 
-    # Dead construct detection — reachability analysis across the full IR
-    warnings.extend(_detect_dead_constructs(appspec))
 
-    # Check for missing titles
+def _lint_missing_titles(appspec: ir.AppSpec) -> list[str]:
+    """Check for entities and surfaces without titles."""
+    warnings: list[str] = []
     for entity in appspec.domain.entities:
         if not entity.title:
             warnings.append(f"Entity '{entity.name}' has no title")
-
     for surface in appspec.surfaces:
         if not surface.title:
             warnings.append(f"Surface '{surface.name}' has no title")
+    return warnings
 
-    # v0.14.2: Check for workspaces without associated personas
-    if appspec.workspaces:
-        # Collect all persona IDs
-        persona_ids = {p.id for p in appspec.personas}
 
-        # Collect personas referenced by workspace UX variants
-        workspaces_with_personas: set[str] = set()
-        for workspace in appspec.workspaces:
-            if workspace.ux and workspace.ux.persona_variants:
-                for variant in workspace.ux.persona_variants:
-                    if variant.persona in persona_ids:
-                        workspaces_with_personas.add(workspace.name)
-                        break
+def _lint_workspace_personas(appspec: ir.AppSpec) -> list[str]:
+    """Check for workspaces without associated personas."""
+    if not appspec.workspaces:
+        return []
 
-        # Collect personas that have default_workspace set
-        for persona in appspec.personas:
-            if persona.default_workspace:
-                for ws in appspec.workspaces:
-                    if ws.name == persona.default_workspace:
-                        workspaces_with_personas.add(ws.name)
+    warnings: list[str] = []
+    persona_ids = {p.id for p in appspec.personas}
 
-        # Warn about workspaces without personas
-        for workspace in appspec.workspaces:
-            if workspace.name not in workspaces_with_personas:
-                warnings.append(
-                    f"Workspace '{workspace.name}' has no associated persona. "
-                    f"Consider adding a persona for role-based access control."
-                )
+    workspaces_with_personas: set[str] = set()
+    for workspace in appspec.workspaces:
+        if workspace.ux and workspace.ux.persona_variants:
+            for variant in workspace.ux.persona_variants:
+                if variant.persona in persona_ids:
+                    workspaces_with_personas.add(workspace.name)
+                    break
 
-    # v0.21.1: Check for workspaces with no routable content (#120)
-    if appspec.workspaces:
-        surface_entities = {s.entity_ref for s in appspec.surfaces if s.entity_ref}
-        for workspace in appspec.workspaces:
-            region_sources = {r.source for r in workspace.regions if r.source}
-            if not region_sources:
-                warnings.append(
-                    f"Workspace '{workspace.name}' has no regions with entity sources. "
-                    f"It will not generate any routes or render content."
-                )
-            elif not region_sources & surface_entities:
-                warnings.append(
-                    f"Workspace '{workspace.name}' references entities "
-                    f"({', '.join(sorted(region_sources))}) that have no surfaces. "
-                    f"It will not generate any routes."
-                )
+    for persona in appspec.personas:
+        if persona.default_workspace:
+            for ws in appspec.workspaces:
+                if ws.name == persona.default_workspace:
+                    workspaces_with_personas.add(ws.name)
 
-    # ---- List surfaces without UX directives ----
-    # Suggest sort/filter/search for list surfaces that lack a ux block
+    for workspace in appspec.workspaces:
+        if workspace.name not in workspaces_with_personas:
+            warnings.append(
+                f"Workspace '{workspace.name}' has no associated persona. "
+                f"Consider adding a persona for role-based access control."
+            )
+    return warnings
+
+
+def _lint_workspace_routing(appspec: ir.AppSpec) -> list[str]:
+    """Check for workspaces with no routable content."""
+    if not appspec.workspaces:
+        return []
+
+    warnings: list[str] = []
+    surface_entities = {s.entity_ref for s in appspec.surfaces if s.entity_ref}
+    for workspace in appspec.workspaces:
+        region_sources = {r.source for r in workspace.regions if r.source}
+        if not region_sources:
+            warnings.append(
+                f"Workspace '{workspace.name}' has no regions with entity sources. "
+                f"It will not generate any routes or render content."
+            )
+        elif not region_sources & surface_entities:
+            warnings.append(
+                f"Workspace '{workspace.name}' references entities "
+                f"({', '.join(sorted(region_sources))}) that have no surfaces. "
+                f"It will not generate any routes."
+            )
+    return warnings
+
+
+def _lint_list_surface_ux(appspec: ir.AppSpec) -> list[str]:
+    """Check list surfaces for sort/filter/search/empty completeness."""
+    warnings: list[str] = []
     for surface in appspec.surfaces:
-        if surface.mode == ir.SurfaceMode.LIST:
-            if not surface.ux:
-                hints = []
-                # Suggest filterable fields from entity
-                surf_entity = appspec.get_entity(surface.entity_ref) if surface.entity_ref else None
-                if surf_entity:
-                    filterable = [
-                        f.name
-                        for f in surf_entity.fields
-                        if f.type
-                        and f.type.kind in (ir.FieldTypeKind.ENUM, ir.FieldTypeKind.BOOL)
-                        and not f.is_primary_key
-                    ]
-                    # Also check state machine field
-                    if surf_entity.state_machine:
-                        sm_field = surf_entity.state_machine.status_field
-                        if sm_field not in filterable:
-                            filterable.insert(0, sm_field)
-                    searchable = [
-                        f.name
-                        for f in surf_entity.fields
-                        if f.type
-                        and f.type.kind in (ir.FieldTypeKind.STR, ir.FieldTypeKind.TEXT)
-                        and not f.is_primary_key
-                    ]
-                    if filterable:
-                        hints.append(f"filter: {', '.join(filterable)}")
-                    if searchable:
-                        hints.append(f"search: {', '.join(searchable)}")
-                hints.insert(0, "sort: (e.g. created_at desc)")
-                hints.append('empty: "No items yet."')
+        if surface.mode != ir.SurfaceMode.LIST:
+            continue
+        if not surface.ux:
+            hints: list[str] = []
+            surf_entity = appspec.get_entity(surface.entity_ref) if surface.entity_ref else None
+            if surf_entity:
+                filterable = [
+                    f.name
+                    for f in surf_entity.fields
+                    if f.type
+                    and f.type.kind in (ir.FieldTypeKind.ENUM, ir.FieldTypeKind.BOOL)
+                    and not f.is_primary_key
+                ]
+                if surf_entity.state_machine:
+                    sm_field = surf_entity.state_machine.status_field
+                    if sm_field not in filterable:
+                        filterable.insert(0, sm_field)
+                searchable = [
+                    f.name
+                    for f in surf_entity.fields
+                    if f.type
+                    and f.type.kind in (ir.FieldTypeKind.STR, ir.FieldTypeKind.TEXT)
+                    and not f.is_primary_key
+                ]
+                if filterable:
+                    hints.append(f"filter: {', '.join(filterable)}")
+                if searchable:
+                    hints.append(f"search: {', '.join(searchable)}")
+            hints.insert(0, "sort: (e.g. created_at desc)")
+            hints.append('empty: "No items yet."')
+            warnings.append(
+                f"Surface '{surface.name}' (mode: list) has no ux block. "
+                f"Consider adding: {'; '.join(hints)}"
+            )
+        else:
+            ux = surface.ux
+            missing = []
+            if not ux.sort:
+                missing.append("sort")
+            if not ux.filter:
+                missing.append("filter")
+            if not ux.search:
+                missing.append("search")
+            if not ux.empty_message:
+                missing.append("empty")
+            if missing:
                 warnings.append(
-                    f"Surface '{surface.name}' (mode: list) has no ux block. "
-                    f"Consider adding: {'; '.join(hints)}"
+                    f"Surface '{surface.name}' ux block is missing: "
+                    f"{', '.join(missing)}. These enhance DataTable UX."
                 )
-            else:
-                ux = surface.ux
-                missing = []
-                if not ux.sort:
-                    missing.append("sort")
-                if not ux.filter:
-                    missing.append("filter")
-                if not ux.search:
-                    missing.append("search")
-                if not ux.empty_message:
-                    missing.append("empty")
-                if missing:
-                    warnings.append(
-                        f"Surface '{surface.name}' ux block is missing: "
-                        f"{', '.join(missing)}. These enhance DataTable UX."
-                    )
+    return warnings
 
-    # ---- Integration binding verification (Issue #81b) ----
-    # Check if stories reference external integrations but no API packs are declared
-    _INTEGRATION_KEYWORDS = {
-        "api",
-        "hmrc",
-        "xero",
-        "sync",
-        "webhook",
-        "stripe",
-        "twilio",
-        "sendgrid",
-        "mailgun",
-        "slack",
-        "zapier",
-        "salesforce",
-    }
 
+_INTEGRATION_KEYWORDS = {
+    "api",
+    "hmrc",
+    "xero",
+    "sync",
+    "webhook",
+    "stripe",
+    "twilio",
+    "sendgrid",
+    "mailgun",
+    "slack",
+    "zapier",
+    "salesforce",
+}
+
+
+def _lint_integration_bindings(appspec: ir.AppSpec) -> list[str]:
+    """Check if stories reference integrations without matching service declarations."""
     stories = list(appspec.stories) if appspec.stories else []
-    if stories:
-        # Collect declared integrations and services
-        declared_integrations = {i.name.lower() for i in appspec.integrations}
-        declared_services = {s.name.lower() for s in appspec.domain_services}
-        declared_bindings = declared_integrations | declared_services
+    if not stories:
+        return []
 
-        for story in stories:
-            title_words = set(story.title.lower().split())
-            integration_hits = title_words & _INTEGRATION_KEYWORDS
+    warnings: list[str] = []
+    declared_integrations = {i.name.lower() for i in appspec.integrations}
+    declared_services = {s.name.lower() for s in appspec.domain_services}
+    declared_bindings = declared_integrations | declared_services
 
-            if integration_hits and not declared_bindings:
+    for story in stories:
+        title_words = set(story.title.lower().split())
+        integration_hits = title_words & _INTEGRATION_KEYWORDS
+
+        if integration_hits and not declared_bindings:
+            warnings.append(
+                f"Story '{story.story_id}' ({story.title}) references integration "
+                f"keywords ({', '.join(integration_hits)}) but no integrations or "
+                f"services are declared in the DSL."
+            )
+        elif integration_hits:
+            scope_entities = {s.lower() for s in story.scope}
+            has_matching_binding = (
+                any(
+                    any(entity in binding for entity in scope_entities)
+                    for binding in declared_bindings
+                )
+                if scope_entities
+                else bool(declared_bindings)
+            )
+
+            if not has_matching_binding and scope_entities:
                 warnings.append(
-                    f"Story '{story.story_id}' ({story.title}) references integration "
-                    f"keywords ({', '.join(integration_hits)}) but no integrations or "
-                    f"services are declared in the DSL."
+                    f"Story '{story.story_id}' references integrations but no "
+                    f"service/integration binds to scope entities "
+                    f"({', '.join(story.scope)})."
                 )
-            elif integration_hits:
-                # Check if any declared binding matches the story scope
-                scope_entities = {s.lower() for s in story.scope}
-                has_matching_binding = (
-                    any(
-                        any(entity in binding for entity in scope_entities)
-                        for binding in declared_bindings
-                    )
-                    if scope_entities
-                    else bool(declared_bindings)
-                )
+    return warnings
 
-                if not has_matching_binding and scope_entities:
-                    warnings.append(
-                        f"Story '{story.story_id}' references integrations but no "
-                        f"service/integration binds to scope entities "
-                        f"({', '.join(story.scope)})."
-                    )
 
+def extended_lint(appspec: ir.AppSpec) -> list[str]:
+    """Extended lint rules for code quality.
+
+    Dispatches to focused checkers for naming, titles, workspace
+    personas, routing, list-surface UX, and integration bindings.
+    Dead-construct detection is handled by :func:`_detect_dead_constructs`.
+    """
+    warnings: list[str] = []
+    warnings.extend(_lint_naming_conventions(appspec))
+    warnings.extend(_detect_dead_constructs(appspec))
+    warnings.extend(_lint_missing_titles(appspec))
+    warnings.extend(_lint_workspace_personas(appspec))
+    warnings.extend(_lint_workspace_routing(appspec))
+    warnings.extend(_lint_list_surface_ux(appspec))
+    warnings.extend(_lint_integration_bindings(appspec))
     return warnings

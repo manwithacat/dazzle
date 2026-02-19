@@ -11,12 +11,15 @@ Storage locations:
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel, Field
 
 from dazzle.testing.viewport import ComponentPattern, ViewportAssertion
+
+logger = logging.getLogger(__name__)
 
 # Storage paths
 DSL_SPECS_DIR = "dsl/tests"
@@ -85,7 +88,8 @@ def load_custom_viewport_specs(project_root: Path) -> list[ViewportSpecEntry]:
                 data = json.loads(path.read_text())
                 container = ViewportSpecsContainer(**data)
                 return container.specs
-            except (json.JSONDecodeError, Exception):
+            except Exception:
+                logger.debug("Could not load viewport specs from %s", path)
                 continue
     return []
 

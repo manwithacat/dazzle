@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.paths import project_processes_dir
+from dazzle.core.paths import project_processes_dir
 
 from .ir.process import ProcessesContainer, ProcessSpec
 

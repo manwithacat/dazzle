@@ -8,7 +8,6 @@ Commands:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import typer
@@ -57,15 +56,10 @@ def pipeline_run(
         dazzle pipeline run --stop-on-error          # Stop on first failure
         dazzle pipeline run --base-url http://localhost:8000  # Include live tests
     """
+    from dazzle.cli.common import resolve_project, run_mcp_handler
     from dazzle.mcp.server.handlers.pipeline import run_pipeline_handler
 
-    manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
-
-    if not (root / "dazzle.toml").exists():
-        typer.echo(f"No dazzle.toml found in {root}", err=True)
-        raise typer.Exit(code=1)
-
+    root = resolve_project(manifest)
     args: dict[str, object] = {
         "detail": detail,
         "stop_on_error": stop_on_error,
@@ -73,16 +67,14 @@ def pipeline_run(
     if base_url:
         args["base_url"] = base_url
 
-    try:
-        from dazzle.cli.activity import cli_activity
-
-        with cli_activity(root, "pipeline", "run") as progress:
-            args["_progress"] = progress
-            raw = run_pipeline_handler(root, args)
-        data = json.loads(raw)
-    except Exception as e:
-        typer.echo(f"Pipeline error: {e}", err=True)
-        raise typer.Exit(code=1)
+    data = run_mcp_handler(
+        root,
+        "pipeline",
+        "run",
+        run_pipeline_handler,
+        args,
+        error_label="Pipeline",
+    )
 
     if format == "json":
         typer.echo(json.dumps(data, indent=2))

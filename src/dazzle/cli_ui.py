@@ -109,7 +109,7 @@ def select_interactive(
 
     try:
         return _select_with_keyboard(options, title, subtitle)
-    except (ImportError, Exception):
+    except Exception:
         # Fallback if keyboard input fails
         return _select_simple(options, title, subtitle)
 

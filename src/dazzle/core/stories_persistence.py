@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.paths import project_stories_dir
+from dazzle.core.paths import project_stories_dir
 
 from .ir.stories import StoriesContainer, StorySpec, StoryStatus
 

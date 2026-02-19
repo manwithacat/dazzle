@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from dazzle.mcp.server.paths import project_demo_data_dir
+from dazzle.core.paths import project_demo_data_dir
 
 if TYPE_CHECKING:
     from dazzle.core.ir.demo_blueprint import DemoDataBlueprint

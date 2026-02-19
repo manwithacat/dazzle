@@ -66,7 +66,7 @@ def load_profile(path: Path | None = None) -> UserProfile:
         try:
             data = json.loads(p.read_text())
             return UserProfile(**data)
-        except (json.JSONDecodeError, Exception) as e:
+        except Exception as e:
             logger.warning("Could not load user profile: %s", e)
     return _make_default_profile()
 

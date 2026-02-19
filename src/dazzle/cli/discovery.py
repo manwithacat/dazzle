@@ -8,7 +8,6 @@ Commands:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any
 
 import typer
@@ -44,29 +43,22 @@ def discovery_coherence(
         dazzle discovery coherence --format json         # JSON for CI
         dazzle discovery coherence --persona admin       # Single persona
     """
+    from dazzle.cli.common import resolve_project, run_mcp_handler
     from dazzle.mcp.server.handlers.discovery import app_coherence_handler
 
-    manifest_path = Path(manifest).resolve()
-    root = manifest_path.parent
-
-    if not (root / "dazzle.toml").exists():
-        typer.echo(f"No dazzle.toml found in {root}", err=True)
-        raise typer.Exit(code=1)
-
+    root = resolve_project(manifest)
     args: dict[str, object] = {}
     if persona:
         args["persona"] = persona
 
-    try:
-        from dazzle.cli.activity import cli_activity
-
-        with cli_activity(root, "discovery", "coherence") as progress:
-            args["_progress"] = progress
-            raw = app_coherence_handler(root, args)
-        data = json.loads(raw)
-    except Exception as e:
-        typer.echo(f"Coherence analysis error: {e}", err=True)
-        raise typer.Exit(code=1)
+    data = run_mcp_handler(
+        root,
+        "discovery",
+        "coherence",
+        app_coherence_handler,
+        args,
+        error_label="Coherence analysis",
+    )
 
     if "error" in data:
         typer.echo(f"Error: {data['error']}", err=True)

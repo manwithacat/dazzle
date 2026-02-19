@@ -201,7 +201,7 @@ class SessionManager:
         try:
             data = json.loads(session_file.read_text())
             return PersonaSession(**data)
-        except (json.JSONDecodeError, Exception) as e:
+        except Exception as e:
             logger.warning("Could not load session for '%s': %s", persona_id, e)
             return None
 
@@ -212,7 +212,7 @@ class SessionManager:
         try:
             data = json.loads(self.manifest_path.read_text())
             return SessionManifest(**data)
-        except (json.JSONDecodeError, Exception) as e:
+        except Exception as e:
             logger.warning("Could not load manifest: %s", e)
             return None
 
