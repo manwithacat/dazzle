@@ -644,6 +644,7 @@ def _compile_view_surface(
     entity_slug: str,
     app_prefix: str,
     reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
+    poly_refs: list[tuple[str, str, str, str, ir.EntitySpec]] | None = None,
 ) -> PageContext:
     """Compile a VIEW mode surface to a PageContext with detail context."""
     fields = _build_form_fields(surface, entity)
@@ -685,6 +686,29 @@ def _compile_view_surface(
             )
         )
 
+    # Polymorphic FK tabs (#321): entity_type + entity_id pattern
+    for src_name, type_field, id_field, type_val, src_entity in poly_refs or []:
+        ref_slug = src_name.lower().replace("_", "-")
+        ref_api = f"/{to_api_plural(src_name)}"
+        tab_label = (src_entity.title or src_name).replace("_", " ")
+        # Exclude both the type and id fields from displayed columns
+        exclude = {type_field, id_field}
+        tab_columns = [c for c in _build_entity_columns(src_entity) if c.key not in exclude]
+        related_tabs.append(
+            RelatedTabContext(
+                tab_id=f"tab-{ref_slug}-{type_val}",
+                label=tab_label,
+                entity_name=src_name,
+                api_endpoint=ref_api,
+                filter_field=id_field,
+                columns=tab_columns,
+                detail_url_template=f"{app_prefix}/{ref_slug}/{{id}}",
+                create_url=f"{app_prefix}/{ref_slug}/create",
+                filter_type_field=type_field,
+                filter_type_value=type_val,
+            )
+        )
+
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",
         template="components/detail_view.html",
@@ -717,6 +741,7 @@ def compile_surface_to_context(
     entity: ir.EntitySpec | None,
     app_prefix: str = "",
     reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
+    poly_refs: list[tuple[str, str, str, str, ir.EntitySpec]] | None = None,
 ) -> PageContext:
     """
     Convert a Surface IR to a PageContext for template rendering.
@@ -730,6 +755,8 @@ def compile_surface_to_context(
         app_prefix: URL prefix for page routes (e.g. "/app"). Not applied to API paths.
         reverse_refs: Entities with ref fields pointing to this entity
             (entity_name, fk_field, entity_spec). Used for related tabs on detail pages.
+        poly_refs: Polymorphic FK reverse refs pointing to this entity (#321).
+            Each tuple: (source_entity, type_field, id_field, type_value, source_spec).
 
     Returns:
         PageContext ready for template rendering.
@@ -755,6 +782,7 @@ def compile_surface_to_context(
             entity_slug,
             app_prefix,
             reverse_refs=reverse_refs,
+            poly_refs=poly_refs,
         )
     else:
         return _compile_custom_surface(surface)
@@ -862,13 +890,47 @@ def compile_appspec_to_templates(
     # ref fields pointing to it.  Used to populate related-entity tabs on
     # detail pages (hub-and-spoke pattern, issue #301).
     _reverse_refs: dict[str, list[tuple[str, str, ir.EntitySpec]]] = {}
+    # Polymorphic FK map (#321): target_entity → list of
+    # (source_entity_name, type_field, id_field, type_value, source_entity_spec)
+    _poly_refs: dict[str, list[tuple[str, str, str, str, ir.EntitySpec]]] = {}
     if domain:
+        entity_names_lower = {e.name.lower().replace("_", ""): e.name for e in domain.entities}
+        # Also map snake_case versions (e.g. "sole_trader" → "SoleTrader")
+        for e in domain.entities:
+            # Convert PascalCase to snake_case for matching
+            snake_form = ""
+            for i, ch in enumerate(e.name):
+                if ch.isupper() and i > 0:
+                    snake_form += "_"
+                snake_form += ch.lower()
+            entity_names_lower[snake_form] = e.name
+
         for ent in domain.entities:
+            fields_by_name = {f.name: f for f in ent.fields}
             for field in ent.fields:
+                # Direct FK refs
                 if field.type and field.type.kind == FieldTypeKind.REF and field.type.ref_entity:
                     _reverse_refs.setdefault(field.type.ref_entity, []).append(
                         (ent.name, field.name, ent)
                     )
+                # Polymorphic FK detection (#321): *_type (enum) + *_id (uuid) pairs
+                if (
+                    field.type
+                    and field.type.kind == FieldTypeKind.ENUM
+                    and field.type.enum_values
+                    and field.name.endswith("_type")
+                ):
+                    id_suffix = field.name[: -len("_type")] + "_id"
+                    id_field = fields_by_name.get(id_suffix)
+                    if id_field and id_field.type and id_field.type.kind == FieldTypeKind.UUID:
+                        for val in field.type.enum_values:
+                            target = entity_names_lower.get(val.lower().replace("_", ""))
+                            if not target:
+                                target = entity_names_lower.get(val.lower())
+                            if target:
+                                _poly_refs.setdefault(target, []).append(
+                                    (ent.name, field.name, id_suffix, val, ent)
+                                )
 
     _route_surfaces: dict[str, ir.SurfaceSpec] = {}
 
@@ -883,6 +945,7 @@ def compile_appspec_to_templates(
             entity,
             app_prefix=app_prefix,
             reverse_refs=_reverse_refs.get(entity_name),
+            poly_refs=_poly_refs.get(entity_name),
         )
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items

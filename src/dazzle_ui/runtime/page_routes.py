@@ -251,9 +251,17 @@ def create_page_routes(
                     async def _fetch_related_tab(
                         tab: Any, _id: str, _backend: str, _ck: Any
                     ) -> None:
-                        params = urllib.parse.urlencode(
-                            {f"filter[{tab.filter_field}]": _id, "page": "1", "page_size": "50"}
-                        )
+                        filter_params: dict[str, str] = {
+                            f"filter[{tab.filter_field}]": _id,
+                            "page": "1",
+                            "page_size": "50",
+                        }
+                        # Polymorphic FK (#321): add type discriminator filter
+                        if tab.filter_type_field and tab.filter_type_value:
+                            filter_params[f"filter[{tab.filter_type_field}]"] = (
+                                tab.filter_type_value
+                            )
+                        params = urllib.parse.urlencode(filter_params)
                         url = f"{_backend}{tab.api_endpoint}?{params}"
                         try:
                             data = await _fetch_url(url, _ck)

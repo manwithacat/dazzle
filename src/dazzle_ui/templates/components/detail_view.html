@@ -110,7 +110,7 @@
         <div class="card-body p-0">
           {% if tab.create_url %}
           <div class="flex justify-end p-3 pb-0">
-            <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}"
+            <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}{% if tab.filter_type_field %}&amp;{{ tab.filter_type_field }}={{ tab.filter_type_value }}{% endif %}"
                class="btn btn-primary btn-sm"
                data-dazzle-action="{{ tab.entity_name }}.create">
               + New {{ tab.label }}

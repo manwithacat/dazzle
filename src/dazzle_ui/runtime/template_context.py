@@ -145,6 +145,9 @@ class RelatedTabContext(BaseModel):
     total: int = 0
     detail_url_template: str | None = None  # e.g. "/contacts/{id}"
     create_url: str | None = None  # e.g. "/contacts/create?company={id}"
+    # Polymorphic FK support (#321): when set, filter by both type + id
+    filter_type_field: str | None = None  # e.g. "entity_type"
+    filter_type_value: str | None = None  # e.g. "company"
 
 
 class DetailContext(BaseModel):

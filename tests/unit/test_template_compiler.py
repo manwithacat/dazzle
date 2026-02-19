@@ -583,6 +583,197 @@ class TestRelatedEntityTabs:
         assert ctx.detail.related_tabs[0].entity_name == "Contact"
 
 
+def _audit_log_entity() -> ir.EntitySpec:
+    """Entity with polymorphic FK (entity_type enum + entity_id uuid)."""
+    return ir.EntitySpec(
+        name="AuditLog",
+        title="Audit Log",
+        fields=[
+            ir.FieldSpec(
+                name="id",
+                type=ir.FieldType(kind=FieldTypeKind.UUID),
+                modifiers=[FieldModifier.PK],
+            ),
+            ir.FieldSpec(
+                name="entity_type",
+                type=ir.FieldType(
+                    kind=FieldTypeKind.ENUM,
+                    enum_values=["company", "sole_trader"],
+                ),
+            ),
+            ir.FieldSpec(
+                name="entity_id",
+                type=ir.FieldType(kind=FieldTypeKind.UUID),
+            ),
+            ir.FieldSpec(
+                name="action",
+                type=ir.FieldType(kind=FieldTypeKind.STR, max_length=100),
+            ),
+        ],
+    )
+
+
+class TestPolymorphicFKTabs:
+    """Tests for polymorphic FK detection and related tab generation (#321)."""
+
+    def _make_poly_appspec(self) -> ir.AppSpec:
+        """Build AppSpec with Company, SoleTrader, and AuditLog (polymorphic FK)."""
+        company = _company_entity()
+        sole_trader = _sole_trader_entity()
+        audit = _audit_log_entity()
+        return ir.AppSpec(
+            name="test_app",
+            title="Test App",
+            version="0.1.0",
+            domain=ir.DomainSpec(entities=[company, sole_trader, audit]),
+            surfaces=[
+                ir.SurfaceSpec(
+                    name="company_detail",
+                    title="Company Detail",
+                    entity_ref="Company",
+                    mode=SurfaceMode.VIEW,
+                    actions=[],
+                ),
+                ir.SurfaceSpec(
+                    name="sole_trader_detail",
+                    title="Sole Trader Detail",
+                    entity_ref="SoleTrader",
+                    mode=SurfaceMode.VIEW,
+                    actions=[],
+                ),
+                ir.SurfaceSpec(
+                    name="audit_list",
+                    title="Audit Logs",
+                    entity_ref="AuditLog",
+                    mode=SurfaceMode.LIST,
+                    actions=[],
+                ),
+            ],
+        )
+
+    def test_company_gets_audit_tab_from_polymorphic_fk(self):
+        """Company detail page gets AuditLog tab via polymorphic FK."""
+        appspec = self._make_poly_appspec()
+        contexts = compile_appspec_to_templates(appspec)
+        detail_ctx = contexts.get("/company/{id}")
+        assert detail_ctx is not None
+        assert detail_ctx.detail is not None
+        tabs = detail_ctx.detail.related_tabs
+        audit_tabs = [t for t in tabs if t.entity_name == "AuditLog"]
+        assert len(audit_tabs) == 1
+
+    def test_sole_trader_gets_audit_tab_from_polymorphic_fk(self):
+        """SoleTrader detail page gets AuditLog tab via polymorphic FK."""
+        appspec = self._make_poly_appspec()
+        contexts = compile_appspec_to_templates(appspec)
+        detail_ctx = contexts.get("/soletrader/{id}")
+        assert detail_ctx is not None
+        assert detail_ctx.detail is not None
+        tabs = detail_ctx.detail.related_tabs
+        audit_tabs = [t for t in tabs if t.entity_name == "AuditLog"]
+        assert len(audit_tabs) == 1
+
+    def test_polymorphic_tab_has_type_filter(self):
+        """Polymorphic tab stores the type discriminator field and value."""
+        appspec = self._make_poly_appspec()
+        contexts = compile_appspec_to_templates(appspec)
+        tabs = contexts["/company/{id}"].detail.related_tabs
+        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
+        assert audit_tab.filter_type_field == "entity_type"
+        assert audit_tab.filter_type_value == "company"
+        assert audit_tab.filter_field == "entity_id"
+
+    def test_polymorphic_tab_type_value_matches_target(self):
+        """Each target entity gets the correct type discriminator value."""
+        appspec = self._make_poly_appspec()
+        contexts = compile_appspec_to_templates(appspec)
+        # SoleTrader should get type_value="sole_trader"
+        tabs = contexts["/soletrader/{id}"].detail.related_tabs
+        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
+        assert audit_tab.filter_type_value == "sole_trader"
+
+    def test_polymorphic_tab_columns_exclude_type_and_id(self):
+        """Polymorphic tab columns exclude both entity_type and entity_id."""
+        appspec = self._make_poly_appspec()
+        contexts = compile_appspec_to_templates(appspec)
+        tabs = contexts["/company/{id}"].detail.related_tabs
+        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
+        col_keys = [c.key for c in audit_tab.columns]
+        assert "entity_type" not in col_keys
+        assert "entity_id" not in col_keys
+        assert "action" in col_keys
+
+    def test_polymorphic_tab_api_endpoint(self):
+        """Polymorphic tab uses the correct API endpoint."""
+        appspec = self._make_poly_appspec()
+        contexts = compile_appspec_to_templates(appspec)
+        tabs = contexts["/company/{id}"].detail.related_tabs
+        audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
+        assert audit_tab.api_endpoint == "/auditlogs"
+
+    def test_non_enum_type_field_not_detected(self):
+        """entity_type as str (not enum) should NOT trigger polymorphic detection."""
+        entity = ir.EntitySpec(
+            name="Note",
+            title="Note",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                ir.FieldSpec(
+                    name="entity_type",
+                    type=ir.FieldType(kind=FieldTypeKind.STR, max_length=100),
+                ),
+                ir.FieldSpec(
+                    name="entity_id",
+                    type=ir.FieldType(kind=FieldTypeKind.UUID),
+                ),
+            ],
+        )
+        company = _company_entity()
+        appspec = ir.AppSpec(
+            name="test_app",
+            domain=ir.DomainSpec(entities=[company, entity]),
+            surfaces=[
+                ir.SurfaceSpec(
+                    name="company_detail",
+                    title="Company Detail",
+                    entity_ref="Company",
+                    mode=SurfaceMode.VIEW,
+                    actions=[],
+                ),
+            ],
+        )
+        contexts = compile_appspec_to_templates(appspec)
+        tabs = contexts["/company/{id}"].detail.related_tabs
+        assert len(tabs) == 0
+
+    def test_compile_surface_to_context_with_poly_refs(self):
+        """compile_surface_to_context passes poly_refs to view surfaces."""
+        company = _company_entity()
+        audit = _audit_log_entity()
+        surface = ir.SurfaceSpec(
+            name="company_detail",
+            title="Company Detail",
+            entity_ref="Company",
+            mode=SurfaceMode.VIEW,
+            actions=[],
+        )
+        ctx = compile_surface_to_context(
+            surface,
+            company,
+            poly_refs=[("AuditLog", "entity_type", "entity_id", "company", audit)],
+        )
+        assert ctx.detail is not None
+        assert len(ctx.detail.related_tabs) == 1
+        tab = ctx.detail.related_tabs[0]
+        assert tab.entity_name == "AuditLog"
+        assert tab.filter_type_field == "entity_type"
+        assert tab.filter_type_value == "company"
+
+
 class TestBuildEntityColumns:
     """Tests for _build_entity_columns helper."""
 
