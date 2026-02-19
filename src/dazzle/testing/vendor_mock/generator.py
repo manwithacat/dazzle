@@ -220,13 +220,19 @@ def _infer_model_for_operation(
 
     Returns the model name or None.
     """
-    # Try to find a model whose name appears in the operation name or path
+    # Try to find a model whose name appears in the operation name or path.
+    # Check both CamelCase and snake_case forms since paths use snake_case
+    # but model names use CamelCase (e.g. PaymentIntent vs /payment_intents).
     path_lower = path.lower()
     op_lower = op_name.lower()
 
     for model_name in fm_defs:
         model_lower = model_name.lower()
+        # Also try snake_case: PaymentIntent → payment_intent
+        snake = re.sub(r"(?<=[a-z0-9])([A-Z])", r"_\1", model_name).lower()
         if model_lower in path_lower or model_lower in op_lower:
+            return model_name
+        if snake != model_lower and (snake in path_lower or snake in op_lower):
             return model_name
 
     # Fallback: use the first model if there's only one
