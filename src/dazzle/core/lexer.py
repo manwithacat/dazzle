@@ -62,6 +62,11 @@ class TokenType(Enum):
     INLINE = "inline"
     SUBMITTED = "submitted"
 
+    # Experience Orchestration Keywords
+    CONTEXT = "context"
+    PREFILL = "prefill"
+    SAVES_TO = "saves_to"
+
     # Integration Keywords
     OPERATION = "operation"
     MAPPING = "mapping"

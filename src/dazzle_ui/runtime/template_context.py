@@ -258,6 +258,7 @@ class ExperienceStepContext(BaseModel):
     title: str
     is_current: bool = False
     is_completed: bool = False
+    is_skipped: bool = False
     url: str = ""
 
 

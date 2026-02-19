@@ -9,7 +9,7 @@ and the inner PageContext for the step's surface.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.experiences import StepKind
 from dazzle_ui.converters.template_compiler import compile_surface_to_context
@@ -54,6 +54,72 @@ def _find_entity(appspec: AppSpec, entity_ref: str) -> EntitySpec | None:
     return None
 
 
+def _evaluate_when_for_progress(when_expr: str, data: dict) -> bool:
+    """Lightweight when-guard check for progress bar display.
+
+    Re-implements the same logic as ``_evaluate_when_guard`` in
+    ``experience_routes`` to avoid a cross-module import.
+    """
+    for op in ("!=", ">=", "<=", "=", ">", "<"):
+        if f" {op} " in when_expr:
+            left, right = when_expr.split(f" {op} ", 1)
+            left = left.strip()
+            right = right.strip()
+            resolved = _resolve_prefill_expression(left, data)
+            if resolved is None:
+                return False
+            rval: Any
+            if right.lower() == "true":
+                rval = True
+            elif right.lower() == "false":
+                rval = False
+            elif right.startswith('"') and right.endswith('"'):
+                rval = right[1:-1]
+            else:
+                try:
+                    rval = int(right)
+                except ValueError:
+                    try:
+                        rval = float(right)
+                    except ValueError:
+                        rval = right
+            if op == "=":
+                return resolved == rval
+            elif op == "!=":
+                return resolved != rval
+            elif op == ">":
+                return resolved > rval
+            elif op == "<":
+                return resolved < rval
+            elif op == ">=":
+                return resolved >= rval
+            elif op == "<=":
+                return resolved <= rval
+            break
+    return True
+
+
+def _resolve_prefill_expression(expression: str, data: dict) -> Any:
+    """Resolve a prefill expression against state data.
+
+    - String literal (starts/ends with ``"``): strip quotes, return string.
+    - Dotted path (``context.X.Y``): navigate ``data["X"]["Y"]``.
+    """
+    if expression.startswith('"') and expression.endswith('"'):
+        return expression[1:-1]
+    # Dotted path resolution
+    parts = expression.split(".")
+    if parts and parts[0] == "context":
+        parts = parts[1:]
+    current: Any = data
+    for part in parts:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return None
+    return current
+
+
 def compile_experience_context(
     experience: ExperienceSpec,
     state: ExperienceState,
@@ -77,12 +143,17 @@ def compile_experience_context(
     steps: list[ExperienceStepContext] = []
     for step in experience.steps:
         step_title = step.name.replace("_", " ").title()
+        # Mark conditional steps as skipped if their guard evaluates to false
+        is_skipped = False
+        if step.when and step.name != state.step:
+            is_skipped = not _evaluate_when_for_progress(step.when, state.data)
         steps.append(
             ExperienceStepContext(
                 name=step.name,
                 title=step_title,
                 is_current=step.name == state.step,
                 is_completed=step.name in state.completed,
+                is_skipped=is_skipped,
                 url=f"{exp_base}/{step.name}",
             )
         )
@@ -123,6 +194,16 @@ def compile_experience_context(
                         else f"{app_prefix}/",
                     }
                 )
+                # Resolve prefill expressions into form initial_values
+                if current_step.prefills:
+                    prefill_values = dict(page_context.form.initial_values)
+                    for pf in current_step.prefills:
+                        resolved = _resolve_prefill_expression(pf.expression, state.data)
+                        if resolved is not None:
+                            prefill_values[pf.field] = resolved
+                    page_context.form = page_context.form.model_copy(
+                        update={"initial_values": prefill_values}
+                    )
 
     return ExperienceContext(
         name=experience.name,

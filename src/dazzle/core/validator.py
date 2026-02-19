@@ -499,6 +499,53 @@ def validate_experiences(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                     f"has no transitions (terminal step)"
                 )
 
+            # Validate saves_to format
+            if step.saves_to:
+                st_parts = step.saves_to.split(".", 1)
+                if len(st_parts) != 2 or st_parts[0] != "context":
+                    errors.append(
+                        f"Experience '{experience.name}' step '{step.name}' "
+                        f"saves_to must be 'context.<varname>', got '{step.saves_to}'"
+                    )
+                elif experience.context:
+                    ctx_names = {cv.name for cv in experience.context}
+                    if st_parts[1] not in ctx_names:
+                        errors.append(
+                            f"Experience '{experience.name}' step '{step.name}' "
+                            f"saves_to references unknown context variable '{st_parts[1]}'"
+                        )
+
+            # Validate prefill references
+            if step.prefills and experience.context:
+                ctx_names = {cv.name for cv in experience.context}
+                for pf in step.prefills:
+                    if not pf.expression.startswith('"'):
+                        pf_parts = pf.expression.split(".")
+                        if pf_parts and pf_parts[0] == "context" and len(pf_parts) >= 2:
+                            if pf_parts[1] not in ctx_names:
+                                warnings.append(
+                                    f"Experience '{experience.name}' step '{step.name}' "
+                                    f"prefill references unknown context variable "
+                                    f"'{pf_parts[1]}'"
+                                )
+
+            # Warn about when guard on terminal steps
+            if step.when and not step.transitions:
+                warnings.append(
+                    f"Experience '{experience.name}' step '{step.name}' "
+                    f"has a 'when' guard but no transitions to skip to"
+                )
+
+        # Validate context variable declarations
+        if experience.context:
+            seen_names: set[str] = set()
+            for cv in experience.context:
+                if cv.name in seen_names:
+                    errors.append(
+                        f"Experience '{experience.name}' has duplicate context variable '{cv.name}'"
+                    )
+                seen_names.add(cv.name)
+
     return errors, warnings
 
 

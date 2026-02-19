@@ -139,7 +139,9 @@ from .eventing import (
 from .experiences import (
     ExperienceSpec,
     ExperienceStep,
+    FlowContextVar,
     StepKind,
+    StepPrefill,
     StepTransition,
     TransitionEvent,
 )
@@ -690,6 +692,8 @@ __all__ = [
     "WorkspaceRegion",
     "WorkspaceSpec",
     # Experiences
+    "FlowContextVar",
+    "StepPrefill",
     "StepKind",
     "TransitionEvent",
     "StepTransition",

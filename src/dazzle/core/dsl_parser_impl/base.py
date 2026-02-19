@@ -716,4 +716,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.WEBHOOK,
     TokenType.APPROVAL,
     TokenType.SLA,
+    # Experience Orchestration Keywords
+    TokenType.CONTEXT,
+    TokenType.PREFILL,
+    TokenType.SAVES_TO,
 )

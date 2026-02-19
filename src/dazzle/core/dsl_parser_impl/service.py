@@ -29,6 +29,7 @@ class ServiceParserMixin:
         parse_type_spec: Any
         parse_field_modifiers: Any
         _parse_surface_access: Any  # From SurfaceParserMixin
+        _parse_dotted_path: Any  # From ProcessParserMixin
         _source_location: Any  # v0.31.0: Source location helper from BaseParser
 
     def parse_service(self) -> ir.APISpec | ir.DomainServiceSpec:
@@ -396,6 +397,27 @@ class ServiceParserMixin:
 
         access_spec = None
         priority = ir.BusinessPriority.MEDIUM
+        context_vars: list[ir.FlowContextVar] = []
+
+        # context: block (optional, before access/priority/start)
+        if self.match(TokenType.CONTEXT):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            self.expect(TokenType.INDENT)
+
+            while not self.match(TokenType.DEDENT):
+                self.skip_newlines()
+                if self.match(TokenType.DEDENT):
+                    break
+                var_name = self.expect(TokenType.IDENTIFIER).value
+                self.expect(TokenType.COLON)
+                entity_ref = self.expect(TokenType.IDENTIFIER).value
+                context_vars.append(ir.FlowContextVar(name=var_name, entity_ref=entity_ref))
+                self.skip_newlines()
+
+            self.expect(TokenType.DEDENT)
+            self.skip_newlines()
 
         # access: public | authenticated | persona(name1, name2) (optional, before start)
         if self.match(TokenType.ACCESS):
@@ -435,6 +457,7 @@ class ServiceParserMixin:
         return ir.ExperienceSpec(
             name=name,
             title=title,
+            context=context_vars,
             start_step=start_step,
             steps=steps,
             access=access_spec,
@@ -463,6 +486,9 @@ class ServiceParserMixin:
         integration = None
         action = None
         access_spec = None
+        saves_to: str | None = None
+        prefills: list[ir.StepPrefill] = []
+        when: str | None = None
 
         # Parse step target based on kind
         if kind == ir.StepKind.SURFACE:
@@ -475,6 +501,52 @@ class ServiceParserMixin:
             integration = self.expect(TokenType.IDENTIFIER).value
             self.expect(TokenType.ACTION)
             action = self.expect(TokenType.IDENTIFIER).value
+            self.skip_newlines()
+
+        # saves_to: context.varname (optional)
+        if self.match(TokenType.SAVES_TO):
+            self.advance()
+            self.expect(TokenType.COLON)
+            saves_to = self._parse_dotted_path()
+            self.skip_newlines()
+
+        # prefill: block (optional)
+        if self.match(TokenType.PREFILL):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            self.expect(TokenType.INDENT)
+
+            while not self.match(TokenType.DEDENT):
+                self.skip_newlines()
+                if self.match(TokenType.DEDENT):
+                    break
+                field_name = self.expect_identifier_or_keyword().value
+                self.expect(TokenType.COLON)
+                # Expression can be a string literal or dotted path
+                if self.match(TokenType.STRING):
+                    expr = f'"{self.advance().value}"'
+                else:
+                    expr = self._parse_dotted_path()
+                prefills.append(ir.StepPrefill(field=field_name, expression=expr))
+                self.skip_newlines()
+
+            self.expect(TokenType.DEDENT)
+            self.skip_newlines()
+
+        # when: condition (optional)
+        if self.match(TokenType.WHEN):
+            self.advance()
+            self.expect(TokenType.COLON)
+            # Consume tokens to end of line as raw condition string
+            parts: list[str] = []
+            while not self.match(TokenType.NEWLINE) and not self.match(TokenType.DEDENT):
+                tok = self.current_token()
+                if tok.type == TokenType.EOF:
+                    break
+                parts.append(tok.value)
+                self.advance()
+            when = " ".join(parts)
             self.skip_newlines()
 
         # access: public | authenticated | persona(name1, name2) (optional)
@@ -513,6 +585,9 @@ class ServiceParserMixin:
             surface=surface,
             integration=integration,
             action=action,
+            saves_to=saves_to,
+            prefills=prefills,
+            when=when,
             transitions=transitions,
             access=access_spec,
         )

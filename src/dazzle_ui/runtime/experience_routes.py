@@ -77,6 +77,68 @@ async def _proxy_to_backend(
     return 200 <= status < 300, data
 
 
+def _resolve_dotted_path(path: str, data: dict[str, Any]) -> Any:
+    """Resolve a dotted path like 'company.is_vat_registered' against data dict."""
+    parts = path.split(".")
+    # Strip leading 'context.' since data keys are already context-relative
+    if parts and parts[0] == "context":
+        parts = parts[1:]
+    current: Any = data
+    for part in parts:
+        if isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            return None
+    return current
+
+
+def _evaluate_when_guard(when_expr: str, data: dict[str, Any]) -> bool:
+    """Evaluate a when guard expression against state data.
+
+    Supports: ``context.X.Y = value``, ``context.X.Y != value``,
+    and comparison operators ``>``, ``<``, ``>=``, ``<=``.
+    """
+    # Find the operator and split
+    for op in ("!=", ">=", "<=", "=", ">", "<"):
+        if f" {op} " in when_expr:
+            left, right = when_expr.split(f" {op} ", 1)
+            left = left.strip()
+            right = right.strip()
+            resolved = _resolve_dotted_path(left, data)
+            if resolved is None:
+                return False
+            # Parse the right side as literal
+            rval: Any
+            if right.lower() == "true":
+                rval = True
+            elif right.lower() == "false":
+                rval = False
+            elif right.startswith('"') and right.endswith('"'):
+                rval = right[1:-1]
+            else:
+                try:
+                    rval = int(right)
+                except ValueError:
+                    try:
+                        rval = float(right)
+                    except ValueError:
+                        rval = right
+            if op == "=":
+                return resolved == rval
+            elif op == "!=":
+                return resolved != rval
+            elif op == ">":
+                return resolved > rval
+            elif op == "<":
+                return resolved < rval
+            elif op == ">=":
+                return resolved >= rval
+            elif op == "<=":
+                return resolved <= rval
+            break
+    return True
+
+
 def create_experience_routes(
     appspec: ir.AppSpec,
     backend_url: str = "http://127.0.0.1:8000",
@@ -270,6 +332,32 @@ def create_experience_routes(
                         status_code=302,
                     )
 
+        # Conditional step guard: skip if condition is false
+        if step_spec.when and not _evaluate_when_guard(step_spec.when, state.data):
+            # Mark step as completed (skipped) and follow success transition
+            completed = list(state.completed)
+            if step not in completed:
+                completed.append(step)
+            next_step_name: str | None = None
+            for tr in step_spec.transitions:
+                if tr.event == "success":
+                    next_step_name = tr.next_step
+                    break
+            if next_step_name:
+                state = state.model_copy(update={"step": next_step_name, "completed": completed})
+                response = RedirectResponse(
+                    url=f"{app_prefix}/experiences/{name}/{next_step_name}",
+                    status_code=302,
+                )
+                response.set_cookie(
+                    cname,
+                    sign_state(state),
+                    httponly=True,
+                    samesite="lax",
+                    max_age=86400,
+                )
+                return response
+
         # Back navigation: revisiting a completed step rewinds state
         if step in state.completed and step != state.step:
             # Remove this step and all subsequent steps from completed
@@ -437,13 +525,16 @@ def create_experience_routes(
                         status_code=302,
                     )
 
-                # Store the created entity ID in the data map
+                # Store the created entity ID in the data map (backward compat)
+                new_data = {**state.data}
                 if "id" in resp_data:
-                    state = state.model_copy(
-                        update={
-                            "data": {**state.data, f"{surface.entity_ref}_id": resp_data["id"]},
-                        }
-                    )
+                    new_data[f"{surface.entity_ref}_id"] = resp_data["id"]
+                # Full entity capture via saves_to
+                if step_spec.saves_to:
+                    parts = step_spec.saves_to.split(".", 1)
+                    if len(parts) == 2 and parts[0] == "context":
+                        new_data[parts[1]] = resp_data
+                state = state.model_copy(update={"data": new_data})
 
         # Find the matching transition
         next_step: str | None = None

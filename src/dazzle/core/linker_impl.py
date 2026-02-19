@@ -966,6 +966,14 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                             f"references unknown persona '{persona_name}'"
                         )
 
+        # Validate context entity references
+        for ctx_var in experience.context:
+            if ctx_var.entity_ref not in symbols.entities:
+                errors.append(
+                    f"Experience '{experience_name}' context variable '{ctx_var.name}' "
+                    f"references unknown entity '{ctx_var.entity_ref}'"
+                )
+
         # Validate experience-level access persona references
         if experience.access and experience.access.allow_personas and symbols.personas:
             for persona_name in experience.access.allow_personas:

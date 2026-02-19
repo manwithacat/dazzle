@@ -36,6 +36,24 @@ class TransitionEvent(StrEnum):
     SKIP = "skip"
 
 
+class FlowContextVar(BaseModel):
+    """Typed context variable in an experience flow."""
+
+    name: str  # e.g. "company"
+    entity_ref: str  # e.g. "Company"
+
+    model_config = ConfigDict(frozen=True)
+
+
+class StepPrefill(BaseModel):
+    """Field prefill mapping for an experience step."""
+
+    field: str  # form field name, e.g. "company"
+    expression: str  # "context.company.id" or '"director"' (quoted literal)
+
+    model_config = ConfigDict(frozen=True)
+
+
 class StepTransition(BaseModel):
     """
     Transition from one step to another.
@@ -70,6 +88,9 @@ class ExperienceStep(BaseModel):
     surface: str | None = None
     integration: str | None = None
     action: str | None = None
+    saves_to: str | None = None  # e.g. "context.company"
+    prefills: list[StepPrefill] = Field(default_factory=list)
+    when: str | None = None  # raw condition string e.g. "context.company.is_vat_registered = true"
     transitions: list[StepTransition] = Field(default_factory=list)
     access: SurfaceAccessSpec | None = None
 
@@ -92,6 +113,7 @@ class ExperienceSpec(BaseModel):
 
     name: str
     title: str | None = None
+    context: list[FlowContextVar] = Field(default_factory=list)
     start_step: str
     steps: list[ExperienceStep] = Field(default_factory=list)
     access: SurfaceAccessSpec | None = None
