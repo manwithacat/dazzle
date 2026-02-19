@@ -21,6 +21,9 @@ from dazzle.core.process.adapter import (
     TaskStatus,
 )
 
+# Default status field name for entities without an explicit state machine
+_DEFAULT_STATUS_FIELD = "status"
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,6 +65,18 @@ class ProcessManager:
         # Trigger mappings
         self._entity_event_triggers: dict[str, list[ProcessSpec]] = {}
         self._status_transition_triggers: dict[str, list[ProcessSpec]] = {}
+
+        # Build entity → status_field mapping from domain state machines
+        self._entity_status_fields: dict[str, str] = {}
+        if app_spec:
+            domain = getattr(app_spec, "domain", None)
+            if domain:
+                for ent in getattr(domain, "entities", []):
+                    sm = getattr(ent, "state_machine", None)
+                    if sm:
+                        self._entity_status_fields[ent.name] = getattr(
+                            sm, "status_field", _DEFAULT_STATUS_FIELD
+                        )
 
     async def initialize(self) -> None:
         """Register all processes and set up triggers."""
@@ -135,10 +150,11 @@ class ProcessManager:
         """
         run_ids = await self._handle_entity_event(entity_name, "updated", entity_id, entity_data)
 
-        # Check for status transitions
-        if old_data and "status" in entity_data and "status" in old_data:
-            old_status = old_data["status"]
-            new_status = entity_data["status"]
+        # Check for status transitions using entity's configured status field
+        status_field = self._entity_status_fields.get(entity_name, _DEFAULT_STATUS_FIELD)
+        if old_data and status_field in entity_data and status_field in old_data:
+            old_status = old_data[status_field]
+            new_status = entity_data[status_field]
             if old_status != new_status:
                 transition_runs = await self._handle_status_transition(
                     entity_name, old_status, new_status, entity_id, entity_data

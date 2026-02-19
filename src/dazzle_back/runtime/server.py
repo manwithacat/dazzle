@@ -480,6 +480,8 @@ class ServerConfig:
     # Process/workflow support (v0.24.0)
     enable_processes: bool = True  # Enable process workflow execution
     process_adapter_class: type | None = None  # Custom ProcessAdapter (default: LiteProcessAdapter)
+    process_specs: list[Any] = field(default_factory=list)  # ProcessSpec list from AppSpec
+    entity_status_fields: dict[str, str] = field(default_factory=dict)  # entity_name → status field
 
     # Fragment sources from DSL source= annotations (v0.25.1)
     fragment_sources: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -622,6 +624,8 @@ class DazzleBackendApp:
         # Process/workflow support (v0.24.0)
         self._enable_processes = config.enable_processes
         self._process_adapter_class = config.process_adapter_class  # Custom adapter class
+        self._process_specs: list[Any] = config.process_specs  # ProcessSpec list from AppSpec
+        self._entity_status_fields: dict[str, str] = config.entity_status_fields
         self._process_manager: Any | None = None  # ProcessManager type
         self._process_adapter: Any | None = None  # ProcessAdapter type
         # Fragment sources from DSL source= annotations (v0.25.1)
@@ -952,8 +956,13 @@ class DazzleBackendApp:
             else:
                 self._process_adapter = adapter_cls(database_url=self._database_url)
 
-            # Create ProcessManager
-            self._process_manager = ProcessManager(adapter=self._process_adapter)
+            # Create ProcessManager with process specs so triggers are registered
+            self._process_manager = ProcessManager(
+                adapter=self._process_adapter,
+                process_specs=self._process_specs or None,
+            )
+            # Pass entity status field mapping for transition detection
+            self._process_manager._entity_status_fields = self._entity_status_fields
 
             # Set process manager dependency for task routes
             set_process_manager(self._process_manager)
@@ -966,17 +975,18 @@ class DazzleBackendApp:
 
             # Capture for closures
             process_adapter = self._process_adapter
+            process_manager = self._process_manager
 
             @self._app.on_event("startup")
             async def startup_processes() -> None:
-                """Initialize process adapter on app startup."""
+                """Initialize process adapter and register triggers."""
                 await process_adapter.initialize()
-                # Scheduler is started automatically in initialize()
+                await process_manager.initialize()
 
             @self._app.on_event("shutdown")
             async def shutdown_processes() -> None:
-                """Cleanup process adapter on app shutdown."""
-                await process_adapter.shutdown()
+                """Cleanup process manager and adapter on app shutdown."""
+                await process_manager.shutdown()
 
             import logging
 

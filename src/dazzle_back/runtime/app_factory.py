@@ -427,6 +427,14 @@ def create_app_factory(
         if ref_names:
             entity_auto_includes[entity.name] = ref_names
 
+    # Extract entity status fields for process trigger status transition detection
+    entity_status_fields: dict[str, str] = {}
+    if appspec.domain:
+        for ent in appspec.domain.entities:
+            sm = getattr(ent, "state_machine", None)
+            if sm:
+                entity_status_fields[ent.name] = getattr(sm, "status_field", "status")
+
     # Build server config
     config = ServerConfig(
         database_url=database_url if database_url else None,
@@ -446,6 +454,8 @@ def create_app_factory(
         enable_console=enable_dev_mode,
         entity_list_projections=entity_list_projections,
         entity_auto_includes=entity_auto_includes,
+        process_specs=list(appspec.processes),
+        entity_status_fields=entity_status_fields,
     )
 
     # Build and return the FastAPI app

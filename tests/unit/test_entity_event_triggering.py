@@ -2,7 +2,8 @@
 Unit tests for entity lifecycle event triggering.
 
 Tests that CRUDService correctly notifies callbacks when entities are
-created, updated, or deleted.
+created, updated, or deleted, and that ProcessManager correctly registers
+triggers and dispatches entity events.
 """
 
 from __future__ import annotations
@@ -343,3 +344,304 @@ class TestProcessManagerIntegration:
 
         assert len(transitions_detected) == 1
         assert transitions_detected[0] == ("pending", "in_progress")
+
+
+# ---------------------------------------------------------------------------
+# ProcessManager trigger registration and dispatch tests
+# ---------------------------------------------------------------------------
+
+
+def _make_process_spec(
+    name: str,
+    trigger_kind: str = "entity_event",
+    entity_name: str = "Order",
+    event_type: str | None = "created",
+    from_status: str | None = None,
+    to_status: str | None = None,
+) -> Any:
+    """Create a minimal ProcessSpec-like object for testing."""
+    from dazzle.core.ir.process import (
+        ProcessSpec,
+        ProcessTriggerKind,
+        ProcessTriggerSpec,
+    )
+
+    trigger = ProcessTriggerSpec(
+        kind=ProcessTriggerKind(trigger_kind),
+        entity_name=entity_name,
+        event_type=event_type,
+        from_status=from_status,
+        to_status=to_status,
+    )
+    return ProcessSpec(name=name, trigger=trigger, steps=[])
+
+
+def _make_app_spec_with_processes(
+    processes: list[Any],
+    entities: list[Any] | None = None,
+) -> Any:
+    """Create a minimal AppSpec-like object with processes and optional entities."""
+
+    class FakeDomain:
+        def __init__(self, ents: list[Any]) -> None:
+            self.entities = ents
+
+    class FakeAppSpec:
+        def __init__(
+            self,
+            procs: list[Any],
+            domain_obj: Any | None = None,
+        ) -> None:
+            self.processes = procs
+            self.schedules: list[Any] = []
+            self.domain = domain_obj
+
+    domain = FakeDomain(entities or []) if entities is not None else None
+    return FakeAppSpec(processes, domain)
+
+
+def _make_entity_with_state_machine(name: str, status_field: str = "status") -> Any:
+    """Create a fake entity with a state machine."""
+
+    class FakeStateMachine:
+        def __init__(self, sf: str) -> None:
+            self.status_field = sf
+
+    class FakeEntity:
+        def __init__(self, n: str, sm: Any) -> None:
+            self.name = n
+            self.state_machine = sm
+
+    return FakeEntity(name, FakeStateMachine(status_field))
+
+
+class TestProcessManagerTriggerRegistration:
+    """Tests that ProcessManager correctly registers and dispatches triggers."""
+
+    @pytest.mark.asyncio
+    async def test_entity_event_trigger_registered(self) -> None:
+        """Test that entity_event triggers are registered on initialize."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec("auto_task", "entity_event", "Order", "created")
+        app_spec = _make_app_spec_with_processes([proc])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        assert "Order:created" in mgr._entity_event_triggers
+        assert mgr._entity_event_triggers["Order:created"] == [proc]
+
+    @pytest.mark.asyncio
+    async def test_status_transition_trigger_registered(self) -> None:
+        """Test that status transition triggers are registered on initialize."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec(
+            "escalation",
+            "entity_status_transition",
+            "Task",
+            event_type=None,
+            from_status="pending",
+            to_status="overdue",
+        )
+        app_spec = _make_app_spec_with_processes([proc])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        assert "Task:pending:overdue" in mgr._status_transition_triggers
+        assert mgr._status_transition_triggers["Task:pending:overdue"] == [proc]
+
+    @pytest.mark.asyncio
+    async def test_on_entity_created_dispatches(self) -> None:
+        """Test that on_entity_created starts matching processes."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec("on_order_created", "entity_event", "Order", "created")
+        app_spec = _make_app_spec_with_processes([proc])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+        adapter.start_process = AsyncMock(return_value="run-001")
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        run_ids = await mgr.on_entity_created("Order", "order-42", {"total": 100})
+
+        assert run_ids == ["run-001"]
+        adapter.start_process.assert_called_once_with(
+            "on_order_created",
+            {
+                "entity_id": "order-42",
+                "entity_name": "Order",
+                "event_type": "created",
+                "total": 100,
+            },
+        )
+
+    @pytest.mark.asyncio
+    async def test_on_entity_created_no_match(self) -> None:
+        """Test that no processes start when no triggers match."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec("on_order_created", "entity_event", "Order", "created")
+        app_spec = _make_app_spec_with_processes([proc])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        # Different entity — no match
+        run_ids = await mgr.on_entity_created("Customer", "cust-1", {"name": "Acme"})
+
+        assert run_ids == []
+        adapter.start_process.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_on_entity_updated_detects_status_transition(self) -> None:
+        """Test that status transitions are detected and dispatched."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec(
+            "on_task_overdue",
+            "entity_status_transition",
+            "Task",
+            event_type=None,
+            from_status="pending",
+            to_status="overdue",
+        )
+        app_spec = _make_app_spec_with_processes([proc])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+        adapter.start_process = AsyncMock(return_value="run-transition-1")
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        run_ids = await mgr.on_entity_updated(
+            "Task",
+            "task-99",
+            {"status": "overdue", "title": "Review doc"},
+            old_data={"status": "pending", "title": "Review doc"},
+        )
+
+        assert "run-transition-1" in run_ids
+        adapter.start_process.assert_called_once()
+        call_kwargs = adapter.start_process.call_args[0]
+        assert call_kwargs[0] == "on_task_overdue"
+
+    @pytest.mark.asyncio
+    async def test_custom_status_field(self) -> None:
+        """Test that custom status_field from state machine is used."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec(
+            "on_approval_change",
+            "entity_status_transition",
+            "Invoice",
+            event_type=None,
+            from_status="draft",
+            to_status="submitted",
+        )
+
+        # Entity with custom status field "approval_state"
+        entity = _make_entity_with_state_machine("Invoice", "approval_state")
+        app_spec = _make_app_spec_with_processes([proc], entities=[entity])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+        adapter.start_process = AsyncMock(return_value="run-custom-1")
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        # Use the custom field name — should trigger
+        run_ids = await mgr.on_entity_updated(
+            "Invoice",
+            "inv-1",
+            {"approval_state": "submitted", "amount": 500},
+            old_data={"approval_state": "draft", "amount": 500},
+        )
+        assert "run-custom-1" in run_ids
+
+    @pytest.mark.asyncio
+    async def test_custom_status_field_ignores_wrong_field(self) -> None:
+        """Test that the default 'status' field is ignored when custom field is set."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec(
+            "on_approval_change",
+            "entity_status_transition",
+            "Invoice",
+            event_type=None,
+            from_status="draft",
+            to_status="submitted",
+        )
+
+        entity = _make_entity_with_state_machine("Invoice", "approval_state")
+        app_spec = _make_app_spec_with_processes([proc], entities=[entity])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        # Change the "status" field (not approval_state) — should NOT trigger
+        run_ids = await mgr.on_entity_updated(
+            "Invoice",
+            "inv-2",
+            {"status": "submitted", "approval_state": "draft"},
+            old_data={"status": "draft", "approval_state": "draft"},
+        )
+        assert run_ids == []
+        adapter.start_process.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_no_app_spec_no_triggers(self) -> None:
+        """Test that ProcessManager without app_spec has no triggers."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        adapter = AsyncMock()
+        mgr = ProcessManager(adapter=adapter)
+
+        assert mgr._entity_event_triggers == {}
+        assert mgr._status_transition_triggers == {}
+
+    @pytest.mark.asyncio
+    async def test_adapter_error_logged_not_raised(self) -> None:
+        """Test that adapter errors are logged but don't propagate."""
+        from dazzle_back.runtime.process_manager import ProcessManager
+
+        proc = _make_process_spec("on_order_created", "entity_event", "Order", "created")
+        app_spec = _make_app_spec_with_processes([proc])
+
+        adapter = AsyncMock()
+        adapter.register_process = AsyncMock()
+        adapter.register_schedule = AsyncMock()
+        adapter.start_process = AsyncMock(side_effect=RuntimeError("adapter broken"))
+
+        mgr = ProcessManager(adapter=adapter, app_spec=app_spec)
+        await mgr.initialize()
+
+        # Should not raise
+        run_ids = await mgr.on_entity_created("Order", "order-1", {"total": 50})
+        assert run_ids == []
