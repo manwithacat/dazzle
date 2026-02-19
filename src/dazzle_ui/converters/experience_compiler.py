@@ -9,7 +9,7 @@ and the inner PageContext for the step's surface.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from dazzle.core.ir.experiences import StepKind
 from dazzle_ui.converters.template_compiler import compile_surface_to_context
@@ -19,6 +19,7 @@ from dazzle_ui.runtime.template_context import (
     ExperienceTransitionContext,
     PageContext,
 )
+from dazzle_ui.utils.expression_eval import evaluate_simple_condition, resolve_prefill_expression
 
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec, EntitySpec, ExperienceSpec, SurfaceSpec
@@ -54,13 +55,6 @@ def _find_entity(appspec: AppSpec, entity_ref: str) -> EntitySpec | None:
     return None
 
 
-def _resolve_prefill_expression(expression: str, data: dict) -> Any:
-    """Resolve a prefill expression against state data."""
-    from dazzle_ui.utils.expression_eval import resolve_prefill_expression
-
-    return resolve_prefill_expression(expression, data)
-
-
 def compile_experience_context(
     experience: ExperienceSpec,
     state: ExperienceState,
@@ -87,8 +81,6 @@ def compile_experience_context(
         # Mark conditional steps as skipped if their guard evaluates to false
         is_skipped = False
         if step.when and step.name != state.step:
-            from dazzle_ui.utils.expression_eval import evaluate_simple_condition
-
             is_skipped = not evaluate_simple_condition(step.when, state.data)
         steps.append(
             ExperienceStepContext(
@@ -141,7 +133,7 @@ def compile_experience_context(
                 if current_step.prefills:
                     prefill_values = dict(page_context.form.initial_values)
                     for pf in current_step.prefills:
-                        resolved = _resolve_prefill_expression(pf.expression, state.data)
+                        resolved = resolve_prefill_expression(pf.expression, state.data)
                         if resolved is not None:
                             prefill_values[pf.field] = resolved
                     page_context.form = page_context.form.model_copy(

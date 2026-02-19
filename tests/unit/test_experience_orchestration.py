@@ -250,69 +250,67 @@ class TestExperienceCompiler:
         assert ctx.page_context.form.initial_values.get("company") == "uuid-123"
 
     def test_prefill_string_literal(self):
-        from dazzle_ui.converters.experience_compiler import _resolve_prefill_expression
+        from dazzle_ui.utils.expression_eval import resolve_prefill_expression
 
-        result = _resolve_prefill_expression('"director"', {})
+        result = resolve_prefill_expression('"director"', {})
         assert result == "director"
 
     def test_prefill_missing_data_no_crash(self):
-        from dazzle_ui.converters.experience_compiler import _resolve_prefill_expression
+        from dazzle_ui.utils.expression_eval import resolve_prefill_expression
 
-        result = _resolve_prefill_expression("context.company.id", {})
+        result = resolve_prefill_expression("context.company.id", {})
         assert result is None
 
     def test_prefill_nested_field(self):
-        from dazzle_ui.converters.experience_compiler import _resolve_prefill_expression
+        from dazzle_ui.utils.expression_eval import resolve_prefill_expression
 
         data = {"company": {"id": "uuid-123", "address": {"city": "London"}}}
-        result = _resolve_prefill_expression("context.company.address.city", data)
+        result = resolve_prefill_expression("context.company.address.city", data)
         assert result == "London"
 
 
 # ===========================================================================
-# Route Helper Tests
+# Shared Expression Evaluator Tests
 # ===========================================================================
 
 
-class TestRouteHelpers:
-    def test_saves_to_resolves_full_entity(self):
-        """saves_to should store the full response dict, not just the ID."""
-        from dazzle_ui.runtime.experience_routes import _resolve_dotted_path
+class TestExpressionEval:
+    def test_resolve_dotted_path(self):
+        from dazzle_ui.utils.expression_eval import resolve_dotted_path
 
         data = {"company": {"id": "uuid-1", "name": "ACME", "is_vat_registered": True}}
-        assert _resolve_dotted_path("context.company.id", data) == "uuid-1"
-        assert _resolve_dotted_path("context.company.name", data) == "ACME"
+        assert resolve_dotted_path("context.company.id", data) == "uuid-1"
+        assert resolve_dotted_path("context.company.name", data) == "ACME"
 
-    def test_backward_compat_entity_id(self):
-        """The entity_ref_id key is still accessible via dotted path."""
-        from dazzle_ui.runtime.experience_routes import _resolve_dotted_path
+    def test_resolve_dotted_path_no_prefix(self):
+        from dazzle_ui.utils.expression_eval import resolve_dotted_path
 
         data = {"Company_id": "uuid-1", "company": {"id": "uuid-1", "name": "ACME"}}
-        assert _resolve_dotted_path("Company_id", data) == "uuid-1"
+        assert resolve_dotted_path("Company_id", data) == "uuid-1"
 
-    def test_when_guard_skips_step(self):
-        from dazzle_ui.runtime.experience_routes import _evaluate_when_guard
+    def test_evaluate_condition_false(self):
+        from dazzle_ui.utils.expression_eval import evaluate_simple_condition
 
         data = {"company": {"is_vat_registered": False}}
-        assert _evaluate_when_guard("context.company.is_vat_registered = true", data) is False
+        assert evaluate_simple_condition("context.company.is_vat_registered = true", data) is False
 
-    def test_when_guard_shows_step(self):
-        from dazzle_ui.runtime.experience_routes import _evaluate_when_guard
+    def test_evaluate_condition_true(self):
+        from dazzle_ui.utils.expression_eval import evaluate_simple_condition
 
         data = {"company": {"is_vat_registered": True}}
-        assert _evaluate_when_guard("context.company.is_vat_registered = true", data) is True
+        assert evaluate_simple_condition("context.company.is_vat_registered = true", data) is True
 
-    def test_when_guard_not_equals(self):
-        from dazzle_ui.runtime.experience_routes import _evaluate_when_guard
+    def test_evaluate_condition_not_equals(self):
+        from dazzle_ui.utils.expression_eval import evaluate_simple_condition
 
         data = {"company": {"status": "active"}}
-        assert _evaluate_when_guard("context.company.status != active", data) is False
-        assert _evaluate_when_guard("context.company.status != inactive", data) is True
+        assert evaluate_simple_condition("context.company.status != active", data) is False
+        assert evaluate_simple_condition("context.company.status != inactive", data) is True
 
-    def test_when_guard_missing_data(self):
-        from dazzle_ui.runtime.experience_routes import _evaluate_when_guard
+    def test_evaluate_condition_missing_data(self):
+        from dazzle_ui.utils.expression_eval import evaluate_simple_condition
 
-        assert _evaluate_when_guard("context.company.missing = true", {}) is False
+        assert evaluate_simple_condition("context.company.missing = true", {}) is False
 
 
 # ===========================================================================

@@ -20,6 +20,7 @@ from typing import Any
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
 from dazzle.core.strings import to_api_plural
+from dazzle_ui.utils.expression_eval import evaluate_simple_condition
 
 logger = logging.getLogger(__name__)
 
@@ -75,26 +76,6 @@ async def _proxy_to_backend(
         data = {}
 
     return 200 <= status < 300, data
-
-
-def _resolve_dotted_path(path: str, data: dict[str, Any]) -> Any:
-    """Resolve a dotted path against data dict.
-
-    Thin wrapper around the shared utility for backward compatibility.
-    """
-    from dazzle_ui.utils.expression_eval import resolve_dotted_path
-
-    return resolve_dotted_path(path, data)
-
-
-def _evaluate_when_guard(when_expr: str, data: dict[str, Any]) -> bool:
-    """Evaluate a when guard expression against state data.
-
-    Thin wrapper around the shared utility for backward compatibility.
-    """
-    from dazzle_ui.utils.expression_eval import evaluate_simple_condition
-
-    return evaluate_simple_condition(when_expr, data)
 
 
 def create_experience_routes(
@@ -291,7 +272,7 @@ def create_experience_routes(
                     )
 
         # Conditional step guard: skip if condition is false
-        if step_spec.when and not _evaluate_when_guard(step_spec.when, state.data):
+        if step_spec.when and not evaluate_simple_condition(step_spec.when, state.data):
             # Mark step as completed (skipped) and follow success transition
             completed = list(state.completed)
             if step not in completed:
