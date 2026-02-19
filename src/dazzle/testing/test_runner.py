@@ -1485,12 +1485,12 @@ class TestRunner:
                 persona_creds = personas.get(persona, {})
                 val = persona_creds.get(field)
                 if val:
-                    return val
+                    return str(val)
                 # Admin fallback to top-level
                 if persona == "admin":
                     val = creds.get(field)
                     if val:
-                        return val
+                        return str(val)
             except Exception:
                 logger.warning(
                     "Failed to read test credential '%s' for persona '%s'",
