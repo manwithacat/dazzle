@@ -174,6 +174,17 @@ def _slugify_filter(value: Any) -> str:
     return text.strip("-")
 
 
+def _basename_or_url_filter(value: Any) -> str:
+    """Extract filename from a URL or path, or return the value as-is."""
+    if value is None:
+        return ""
+    text = str(value)
+    # Try to extract filename from URL path
+    if "/" in text:
+        return text.rsplit("/", 1)[-1].split("?")[0] or text
+    return text
+
+
 def _truncate_filter(value: Any, length: int = 50) -> str:
     """Truncate text to a given length."""
     if value is None:
@@ -224,6 +235,7 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["truncate_text"] = _truncate_filter
     env.filters["timeago"] = _timeago_filter
     env.filters["slugify"] = _slugify_filter
+    env.filters["basename_or_url"] = _basename_or_url_filter
 
     return env
 

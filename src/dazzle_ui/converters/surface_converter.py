@@ -348,6 +348,17 @@ def _generate_field_element(
                 },
             )
 
+        # Handle file/image fields
+        if type_kind in ("file", "image"):
+            return ElementNode(
+                **{"as": "Input"},  # type: ignore[arg-type]
+                props={
+                    "fieldType": LiteralBinding(value="file"),
+                    "placeholder": LiteralBinding(value=field_label),
+                    "dazzle": LiteralBinding(value=dazzle_attrs),
+                },
+            )
+
     # Default: standard text input
     return ElementNode(
         **{"as": "Input"},  # type: ignore[arg-type]

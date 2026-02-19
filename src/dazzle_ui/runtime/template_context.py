@@ -64,7 +64,7 @@ class FieldContext(BaseModel):
     name: str
     label: str
     type: str = (
-        "text"  # text, textarea, select, checkbox, date, datetime, number, email, url, money
+        "text"  # text, textarea, select, checkbox, date, datetime, number, email, url, money, file
     )
     required: bool = False
     placeholder: str = ""

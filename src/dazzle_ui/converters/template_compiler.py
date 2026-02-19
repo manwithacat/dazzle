@@ -130,6 +130,17 @@ def _field_type_to_column_type(field_spec: ir.FieldSpec | None) -> str:
     return type_map.get(kind, "text")
 
 
+def _file_accept_attr(field_spec: ir.FieldSpec) -> str:
+    """Build an HTML accept attribute value for a file input."""
+    # Check BackendSpec file_config if available
+    ft = field_spec.type
+    if ft and hasattr(ft, "file_config") and ft.file_config:
+        allowed = getattr(ft.file_config, "allowed_types", None)
+        if allowed:
+            return ",".join(allowed)
+    return "*/*"
+
+
 def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
     """Map an IR field type to a form input type."""
     if not field_spec or not field_spec.type:
@@ -147,6 +158,7 @@ def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
         FieldTypeKind.URL: "text",
         FieldTypeKind.ENUM: "select",
         FieldTypeKind.REF: "ref",
+        FieldTypeKind.FILE: "file",
     }
     return type_map.get(kind, "text")
 
@@ -416,15 +428,24 @@ def _build_form_fields(
             if source_ctx:
                 form_type = "search_select"
 
+        extra: dict[str, Any] = {}
+        if form_type == "file" and field_spec and field_spec.type:
+            extra["accept"] = _file_accept_attr(field_spec)
+            # IMAGE scalar type is only in BackendSpec, not IR;
+            # file_config.allowed_types handles MIME restriction if set.
+
         fields.append(
             FieldContext(
                 name=field_name,
                 label=display_label,
                 type=form_type,
                 required=is_required,
-                placeholder=display_label if form_type not in ("checkbox", "select") else "",
+                placeholder=display_label
+                if form_type not in ("checkbox", "select", "file")
+                else "",
                 options=options,
                 source=source_ctx,
+                extra=extra,
             )
         )
 
@@ -475,15 +496,22 @@ def _build_form_sections(
                 if source_ctx:
                     form_type = "search_select"
 
+            extra: dict[str, Any] = {}
+            if form_type == "file" and field_spec and field_spec.type:
+                extra["accept"] = _file_accept_attr(field_spec)
+
             section_fields.append(
                 FieldContext(
                     name=element.field_name,
                     label=display_label,
                     type=form_type,
                     required=is_required,
-                    placeholder=display_label if form_type not in ("checkbox", "select") else "",
+                    placeholder=(
+                        display_label if form_type not in ("checkbox", "select", "file") else ""
+                    ),
                     options=options,
                     source=source_ctx,
+                    extra=extra,
                 )
             )
 

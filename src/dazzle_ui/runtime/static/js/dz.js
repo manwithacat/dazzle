@@ -699,6 +699,200 @@ const dz = (() => {
     });
   }
 
+  // ── File Upload ──────────────────────────────────────────────────────
+
+  /**
+   * Initialize a file upload field.
+   * @param {HTMLElement} container — element with [data-dz-file]
+   */
+  function initFileUpload(container) {
+    const hiddenInput = container.querySelector("[data-dz-file-value]");
+    const fileInput = container.querySelector("[data-dz-file-input]");
+    const dropzone = container.querySelector("[data-dz-file-dropzone]");
+    const preview = container.querySelector("[data-dz-file-preview]");
+    const progressBar = container.querySelector("[data-dz-file-progress]");
+    const errorEl = container.querySelector("[data-dz-file-error]");
+    const clearBtn = container.querySelector("[data-dz-file-clear]");
+
+    if (!fileInput || !hiddenInput) return;
+
+    function showError(msg) {
+      if (errorEl) {
+        errorEl.textContent = msg;
+        errorEl.classList.remove("hidden");
+      }
+    }
+
+    function clearError() {
+      if (errorEl) {
+        errorEl.textContent = "";
+        errorEl.classList.add("hidden");
+      }
+    }
+
+    /**
+     * Build a preview element using safe DOM APIs (no innerHTML).
+     * @param {string} filename
+     * @returns {HTMLElement}
+     */
+    function buildPreviewEl(filename) {
+      const div = document.createElement("div");
+      div.setAttribute("data-dz-file-preview", "");
+      div.className =
+        "flex items-center gap-2 p-3 bg-base-200 rounded-lg mb-2";
+
+      // Checkmark icon
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "h-5 w-5 text-success shrink-0");
+      svg.setAttribute("fill", "none");
+      svg.setAttribute("viewBox", "0 0 24 24");
+      svg.setAttribute("stroke", "currentColor");
+      const path = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+      );
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+      path.setAttribute("stroke-width", "2");
+      path.setAttribute(
+        "d",
+        "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
+      );
+      svg.appendChild(path);
+      div.appendChild(svg);
+
+      // Filename label
+      const span = document.createElement("span");
+      span.className = "text-sm truncate";
+      span.setAttribute("data-dz-file-name", "");
+      span.textContent = filename;
+      div.appendChild(span);
+
+      // Clear button
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-dz-file-clear", "");
+      btn.className = "btn btn-ghost btn-xs ml-auto";
+      btn.setAttribute("aria-label", "Remove file");
+      const xSvg = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "svg",
+      );
+      xSvg.setAttribute("class", "h-4 w-4");
+      xSvg.setAttribute("fill", "none");
+      xSvg.setAttribute("viewBox", "0 0 24 24");
+      xSvg.setAttribute("stroke", "currentColor");
+      const xPath = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+      );
+      xPath.setAttribute("stroke-linecap", "round");
+      xPath.setAttribute("stroke-linejoin", "round");
+      xPath.setAttribute("stroke-width", "2");
+      xPath.setAttribute("d", "M6 18L18 6M6 6l12 12");
+      xSvg.appendChild(xPath);
+      btn.appendChild(xSvg);
+      btn.addEventListener("click", clearFile);
+      div.appendChild(btn);
+
+      return div;
+    }
+
+    function showPreview(filename, url) {
+      if (preview) {
+        preview.classList.remove("hidden");
+        const nameEl = preview.querySelector("[data-dz-file-name]");
+        if (nameEl) nameEl.textContent = filename;
+      } else {
+        // Create preview dynamically
+        const div = buildPreviewEl(filename);
+        container.insertBefore(div, dropzone);
+      }
+      if (dropzone) dropzone.style.display = "none";
+      hiddenInput.value = url;
+    }
+
+    function clearFile() {
+      hiddenInput.value = "";
+      fileInput.value = "";
+      const prev = container.querySelector("[data-dz-file-preview]");
+      if (prev) prev.classList.add("hidden");
+      if (dropzone) dropzone.style.display = "";
+      clearError();
+    }
+
+    async function uploadFile(file) {
+      clearError();
+      if (progressBar) progressBar.classList.remove("hidden");
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Add entity context from form
+      const form = container.closest("form");
+      const entityName =
+        form && form.dataset.dazzleForm ? form.dataset.dazzleForm : "";
+      const fieldName = container.dataset.dzFile || "";
+      if (entityName) formData.append("entity", entityName);
+      if (fieldName) formData.append("field", fieldName);
+
+      try {
+        const resp = await fetch("/files/upload", {
+          method: "POST",
+          body: formData,
+        });
+        if (!resp.ok) {
+          const errBody = await resp.json().catch(() => ({}));
+          throw new Error(errBody.detail || "Upload failed");
+        }
+        const data = await resp.json();
+        showPreview(data.filename || file.name, data.url || data.id);
+      } catch (err) {
+        showError(err.message || "Upload failed");
+      } finally {
+        if (progressBar) progressBar.classList.add("hidden");
+      }
+    }
+
+    fileInput.addEventListener("change", function () {
+      if (fileInput.files && fileInput.files[0]) {
+        uploadFile(fileInput.files[0]);
+      }
+    });
+
+    // Drag-and-drop
+    if (dropzone) {
+      dropzone.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        dropzone.classList.add("border-primary", "bg-base-200/50");
+      });
+      dropzone.addEventListener("dragleave", function () {
+        dropzone.classList.remove("border-primary", "bg-base-200/50");
+      });
+      dropzone.addEventListener("drop", function (e) {
+        e.preventDefault();
+        dropzone.classList.remove("border-primary", "bg-base-200/50");
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          uploadFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", clearFile);
+    }
+
+    container.dataset.dzFileInit = "1";
+  }
+
+  function initFileUploads() {
+    document.querySelectorAll("[data-dz-file]").forEach((el) => {
+      if (!/** @type {HTMLElement} */ (el).dataset.dzFileInit) {
+        initFileUpload(/** @type {HTMLElement} */ (el));
+      }
+    });
+  }
+
   // ── Wizard Form Navigation ───────────────────────────────────────────
 
   function initWizardForms() {
@@ -798,6 +992,7 @@ const dz = (() => {
     initSearchInputs();
     initFormLoading();
     initMoneyInputs();
+    initFileUploads();
     initWizardForms();
 
     // Auto-init data tables
@@ -823,6 +1018,11 @@ const dz = (() => {
       target.querySelectorAll("[data-dz-money]").forEach((el) => {
         if (!/** @type {HTMLElement} */ (el).dataset.dzMoneyInit) {
           initMoneyField(/** @type {HTMLElement} */ (el));
+        }
+      });
+      target.querySelectorAll("[data-dz-file]").forEach((el) => {
+        if (!/** @type {HTMLElement} */ (el).dataset.dzFileInit) {
+          initFileUpload(/** @type {HTMLElement} */ (el));
         }
       });
       // Reinit wizard forms after HTMX swap
