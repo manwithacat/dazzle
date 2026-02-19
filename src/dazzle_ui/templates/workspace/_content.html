@@ -7,6 +7,12 @@
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>
     {% for region in workspace.regions %}
+    {% if region.source_tabs %}
+    {# Multi-source tabbed region: render tabs inline, each panel lazy-loads independently #}
+    <div class="{{ region.grid_class }}" id="region-{{ region.name }}">
+      {% include 'workspace/regions/tabbed_list.html' with context %}
+    </div>
+    {% else %}
     <div class="{{ region.grid_class }}"
          id="region-{{ region.name }}"
          {% if region.endpoint %}
@@ -31,6 +37,7 @@
         </div>
       </div>
     </div>
+    {% endif %}
     {% endfor %}
   </div>
 </div>

@@ -197,8 +197,11 @@ async def _workspace_region_handler(
     if repo:
         try:
             # Build filters from IR ConditionExpr
+            # Multi-source regions store per-source filter on _source_filter
             filters: dict[str, Any] | None = None
-            ir_filter = getattr(ctx.ir_region, "filter", None)
+            ir_filter = getattr(ctx, "_source_filter", None) or getattr(
+                ctx.ir_region, "filter", None
+            )
             if ir_filter is not None:
                 try:
                     from dazzle_back.runtime.condition_evaluator import (
@@ -379,6 +382,9 @@ async def _workspace_region_handler(
 
         queue_api_endpoint = f"/{to_api_plural(ctx.source)}"
 
+    # Multi-source tabbed regions pass source_tabs to the template
+    source_tabs = getattr(ctx.ctx_region, "source_tabs", []) or []
+
     html = render_fragment(
         ctx.ctx_region.template,
         title=ctx.ctx_region.title,
@@ -401,6 +407,7 @@ async def _workspace_region_handler(
         queue_transitions=queue_transitions,
         queue_status_field=queue_status_field,
         queue_api_endpoint=queue_api_endpoint,
+        source_tabs=source_tabs,
     )
     return HTMLResponse(content=html)
 

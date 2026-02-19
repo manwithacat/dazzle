@@ -276,6 +276,67 @@ class WorkspaceRouteBuilder:
                 _ws_region_ctxs: list[WorkspaceRegionContext] = []
 
                 for ir_region, ctx_region in zip(workspace.regions, ws_ctx.regions, strict=False):
+                    # Multi-source regions: register per-source sub-endpoints
+                    if ctx_region.sources:
+                        source_filters_ir = dict(getattr(ir_region, "source_filters", {}) or {})
+                        for src_tab in ctx_region.source_tabs:
+                            _src_name = src_tab.entity_name
+                            _src_entity_spec = None
+                            _entities = getattr(spec, "entities", [])
+                            for _e in _entities:
+                                if _e.name == _src_name:
+                                    _src_entity_spec = _e
+                                    break
+
+                            # Build a synthetic single-source IR region for this tab
+                            _src_filter = source_filters_ir.get(
+                                _src_name, getattr(ir_region, "filter", None)
+                            )
+
+                            _src_region_ctx = WorkspaceRegionContext(
+                                ctx_region=ctx_region,
+                                ir_region=ir_region,
+                                source=_src_name,
+                                entity_spec=_src_entity_spec,
+                                attention_signals=[],
+                                ws_access=_ws_access,
+                                repositories=repositories,
+                                require_auth=require_auth,
+                                auth_middleware=auth_middleware,
+                                precomputed_columns=_build_entity_columns(_src_entity_spec),
+                            )
+                            # Override the IR filter for this source
+                            _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
+                            _ws_region_ctxs.append(_src_region_ctx)
+
+                            def _make_src_route(
+                                rctx: WorkspaceRegionContext,
+                                src_filter: Any = _src_filter,
+                            ) -> Any:
+                                async def workspace_src_data(
+                                    request: Request,
+                                    page: int = 1,
+                                    page_size: int = 20,
+                                    sort: str | None = None,
+                                    dir: str = "asc",
+                                ) -> Any:
+                                    return await _workspace_region_handler(
+                                        request,
+                                        page,
+                                        page_size,
+                                        sort,
+                                        dir,
+                                        ctx=rctx,
+                                    )
+
+                                return workspace_src_data
+
+                            app.get(
+                                f"/api/workspaces/{ws_name}/regions/{ctx_region.name}/{_src_name}",
+                                tags=["Workspaces"],
+                            )(_make_src_route(_src_region_ctx))
+                        continue
+
                     if not ctx_region.source:
                         continue
 

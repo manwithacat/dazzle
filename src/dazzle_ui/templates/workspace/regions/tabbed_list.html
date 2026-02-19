@@ -1,0 +1,42 @@
+{# Tabbed multi-source list — one tab per source entity, each lazy-loaded via HTMX #}
+{% set tabs = source_tabs if source_tabs is defined else (region.source_tabs if region is defined else []) %}
+{% set rname = region_name if region_name is defined else (region.name if region is defined else "unknown") %}
+{% set rtitle = title if title is defined else (region.title if region is defined else "") %}
+{% set rempty = empty_message if empty_message is defined else (region.empty_message if region is defined else "No data available.") %}
+
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ rtitle }}</h3>
+
+    {# Tab headers #}
+    {% if tabs %}
+    <div role="tablist" class="tabs tabs-bordered mb-3" id="tabs-{{ rname }}">
+      {% for tab in tabs %}
+      <a role="tab"
+         class="tab{% if loop.first %} tab-active{% endif %}"
+         data-tab-target="tab-{{ rname }}-{{ tab.entity_name | lower }}"
+         onclick="document.querySelectorAll('#tabs-{{ rname }} .tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active'); document.querySelectorAll('#panels-{{ rname }} .tab-panel').forEach(p => p.classList.add('hidden')); document.getElementById(this.dataset.tabTarget).classList.remove('hidden');">
+        {{ tab.label }}
+      </a>
+      {% endfor %}
+    </div>
+
+    {# Tab panels — each lazy-loaded independently #}
+    <div id="panels-{{ rname }}">
+      {% for tab in tabs %}
+      <div id="tab-{{ rname }}-{{ tab.entity_name | lower }}"
+           class="tab-panel{% if not loop.first %} hidden{% endif %}"
+           hx-get="{{ tab.endpoint }}"
+           hx-trigger="{% if loop.first %}load{% else %}intersect once{% endif %}"
+           hx-swap="innerHTML">
+        <div class="flex justify-center py-8">
+          <span class="loading loading-spinner loading-sm"></span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-sm opacity-50">{{ rempty }}</p>
+    {% endif %}
+  </div>
+</div>

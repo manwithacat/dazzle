@@ -25,13 +25,23 @@ from dazzle.core.strings import to_api_plural
 # =============================================================================
 
 
+class SourceTabContext(BaseModel):
+    """Context for a single tab in a multi-source tabbed region."""
+
+    entity_name: str
+    label: str = ""
+    endpoint: str = ""
+    filter_expr: str = ""
+    action_url: str = ""
+
+
 class RegionContext(BaseModel):
     """Rendering context for a single workspace region."""
 
     name: str
     title: str = ""
     source: str = ""  # Entity or surface name
-    display: str = "LIST"  # LIST, GRID, METRICS, SUMMARY, DETAIL, KANBAN
+    display: str = "LIST"  # LIST, GRID, METRICS, SUMMARY, DETAIL, KANBAN, TABBED_LIST
     endpoint: str = ""  # HTMX data endpoint
     filter_expr: str = ""  # Serialised filter for query params
     sort: list[dict[str, str]] = Field(default_factory=list)
@@ -41,6 +51,9 @@ class RegionContext(BaseModel):
     aggregates: dict[str, str] = Field(default_factory=dict)
     action: str = ""  # Surface name for row-click navigation
     action_url: str = ""  # Resolved URL pattern for the action surface
+    # Multi-source (v0.33.0)
+    sources: list[str] = Field(default_factory=list)
+    source_tabs: list[SourceTabContext] = Field(default_factory=list)
     # CSS
     grid_class: str = ""  # col-span/row-span classes
     template: str = "workspace/regions/list.html"  # Region display template
@@ -82,6 +95,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "BAR_CHART": "workspace/regions/bar_chart.html",
     "FUNNEL_CHART": "workspace/regions/funnel_chart.html",
     "QUEUE": "workspace/regions/queue.html",
+    "TABBED_LIST": "workspace/regions/tabbed_list.html",
 }
 
 # Region span classes for command_center stage
@@ -148,6 +162,7 @@ def build_workspace_context(
             )
 
         source_name = getattr(region, "source", "") or ""
+        region_sources = list(getattr(region, "sources", []) or [])
         endpoint = f"/api/workspaces/{workspace.name}/regions/{region.name}" if source_name else ""
 
         # Serialize IR filter to JSON for the data endpoint
@@ -178,6 +193,27 @@ def build_workspace_context(
                                 action_url = f"/{to_api_plural(entity_ref)}/{{id}}"
                     break
 
+        # Build multi-source tabs
+        source_tabs: list[SourceTabContext] = []
+        if region_sources:
+            source_filters_ir = dict(getattr(region, "source_filters", {}) or {})
+            for src in region_sources:
+                tab_endpoint = f"/api/workspaces/{workspace.name}/regions/{region.name}/{src}"
+                tab_filter = ""
+                if src in source_filters_ir:
+                    tab_filter = _serialize_filter_to_params(source_filters_ir[src])
+                # Per-source action URL: link to the entity's detail page
+                tab_action_url = f"/{to_api_plural(src)}/{{id}}"
+                source_tabs.append(
+                    SourceTabContext(
+                        entity_name=src,
+                        label=src.replace("_", " ").title(),
+                        endpoint=tab_endpoint,
+                        filter_expr=tab_filter,
+                        action_url=tab_action_url,
+                    )
+                )
+
         regions.append(
             RegionContext(
                 name=region.name,
@@ -193,6 +229,8 @@ def build_workspace_context(
                 aggregates=dict(getattr(region, "aggregates", {}) or {}),
                 action=action_name,
                 action_url=action_url,
+                sources=region_sources,
+                source_tabs=source_tabs,
                 grid_class=region_grid,
                 template=template,
             )

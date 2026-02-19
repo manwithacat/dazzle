@@ -492,19 +492,24 @@ def create_page_routes(
             entity_items: list[dict[str, Any]] = []
             seen_entities: set[str] = set()
             for region in ws.regions:
-                if region.source and region.source not in seen_entities:
-                    seen_entities.add(region.source)
-                    list_surface = _list_surfaces_by_entity.get(region.source)
-                    if list_surface:
-                        entity_slug = region.source.lower().replace("_", "-")
-                        entity_items.append(
-                            {
-                                "label": list_surface.title
-                                or region.source.replace("_", " ").title(),
-                                "route": f"{app_prefix}/{entity_slug}",
-                                "allow_personas": [],
-                            }
-                        )
+                # Collect all source entities (single + multi-source)
+                region_sources: list[str] = []
+                if region.source:
+                    region_sources.append(region.source)
+                region_sources.extend(getattr(region, "sources", []) or [])
+                for src in region_sources:
+                    if src not in seen_entities:
+                        seen_entities.add(src)
+                        list_surface = _list_surfaces_by_entity.get(src)
+                        if list_surface:
+                            entity_slug = src.lower().replace("_", "-")
+                            entity_items.append(
+                                {
+                                    "label": list_surface.title or src.replace("_", " ").title(),
+                                    "route": f"{app_prefix}/{entity_slug}",
+                                    "allow_personas": [],
+                                }
+                            )
             ws_entity_nav[ws.name] = entity_items
 
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()

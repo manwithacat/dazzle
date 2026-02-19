@@ -60,6 +60,7 @@ class DisplayMode(StrEnum):
     BAR_CHART = "bar_chart"  # v0.9.5: Bar chart visualization
     FUNNEL_CHART = "funnel_chart"  # v0.9.5: Funnel chart (e.g., sales pipeline)
     QUEUE = "queue"  # v0.33.0: Review queue with inline actions
+    TABBED_LIST = "tabbed_list"  # v0.33.0: Tabbed multi-source list
 
 
 class WorkspaceRegion(BaseModel):
@@ -86,6 +87,10 @@ class WorkspaceRegion(BaseModel):
 
     name: str
     source: str | None = None  # Entity or surface name (optional for aggregate-only)
+    sources: list[str] = Field(default_factory=list)  # v0.33.0: Multi-source entity list
+    source_filters: dict[str, ConditionExpr] = Field(
+        default_factory=dict
+    )  # v0.33.0: Per-source filters
     filter: ConditionExpr | None = None
     sort: list[SortSpec] = Field(default_factory=list)
     limit: int | None = Field(None, ge=1, le=1000)

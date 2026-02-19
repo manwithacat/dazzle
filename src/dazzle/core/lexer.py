@@ -136,6 +136,7 @@ class TokenType(Enum):
     FOCUS = "focus"
     GROUP_BY = "group_by"
     WHERE = "where"
+    FILTER_MAP = "filter_map"  # v0.33.0: Per-source filters in multi-source regions
 
     # v0.3.1 keywords
     ENGINE_HINT = "engine_hint"  # Deprecated: use STAGE instead

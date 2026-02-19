@@ -181,6 +181,8 @@ class WorkspaceParserMixin:
         self.expect(TokenType.INDENT)
 
         source = None
+        sources: list[str] = []
+        source_filters: dict[str, ir.ConditionExpr] = {}
         filter_expr = None
         sort: list[ir.SortSpec] = []
         limit = None
@@ -195,12 +197,42 @@ class WorkspaceParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            # source: EntityName
+            # source: EntityName  OR  source: [Entity1, Entity2, ...]
             if self.match(TokenType.SOURCE):
                 self.advance()
                 self.expect(TokenType.COLON)
-                source = self.expect_identifier_or_keyword().value
+                if self.match(TokenType.LBRACKET):
+                    # Multi-source: source: [Entity1, Entity2, Entity3]
+                    self.advance()  # consume [
+                    while not self.match(TokenType.RBRACKET):
+                        self.skip_newlines()
+                        if self.match(TokenType.RBRACKET):
+                            break
+                        entity_name = self.expect_identifier_or_keyword().value
+                        sources.append(entity_name)
+                        if self.match(TokenType.COMMA):
+                            self.advance()
+                        self.skip_newlines()
+                    self.expect(TokenType.RBRACKET)
+                else:
+                    source = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
+
+            # filter_map: per-source filters for multi-source regions
+            elif self.match(TokenType.FILTER_MAP):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    entity_name = self.expect_identifier_or_keyword().value
+                    self.expect(TokenType.COLON)
+                    source_filters[entity_name] = self.parse_condition_expr()
+                    self.skip_newlines()
+                self.expect(TokenType.DEDENT)
 
             # filter: condition_expr
             elif self.match(TokenType.FILTER):
@@ -282,7 +314,7 @@ class WorkspaceParserMixin:
 
         # v0.9.5: Allow aggregate-only regions without source
         # Traditional regions require source, but pure metric regions don't
-        if source is None and not aggregates:
+        if source is None and not sources and not aggregates:
             token = self.current_token()
             raise make_parse_error(
                 f"Workspace region '{name}' requires 'source:' or 'aggregate:' block",
@@ -291,9 +323,25 @@ class WorkspaceParserMixin:
                 token.column,
             )
 
+        # Cannot have both source and sources
+        if source and sources:
+            token = self.current_token()
+            raise make_parse_error(
+                f"Workspace region '{name}' cannot have both 'source:' (single) and multi-source list",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        # Multi-source regions default to tabbed_list display
+        if sources and display == ir.DisplayMode.LIST:
+            display = ir.DisplayMode.TABBED_LIST
+
         return ir.WorkspaceRegion(
             name=name,
             source=source,
+            sources=sources,
+            source_filters=source_filters,
             filter=filter_expr,
             sort=sort,
             limit=limit,
