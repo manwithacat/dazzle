@@ -191,6 +191,8 @@ class WorkspaceParserMixin:
         empty_message = None
         group_by = None
         aggregates: dict[str, str] = {}
+        date_field: str | None = None
+        date_range: bool = False
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -284,6 +286,19 @@ class WorkspaceParserMixin:
                 group_by = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
+            # date_field: created_at
+            elif self.match(TokenType.DATE_FIELD):
+                self.advance()
+                self.expect(TokenType.COLON)
+                date_field = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # date_range (flag — no colon needed)
+            elif self.match(TokenType.DATE_RANGE):
+                self.advance()
+                date_range = True
+                self.skip_newlines()
+
             # aggregate:
             elif self.match(TokenType.AGGREGATE):
                 self.advance()
@@ -350,4 +365,6 @@ class WorkspaceParserMixin:
             empty_message=empty_message,
             group_by=group_by,
             aggregates=aggregates,
+            date_field=date_field,
+            date_range=date_range,
         )

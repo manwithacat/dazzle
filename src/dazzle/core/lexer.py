@@ -143,6 +143,23 @@ class TokenType(Enum):
     WHERE = "where"
     FILTER_MAP = "filter_map"  # v0.33.0: Per-source filters in multi-source regions
 
+    # v0.34.0 Platform Capability Keywords
+    SOFT_DELETE = "soft_delete"
+    SEARCHABLE = "searchable"
+    BULK = "bulk"
+    IMPORT = "import"
+    EXPORT = "export"
+    NOTIFICATION = "notification"
+    NOTIFY = "notify"
+    CHANNELS = "channels"
+    IN_APP = "in_app"
+    SMS = "sms"
+    SLACK = "slack"
+    PREFERENCES = "preferences"
+    DATE_RANGE = "date_range"
+    TIME_BUCKET = "time_bucket"
+    DATE_FIELD = "date_field"
+
     # v0.3.1 keywords
     ENGINE_HINT = "engine_hint"  # Deprecated: use STAGE instead
     STAGE = "stage"  # v0.8.0: Workspace layout stage (replaces engine_hint)

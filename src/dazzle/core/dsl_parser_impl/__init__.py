@@ -33,6 +33,7 @@ from .island import IslandParserMixin
 from .ledger import LedgerParserMixin
 from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
+from .notification import NotificationParserMixin
 from .process import ProcessParserMixin
 from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
@@ -74,6 +75,7 @@ class Parser(
     ApprovalParserMixin,
     SLAParserMixin,
     IslandParserMixin,
+    NotificationParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -334,6 +336,13 @@ class Parser(
             elif self.match(TokenType.ISLAND):
                 island_spec = self.parse_island()
                 fragment = _updated(fragment, islands=[*fragment.islands, island_spec])
+
+            # v0.34.0 Notifications
+            elif self.match(TokenType.NOTIFICATION):
+                notification_spec = self.parse_notification()
+                fragment = _updated(
+                    fragment, notifications=[*fragment.notifications, notification_spec]
+                )
 
             else:
                 token = self.current_token()

@@ -71,6 +71,8 @@ class ViewParserMixin:
         filter_condition = None
         group_by: list[str] = []
         fields: list[ir.ViewFieldSpec] = []
+        date_field: str | None = None
+        time_bucket: ir.TimeBucket | None = None
 
         while not self.match(TokenType.DEDENT, TokenType.EOF):
             self.skip_newlines()
@@ -93,6 +95,21 @@ class ViewParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 group_by = self._parse_view_identifier_list()
+                self.skip_newlines()
+
+            # date_field: created_at
+            elif self.match(TokenType.DATE_FIELD):
+                self.advance()
+                self.expect(TokenType.COLON)
+                date_field = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # time_bucket: month
+            elif self.match(TokenType.TIME_BUCKET):
+                self.advance()
+                self.expect(TokenType.COLON)
+                bucket_token = self.expect_identifier_or_keyword()
+                time_bucket = ir.TimeBucket(bucket_token.value)
                 self.skip_newlines()
 
             elif self.match(TokenType.FIELD):
@@ -129,6 +146,8 @@ class ViewParserMixin:
             filter_condition=filter_condition,
             group_by=group_by,
             fields=fields,
+            date_field=date_field,
+            time_bucket=time_bucket,
         )
 
     def _parse_view_identifier_list(self) -> list[str]:

@@ -378,6 +378,22 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         _validate_field_modifiers(entity, errors, warnings)
         _validate_constraints(entity, errors)
 
+        # v0.34.0: Validate bulk config field references
+        if entity.bulk:
+            field_names = {f.name for f in entity.fields}
+            for imp_f in entity.bulk.import_fields:
+                if imp_f not in field_names:
+                    errors.append(
+                        f"Entity '{entity.name}' bulk import_fields references "
+                        f"unknown field '{imp_f}'"
+                    )
+            for exp_f in entity.bulk.export_fields:
+                if exp_f not in field_names:
+                    errors.append(
+                        f"Entity '{entity.name}' bulk export_fields references "
+                        f"unknown field '{exp_f}'"
+                    )
+
     return errors, warnings
 
 
@@ -411,6 +427,17 @@ def validate_surfaces(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                                 f"references non-existent field '{element.field_name}' "
                                 f"from entity '{entity.name}'"
                             )
+
+        # Validate search fields reference valid entity fields
+        if surface.search_fields and surface.entity_ref:
+            entity = appspec.get_entity(surface.entity_ref)
+            if entity:
+                for sf in surface.search_fields:
+                    if not entity.get_field(sf):
+                        warnings.append(
+                            f"Surface '{surface.name}' search field '{sf}' "
+                            f"does not exist on entity '{entity.name}'"
+                        )
 
         # Warn if no sections
         if not surface.sections:
@@ -1485,6 +1512,53 @@ def _lint_process_effects(appspec: ir.AppSpec) -> list[str]:
                     )
 
     return warnings
+
+
+def validate_notifications(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """
+    Validate all notifications for semantic correctness (v0.34.0).
+
+    Checks:
+    - Trigger entity exists
+    - Trigger field exists on entity (if specified)
+    - No duplicate notification names
+    - Recipients reference valid fields (for field-based recipients)
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    seen_names: set[str] = set()
+    entity_names = {e.name for e in appspec.domain.entities}
+
+    for n in appspec.notifications:
+        # Duplicate name check
+        if n.name in seen_names:
+            errors.append(f"Duplicate notification name: '{n.name}'")
+        seen_names.add(n.name)
+
+        # Trigger entity must exist
+        if n.trigger.entity not in entity_names:
+            errors.append(f"Notification '{n.name}' references unknown entity '{n.trigger.entity}'")
+        else:
+            entity = appspec.get_entity(n.trigger.entity)
+            if entity and n.trigger.field:
+                if not entity.get_field(n.trigger.field):
+                    errors.append(
+                        f"Notification '{n.name}' trigger references unknown field "
+                        f"'{n.trigger.field}' on entity '{n.trigger.entity}'"
+                    )
+
+            # Field-based recipients should reference a valid field
+            if entity and n.recipients.kind == "field":
+                if n.recipients.value and not entity.get_field(n.recipients.value):
+                    warnings.append(
+                        f"Notification '{n.name}' recipients reference field "
+                        f"'{n.recipients.value}' which does not exist on '{n.trigger.entity}'"
+                    )
+
+    return errors, warnings
 
 
 def extended_lint(appspec: ir.AppSpec) -> list[str]:

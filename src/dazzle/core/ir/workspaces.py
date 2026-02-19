@@ -99,6 +99,9 @@ class WorkspaceRegion(BaseModel):
     empty_message: str | None = None
     group_by: str | None = None  # Field to group by
     aggregates: dict[str, str] = Field(default_factory=dict)  # metric_name: expr
+    # v0.34.0: Date-range filtering
+    date_field: str | None = None
+    date_range: bool = False  # Enable date picker on this region
 
     model_config = ConfigDict(frozen=True)
 

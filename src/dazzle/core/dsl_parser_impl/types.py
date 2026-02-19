@@ -361,6 +361,9 @@ class TypeParserMixin:
             elif token.value == "sensitive":
                 self.advance()
                 modifiers.append(ir.FieldModifier.SENSITIVE)
+            elif token.value == "searchable":
+                self.advance()
+                modifiers.append(ir.FieldModifier.SEARCHABLE)
             elif self.match(TokenType.EQUALS):
                 # default=value
                 self.advance()

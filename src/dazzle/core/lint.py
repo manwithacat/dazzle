@@ -8,6 +8,7 @@ from .validator import (
     validate_integrations,
     validate_ledgers,
     validate_money_fields,
+    validate_notifications,
     validate_services,
     validate_surfaces,
     validate_ux_specs,
@@ -89,6 +90,11 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
 
     # TigerBeetle ledger validation (v0.24.0)
     errors, warnings = validate_ledgers(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Notification validation (v0.34.0)
+    errors, warnings = validate_notifications(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

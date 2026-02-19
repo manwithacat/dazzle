@@ -69,6 +69,9 @@ class EntityParserMixin:
         examples: list[ir.ExampleRecord] = []
         # v0.10.3: Semantic archetype
         archetype_kind: ir.ArchetypeKind | None = None
+        # v0.34.0: Soft delete and bulk config
+        soft_delete: bool = False
+        bulk_config: ir.BulkConfig | None = None
 
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
@@ -395,6 +398,21 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # v0.34.0: Check for soft_delete flag
+            if self.match(TokenType.SOFT_DELETE):
+                self.advance()
+                soft_delete = True
+                self.skip_newlines()
+                continue
+
+            # v0.34.0: Check for bulk: block
+            if self.match(TokenType.BULK):
+                self.advance()
+                self.expect(TokenType.COLON)
+                bulk_config = self._parse_bulk_config()
+                self.skip_newlines()
+                continue
+
             # Check for transitions: block (state machines)
             if self.match(TokenType.TRANSITIONS):
                 self.advance()
@@ -509,6 +527,8 @@ class EntityParserMixin:
             constraints=constraints,
             access=access,
             audit=audit_config,
+            soft_delete=soft_delete,
+            bulk=bulk_config,
             state_machine=state_machine,
             examples=examples,
             publishes=publishes,
@@ -689,6 +709,92 @@ class EntityParserMixin:
             require_auth=True,
             condition=condition,
             effect=effect,
+        )
+
+    def _parse_bulk_config(self) -> ir.BulkConfig:
+        """
+        Parse bulk: block.
+
+        Syntax:
+            bulk: all                          # import + export, csv
+            bulk: import                       # import only
+            bulk: export                       # export only
+            bulk:
+              import: true
+              export: true
+              formats: [csv, json, xlsx]
+        """
+        # Simple forms: bulk: all / bulk: import / bulk: export
+        if self.match(TokenType.ALL):
+            self.advance()
+            return ir.BulkConfig(import_enabled=True, export_enabled=True)
+
+        if self.match(TokenType.IMPORT):
+            self.advance()
+            return ir.BulkConfig(import_enabled=True, export_enabled=False)
+
+        if self.match(TokenType.EXPORT):
+            self.advance()
+            return ir.BulkConfig(import_enabled=False, export_enabled=True)
+
+        if self.match(TokenType.TRUE):
+            self.advance()
+            return ir.BulkConfig(import_enabled=True, export_enabled=True)
+
+        # Block form
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        import_enabled = True
+        export_enabled = True
+        formats: list[ir.BulkFormat] = [ir.BulkFormat.CSV]
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COLON)
+
+            if key == "import":
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    import_enabled = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    import_enabled = False
+                else:
+                    import_enabled = True
+
+            elif key == "export":
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    export_enabled = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    export_enabled = False
+                else:
+                    export_enabled = True
+
+            elif key == "formats":
+                formats = []
+                self.expect(TokenType.LBRACKET)
+                while not self.match(TokenType.RBRACKET):
+                    fmt_token = self.expect_identifier_or_keyword()
+                    formats.append(ir.BulkFormat(fmt_token.value))
+                    if self.match(TokenType.COMMA):
+                        self.advance()
+                self.expect(TokenType.RBRACKET)
+
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.BulkConfig(
+            import_enabled=import_enabled,
+            export_enabled=export_enabled,
+            formats=formats,
         )
 
     def _parse_audit_directive(self) -> ir.AuditConfig:

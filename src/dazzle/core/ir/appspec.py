@@ -54,6 +54,7 @@ from .messaging import (
     MessageSpec,
     TemplateSpec,
 )
+from .notifications import NotificationSpec
 from .personas import PersonaSpec
 from .process import (
     ProcessSpec,
@@ -161,6 +162,8 @@ class AppSpec(BaseModel):
     slas: list[SLASpec] = Field(default_factory=list)
     # Islands (UI Islands)
     islands: list[IslandSpec] = Field(default_factory=list)
+    # Notifications (v0.34.0)
+    notifications: list[NotificationSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

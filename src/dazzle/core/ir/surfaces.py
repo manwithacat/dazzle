@@ -176,6 +176,8 @@ class SurfaceSpec(BaseModel):
     ux: UXSpec | None = None  # UX Semantic Layer extension
     access: SurfaceAccessSpec | None = None  # Auth/RBAC access control
     priority: BusinessPriority = BusinessPriority.MEDIUM
+    # v0.34.0: Search configuration for list surfaces
+    search_fields: list[str] = Field(default_factory=list)
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
 

@@ -15,7 +15,7 @@ from .archetype import ArchetypeKind
 from .computed import ComputedFieldSpec
 from .conditions import ConditionExpr
 from .eventing import PublishSpec
-from .fields import FieldSpec
+from .fields import FieldModifier, FieldSpec
 from .invariant import InvariantSpec
 from .location import SourceLocation
 from .state_machine import StateMachineSpec
@@ -150,10 +150,41 @@ class AuditConfig(BaseModel):
     Attributes:
         enabled: Whether audit logging is enabled
         operations: Operations to audit (empty = all operations)
+        include_field_changes: Whether to capture old/new field values (v0.34.0)
     """
 
     enabled: bool = False
     operations: list[PermissionKind] = Field(default_factory=list)
+    include_field_changes: bool = True  # v0.34.0: field-level diffs by default
+
+    model_config = ConfigDict(frozen=True)
+
+
+class BulkFormat(StrEnum):
+    """Supported formats for bulk import/export (v0.34.0)."""
+
+    CSV = "csv"
+    JSON = "json"
+    XLSX = "xlsx"
+
+
+class BulkConfig(BaseModel):
+    """
+    Bulk import/export configuration for an entity (v0.34.0).
+
+    Attributes:
+        import_enabled: Whether bulk import is enabled
+        export_enabled: Whether bulk export is enabled
+        formats: Supported file formats
+        import_fields: Fields to include in import (empty = all writable fields)
+        export_fields: Fields to include in export (empty = all non-sensitive fields)
+    """
+
+    import_enabled: bool = True
+    export_enabled: bool = True
+    formats: list[BulkFormat] = Field(default_factory=lambda: [BulkFormat.CSV])
+    import_fields: list[str] = Field(default_factory=list)
+    export_fields: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -217,6 +248,10 @@ class EntitySpec(BaseModel):
     constraints: list[Constraint] = Field(default_factory=list)
     access: AccessSpec | None = None
     audit: AuditConfig | None = None
+    # v0.34.0: Soft delete — archive instead of hard delete
+    soft_delete: bool = False
+    # v0.34.0: Bulk import/export
+    bulk: BulkConfig | None = None
     state_machine: StateMachineSpec | None = None
     examples: list[ExampleRecord] = Field(default_factory=list)
     # v0.18.0: Event publishing
@@ -257,6 +292,11 @@ class EntitySpec(BaseModel):
     def has_computed_fields(self) -> bool:
         """Check if this entity has computed fields."""
         return len(self.computed_fields) > 0
+
+    @property
+    def searchable_fields(self) -> list[FieldSpec]:
+        """Get fields marked as searchable (v0.34.0)."""
+        return [f for f in self.fields if FieldModifier.SEARCHABLE in f.modifiers]
 
 
 class DomainSpec(BaseModel):

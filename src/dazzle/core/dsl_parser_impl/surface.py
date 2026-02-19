@@ -55,6 +55,7 @@ class SurfaceParserMixin:
         actions = []
         ux_spec = None
         access_spec = None
+        search_fields: list[str] = []
         persona_variants: list[ir.PersonaVariant] = []
 
         while not self.match(TokenType.DEDENT):
@@ -113,6 +114,21 @@ class SurfaceParserMixin:
             elif self.match(TokenType.UX):
                 ux_spec = self.parse_ux_block()
 
+            # search: [field1, field2]
+            elif self.match(TokenType.SEARCH):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.LBRACKET):
+                    self.advance()
+                    while not self.match(TokenType.RBRACKET):
+                        search_fields.append(self.expect_identifier_or_keyword().value)
+                        if self.match(TokenType.COMMA):
+                            self.advance()
+                    self.expect(TokenType.RBRACKET)
+                else:
+                    search_fields.append(self.expect_identifier_or_keyword().value)
+                self.skip_newlines()
+
             # for persona_name: (persona variant at surface level)
             elif self.match(TokenType.FOR):
                 variant = self.parse_persona_variant()
@@ -151,6 +167,7 @@ class SurfaceParserMixin:
             actions=actions,
             ux=ux_spec,
             access=access_spec,
+            search_fields=search_fields,
             source=loc,
         )
 

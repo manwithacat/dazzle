@@ -120,6 +120,7 @@ class FieldModifier(StrEnum):
     AUTO_ADD = "auto_add"
     AUTO_UPDATE = "auto_update"
     SENSITIVE = "sensitive"
+    SEARCHABLE = "searchable"  # v0.34.0: Include in full-text search
 
 
 class FieldSpec(BaseModel):
@@ -173,6 +174,11 @@ class FieldSpec(BaseModel):
     def is_sensitive(self) -> bool:
         """Check if field contains sensitive data (PII, credentials, etc.)."""
         return FieldModifier.SENSITIVE in self.modifiers
+
+    @property
+    def is_searchable(self) -> bool:
+        """Check if field is included in full-text search (v0.34.0)."""
+        return FieldModifier.SEARCHABLE in self.modifiers
 
 
 def _rebuild_field_spec() -> None:

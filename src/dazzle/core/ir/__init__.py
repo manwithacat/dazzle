@@ -74,6 +74,8 @@ from .domain import (
     AccessSpec,
     AuditConfig,
     AuthContext,
+    BulkConfig,
+    BulkFormat,
     Constraint,
     ConstraintKind,
     DomainSpec,
@@ -416,6 +418,15 @@ from .money import (
     to_money,
 )
 
+# Notifications (v0.34.0)
+from .notifications import (
+    NotificationChannel,
+    NotificationPreference,
+    NotificationRecipient,
+    NotificationSpec,
+    NotificationTrigger,
+)
+
 # Personas (v0.8.5)
 from .personas import (
     PersonaSpec,
@@ -607,8 +618,9 @@ from .ux import (
     UXSpec,
 )
 
-# Views (v0.25.0)
+# Views (v0.25.0, v0.34.0 date-range reporting)
 from .views import (
+    TimeBucket,
     ViewFieldSpec,
     ViewSpec,
 )
@@ -656,6 +668,8 @@ __all__ = [
     "Comparison",
     "ConditionExpr",
     # Domain
+    "BulkConfig",
+    "BulkFormat",
     "ConstraintKind",
     "Constraint",
     "AuthContext",
@@ -1002,9 +1016,16 @@ __all__ = [
     # Shared Enums (v0.25.0)
     "EnumSpec",
     "EnumValueSpec",
-    # Views (v0.25.0)
+    # Views (v0.25.0, v0.34.0 date-range)
+    "TimeBucket",
     "ViewFieldSpec",
     "ViewSpec",
+    # Notifications (v0.34.0)
+    "NotificationChannel",
+    "NotificationPreference",
+    "NotificationRecipient",
+    "NotificationSpec",
+    "NotificationTrigger",
     # Webhooks (v0.25.0)
     "WebhookAuthMethod",
     "WebhookAuthSpec",
