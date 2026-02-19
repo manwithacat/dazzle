@@ -14,7 +14,12 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
-from dazzle_back.runtime.auth import AuthMiddleware, AuthStore, create_auth_routes
+from dazzle_back.runtime.auth import (
+    AuthMiddleware,
+    AuthStore,
+    create_2fa_routes,
+    create_auth_routes,
+)
 from dazzle_back.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle_back.runtime.file_storage import FileService
 from dazzle_back.runtime.migrations import MigrationPlan, auto_migrate
@@ -1477,6 +1482,21 @@ class DazzleBackendApp:
         )
         assert self._app is not None
         self._app.include_router(auth_router)
+
+        # 2FA routes
+        twofa_router = create_2fa_routes(
+            self._auth_store,
+            database_url=self._database_url,
+        )
+        self._app.include_router(twofa_router)
+
+        # SES webhook (if SES is configured)
+        try:
+            from dazzle_back.channels.ses_webhooks import register_ses_webhook
+
+            register_ses_webhook(self._app)
+        except Exception:
+            pass  # SES webhooks are optional
 
         from dazzle_back.runtime.auth import (
             create_auth_dependency,

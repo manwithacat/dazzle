@@ -1,0 +1,115 @@
+{% extends "site/site_base.html" %}
+
+{% block title %}Two-Factor Authentication - {{ product_name }}{% endblock %}
+
+{% block body %}
+<body class="dz-site dz-auth-page bg-base-200" hx-history="false">
+  <div class="dz-auth-container">
+    <div class="card bg-base-100 shadow-xl dz-auth-card">
+      <div class="card-body">
+        <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{{ product_name }}</a>
+        <h1 class="card-title text-2xl justify-center">Verify Your Identity</h1>
+
+        <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
+
+        <p class="text-center text-sm text-base-content/70 mb-4">
+          Enter the verification code to continue.
+        </p>
+
+        <form id="dz-2fa-form" method="POST">
+          <input type="hidden" id="session_token" name="session_token" value="{{ session_token }}">
+          <input type="hidden" id="method" name="method" value="{{ default_method }}">
+
+          <div class="form-control w-full">
+            <label class="label" for="code">
+              <span class="label-text">Verification Code</span>
+            </label>
+            <input type="text" id="code" name="code" required autocomplete="one-time-code"
+                   inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                   class="input input-bordered w-full text-center text-2xl tracking-widest"
+                   placeholder="000000">
+          </div>
+
+          <button type="submit" class="btn btn-primary w-full mt-4">Verify</button>
+        </form>
+
+        {% if "email_otp" in methods %}
+        <div class="text-center mt-4">
+          <button id="dz-send-otp" class="btn btn-ghost btn-sm">Send code to email</button>
+        </div>
+        {% endif %}
+
+        <div class="divider text-xs">OR</div>
+
+        <p class="text-center text-sm">
+          <a href="#" id="dz-use-recovery" class="link link-secondary">Use a recovery code</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(function() {
+  const form = document.getElementById('dz-2fa-form');
+  const errorDiv = document.getElementById('dz-auth-error');
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    errorDiv.classList.add('hidden');
+
+    const code = document.getElementById('code').value;
+    const sessionToken = document.getElementById('session_token').value;
+    const method = document.getElementById('method').value;
+
+    try {
+      const resp = await fetch('/auth/2fa/verify', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({code, session_token: sessionToken, method})
+      });
+      const data = await resp.json();
+
+      if (resp.ok) {
+        window.location.href = data.redirect_url || '/app';
+      } else {
+        errorDiv.textContent = data.detail || 'Invalid code';
+        errorDiv.classList.remove('hidden');
+      }
+    } catch (err) {
+      errorDiv.textContent = 'Network error. Please try again.';
+      errorDiv.classList.remove('hidden');
+    }
+  });
+
+  const sendOtp = document.getElementById('dz-send-otp');
+  if (sendOtp) {
+    sendOtp.addEventListener('click', async function() {
+      const sessionToken = document.getElementById('session_token').value;
+      document.getElementById('method').value = 'email_otp';
+
+      await fetch('/auth/2fa/challenge', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({session_token: sessionToken, method: 'email_otp', code: ''})
+      });
+      sendOtp.textContent = 'Code sent!';
+      sendOtp.disabled = true;
+      setTimeout(() => { sendOtp.textContent = 'Resend code'; sendOtp.disabled = false; }, 30000);
+    });
+  }
+
+  document.getElementById('dz-use-recovery').addEventListener('click', function(e) {
+    e.preventDefault();
+    document.getElementById('method').value = 'recovery';
+    document.querySelector('label[for="code"] .label-text').textContent = 'Recovery Code';
+    document.getElementById('code').maxLength = 9;
+    document.getElementById('code').pattern = '[A-Za-z0-9-]*';
+    document.getElementById('code').inputMode = 'text';
+    document.getElementById('code').placeholder = 'XXXX-XXXX';
+  });
+})();
+</script>
+{% endblock %}

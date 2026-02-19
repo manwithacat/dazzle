@@ -11,7 +11,7 @@ Adapters by channel kind:
 """
 
 from .base import BaseChannelAdapter, QueueAdapter, SendResult, StreamAdapter
-from .email import FileEmailAdapter, MailpitAdapter
+from .email import FileEmailAdapter, MailpitAdapter, SESAdapter
 from .queue import InMemoryQueueAdapter, RabbitMQAdapter
 from .stream import InMemoryStreamAdapter, KafkaAdapter, RedisStreamAdapter
 
@@ -24,6 +24,7 @@ __all__ = [
     # Email adapters
     "FileEmailAdapter",
     "MailpitAdapter",
+    "SESAdapter",
     # Queue adapters
     "RabbitMQAdapter",
     "InMemoryQueueAdapter",

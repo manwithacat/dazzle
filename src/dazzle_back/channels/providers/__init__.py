@@ -11,6 +11,7 @@ from .email import (
     FileEmailDetector,
     MailpitDetector,
     SendGridDetector,
+    SESDetector,
 )
 from .queue import (
     InMemoryQueueDetector,
@@ -25,6 +26,7 @@ __all__ = [
     # Email
     "MailpitDetector",
     "SendGridDetector",
+    "SESDetector",
     "FileEmailDetector",
     # Queue
     "RabbitMQDetector",

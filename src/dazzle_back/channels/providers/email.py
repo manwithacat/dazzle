@@ -279,6 +279,107 @@ class SendGridDetector(ProviderDetector):
             return False
 
 
+class SESDetector(ProviderDetector):
+    """Detect Amazon SES for production email.
+
+    Detection order:
+    1. Explicit env var DAZZLE_EMAIL_PROVIDER=ses
+    2. AWS_SES_ENABLED=true or DAZZLE_SES_FROM_ADDRESS set
+    3. Verify AWS credentials available
+    """
+
+    @property
+    def provider_name(self) -> str:
+        return "ses"
+
+    @property
+    def channel_kind(self) -> str:
+        return "email"
+
+    @property
+    def priority(self) -> int:
+        return 40  # Between Mailpit (10) and SendGrid (50)
+
+    async def detect(self) -> DetectionResult | None:
+        """Detect SES via environment variables."""
+        # 1. Check explicit provider setting
+        if get_env_var("DAZZLE_EMAIL_PROVIDER") == "ses":
+            return await self._build_result("explicit")
+
+        # 2. Check SES-specific env vars
+        if (get_env_var("AWS_SES_ENABLED") or "").lower() == "true":
+            return await self._build_result("env")
+
+        from_address = get_env_var("DAZZLE_SES_FROM_ADDRESS")
+        if from_address:
+            return await self._build_result("env")
+
+        return None
+
+    async def _build_result(self, method: str) -> DetectionResult:
+        """Build detection result with SES configuration."""
+        from dazzle_back.runtime.aws_config import get_aws_config
+
+        config = get_aws_config()
+        ses_region = get_env_var("DAZZLE_SES_REGION") or config.region
+        from_address = get_env_var("DAZZLE_SES_FROM_ADDRESS", "noreply@example.com")
+
+        metadata: dict[str, str] = {
+            "region": ses_region,
+            "from_address": from_address or "noreply@example.com",
+        }
+        config_set = get_env_var("DAZZLE_SES_CONFIGURATION_SET")
+        if config_set:
+            metadata["configuration_set"] = config_set
+
+        result = DetectionResult(
+            provider_name="ses",
+            status=ProviderStatus.AVAILABLE,
+            connection_url=None,
+            api_url=f"https://email.{ses_region}.amazonaws.com",
+            management_url="https://console.aws.amazon.com/ses/",
+            detection_method=method,
+            metadata=metadata,
+        )
+
+        # Verify AWS credentials are available
+        if not config.access_key_id:
+            result.status = ProviderStatus.DEGRADED
+            result.error = "AWS credentials not configured (may use IAM role)"
+
+        return result
+
+    async def health_check(self, result: DetectionResult) -> bool:
+        """Verify SES access by calling get_account."""
+        try:
+            from dazzle_back.runtime.aws_config import get_aioboto3_session, get_aws_config
+
+            config = get_aws_config()
+            ses_region = get_env_var("DAZZLE_SES_REGION") or config.region
+            session = get_aioboto3_session()
+
+            kwargs = config.to_boto3_kwargs()
+            kwargs["region_name"] = ses_region
+
+            async with session.client("sesv2", **kwargs) as ses:
+                response = await ses.get_account()
+                # Check if sending is enabled
+                send_quota = response.get("SendQuota", {})
+                if send_quota.get("Max24HourSend", 0) == 0:
+                    result.error = "SES sending quota is zero"
+                    result.status = ProviderStatus.DEGRADED
+                    return True  # Account exists but limited
+
+                return True
+
+        except ImportError:
+            logger.debug("aioboto3 not installed, skipping SES health check")
+            return True  # Assume available if deps not installed yet
+        except Exception as e:
+            logger.debug(f"SES health check failed: {e}")
+            return False
+
+
 class FileEmailDetector(ProviderDetector):
     """File-based email provider (fallback).
 

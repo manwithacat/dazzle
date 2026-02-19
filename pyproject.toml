@@ -132,6 +132,11 @@ mobile_full = [
     "httpx>=0.25.0",
     "firebase-admin>=6.2.0",
 ]
+# AWS services (S3 storage, SES email)
+aws = [
+    "aioboto3>=13.0",
+    "boto3>=1.35",
+]
 
 [project.urls]
 Homepage = "https://github.com/manwithacat/dazzle"

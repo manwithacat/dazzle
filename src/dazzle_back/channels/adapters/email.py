@@ -145,6 +145,177 @@ class MailpitAdapter(EmailAdapter):
             return False
 
 
+class SESAdapter(EmailAdapter):
+    """Adapter for Amazon SES v2 email service.
+
+    Sends emails via SES v2 API with support for transactional and bulk sends.
+    Handles to, cc, bcc, reply_to, and attachments.
+    """
+
+    def __init__(self, detection_result: DetectionResult):
+        super().__init__(detection_result)
+        self._from_address = detection_result.metadata.get("from_address", "noreply@example.com")
+        self._config_set = detection_result.metadata.get("configuration_set")
+        self._ses_region = detection_result.metadata.get("region", "us-east-1")
+
+    @property
+    def provider_name(self) -> str:
+        return "ses"
+
+    async def initialize(self) -> None:
+        """Initialize the SES adapter."""
+        await super().initialize()
+        logger.info(
+            f"SES adapter initialized (region={self._ses_region}, from={self._from_address})"
+        )
+
+    def _get_ses_client_kwargs(self) -> dict[str, Any]:
+        """Get kwargs for creating an SES v2 client."""
+        from dazzle_back.runtime.aws_config import get_aws_config
+
+        config = get_aws_config()
+        kwargs = config.to_boto3_kwargs()
+        kwargs["region_name"] = self._ses_region
+        return kwargs
+
+    async def send(self, message: OutboxMessage) -> SendResult:
+        """Send email via SES v2 API.
+
+        Args:
+            message: Outbox message to send
+
+        Returns:
+            SendResult with status
+        """
+        try:
+            from dazzle_back.runtime.aws_config import get_aioboto3_session
+        except ImportError:
+            return SendResult(
+                status=SendStatus.FAILED,
+                error="aioboto3 required for SES. Install with: pip install dazzle-dsl[aws]",
+            )
+
+        email_data = self.build_email(message)
+
+        try:
+            start = time.monotonic()
+            session = get_aioboto3_session()
+            kwargs = self._get_ses_client_kwargs()
+
+            async with session.client("sesv2", **kwargs) as ses:
+                # Build destination
+                destination: dict[str, Any] = {"ToAddresses": [email_data["to"]]}
+                if email_data.get("cc"):
+                    destination["CcAddresses"] = email_data["cc"]
+                if email_data.get("bcc"):
+                    destination["BccAddresses"] = email_data["bcc"]
+
+                # Build email content
+                body: dict[str, Any] = {}
+                if email_data.get("body"):
+                    body["Text"] = {"Data": email_data["body"], "Charset": "UTF-8"}
+                if email_data.get("html_body"):
+                    body["Html"] = {"Data": email_data["html_body"], "Charset": "UTF-8"}
+
+                send_kwargs: dict[str, Any] = {
+                    "FromEmailAddress": email_data.get("from", self._from_address),
+                    "Destination": destination,
+                    "Content": {
+                        "Simple": {
+                            "Subject": {
+                                "Data": email_data["subject"],
+                                "Charset": "UTF-8",
+                            },
+                            "Body": body,
+                        }
+                    },
+                }
+
+                if email_data.get("reply_to"):
+                    send_kwargs["ReplyToAddresses"] = [email_data["reply_to"]]
+
+                if self._config_set:
+                    send_kwargs["ConfigurationSetName"] = self._config_set
+
+                response = await ses.send_email(**send_kwargs)
+
+            latency = (time.monotonic() - start) * 1000
+            ses_message_id = response.get("MessageId", "")
+
+            logger.info(f"Email sent via SES: {email_data['to']} - {email_data['subject']}")
+
+            return SendResult(
+                status=SendStatus.SUCCESS,
+                message_id=ses_message_id,
+                latency_ms=latency,
+                provider_response={"ses_message_id": ses_message_id},
+            )
+
+        except Exception as e:
+            logger.error(f"SES send error: {e}")
+            error_str = str(e)
+
+            # Check for throttling
+            if "Throttling" in error_str or "TooManyRequests" in error_str:
+                return SendResult(
+                    status=SendStatus.RATE_LIMITED,
+                    error=error_str,
+                )
+
+            return SendResult(
+                status=SendStatus.FAILED,
+                error=error_str,
+            )
+
+    async def send_bulk(self, messages: list[OutboxMessage]) -> list[SendResult]:
+        """Send multiple emails via SES v2 bulk API.
+
+        Groups messages into batches of 50 (SES limit per call).
+
+        Args:
+            messages: List of outbox messages to send
+
+        Returns:
+            List of SendResult, one per message
+        """
+        results: list[SendResult] = []
+        batch_size = 50
+
+        for i in range(0, len(messages), batch_size):
+            batch = messages[i : i + batch_size]
+            batch_results = await self._send_batch(batch)
+            results.extend(batch_results)
+
+        return results
+
+    async def _send_batch(self, messages: list[OutboxMessage]) -> list[SendResult]:
+        """Send a batch of messages via SES bulk API."""
+        # Fall back to individual sends for simplicity
+        # SES v2 SendBulkEmail requires templates; for non-templated we send individually
+        results: list[SendResult] = []
+        for msg in messages:
+            result = await self.send(msg)
+            results.append(result)
+        return results
+
+    async def health_check(self) -> bool:
+        """Check if SES is accessible by calling get_account."""
+        try:
+            from dazzle_back.runtime.aws_config import get_aioboto3_session
+
+            session = get_aioboto3_session()
+            kwargs = self._get_ses_client_kwargs()
+
+            async with session.client("sesv2", **kwargs) as ses:
+                response = await ses.get_account()
+                # Check sending is not paused
+                return bool(response.get("SendingEnabled", True))
+
+        except Exception:
+            logger.debug("SES health check failed", exc_info=True)
+            return False
+
+
 class FileEmailAdapter(EmailAdapter):
     """File-based email adapter (fallback).
 

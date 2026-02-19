@@ -1,0 +1,159 @@
+{% extends "site/site_base.html" %}
+
+{% block title %}Set Up Two-Factor Authentication - {{ product_name }}{% endblock %}
+
+{% block body %}
+<body class="dz-site dz-auth-page bg-base-200">
+  <div class="dz-auth-container">
+    <div class="card bg-base-100 shadow-xl dz-auth-card" style="max-width: 480px;">
+      <div class="card-body">
+        <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{{ product_name }}</a>
+        <h1 class="card-title text-2xl justify-center">Set Up 2FA</h1>
+
+        <div id="dz-auth-error" class="alert alert-error hidden" role="alert"></div>
+        <div id="dz-auth-success" class="alert alert-success hidden" role="alert"></div>
+
+        <!-- TOTP Setup -->
+        <div id="dz-totp-section">
+          <h2 class="text-lg font-semibold mt-4">Authenticator App</h2>
+          <p class="text-sm text-base-content/70 mb-2">
+            Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)
+          </p>
+
+          <div id="dz-qr-container" class="flex justify-center my-4">
+            <button id="dz-setup-totp" class="btn btn-outline btn-primary">Generate QR Code</button>
+          </div>
+
+          <div id="dz-totp-verify" class="hidden">
+            <p class="text-sm text-base-content/70 mb-2">
+              Or enter the secret manually: <code id="dz-totp-secret" class="text-xs"></code>
+            </p>
+
+            <form id="dz-totp-form">
+              <div class="form-control w-full">
+                <label class="label" for="totp_code">
+                  <span class="label-text">Enter code from app</span>
+                </label>
+                <input type="text" id="totp_code" name="code" required
+                       inputmode="numeric" pattern="[0-9]*" maxlength="6"
+                       class="input input-bordered w-full text-center text-2xl tracking-widest"
+                       placeholder="000000">
+              </div>
+              <button type="submit" class="btn btn-primary w-full mt-4">Verify &amp; Enable</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Email OTP Setup -->
+        <div id="dz-email-otp-section">
+          <h2 class="text-lg font-semibold">Email Verification</h2>
+          <p class="text-sm text-base-content/70 mb-2">
+            Receive a one-time code via email when you sign in.
+          </p>
+          <button id="dz-enable-email-otp" class="btn btn-outline w-full">Enable Email OTP</button>
+        </div>
+
+        <!-- Recovery Codes -->
+        <div id="dz-recovery-section" class="hidden mt-4">
+          <div class="alert alert-warning">
+            <div>
+              <h3 class="font-bold">Save Your Recovery Codes</h3>
+              <p class="text-sm">Store these codes in a safe place. Each code can only be used once.</p>
+            </div>
+          </div>
+          <div id="dz-recovery-codes" class="grid grid-cols-2 gap-2 mt-4 font-mono text-sm"></div>
+        </div>
+
+        <div class="mt-6">
+          <a href="/app" class="btn btn-ghost w-full">Back to App</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+(function() {
+  const errorDiv = document.getElementById('dz-auth-error');
+  const successDiv = document.getElementById('dz-auth-success');
+
+  function showError(msg) {
+    errorDiv.textContent = msg;
+    errorDiv.classList.remove('hidden');
+    successDiv.classList.add('hidden');
+  }
+
+  function showSuccess(msg) {
+    successDiv.textContent = msg;
+    successDiv.classList.remove('hidden');
+    errorDiv.classList.add('hidden');
+  }
+
+  function showRecoveryCodes(codes) {
+    const container = document.getElementById('dz-recovery-codes');
+    container.replaceChildren();
+    codes.forEach(function(code) {
+      const badge = document.createElement('div');
+      badge.className = 'badge badge-lg badge-outline p-3';
+      badge.textContent = code;
+      container.appendChild(badge);
+    });
+    document.getElementById('dz-recovery-section').classList.remove('hidden');
+  }
+
+  // TOTP setup
+  document.getElementById('dz-setup-totp').addEventListener('click', async function() {
+    try {
+      const resp = await fetch('/auth/2fa/setup/totp', {method: 'POST'});
+      const data = await resp.json();
+      if (!resp.ok) { showError(data.detail || 'Setup failed'); return; }
+
+      document.getElementById('dz-totp-secret').textContent = data.secret;
+      const qrContainer = document.getElementById('dz-qr-container');
+      qrContainer.replaceChildren();
+      const img = document.createElement('img');
+      img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.uri);
+      img.alt = 'QR Code';
+      img.width = 200;
+      img.height = 200;
+      qrContainer.appendChild(img);
+      document.getElementById('dz-totp-verify').classList.remove('hidden');
+    } catch (err) { showError('Network error'); }
+  });
+
+  // TOTP verify
+  document.getElementById('dz-totp-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const code = document.getElementById('totp_code').value;
+    try {
+      const resp = await fetch('/auth/2fa/verify/totp', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({code: code})
+      });
+      const data = await resp.json();
+      if (!resp.ok) { showError(data.detail || 'Invalid code'); return; }
+
+      showSuccess('TOTP enabled successfully!');
+      if (data.recovery_codes) { showRecoveryCodes(data.recovery_codes); }
+    } catch (err) { showError('Network error'); }
+  });
+
+  // Email OTP enable
+  document.getElementById('dz-enable-email-otp').addEventListener('click', async function() {
+    try {
+      const resp = await fetch('/auth/2fa/setup/email-otp', {method: 'POST'});
+      const data = await resp.json();
+      if (!resp.ok) { showError(data.detail || 'Setup failed'); return; }
+      showSuccess('Email OTP enabled!');
+      this.textContent = 'Enabled';
+      this.disabled = true;
+    } catch (err) { showError('Network error'); }
+  });
+})();
+</script>
+{% endblock %}

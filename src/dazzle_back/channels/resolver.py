@@ -28,6 +28,7 @@ from .providers import (
     RabbitMQDetector,
     RedisDetector,
     SendGridDetector,
+    SESDetector,
 )
 
 if TYPE_CHECKING:
@@ -94,6 +95,7 @@ class ChannelResolver:
             self._detectors = {
                 "email": [
                     MailpitDetector(),
+                    SESDetector(),
                     SendGridDetector(),
                     FileEmailDetector(),
                 ],

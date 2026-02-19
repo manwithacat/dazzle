@@ -27,6 +27,35 @@ class SecurityProfile(StrEnum):
     STRICT = "strict"
 
 
+class TwoFactorMethod(StrEnum):
+    """Supported two-factor authentication methods."""
+
+    EMAIL_OTP = "email_otp"
+    TOTP = "totp"
+
+
+class TwoFactorConfig(BaseModel):
+    """Two-factor authentication configuration.
+
+    Attributes:
+        enabled: Whether 2FA is available for users
+        methods: Allowed 2FA methods
+        otp_length: Number of digits in OTP codes
+        otp_expiry_seconds: How long OTP codes remain valid
+        recovery_code_count: Number of recovery codes to generate
+        enforce_for_roles: Roles that must enable 2FA (empty = optional for all)
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    enabled: bool = False
+    methods: list[TwoFactorMethod] = [TwoFactorMethod.EMAIL_OTP, TwoFactorMethod.TOTP]
+    otp_length: int = 6
+    otp_expiry_seconds: int = 300
+    recovery_code_count: int = 8
+    enforce_for_roles: list[str] = []
+
+
 class SecurityConfig(BaseModel):
     """
     Security configuration for the application.
