@@ -66,6 +66,7 @@ class TokenType(Enum):
     CONTEXT = "context"
     PREFILL = "prefill"
     SAVES_TO = "saves_to"
+    CREATES = "creates"
 
     # Integration Keywords
     OPERATION = "operation"
@@ -492,6 +493,7 @@ class TokenType(Enum):
     DOT = "."
     SLASH = "/"
     QUESTION = "?"
+    DOLLAR = "$"
 
     # Arithmetic operators (for aggregate expressions)
     PLUS = "+"
@@ -533,6 +535,7 @@ _NON_KEYWORD_TOKENS = {
     TokenType.DOT,
     TokenType.SLASH,
     TokenType.QUESTION,
+    TokenType.DOLLAR,
     TokenType.PLUS,
     TokenType.MINUS,
     TokenType.STAR,
@@ -934,6 +937,10 @@ class Lexer:
             elif ch == "%":
                 self.advance()
                 self.tokens.append(Token(TokenType.PERCENT, "%", token_line, token_col))
+
+            elif ch == "$":
+                self.advance()
+                self.tokens.append(Token(TokenType.DOLLAR, "$", token_line, token_col))
 
             else:
                 raise make_parse_error(

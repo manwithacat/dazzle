@@ -454,6 +454,19 @@ class ServiceParserMixin:
 
         self.expect(TokenType.DEDENT)
 
+        # Auto-add context vars for entity_ref steps with creates (saves_to)
+        existing_var_names = {v.name for v in context_vars}
+        for step in steps:
+            if step.entity_ref and step.saves_to:
+                parts = step.saves_to.split(".", 1)
+                if len(parts) == 2 and parts[0] == "context":
+                    var_name = parts[1]
+                    if var_name not in existing_var_names:
+                        context_vars.append(
+                            ir.FlowContextVar(name=var_name, entity_ref=step.entity_ref)
+                        )
+                        existing_var_names.add(var_name)
+
         return ir.ExperienceSpec(
             name=name,
             title=title,
@@ -475,14 +488,8 @@ class ServiceParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # kind: surface|process|integration
-        self.expect(TokenType.KIND)
-        self.expect(TokenType.COLON)
-        kind_token = self.expect_identifier_or_keyword()
-        kind = ir.StepKind(kind_token.value)
-        self.skip_newlines()
-
         surface = None
+        entity_ref = None
         integration = None
         action = None
         access_spec = None
@@ -490,27 +497,78 @@ class ServiceParserMixin:
         prefills: list[ir.StepPrefill] = []
         when: str | None = None
 
-        # Parse step target based on kind
-        if kind == ir.StepKind.SURFACE:
-            self.expect(TokenType.SURFACE)
-            surface = self.expect(TokenType.IDENTIFIER).value
+        # entity: EntityName (shorthand — infers kind=surface, auto-generates form)
+        if self.match(TokenType.ENTITY):
+            self.advance()
+            self.expect(TokenType.COLON)
+            entity_ref = self.expect(TokenType.IDENTIFIER).value
+            kind = ir.StepKind.SURFACE
+            self.skip_newlines()
+        else:
+            # kind: surface|process|integration (existing syntax)
+            self.expect(TokenType.KIND)
+            self.expect(TokenType.COLON)
+            kind_token = self.expect_identifier_or_keyword()
+            kind = ir.StepKind(kind_token.value)
             self.skip_newlines()
 
-        elif kind == ir.StepKind.INTEGRATION:
-            self.expect(TokenType.INTEGRATION)
-            integration = self.expect(TokenType.IDENTIFIER).value
-            self.expect(TokenType.ACTION)
-            action = self.expect(TokenType.IDENTIFIER).value
+            # Parse step target based on kind
+            if kind == ir.StepKind.SURFACE:
+                self.expect(TokenType.SURFACE)
+                surface = self.expect(TokenType.IDENTIFIER).value
+                self.skip_newlines()
+
+            elif kind == ir.StepKind.INTEGRATION:
+                self.expect(TokenType.INTEGRATION)
+                integration = self.expect(TokenType.IDENTIFIER).value
+                self.expect(TokenType.ACTION)
+                action = self.expect(TokenType.IDENTIFIER).value
+                self.skip_newlines()
+
+        # creates: varname (shorthand for saves_to: context.varname)
+        if self.match(TokenType.CREATES):
+            self.advance()
+            self.expect(TokenType.COLON)
+            creates_var = self.expect(TokenType.IDENTIFIER).value
+            saves_to = f"context.{creates_var}"
             self.skip_newlines()
 
-        # saves_to: context.varname (optional)
+        # defaults: block (shorthand for prefill with $var → context.var.id)
+        if self.match(TokenType.DEFAULTS):
+            self.advance()
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+            self.expect(TokenType.INDENT)
+
+            while not self.match(TokenType.DEDENT):
+                self.skip_newlines()
+                if self.match(TokenType.DEDENT):
+                    break
+                field_name = self.expect_identifier_or_keyword().value
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.STRING):
+                    expr = f'"{self.advance().value}"'
+                elif self.match(TokenType.DOLLAR):
+                    # $varname → context.varname.id
+                    self.advance()
+                    var_name = self.expect(TokenType.IDENTIFIER).value
+                    expr = f"context.{var_name}.id"
+                else:
+                    expr = self._parse_dotted_path()
+                prefills.append(ir.StepPrefill(field=field_name, expression=expr))
+                self.skip_newlines()
+
+            self.expect(TokenType.DEDENT)
+            self.skip_newlines()
+
+        # saves_to: context.varname (optional, existing syntax)
         if self.match(TokenType.SAVES_TO):
             self.advance()
             self.expect(TokenType.COLON)
             saves_to = self._parse_dotted_path()
             self.skip_newlines()
 
-        # prefill: block (optional)
+        # prefill: block (optional, existing syntax)
         if self.match(TokenType.PREFILL):
             self.advance()
             self.expect(TokenType.COLON)
@@ -583,6 +641,7 @@ class ServiceParserMixin:
             name=name,
             kind=kind,
             surface=surface,
+            entity_ref=entity_ref,
             integration=integration,
             action=action,
             saves_to=saves_to,

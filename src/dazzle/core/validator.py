@@ -506,10 +506,10 @@ def validate_experiences(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         for step in experience.steps:
             # Validate step kind matches target
             if step.kind == ir.StepKind.SURFACE:
-                if not step.surface:
+                if not step.surface and not step.entity_ref:
                     errors.append(
                         f"Experience '{experience.name}' step '{step.name}' "
-                        f"has kind 'surface' but no surface target"
+                        f"has kind 'surface' but no surface or entity target"
                     )
             elif step.kind == ir.StepKind.INTEGRATION:
                 if not step.integration or not step.action:

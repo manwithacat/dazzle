@@ -86,6 +86,7 @@ class ExperienceStep(BaseModel):
     name: str
     kind: StepKind
     surface: str | None = None
+    entity_ref: str | None = None  # Direct entity reference (auto-generates form)
     integration: str | None = None
     action: str | None = None
     saves_to: str | None = None  # e.g. "context.company"

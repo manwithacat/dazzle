@@ -619,6 +619,8 @@ def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> 
 
                 if step.kind == ir.StepKind.SURFACE and step.surface:
                     target_module = symbols.symbol_sources.get(step.surface)
+                elif step.kind == ir.StepKind.SURFACE and step.entity_ref:
+                    target_module = symbols.symbol_sources.get(step.entity_ref)
                 elif step.kind == ir.StepKind.INTEGRATION and step.integration:
                     target_module = symbols.symbol_sources.get(step.integration)
 
@@ -941,6 +943,11 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     errors.append(
                         f"Experience '{experience_name}' step '{step.name}' references "
                         f"unknown surface '{step.surface}'"
+                    )
+                if step.entity_ref and step.entity_ref not in symbols.entities:
+                    errors.append(
+                        f"Experience '{experience_name}' step '{step.name}' references "
+                        f"unknown entity '{step.entity_ref}'"
                     )
             elif step.kind == ir.StepKind.INTEGRATION:
                 if step.integration and step.integration not in symbols.integrations:

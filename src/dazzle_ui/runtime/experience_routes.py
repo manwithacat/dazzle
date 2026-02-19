@@ -416,14 +416,18 @@ def create_experience_routes(
         effective_backend_url = _resolve_backend_url(request, backend_url)
         _cookies = dict(request.cookies) if request.cookies else None
 
-        if step_spec.kind == StepKind.SURFACE and step_spec.surface and has_matching_transition:
-            surface = None
-            for s in appspec.surfaces:
-                if s.name == step_spec.surface:
-                    surface = s
-                    break
+        if step_spec.kind == StepKind.SURFACE and has_matching_transition:
+            # Resolve entity_ref from either the surface or the step directly
+            entity_ref: str | None = None
+            if step_spec.surface:
+                for s in appspec.surfaces:
+                    if s.name == step_spec.surface:
+                        entity_ref = s.entity_ref
+                        break
+            elif step_spec.entity_ref:
+                entity_ref = step_spec.entity_ref
 
-            if surface and surface.entity_ref and event == "success":
+            if entity_ref and event == "success":
                 # Read request body
                 try:
                     body = await request.json()
@@ -432,7 +436,7 @@ def create_experience_routes(
 
                 success, resp_data = await _proxy_to_backend(
                     effective_backend_url,
-                    surface.entity_ref,
+                    entity_ref,
                     body,
                     _cookies,
                 )
@@ -467,7 +471,7 @@ def create_experience_routes(
                 # Store the created entity ID in the data map (backward compat)
                 new_data = {**state.data}
                 if "id" in resp_data:
-                    new_data[f"{surface.entity_ref}_id"] = resp_data["id"]
+                    new_data[f"{entity_ref}_id"] = resp_data["id"]
                 # Full entity capture via saves_to
                 if step_spec.saves_to:
                     parts = step_spec.saves_to.split(".", 1)

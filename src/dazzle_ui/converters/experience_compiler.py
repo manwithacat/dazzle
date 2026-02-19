@@ -12,6 +12,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from dazzle.core.ir.experiences import StepKind
+from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle_ui.converters.template_compiler import compile_surface_to_context
 from dazzle_ui.runtime.template_context import (
     ExperienceContext,
@@ -22,7 +23,7 @@ from dazzle_ui.runtime.template_context import (
 from dazzle_ui.utils.expression_eval import evaluate_simple_condition, resolve_prefill_expression
 
 if TYPE_CHECKING:
-    from dazzle.core.ir import AppSpec, EntitySpec, ExperienceSpec, SurfaceSpec
+    from dazzle.core.ir import AppSpec, EntitySpec, ExperienceSpec
     from dazzle_ui.runtime.experience_state import ExperienceState
 
 logger = logging.getLogger(__name__)
@@ -114,10 +115,26 @@ def compile_experience_context(
 
     # Compile the inner page context for the current step's surface
     page_context: PageContext | None = None
-    if current_step and current_step.kind == StepKind.SURFACE and current_step.surface:
-        surface = _find_surface(appspec, current_step.surface)
+    if current_step and current_step.kind == StepKind.SURFACE:
+        surface: SurfaceSpec | None = None
+        entity = None
+
+        if current_step.surface:
+            # Existing path: step references a named surface
+            surface = _find_surface(appspec, current_step.surface)
+            if surface:
+                entity = _find_entity(appspec, surface.entity_ref) if surface.entity_ref else None
+        elif current_step.entity_ref:
+            # New path: step references an entity directly — synthesize a surface
+            entity = _find_entity(appspec, current_step.entity_ref)
+            if entity:
+                surface = SurfaceSpec(
+                    name=f"_auto_{current_step.name}",
+                    entity_ref=current_step.entity_ref,
+                    mode=SurfaceMode.CREATE,
+                )
+
         if surface:
-            entity = _find_entity(appspec, surface.entity_ref) if surface.entity_ref else None
             page_context = compile_surface_to_context(surface, entity, app_prefix=app_prefix)
             # Rewrite form action URL to point to the experience transition endpoint
             if page_context.form:
