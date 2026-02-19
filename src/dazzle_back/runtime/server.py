@@ -1078,6 +1078,16 @@ class DazzleBackendApp:
             # Wire entity lifecycle events to ProcessManager
             self._wire_entity_events_to_processes()
 
+            # Wire SideEffectExecutor for step effects (v0.33.0)
+            if hasattr(self._process_adapter, "set_side_effect_executor"):
+                from dazzle_back.runtime.side_effect_executor import SideEffectExecutor
+
+                side_effect_executor = SideEffectExecutor(
+                    services=self._services,
+                    repositories=self._repositories,
+                )
+                self._process_adapter.set_side_effect_executor(side_effect_executor)
+
             # Capture for closures
             process_adapter = self._process_adapter
             process_manager = self._process_manager

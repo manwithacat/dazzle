@@ -43,6 +43,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
+from ..ir.process import EffectAction, StepEffect
 from ..lexer import TokenType
 
 
@@ -710,6 +711,7 @@ class ProcessParserMixin:
         condition: str | None = None
         on_true: str | None = None
         on_false: str | None = None
+        effects: list[StepEffect] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -832,6 +834,12 @@ class ProcessParserMixin:
                 output_mapping = str(self.expect_identifier_or_keyword().value)
                 self.skip_newlines()
 
+            elif self.match(TokenType.EFFECTS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                effects = self._parse_step_effects()
+
             else:
                 # Skip unknown field
                 self.advance()
@@ -861,6 +869,7 @@ class ProcessParserMixin:
             on_success=on_success,
             on_failure=on_failure,
             compensate_with=compensate_with,
+            effects=effects,
         )
 
     def _parse_parallel_block(self) -> ir.ProcessStepSpec:
@@ -1190,6 +1199,101 @@ class ProcessParserMixin:
         self.expect(TokenType.DEDENT)
         return assignments
 
+    def _parse_step_effects(self) -> list[StepEffect]:
+        """Parse step effects block.
+
+        Grammar:
+            INDENT
+              (MINUS create|update IDENTIFIER COLON NEWLINE INDENT
+                [where COLON condition_string NEWLINE]
+                [set COLON NEWLINE assignment_list]
+              DEDENT)*
+            DEDENT
+        """
+        effects: list[StepEffect] = []
+
+        if not self.match(TokenType.INDENT):
+            return effects
+
+        self.expect(TokenType.INDENT)
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            if self.match(TokenType.MINUS):
+                self.advance()
+
+                # Parse action keyword (create or update)
+                action_token = self.current_token()
+                action_str = str(action_token.value).lower()
+                if action_str == "create":
+                    action = EffectAction.CREATE
+                elif action_str == "update":
+                    action = EffectAction.UPDATE
+                else:
+                    from ..errors import make_parse_error
+
+                    raise make_parse_error(
+                        f"Invalid effect action: '{action_str}' (expected 'create' or 'update')",
+                        self.file,
+                        action_token.line,
+                        action_token.column,
+                    )
+                self.advance()
+
+                # Parse entity name
+                entity_name = str(self.expect_identifier_or_keyword().value)
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+
+                # Parse effect body (where + set)
+                where_clause: str | None = None
+                assignments: list[ir.FieldAssignment] = []
+
+                if self.match(TokenType.INDENT):
+                    self.expect(TokenType.INDENT)
+
+                    while not self.match(TokenType.DEDENT):
+                        self.skip_newlines()
+                        if self.match(TokenType.DEDENT):
+                            break
+
+                        token = self.current_token()
+                        field_name = str(token.value).lower()
+
+                        if field_name == "where" or self.match(TokenType.WHERE):
+                            self.advance()
+                            self.expect(TokenType.COLON)
+                            where_clause = self._parse_condition_string()
+                            self.skip_newlines()
+
+                        elif field_name == "set" or self.match(TokenType.SETS):
+                            self.advance()
+                            self.expect(TokenType.COLON)
+                            self.skip_newlines()
+                            assignments = self._parse_field_assignments()
+
+                        else:
+                            self.advance()
+
+                    self.expect(TokenType.DEDENT)
+
+                effects.append(
+                    StepEffect(
+                        action=action,
+                        entity_name=entity_name,
+                        where=where_clause,
+                        assignments=assignments,
+                    )
+                )
+            else:
+                self.advance()
+
+        self.expect(TokenType.DEDENT)
+        return effects
+
     def _parse_input_mappings(self) -> list[ir.InputMapping]:
         """Parse input mapping list."""
         mappings: list[ir.InputMapping] = []
@@ -1399,10 +1503,29 @@ class ProcessParserMixin:
         return ".".join(parts)
 
     def _parse_field_value(self) -> str:
-        """Parse a field value (string or identifier)."""
+        """Parse a field value (string, identifier, or function call like now())."""
         if self.match(TokenType.STRING):
             return str(self.advance().value)
-        return str(self.expect_identifier_or_keyword().value)
+
+        # Consume the identifier/keyword (including self, now, etc.)
+        token = self.current_token()
+        value = str(token.value)
+        self.advance()
+
+        # Handle dotted path (self.field)
+        while self.match(TokenType.DOT):
+            self.advance()
+            next_part = self.current_token()
+            value += "." + str(next_part.value)
+            self.advance()
+
+        # Handle function call syntax (now(), current_user())
+        if self.match(TokenType.LPAREN):
+            self.advance()
+            self.expect(TokenType.RPAREN)
+            value += "()"
+
+        return value
 
     def _skip_to_next_process_field(self) -> None:
         """Skip tokens until we reach the next process field or end of block."""
@@ -1450,6 +1573,7 @@ class ProcessParserMixin:
             TokenType.RETRY,
             TokenType.INPUTS,
             TokenType.OUTPUT,
+            TokenType.EFFECTS,
             TokenType.DEDENT,
             TokenType.EOF,
         ):

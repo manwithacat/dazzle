@@ -68,6 +68,11 @@ class StepExecutor:
 
     def __init__(self, adapter: LiteProcessAdapter) -> None:
         self._adapter = adapter
+        self._side_effect_executor: Any | None = None
+
+    def set_side_effect_executor(self, executor: Any) -> None:
+        """Set the side-effect executor for processing step effects."""
+        self._side_effect_executor = executor
 
     async def execute_step(
         self,
@@ -131,25 +136,58 @@ class StepExecutor:
             step_inputs[mapping.target] = value
 
         if step.kind == StepKind.SERVICE:
-            return await self._execute_service_step(step, step_inputs, context)
+            result = await self._execute_service_step(step, step_inputs, context)
 
         elif step.kind == StepKind.SEND:
-            return await self._execute_send_step(step, step_inputs, context)
+            result = await self._execute_send_step(step, step_inputs, context)
 
         elif step.kind == StepKind.WAIT:
-            return await self._execute_wait_step(step, context)
+            result = await self._execute_wait_step(step, context)
 
         elif step.kind == StepKind.HUMAN_TASK:
-            return await self._execute_human_task_step(run_id, step, context)
+            result = await self._execute_human_task_step(run_id, step, context)
 
         elif step.kind == StepKind.SUBPROCESS:
-            return await self._execute_subprocess_step(step, step_inputs)
+            result = await self._execute_subprocess_step(step, step_inputs)
 
         elif step.kind == StepKind.PARALLEL:
-            return await self._execute_parallel_step(run_id, step, context, spec)
+            result = await self._execute_parallel_step(run_id, step, context, spec)
 
         else:
-            return {}
+            result = {}
+
+        # Execute step effects after successful completion
+        if step.effects and self._side_effect_executor:
+            effect_results = await self._run_step_effects(step, context)
+            result["_effects"] = effect_results
+
+        return result
+
+    async def _run_step_effects(
+        self,
+        step: ProcessStepSpec,
+        context: ProcessContext,
+    ) -> list[dict[str, Any]]:
+        """Execute side-effects declared on a step."""
+        from dazzle_back.runtime.side_effect_executor import EffectContext
+
+        assert self._side_effect_executor is not None
+        effect_ctx = EffectContext(
+            trigger_entity=context.get_variable("trigger_entity") or {},
+            process_inputs=context.inputs if hasattr(context, "inputs") else {},
+            step_outputs=context.get_variable(f"steps.{step.name}") or {},
+        )
+        results = await self._side_effect_executor.execute_effects(step.effects, effect_ctx)
+        return [
+            {
+                "action": r.action,
+                "entity": r.entity_name,
+                "success": r.success,
+                "affected": r.affected_count,
+                "error": r.error,
+            }
+            for r in results
+        ]
 
     async def _execute_service_step(
         self,
@@ -273,8 +311,8 @@ class StepExecutor:
 
                 for outcome_config in task_config.outcomes:
                     if outcome_config.name == outcome:
-                        for _assignment in outcome_config.sets:
-                            pass
+                        if outcome_config.sets and self._side_effect_executor:
+                            await self._execute_human_task_sets(outcome_config.sets, context)
                         break
 
                 return {"outcome": outcome, "task_id": task_id, **outcome_data}
@@ -358,6 +396,49 @@ class StepExecutor:
             raise ProcessStepFailed(step.name, f"Parallel failures: {'; '.join(errors)}")
 
         return results
+
+    async def _execute_human_task_sets(
+        self,
+        assignments: list[Any],
+        context: ProcessContext,
+    ) -> None:
+        """Execute field assignments from human task outcomes.
+
+        Each assignment has Entity.field -> value format.
+        Delegates to SideEffectExecutor for value resolution and service calls.
+        """
+        from dazzle.core.ir.process import EffectAction, FieldAssignment, StepEffect
+
+        # Group assignments by entity
+        entity_assignments: dict[str, list[FieldAssignment]] = {}
+        for assignment in assignments:
+            if "." in assignment.field_path:
+                entity_name = assignment.field_path.split(".")[0]
+            else:
+                entity_name = ""
+                continue
+            entity_assignments.setdefault(entity_name, []).append(assignment)
+
+        # Build update effects for each entity
+        from dazzle_back.runtime.side_effect_executor import EffectContext
+
+        assert self._side_effect_executor is not None
+        effect_ctx = EffectContext(
+            trigger_entity=context.get_variable("trigger_entity") or {},
+            process_inputs=context.inputs if hasattr(context, "inputs") else {},
+        )
+
+        for entity_name, assigns in entity_assignments.items():
+            # For human task sets, the entity ID comes from the process context
+            entity_id = context.resolve(f"{entity_name}.id")
+            if entity_id:
+                effect = StepEffect(
+                    action=EffectAction.UPDATE,
+                    entity_name=entity_name,
+                    where=f"id = {entity_id}",
+                    assignments=assigns,
+                )
+                await self._side_effect_executor.execute_effects([effect], effect_ctx)
 
     @staticmethod
     def _calculate_backoff(retry: RetryConfig, attempt: int) -> float:

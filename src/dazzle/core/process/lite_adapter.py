@@ -126,6 +126,10 @@ class LiteProcessAdapter(ProcessAdapter):
         self._compensation_runner = CompensationRunner(self)
         self._schedule_poller = SchedulePoller(self)
 
+    def set_side_effect_executor(self, executor: Any) -> None:
+        """Pass a SideEffectExecutor to the step executor for effects processing."""
+        self._step_executor.set_side_effect_executor(executor)
+
     # Handler injection
     def set_service_handler(self, service_name: str, handler: ServiceHandler) -> None:
         """Register a handler for a service call."""

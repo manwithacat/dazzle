@@ -422,6 +422,7 @@ from .personas import (
 # Process Workflows (v0.23.0)
 from .process import (
     CompensationSpec,
+    EffectAction,
     FieldAssignment,
     HumanTaskOutcome,
     HumanTaskSpec,
@@ -437,6 +438,7 @@ from .process import (
     ProcessTriggerSpec,
     RetryConfig,
     ScheduleSpec,
+    StepEffect,
 )
 from .process import RetryBackoff as ProcessRetryBackoff
 from .process import StepKind as ProcessStepKind
@@ -813,6 +815,7 @@ __all__ = [
     "PersonaSpec",
     # Process Workflows (v0.23.0)
     "CompensationSpec",
+    "EffectAction",
     "FieldAssignment",
     "HumanTaskOutcome",
     "HumanTaskSpec",
@@ -830,6 +833,7 @@ __all__ = [
     "ProcessTriggerSpec",
     "RetryConfig",
     "ScheduleSpec",
+    "StepEffect",
     # Scenarios (v0.8.5)
     "DemoFixture",
     "PersonaScenarioEntry",

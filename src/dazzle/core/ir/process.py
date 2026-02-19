@@ -125,11 +125,37 @@ class ProcessOutputField(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class EffectAction(StrEnum):
+    """Types of side-effect actions on process steps."""
+
+    CREATE = "create"
+    UPDATE = "update"
+
+
 class FieldAssignment(BaseModel):
     """A field assignment in an outcome (Entity.field -> value)."""
 
     field_path: str = Field(..., description="e.g., 'ExpenseReport.status'")
     value: str = Field(..., description="Value or expression")
+
+    model_config = ConfigDict(frozen=True)
+
+
+class StepEffect(BaseModel):
+    """A side-effect action executed after a process step completes.
+
+    Effects create or update entities as declared in DSL process steps.
+    """
+
+    action: EffectAction
+    entity_name: str = Field(..., description="Target entity name")
+    where: str | None = Field(
+        default=None,
+        description="Filter expression for update (e.g., 'linked_return_id = self.id')",
+    )
+    assignments: list[FieldAssignment] = Field(
+        default_factory=list, description="Field assignments to apply"
+    )
 
     model_config = ConfigDict(frozen=True)
 
@@ -249,6 +275,12 @@ class ProcessStepSpec(BaseModel):
     on_success: str | None = Field(default=None, description="Step/action on success")
     on_failure: str | None = Field(default=None, description="Step/action on failure")
     compensate_with: str | None = Field(default=None, description="Compensation handler name")
+
+    # Side-effect actions (v0.33.0)
+    effects: list[StepEffect] = Field(
+        default_factory=list,
+        description="Side-effect actions to execute after step completes",
+    )
 
     # Coverage traceability
     satisfies: list[SatisfiesRef] = Field(

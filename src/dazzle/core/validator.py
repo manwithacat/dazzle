@@ -1397,6 +1397,49 @@ def _lint_integration_bindings(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def _lint_process_effects(appspec: ir.AppSpec) -> list[str]:
+    """Check process step effects reference valid entities and fields."""
+    warnings: list[str] = []
+    entity_names = {e.name for e in appspec.domain.entities}
+
+    for process in appspec.processes:
+        for step in process.steps:
+            for effect in step.effects:
+                # Check entity reference
+                if effect.entity_name not in entity_names:
+                    warnings.append(
+                        f"Process '{process.name}' step '{step.name}' effect "
+                        f"references non-existent entity '{effect.entity_name}'"
+                    )
+                    continue
+
+                # Check assignment field paths
+                entity = appspec.get_entity(effect.entity_name)
+                if entity:
+                    entity_field_names = {f.name for f in entity.fields}
+                    for assignment in effect.assignments:
+                        # Strip entity prefix (e.g. "Task.title" -> "title")
+                        field_name = assignment.field_path
+                        if "." in field_name:
+                            field_name = field_name.split(".", 1)[1]
+                        if field_name not in entity_field_names:
+                            warnings.append(
+                                f"Process '{process.name}' step '{step.name}' effect "
+                                f"assignment references non-existent field "
+                                f"'{field_name}' on entity '{effect.entity_name}'"
+                            )
+
+                # Warn about update without where clause
+                if effect.action.value == "update" and not effect.where:
+                    warnings.append(
+                        f"Process '{process.name}' step '{step.name}' has "
+                        f"update effect on '{effect.entity_name}' without "
+                        f"a 'where' clause — needs entity ID from context"
+                    )
+
+    return warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """Extended lint rules for code quality.
 
@@ -1412,4 +1455,5 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_workspace_routing(appspec))
     warnings.extend(_lint_list_surface_ux(appspec))
     warnings.extend(_lint_integration_bindings(appspec))
+    warnings.extend(_lint_process_effects(appspec))
     return warnings

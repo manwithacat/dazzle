@@ -283,6 +283,7 @@ class TokenType(Enum):
     ASSIGNEE_ROLE = "assignee_role"
     INTERVAL = "interval"
     TIMEZONE = "timezone"
+    EFFECTS = "effects"
     SETS = "sets"
     CONFIRM = "confirm"
     INPUTS = "inputs"
