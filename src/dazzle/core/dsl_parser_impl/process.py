@@ -849,6 +849,10 @@ class ProcessParserMixin:
 
         self.expect(TokenType.DEDENT)
 
+        # Auto-detect side-effect-only steps: effects present but no service/channel/etc.
+        if kind == ir.ProcessStepKind.SERVICE and service is None and effects:
+            kind = ir.ProcessStepKind.SIDE_EFFECT
+
         return ir.ProcessStepSpec(
             name=name,
             kind=kind,

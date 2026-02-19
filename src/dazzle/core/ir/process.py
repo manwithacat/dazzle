@@ -42,6 +42,7 @@ class StepKind(StrEnum):
     SUBPROCESS = "subprocess"  # Start another process
     PARALLEL = "parallel"  # Execute steps in parallel
     CONDITION = "condition"  # Conditional branch
+    SIDE_EFFECT = "side_effect"  # Execute effects only (no service/send/wait)
 
 
 class RetryBackoff(StrEnum):

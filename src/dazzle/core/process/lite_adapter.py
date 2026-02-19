@@ -570,6 +570,16 @@ class LiteProcessAdapter(ProcessAdapter):
         context = ProcessContext(inputs=inputs)
         # Store run_id in context for signal lookups
         context.set_variable("run_id", run_id)
+
+        # Populate trigger_entity so self.field resolves in effects
+        if "entity_name" in inputs and "entity_id" in inputs:
+            trigger_data = {
+                k: v
+                for k, v in inputs.items()
+                if k not in ("entity_name", "entity_id", "event_type", "old_status", "new_status")
+            }
+            trigger_data["id"] = inputs["entity_id"]
+            context.set_variable("trigger_entity", trigger_data)
         completed_steps: list[str] = []
 
         try:

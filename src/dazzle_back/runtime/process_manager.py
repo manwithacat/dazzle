@@ -114,6 +114,11 @@ class ProcessManager:
                 key = f"{trigger.entity_name}:{trigger.event_type}"
                 self._entity_event_triggers.setdefault(key, []).append(proc)
                 logger.debug(f"Registered entity event trigger: {key} -> {proc.name}")
+            elif trigger.entity_name:
+                # Wildcard: any event type for this entity
+                key = f"{trigger.entity_name}:*"
+                self._entity_event_triggers.setdefault(key, []).append(proc)
+                logger.debug(f"Registered wildcard entity event trigger: {key} -> {proc.name}")
 
         elif trigger.kind == ProcessTriggerKind.ENTITY_STATUS_TRANSITION:
             # Status transition events
@@ -121,6 +126,11 @@ class ProcessManager:
                 key = f"{trigger.entity_name}:{trigger.from_status}:{trigger.to_status}"
                 self._status_transition_triggers.setdefault(key, []).append(proc)
                 logger.debug(f"Registered status transition trigger: {key} -> {proc.name}")
+            elif trigger.entity_name and trigger.to_status:
+                # Wildcard from_status: any status -> to_status
+                key = f"{trigger.entity_name}:*:{trigger.to_status}"
+                self._status_transition_triggers.setdefault(key, []).append(proc)
+                logger.debug(f"Registered wildcard status trigger: {key} -> {proc.name}")
 
     # Entity Event Handling
     async def on_entity_created(
@@ -188,7 +198,11 @@ class ProcessManager:
     ) -> list[str]:
         """Handle a generic entity event."""
         key = f"{entity_name}:{event_type}"
-        processes = self._entity_event_triggers.get(key, [])
+        wildcard_key = f"{entity_name}:*"
+        processes = [
+            *self._entity_event_triggers.get(key, []),
+            *self._entity_event_triggers.get(wildcard_key, []),
+        ]
 
         run_ids = []
         for proc in processes:
@@ -219,7 +233,11 @@ class ProcessManager:
     ) -> list[str]:
         """Handle a status transition event."""
         key = f"{entity_name}:{old_status}:{new_status}"
-        processes = self._status_transition_triggers.get(key, [])
+        wildcard_key = f"{entity_name}:*:{new_status}"
+        processes = [
+            *self._status_transition_triggers.get(key, []),
+            *self._status_transition_triggers.get(wildcard_key, []),
+        ]
 
         run_ids = []
         for proc in processes:

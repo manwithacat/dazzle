@@ -153,6 +153,9 @@ class StepExecutor:
         elif step.kind == StepKind.PARALLEL:
             result = await self._execute_parallel_step(run_id, step, context, spec)
 
+        elif step.kind == StepKind.SIDE_EFFECT:
+            result = {}  # effects run via existing post-step block below
+
         else:
             result = {}
 
