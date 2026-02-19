@@ -391,26 +391,82 @@ error recovery. Each step references a surface, process, or integration, and
 transitions between steps are driven by user events (continue, back, success,
 failure, etc.). Use experiences for onboarding wizards, checkout flows, approval
 workflows, and any multi-screen interaction that needs explicit flow control.
+
+Steps can reference entities directly with `entity: EntityName` to auto-generate
+creation forms — no separate surface definition needed. Use `creates: varname` to
+capture the created entity in flow state, and `defaults: field: $varname` to
+forward IDs between steps (e.g. setting a foreign key from a previously created
+entity). The `context:` block declares typed variables, and `when:` guards
+conditionally skip steps based on state.
 """
 
 syntax = """
-experience <experience_name> "<Display Name>":
+experience <name> "<Display Name>":
+  # Optional: declare typed context variables
+  context:
+    <varname>: <EntityName>
+
+  # Optional: access control, priority
+  access: <public|authenticated|persona(name1, name2)>
+  priority: <critical|high|medium|low>
+
   start at step <step_name>
 
+  # Entity shorthand — auto-generates a create form from entity fields
   step <step_name>:
-    kind: <surface|process|integration>
-    surface <surface_name>           # when kind is surface
-    on <event> -> step <target_step>
-    [on <event> -> step <target_step>]
-    ...
+    entity: <EntityName>
+    creates: <varname>             # saves_to: context.varname
+    defaults:                      # prefill fields
+      <field>: $<varname>          # → context.varname.id
+      <field>: "<literal>"         # → quoted literal
+    on <event> -> step <target>
 
+  # Explicit surface reference (original syntax)
   step <step_name>:
     kind: <surface|process|integration>
-    ...
+    surface <surface_name>         # when kind is surface
+    saves_to: context.<varname>    # capture created entity
+    prefill:                       # pre-populate form fields
+      <field>: context.<var>.<prop>
+      <field>: "<literal>"
+    when: context.<var>.<prop> = <value>   # conditional guard
+    on <event> -> step <target>
 """
 
 example = """
+# Entity creation with ID forwarding (recommended for multi-entity flows)
+experience client_onboarding "Client Onboarding":
+  start at step add_company
+
+  step add_company:
+    entity: Company
+    creates: company
+    on success -> step add_contact
+
+  step add_contact:
+    entity: Contact
+    creates: contact
+    defaults:
+      company_id: $company
+    on success -> step add_address
+    on back -> step add_company
+
+  step add_address:
+    entity: Address
+    creates: address
+    defaults:
+      contact_id: $contact
+    on success -> step done
+    on back -> step add_contact
+
+  step done:
+    entity: Company
+
+# Surface-based flow (original syntax — still fully supported)
 experience user_onboarding "User Onboarding":
+  context:
+    company: Company
+
   start at step welcome
 
   step welcome:
@@ -421,30 +477,22 @@ experience user_onboarding "User Onboarding":
   step profile:
     kind: surface
     surface onboarding_profile
-    on continue -> step preferences
+    saves_to: context.company
+    on continue -> step vat_check
     on back -> step welcome
 
-  step preferences:
+  step vat_check:
     kind: surface
-    surface onboarding_preferences
-    on continue -> step verify
-    on back -> step profile
-
-  step verify:
-    kind: surface
-    surface verification_pending
+    surface vat_form
+    when: context.company.is_vat_registered = true
+    prefill:
+      company: context.company.id
     on success -> step complete
-    on failure -> step verify_error
-
-  step verify_error:
-    kind: surface
-    surface verification_error
-    on try_again -> step verify
-    on skip -> step complete
+    on back -> step profile
 
   step complete:
     kind: surface
     surface onboarding_complete
 """
 
-related = ["surface", "process", "integration", "state_machine"]
+related = ["surface", "process", "integration", "state_machine", "entity"]

@@ -422,7 +422,7 @@ class TestValidateExperiences:
                         ),
                     ],
                 ),
-                "no surface target",
+                "no surface or entity target",
             ),
         ],
         ids=["no_steps", "surface_step_without_surface"],
