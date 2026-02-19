@@ -183,6 +183,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Task',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'complex_workspace.dsl',
@@ -237,6 +238,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Report',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'complex_workspace.dsl',
@@ -366,11 +368,13 @@
           'purpose': 'Administrative overview of tasks and reports',
           'regions': list([
             dict({
+              'date_range': False,
               'display': 'list',
               'name': 'sidebar',
               'source': 'Task',
             }),
             dict({
+              'date_range': False,
               'display': 'kanban',
               'filter': dict({
                 'comparison': dict({
@@ -397,6 +401,7 @@
           'purpose': "User's personal task view",
           'regions': list([
             dict({
+              'date_range': False,
               'display': 'list',
               'filter': dict({
                 'comparison': dict({
@@ -470,6 +475,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Task',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'edge_comments.dsl',
@@ -590,6 +596,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Item',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'edge_whitespace.dsl',
@@ -749,6 +756,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Item',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'minimal_entity.dsl',
@@ -796,6 +804,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Task',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'minimal_surface.dsl',
@@ -915,6 +924,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Ticket',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'state_machine.dsl',
@@ -1034,6 +1044,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Order',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'state_machine.dsl',
@@ -1236,6 +1247,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Contact',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'typical_crud_app.dsl',
@@ -1454,6 +1466,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Company',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'typical_multi_entity.dsl',
@@ -1533,6 +1546,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Person',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'typical_multi_entity.dsl',
@@ -1625,6 +1639,7 @@
           'is_singleton': False,
           'is_tenant_root': False,
           'name': 'Project',
+          'soft_delete': False,
           'source': dict({
             'column': 1,
             'file': 'typical_multi_entity.dsl',
