@@ -1,0 +1,96 @@
+{# Queue display mode — review queue with inline transition actions #}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <div class="flex items-center justify-between mb-2">
+      <h3 class="card-title text-sm">{{ title }}</h3>
+      {% if total > 0 %}
+      <span class="badge badge-primary badge-sm">{{ total }}</span>
+      {% endif %}
+    </div>
+
+    {# Metrics summary #}
+    {% if metrics %}
+    <div class="flex gap-3 mb-3">
+      {% for metric in metrics %}
+      <div class="stat p-2 bg-base-200 rounded-lg flex-1 text-center">
+        <div class="stat-value text-lg">{{ metric.value }}</div>
+        <div class="stat-title text-xs">{{ metric.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Filter bar #}
+    {% if filter_columns %}
+    <div class="flex flex-wrap gap-2 mb-2 filter-bar">
+      {% for fc in filter_columns %}
+      <select class="select select-xs select-bordered"
+              hx-get="{{ endpoint }}" hx-target="#region-{{ region_name }}" hx-swap="innerHTML"
+              hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
+        <option value="">All {{ fc.label }}</option>
+        {% for opt in fc.options %}
+        <option value="{{ opt }}" {% if active_filters.get(fc.key) == opt %}selected{% endif %}>{{ opt }}</option>
+        {% endfor %}
+      </select>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# Queue items #}
+    {% if items %}
+    <div class="space-y-2">
+      {% for item in items %}
+      {% set attn = item.get("_attention") if item.get is defined else none %}
+      <div class="flex items-center gap-3 p-3 rounded-lg border border-base-200 {% if attn %}{% if attn.level == 'critical' %}border-l-4 border-l-error bg-error/5{% elif attn.level == 'warning' %}border-l-4 border-l-warning bg-warning/5{% elif attn.level == 'notice' %}border-l-4 border-l-info bg-info/5{% endif %}{% else %}hover:bg-base-200{% endif %}">
+
+        {# Main content — clickable to navigate to detail #}
+        <div class="flex-1 min-w-0 {% if action_url %}cursor-pointer{% endif %}"
+             {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+             hx-push-url="true" hx-target="body" hx-swap="innerHTML"{% endif %}>
+          <div class="flex items-center gap-2">
+            <span class="font-medium truncate">{{ item[display_key] | default(item.id) }}</span>
+            {% for col in columns %}
+              {% if col.type == "badge" and col.key != display_key %}
+                <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+              {% endif %}
+            {% endfor %}
+          </div>
+          {% if attn %}
+          <p class="text-xs opacity-60 mt-0.5">{{ attn.message }}</p>
+          {% endif %}
+          {# Show date columns as secondary info #}
+          {% for col in columns %}
+            {% if col.type == "date" and item[col.key] %}
+            <span class="text-xs opacity-50">{{ col.label }}: {{ item[col.key] | timeago }}</span>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        {# Inline transition action buttons #}
+        {% if queue_transitions %}
+        <div class="flex gap-1 flex-shrink-0" onclick="event.stopPropagation()">
+          {% for tr in queue_transitions %}
+          {% if item.get(queue_status_field) != tr.to_state %}
+          <button class="btn btn-outline btn-xs"
+                  hx-put="{{ queue_api_endpoint }}/{{ item.id }}"
+                  hx-vals='{"{{ queue_status_field }}": "{{ tr.to_state }}"}'
+                  hx-ext="json-enc"
+                  hx-target="#region-{{ region_name }}"
+                  hx-swap="innerHTML">
+            {{ tr.label }}
+          </button>
+          {% endif %}
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% if total > items | length %}
+    <p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
+    {% endif %}
+    {% else %}
+    <p class="text-sm opacity-50 py-4 text-center">{{ empty_message | default("Queue is empty.") }}</p>
+    {% endif %}
+  </div>
+</div>

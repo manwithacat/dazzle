@@ -59,6 +59,7 @@ class DisplayMode(StrEnum):
     KANBAN = "kanban"  # v0.9.5: Kanban board view for workflows
     BAR_CHART = "bar_chart"  # v0.9.5: Bar chart visualization
     FUNNEL_CHART = "funnel_chart"  # v0.9.5: Funnel chart (e.g., sales pipeline)
+    QUEUE = "queue"  # v0.33.0: Review queue with inline actions
 
 
 class WorkspaceRegion(BaseModel):

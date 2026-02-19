@@ -455,3 +455,97 @@ class TestCrossEntityAction:
 
         ctx = build_workspace_context(ws, app_spec)
         assert ctx.regions[0].action_url == "/customers/{id}"
+
+
+# ===========================================================================
+# TestQueueDisplayMode
+# ===========================================================================
+
+
+class TestQueueDisplayMode:
+    """Tests for the queue display mode (#300)."""
+
+    def test_display_mode_enum_has_queue(self) -> None:
+        """DisplayMode enum includes QUEUE value."""
+        from dazzle.core.ir.workspaces import DisplayMode
+
+        assert DisplayMode.QUEUE == "queue"
+        assert DisplayMode("queue") == DisplayMode.QUEUE
+
+    def test_queue_template_mapping(self) -> None:
+        """QUEUE maps to the queue.html template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert "QUEUE" in DISPLAY_TEMPLATE_MAP
+        assert DISPLAY_TEMPLATE_MAP["QUEUE"] == "workspace/regions/queue.html"
+
+    def test_workspace_region_with_queue_display(self) -> None:
+        """WorkspaceRegion accepts display=queue."""
+        from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion
+
+        region = WorkspaceRegion(
+            name="review_queue",
+            source="BookkeepingPeriod",
+            display=DisplayMode.QUEUE,
+        )
+        assert region.display == DisplayMode.QUEUE
+
+    def test_queue_region_renders_correct_template(self) -> None:
+        """Queue region context gets the queue template path."""
+        from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        fields = [
+            _make_field("title", FieldTypeKind.STR),
+            _make_field("status", FieldTypeKind.ENUM, enum_values=["pending", "approved"]),
+        ]
+        entity = _make_entity("Task", fields)
+        region = WorkspaceRegion(name="review", source="Task", display=DisplayMode.QUEUE)
+        ws = WorkspaceSpec(name="dashboard", regions=[region])
+
+        app_spec = SimpleNamespace(
+            domain=SimpleNamespace(
+                entities=[entity],
+                get_entity=lambda n: entity if n == "Task" else None,
+            ),
+            surfaces=[],
+            workspaces=[ws],
+        )
+
+        ctx = build_workspace_context(ws, app_spec)
+        assert ctx.regions[0].template == "workspace/regions/queue.html"
+
+    def test_current_user_filter_context(self) -> None:
+        """_resolve_value handles current_user identifier in filter context."""
+        from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+
+        condition = {
+            "comparison": {
+                "field": "reviewer",
+                "operator": "eq",
+                "value": {"literal": "current_user"},
+            }
+        }
+        result = condition_to_sql_filter(condition, {"current_user_id": "user-123"})
+        assert result == {"reviewer": "user-123"}
+
+    def test_current_user_filter_without_auth(self) -> None:
+        """current_user resolves to None when no user is authenticated."""
+        from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+
+        condition = {
+            "comparison": {
+                "field": "reviewer",
+                "operator": "eq",
+                "value": {"literal": "current_user"},
+            }
+        }
+        result = condition_to_sql_filter(condition, {})
+        assert result == {"reviewer": None}
+
+    def test_display_mode_queue_from_string(self) -> None:
+        """DisplayMode('queue') works (used by DSL parser via token.value)."""
+        from dazzle.core.ir.workspaces import DisplayMode
+
+        assert DisplayMode("queue") == DisplayMode.QUEUE
+        assert DisplayMode("queue").value == "queue"

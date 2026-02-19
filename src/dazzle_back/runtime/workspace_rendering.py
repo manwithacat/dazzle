@@ -175,6 +175,19 @@ async def _workspace_region_handler(
             if not is_super and not any(r in ctx.ws_access.allow_personas for r in auth_ctx.roles):
                 raise HTTPException(status_code=403, detail="Workspace access denied")
 
+    # Resolve current user ID for filter expressions (e.g. reviewer == current_user)
+    _current_user_id: str | None = None
+    if ctx.require_auth and ctx.auth_middleware:
+        try:
+            _auth = ctx.auth_middleware.get_auth_context(request)
+            if _auth and _auth.is_authenticated and _auth.user:
+                _current_user_id = str(_auth.user.id)
+        except Exception:
+            pass  # already checked above
+    _filter_context: dict[str, Any] = {}
+    if _current_user_id:
+        _filter_context["current_user_id"] = _current_user_id
+
     # Query the source entity
     items: list[dict[str, Any]] = []
     total = 0
@@ -194,7 +207,7 @@ async def _workspace_region_handler(
 
                     filters = condition_to_sql_filter(
                         ir_filter.model_dump(exclude_none=True),
-                        context={},
+                        context=_filter_context,
                     )
                 except Exception:
                     logger.warning("Failed to evaluate condition filter", exc_info=True)
@@ -342,6 +355,30 @@ async def _workspace_region_handler(
                     s if isinstance(s, str) else getattr(s, "name", str(s)) for s in states
                 ]
 
+    # Queue display: extract state machine transitions for inline action buttons
+    queue_transitions: list[dict[str, str]] = []
+    queue_status_field = ""
+    queue_api_endpoint = ""
+    if ctx.ctx_region.display == "QUEUE" and ctx.entity_spec:
+        sm = getattr(ctx.entity_spec, "state_machine", None)
+        if sm:
+            queue_status_field = getattr(sm, "status_field", "status")
+            seen: set[str] = set()
+            for t in getattr(sm, "transitions", []):
+                to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
+                if to_state not in seen:
+                    seen.add(to_state)
+                    queue_transitions.append(
+                        {
+                            "to_state": to_state,
+                            "label": to_state.replace("_", " ").title(),
+                        }
+                    )
+        # API endpoint for PUT transitions
+        from dazzle.core.strings import to_api_plural
+
+        queue_api_endpoint = f"/{to_api_plural(ctx.source)}"
+
     html = render_fragment(
         ctx.ctx_region.template,
         title=ctx.ctx_region.title,
@@ -361,6 +398,9 @@ async def _workspace_region_handler(
         active_filters=active_filters,
         group_by=group_by,
         kanban_columns=kanban_columns,
+        queue_transitions=queue_transitions,
+        queue_status_field=queue_status_field,
+        queue_api_endpoint=queue_api_endpoint,
     )
     return HTMLResponse(content=html)
 
