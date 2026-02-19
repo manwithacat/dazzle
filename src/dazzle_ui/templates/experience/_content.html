@@ -1,0 +1,137 @@
+{# Experience flow content — step progress + inner surface #}
+{% from 'macros/form_field.html' import render_field %}
+
+<div data-dz-experience="{{ experience.name }}" class="max-w-4xl mx-auto">
+  {# Title #}
+  <h2 class="text-2xl font-bold mb-6">{{ experience.title }}</h2>
+
+  {# Progress indicator (DaisyUI steps) #}
+  {% if experience.steps | length > 1 %}
+  <ul class="steps steps-horizontal w-full mb-8">
+    {% for step in experience.steps %}
+    <li class="step{% if step.is_completed or step.is_current %} step-primary{% endif %}"
+        data-dz-exp-step="{{ step.name }}">
+      {{ step.title }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {# Step content #}
+  <div class="dz-experience-step" data-dz-exp-current="{{ experience.current_step }}">
+    {% if experience.page_context %}
+      {% set ctx = experience.page_context %}
+
+      {# Form step: render the form with action rewritten to experience endpoint #}
+      {% if ctx.form %}
+        <div class="max-w-2xl">
+          <form data-dz-form data-dz-experience-form
+                data-dazzle-form="{{ ctx.form.entity_name }}"
+                data-dazzle-form-mode="{{ ctx.form.mode }}"
+                hx-{{ "put" if ctx.form.method == "put" else "post" }}="{{ ctx.form.action_url }}"
+                hx-target="body"
+                hx-swap="innerHTML"
+                hx-target-422="#form-errors"
+                hx-target-5*="#form-errors"
+                hx-headers='{"Content-Type": "application/json"}'
+                hx-ext="json-enc"
+                class="space-y-4">
+
+            <div id="form-errors">
+              {% include 'fragments/form_errors.html' %}
+            </div>
+
+            {% if ctx.form.sections %}
+              {# Wizard sections within a step #}
+              {% include 'fragments/form_stepper.html' with context %}
+              {% for section in ctx.form.sections %}
+              <div class="dz-wizard-stage" data-dz-stage="{{ loop.index0 }}"
+                   {% if not loop.first %}style="display:none"{% endif %}>
+                <h3 class="text-lg font-semibold mb-3">{{ section.title }}</h3>
+                {% for field in section.fields %}
+                  {{ render_field(field, ctx.form.initial_values) }}
+                {% endfor %}
+              </div>
+              {% endfor %}
+            {% else %}
+              {% for field in ctx.form.fields %}
+                {{ render_field(field, ctx.form.initial_values) }}
+              {% endfor %}
+            {% endif %}
+
+            {# Form submit + back buttons #}
+            <div class="flex gap-3 pt-4">
+              <button type="submit" class="btn btn-primary"
+                      data-loading-class="loading"
+                      data-loading-disable>
+                {% if ctx.form.mode == "edit" %}Save & Continue{% else %}Submit{% endif %}
+              </button>
+              {% for tr in experience.transitions %}
+                {% if tr.event != 'success' %}
+                <a href="{{ tr.url }}" class="btn btn-{{ tr.style }}">{{ tr.label }}</a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </form>
+        </div>
+
+      {# Detail/view step #}
+      {% elif ctx.detail %}
+        {% include 'components/detail_view.html' %}
+        {# Transition buttons #}
+        {% if experience.transitions %}
+        <div class="flex gap-3 pt-4">
+          {% for tr in experience.transitions %}
+          <form method="post" action="{{ tr.url }}">
+            <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+          </form>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+      {# Table/list step #}
+      {% elif ctx.table %}
+        {% include 'components/filterable_table.html' %}
+        {% if experience.transitions %}
+        <div class="flex gap-3 pt-4">
+          {% for tr in experience.transitions %}
+          <form method="post" action="{{ tr.url }}">
+            <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+          </form>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+      {% else %}
+        <div class="alert alert-info">
+          <span>This step is ready.</span>
+        </div>
+        {% if experience.transitions %}
+        <div class="flex gap-3 pt-4">
+          {% for tr in experience.transitions %}
+          <form method="post" action="{{ tr.url }}">
+            <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+          </form>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endif %}
+
+    {% else %}
+      {# Non-surface step (process/integration) — placeholder #}
+      <div class="card bg-base-200 p-8 text-center">
+        <div class="text-lg font-medium mb-2">Step in progress</div>
+        <p class="text-base-content/60">This step is being processed. Please wait or continue.</p>
+      </div>
+      {% if experience.transitions %}
+      <div class="flex gap-3 pt-4 justify-center">
+        {% for tr in experience.transitions %}
+        <form method="post" action="{{ tr.url }}">
+          <button type="submit" class="btn btn-{{ tr.style }}">{{ tr.label }}</button>
+        </form>
+        {% endfor %}
+      </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>

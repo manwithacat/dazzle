@@ -207,6 +207,41 @@ class PageContext(BaseModel):
 
 
 # =============================================================================
+# Experience Flow Context Models (v0.32.0)
+# =============================================================================
+
+
+class ExperienceStepContext(BaseModel):
+    """Step indicator for the experience progress bar."""
+
+    name: str
+    title: str
+    is_current: bool = False
+    is_completed: bool = False
+    url: str = ""
+
+
+class ExperienceTransitionContext(BaseModel):
+    """Transition button for an experience step."""
+
+    event: str
+    label: str
+    style: str = "primary"  # primary, ghost, error
+    url: str = ""
+
+
+class ExperienceContext(BaseModel):
+    """Top-level context for rendering an experience flow."""
+
+    name: str
+    title: str = ""
+    steps: list[ExperienceStepContext] = Field(default_factory=list)
+    current_step: str = ""
+    transitions: list[ExperienceTransitionContext] = Field(default_factory=list)
+    page_context: PageContext | None = None
+
+
+# =============================================================================
 # Fragment / Source Resolution Helpers (v0.20.0)
 # =============================================================================
 

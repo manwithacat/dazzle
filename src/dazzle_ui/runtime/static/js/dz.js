@@ -893,6 +893,19 @@ const dz = (() => {
     });
   }
 
+  // ── Experience Flow Forms ────────────────────────────────────────────
+
+  function initExperienceForms() {
+    document
+      .querySelectorAll("[data-dz-experience] form[data-dz-experience-form]")
+      .forEach(function (form) {
+        // Ensure experience forms target body for full-page transition
+        if (!form.getAttribute("hx-target")) {
+          form.setAttribute("hx-target", "body");
+        }
+      });
+  }
+
   // ── Wizard Form Navigation ───────────────────────────────────────────
 
   function initWizardForms() {
@@ -994,6 +1007,7 @@ const dz = (() => {
     initMoneyInputs();
     initFileUploads();
     initWizardForms();
+    initExperienceForms();
 
     // Auto-init data tables
     document.querySelectorAll("[data-dz-table]").forEach((el) => {
@@ -1028,6 +1042,10 @@ const dz = (() => {
       // Reinit wizard forms after HTMX swap
       if (target.querySelector("form[data-dz-wizard]")) {
         initWizardForms();
+      }
+      // Reinit experience forms after HTMX swap
+      if (target.querySelector("[data-dz-experience]")) {
+        initExperienceForms();
       }
     });
   }

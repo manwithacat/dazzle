@@ -522,6 +522,25 @@ def create_app_factory(
         )
         app.include_router(page_router, prefix="/app")
         logger.info(f"  App pages: {len(appspec.workspaces)} workspaces mounted at /app")
+
+        # Experience flow routes (/app/experiences/*)
+        if appspec.experiences:
+            try:
+                from dazzle_ui.runtime.experience_routes import create_experience_routes
+
+                experience_router = create_experience_routes(
+                    appspec,
+                    backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
+                    theme_css=theme_css,
+                    get_auth_context=_page_get_auth_context,
+                    app_prefix="/app",
+                )
+                app.include_router(experience_router, prefix="/app")
+                logger.info(
+                    f"  Experiences: {len(appspec.experiences)} mounted at /app/experiences"
+                )
+            except ImportError as e:
+                logger.warning(f"Experience routes not available: {e}")
     except ImportError as e:
         logger.warning(f"Page routes not available: {e}")
 
