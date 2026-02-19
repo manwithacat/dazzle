@@ -1062,6 +1062,122 @@ class DazzleBackendApp:
             f"Wired entity events to ProcessManager for {wired_count} services"
         )
 
+    def _wire_send_handler_to_channels(self) -> None:
+        """Connect process adapter's SEND step to ChannelManager.
+
+        When a process step has ``kind: send``, the adapter calls the
+        send handler.  This wires it to ChannelManager.send() so that
+        process workflows can dispatch email/queue/stream messages.
+        """
+        channel_mgr = self.channel_manager
+        if not channel_mgr or not self._process_adapter:
+            return
+
+        # Only LiteProcessAdapter exposes set_send_handler
+        if not hasattr(self._process_adapter, "set_send_handler"):
+            return
+
+        async def _send_via_channel(
+            channel: str, message_type: str, payload: dict[str, Any]
+        ) -> None:
+            await channel_mgr.send(
+                channel=channel,
+                operation="process_send",
+                message_type=message_type,
+                payload=payload,
+                recipient=payload.get("to", payload.get("recipient", "")),
+            )
+
+        self._process_adapter.set_send_handler(_send_via_channel)
+
+        logger.info("Wired process SEND steps to ChannelManager")
+
+    def _wire_entity_events_to_channels(self) -> None:
+        """Wire entity lifecycle events to channel send operations.
+
+        Scans channel send operations in the BackendSpec for entity_event
+        triggers (stored in channel metadata by the converter) and registers
+        callbacks on the corresponding CRUDService.
+        """
+        channel_mgr = self.channel_manager
+        if not channel_mgr or not self._services:
+            return
+
+        # Build trigger map: (entity_name, event_type) → [(channel, op, message)]
+        trigger_map: dict[tuple[str, str], list[tuple[str, str, str]]] = {}
+
+        for channel in self.spec.channels:
+            trigger_meta = channel.metadata.get("send_triggers", {})
+            for send_op in channel.send_operations:
+                op_trigger = trigger_meta.get(send_op.name)
+                if not op_trigger:
+                    continue
+                entity_name = op_trigger.get("entity_name")
+                event_type = op_trigger.get("event")
+                if entity_name and event_type:
+                    key = (entity_name, event_type)
+                    trigger_map.setdefault(key, []).append(
+                        (channel.name, send_op.name, send_op.message)
+                    )
+
+        if not trigger_map:
+            return
+
+        def _make_callback(
+            event_type: str,
+        ) -> Any:
+            """Create an event-specific callback for channel dispatch."""
+
+            async def _dispatch(
+                entity_name: str,
+                entity_id: str,
+                entity_data: dict[str, Any],
+                _old_data: dict[str, Any] | None,
+            ) -> None:
+                operations = trigger_map.get((entity_name, event_type), [])
+                for channel_name, op_name, message_type in operations:
+                    try:
+                        await channel_mgr.send(
+                            channel=channel_name,
+                            operation=op_name,
+                            message_type=message_type,
+                            payload={
+                                "entity_id": entity_id,
+                                "entity_name": entity_name,
+                                "event_type": event_type,
+                                **entity_data,
+                            },
+                            recipient=entity_data.get("email", entity_data.get("to", "")),
+                        )
+                    except Exception:
+                        logger.warning(
+                            "Channel send failed for %s.%s on %s %s",
+                            channel_name,
+                            op_name,
+                            entity_name,
+                            event_type,
+                        )
+
+            return _dispatch
+
+        on_created_cb = _make_callback("created")
+        on_updated_cb = _make_callback("updated")
+        on_deleted_cb = _make_callback("deleted")
+
+        # Register callbacks with CRUD services for entities that have triggers
+        triggered_entities = {ename for (ename, _) in trigger_map}
+        wired = 0
+        for _svc_name, service in self._services.items():
+            if isinstance(service, CRUDService):
+                if service.entity_name in triggered_entities:
+                    service.on_created(on_created_cb)
+                    service.on_updated(on_updated_cb)
+                    service.on_deleted(on_deleted_cb)
+                    wired += 1
+
+        if wired:
+            logger.info("Wired entity events to channel sends for %d entities", wired)
+
     # ------------------------------------------------------------------
     # Build phases — called in order by build()
     # ------------------------------------------------------------------
@@ -1457,6 +1573,12 @@ class DazzleBackendApp:
         # Process manager (v0.24.0)
         if self._enable_processes:
             self._init_process_manager()
+
+        # Wire process SEND steps to channel manager (v0.33.0)
+        self._wire_send_handler_to_channels()
+
+        # Wire entity event triggers from channel send operations (v0.33.0)
+        self._wire_entity_events_to_channels()
 
     def _setup_system_routes(self) -> None:
         """Register domain service stubs, health check, spec, and db-info routes."""
