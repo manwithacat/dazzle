@@ -7,9 +7,12 @@ field elements, and template filters.
 
 from __future__ import annotations
 
-from dazzle.core.ir import FieldTypeKind
+from dazzle.core import ir
+from dazzle.core.ir import EntitySpec, FieldTypeKind
 from dazzle.core.ir.fields import FieldSpec, FieldType
+from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle_ui.converters.template_compiler import (
+    _build_form_fields,
     _field_type_to_form_type,
     _file_accept_attr,
 )
@@ -61,6 +64,115 @@ class TestFileAcceptAttr:
             type=FieldType(kind=FieldTypeKind.STR),
         )
         assert _file_accept_attr(spec) == "*/*"
+
+
+class TestFileCaptureAttribute:
+    """Tests for capture and accept options on FILE fields (#334)."""
+
+    def _make_file_entity(self) -> EntitySpec:
+        return EntitySpec(
+            name="Document",
+            fields=[
+                FieldSpec(name="id", type=FieldType(kind="uuid"), is_primary_key=True),
+                FieldSpec(name="photo", type=FieldType(kind=FieldTypeKind.FILE)),
+                FieldSpec(name="name", type=FieldType(kind=FieldTypeKind.STR)),
+            ],
+        )
+
+    def test_capture_from_element_options(self) -> None:
+        """Surface field with capture= option passes through to extra."""
+        entity = self._make_file_entity()
+        surface = SurfaceSpec(
+            name="photo_upload",
+            entity_ref="Document",
+            mode=SurfaceMode.CREATE,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[
+                        ir.SurfaceElement(
+                            field_name="photo",
+                            label="Take Photo",
+                            options={"accept": "image/*", "capture": "environment"},
+                        ),
+                    ],
+                ),
+            ],
+        )
+        fields = _build_form_fields(surface, entity)
+        photo_field = next(f for f in fields if f.name == "photo")
+        assert photo_field.extra["capture"] == "environment"
+        assert photo_field.extra["accept"] == "image/*"
+
+    def test_accept_override_from_element_options(self) -> None:
+        """Surface field with accept= option overrides default."""
+        entity = self._make_file_entity()
+        surface = SurfaceSpec(
+            name="doc_upload",
+            entity_ref="Document",
+            mode=SurfaceMode.CREATE,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[
+                        ir.SurfaceElement(
+                            field_name="photo",
+                            label="Document",
+                            options={"accept": ".pdf,.doc"},
+                        ),
+                    ],
+                ),
+            ],
+        )
+        fields = _build_form_fields(surface, entity)
+        photo_field = next(f for f in fields if f.name == "photo")
+        assert photo_field.extra["accept"] == ".pdf,.doc"
+        assert "capture" not in photo_field.extra
+
+    def test_no_capture_when_not_specified(self) -> None:
+        """FILE field without capture option has no capture in extra."""
+        entity = self._make_file_entity()
+        surface = SurfaceSpec(
+            name="upload",
+            entity_ref="Document",
+            mode=SurfaceMode.CREATE,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[
+                        ir.SurfaceElement(field_name="photo", label="Photo"),
+                    ],
+                ),
+            ],
+        )
+        fields = _build_form_fields(surface, entity)
+        photo_field = next(f for f in fields if f.name == "photo")
+        assert photo_field.extra["accept"] == "*/*"
+        assert "capture" not in photo_field.extra
+
+    def test_user_camera_capture(self) -> None:
+        """capture=user opens front camera."""
+        entity = self._make_file_entity()
+        surface = SurfaceSpec(
+            name="selfie",
+            entity_ref="Document",
+            mode=SurfaceMode.CREATE,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[
+                        ir.SurfaceElement(
+                            field_name="photo",
+                            label="Selfie",
+                            options={"capture": "user"},
+                        ),
+                    ],
+                ),
+            ],
+        )
+        fields = _build_form_fields(surface, entity)
+        photo_field = next(f for f in fields if f.name == "photo")
+        assert photo_field.extra["capture"] == "user"
 
 
 class TestBasenameOrUrlFilter:

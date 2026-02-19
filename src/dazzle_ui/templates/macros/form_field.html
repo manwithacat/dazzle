@@ -202,6 +202,7 @@
           </div>
           <input type="file" class="hidden" data-dz-file-input
                  accept="{{ field.extra.get('accept', '*/*') }}"
+                 {% if field.extra.get('capture') %}capture="{{ field.extra.capture }}"{% endif %}
                  {% if field.required and not value %}required aria-required="true"{% endif %}
                  {% if error %}aria-invalid="true"{% endif %} />
         </label>

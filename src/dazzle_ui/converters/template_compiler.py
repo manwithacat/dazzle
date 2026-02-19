@@ -440,9 +440,11 @@ def _build_form_fields(
 
         extra: dict[str, Any] = {}
         if form_type == "file" and field_spec and field_spec.type:
-            extra["accept"] = _file_accept_attr(field_spec)
-            # IMAGE scalar type is only in BackendSpec, not IR;
-            # file_config.allowed_types handles MIME restriction if set.
+            accept_override = element_options.get("accept")
+            extra["accept"] = accept_override if accept_override else _file_accept_attr(field_spec)
+            capture = element_options.get("capture")
+            if capture:
+                extra["capture"] = capture
 
         fields.append(
             FieldContext(
@@ -508,7 +510,13 @@ def _build_form_sections(
 
             extra: dict[str, Any] = {}
             if form_type == "file" and field_spec and field_spec.type:
-                extra["accept"] = _file_accept_attr(field_spec)
+                accept_override = element.options.get("accept")
+                extra["accept"] = (
+                    accept_override if accept_override else _file_accept_attr(field_spec)
+                )
+                capture = element.options.get("capture")
+                if capture:
+                    extra["capture"] = capture
 
             section_fields.append(
                 FieldContext(
