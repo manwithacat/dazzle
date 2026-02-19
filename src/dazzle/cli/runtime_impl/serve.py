@@ -156,6 +156,11 @@ def serve_command(
         "--database-url",
         help="PostgreSQL URL. Also reads DATABASE_URL env var.",
     ),
+    auto_mock: bool | None = typer.Option(
+        None,
+        "--mock/--no-mock",
+        help="Auto-start vendor mocks for API packs without credentials. Default: enabled in local mode.",
+    ),
 ) -> None:
     """
     Serve Dazzle app (backend API + UI with live data).
@@ -347,6 +352,25 @@ def serve_command(
     except (ParseError, DazzleError) as e:
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
+
+    # Auto-start vendor mocks if enabled (v0.32.0)
+    mock_orch = None
+    should_mock = auto_mock if auto_mock is not None else local
+    if should_mock and not ui_only:
+        try:
+            from dazzle.testing.vendor_mock.orchestrator import (
+                MockOrchestrator,
+                discover_packs_from_appspec,
+            )
+
+            packs = discover_packs_from_appspec(appspec)
+            if packs:
+                mock_orch = MockOrchestrator.from_appspec(appspec, base_port=9001)
+                mock_orch.start()
+                for _name, mock in mock_orch.vendors.items():
+                    typer.echo(f"  • Mock: {mock.provider} on :{mock.port} ({mock.env_var})")
+        except Exception as e:
+            typer.echo(f"  Warning: Vendor mock setup failed: {e}", err=True)
 
     # Load SiteSpec if available (v0.16.0)
     sitespec_data = None
