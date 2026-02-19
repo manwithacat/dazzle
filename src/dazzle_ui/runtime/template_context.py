@@ -132,6 +132,21 @@ class TransitionContext(BaseModel):
     api_url: str = ""
 
 
+class RelatedTabContext(BaseModel):
+    """Context for a related entity tab on a detail page."""
+
+    tab_id: str  # Unique DOM id for tab switching
+    label: str  # Display label (e.g. "Contacts")
+    entity_name: str  # Related entity name
+    api_endpoint: str  # Backend API endpoint for fetching
+    filter_field: str  # FK field name to filter by (e.g. "company")
+    columns: list[ColumnContext]
+    rows: list[dict[str, Any]] = Field(default_factory=list)
+    total: int = 0
+    detail_url_template: str | None = None  # e.g. "/contacts/{id}"
+    create_url: str | None = None  # e.g. "/contacts/create?company={id}"
+
+
 class DetailContext(BaseModel):
     """Context for rendering a detail/view page."""
 
@@ -144,6 +159,7 @@ class DetailContext(BaseModel):
     back_url: str = "/"
     transitions: list[TransitionContext] = Field(default_factory=list)
     status_field: str = "status"
+    related_tabs: list[RelatedTabContext] = Field(default_factory=list)
 
 
 class IslandContext(BaseModel):

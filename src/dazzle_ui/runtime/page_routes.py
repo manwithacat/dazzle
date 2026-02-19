@@ -244,6 +244,36 @@ def create_page_routes(
                     if _t.api_url and "{id}" in _t.api_url:
                         _t.api_url = _t.api_url.replace("{id}", str(path_id))
 
+                # Fetch related entity data for tabs (hub-and-spoke, #301)
+                if req_detail.related_tabs and path_id:
+                    import urllib.parse
+
+                    async def _fetch_related_tab(
+                        tab: Any, _id: str, _backend: str, _ck: Any
+                    ) -> None:
+                        params = urllib.parse.urlencode(
+                            {f"filter[{tab.filter_field}]": _id, "page": "1", "page_size": "50"}
+                        )
+                        url = f"{_backend}{tab.api_endpoint}?{params}"
+                        try:
+                            data = await _fetch_url(url, _ck)
+                            tab.rows = data.get("items", [])
+                            tab.total = data.get("total", len(tab.rows))
+                        except Exception:
+                            logger.warning(
+                                "Failed to fetch related %s for %s",
+                                tab.entity_name,
+                                _id,
+                                exc_info=True,
+                            )
+
+                    await asyncio.gather(
+                        *[
+                            _fetch_related_tab(tab, str(path_id), effective_backend_url, _cookies)
+                            for tab in req_detail.related_tabs
+                        ]
+                    )
+
                 _ctx_overrides["detail"] = req_detail
 
             if path_id and ctx.form and ctx.form.mode == "edit":

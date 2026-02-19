@@ -1,6 +1,6 @@
 {# Detail view component - displays entity fields as a definition list #}
 {% if detail %}
-<div class="max-w-3xl" data-dazzle-entity="{{ detail.entity_name }}">
+<div class="{% if detail.related_tabs %}max-w-5xl{% else %}max-w-3xl{% endif %}" data-dazzle-entity="{{ detail.entity_name }}">
   {# Header with actions #}
   {% block detail_header %}
   <div class="flex items-center justify-between mb-6">
@@ -75,5 +75,92 @@
     </div>
   </div>
   {% endblock detail_fields %}
+
+  {# Related entity tabs (hub-and-spoke, #301) #}
+  {% if detail.related_tabs %}
+  {% block detail_related_tabs %}
+  <div class="mt-6" data-dazzle-related="{{ detail.entity_name }}">
+    {# Tab navigation with count badges #}
+    <div class="tabs tabs-bordered" role="tablist">
+      {% for tab in detail.related_tabs %}
+      <button class="tab{% if loop.first %} tab-active{% endif %}"
+              role="tab"
+              aria-selected="{{ 'true' if loop.first else 'false' }}"
+              data-dz-tab="{{ tab.tab_id }}"
+              onclick="document.querySelectorAll('[data-dz-tab]').forEach(t=>{t.classList.remove('tab-active');t.setAttribute('aria-selected','false')});this.classList.add('tab-active');this.setAttribute('aria-selected','true');document.querySelectorAll('[data-dz-tab-panel]').forEach(p=>p.hidden=true);document.querySelector('[data-dz-tab-panel=&quot;'+this.dataset.dzTab+'&quot;]').hidden=false">
+        {{ tab.label }}
+        <span class="badge badge-sm ml-1">{{ tab.total }}</span>
+      </button>
+      {% endfor %}
+    </div>
+
+    {# Tab panels #}
+    {% for tab in detail.related_tabs %}
+    <div data-dz-tab-panel="{{ tab.tab_id }}" {% if not loop.first %}hidden{% endif %} role="tabpanel">
+      <div class="card bg-base-100 shadow-sm mt-2">
+        <div class="card-body p-0">
+          {% if tab.create_url %}
+          <div class="flex justify-end p-3 pb-0">
+            <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}"
+               class="btn btn-primary btn-sm"
+               data-dazzle-action="{{ tab.entity_name }}.create">
+              + New {{ tab.label }}
+            </a>
+          </div>
+          {% endif %}
+
+          <div class="overflow-x-auto">
+            <table class="table table-zebra w-full" data-entity="{{ tab.entity_name }}">
+              <thead>
+                <tr>
+                  {% for col in tab.columns %}
+                  <th scope="col">{{ col.label }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% if tab.rows %}
+                {% for item in tab.rows %}
+                <tr class="hover cursor-pointer"
+                    {% if tab.detail_url_template %}
+                    hx-get="{{ tab.detail_url_template.replace('{id}', item.id | string) }}"
+                    hx-push-url="true"
+                    hx-target="body"
+                    hx-swap="innerHTML"
+                    {% endif %}>
+                  {% for col in tab.columns %}
+                  <td>
+                    {% if col.type == "badge" %}
+                      <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+                    {% elif col.type == "bool" %}
+                      {{ item[col.key] | bool_icon }}
+                    {% elif col.type == "date" %}
+                      {{ item[col.key] | dateformat }}
+                    {% elif col.type == "currency" %}
+                      {{ item[col.key] | currency(col.currency_code or "GBP") }}
+                    {% else %}
+                      {{ item[col.key] | default("") | truncate_text }}
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr>
+                  <td colspan="{{ tab.columns | length }}" class="text-center py-8 text-base-content/50">
+                    No {{ tab.label | lower }} found.
+                  </td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endblock detail_related_tabs %}
+  {% endif %}
 </div>
 {% endif %}

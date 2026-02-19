@@ -24,6 +24,7 @@ from dazzle_ui.runtime.template_context import (
     FormSectionContext,
     NavItemContext,
     PageContext,
+    RelatedTabContext,
     TableContext,
     TransitionContext,
 )
@@ -578,6 +579,34 @@ def _compile_form_surface(
         )
 
 
+def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
+    """Build table columns from an entity's fields, excluding PK and FK fields."""
+    columns: list[ColumnContext] = []
+    for field in entity.fields:
+        if field.is_primary_key:
+            continue
+        # Skip relationship fields (has_many, has_one, embeds) — not tabular
+        if field.type and field.type.kind in (
+            FieldTypeKind.HAS_MANY,
+            FieldTypeKind.HAS_ONE,
+        ):
+            continue
+        col_key = field.name
+        col_currency = ""
+        if field.type and field.type.kind == FieldTypeKind.MONEY:
+            col_key = f"{field.name}_minor"
+            col_currency = field.type.currency_code or "GBP"
+        columns.append(
+            ColumnContext(
+                key=col_key,
+                label=field.name.replace("_", " ").title(),
+                type=_field_type_to_column_type(field),
+                currency_code=col_currency,
+            )
+        )
+    return columns
+
+
 def _compile_view_surface(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
@@ -585,6 +614,7 @@ def _compile_view_surface(
     api_endpoint: str,
     entity_slug: str,
     app_prefix: str,
+    reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
 ) -> PageContext:
     """Compile a VIEW mode surface to a PageContext with detail context."""
     fields = _build_form_fields(surface, entity)
@@ -604,6 +634,28 @@ def _compile_view_surface(
                         api_url=f"{api_endpoint}/{{id}}",
                     )
                 )
+
+    # Build related entity tabs from reverse references
+    related_tabs: list[RelatedTabContext] = []
+    for ref_entity_name, fk_field, ref_entity in reverse_refs or []:
+        ref_slug = ref_entity_name.lower().replace("_", "-")
+        ref_api = f"/{to_api_plural(ref_entity_name)}"
+        tab_label = (ref_entity.title or ref_entity_name).replace("_", " ")
+        # Build columns from the related entity's fields (exclude FK to parent)
+        tab_columns = [c for c in _build_entity_columns(ref_entity) if c.key != fk_field]
+        related_tabs.append(
+            RelatedTabContext(
+                tab_id=f"tab-{ref_slug}",
+                label=tab_label,
+                entity_name=ref_entity_name,
+                api_endpoint=ref_api,
+                filter_field=fk_field,
+                columns=tab_columns,
+                detail_url_template=f"{app_prefix}/{ref_slug}/{{id}}",
+                create_url=f"{app_prefix}/{ref_slug}/create",
+            )
+        )
+
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",
         template="components/detail_view.html",
@@ -616,6 +668,7 @@ def _compile_view_surface(
             back_url=f"{app_prefix}/{entity_slug}",
             transitions=transitions,
             status_field=status_field,
+            related_tabs=related_tabs,
         ),
     )
 
@@ -634,6 +687,7 @@ def compile_surface_to_context(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
     app_prefix: str = "",
+    reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
 ) -> PageContext:
     """
     Convert a Surface IR to a PageContext for template rendering.
@@ -645,6 +699,8 @@ def compile_surface_to_context(
         surface: IR surface specification.
         entity: Optional entity specification for field metadata.
         app_prefix: URL prefix for page routes (e.g. "/app"). Not applied to API paths.
+        reverse_refs: Entities with ref fields pointing to this entity
+            (entity_name, fk_field, entity_spec). Used for related tabs on detail pages.
 
     Returns:
         PageContext ready for template rendering.
@@ -663,7 +719,13 @@ def compile_surface_to_context(
         )
     elif surface.mode == SurfaceMode.VIEW:
         return _compile_view_surface(
-            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix
+            surface,
+            entity,
+            entity_name,
+            api_endpoint,
+            entity_slug,
+            app_prefix,
+            reverse_refs=reverse_refs,
         )
     else:
         return _compile_custom_surface(surface)
@@ -767,6 +829,18 @@ def compile_appspec_to_templates(
                 if entity_item not in persona_nav:
                     persona_nav.append(entity_item)
 
+    # Build reverse-ref map: for each entity, find other entities that have
+    # ref fields pointing to it.  Used to populate related-entity tabs on
+    # detail pages (hub-and-spoke pattern, issue #301).
+    _reverse_refs: dict[str, list[tuple[str, str, ir.EntitySpec]]] = {}
+    if domain:
+        for ent in domain.entities:
+            for field in ent.fields:
+                if field.type and field.type.kind == FieldTypeKind.REF and field.type.ref_entity:
+                    _reverse_refs.setdefault(field.type.ref_entity, []).append(
+                        (ent.name, field.name, ent)
+                    )
+
     _route_surfaces: dict[str, ir.SurfaceSpec] = {}
 
     for surface in appspec.surfaces:
@@ -774,7 +848,13 @@ def compile_appspec_to_templates(
         if domain and surface.entity_ref:
             entity = domain.get_entity(surface.entity_ref)
 
-        ctx = compile_surface_to_context(surface, entity, app_prefix=app_prefix)
+        entity_name = entity.name if entity else (surface.entity_ref or "Item")
+        ctx = compile_surface_to_context(
+            surface,
+            entity,
+            app_prefix=app_prefix,
+            reverse_refs=_reverse_refs.get(entity_name),
+        )
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
         ctx.nav_by_persona = nav_by_persona
