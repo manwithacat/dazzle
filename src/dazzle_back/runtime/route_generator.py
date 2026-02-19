@@ -134,6 +134,137 @@ async def _parse_request_body(request: Any) -> dict[str, Any]:
 
 
 # =============================================================================
+# Row-level RBAC helpers
+# =============================================================================
+
+
+def _extract_cedar_row_filters(
+    cedar_access_spec: Any,
+    user_id: str,
+    auth_context: Any | None = None,
+) -> dict[str, Any]:
+    """Extract SQL-compatible row filters from Cedar permission rules.
+
+    Scans LIST and READ permission rules for field-level conditions that
+    reference ``current_user`` and converts them to repository filter syntax.
+    Role-only rules (no field condition) are skipped since they grant
+    unrestricted access to the operation.
+
+    Returns a dict suitable for merging into the repository's filter kwargs.
+    """
+    import logging
+
+    _logger = logging.getLogger(__name__)
+
+    permissions = getattr(cedar_access_spec, "permissions", None)
+    if not permissions:
+        return {}
+
+    # Collect roles from auth_context
+    user_roles: set[str] = set()
+    if auth_context is not None:
+        _user_obj = getattr(auth_context, "user", None)
+        if _user_obj:
+            for r in getattr(_user_obj, "roles", []):
+                user_roles.add(r if isinstance(r, str) else getattr(r, "name", str(r)))
+
+    filters: dict[str, Any] = {}
+    has_unrestricted_permit = False
+
+    for rule in permissions:
+        op = getattr(rule, "operation", None)
+        if op is None:
+            continue
+        op_val = op.value if hasattr(op, "value") else str(op)
+
+        # Only process LIST and READ rules
+        if op_val not in ("list", "read"):
+            continue
+
+        effect = getattr(rule, "effect", None)
+        if effect is None:
+            continue
+        effect_val = effect.value if hasattr(effect, "value") else str(effect)
+        if effect_val != "permit":
+            continue
+
+        condition = getattr(rule, "condition", None)
+        if condition is None:
+            # Unconditional permit — user has full access, no row filter needed.
+            # But only if they pass the role check (if personas specified).
+            rule_personas = getattr(rule, "personas", [])
+            if rule_personas:
+                if user_roles & set(rule_personas):
+                    has_unrestricted_permit = True
+            else:
+                has_unrestricted_permit = True
+            continue
+
+        # Check if this rule applies to the user's roles
+        rule_personas = getattr(rule, "personas", [])
+        if rule_personas and not (user_roles & set(rule_personas)):
+            continue
+
+        # Extract field comparison conditions
+        _extract_condition_filters(condition, user_id, filters, _logger)
+
+    # If user has any unrestricted permit, don't apply row filters
+    if has_unrestricted_permit:
+        return {}
+
+    return filters
+
+
+def _extract_condition_filters(
+    condition: Any,
+    user_id: str,
+    filters: dict[str, Any],
+    _logger: Any,
+) -> None:
+    """Recursively extract SQL filters from an AccessConditionSpec tree.
+
+    Only handles simple comparison conditions with ``current_user`` as the value.
+    Complex logical trees with OR are not pushed to SQL (they'd require post-fetch
+    filtering which is already handled by the visibility system).
+    """
+    kind = getattr(condition, "kind", "")
+
+    if kind == "comparison":
+        field = getattr(condition, "field", None)
+        value = getattr(condition, "value", None)
+        op = getattr(condition, "comparison_op", None)
+        if op is None:
+            op_val = "="
+        else:
+            op_val = op.value if hasattr(op, "value") else str(op)
+
+        if field and value == "current_user" and op_val in ("=", "eq", "equals"):
+            filters[field] = user_id
+        elif field and isinstance(value, (str, int, float, bool)) and value != "current_user":
+            if op_val in ("=", "eq", "equals"):
+                filters[field] = value
+            elif op_val in ("!=", "ne", "not_equals"):
+                filters[f"{field}__ne"] = value
+
+    elif kind == "logical":
+        logical_op = getattr(condition, "logical_op", None)
+        if logical_op is None:
+            return
+        logical_op_val = logical_op.value if hasattr(logical_op, "value") else str(logical_op)
+
+        # Only push AND conditions to SQL; OR needs post-fetch filtering
+        if logical_op_val == "and":
+            left = getattr(condition, "logical_left", None)
+            right = getattr(condition, "logical_right", None)
+            if left:
+                _extract_condition_filters(left, user_id, filters, _logger)
+            if right:
+                _extract_condition_filters(right, user_id, filters, _logger)
+        # OR and other logical operators require post-fetch filtering
+        # which is handled by the visibility system already
+
+
+# =============================================================================
 # Route Handler Factory
 # =============================================================================
 
@@ -150,6 +281,7 @@ def create_list_handler(
     htmx_detail_url: str | None = None,
     htmx_entity_name: str = "Item",
     htmx_empty_message: str = "No items found.",
+    cedar_access_spec: Any | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -211,6 +343,8 @@ def create_list_handler(
                 search,
                 select_fields=select_fields,
                 auto_include=auto_include,
+                cedar_access_spec=cedar_access_spec,
+                auth_context=auth_context,
             )
 
         _auth_handler.__annotations__ = {
@@ -274,6 +408,8 @@ async def _list_handler_body(
     search: str | None,
     select_fields: list[str] | None = None,
     auto_include: list[str] | None = None,
+    cedar_access_spec: Any | None = None,
+    auth_context: Any | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -283,6 +419,12 @@ async def _list_handler_body(
 
     # Build visibility filters
     sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
+
+    # Apply row-level filters from Cedar permission rules (v0.33.0)
+    if cedar_access_spec and is_authenticated and user_id:
+        cedar_filters = _extract_cedar_row_filters(cedar_access_spec, user_id, auth_context)
+        if cedar_filters:
+            sql_filters = {**(sql_filters or {}), **cedar_filters}
 
     # Extract filter[field] params from query string
     filters: dict[str, Any] = {}
@@ -1140,6 +1282,7 @@ class RouteGenerator:
                 htmx_detail_url=_htmx.get("detail_url"),
                 htmx_entity_name=_htmx.get("entity_name", entity_name or "Item"),
                 htmx_empty_message=_htmx.get("empty_message", "No items found."),
+                cedar_access_spec=_cedar_spec,
             )
             self._add_route(endpoint, handler, response_model=None)
 
