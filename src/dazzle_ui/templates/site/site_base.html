@@ -9,17 +9,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  {# DaisyUI 5 + Tailwind Browser #}
+  {# DaisyUI 5 #}
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
+
+  {# Tailwind CSS — compiled bundle if available, browser fallback for dev #}
+  {% if _tailwind_bundled | default(false) %}
+  <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
+  {% else %}
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  {% endif %}
   {# DAZZLE design system layer #}
   <link rel="stylesheet" href="/styles/dazzle.css">
   {% if custom_css %}
   {# Project custom CSS #}
   <link rel="stylesheet" href="/static/css/custom.css">
   {% endif %}
-  {# Lucide icons #}
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  {# Lucide icons (vendored) #}
+  <script src="/static/vendor/lucide.min.js"></script>
   {% block og_meta %}{% endblock %}
   {% block head_extra %}{% endblock %}
 </head>

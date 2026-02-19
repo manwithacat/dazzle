@@ -124,6 +124,7 @@ app.command(name="grammar")(grammar_command)
 from dazzle.cli.runtime_impl import (  # noqa: E402
     build_api_command,
     build_command,
+    build_css_command,
     build_ui_command,
     check_command,
     info_command,
@@ -140,6 +141,7 @@ app.command(name="serve")(serve_command)
 app.command(name="build")(build_command)
 app.command(name="build-ui")(build_ui_command)
 app.command(name="build-api")(build_api_command)
+app.command(name="build-css")(build_css_command)
 app.command(name="info")(info_command)
 app.command(name="stop")(stop_command)
 app.command(name="rebuild")(rebuild_command)

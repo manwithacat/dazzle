@@ -11,18 +11,24 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  {# DaisyUI + Tailwind CDN #}
+  {# DaisyUI #}
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.tailwindcss.com"></script>
 
-  {# HTMX + extensions #}
-  <script src="https://unpkg.com/htmx.org@2.0.8"></script>
-  <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-  <script src="https://unpkg.com/idiomorph@0.7.4/dist/idiomorph-ext.min.js"></script>
-  <script src="https://unpkg.com/htmx-ext-preload@2.1.0/preload.js"></script>
-  <script src="https://unpkg.com/htmx-ext-response-targets@2.0.2/response-targets.js"></script>
-  <script src="https://unpkg.com/htmx-ext-loading-states@2.0.0/loading-states.js"></script>
-  <script src="https://unpkg.com/htmx-ext-sse@2.2.2/sse.js"></script>
+  {# Tailwind CSS — compiled bundle if available, CDN fallback for dev #}
+  {% if _tailwind_bundled | default(false) %}
+  <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
+  {% else %}
+  <script src="https://cdn.tailwindcss.com"></script>
+  {% endif %}
+
+  {# HTMX + extensions (vendored) #}
+  <script src="/static/vendor/htmx.min.js"></script>
+  <script src="/static/vendor/htmx-ext-json-enc.js"></script>
+  <script src="/static/vendor/idiomorph-ext.min.js"></script>
+  <script src="/static/vendor/htmx-ext-preload.js"></script>
+  <script src="/static/vendor/htmx-ext-response-targets.js"></script>
+  <script src="/static/vendor/htmx-ext-loading-states.js"></script>
+  <script src="/static/vendor/htmx-ext-sse.js"></script>
 
   {# Dazzle micro-runtime — replaces Alpine.js #}
   <link rel="stylesheet" href="/static/css/dz.css">
@@ -52,10 +58,6 @@
       {% endif %}
     }
   </style>
-
-  {% if theme_css %}
-  <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
-  {% endif %}
 
   {% block head_extra %}{% endblock %}
 </head>

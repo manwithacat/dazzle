@@ -15,7 +15,13 @@ The modules are:
 
 from __future__ import annotations
 
-from .build import build_api_command, build_command, build_ui_command, migrate_command
+from .build import (
+    build_api_command,
+    build_command,
+    build_css_command,
+    build_ui_command,
+    migrate_command,
+)
 from .info import info_command
 from .inspect import schema_command
 from .lifecycle import logs_command, rebuild_command, status_command, stop_command
@@ -26,6 +32,7 @@ __all__ = [
     # Build commands
     "build_ui_command",
     "build_api_command",
+    "build_css_command",
     "migrate_command",
     "build_command",
     # Serve
