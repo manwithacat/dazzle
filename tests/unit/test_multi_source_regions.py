@@ -345,6 +345,73 @@ class TestBuildWorkspaceContext:
         assert ctx.regions[0].endpoint == ""
 
 
+class TestPerSourceTabTemplate:
+    """Verify per-source tab endpoints use tab_data.html to avoid infinite HTMX loop (#328)."""
+
+    def test_tab_data_template_no_load_trigger(self) -> None:
+        """The tab_data.html template must not contain hx-trigger='load' to prevent infinite polling."""
+        template_path = (
+            Path(__file__).resolve().parents[2]
+            / "src"
+            / "dazzle_ui"
+            / "templates"
+            / "workspace"
+            / "regions"
+            / "tab_data.html"
+        )
+        content = template_path.read_text()
+        assert 'hx-trigger="load"' not in content
+        assert "hx-trigger='load'" not in content
+
+    def test_tab_data_template_exists(self) -> None:
+        """tab_data.html template must exist for per-source tab endpoints."""
+        template_path = (
+            Path(__file__).resolve().parents[2]
+            / "src"
+            / "dazzle_ui"
+            / "templates"
+            / "workspace"
+            / "regions"
+            / "tab_data.html"
+        )
+        assert template_path.exists()
+
+    def test_per_source_region_ctx_uses_tab_data_template(self) -> None:
+        """Per-source RegionContext should use tab_data.html, not tabbed_list.html."""
+        ws = WorkspaceSpec(
+            name="dashboard",
+            regions=[
+                WorkspaceRegion(
+                    name="queue",
+                    sources=["Task", "Bug"],
+                    display=DisplayMode.TABBED_LIST,
+                )
+            ],
+        )
+        ctx = build_workspace_context(ws, self._make_appspec())
+        parent_region = ctx.regions[0]
+        # The parent region uses tabbed_list for the tab container
+        assert parent_region.template == "workspace/regions/tabbed_list.html"
+        # Create per-source copy as server.py does
+        for tab in parent_region.source_tabs:
+            src_region = parent_region.model_copy(
+                update={
+                    "template": "workspace/regions/tab_data.html",
+                    "endpoint": tab.endpoint,
+                    "source_tabs": [],
+                }
+            )
+            assert src_region.template == "workspace/regions/tab_data.html"
+            assert src_region.source_tabs == []
+            assert src_region.endpoint == tab.endpoint
+
+    def _make_appspec(self) -> AppSpec:
+        return AppSpec(
+            name="test_app",
+            domain=DomainSpec(entities=[_make_entity("Task"), _make_entity("Bug")]),
+        )
+
+
 class TestSourceTabContext:
     def test_model_fields(self) -> None:
         tab = SourceTabContext(

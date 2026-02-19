@@ -408,6 +408,7 @@ async def _workspace_region_handler(
         queue_status_field=queue_status_field,
         queue_api_endpoint=queue_api_endpoint,
         source_tabs=source_tabs,
+        source_entity=ctx.source,
     )
     return HTMLResponse(content=html)
 

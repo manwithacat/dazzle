@@ -293,8 +293,20 @@ class WorkspaceRouteBuilder:
                                 _src_name, getattr(ir_region, "filter", None)
                             )
 
+                            # Per-source tab uses tab_data.html (not tabbed_list.html)
+                            # to avoid infinite HTMX loop (#328)
+                            _tab_endpoint = (
+                                f"/api/workspaces/{ws_name}/regions/{ctx_region.name}/{_src_name}"
+                            )
+                            _src_ctx_region = ctx_region.model_copy(
+                                update={
+                                    "template": "workspace/regions/tab_data.html",
+                                    "endpoint": _tab_endpoint,
+                                    "source_tabs": [],
+                                }
+                            )
                             _src_region_ctx = WorkspaceRegionContext(
-                                ctx_region=ctx_region,
+                                ctx_region=_src_ctx_region,
                                 ir_region=ir_region,
                                 source=_src_name,
                                 entity_spec=_src_entity_spec,

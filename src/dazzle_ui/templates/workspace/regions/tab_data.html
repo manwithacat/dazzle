@@ -1,0 +1,77 @@
+{# Tab data fragment — data table for multi-source tab panels, no card wrapper #}
+{% if filter_columns %}
+<div class="flex flex-wrap gap-2 mb-2 filter-bar">
+  {% for fc in filter_columns %}
+  <select class="select select-xs select-bordered"
+          hx-get="{{ endpoint }}" hx-target="#tab-{{ region_name }}-{{ source_entity | lower }}" hx-swap="innerHTML"
+          hx-include="closest .filter-bar" name="filter_{{ fc.key }}">
+    <option value="">All {{ fc.label }}</option>
+    {% for opt in fc.options %}
+    <option value="{{ opt }}" {% if active_filters.get(fc.key) == opt %}selected{% endif %}>{{ opt }}</option>
+    {% endfor %}
+  </select>
+  {% endfor %}
+</div>
+{% endif %}
+{% if items %}
+<div class="overflow-x-auto">
+  <table class="table table-sm table-zebra">
+    <thead>
+      <tr>
+        {% for col in columns %}
+        <th>
+          {% if col.sortable %}
+          <a hx-get="{{ endpoint }}?sort={{ col.key }}&amp;dir={% if sort_field == col.key and sort_dir == 'asc' %}desc{% else %}asc{% endif %}"
+             hx-target="#tab-{{ region_name }}-{{ source_entity | lower }}" hx-swap="innerHTML"
+             class="cursor-pointer select-none hover:text-primary inline-flex items-center gap-1">
+            {{ col.label }}
+            {% if sort_field == col.key %}<span class="ml-1">{{ "▼" if sort_dir == "desc" else "▲" }}</span>{% endif %}
+          </a>
+          {% else %}
+          {{ col.label }}
+          {% endif %}
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      {% set attn = item.get("_attention") if item.get is defined else none %}
+      <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-error/10{% elif attn.level == 'warning' %}bg-warning/10{% elif attn.level == 'notice' %}bg-info/10{% endif %} {% endif %}{% if action_url %}cursor-pointer hover{% endif %}"
+          {% if attn %}title="{{ attn.message }}"{% endif %}
+          {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+          hx-push-url="true" hx-target="body"{% endif %}>
+        {% for col in columns %}
+        <td>
+          {% if col.type == "badge" %}
+            <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+          {% elif col.type == "bool" %}
+            {{ item[col.key] | bool_icon }}
+          {% elif col.type == "date" %}
+            {{ item[col.key] | timeago }}
+          {% elif col.type == "currency" %}
+            {{ item[col.key] | currency }}
+          {% elif col.type == "ref" %}
+            {% set ref = item[col.key] %}
+            {% if ref is mapping %}
+              {% set ref_display = ref.get("name") or ref.get("company_name") or ((ref.get("first_name", "") ~ " " ~ ref.get("last_name", "")) | trim) or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "") %}
+              {% if col.ref_route and ref.get("id") %}
+                <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary" onclick="event.stopPropagation()">{{ ref_display }}</a>
+              {% else %}{{ ref_display }}{% endif %}
+            {% elif ref %}{{ ref }}{% else %}-{% endif %}
+          {% else %}
+            {{ item[col.key] | default("") | truncate_text }}
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if total > items | length %}
+<p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
+{% endif %}
+{% else %}
+<p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+{% endif %}
