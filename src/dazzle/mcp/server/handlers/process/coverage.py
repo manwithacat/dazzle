@@ -115,171 +115,167 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         offset: Number of stories to skip (default: 0)
     """
     progress = extract_progress(args)
-    try:
-        progress.log_sync("Loading app spec for coverage analysis...")
-        app_spec = _helpers.load_app_spec(project_root)
+    progress.log_sync("Loading app spec for coverage analysis...")
+    app_spec = _helpers.load_app_spec(project_root)
 
-        # Use lightweight index when stories aren't in the AppSpec
-        stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
-        used_index = False
+    # Use lightweight index when stories aren't in the AppSpec
+    stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
+    used_index = False
 
-        if not stories:
-            from dazzle.core.stories_persistence import load_story_index
+    if not stories:
+        from dazzle.core.stories_persistence import load_story_index
 
-            story_index = load_story_index(project_root)
-            used_index = bool(story_index)
+        story_index = load_story_index(project_root)
+        used_index = bool(story_index)
 
-            if not used_index:
-                return json.dumps(
-                    {
-                        "error": "No stories found in project",
-                        "hint": (
-                            "Use propose_stories_from_dsl to generate "
-                            "stories, or define them in DSL."
-                        ),
-                    }
-                )
+        if not used_index:
+            return json.dumps(
+                {
+                    "error": "No stories found in project",
+                    "hint": (
+                        "Use propose_stories_from_dsl to generate stories, or define them in DSL."
+                    ),
+                }
+            )
 
-        processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
+    processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
-        # Merge with persisted processes
-        from dazzle.core.process_persistence import load_processes as load_persisted_processes
+    # Merge with persisted processes
+    from dazzle.core.process_persistence import load_processes as load_persisted_processes
 
-        persisted = load_persisted_processes(project_root)
-        dsl_names = {p.name for p in processes}
-        for p in persisted:
-            if p.name not in dsl_names:
-                processes.append(p)
+    persisted = load_persisted_processes(project_root)
+    dsl_names = {p.name for p in processes}
+    for p in persisted:
+        if p.name not in dsl_names:
+            processes.append(p)
 
-        # Build implements mapping: story_id -> [process_names]
-        implements_map: dict[str, list[str]] = {}
-        for proc in processes:
-            for story_id in proc.implements:
-                implements_map.setdefault(story_id, []).append(proc.name)
+    # Build implements mapping: story_id -> [process_names]
+    implements_map: dict[str, list[str]] = {}
+    for proc in processes:
+        for story_id in proc.implements:
+            implements_map.setdefault(story_id, []).append(proc.name)
 
-        coverage_results: list[StoryCoverage] = []
-        covered_count = 0
-        partial_count = 0
-        uncovered_count = 0
+    coverage_results: list[StoryCoverage] = []
+    covered_count = 0
+    partial_count = 0
+    uncovered_count = 0
 
-        # Iterate using lightweight index or full stories
-        story_index_list: list[dict[str, Any]] = (
-            story_index if used_index else []  # noqa: F821
-        )
-        items: list[Any] = stories if stories else story_index_list
+    # Iterate using lightweight index or full stories
+    story_index_list: list[dict[str, Any]] = (
+        story_index if used_index else []  # noqa: F821
+    )
+    items: list[Any] = stories if stories else story_index_list
 
-        # Exclude rejected stories from coverage calculations
-        rejected_count = 0
-        filtered_items: list[Any] = []
-        for item in items:
-            item_status = item["status"] if used_index else getattr(item, "status", "draft")
-            if item_status == "rejected":
-                rejected_count += 1
-            else:
-                filtered_items.append(item)
-        items = filtered_items
+    # Exclude rejected stories from coverage calculations
+    rejected_count = 0
+    filtered_items: list[Any] = []
+    for item in items:
+        item_status = item["status"] if used_index else getattr(item, "status", "draft")
+        if item_status == "rejected":
+            rejected_count += 1
+        else:
+            filtered_items.append(item)
+    items = filtered_items
 
-        progress.log_sync(
-            f"Analyzing coverage for {len(items)} stories against {len(processes)} processes..."
-        )
-        for item in items:
+    progress.log_sync(
+        f"Analyzing coverage for {len(items)} stories against {len(processes)} processes..."
+    )
+    for item in items:
+        if used_index:
+            sid = item["story_id"]
+            title = item["title"]
+        else:
+            sid = item.story_id
+            title = item.title
+
+        implementing = implements_map.get(sid, [])
+
+        if not implementing:
+            status: Literal["covered", "partial", "uncovered"] = "uncovered"
+            uncovered_count += 1
+            missing = ["No implementing process"]
+        else:
             if used_index:
-                sid = item["story_id"]
-                title = item["title"]
+                missing = _find_missing_aspects_from_index(item, processes, implementing)
             else:
-                sid = item.story_id
-                title = item.title
-
-            implementing = implements_map.get(sid, [])
-
-            if not implementing:
-                status: Literal["covered", "partial", "uncovered"] = "uncovered"
-                uncovered_count += 1
-                missing = ["No implementing process"]
+                missing = _find_missing_aspects(item, processes, implementing)
+            if missing:
+                status = "partial"
+                partial_count += 1
             else:
-                if used_index:
-                    missing = _find_missing_aspects_from_index(item, processes, implementing)
-                else:
-                    missing = _find_missing_aspects(item, processes, implementing)
-                if missing:
-                    status = "partial"
-                    partial_count += 1
-                else:
-                    status = "covered"
-                    covered_count += 1
+                status = "covered"
+                covered_count += 1
 
-            coverage_results.append(
-                StoryCoverage(
-                    story_id=sid,
-                    title=title,
-                    status=status,
-                    implementing_processes=implementing,
-                    missing_aspects=missing,
-                )
+        coverage_results.append(
+            StoryCoverage(
+                story_id=sid,
+                title=title,
+                status=status,
+                implementing_processes=implementing,
+                missing_aspects=missing,
             )
-
-        total = len(items)
-        coverage_percent = (covered_count / total * 100) if total > 0 else 0.0
-        progress.log_sync(
-            f"Coverage: {covered_count} covered, {partial_count} partial, {uncovered_count} uncovered"
         )
 
-        # Apply status filter
-        status_filter = args.get("status_filter", "all")
-        if status_filter != "all":
-            coverage_results = [r for r in coverage_results if r.status == status_filter]
+    total = len(items)
+    coverage_percent = (covered_count / total * 100) if total > 0 else 0.0
+    progress.log_sync(
+        f"Coverage: {covered_count} covered, {partial_count} partial, {uncovered_count} uncovered"
+    )
 
-        # Sort so actionable items (uncovered, partial) appear first
-        _status_priority = {"uncovered": 0, "partial": 1, "covered": 2}
-        coverage_results.sort(key=lambda r: _status_priority.get(r.status, 9))
+    # Apply status filter
+    status_filter = args.get("status_filter", "all")
+    if status_filter != "all":
+        coverage_results = [r for r in coverage_results if r.status == status_filter]
 
-        # Apply pagination
-        limit = args.get("limit", 50)
-        offset = args.get("offset", 0)
-        page = coverage_results[offset : offset + limit]
-        has_more = (offset + limit) < len(coverage_results)
+    # Sort so actionable items (uncovered, partial) appear first
+    _status_priority = {"uncovered": 0, "partial": 1, "covered": 2}
+    coverage_results.sort(key=lambda r: _status_priority.get(r.status, 9))
 
-        has_process = covered_count + partial_count
-        has_process_percent = round(has_process / total * 100, 1) if total > 0 else 0.0
-        effective_coverage_percent = (
-            round((covered_count + partial_count * 0.5) / total * 100, 1) if total > 0 else 0.0
+    # Apply pagination
+    limit = args.get("limit", 50)
+    offset = args.get("offset", 0)
+    page = coverage_results[offset : offset + limit]
+    has_more = (offset + limit) < len(coverage_results)
+
+    has_process = covered_count + partial_count
+    has_process_percent = round(has_process / total * 100, 1) if total > 0 else 0.0
+    effective_coverage_percent = (
+        round((covered_count + partial_count * 0.5) / total * 100, 1) if total > 0 else 0.0
+    )
+
+    result: dict[str, Any] = {
+        "total_stories": total,
+        "covered": covered_count,
+        "partial": partial_count,
+        "uncovered": uncovered_count,
+        "rejected_excluded": rejected_count,
+        "coverage_percent": round(coverage_percent, 1),
+        "effective_coverage_percent": effective_coverage_percent,
+        "has_process": has_process,
+        "has_process_percent": has_process_percent,
+        "showing": len(page),
+        "offset": offset,
+        "has_more": has_more,
+        "stories": [asdict(s) for s in page],
+    }
+
+    if has_more:
+        next_offset = offset + limit
+        result["guidance"] = (
+            f"Showing {len(page)} of {len(coverage_results)} stories "
+            f"(filter: {status_filter}). "
+            f"Use process(operation='coverage', offset={next_offset}) "
+            f"for the next page."
         )
 
-        result: dict[str, Any] = {
-            "total_stories": total,
-            "covered": covered_count,
-            "partial": partial_count,
-            "uncovered": uncovered_count,
-            "rejected_excluded": rejected_count,
-            "coverage_percent": round(coverage_percent, 1),
-            "effective_coverage_percent": effective_coverage_percent,
-            "has_process": has_process,
-            "has_process_percent": has_process_percent,
-            "showing": len(page),
-            "offset": offset,
-            "has_more": has_more,
-            "stories": [asdict(s) for s in page],
-        }
+    if uncovered_count > 0:
+        result["discovery_hint"] = (
+            f"{uncovered_count} stories have no implementing process. "
+            "Use discovery(operation='run', mode='workflow_coherence') "
+            "to analyze process/story integrity and find workflow gaps."
+        )
 
-        if has_more:
-            next_offset = offset + limit
-            result["guidance"] = (
-                f"Showing {len(page)} of {len(coverage_results)} stories "
-                f"(filter: {status_filter}). "
-                f"Use process(operation='coverage', offset={next_offset}) "
-                f"for the next page."
-            )
-
-        if uncovered_count > 0:
-            result["discovery_hint"] = (
-                f"{uncovered_count} stories have no implementing process. "
-                "Use discovery(operation='run', mode='workflow_coherence') "
-                "to analyze process/story integrity and find workflow gaps."
-            )
-
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    return json.dumps(result, indent=2)
 
 
 # =============================================================================

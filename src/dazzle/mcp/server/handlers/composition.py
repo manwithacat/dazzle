@@ -177,25 +177,19 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
             )
 
     t0 = time.monotonic()
-    try:
-        results = evaluate_captures(
-            captures,
-            dimensions=dimensions,
-            token_budget=token_budget,
-        )
-        report = build_visual_report(results)
-        wall_ms = (time.monotonic() - t0) * 1000
-        report["_meta"] = {
-            "wall_time_ms": round(wall_ms, 1),
-            "tokens_used": report.get("tokens_used", 0),
-            "llm_calls": report.get("llm_calls", len(captures)),
-        }
-        return json.dumps(report, indent=2)
-    except ImportError as e:
-        return json.dumps({"error": str(e)})
-    except Exception as e:
-        logger.exception("Visual evaluation failed")
-        return json.dumps({"error": str(e)})
+    results = evaluate_captures(
+        captures,
+        dimensions=dimensions,
+        token_budget=token_budget,
+    )
+    report = build_visual_report(results)
+    wall_ms = (time.monotonic() - t0) * 1000
+    report["_meta"] = {
+        "wall_time_ms": round(wall_ms, 1),
+        "tokens_used": report.get("tokens_used", 0),
+        "llm_calls": report.get("llm_calls", len(captures)),
+    }
+    return json.dumps(report, indent=2)
 
 
 def _load_captures_from_dir(captures_dir: Path) -> list[Any]:
@@ -305,11 +299,7 @@ async def report_composition_handler(project_path: Path, args: dict[str, Any]) -
         )
 
     await progress.advance(2, total_phases, "DOM audit")
-    try:
-        dom_result = run_composition_audit(sitespec, routes_filter=routes_filter)
-    except Exception as e:
-        logger.exception("DOM audit failed in report")
-        return json.dumps({"error": f"DOM audit failed: {e}"})
+    dom_result = run_composition_audit(sitespec, routes_filter=routes_filter)
 
     dom_score = dom_result.get("overall_score", 100)
 

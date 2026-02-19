@@ -23,53 +23,49 @@ def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
     Loads all accepted stories, maps each to its entity tests via scope,
     runs them, and returns a structured pass/fail report — the automated UAT.
     """
-    try:
-        from dazzle.core.ir.stories import StoryStatus
-        from dazzle.core.stories_persistence import get_stories_by_status
+    from dazzle.core.ir.stories import StoryStatus
+    from dazzle.core.stories_persistence import get_stories_by_status
 
-        from ..dsl_test import verify_story_handler
+    from ..dsl_test import verify_story_handler
 
-        base_url = args.get("base_url")
+    base_url = args.get("base_url")
 
-        # Load accepted stories
-        stories = get_stories_by_status(project_path, StoryStatus.ACCEPTED)
-        if not stories:
-            return json.dumps(
-                {
-                    "status": "no_stories",
-                    "message": "No accepted stories found. Use story(operation='propose') and accept them first.",
-                },
-                indent=2,
-            )
+    # Load accepted stories
+    stories = get_stories_by_status(project_path, StoryStatus.ACCEPTED)
+    if not stories:
+        return json.dumps(
+            {
+                "status": "no_stories",
+                "message": "No accepted stories found. Use story(operation='propose') and accept them first.",
+            },
+            indent=2,
+        )
 
-        # Run verify_story for all stories at once (the handler handles batching)
-        all_ids = [s.story_id for s in stories]
-        verify_args: dict[str, Any] = {
-            "story_ids": all_ids,
-        }
-        if base_url:
-            verify_args["base_url"] = base_url
+    # Run verify_story for all stories at once (the handler handles batching)
+    all_ids = [s.story_id for s in stories]
+    verify_args: dict[str, Any] = {
+        "story_ids": all_ids,
+    }
+    if base_url:
+        verify_args["base_url"] = base_url
 
-        raw_result = verify_story_handler(project_path, verify_args)
-        result_data = json.loads(raw_result)
+    raw_result = verify_story_handler(project_path, verify_args)
+    result_data = json.loads(raw_result)
 
-        # Wrap with discovery-specific metadata
-        if "error" in result_data:
-            return raw_result
+    # Wrap with discovery-specific metadata
+    if "error" in result_data:
+        return raw_result
 
-        response: dict[str, Any] = {
-            "operation": "verify_all_stories",
-            "total_accepted_stories": len(stories),
-            **result_data,
-            "summary": (
-                f"{result_data.get('stories_passed', 0)}/{len(stories)} stories verified successfully"
-            ),
-        }
+    response: dict[str, Any] = {
+        "operation": "verify_all_stories",
+        "total_accepted_stories": len(stories),
+        **result_data,
+        "summary": (
+            f"{result_data.get('stories_passed', 0)}/{len(stories)} stories verified successfully"
+        ),
+    }
 
-        return json.dumps(response, indent=2)
-
-    except ImportError as e:
-        return json.dumps({"error": f"Module not available: {e}"}, indent=2)
+    return json.dumps(response, indent=2)
 
 
 @wrap_handler_errors
@@ -165,16 +161,12 @@ def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
     persona_filter = args.get("persona")
     persona_ids = [persona_filter] if persona_filter else None
 
-    try:
-        report = run_headless_discovery(
-            appspec,
-            persona_ids=persona_ids,
-            include_entity_analysis=False,
-            include_workflow_analysis=False,
-        )
-    except Exception as e:
-        logger.exception("App coherence analysis failed")
-        return json.dumps({"error": f"Analysis failed: {e}"}, indent=2)
+    report = run_headless_discovery(
+        appspec,
+        persona_ids=persona_ids,
+        include_entity_analysis=False,
+        include_workflow_analysis=False,
+    )
 
     persona_results: list[dict[str, Any]] = []
 

@@ -62,120 +62,117 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     ready-made DSL stubs.
     """
     progress = extract_progress(args)
-    try:
-        progress.log_sync("Loading app spec and stories...")
-        app_spec = _helpers.load_app_spec(project_root)
-        story_ids = args.get("story_ids")
+    progress.log_sync("Loading app spec and stories...")
+    app_spec = _helpers.load_app_spec(project_root)
+    story_ids = args.get("story_ids")
 
-        stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
+    stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
 
-        # Fall back to persisted stories from .dazzle/stories/stories.json
-        if not stories:
-            from dazzle.core.stories_persistence import load_stories
+    # Fall back to persisted stories from .dazzle/stories/stories.json
+    if not stories:
+        from dazzle.core.stories_persistence import load_stories
 
-            stories = load_stories(project_root)
+        stories = load_stories(project_root)
 
-        processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
+    processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
-        if not stories:
-            return json.dumps(
-                {
-                    "error": "No stories found",
-                    "hint": "Use propose_stories_from_dsl first.",
-                }
-            )
-
-        # Build implements mapping
-        implements_map: dict[str, list[str]] = {}
-        for proc in processes:
-            for sid in proc.implements:
-                implements_map.setdefault(sid, []).append(proc.name)
-
-        # Find target stories
-        if story_ids:
-            target_stories = [s for s in stories if s.story_id in story_ids]
-        else:
-            # Find uncovered or partial stories
-            target_stories = [
-                s
-                for s in stories
-                if s.story_id not in implements_map
-                or _find_missing_aspects(s, processes, implements_map.get(s.story_id, []))
-            ]
-
-        if not target_stories:
-            return json.dumps(
-                {
-                    "status": "all_covered",
-                    "message": "All stories are fully covered by processes.",
-                }
-            )
-
-        progress.log_sync(f"Clustering {len(target_stories)} stories into workflows...")
-        # Cluster stories into workflows and build design briefs
-        proposals = _cluster_stories_into_workflows(target_stories, app_spec)
-
-        # Build deduplicated output: entity contexts emitted once,
-        # process_not_recommended collapsed to a summary list
-        entities: dict[str, dict[str, Any]] = {}
-        workflows: list[dict[str, Any]] = []
-        skipped_crud: list[str] = []
-
-        include_crud = args.get("include_crud", False)
-
-        for proposal in proposals:
-            if proposal.entity and proposal.entity not in entities:
-                entities[proposal.entity] = _build_entity_context(proposal.entity, app_spec)
-
-            if proposal.recommendation == "process_not_recommended" and not include_crud:
-                # Collapse to just the entity name — agent doesn't need details
-                if proposal.entity and proposal.entity not in skipped_crud:
-                    skipped_crud.append(proposal.entity)
-                continue
-
-            # When include_crud is True, upgrade CRUD proposals
-            rec = proposal.recommendation
-            if include_crud and rec == "process_not_recommended":
-                rec = "compose_process"
-
-            workflow_dict: dict[str, Any] = {
-                "name": proposal.name,
-                "title": proposal.title,
-                "implements": proposal.implements,
-                "story_summaries": proposal.story_summaries,
-                "entity": proposal.entity,
-                "design_questions": proposal.design_questions,
-                "recommendation": rec,
-                "reason": proposal.reason,
+    if not stories:
+        return json.dumps(
+            {
+                "error": "No stories found",
+                "hint": "Use propose_stories_from_dsl first.",
             }
+        )
 
-            # Build review checklist from story contracts
-            proposal_stories = [s for s in target_stories if s.story_id in proposal.implements]
-            checklist = _build_review_checklist(proposal_stories)
-            if checklist:
-                workflow_dict["review_checklist"] = checklist
+    # Build implements mapping
+    implements_map: dict[str, list[str]] = {}
+    for proc in processes:
+        for sid in proc.implements:
+            implements_map.setdefault(sid, []).append(proc.name)
 
-            workflows.append(workflow_dict)
+    # Find target stories
+    if story_ids:
+        target_stories = [s for s in stories if s.story_id in story_ids]
+    else:
+        # Find uncovered or partial stories
+        target_stories = [
+            s
+            for s in stories
+            if s.story_id not in implements_map
+            or _find_missing_aspects(s, processes, implements_map.get(s.story_id, []))
+        ]
 
-        result: dict[str, Any] = {
-            "workflow_count": len(workflows),
-            "workflows": workflows,
+    if not target_stories:
+        return json.dumps(
+            {
+                "status": "all_covered",
+                "message": "All stories are fully covered by processes.",
+            }
+        )
+
+    progress.log_sync(f"Clustering {len(target_stories)} stories into workflows...")
+    # Cluster stories into workflows and build design briefs
+    proposals = _cluster_stories_into_workflows(target_stories, app_spec)
+
+    # Build deduplicated output: entity contexts emitted once,
+    # process_not_recommended collapsed to a summary list
+    entities: dict[str, dict[str, Any]] = {}
+    workflows: list[dict[str, Any]] = []
+    skipped_crud: list[str] = []
+
+    include_crud = args.get("include_crud", False)
+
+    for proposal in proposals:
+        if proposal.entity and proposal.entity not in entities:
+            entities[proposal.entity] = _build_entity_context(proposal.entity, app_spec)
+
+        if proposal.recommendation == "process_not_recommended" and not include_crud:
+            # Collapse to just the entity name — agent doesn't need details
+            if proposal.entity and proposal.entity not in skipped_crud:
+                skipped_crud.append(proposal.entity)
+            continue
+
+        # When include_crud is True, upgrade CRUD proposals
+        rec = proposal.recommendation
+        if include_crud and rec == "process_not_recommended":
+            rec = "compose_process"
+
+        workflow_dict: dict[str, Any] = {
+            "name": proposal.name,
+            "title": proposal.title,
+            "implements": proposal.implements,
+            "story_summaries": proposal.story_summaries,
+            "entity": proposal.entity,
+            "design_questions": proposal.design_questions,
+            "recommendation": rec,
+            "reason": proposal.reason,
         }
 
-        # Only include entities referenced by compose_process workflows
-        workflow_entities = {w["entity"] for w in workflows if w["entity"]}
-        if workflow_entities:
-            result["entities"] = {
-                name: ctx for name, ctx in entities.items() if name in workflow_entities
-            }
+        # Build review checklist from story contracts
+        proposal_stories = [s for s in target_stories if s.story_id in proposal.implements]
+        checklist = _build_review_checklist(proposal_stories)
+        if checklist:
+            workflow_dict["review_checklist"] = checklist
 
-        if skipped_crud:
-            result["skipped_crud"] = skipped_crud
-            result["skipped_crud_count"] = len(skipped_crud)
+        workflows.append(workflow_dict)
 
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+    result: dict[str, Any] = {
+        "workflow_count": len(workflows),
+        "workflows": workflows,
+    }
+
+    # Only include entities referenced by compose_process workflows
+    workflow_entities = {w["entity"] for w in workflows if w["entity"]}
+    if workflow_entities:
+        result["entities"] = {
+            name: ctx for name, ctx in entities.items() if name in workflow_entities
+        }
+
+    if skipped_crud:
+        result["skipped_crud"] = skipped_crud
+        result["skipped_crud_count"] = len(skipped_crud)
+
+    return json.dumps(result, indent=2)
 
 
 # =============================================================================

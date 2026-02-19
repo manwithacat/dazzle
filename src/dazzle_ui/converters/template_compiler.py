@@ -360,6 +360,11 @@ def _resolve_field_source(
         _fs = getattr(_build_form_fields, "_fragment_sources", {})
         source_ctx = build_field_source_context(source_ref, _fs)
     except Exception:
+        logger.warning(
+            "Failed to resolve field source '%s' via centralised resolver",
+            source_ref,
+            exc_info=True,
+        )
         source_ctx = None
 
     # Fall back to direct API pack resolution
@@ -379,7 +384,9 @@ def _resolve_field_source(
                     autofill=source_config.get("autofill", {}),
                 )
         except Exception:
-            pass  # Fall back to default field type
+            logger.warning(
+                "Failed to resolve field source '%s' via API pack", source_ref, exc_info=True
+            )
 
     return source_ctx
 

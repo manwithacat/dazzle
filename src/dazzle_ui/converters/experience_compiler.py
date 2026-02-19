@@ -54,70 +54,11 @@ def _find_entity(appspec: AppSpec, entity_ref: str) -> EntitySpec | None:
     return None
 
 
-def _evaluate_when_for_progress(when_expr: str, data: dict) -> bool:
-    """Lightweight when-guard check for progress bar display.
-
-    Re-implements the same logic as ``_evaluate_when_guard`` in
-    ``experience_routes`` to avoid a cross-module import.
-    """
-    for op in ("!=", ">=", "<=", "=", ">", "<"):
-        if f" {op} " in when_expr:
-            left, right = when_expr.split(f" {op} ", 1)
-            left = left.strip()
-            right = right.strip()
-            resolved = _resolve_prefill_expression(left, data)
-            if resolved is None:
-                return False
-            rval: Any
-            if right.lower() == "true":
-                rval = True
-            elif right.lower() == "false":
-                rval = False
-            elif right.startswith('"') and right.endswith('"'):
-                rval = right[1:-1]
-            else:
-                try:
-                    rval = int(right)
-                except ValueError:
-                    try:
-                        rval = float(right)
-                    except ValueError:
-                        rval = right
-            if op == "=":
-                return resolved == rval
-            elif op == "!=":
-                return resolved != rval
-            elif op == ">":
-                return resolved > rval
-            elif op == "<":
-                return resolved < rval
-            elif op == ">=":
-                return resolved >= rval
-            elif op == "<=":
-                return resolved <= rval
-            break
-    return True
-
-
 def _resolve_prefill_expression(expression: str, data: dict) -> Any:
-    """Resolve a prefill expression against state data.
+    """Resolve a prefill expression against state data."""
+    from dazzle_ui.utils.expression_eval import resolve_prefill_expression
 
-    - String literal (starts/ends with ``"``): strip quotes, return string.
-    - Dotted path (``context.X.Y``): navigate ``data["X"]["Y"]``.
-    """
-    if expression.startswith('"') and expression.endswith('"'):
-        return expression[1:-1]
-    # Dotted path resolution
-    parts = expression.split(".")
-    if parts and parts[0] == "context":
-        parts = parts[1:]
-    current: Any = data
-    for part in parts:
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-        else:
-            return None
-    return current
+    return resolve_prefill_expression(expression, data)
 
 
 def compile_experience_context(
@@ -146,7 +87,9 @@ def compile_experience_context(
         # Mark conditional steps as skipped if their guard evaluates to false
         is_skipped = False
         if step.when and step.name != state.step:
-            is_skipped = not _evaluate_when_for_progress(step.when, state.data)
+            from dazzle_ui.utils.expression_eval import evaluate_simple_condition
+
+            is_skipped = not evaluate_simple_condition(step.when, state.data)
         steps.append(
             ExperienceStepContext(
                 name=step.name,

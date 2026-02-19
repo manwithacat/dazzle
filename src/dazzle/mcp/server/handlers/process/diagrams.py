@@ -49,45 +49,42 @@ def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str
     if not process_name:
         return json.dumps({"error": "process_name is required"})
 
-    try:
-        progress.log_sync(f"Generating {diagram_type} diagram for '{process_name}'...")
-        app_spec = _helpers.load_app_spec(project_root)
+    progress.log_sync(f"Generating {diagram_type} diagram for '{process_name}'...")
+    app_spec = _helpers.load_app_spec(project_root)
 
-        processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
+    processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
-        # Merge with persisted processes
-        from dazzle.core.process_persistence import load_processes as load_persisted_processes
+    # Merge with persisted processes
+    from dazzle.core.process_persistence import load_processes as load_persisted_processes
 
-        persisted = load_persisted_processes(project_root)
-        dsl_names = {p.name for p in processes}
-        for p in persisted:
-            if p.name not in dsl_names:
-                processes.append(p)
+    persisted = load_persisted_processes(project_root)
+    dsl_names = {p.name for p in processes}
+    for p in persisted:
+        if p.name not in dsl_names:
+            processes.append(p)
 
-        proc = next((p for p in processes if p.name == process_name), None)
-        if not proc:
-            available = [p.name for p in processes]
-            return json.dumps(
-                {
-                    "error": f"Process '{process_name}' not found",
-                    "available_processes": available,
-                }
-            )
-
-        # Generate diagram
-        mermaid_code = _generate_process_mermaid(proc, include_compensations, diagram_type)
-
+    proc = next((p for p in processes if p.name == process_name), None)
+    if not proc:
+        available = [p.name for p in processes]
         return json.dumps(
             {
-                "process_name": proc.name,
-                "title": proc.title,
-                "type": diagram_type,
-                "diagram": mermaid_code,
-            },
-            indent=2,
+                "error": f"Process '{process_name}' not found",
+                "available_processes": available,
+            }
         )
-    except Exception as e:
-        return json.dumps({"error": str(e)}, indent=2)
+
+    # Generate diagram
+    mermaid_code = _generate_process_mermaid(proc, include_compensations, diagram_type)
+
+    return json.dumps(
+        {
+            "process_name": proc.name,
+            "title": proc.title,
+            "type": diagram_type,
+            "diagram": mermaid_code,
+        },
+        indent=2,
+    )
 
 
 # =============================================================================

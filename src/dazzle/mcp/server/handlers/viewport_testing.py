@@ -36,10 +36,7 @@ def run_viewport_tests_handler(
     if not project.is_dir():
         return json.dumps({"error": f"Project directory not found: {project_path}"})
 
-    try:
-        appspec = load_and_link(project)
-    except Exception as exc:
-        return json.dumps({"error": f"Failed to load AppSpec: {exc}"})
+    appspec = load_and_link(project)
 
     patterns = derive_patterns_from_appspec(appspec)
 
@@ -123,10 +120,7 @@ def manage_viewport_specs_handler(
     elif operation == "save_viewport_specs":
         if not specs:
             return json.dumps({"error": "No specs provided"})
-        try:
-            entries = [ViewportSpecEntry(**s) for s in specs]
-        except Exception as exc:
-            return json.dumps({"error": f"Invalid spec format: {exc}"})
+        entries = [ViewportSpecEntry(**s) for s in specs]
         path = save_custom_viewport_specs(project, entries, to_dsl=to_dsl)
         return json.dumps(
             {

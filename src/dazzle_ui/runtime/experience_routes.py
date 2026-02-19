@@ -78,65 +78,23 @@ async def _proxy_to_backend(
 
 
 def _resolve_dotted_path(path: str, data: dict[str, Any]) -> Any:
-    """Resolve a dotted path like 'company.is_vat_registered' against data dict."""
-    parts = path.split(".")
-    # Strip leading 'context.' since data keys are already context-relative
-    if parts and parts[0] == "context":
-        parts = parts[1:]
-    current: Any = data
-    for part in parts:
-        if isinstance(current, dict) and part in current:
-            current = current[part]
-        else:
-            return None
-    return current
+    """Resolve a dotted path against data dict.
+
+    Thin wrapper around the shared utility for backward compatibility.
+    """
+    from dazzle_ui.utils.expression_eval import resolve_dotted_path
+
+    return resolve_dotted_path(path, data)
 
 
 def _evaluate_when_guard(when_expr: str, data: dict[str, Any]) -> bool:
     """Evaluate a when guard expression against state data.
 
-    Supports: ``context.X.Y = value``, ``context.X.Y != value``,
-    and comparison operators ``>``, ``<``, ``>=``, ``<=``.
+    Thin wrapper around the shared utility for backward compatibility.
     """
-    # Find the operator and split
-    for op in ("!=", ">=", "<=", "=", ">", "<"):
-        if f" {op} " in when_expr:
-            left, right = when_expr.split(f" {op} ", 1)
-            left = left.strip()
-            right = right.strip()
-            resolved = _resolve_dotted_path(left, data)
-            if resolved is None:
-                return False
-            # Parse the right side as literal
-            rval: Any
-            if right.lower() == "true":
-                rval = True
-            elif right.lower() == "false":
-                rval = False
-            elif right.startswith('"') and right.endswith('"'):
-                rval = right[1:-1]
-            else:
-                try:
-                    rval = int(right)
-                except ValueError:
-                    try:
-                        rval = float(right)
-                    except ValueError:
-                        rval = right
-            if op == "=":
-                return resolved == rval
-            elif op == "!=":
-                return resolved != rval
-            elif op == ">":
-                return resolved > rval
-            elif op == "<":
-                return resolved < rval
-            elif op == ">=":
-                return resolved >= rval
-            elif op == "<=":
-                return resolved <= rval
-            break
-    return True
+    from dazzle_ui.utils.expression_eval import evaluate_simple_condition
+
+    return evaluate_simple_condition(when_expr, data)
 
 
 def create_experience_routes(

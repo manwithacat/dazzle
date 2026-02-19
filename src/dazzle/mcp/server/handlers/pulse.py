@@ -327,84 +327,59 @@ def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
 # ---------------------------------------------------------------------------
 # Data collectors — each calls one handler and returns a parsed dict.
-# Failures are captured as {"error": "..."} so the pulse never crashes.
 # ---------------------------------------------------------------------------
 
 
 def _collect_pipeline(project_path: Path) -> dict[str, Any]:
     from .pipeline import run_pipeline_handler
 
-    try:
-        raw = run_pipeline_handler(project_path, {"summary": True})
-        result: dict[str, Any] = json.loads(raw)
-        return result
-    except Exception as e:
-        logger.warning("pulse: pipeline failed: %s", e)
-        return {"error": str(e)}
+    raw = run_pipeline_handler(project_path, {"summary": True})
+    result: dict[str, Any] = json.loads(raw)
+    return result
 
 
 def _collect_stories(project_path: Path) -> dict[str, Any]:
     from .process import stories_coverage_handler
 
-    try:
-        raw = stories_coverage_handler(project_path, {})
-        result: dict[str, Any] = json.loads(raw)
-        return result
-    except Exception as e:
-        logger.warning("pulse: story coverage failed: %s", e)
-        return {"error": str(e)}
+    raw = stories_coverage_handler(project_path, {})
+    result: dict[str, Any] = json.loads(raw)
+    return result
 
 
 def _collect_coherence(project_path: Path, business_context: str | None) -> dict[str, Any]:
     from .sitespec import coherence_handler
 
-    try:
-        coh_args: dict[str, Any] = {}
-        if business_context:
-            coh_args["business_context"] = business_context
-        raw = coherence_handler(project_path, coh_args)
-        result: dict[str, Any] = json.loads(raw)
-        return result
-    except Exception as e:
-        logger.warning("pulse: coherence failed: %s", e)
-        return {"error": str(e)}
+    coh_args: dict[str, Any] = {}
+    if business_context:
+        coh_args["business_context"] = business_context
+    raw = coherence_handler(project_path, coh_args)
+    result: dict[str, Any] = json.loads(raw)
+    return result
 
 
 def _collect_policy(project_path: Path) -> dict[str, Any]:
     from .policy import handle_policy
 
-    try:
-        raw = handle_policy(project_path, {"operation": "coverage"})
-        result: dict[str, Any] = json.loads(raw)
-        return result
-    except Exception as e:
-        logger.warning("pulse: policy coverage failed: %s", e)
-        return {"error": str(e)}
+    raw = handle_policy(project_path, {"operation": "coverage"})
+    result: dict[str, Any] = json.loads(raw)
+    return result
 
 
 def _collect_compliance(project_path: Path) -> dict[str, Any]:
-    try:
-        from dazzle.mcp.event_first_tools import handle_infer_compliance
+    from dazzle.mcp.event_first_tools import handle_infer_compliance
 
-        raw = handle_infer_compliance({}, project_path)
-        result: dict[str, Any] = json.loads(raw)
-        return result
-    except Exception as e:
-        logger.warning("pulse: compliance failed: %s", e)
-        return {"error": str(e)}
+    raw = handle_infer_compliance({}, project_path)
+    result: dict[str, Any] = json.loads(raw)
+    return result
 
 
 def _collect_story_list(project_path: Path) -> dict[str, Any]:
     """Fetch the story list (with actor/persona info) for persona filtering."""
     from .stories import get_stories_handler
 
-    try:
-        raw = get_stories_handler(project_path, {"status_filter": "accepted"})
-        result: dict[str, Any] = json.loads(raw)
-        return result
-    except Exception as e:
-        logger.warning("pulse: story list failed: %s", e)
-        return {"error": str(e)}
+    raw = get_stories_handler(project_path, {"status_filter": "accepted"})
+    result: dict[str, Any] = json.loads(raw)
+    return result
 
 
 # ---------------------------------------------------------------------------

@@ -77,7 +77,7 @@ def _resolve_backend_url(request: Any, fallback: str) -> str:
         if base:
             return base
     except Exception:
-        pass
+        logger.warning("Failed to extract base_url from request", exc_info=True)
     return fallback
 
 
@@ -636,7 +636,10 @@ def create_page_routes(
                                 if route:
                                     return RedirectResponse(url=route, status_code=302)
                     except Exception:
-                        pass
+                        logger.warning(
+                            "Failed to resolve user persona for workspace redirect",
+                            exc_info=True,
+                        )
                 return RedirectResponse(url=_fallback_ws_route, status_code=302)
 
             router.get("/", response_class=HTMLResponse)(root_redirect)

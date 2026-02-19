@@ -72,10 +72,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
 
     # --- Build mission ---
 
-    try:
-        appspec = _load_appspec(project_path)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}"}, indent=2)
+    appspec = _load_appspec(project_path)
 
     kg_store = _populate_kg_for_discovery(project_path)
 
@@ -115,59 +112,48 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
 
     progress = args.get("_progress")
 
-    try:
-        import httpx
+    import httpx
 
-        from dazzle.agent.core import DazzleAgent
-        from dazzle.agent.executor import HttpExecutor
-        from dazzle.agent.observer import HttpObserver
+    from dazzle.agent.core import DazzleAgent
+    from dazzle.agent.executor import HttpExecutor
+    from dazzle.agent.observer import HttpObserver
 
-        # Set up auth cookies for persona mode
-        cookies: dict[str, str] = {}
-        if mode == "persona":
-            session_info = await _get_persona_session_info(project_path, persona, base_url)
-            cookies = session_info.get("cookie", {})
+    # Set up auth cookies for persona mode
+    cookies: dict[str, str] = {}
+    if mode == "persona":
+        session_info = await _get_persona_session_info(project_path, persona, base_url)
+        cookies = session_info.get("cookie", {})
 
-        t0 = time.monotonic()
+    t0 = time.monotonic()
 
-        def _on_step(step_num: int, step: Any) -> None:
-            """Report step progress to the activity log."""
-            if progress is not None:
-                try:
-                    action_type = step.action.type.value if step.action else "unknown"
-                    progress.log_sync(
-                        f"Step {step_num}/{mission.max_steps}: {action_type}"
-                        + (f" → {step.action.target[:40]}" if step.action.target else "")
-                    )
-                except Exception:
-                    logger.debug("Failed to log discovery step progress", exc_info=True)
+    def _on_step(step_num: int, step: Any) -> None:
+        """Report step progress to the activity log."""
+        if progress is not None:
+            try:
+                action_type = step.action.type.value if step.action else "unknown"
+                progress.log_sync(
+                    f"Step {step_num}/{mission.max_steps}: {action_type}"
+                    + (f" → {step.action.target[:40]}" if step.action.target else "")
+                )
+            except Exception:
+                logger.debug("Failed to log discovery step progress", exc_info=True)
 
-        async with httpx.AsyncClient(
-            base_url=base_url,
-            cookies=cookies,
-            follow_redirects=True,
-            timeout=30.0,
-        ) as client:
-            observer = HttpObserver(client, base_url)
-            executor = HttpExecutor(client, base_url, observer=observer)
-            agent = DazzleAgent(observer, executor, api_key=api_key, mcp_session=mcp_session)
+    async with httpx.AsyncClient(
+        base_url=base_url,
+        cookies=cookies,
+        follow_redirects=True,
+        timeout=30.0,
+    ) as client:
+        observer = HttpObserver(client, base_url)
+        executor = HttpExecutor(client, base_url, observer=observer)
+        agent = DazzleAgent(observer, executor, api_key=api_key, mcp_session=mcp_session)
 
-            if progress is not None:
-                progress.log_sync(f"Starting {mode} discovery against {base_url}")
+        if progress is not None:
+            progress.log_sync(f"Starting {mode} discovery against {base_url}")
 
-            transcript = await agent.run(mission, on_step=_on_step)
+        transcript = await agent.run(mission, on_step=_on_step)
 
-        wall_ms = (time.monotonic() - t0) * 1000
-
-    except Exception as e:
-        logger.exception("Discovery agent execution failed")
-        return json.dumps(
-            {
-                "error": f"Agent execution failed: {e}",
-                "hint": "Check that the app is running. LLM auth requires either ANTHROPIC_API_KEY or an MCP host that supports sampling.",
-            },
-            indent=2,
-        )
+    wall_ms = (time.monotonic() - t0) * 1000
 
     # --- Save report ---
 

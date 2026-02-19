@@ -212,28 +212,18 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
     """
     # If we have a roots-resolved path with a manifest, use it directly
     if resolved_path is not None and (resolved_path / "dazzle.toml").exists():
-        try:
-            manifest = load_manifest(resolved_path / "dazzle.toml")
-            result: dict[str, Any] = {
-                "mode": "dev" if is_dev_mode() else "normal",
-                "project_root": str(resolved_path),
-                "manifest_name": manifest.name,
-                "version": manifest.version,
-            }
+        manifest = load_manifest(resolved_path / "dazzle.toml")
+        result: dict[str, Any] = {
+            "mode": "dev" if is_dev_mode() else "normal",
+            "project_root": str(resolved_path),
+            "manifest_name": manifest.name,
+            "version": manifest.version,
+        }
 
-            backend_spec_loaded = load_backend_spec_for_project(resolved_path)
-            result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+        backend_spec_loaded = load_backend_spec_for_project(resolved_path)
+        result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
 
-            return json.dumps(result, indent=2)
-        except Exception as e:
-            return json.dumps(
-                {
-                    "mode": "dev" if is_dev_mode() else "normal",
-                    "project_root": str(resolved_path),
-                    "error": f"Could not load manifest: {e}",
-                },
-                indent=2,
-            )
+        return json.dumps(result, indent=2)
 
     if not is_dev_mode():
         # In normal mode, return info about the project root
@@ -241,29 +231,19 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
         manifest_path = project_root / "dazzle.toml"
 
         if manifest_path.exists():
-            try:
-                manifest = load_manifest(manifest_path)
-                result = {
-                    "mode": "normal",
-                    "project_root": str(project_root),
-                    "manifest_name": manifest.name,
-                    "version": manifest.version,
-                }
+            manifest = load_manifest(manifest_path)
+            result = {
+                "mode": "normal",
+                "project_root": str(project_root),
+                "manifest_name": manifest.name,
+                "version": manifest.version,
+            }
 
-                # Auto-load BackendSpec for DNR tools
-                backend_spec_loaded = load_backend_spec_for_project(project_root)
-                result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+            # Auto-load BackendSpec for DNR tools
+            backend_spec_loaded = load_backend_spec_for_project(project_root)
+            result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
 
-                return json.dumps(result, indent=2)
-            except Exception as e:
-                return json.dumps(
-                    {
-                        "mode": "normal",
-                        "project_root": str(project_root),
-                        "error": f"Could not load manifest: {e}",
-                    },
-                    indent=2,
-                )
+            return json.dumps(result, indent=2)
         else:
             return json.dumps(
                 {
@@ -278,30 +258,19 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
     project_root = get_project_root()
     cwd_manifest = project_root / "dazzle.toml"
     if cwd_manifest.exists():
-        try:
-            manifest = load_manifest(cwd_manifest)
-            result = {
-                "mode": "dev",
-                "source": "cwd",
-                "project_root": str(project_root),
-                "manifest_name": manifest.name,
-                "version": manifest.version,
-            }
+        manifest = load_manifest(cwd_manifest)
+        result = {
+            "mode": "dev",
+            "source": "cwd",
+            "project_root": str(project_root),
+            "manifest_name": manifest.name,
+            "version": manifest.version,
+        }
 
-            backend_spec_loaded = load_backend_spec_for_project(project_root)
-            result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+        backend_spec_loaded = load_backend_spec_for_project(project_root)
+        result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
 
-            return json.dumps(result, indent=2)
-        except Exception as e:
-            return json.dumps(
-                {
-                    "mode": "dev",
-                    "source": "cwd",
-                    "project_root": str(project_root),
-                    "error": f"Could not load manifest: {e}",
-                },
-                indent=2,
-            )
+        return json.dumps(result, indent=2)
 
     active_project = get_active_project()
     available_projects = get_available_projects()
@@ -327,28 +296,17 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
             indent=2,
         )
 
-    try:
-        manifest = load_manifest(project_path / "dazzle.toml")
-        return json.dumps(
-            {
-                "mode": "dev",
-                "active_project": active_project,
-                "path": str(project_path),
-                "manifest_name": manifest.name,
-                "version": manifest.version,
-            },
-            indent=2,
-        )
-    except Exception as e:
-        return json.dumps(
-            {
-                "mode": "dev",
-                "active_project": active_project,
-                "path": str(project_path),
-                "error": f"Could not load manifest: {e}",
-            },
-            indent=2,
-        )
+    manifest = load_manifest(project_path / "dazzle.toml")
+    return json.dumps(
+        {
+            "mode": "dev",
+            "active_project": active_project,
+            "path": str(project_path),
+            "manifest_name": manifest.name,
+            "version": manifest.version,
+        },
+        indent=2,
+    )
 
 
 def validate_all_projects() -> str:

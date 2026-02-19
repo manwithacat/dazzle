@@ -287,30 +287,25 @@ def scaffold_pack_handler(project_path: Path | None, args: dict[str, Any]) -> st
         toml_content = import_from_openapi(openapi_spec)
     elif openapi_url:
         # Fetch and convert
-        import json as _json
-
         import httpx
 
-        try:
-            resp = httpx.get(openapi_url, timeout=30.0, follow_redirects=True)
-            resp.raise_for_status()
-            content_type = resp.headers.get("content-type", "")
-            if "yaml" in content_type or openapi_url.endswith((".yaml", ".yml")):
-                try:
-                    import yaml
+        resp = httpx.get(openapi_url, timeout=30.0, follow_redirects=True)
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "")
+        if "yaml" in content_type or openapi_url.endswith((".yaml", ".yml")):
+            try:
+                import yaml
 
-                    spec_data = yaml.safe_load(resp.text)
-                except ImportError:
-                    return _json.dumps(
-                        {
-                            "error": "PyYAML required for YAML OpenAPI specs. Install with: pip install pyyaml"
-                        }
-                    )
-            else:
-                spec_data = resp.json()
-            toml_content = import_from_openapi(spec_data)
-        except Exception as e:
-            return _json.dumps({"error": f"Failed to fetch OpenAPI spec: {e}"})
+                spec_data = yaml.safe_load(resp.text)
+            except ImportError:
+                return json.dumps(
+                    {
+                        "error": "PyYAML required for YAML OpenAPI specs. Install with: pip install pyyaml"
+                    }
+                )
+        else:
+            spec_data = resp.json()
+        toml_content = import_from_openapi(spec_data)
     else:
         # Blank template
         if not pack_name:

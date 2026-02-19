@@ -61,11 +61,8 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
         )
 
     # Load appspec for emit context
-    try:
-        appspec = _load_appspec(project_path)
-        context = build_emit_context(appspec)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL for emit context: {e}"})
+    appspec = _load_appspec(project_path)
+    context = build_emit_context(appspec)
 
     # Emit DSL for each proposal
     emitter = DslEmitter()

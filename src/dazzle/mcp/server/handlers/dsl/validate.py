@@ -24,32 +24,26 @@ logger = logging.getLogger(__name__)
 def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     """Validate DSL files in the project."""
     progress = extract_progress(args)
-    try:
-        progress.log_sync("Loading project DSL...")
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+    progress.log_sync("Loading project DSL...")
+    manifest = load_manifest(project_root / "dazzle.toml")
+    dsl_files = discover_dsl_files(project_root, manifest)
+    modules = parse_modules(dsl_files)
+    app_spec = build_appspec(modules, manifest.project_root)
 
-        result: dict[str, Any] = {
-            "status": "valid",
-            "project_path": str(project_root),
-            "modules": len(modules),
-            "entities": len(app_spec.domain.entities),
-            "surfaces": len(app_spec.surfaces),
-            "apis": len(app_spec.apis),
-        }
+    result: dict[str, Any] = {
+        "status": "valid",
+        "project_path": str(project_root),
+        "modules": len(modules),
+        "entities": len(app_spec.domain.entities),
+        "surfaces": len(app_spec.surfaces),
+        "apis": len(app_spec.apis),
+    }
 
-        # Add project context in dev mode
-        if is_dev_mode():
-            result["project"] = get_active_project()
+    # Add project context in dev mode
+    if is_dev_mode():
+        result["project"] = get_active_project()
 
-        return json.dumps(result, indent=2)
-    except Exception as e:
-        return json.dumps(
-            {"status": "error", "project_path": str(project_root), "error": str(e)},
-            indent=2,
-        )
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors

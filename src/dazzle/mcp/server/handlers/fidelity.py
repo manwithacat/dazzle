@@ -30,11 +30,8 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
         return json.dumps({"error": "fidelity_scorer module not available"})
 
     # Parse and link DSL
-    try:
-        progress.log_sync("Loading project DSL...")
-        appspec = load_project_appspec(project_path)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to parse/link DSL: {e}"})
+    progress.log_sync("Loading project DSL...")
+    appspec = load_project_appspec(project_path)
 
     # Validate DSL before proceeding
     progress.log_sync("Linting DSL...")
@@ -61,11 +58,8 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
             }
         )
 
-    try:
-        progress.log_sync("Compiling templates...")
-        page_contexts = compile_appspec_to_templates(appspec)
-    except Exception as e:
-        return json.dumps({"error": f"Failed to compile templates: {e}"})
+    progress.log_sync("Compiling templates...")
+    page_contexts = compile_appspec_to_templates(appspec)
 
     # Render each page and build surface_name → HTML mapping
     progress.log_sync(f"Rendering {len(page_contexts)} pages...")

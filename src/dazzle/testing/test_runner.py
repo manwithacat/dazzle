@@ -1492,7 +1492,12 @@ class TestRunner:
                     if val:
                         return val
             except Exception:
-                pass
+                logger.warning(
+                    "Failed to read test credential '%s' for persona '%s'",
+                    field,
+                    persona,
+                    exc_info=True,
+                )
 
         return f"__PERSONA_{field.upper()}__"  # unresolved
 
