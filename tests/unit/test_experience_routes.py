@@ -140,6 +140,26 @@ class TestStepRendering:
         cname = cookie_name("onboarding")
         assert cname in resp.cookies
 
+    def test_navigation_buttons_use_post(self, client: TestClient) -> None:
+        """Non-success transition buttons must use hx-post, not GET links (#307)."""
+        resp = client.get("/app/experiences/onboarding/enter_details")
+        assert resp.status_code == 200
+        # The "cancel" transition should render as hx-post button, not <a href>
+        assert 'hx-post="/app/experiences/onboarding/enter_details?event=cancel"' in resp.text
+        # Should NOT have a plain <a href> for transition events
+        assert '<a href="/app/experiences/onboarding/enter_details?event=cancel"' not in resp.text
+
+    def test_detail_step_transitions_use_post_forms(self, client: TestClient) -> None:
+        """Detail/view step transitions use <form method=post>."""
+        state = ExperienceState(step="review", completed=["enter_details"])
+        cname = cookie_name("onboarding")
+        client.cookies.set(cname, sign_state(state))
+
+        resp = client.get("/app/experiences/onboarding/review")
+        assert resp.status_code == 200
+        # Should use <form method="post"> for transitions
+        assert 'method="post"' in resp.text
+
 
 class TestSkipPrevention:
     def test_cannot_skip_ahead(self, client: TestClient) -> None:

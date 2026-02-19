@@ -59,7 +59,7 @@
               {% endfor %}
             {% endif %}
 
-            {# Form submit + back buttons #}
+            {# Form submit + navigation buttons #}
             <div class="flex gap-3 pt-4">
               <button type="submit" class="btn btn-primary"
                       data-loading-class="loading"
@@ -68,7 +68,12 @@
               </button>
               {% for tr in experience.transitions %}
                 {% if tr.event != 'success' %}
-                <a href="{{ tr.url }}" class="btn btn-{{ tr.style }}">{{ tr.label }}</a>
+                <button type="button" class="btn btn-{{ tr.style }}"
+                        hx-post="{{ tr.url }}"
+                        hx-target="body"
+                        hx-swap="innerHTML">
+                  {{ tr.label }}
+                </button>
                 {% endif %}
               {% endfor %}
             </div>
