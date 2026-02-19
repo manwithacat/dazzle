@@ -1199,6 +1199,11 @@ class DazzleBackendApp:
             cors_origins=self._cors_origins,
         )
 
+        # GZip compression (v0.33.0) — must be added before other middleware
+        from starlette.middleware.gzip import GZipMiddleware
+
+        self._app.add_middleware(GZipMiddleware, minimum_size=500)
+
         # Metrics middleware (v0.27.0)
         try:
             from dazzle_back.runtime.metrics import add_metrics_middleware

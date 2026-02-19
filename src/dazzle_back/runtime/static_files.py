@@ -3,6 +3,10 @@
 Serves static files from project and framework directories, with project
 files taking priority (first match wins). This enables project-level images
 (e.g. hero-office.webp) to be served alongside framework assets (dz.js, dz.css).
+
+Adds Cache-Control headers to all static responses:
+- Fingerprinted assets (containing hash-like segments): 1 year, immutable
+- Other assets: 1 hour, public
 """
 
 from __future__ import annotations
@@ -11,7 +15,17 @@ import os
 from pathlib import Path
 from typing import Any
 
+from starlette.responses import Response
 from starlette.staticfiles import StaticFiles
+
+# Extensions unlikely to change between deploys
+_IMMUTABLE_EXTENSIONS = frozenset({".woff2", ".woff", ".ttf", ".eot"})
+
+# Default cache duration for non-fingerprinted assets (1 hour)
+_DEFAULT_MAX_AGE = 3600
+
+# Cache duration for fingerprinted/immutable assets (1 year)
+_IMMUTABLE_MAX_AGE = 31536000
 
 
 class CombinedStaticFiles(StaticFiles):
@@ -38,3 +52,22 @@ class CombinedStaticFiles(StaticFiles):
             except (FileNotFoundError, PermissionError):
                 continue
         return super().lookup_path(path)
+
+    def file_response(
+        self,
+        full_path: Any,
+        stat_result: os.stat_result,
+        scope: Any,
+        status_code: int = 200,
+    ) -> Response:
+        """Add Cache-Control headers to static file responses."""
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        if "cache-control" not in response.headers:
+            ext = os.path.splitext(str(full_path))[1].lower()
+            if ext in _IMMUTABLE_EXTENSIONS:
+                response.headers["Cache-Control"] = (
+                    f"public, max-age={_IMMUTABLE_MAX_AGE}, immutable"
+                )
+            else:
+                response.headers["Cache-Control"] = f"public, max-age={_DEFAULT_MAX_AGE}"
+        return response
