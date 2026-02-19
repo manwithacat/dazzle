@@ -869,7 +869,8 @@ def create_update_handler(
 
             body = await _parse_request_body(request)
             data = input_schema.model_validate(body)
-            result = await service.execute(operation="update", id=id, data=data)
+            _cu = str(user.id) if user else None
+            result = await service.execute(operation="update", id=id, data=data, current_user=_cu)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
             return _with_htmx_triggers(
@@ -891,7 +892,8 @@ def create_update_handler(
         ) -> Any:
             body = await _parse_request_body(request)
             data = input_schema.model_validate(body)
-            result = await service.execute(operation="update", id=id, data=data)
+            _cu = str(auth_context.user.id) if auth_context.user else None
+            result = await service.execute(operation="update", id=id, data=data, current_user=_cu)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
             if audit_logger:

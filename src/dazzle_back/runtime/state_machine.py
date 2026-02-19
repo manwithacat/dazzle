@@ -290,6 +290,8 @@ def _eval_func(node: dict[str, Any], data: dict[str, Any]) -> Any:
             return len(args[0])
         except TypeError:
             return 0
+    if name == "all_true":
+        return all(bool(a) for a in args)
     return None
 
 
@@ -338,6 +340,7 @@ class TransitionValidator:
         to_state: str,
         entity_data: dict[str, Any],
         user_roles: list[str] | None = None,
+        current_user: str | None = None,
     ) -> TransitionValidationResult:
         """
         Validate a state transition.
@@ -347,6 +350,7 @@ class TransitionValidator:
             to_state: Desired new state value
             entity_data: Current entity data (for checking field guards)
             user_roles: List of roles the current user has (for role guards)
+            current_user: Current user identifier (for field != current_user guards)
 
         Returns:
             TransitionValidationResult with validation outcome
@@ -398,8 +402,13 @@ class TransitionValidator:
 
             # Check expression guard
             if guard.guard_expr:
+                # Inject current_user into data for guard evaluation
+                eval_data = entity_data
+                if current_user is not None:
+                    eval_data = {**entity_data, "current_user": current_user}
+
                 try:
-                    result = evaluate_guard_expr(guard.guard_expr, entity_data)
+                    result = evaluate_guard_expr(guard.guard_expr, eval_data)
                 except Exception:
                     logger.warning(
                         "Guard expression evaluation failed for %s -> %s",
@@ -410,9 +419,11 @@ class TransitionValidator:
                     result = False
 
                 if not result:
-                    message = guard.guard_message or (
-                        f"Guard condition not met for transition '{from_state}' -> '{to_state}'"
-                    )
+                    message = guard.guard_message
+                    if not message:
+                        message = _build_guard_failure_message(
+                            guard.guard_expr, eval_data, from_state, to_state
+                        )
                     return TransitionValidationResult.failure(
                         GuardNotSatisfiedError(
                             from_state,
@@ -431,11 +442,44 @@ class TransitionValidator:
 # =============================================================================
 
 
+def _build_guard_failure_message(
+    expr: dict[str, Any],
+    data: dict[str, Any],
+    from_state: str,
+    to_state: str,
+) -> str:
+    """Build a human-readable error message for a failed guard expression.
+
+    For ``all_true(...)`` calls, lists which fields are still false/unset.
+    For other expressions, returns a generic message.
+    """
+    # Detect all_true() function call
+    if expr.get("name") == "all_true" and "args" in expr:
+        false_fields: list[str] = []
+        for arg in expr["args"]:
+            path = arg.get("path")
+            if path:
+                field_name = ".".join(s for s in path if s != "self")
+                value = _eval_field_ref(path, data)
+                if not value:
+                    false_fields.append(field_name)
+        if false_fields:
+            items = ", ".join(false_fields)
+            return (
+                f"Cannot transition '{from_state}' -> '{to_state}': "
+                f"checklist items not completed: {items}"
+            )
+        return f"Guard condition not met for transition '{from_state}' -> '{to_state}'"
+
+    return f"Guard condition not met for transition '{from_state}' -> '{to_state}'"
+
+
 def validate_status_update(
     state_machine: StateMachineSpec | None,
     current_data: dict[str, Any],
     update_data: dict[str, Any],
     user_roles: list[str] | None = None,
+    current_user: str | None = None,
 ) -> TransitionValidationResult | None:
     """
     Validate a status field update against a state machine.
@@ -447,6 +491,7 @@ def validate_status_update(
         current_data: Current entity data
         update_data: Data being updated
         user_roles: User's roles for role guard checks
+        current_user: Current user identifier for field comparison guards
 
     Returns:
         TransitionValidationResult if status is changing, None otherwise
@@ -482,4 +527,6 @@ def validate_status_update(
     merged_data = {**current_data, **update_data}
 
     validator = TransitionValidator(state_machine)
-    return validator.validate_transition(current_status, new_status, merged_data, user_roles)
+    return validator.validate_transition(
+        current_status, new_status, merged_data, user_roles, current_user
+    )

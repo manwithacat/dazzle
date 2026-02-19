@@ -277,6 +277,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         id: UUID,
         data: UpdateT,
         user_roles: list[str] | None = None,
+        current_user: str | None = None,
     ) -> T | dict[str, Any] | None:
         """
         Update an existing entity.
@@ -290,6 +291,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             id: Entity ID to update
             data: Update data
             user_roles: User's roles for state machine role guard checks
+            current_user: Current user identifier for field comparison guards
 
         Returns:
             Updated entity or None if not found
@@ -345,6 +347,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 current_data,
                 update_data,
                 user_roles,
+                current_user,
             )
             if result is not None and not result.is_valid:
                 raise result.error  # type: ignore
