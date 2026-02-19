@@ -438,7 +438,7 @@ class ServiceParserMixin:
         self.expect(TokenType.START)
         self.expect(TokenType.AT)
         self.expect(TokenType.STEP)
-        start_step = self.expect(TokenType.IDENTIFIER).value
+        start_step = self.expect_identifier_or_keyword().value
         self.skip_newlines()
 
         steps = []
@@ -482,7 +482,7 @@ class ServiceParserMixin:
         """Parse experience step."""
         self.expect(TokenType.STEP)
 
-        name = self.expect(TokenType.IDENTIFIER).value
+        name = self.expect_identifier_or_keyword().value
 
         self.expect(TokenType.COLON)
         self.skip_newlines()
@@ -619,12 +619,12 @@ class ServiceParserMixin:
         while self.match(TokenType.ON):
             self.advance()
 
-            event_token = self.expect(TokenType.IDENTIFIER)
+            event_token = self.expect_identifier_or_keyword()
             event = event_token.value  # Arbitrary event names supported
 
             self.expect(TokenType.ARROW)
             self.expect(TokenType.STEP)
-            next_step = self.expect(TokenType.IDENTIFIER).value
+            next_step = self.expect_identifier_or_keyword().value
 
             transitions.append(
                 ir.StepTransition(
