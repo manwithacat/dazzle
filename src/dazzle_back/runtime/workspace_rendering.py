@@ -244,12 +244,12 @@ async def _workspace_region_handler(
                         rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
                         include_rels.append(rel_name)
 
-            # Grouped views need all items to distribute across columns
+            # Grouped views need enough items to distribute across columns
             if (
                 ctx.ctx_region.display in ("KANBAN", "BAR_CHART", "FUNNEL_CHART")
                 and not ctx.ctx_region.limit
             ):
-                limit = 200
+                limit = min(page_size, 200) if page_size > 20 else 50
             else:
                 limit = ctx.ctx_region.limit or page_size
             result = await repo.list(

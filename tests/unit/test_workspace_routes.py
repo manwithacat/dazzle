@@ -826,6 +826,62 @@ class TestKanbanTemplate:
         )
         assert "Alice" in html
 
+    def test_kanban_load_all_button_when_truncated(self) -> None:
+        html = render_fragment(
+            "workspace/regions/kanban.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+            ],
+            items=[
+                {"id": "1", "title": "Task 1", "status": "todo"},
+                {"id": "2", "title": "Task 2", "status": "todo"},
+            ],
+            kanban_columns=["todo"],
+            group_by="status",
+            display_key="title",
+            total=100,
+            action_url="",
+            empty_message="No tasks.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "Showing 2 of 100" in html
+        assert "Load all" in html
+        assert "page_size=100" in html
+
+    def test_kanban_no_load_all_when_all_shown(self) -> None:
+        html = render_fragment(
+            "workspace/regions/kanban.html",
+            title="Tasks",
+            columns=[
+                {"key": "title", "label": "Title", "type": "text", "sortable": True},
+            ],
+            items=[
+                {"id": "1", "title": "Task 1", "status": "todo"},
+            ],
+            kanban_columns=["todo"],
+            group_by="status",
+            display_key="title",
+            total=1,
+            action_url="",
+            empty_message="No tasks.",
+            endpoint="/api/workspaces/ws/regions/tasks",
+            region_name="tasks",
+            sort_field="",
+            sort_dir="asc",
+            filter_columns=[],
+            active_filters={},
+            metrics=[],
+        )
+        assert "Load all" not in html
+        assert "Showing" not in html
+
     def test_kanban_no_items(self) -> None:
         html = render_fragment(
             "workspace/regions/kanban.html",
