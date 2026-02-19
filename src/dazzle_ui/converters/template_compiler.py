@@ -25,6 +25,8 @@ from dazzle_ui.runtime.template_context import (
     NavItemContext,
     PageContext,
     RelatedTabContext,
+    ReviewActionContext,
+    ReviewContext,
     TableContext,
     TransitionContext,
 )
@@ -726,6 +728,79 @@ def _compile_view_surface(
     )
 
 
+def _compile_review_surface(
+    surface: ir.SurfaceSpec,
+    entity: ir.EntitySpec | None,
+    entity_name: str,
+    api_endpoint: str,
+    entity_slug: str,
+    app_prefix: str,
+) -> PageContext:
+    """Compile a REVIEW mode surface to a PageContext with review queue context.
+
+    Review mode displays entities one-at-a-time from a filtered queue with
+    approve/return action buttons and queue navigation.
+    """
+    fields = _build_form_fields(surface, entity)
+
+    # Build review actions from state machine transitions
+    actions: list[ReviewActionContext] = []
+    status_field = "status"
+    if entity and entity.state_machine:
+        sm = entity.state_machine
+        status_field = sm.status_field if hasattr(sm, "status_field") else "status"
+
+        # Map common transition patterns to review actions
+        _ACTION_STYLES: dict[str, tuple[str, str]] = {
+            "approved": ("Approve", "primary"),
+            "reviewed": ("Approve", "primary"),
+            "completed": ("Complete", "primary"),
+            "accepted": ("Accept", "primary"),
+            "closed": ("Close", "primary"),
+            "draft": ("Return", "error"),
+            "returned": ("Return", "error"),
+            "rejected": ("Reject", "error"),
+            "flagged": ("Flag", "error"),
+        }
+        seen_targets: set[str] = set()
+        for t in sm.transitions:
+            if t.to_state not in seen_targets:
+                seen_targets.add(t.to_state)
+                label, style = _ACTION_STYLES.get(
+                    t.to_state,
+                    (t.to_state.replace("_", " ").title(), "ghost"),
+                )
+                # "Return" actions require notes
+                require_notes = style == "error"
+                actions.append(
+                    ReviewActionContext(
+                        label=label,
+                        event=t.to_state,
+                        style=style,
+                        transition_url=f"{api_endpoint}/{{id}}",
+                        to_state=t.to_state,
+                        require_notes=require_notes,
+                    )
+                )
+
+    review_base = f"{app_prefix}/{entity_slug}/review"
+
+    return PageContext(
+        page_title=surface.title or f"Review {entity_name}",
+        template="components/review_queue.html",
+        review=ReviewContext(
+            entity_name=entity_name,
+            title=surface.title or f"Review {entity_name}",
+            fields=fields,
+            api_endpoint=api_endpoint,
+            back_url=f"{app_prefix}/{entity_slug}",
+            status_field=status_field,
+            actions=actions,
+            queue_url=review_base,
+        ),
+    )
+
+
 def _compile_custom_surface(
     surface: ir.SurfaceSpec,
 ) -> PageContext:
@@ -783,6 +858,10 @@ def compile_surface_to_context(
             app_prefix,
             reverse_refs=reverse_refs,
             poly_refs=poly_refs,
+        )
+    elif surface.mode == SurfaceMode.REVIEW:
+        return _compile_review_surface(
+            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix
         )
     else:
         return _compile_custom_surface(surface)
@@ -961,6 +1040,7 @@ def compile_appspec_to_templates(
             SurfaceMode.CREATE: f"{app_prefix}/{entity_slug}/create",
             SurfaceMode.EDIT: f"{app_prefix}/{entity_slug}/{{id}}/edit",
             SurfaceMode.VIEW: f"{app_prefix}/{entity_slug}/{{id}}",
+            SurfaceMode.REVIEW: f"{app_prefix}/{entity_slug}/review/{{id}}",
         }
         route = route_map.get(surface.mode, f"/{surface.name}")
 

@@ -165,6 +165,42 @@ class DetailContext(BaseModel):
     related_tabs: list[RelatedTabContext] = Field(default_factory=list)
 
 
+class ReviewActionContext(BaseModel):
+    """Action button for a review surface (approve, return, etc.)."""
+
+    label: str
+    event: str  # e.g. "approve", "return"
+    style: str = "primary"  # primary, error, ghost
+    transition_url: str = ""  # API URL for state transition
+    to_state: str = ""  # Target state
+    require_notes: bool = False
+
+
+class ReviewContext(BaseModel):
+    """Context for rendering a review queue page (mode: review)."""
+
+    entity_name: str
+    title: str
+    fields: list[FieldContext]
+    item: dict[str, Any] = Field(default_factory=dict)
+    api_endpoint: str = ""
+    back_url: str = "/"
+    status_field: str = "status"
+
+    # Queue navigation
+    queue_position: int = 0  # 0-indexed position of current item in queue
+    queue_total: int = 0  # total items in queue
+    next_url: str | None = None  # URL to next item in queue
+    prev_url: str | None = None  # URL to previous item in queue
+    queue_url: str = ""  # URL back to the review queue list
+
+    # Review actions (approve, return, etc.)
+    actions: list[ReviewActionContext] = Field(default_factory=list)
+
+    # Notes field for return/rejection
+    notes_field: str = "review_notes"
+
+
 class IslandContext(BaseModel):
     """Context for rendering a UI island mount point."""
 
@@ -192,6 +228,7 @@ class PageContext(BaseModel):
     table: TableContext | None = None
     form: FormContext | None = None
     detail: DetailContext | None = None
+    review: ReviewContext | None = None
 
     # UI islands available on this page
     islands: list[IslandContext] = Field(default_factory=list)

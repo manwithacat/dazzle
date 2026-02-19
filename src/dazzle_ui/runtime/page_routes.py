@@ -284,6 +284,71 @@ def create_page_routes(
 
                 _ctx_overrides["detail"] = req_detail
 
+            if path_id and ctx.review:
+                req_review = ctx.review.model_copy(deep=True)
+
+                # Fetch the current item
+                req_review.item = await _fetch_json(
+                    effective_backend_url,
+                    f"{ctx.review.api_endpoint}/{{id}}",
+                    path_id,
+                    _cookies,
+                )
+                if "error" in req_review.item:
+                    logger.warning(
+                        "Review page data fetch failed for %s/%s",
+                        ctx.review.entity_name,
+                        path_id,
+                    )
+
+                # Substitute {id} in action transition URLs
+                for action in req_review.actions:
+                    if action.transition_url and "{id}" in action.transition_url:
+                        action.transition_url = action.transition_url.replace("{id}", str(path_id))
+
+                # Fetch the review queue to compute position + navigation
+                import urllib.parse as _urlparse
+
+                # Use the same filter from request params (e.g. filter[status]=prepared)
+                queue_params: dict[str, str] = {"page_size": "1000"}
+                for key, val in request.query_params.items():
+                    if key.startswith("filter[") and val:
+                        queue_params[key] = val
+                queue_qs = _urlparse.urlencode(queue_params)
+                queue_url = f"{effective_backend_url}{ctx.review.api_endpoint}?{queue_qs}"
+                try:
+                    queue_data = await _fetch_url(queue_url, _cookies)
+                    queue_items = queue_data.get("items", [])
+                    queue_ids = [str(item.get("id", "")) for item in queue_items]
+                    req_review.queue_total = len(queue_ids)
+
+                    current_id = str(path_id)
+                    if current_id in queue_ids:
+                        pos = queue_ids.index(current_id)
+                        req_review.queue_position = pos
+                        # Build prev/next URLs preserving filter params
+                        filter_qs = _urlparse.urlencode(
+                            {
+                                k: v
+                                for k, v in request.query_params.items()
+                                if k.startswith("filter[")
+                            }
+                        )
+                        base = ctx.review.queue_url.rstrip("/")
+                        suffix = f"?{filter_qs}" if filter_qs else ""
+                        if pos > 0:
+                            req_review.prev_url = f"{base}/{queue_ids[pos - 1]}{suffix}"
+                        if pos < len(queue_ids) - 1:
+                            req_review.next_url = f"{base}/{queue_ids[pos + 1]}{suffix}"
+                except Exception:
+                    logger.warning(
+                        "Failed to fetch review queue for %s",
+                        ctx.review.entity_name,
+                        exc_info=True,
+                    )
+
+                _ctx_overrides["review"] = req_review
+
             if path_id and ctx.form and ctx.form.mode == "edit":
                 req_form = ctx.form.model_copy(deep=True)
 
@@ -309,9 +374,9 @@ def create_page_routes(
                 # Forward all DataTable query params to backend API
                 api_params: dict[str, str] = {}
                 for key in ("page", "page_size", "sort", "dir", "search"):
-                    val = request.query_params.get(key)
-                    if val:
-                        api_params[key] = val
+                    _qval = request.query_params.get(key)
+                    if _qval:
+                        api_params[key] = _qval
                 for key, val in request.query_params.items():
                     if key.startswith("filter[") and val:
                         api_params[key] = val

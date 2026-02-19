@@ -1,0 +1,148 @@
+{# Review queue component - displays entities one-at-a-time with approve/return actions #}
+{% if review %}
+<div class="max-w-4xl" data-dazzle-entity="{{ review.entity_name }}" data-dazzle-review="true">
+  {# Header with queue progress #}
+  {% block review_header %}
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <a href="{{ review.back_url }}" class="btn btn-ghost btn-sm">&larr; Back</a>
+      <h2 class="text-2xl font-bold">{{ review.title }}</h2>
+    </div>
+    {% if review.queue_total > 0 %}
+    <div class="flex items-center gap-2">
+      <span class="text-sm text-base-content/60">
+        {{ review.queue_position + 1 }} of {{ review.queue_total }}
+      </span>
+      <progress class="progress progress-primary w-24"
+                value="{{ review.queue_position + 1 }}"
+                max="{{ review.queue_total }}"></progress>
+    </div>
+    {% endif %}
+  </div>
+  {% endblock review_header %}
+
+  {# Queue navigation #}
+  {% block review_nav %}
+  {% if review.prev_url or review.next_url %}
+  <div class="flex justify-between mb-4">
+    {% if review.prev_url %}
+    <a href="{{ review.prev_url }}" class="btn btn-ghost btn-sm"
+       hx-get="{{ review.prev_url }}" hx-push-url="true" hx-target="body" hx-swap="innerHTML">
+      &larr; Previous
+    </a>
+    {% else %}
+    <span></span>
+    {% endif %}
+    {% if review.next_url %}
+    <a href="{{ review.next_url }}" class="btn btn-ghost btn-sm"
+       hx-get="{{ review.next_url }}" hx-push-url="true" hx-target="body" hx-swap="innerHTML">
+      Next &rarr;
+    </a>
+    {% else %}
+    <span></span>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endblock review_nav %}
+
+  {# Item detail card #}
+  {% block review_fields %}
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+      <dl class="divide-y divide-base-200">
+        {% for field in review.fields %}
+        {% set value = review.item.get(field.name, "") %}
+        <div class="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
+          <dt class="text-sm font-medium text-base-content/70">{{ field.label }}</dt>
+          <dd class="mt-1 text-sm sm:col-span-2 sm:mt-0">
+            {% if field.type == "badge" %}
+              {% include 'fragments/status_badge.html' %}
+            {% elif field.type == "bool" or field.type == "checkbox" %}
+              {{ value | bool_icon }}
+            {% elif field.type == "date" %}
+              {{ value | dateformat }}
+            {% elif field.type == "currency" or field.type == "money" %}
+              {{ value | currency(field.extra.get('currency_code', 'GBP') if field.extra else 'GBP') }}
+            {% elif field.type == "ref" %}
+              {% if value is mapping %}{{ value.get("name") or value.get("title") or value.get("label") or value.get("email") or value.get("id", "\u2014") }}{% elif value %}{{ value }}{% else %}&mdash;{% endif %}
+            {% else %}
+              {{ value | default("\u2014") }}
+            {% endif %}
+          </dd>
+        </div>
+        {% endfor %}
+      </dl>
+    </div>
+  </div>
+  {% endblock review_fields %}
+
+  {# Review actions #}
+  {% block review_actions %}
+  {% if review.actions %}
+  <div class="card bg-base-100 shadow-sm mt-4">
+    <div class="card-body">
+      {# Notes textarea (shown when a return/reject action needs it) #}
+      <div id="review-notes-container" class="hidden mb-4">
+        <label class="label" for="review-notes">
+          <span class="label-text font-medium">Notes</span>
+          <span class="label-text-alt text-error">Required</span>
+        </label>
+        <textarea id="review-notes" name="{{ review.notes_field }}"
+                  class="textarea textarea-bordered w-full" rows="3"
+                  placeholder="Reason for returning/rejecting..."></textarea>
+      </div>
+
+      <div class="flex gap-2 justify-end" data-dazzle-review-actions="{{ review.entity_name }}">
+        {% for action in review.actions %}
+        <button class="btn btn-{{ action.style }} btn-sm"
+                data-dazzle-action="{{ review.entity_name }}.review.{{ action.event }}"
+                data-review-to-state="{{ action.to_state }}"
+                data-review-require-notes="{{ 'true' if action.require_notes else 'false' }}"
+                {% if action.transition_url %}
+                hx-put="{{ action.transition_url }}"
+                hx-vals='js:{
+                  "{{ review.status_field }}": "{{ action.to_state }}",
+                  ...( document.getElementById("review-notes")?.value
+                       ? {"{{ review.notes_field }}": document.getElementById("review-notes").value}
+                       : {} )
+                }'
+                hx-ext="json-enc"
+                hx-target="body"
+                hx-swap="innerHTML"
+                hx-confirm="{% if action.style == 'error' %}Return this {{ review.entity_name | lower }} with notes?{% else %}{{ action.label }} this {{ review.entity_name | lower }}?{% endif %}"
+                {% endif %}>
+          {{ action.label }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endblock review_actions %}
+
+  {# Queue empty state #}
+  {% if not review.item %}
+  <div class="card bg-base-100 shadow-sm mt-4">
+    <div class="card-body text-center py-12">
+      <div class="text-4xl mb-2">&#10003;</div>
+      <h3 class="text-lg font-semibold mb-1">Queue Complete</h3>
+      <p class="text-base-content/60">All items have been reviewed.</p>
+      <a href="{{ review.back_url }}" class="btn btn-primary btn-sm mt-4">Return to list</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+// Toggle notes visibility when a "require notes" action button is focused/hovered
+document.addEventListener('DOMContentLoaded', function() {
+  const container = document.getElementById('review-notes-container');
+  if (!container) return;
+
+  document.querySelectorAll('[data-review-require-notes="true"]').forEach(btn => {
+    btn.addEventListener('mouseenter', () => container.classList.remove('hidden'));
+    btn.addEventListener('focus', () => container.classList.remove('hidden'));
+  });
+});
+</script>
+{% endif %}
