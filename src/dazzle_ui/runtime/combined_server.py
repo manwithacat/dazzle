@@ -276,6 +276,21 @@ def run_unified_server(
                 except Exception:
                     logger.debug("Failed to load bundled CSS", exc_info=True)
 
+            # Serve bundled CSS as a cacheable external file instead of
+            # inlining 58KB on every page (#318).
+            if theme_css:
+                from starlette.responses import Response as StarletteResponse
+
+                _bundle_css = theme_css  # capture for closure
+
+                @app.get("/static/css/dazzle-bundle.css", include_in_schema=False)
+                async def serve_bundled_css() -> StarletteResponse:
+                    return StarletteResponse(
+                        content=_bundle_css,
+                        media_type="text/css",
+                        headers={"Cache-Control": "public, max-age=3600"},
+                    )
+
             get_auth_context = None
             if builder.auth_middleware:
                 get_auth_context = builder.auth_middleware.get_auth_context
