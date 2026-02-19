@@ -14,6 +14,7 @@ import json
 import logging
 import urllib.request
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from dazzle.core import ir
@@ -82,6 +83,7 @@ def create_experience_routes(
     theme_css: str = "",
     get_auth_context: Callable[..., Any] | None = None,
     app_prefix: str = "",
+    project_root: Path | None = None,
 ) -> APIRouter:
     """Create FastAPI routes for all experiences in the appspec.
 
@@ -91,6 +93,7 @@ def create_experience_routes(
         theme_css: Pre-compiled theme CSS to inject.
         get_auth_context: Optional callable(request) -> AuthContext for user info.
         app_prefix: URL prefix for page routes (e.g. "/app").
+        project_root: Project root for durable progress persistence.
 
     Returns:
         FastAPI router with experience routes.
@@ -99,6 +102,10 @@ def create_experience_routes(
         raise RuntimeError("FastAPI is not installed")
 
     from dazzle_ui.converters.experience_compiler import compile_experience_context
+    from dazzle_ui.runtime.experience_persistence import (
+        ExperienceProgress,
+        ExperienceProgressStore,
+    )
     from dazzle_ui.runtime.experience_state import (
         cookie_name,
         create_initial_state,
@@ -107,6 +114,11 @@ def create_experience_routes(
     )
     from dazzle_ui.runtime.page_routes import _resolve_backend_url
     from dazzle_ui.runtime.template_renderer import render_fragment
+
+    # Durable progress store (file-based, survives cookie expiry)
+    progress_store: ExperienceProgressStore | None = None
+    if project_root:
+        progress_store = ExperienceProgressStore(project_root)
 
     router = APIRouter()
 
@@ -147,26 +159,66 @@ def create_experience_routes(
                 logger.debug("Failed to resolve auth context for experience", exc_info=True)
         return ctx
 
+    def _get_user_email(request: Request) -> str:
+        """Extract user email from auth context for progress keying."""
+        auth_ctx = _inject_auth(request)
+        email: str = auth_ctx.get("user_email", "")
+        return email
+
     # GET /experiences/{name} — redirect to current or start step
     async def experience_entry(request: Request, name: str) -> Response:
         experience = experiences_by_name.get(name)
         if not experience:
             return RedirectResponse(url=f"{app_prefix}/", status_code=302)
 
-        # Check for existing state
+        # Check for existing state: cookie first, then durable store
         cname = cookie_name(name)
         raw_cookie = request.cookies.get(cname)
         state = verify_state(raw_cookie) if raw_cookie else None
 
         if state:
             target_step = state.step
+        elif progress_store:
+            # Cookie expired or missing — try durable store for resume
+            user_email = _get_user_email(request)
+            saved = progress_store.load(name, user_email)
+            if saved:
+                logger.info(
+                    "Resuming experience '%s' from step '%s' (saved progress)",
+                    name,
+                    saved.current_step,
+                )
+                target_step = saved.current_step
+                # Restore cookie from saved progress
+                state = create_initial_state(saved.current_step)
+                state = state.model_copy(
+                    update={
+                        "completed": saved.completed_steps,
+                        "data": saved.step_data,
+                        "started_at": saved.started_at,
+                    }
+                )
+            else:
+                target_step = experience.start_step
         else:
             target_step = experience.start_step
 
-        return RedirectResponse(
+        response = RedirectResponse(
             url=f"{app_prefix}/experiences/{name}/{target_step}",
             status_code=302,
         )
+
+        # If we restored state from the file store, set the cookie
+        if state and not raw_cookie:
+            response.set_cookie(
+                cname,
+                sign_state(state),
+                httponly=True,
+                samesite="lax",
+                max_age=86400,
+            )
+
+        return response
 
     # GET /experiences/{name}/{step} — render a step
     async def experience_step_get(request: Request, name: str, step: str) -> Response:
@@ -182,10 +234,23 @@ def create_experience_routes(
                 status_code=302,
             )
 
-        # Load or create state
+        # Load or create state: cookie → file store → fresh
         cname = cookie_name(name)
         raw_cookie = request.cookies.get(cname)
         state = verify_state(raw_cookie) if raw_cookie else None
+
+        if not state and progress_store:
+            user_email = _get_user_email(request)
+            saved = progress_store.load(name, user_email)
+            if saved:
+                state = create_initial_state(saved.current_step)
+                state = state.model_copy(
+                    update={
+                        "completed": saved.completed_steps,
+                        "data": saved.step_data,
+                        "started_at": saved.started_at,
+                    }
+                )
 
         if not state:
             state = create_initial_state(experience.start_step)
@@ -264,6 +329,21 @@ def create_experience_routes(
             samesite="lax",
             max_age=86400,
         )
+
+        # Persist progress durably (survives cookie expiry / browser close)
+        if progress_store:
+            user_email = _get_user_email(request)
+            progress_store.save(
+                ExperienceProgress(
+                    experience_name=name,
+                    current_step=state.step,
+                    completed_steps=list(state.completed),
+                    step_data=dict(state.data),
+                    started_at=state.started_at,
+                    user_email=user_email,
+                )
+            )
+
         return response
 
     # POST /experiences/{name}/{step}?event=X — process transition
@@ -279,10 +359,24 @@ def create_experience_routes(
                 status_code=302,
             )
 
-        # Load state
+        # Load state: cookie → file store → fresh
         cname = cookie_name(name)
         raw_cookie = request.cookies.get(cname)
         state = verify_state(raw_cookie) if raw_cookie else None
+
+        if not state and progress_store:
+            user_email = _get_user_email(request)
+            saved = progress_store.load(name, user_email)
+            if saved:
+                state = create_initial_state(saved.current_step)
+                state = state.model_copy(
+                    update={
+                        "completed": saved.completed_steps,
+                        "data": saved.step_data,
+                        "started_at": saved.started_at,
+                    }
+                )
+
         if not state:
             state = create_initial_state(experience.start_step)
 
@@ -379,8 +473,11 @@ def create_experience_routes(
             else:
                 response = RedirectResponse(url=redirect_url, status_code=302)
 
-            # Clear the cookie
+            # Clear the cookie and durable progress
             response.delete_cookie(cname)
+            if progress_store:
+                user_email = _get_user_email(request)
+                progress_store.delete(name, user_email)
             return response
 
         # Update state: mark current step as completed, advance to next
@@ -417,6 +514,21 @@ def create_experience_routes(
             samesite="lax",
             max_age=86400,
         )
+
+        # Persist progress durably
+        if progress_store:
+            user_email = _get_user_email(request)
+            progress_store.save(
+                ExperienceProgress(
+                    experience_name=name,
+                    current_step=state.step,
+                    completed_steps=list(state.completed),
+                    step_data=dict(state.data),
+                    started_at=state.started_at,
+                    user_email=user_email,
+                )
+            )
+
         return response
 
     # Register routes

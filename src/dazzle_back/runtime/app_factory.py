@@ -534,6 +534,7 @@ def create_app_factory(
                     theme_css=theme_css,
                     get_auth_context=_page_get_auth_context,
                     app_prefix="/app",
+                    project_root=project_root,
                 )
                 app.include_router(experience_router, prefix="/app")
                 logger.info(
