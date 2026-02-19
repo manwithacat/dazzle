@@ -126,6 +126,7 @@ def _field_type_to_column_type(field_spec: ir.FieldSpec | None) -> str:
         FieldTypeKind.MONEY: "currency",
         FieldTypeKind.DECIMAL: "text",
         FieldTypeKind.ENUM: "badge",
+        FieldTypeKind.REF: "ref",
     }
     return type_map.get(kind, "text")
 

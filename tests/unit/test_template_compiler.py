@@ -613,3 +613,10 @@ class TestBuildEntityColumns:
         cols = _build_entity_columns(task)
         completed_col = next(c for c in cols if c.key == "completed")
         assert completed_col.type == "bool"
+
+    def test_ref_field_maps_to_ref_type(self):
+        """Ref (FK) fields map to ref column type, not text (#308)."""
+        contact = _contact_entity()
+        cols = _build_entity_columns(contact)
+        company_col = next(c for c in cols if c.key == "company")
+        assert company_col.type == "ref"

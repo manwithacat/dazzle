@@ -429,6 +429,62 @@ class TestRendering:
         # Should fall back to item.id for accessibility labels
         assert "1" in fragment
 
+    def test_render_table_rows_ref_column_displays_name(self) -> None:
+        """Ref columns should display resolved name, not raw dict repr (#308)."""
+        fragment = render_fragment(
+            "fragments/table_rows.html",
+            table=TableContext(
+                entity_name="QualityCheck",
+                title="Quality Checks",
+                columns=[
+                    ColumnContext(key="title", label="Title"),
+                    ColumnContext(key="checked_by", label="Checked By", type="ref"),
+                ],
+                api_endpoint="/qualitychecks",
+                detail_url_template="/qualitycheck/{id}",
+                rows=[
+                    {
+                        "id": "1",
+                        "title": "Review A",
+                        "checked_by": {
+                            "id": "c-123",
+                            "name": "Jane Smith",
+                            "email": "jane@example.com",
+                        },
+                    }
+                ],
+                total=1,
+            ),
+        )
+        assert "Jane Smith" in fragment
+        # Must NOT contain raw dict repr
+        assert "{'id'" not in fragment
+        assert "c-123" not in fragment  # Should show name, not id
+
+    def test_render_table_rows_ref_column_fallback_to_email(self) -> None:
+        """Ref columns without name/title should fall back to email."""
+        fragment = render_fragment(
+            "fragments/table_rows.html",
+            table=TableContext(
+                entity_name="Task",
+                title="Tasks",
+                columns=[
+                    ColumnContext(key="assigned_to", label="Assigned To", type="ref"),
+                ],
+                api_endpoint="/tasks",
+                detail_url_template="/task/{id}",
+                rows=[
+                    {
+                        "id": "1",
+                        "assigned_to": {"id": "u-456", "email": "bob@example.com"},
+                    }
+                ],
+                total=1,
+            ),
+        )
+        assert "bob@example.com" in fragment
+        assert "{'id'" not in fragment
+
     def test_render_form_page(self) -> None:
         ctx = PageContext(
             page_title="Create Task",
@@ -543,6 +599,32 @@ class TestJinjaFilters:
     def test_truncate_text_none(self, env) -> None:
         tmpl = env.from_string("{{ val|truncate_text }}")
         assert tmpl.render(val=None) == ""
+
+    def test_truncate_text_dict_extracts_name(self, env) -> None:
+        """FK ref dicts should display a name, not Python repr (#308)."""
+        tmpl = env.from_string("{{ val|truncate_text }}")
+        result = tmpl.render(val={"id": "abc-123", "name": "John Doe", "email": "john@test.com"})
+        assert result == "John Doe"
+
+    def test_truncate_text_dict_falls_back_to_title(self, env) -> None:
+        tmpl = env.from_string("{{ val|truncate_text }}")
+        result = tmpl.render(val={"id": "abc-123", "title": "My Company"})
+        assert result == "My Company"
+
+    def test_truncate_text_dict_falls_back_to_email(self, env) -> None:
+        tmpl = env.from_string("{{ val|truncate_text }}")
+        result = tmpl.render(val={"id": "abc-123", "email": "user@example.com"})
+        assert result == "user@example.com"
+
+    def test_truncate_text_dict_falls_back_to_id(self, env) -> None:
+        tmpl = env.from_string("{{ val|truncate_text }}")
+        result = tmpl.render(val={"id": "abc-123"})
+        assert result == "abc-123"
+
+    def test_truncate_text_empty_dict(self, env) -> None:
+        tmpl = env.from_string("{{ val|truncate_text }}")
+        result = tmpl.render(val={})
+        assert result == ""
 
 
 # ===================================================================

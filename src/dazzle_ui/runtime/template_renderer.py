@@ -189,7 +189,17 @@ def _truncate_filter(value: Any, length: int = 50) -> str:
     """Truncate text to a given length."""
     if value is None:
         return ""
-    text = str(value)
+    # Ref fields may arrive as dicts — extract a display name instead of repr
+    if isinstance(value, dict):
+        text = str(
+            value.get("name")
+            or value.get("title")
+            or value.get("label")
+            or value.get("email")
+            or value.get("id", "")
+        )
+    else:
+        text = str(value)
     if len(text) <= length:
         return text
     return text[:length] + "..."

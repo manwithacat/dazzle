@@ -28,6 +28,9 @@
     {% elif col.type == "sensitive" %}
       {% set raw = item[col.key] | default("") | string %}
       {% if raw | length > 4 %}{{ "****" ~ raw[-4:] }}{% elif raw %}****{% else %}{% endif %}
+    {% elif col.type == "ref" %}
+      {% set ref_val = item[col.key] %}
+      {% if ref_val is mapping %}{{ ref_val.get("name") or ref_val.get("title") or ref_val.get("label") or ref_val.get("email") or ref_val.get("id", "") }}{% elif ref_val %}{{ ref_val }}{% else %}{% endif %}
     {% elif col.type == "percentage" %}
       {{ item[col.key] | default("") }}%
     {% else %}
