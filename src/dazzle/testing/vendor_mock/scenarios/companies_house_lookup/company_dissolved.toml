@@ -1,0 +1,8 @@
+[scenario]
+name = "company_dissolved"
+description = "Company has been dissolved"
+vendor = "companies_house_lookup"
+
+[[steps]]
+operation = "get_company"
+response_override = { company_status = "dissolved", date_of_cessation = "2025-06-15" }

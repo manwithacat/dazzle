@@ -13,6 +13,7 @@ from dazzle.testing.vendor_mock.data_generators import DataGenerator
 from dazzle.testing.vendor_mock.fixtures import mock_vendor
 from dazzle.testing.vendor_mock.generator import create_mock_server
 from dazzle.testing.vendor_mock.orchestrator import MockOrchestrator, discover_packs_from_appspec
+from dazzle.testing.vendor_mock.scenarios import ScenarioEngine
 from dazzle.testing.vendor_mock.state import MockStateStore
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "MockOrchestrator",
     "MockStateStore",
     "RequestRecorder",
+    "ScenarioEngine",
     "create_mock_server",
     "discover_packs_from_appspec",
     "get_recorder",

@@ -1,0 +1,8 @@
+[scenario]
+name = "company_found"
+description = "Returns full company profile — active company"
+vendor = "companies_house_lookup"
+
+[[steps]]
+operation = "get_company"
+response_override = { company_status = "active", type = "ltd", jurisdiction = "england-wales", has_been_liquidated = false, has_charges = false }

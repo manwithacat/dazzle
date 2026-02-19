@@ -16,6 +16,7 @@ from typing import Any
 
 from dazzle.api_kb.loader import ApiPack, load_pack
 from dazzle.testing.vendor_mock.data_generators import DataGenerator
+from dazzle.testing.vendor_mock.scenarios import ScenarioEngine
 from dazzle.testing.vendor_mock.state import MockStateStore
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ def create_mock_server(
     *,
     seed: int | None = None,
     auth_tokens: dict[str, str] | None = None,
+    scenario_engine: ScenarioEngine | None = None,
 ) -> FastAPI:
     """Create a mock FastAPI server from an API pack definition.
 
@@ -44,6 +46,7 @@ def create_mock_server(
         auth_tokens: Optional dict of valid auth credentials for validation.
             Keys depend on auth type: 'api_key', 'token', 'secret', etc.
             If not provided, any correctly-formatted auth is accepted.
+        scenario_engine: Optional scenario engine for overriding responses.
 
     Returns:
         A FastAPI application with routes for all pack operations.
@@ -59,7 +62,7 @@ def create_mock_server(
     if not pack:
         raise ValueError(f"API pack '{pack_name}' not found")
 
-    return _build_app(pack, seed=seed, auth_tokens=auth_tokens)
+    return _build_app(pack, seed=seed, auth_tokens=auth_tokens, scenario_engine=scenario_engine)
 
 
 def _build_app(
@@ -67,6 +70,7 @@ def _build_app(
     *,
     seed: int | None = None,
     auth_tokens: dict[str, str] | None = None,
+    scenario_engine: ScenarioEngine | None = None,
 ) -> FastAPI:
     """Build the FastAPI app from a loaded pack."""
     generator = DataGenerator(seed=seed)
@@ -88,10 +92,11 @@ def _build_app(
         description=f"Auto-generated mock for {pack.name}",
     )
 
-    # Attach store and log to the app for test access
+    # Attach store, log, and scenario engine to the app for test access
     app.state.store = store
     app.state.request_log = request_log
     app.state.pack = pack
+    app.state.scenario_engine = scenario_engine
 
     # Auth middleware
     if pack.auth:
@@ -105,7 +110,7 @@ def _build_app(
 
     # Generate routes for each operation
     for op in pack.operations:
-        _register_operation(app, op, pack, store, generator, request_log, fm_defs)
+        _register_operation(app, op, pack, store, generator, request_log, fm_defs, scenario_engine)
 
     return app
 
@@ -250,6 +255,7 @@ def _register_operation(
     generator: DataGenerator,
     request_log: list[dict[str, Any]],
     fm_defs: dict[str, dict[str, Any]],
+    scenario_engine: ScenarioEngine | None = None,
 ) -> None:
     """Register a single API operation as a FastAPI route."""
     fastapi_path = _path_to_fastapi(op.path)
@@ -337,6 +343,12 @@ def _register_operation(
             else:
                 response_data = {"ok": True, "operation": op.name}
             status = 200
+
+        # Apply scenario overrides if engine is attached
+        if scenario_engine is not None:
+            response_data, status = await scenario_engine.intercept(
+                pack.name, op.name, response_data, status
+            )
 
         elapsed_ms = (time.monotonic() - start) * 1000
         log_entry["status"] = status

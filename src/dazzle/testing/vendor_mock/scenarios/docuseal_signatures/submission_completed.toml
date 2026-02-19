@@ -1,0 +1,12 @@
+[scenario]
+name = "submission_completed"
+description = "All signers completed — document fully signed"
+vendor = "docuseal_signatures"
+
+[[steps]]
+operation = "create_submission"
+response_override = { status = "pending" }
+
+[[steps]]
+operation = "get_submission"
+response_override = { status = "completed", completed_at = "2026-02-19T15:30:00Z" }

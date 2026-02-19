@@ -1,0 +1,8 @@
+[scenario]
+name = "invoice_created"
+description = "Successful invoice creation with auto-number"
+vendor = "xero_accounting"
+
+[[steps]]
+operation = "create_invoice"
+response_override = { status = "AUTHORISED", invoice_number = "INV-0042", has_errors = false }

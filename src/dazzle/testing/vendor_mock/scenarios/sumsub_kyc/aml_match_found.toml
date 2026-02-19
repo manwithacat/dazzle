@@ -1,0 +1,12 @@
+[scenario]
+name = "aml_match_found"
+description = "AML screening finds a PEP/sanctions match"
+vendor = "sumsub_kyc"
+
+[[steps]]
+operation = "request_aml_check"
+response_override = { status = "completed", match_found = true }
+
+[[steps]]
+operation = "get_aml_check"
+response_override = { status = "completed", match_found = true, match_type = "PEP", match_score = 0.95 }

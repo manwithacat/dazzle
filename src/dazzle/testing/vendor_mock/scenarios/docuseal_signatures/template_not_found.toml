@@ -1,0 +1,9 @@
+[scenario]
+name = "template_not_found"
+description = "Template lookup returns 404"
+vendor = "docuseal_signatures"
+
+[[steps]]
+operation = "get_template"
+status_override = 404
+response_override = { error = "Not Found", message = "Template not found" }

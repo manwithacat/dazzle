@@ -1,0 +1,19 @@
+[scenario]
+name = "rate_limited"
+description = "HMRC returns 429 Too Many Requests"
+vendor = "hmrc_mtd_vat"
+
+[[steps]]
+operation = "get_obligations"
+status_override = 429
+response_override = { code = "TOO_MANY_REQUESTS", message = "Rate limit exceeded. Try again later." }
+
+[[steps]]
+operation = "submit_return"
+status_override = 429
+response_override = { code = "TOO_MANY_REQUESTS", message = "Rate limit exceeded. Try again later." }
+
+[[steps]]
+operation = "get_return"
+status_override = 429
+response_override = { code = "TOO_MANY_REQUESTS", message = "Rate limit exceeded. Try again later." }

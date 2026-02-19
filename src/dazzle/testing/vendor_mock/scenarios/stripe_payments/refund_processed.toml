@@ -1,0 +1,12 @@
+[scenario]
+name = "refund_processed"
+description = "Successful refund processing"
+vendor = "stripe_payments"
+
+[[steps]]
+operation = "create_refund"
+response_override = { status = "succeeded", reason = "requested_by_customer" }
+
+[[steps]]
+operation = "get_refund"
+response_override = { status = "succeeded" }

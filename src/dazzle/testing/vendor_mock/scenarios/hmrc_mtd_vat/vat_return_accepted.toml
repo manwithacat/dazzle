@@ -1,0 +1,8 @@
+[scenario]
+name = "vat_return_accepted"
+description = "Successful VAT return submission"
+vendor = "hmrc_mtd_vat"
+
+[[steps]]
+operation = "submit_return"
+response_override = { processing_date = "2026-02-19T12:00:00Z", payment_indicator = "DD", form_bundle_number = "119775020136" }

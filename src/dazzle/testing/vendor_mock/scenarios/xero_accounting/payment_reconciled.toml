@@ -1,0 +1,12 @@
+[scenario]
+name = "payment_reconciled"
+description = "Payment matched to invoice and reconciled"
+vendor = "xero_accounting"
+
+[[steps]]
+operation = "create_payment"
+response_override = { status = "AUTHORISED", is_reconciled = true, has_account = true }
+
+[[steps]]
+operation = "get_invoice"
+response_override = { status = "PAID", amount_due = 0.0, amount_paid = 1500.00 }

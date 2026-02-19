@@ -1,0 +1,9 @@
+[scenario]
+name = "company_not_found"
+description = "Company number not found — 404 response"
+vendor = "companies_house_lookup"
+
+[[steps]]
+operation = "get_company"
+status_override = 404
+response_override = { errors = [{ error = "company-profile-not-found", type = "ch:service" }] }

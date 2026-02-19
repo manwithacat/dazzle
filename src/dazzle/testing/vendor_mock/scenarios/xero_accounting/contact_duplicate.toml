@@ -1,0 +1,9 @@
+[scenario]
+name = "contact_duplicate"
+description = "Duplicate contact creation error"
+vendor = "xero_accounting"
+
+[[steps]]
+operation = "create_contact"
+status_override = 409
+response_override = { type = "ValidationException", message = "A contact with this name already exists", error_number = 10 }

@@ -1,0 +1,16 @@
+[scenario]
+name = "payment_succeeded"
+description = "Payment intent succeeds — card charged successfully"
+vendor = "stripe_payments"
+
+[[steps]]
+operation = "create_payment_intent"
+response_override = { status = "requires_confirmation" }
+
+[[steps]]
+operation = "confirm_payment_intent"
+response_override = { status = "succeeded", charges = { total_count = 1 } }
+
+[[steps]]
+operation = "get_payment_intent"
+response_override = { status = "succeeded" }

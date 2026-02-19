@@ -1,0 +1,17 @@
+[scenario]
+name = "kyc_pending_manual"
+description = "Applicant requires manual review — onHold status"
+vendor = "sumsub_kyc"
+
+[[steps]]
+operation = "create_applicant"
+response_override = { review_status = "init" }
+
+[[steps]]
+operation = "request_check"
+response_override = { review_status = "onHold" }
+delay_ms = 1000
+
+[[steps]]
+operation = "get_applicant_status"
+response_override = { review_status = "onHold", review_result = "pending" }

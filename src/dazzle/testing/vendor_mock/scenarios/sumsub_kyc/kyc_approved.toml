@@ -1,0 +1,20 @@
+[scenario]
+name = "kyc_approved"
+description = "Applicant verification approved — clean pass, GREEN result"
+vendor = "sumsub_kyc"
+
+[[steps]]
+operation = "create_applicant"
+response_override = { review_status = "init" }
+
+[[steps]]
+operation = "request_check"
+response_override = { review_status = "completed", review_result = "GREEN" }
+
+[[steps]]
+operation = "get_applicant_status"
+response_override = { review_status = "completed", review_result = "GREEN" }
+
+[[steps]]
+operation = "get_review_result"
+response_override = { review_status = "completed", review_result = "GREEN", reject_labels = [] }

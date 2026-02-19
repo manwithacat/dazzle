@@ -1,0 +1,9 @@
+[scenario]
+name = "vat_return_rejected"
+description = "VAT return rejected with validation errors"
+vendor = "hmrc_mtd_vat"
+
+[[steps]]
+operation = "submit_return"
+status_override = 422
+response_override = { code = "INVALID_REQUEST", message = "Invalid request", errors = [{ code = "INVALID_MONETARY_AMOUNT", message = "The amount must be a positive number", path = "/vatDueSales" }] }

@@ -1,0 +1,13 @@
+[scenario]
+name = "payment_failed_insufficient"
+description = "Payment declined — insufficient funds"
+vendor = "stripe_payments"
+
+[[steps]]
+operation = "create_payment_intent"
+response_override = { status = "requires_confirmation" }
+
+[[steps]]
+operation = "confirm_payment_intent"
+response_override = { status = "requires_payment_method", last_payment_error = { code = "card_declined", decline_code = "insufficient_funds", message = "Your card has insufficient funds." } }
+status_override = 402

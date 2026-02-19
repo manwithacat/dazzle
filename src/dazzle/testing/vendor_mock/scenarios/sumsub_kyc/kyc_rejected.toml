@@ -1,0 +1,21 @@
+[scenario]
+name = "kyc_rejected"
+description = "Applicant verification rejected — document face mismatch"
+vendor = "sumsub_kyc"
+
+[[steps]]
+operation = "create_applicant"
+response_override = { review_status = "init" }
+
+[[steps]]
+operation = "request_check"
+response_override = { review_status = "completed", review_result = "RED" }
+delay_ms = 500
+
+[[steps]]
+operation = "get_applicant_status"
+response_override = { review_status = "completed", review_result = "RED" }
+
+[[steps]]
+operation = "get_review_result"
+response_override = { review_status = "completed", review_result = "RED", reject_labels = ["DOCUMENT_FACE_MISMATCH"] }

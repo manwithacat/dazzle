@@ -1,0 +1,16 @@
+[scenario]
+name = "submission_declined"
+description = "Signer declined to sign the document"
+vendor = "docuseal_signatures"
+
+[[steps]]
+operation = "create_submission"
+response_override = { status = "pending" }
+
+[[steps]]
+operation = "get_submission"
+response_override = { status = "declined", declined_at = "2026-02-19T15:30:00Z" }
+
+[[steps]]
+operation = "get_submitter"
+response_override = { status = "declined", decline_reason = "Terms not acceptable" }
