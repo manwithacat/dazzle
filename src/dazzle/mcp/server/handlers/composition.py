@@ -19,9 +19,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.paths import project_composition_captures, project_composition_references
+from dazzle.core.paths import project_composition_captures, project_composition_references
 
-from .common import extract_progress, wrap_async_handler_errors, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_async_handler_errors, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +128,7 @@ async def capture_composition_handler(project_path: Path, args: dict[str, Any]) 
             indent=2,
         )
     except ImportError as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -165,7 +165,7 @@ def analyze_composition_handler(project_path: Path, args: dict[str, Any]) -> str
     # Reconstruct captures from saved files
     captures = _load_captures_from_dir(captures_dir)
     if not captures:
-        return json.dumps({"error": "No capture files found in " + str(captures_dir)})
+        return error_response("No capture files found in " + str(captures_dir))
 
     # Filter dimensions if focus specified
     dimensions: list[str] | None = None
@@ -545,7 +545,7 @@ def bootstrap_composition_handler(project_path: Path, args: dict[str, Any]) -> s
     try:
         by_section = bootstrap_references(ref_dir)
     except ImportError as e:
-        return json.dumps({"error": f"Pillow required for bootstrap: {e}"})
+        return error_response(f"Pillow required for bootstrap: {e}")
     total = sum(len(refs) for refs in by_section.values())
     good = sum(1 for refs in by_section.values() for r in refs if r.label == "good")
     bad = total - good
@@ -597,7 +597,7 @@ async def inspect_styles_handler(_project_path: Path, args: dict[str, Any]) -> s
     route: str = args.get("route", "/")
     selectors: dict[str, str] | None = args.get("selectors")
     if not selectors:
-        return json.dumps({"error": "selectors is required — dict mapping label to CSS selector"})
+        return error_response("selectors is required — dict mapping label to CSS selector")
 
     properties: list[str] | None = args.get("properties")
 
@@ -609,9 +609,9 @@ async def inspect_styles_handler(_project_path: Path, args: dict[str, Any]) -> s
             properties=properties,
         )
     except ImportError as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
     except RuntimeError as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
     not_found = [label for label, styles in results.items() if styles is None]
     found = {label: styles for label, styles in results.items() if styles is not None}
 

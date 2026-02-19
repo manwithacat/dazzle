@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 
 def _get_dazzle_version() -> str:
@@ -106,11 +106,11 @@ def create_handler(args: dict[str, Any]) -> str:
     output_dir = args.get("output_dir")
 
     if not contrib_type:
-        return json.dumps({"error": "type is required"})
+        return error_response("type is required")
 
     valid_types = [t["type"] for t in CONTRIBUTION_TYPES]
     if contrib_type not in valid_types:
-        return json.dumps({"error": f"Invalid type: {contrib_type}. Valid types: {valid_types}"})
+        return error_response(f"Invalid type: {contrib_type}. Valid types: {valid_types}")
 
     # Pre-check GitHub auth before doing expensive generation work
     from dazzle.mcp.server.github_issues import gh_auth_guidance
@@ -129,7 +129,7 @@ def create_handler(args: dict[str, Any]) -> str:
     elif contrib_type == "feature_request":
         result = _generate_feature_request(title, description, content, output_dir)
     else:
-        return json.dumps({"error": f"Unhandled type: {contrib_type}"})
+        return error_response(f"Unhandled type: {contrib_type}")
 
     # Attempt to create a GitHub issue (only if authenticated)
     if gh_status["authenticated"]:
@@ -171,12 +171,12 @@ def validate_handler(args: dict[str, Any]) -> str:
     content = args.get("content", {})
 
     if not contrib_type:
-        return json.dumps({"error": "type is required"})
+        return error_response("type is required")
 
     # Find the type definition
     type_def = next((t for t in CONTRIBUTION_TYPES if t["type"] == contrib_type), None)
     if not type_def:
-        return json.dumps({"error": f"Unknown type: {contrib_type}"})
+        return error_response(f"Unknown type: {contrib_type}")
 
     # Check required fields
     missing = []
@@ -305,7 +305,7 @@ def examples_handler(args: dict[str, Any]) -> str:
 
     example = examples.get(contrib_type)
     if not example:
-        return json.dumps({"error": f"No example for type: {contrib_type}"})
+        return error_response(f"No example for type: {contrib_type}")
 
     return json.dumps(
         {

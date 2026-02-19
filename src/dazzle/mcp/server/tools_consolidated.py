@@ -148,7 +148,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="api_pack",
-            description="API pack operations: list, search, get, generate_dsl, env_vars, infrastructure",
+            description="API pack operations: list, search, get, generate_dsl, env_vars, infrastructure, scaffold. Project-local packs in .dazzle/api_packs/ override built-in packs.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -161,6 +161,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "generate_dsl",
                             "env_vars",
                             "infrastructure",
+                            "scaffold",
                         ],
                         "description": "Operation to perform",
                     },
@@ -185,6 +186,94 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Filter by provider (for search)",
                     },
+                    "openapi_url": {
+                        "type": "string",
+                        "description": "OpenAPI spec URL (for scaffold, converts to pack TOML)",
+                    },
+                    "openapi_spec": {
+                        "type": "object",
+                        "description": "OpenAPI spec as JSON object (for scaffold)",
+                    },
+                    "from_scratch": {
+                        "type": "boolean",
+                        "description": "Generate blank template (for scaffold, default if no openapi_*)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
+        # Mock Server Management (NEW)
+        # =====================================================================
+        Tool(
+            name="mock",
+            description="Vendor mock server management: status, scenarios, fire_webhook, request_log, inject_error, scaffold_scenario. Operates on auto-started mock servers during 'dazzle serve'.",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "status",
+                            "scenarios",
+                            "fire_webhook",
+                            "request_log",
+                            "inject_error",
+                            "scaffold_scenario",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "vendor": {
+                        "type": "string",
+                        "description": "API pack name (e.g. 'sumsub_kyc')",
+                    },
+                    "action": {
+                        "type": "string",
+                        "enum": ["list", "activate", "deactivate"],
+                        "description": "Action for scenarios operation (default: list)",
+                    },
+                    "scenario_name": {
+                        "type": "string",
+                        "description": "Scenario name (for scenarios activate, scaffold_scenario)",
+                    },
+                    "event": {
+                        "type": "string",
+                        "description": "Webhook event name (for fire_webhook)",
+                    },
+                    "overrides": {
+                        "type": "object",
+                        "description": "Payload overrides (for fire_webhook)",
+                    },
+                    "method": {
+                        "type": "string",
+                        "description": "Filter by HTTP method (for request_log)",
+                    },
+                    "path": {
+                        "type": "string",
+                        "description": "Filter by path substring (for request_log)",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (for request_log, default: 20)",
+                    },
+                    "operation_name": {
+                        "type": "string",
+                        "description": "API operation name (for inject_error)",
+                    },
+                    "status_code": {
+                        "type": "integer",
+                        "description": "HTTP status code to inject (for inject_error, default: 500)",
+                    },
+                    "body": {
+                        "type": "object",
+                        "description": "Error response body (for inject_error)",
+                    },
+                    "after_n": {
+                        "type": "integer",
+                        "description": "Trigger after N successful calls (for inject_error)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["operation"],
             },

@@ -19,7 +19,6 @@ def _import_test_design():
     """
     # Create mock modules to satisfy imports
     mock_state = MagicMock()
-    mock_state.get_project_path = MagicMock(return_value=None)
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
 
     # Build a common mock with real implementations for DSL loading
@@ -43,6 +42,14 @@ def _import_test_design():
         modules = parse_modules(dsl_files)
         return build_appspec(modules, manifest.project_root)
 
+    def _error_response(msg):
+        return json.dumps({"error": msg})
+
+    def _unknown_op_response(operation, tool):
+        return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+    common_mock.error_response = _error_response
+    common_mock.unknown_op_response = _unknown_op_response
     common_mock.extract_progress = _extract_progress
     common_mock.load_project_appspec = _load_project_appspec
 

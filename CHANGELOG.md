@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-02-19
+
+### Added
+- Canonical AppSpec loader (`dazzle.core.appspec_loader`) — single implementation of manifest → discover → parse → build pipeline, replacing 6 duplicate copies (#329)
+- `error_response()` and `unknown_op_response()` factory functions in MCP handler common module, replacing ~100 inline `json.dumps({"error": ...})` calls (#329)
+- Experience flow entity orchestration — `context:`, `prefill:`, `saves_to:`, `when:` blocks for multi-entity experience steps (#326)
+- Process step side-effect actions for cross-entity automation (#323)
+- Multi-source workspace regions with tabbed display (#322)
+- Guided review surface mode with queue navigation and approve/return actions (#325)
+- Experience flow resume with durable file-based progress persistence (#324)
+- Polymorphic FK detection for related entity tabs (#321)
+
+### Changed
+- HTMX utilities (`HtmxDetails`, `htmx_error_response`) moved from `dazzle_back` to `dazzle_ui.runtime.htmx` — correct layer ownership (#329)
+- Backward compatibility policy: clean breaks preferred over shims; breaking changes communicated via CHANGELOG (#329)
+
+### Removed
+- Backward-compat shims: `get_project_path()` alias, pipeline/nightly aliases, archetype→stage aliases, `paths.py` re-export module, `handlers/utils.py` re-export module, `site_renderer.py` shim functions, `DNRDevServer`/`DNRDevHandler` aliases, `docker_runner.py` re-export module (#329)
+- Deprecated `db_path` parameters from 6 constructor signatures (`TokenStore`, `AuthStore`, `FileMetadataStore`, `OpsDatabase`, `DeviceRegistry`, `create_local_file_service`, `create_s3_file_service`) (#329)
+- CLI utils backward-compat aliases (`_print_human_diagnostics`, etc.) (#329)
+
+### Fixed
+- Last 2 swallowed exceptions in `workspace_rendering.py` now log at WARNING level (#329)
+- Expression evaluator duplication eliminated — shared `dazzle_ui.utils.expression_eval` module (#327)
+- Reduced MCP handler inner catches from 71 to 38 (#327)
+
 ## [0.32.0] - 2026-02-17
 
 ### Added

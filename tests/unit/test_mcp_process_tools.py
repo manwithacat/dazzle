@@ -681,7 +681,7 @@ class TestHelperFunctions:
 
     def test_slugify(self) -> None:
         """Test _slugify function."""
-        from dazzle.mcp.server.handlers.utils import slugify as _slugify
+        from dazzle.mcp.server.handlers.text_utils import slugify as _slugify
 
         assert _slugify("Hello World") == "hello_world"
         assert _slugify("Test-123-Value") == "test_123_value"

@@ -11,7 +11,7 @@ from datetime import UTC
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .common import extract_progress, load_project_appspec, wrap_handler_errors
+from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 from .serializers import (
     serialize_entity_detail,
     serialize_entity_summary,
@@ -266,7 +266,7 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     overwrite = args.get("overwrite", False)
 
     if not stories_data:
-        return json.dumps({"error": "No stories provided"})
+        return error_response("No stories provided")
 
     progress.log_sync("Validating stories...")
     # Convert to StorySpec objects with validation

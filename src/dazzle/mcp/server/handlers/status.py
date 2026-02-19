@@ -10,8 +10,8 @@ import json
 import logging
 from typing import Any
 
+from dazzle.core.paths import project_log_dir, project_manifest
 from dazzle.mcp.semantics import get_mcp_version
-from dazzle.mcp.server.paths import project_log_dir, project_manifest
 
 from ..state import (
     get_active_project,
@@ -20,7 +20,7 @@ from ..state import (
     get_project_root,
     is_dev_mode,
 )
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ def get_telemetry_handler(args: dict[str, Any]) -> str:
 
     graph = get_knowledge_graph()
     if graph is None:
-        return json.dumps({"error": "Knowledge graph not initialized"})
+        return error_response("Knowledge graph not initialized")
 
     stats_only = args.get("stats_only", False)
     tool_name = args.get("tool_name")
@@ -189,7 +189,7 @@ def get_activity_handler(args: dict[str, Any]) -> str:
 
     activity_store = get_activity_store()
     if activity_store is None:
-        return json.dumps({"error": "Activity store not initialized"})
+        return error_response("Activity store not initialized")
 
     count = args.get("count", 20)
     fmt = args.get("format", "structured")

@@ -12,6 +12,7 @@ import logging
 import os
 import threading
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.api_kb.loader import load_pack
@@ -46,11 +47,13 @@ class MockOrchestrator:
         seed: Optional seed for deterministic data generation across all mocks.
         base_port: Starting port for mock server allocation.
         auth_tokens: Per-vendor auth tokens, keyed by pack_name.
+        project_root: Optional project root for project-local packs/scenarios.
     """
 
     seed: int | None = None
     base_port: int = _DEFAULT_BASE_PORT
     auth_tokens: dict[str, dict[str, str]] = field(default_factory=dict)
+    project_root: Path | None = None
     _mocks: dict[str, VendorMock] = field(default_factory=dict)
     _running: bool = False
 
@@ -62,6 +65,7 @@ class MockOrchestrator:
         seed: int | None = None,
         base_port: int = _DEFAULT_BASE_PORT,
         auth_tokens: dict[str, dict[str, str]] | None = None,
+        project_root: Path | None = None,
     ) -> MockOrchestrator:
         """Auto-discover needed vendors from an AppSpec.
 
@@ -73,14 +77,22 @@ class MockOrchestrator:
             seed: Optional seed for deterministic data.
             base_port: Starting port for allocation.
             auth_tokens: Per-vendor auth tokens.
+            project_root: Optional project root for project-local packs/scenarios.
 
         Returns:
             Configured orchestrator (not yet started).
         """
+        # Set project root for project-local pack discovery
+        if project_root is not None:
+            from dazzle.api_kb.loader import set_project_root
+
+            set_project_root(project_root)
+
         orchestrator = cls(
             seed=seed,
             base_port=base_port,
             auth_tokens=auth_tokens or {},
+            project_root=project_root,
         )
 
         # Discover packs from API service definitions
@@ -126,7 +138,9 @@ class MockOrchestrator:
         assigned_port = port or (self.base_port + len(self._mocks))
         tokens = auth_tokens or self.auth_tokens.get(pack_name)
 
-        app = create_mock_server(pack_name, seed=self.seed, auth_tokens=tokens)
+        app = create_mock_server(
+            pack_name, seed=self.seed, auth_tokens=tokens, project_root=self.project_root
+        )
         env_var = _pack_to_env_var(pack_name)
 
         mock = VendorMock(

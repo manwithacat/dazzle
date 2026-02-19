@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import unquote, urlparse
 
-from dazzle.mcp.server.paths import (
+from dazzle.core.paths import (
     project_activity_log,
     project_kg_db,
     project_manifest,
@@ -54,6 +54,7 @@ class ServerState:
         self.graph_db_path: Path | None = None
         self.activity_log: ActivityLog | None = None
         self.activity_store: ActivityStore | None = None
+        self.mock_orchestrator: Any = None
         self._roots_cache: dict[frozenset[str], Path] = {}
 
     def reset(self) -> None:
@@ -66,6 +67,7 @@ class ServerState:
         self.graph_db_path = None
         self.activity_log = None
         self.activity_store = None
+        self.mock_orchestrator = None
         self._roots_cache.clear()
 
     # -- roots cache with bounded size ------------------------------------
@@ -141,12 +143,6 @@ def get_active_project_path() -> Path | None:
     if _state.active_project and _state.active_project in _state.available_projects:
         return _state.available_projects[_state.active_project]
     return None
-
-
-# Alias for backward compatibility
-def get_project_path() -> Path | None:
-    """Get the path to the current project. Alias for get_active_project_path."""
-    return get_active_project_path()
 
 
 def resolve_project_path(project_path: str | None = None) -> Path:
@@ -505,6 +501,16 @@ def get_activity_store() -> ActivityStore | None:
     return _state.activity_store
 
 
+def get_mock_orchestrator() -> Any:
+    """Get the mock orchestrator instance (if running)."""
+    return _state.mock_orchestrator
+
+
+def set_mock_orchestrator(orch: Any) -> None:
+    """Store the mock orchestrator for MCP tool access."""
+    _state.mock_orchestrator = orch
+
+
 def init_browser_gate(max_concurrent: int | None = None) -> None:
     """Configure the global Playwright browser gate at server startup.
 
@@ -565,6 +571,7 @@ _LEGACY_ATTR_MAP: dict[str, str] = {
     "_graph_db_path": "graph_db_path",
     "_activity_log": "activity_log",
     "_activity_store": "activity_store",
+    "_mock_orchestrator": "mock_orchestrator",
     "_roots_cache": "_roots_cache",
 }
 

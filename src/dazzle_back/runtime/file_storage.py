@@ -441,19 +441,16 @@ class FileMetadataStore:
 
     Args:
         database_url: PostgreSQL connection URL (required).
-        db_path: Deprecated, ignored. Accepted for backward compatibility.
     """
 
     def __init__(
         self,
-        db_path: str | Path | None = None,
         database_url: str | None = None,
     ):
         """
         Initialize metadata store.
 
         Args:
-            db_path: Deprecated, ignored. Accepted for backward compatibility.
             database_url: PostgreSQL connection URL.
         """
         if database_url is None:
@@ -1044,7 +1041,6 @@ class FileService:
 
 def create_local_file_service(
     base_path: str | Path = ".dazzle/uploads",
-    db_path: str | Path | None = None,
     base_url: str = "/files",
     max_size: int = 10 * 1024 * 1024,
     allowed_types: list[str] | None = None,
@@ -1055,7 +1051,6 @@ def create_local_file_service(
 
     Args:
         base_path: Directory for file storage
-        db_path: Deprecated, ignored. Accepted for backward compatibility.
         base_url: Base URL for file access
         max_size: Maximum file size
         allowed_types: Allowed MIME types
@@ -1072,7 +1067,6 @@ def create_local_file_service(
 
 def create_s3_file_service(
     bucket: str,
-    db_path: str | Path | None = None,
     region: str = "us-east-1",
     endpoint_url: str | None = None,
     access_key: str | None = None,
@@ -1087,7 +1081,6 @@ def create_s3_file_service(
 
     Args:
         bucket: S3 bucket name
-        db_path: Deprecated, ignored. Accepted for backward compatibility.
         region: AWS region
         endpoint_url: Custom endpoint for MinIO etc.
         access_key: AWS access key

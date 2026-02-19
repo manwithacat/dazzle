@@ -43,7 +43,7 @@ def _get_version_manager() -> VersionManager:
         console.print("[red]Error: No dazzle.toml found in current directory[/red]")
         raise typer.Exit(1)
 
-    from dazzle.mcp.server.paths import project_processes_db
+    from dazzle.core.paths import project_processes_db
 
     db_path = project_processes_db(project_root)
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -387,8 +387,8 @@ def history_command(
     ),
 ) -> None:
     """Show migration history."""
+    from dazzle.core.paths import project_processes_db
     from dazzle.core.process import VersionManager
-    from dazzle.mcp.server.paths import project_processes_db
 
     project_root = Path.cwd()
     db_path = project_processes_db(project_root)

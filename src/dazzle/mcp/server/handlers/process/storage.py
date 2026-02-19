@@ -9,7 +9,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..common import extract_progress, wrap_async_handler_errors, wrap_handler_errors
+from ..common import (
+    error_response,
+    extract_progress,
+    wrap_async_handler_errors,
+    wrap_handler_errors,
+)
 from . import _helpers
 
 if TYPE_CHECKING:
@@ -57,7 +62,7 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     raw_processes = args.get("processes")
     if not raw_processes or not isinstance(raw_processes, list):
-        return json.dumps({"error": "processes list is required"})
+        return error_response("processes list is required")
 
     overwrite = args.get("overwrite", False)
 
@@ -185,11 +190,11 @@ async def _get_run_async(project_root: Path, args: dict[str, Any]) -> str:
 
     run_id = args.get("run_id")
     if not run_id:
-        return json.dumps({"error": "run_id is required"})
+        return error_response("run_id is required")
 
     run = await adapter.get_run(run_id)
     if not run:
-        return json.dumps({"error": f"Run '{run_id}' not found"})
+        return error_response(f"Run '{run_id}' not found")
 
     duration = None
     if run.completed_at:
@@ -222,6 +227,6 @@ async def get_process_run_handler(project_root: Path, args: dict[str, Any]) -> s
     """Get detailed information about a specific process run."""
     run_id = args.get("run_id") if args else None
     if not run_id:
-        return json.dumps({"error": "run_id is required"})
+        return error_response("run_id is required")
 
     return await _get_run_async(project_root, args)

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from ..state import get_project_path
+from ..state import get_active_project_path
 from .common import extract_progress
 
 
@@ -34,7 +34,7 @@ def _get_auth_store(project_path: Path | None = None) -> Any:
     from dazzle_back.runtime.auth import AuthStore
 
     if project_path is None:
-        project_path = get_project_path()
+        project_path = get_active_project_path()
         if not project_path:
             raise ValueError("No active project. Select a project first.")
 

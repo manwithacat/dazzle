@@ -69,14 +69,12 @@ class DeviceRegistry:
     def __init__(
         self,
         database_url: str,
-        db_path: Any = None,
     ):
         """
         Initialize device registry.
 
         Args:
             database_url: PostgreSQL connection URL
-            db_path: Deprecated, ignored. Kept for backward compatibility.
         """
         # Normalize Heroku's postgres:// to postgresql://
         if database_url.startswith("postgres://"):

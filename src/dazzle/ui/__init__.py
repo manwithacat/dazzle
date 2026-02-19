@@ -9,11 +9,11 @@ This module provides UI generation capabilities including:
 from dazzle.ui.layout_engine import (
     ArchetypeDefinition,
     build_layout_plan,
-    select_archetype,
+    select_stage,
 )
 
 __all__ = [
     "ArchetypeDefinition",
     "build_layout_plan",
-    "select_archetype",
+    "select_stage",
 ]

@@ -131,17 +131,84 @@ application_key = { type = "str(100)" }
 external_id = { type = "str(100)" }
 
 # Webhooks
-[webhooks]
-form_viewed = { description = "Submitter opened the signing form" }
-form_started = { description = "Submitter started filling the form" }
-form_completed = { description = "Submitter completed and signed" }
-form_declined = { description = "Submitter declined to sign" }
-submission_created = { description = "New submission created" }
-submission_completed = { description = "All submitters completed signing" }
-submission_expired = { description = "Submission expired without completion" }
-submission_archived = { description = "Submission was archived" }
-template_created = { description = "New template created" }
-template_updated = { description = "Template was modified" }
+[webhooks.form_viewed]
+description = "Submitter opened the signing form"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks.form_started]
+description = "Submitter started filling the form"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks.form_completed]
+description = "Submitter completed and signed"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks.form_declined]
+description = "Submitter declined to sign"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks."submission.created"]
+description = "New submission created"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks."submission.created".payload]
+event_type = "submission.created"
+timestamp = ""
+
+[webhooks."submission.created".payload.data]
+id = 0
+status = "pending"
+submitters = []
+
+[webhooks."submission.completed"]
+description = "All submitters completed signing"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks."submission.completed".payload]
+event_type = "submission.completed"
+timestamp = ""
+
+[webhooks."submission.completed".payload.data]
+id = 0
+status = "completed"
+completed_at = ""
+submitters = []
+
+[webhooks.submission_expired]
+description = "Submission expired without completion"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks.submission_archived]
+description = "Submission was archived"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks.template_created]
+description = "New template created"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
+
+[webhooks.template_updated]
+description = "Template was modified"
+signing = "hmac-sha256"
+signing_header = "X-Webhook-Signature"
+webhook_path = "/webhooks/docuseal"
 
 # DSL generation hints
 [integration_hints]

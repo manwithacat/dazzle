@@ -10,24 +10,8 @@ from pathlib import Path
 import typer
 
 from dazzle._version import get_version
+from dazzle.core.appspec_loader import load_project_appspec as load_project_appspec
 from dazzle.core.errors import ParseError
-from dazzle.core.ir.appspec import AppSpec
-
-
-def load_project_appspec(project_root: Path) -> AppSpec:
-    """Load and return the fully-linked AppSpec for a project.
-
-    Combines the four-step boilerplate: manifest -> discover -> parse -> build.
-    """
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
-
-    manifest = load_manifest(project_root / "dazzle.toml")
-    dsl_files = discover_dsl_files(project_root, manifest)
-    modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root)
 
 
 def version_callback(value: bool) -> None:
@@ -214,10 +198,3 @@ def is_directory_empty(directory: Path) -> bool:
         return True
 
     return False
-
-
-# Aliases for backward compatibility (functions were previously underscore-prefixed)
-_print_human_diagnostics = print_human_diagnostics
-_print_vscode_diagnostics = print_vscode_diagnostics
-_print_vscode_parse_error = print_vscode_parse_error
-_is_directory_empty = is_directory_empty

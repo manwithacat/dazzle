@@ -8,9 +8,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.paths import project_discovery_dir, project_kg_db
+from dazzle.core.paths import project_discovery_dir, project_kg_db
 
-from ..common import wrap_handler_errors
+from ..common import error_response, wrap_handler_errors
 from ._helpers import deserialize_observations, load_report_data
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
@@ -29,7 +29,7 @@ def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> st
     if session_id:
         report_file = report_dir / f"{session_id}.json"
         if not report_file.exists():
-            return json.dumps({"error": f"Report not found: {session_id}"})
+            return error_response(f"Report not found: {session_id}")
         return report_file.read_text()
 
     # Get the most recent report
@@ -43,7 +43,7 @@ def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> st
 
     reports = sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not reports:
-        return json.dumps({"error": "No discovery reports found"})
+        return error_response("No discovery reports found")
 
     # Return summary of available reports
     report_summaries = []

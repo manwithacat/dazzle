@@ -8,7 +8,6 @@ import hashlib
 import secrets
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -554,14 +553,12 @@ class AuthStore(UserStoreMixin, SessionStoreMixin):
     def __init__(
         self,
         database_url: str,
-        db_path: str | Path | None = None,  # Deprecated, ignored. Kept for backward compat.
     ):
         """
         Initialize the auth store.
 
         Args:
             database_url: PostgreSQL connection URL
-            db_path: Deprecated, ignored. Kept for backward compatibility.
         """
         self._database_url = database_url
         # Normalize Heroku's postgres:// to postgresql://

@@ -8,7 +8,7 @@ from typing import Any
 
 from dazzle.core.loader import load_and_link
 
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, unknown_op_response, wrap_handler_errors
 
 
 @wrap_handler_errors
@@ -34,7 +34,7 @@ def run_viewport_tests_handler(
 
     project = Path(project_path)
     if not project.is_dir():
-        return json.dumps({"error": f"Project directory not found: {project_path}"})
+        return error_response(f"Project directory not found: {project_path}")
 
     appspec = load_and_link(project)
 
@@ -106,7 +106,7 @@ def manage_viewport_specs_handler(
 
     project = Path(project_path)
     if not project.is_dir():
-        return json.dumps({"error": f"Project directory not found: {project_path}"})
+        return error_response(f"Project directory not found: {project_path}")
 
     if operation == "list_viewport_specs":
         entries = load_custom_viewport_specs(project)
@@ -119,7 +119,7 @@ def manage_viewport_specs_handler(
         )
     elif operation == "save_viewport_specs":
         if not specs:
-            return json.dumps({"error": "No specs provided"})
+            return error_response("No specs provided")
         entries = [ViewportSpecEntry(**s) for s in specs]
         path = save_custom_viewport_specs(project, entries, to_dsl=to_dsl)
         return json.dumps(
@@ -130,4 +130,4 @@ def manage_viewport_specs_handler(
             }
         )
     else:
-        return json.dumps({"error": f"Unknown viewport spec operation: {operation}"})
+        return unknown_op_response(operation, "viewport spec")

@@ -6,13 +6,11 @@ This module retains:
 - Task context injection functions (used by human task workflow)
 - ``get_shared_head_html()`` (used by task surface pages)
 - ``get_site_js()`` (serves the site.js static file)
-- Backward-compatible shims that delegate to the Jinja2 path
 """
 
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from dazzle_ui.runtime.task_context import TaskContext
 
@@ -54,84 +52,6 @@ def get_shared_head_html(title: str, *, custom_css: bool = False) -> str:
     <link rel="stylesheet" href="/styles/dazzle.css">{custom_css_link}
     <!-- Lucide icons for feature/section icons -->
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>"""
-
-
-# =========================================================================
-# Backward-compatible shims — delegate to Jinja2 templates
-# =========================================================================
-
-
-def render_site_page_html(
-    sitespec_data: dict[str, Any],
-    path: str,
-    page_data: dict[str, Any] | None = None,
-    *,
-    custom_css: bool = False,
-) -> str:
-    """Render a site page via Jinja2 templates (backward-compatible shim)."""
-    from dazzle_ui.runtime.site_context import build_site_page_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
-
-    ctx = build_site_page_context(sitespec_data, path, page_data=page_data, custom_css=custom_css)
-    return render_site_page("site/page.html", ctx)
-
-
-def render_404_page_html(
-    sitespec_data: dict[str, Any],
-    path: str = "/",
-    *,
-    custom_css: bool = False,
-) -> str:
-    """Render a styled 404 page via Jinja2 templates (backward-compatible shim)."""
-    from dazzle_ui.runtime.site_context import build_site_404_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
-
-    ctx = build_site_404_context(sitespec_data, custom_css=custom_css)
-    return render_site_page("site/404.html", ctx)
-
-
-def render_auth_page_html(
-    sitespec_data: dict[str, Any],
-    page_type: str,
-    *,
-    custom_css: bool = False,
-) -> str:
-    """Render an auth page via Jinja2 templates (backward-compatible shim)."""
-    from dazzle_ui.runtime.site_context import build_site_auth_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
-
-    template_map = {
-        "login": "site/auth/login.html",
-        "signup": "site/auth/signup.html",
-    }
-    ctx = build_site_auth_context(sitespec_data, page_type, custom_css=custom_css)
-    return render_site_page(template_map.get(page_type, "site/auth/login.html"), ctx)
-
-
-def render_forgot_password_page_html(
-    sitespec_data: dict[str, Any],
-    *,
-    custom_css: bool = False,
-) -> str:
-    """Render forgot-password page via Jinja2 templates (backward-compatible shim)."""
-    from dazzle_ui.runtime.site_context import build_site_auth_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
-
-    ctx = build_site_auth_context(sitespec_data, "forgot_password", custom_css=custom_css)
-    return render_site_page("site/auth/forgot_password.html", ctx)
-
-
-def render_reset_password_page_html(
-    sitespec_data: dict[str, Any],
-    *,
-    custom_css: bool = False,
-) -> str:
-    """Render reset-password page via Jinja2 templates (backward-compatible shim)."""
-    from dazzle_ui.runtime.site_context import build_site_auth_context
-    from dazzle_ui.runtime.template_renderer import render_site_page
-
-    ctx = build_site_auth_context(sitespec_data, "reset_password", custom_css=custom_css)
-    return render_site_page("site/auth/reset_password.html", ctx)
 
 
 # =========================================================================

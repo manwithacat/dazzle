@@ -20,19 +20,8 @@ from .common import extract_progress, wrap_handler_errors
 from .orchestration import (
     QualityStep,
     aggregate_results,
-    collect_top_issues,
-    extract_step_metrics,
-    filter_issues_result,
     run_steps_sequential,
-    step_has_issues,
 )
-
-# Backward-compat aliases — tests and nightly.py import these names
-_build_pipeline_response = aggregate_results
-_step_has_issues = step_has_issues
-_filter_issues_result = filter_issues_result
-_extract_step_metrics = extract_step_metrics
-_collect_top_issues = collect_top_issues
 
 
 @wrap_handler_errors

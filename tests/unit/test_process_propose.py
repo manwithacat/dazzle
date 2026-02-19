@@ -38,7 +38,6 @@ def _import_module():
         "dazzle.mcp.server.handlers.common",
         "dazzle.mcp.server.handlers.utils",
         "dazzle.mcp.server.handlers.text_utils",
-        "dazzle.mcp.server.paths",
         "dazzle.mcp.server.progress",
     ]
     _orig = {k: sys.modules.get(k) for k in _mocked}

@@ -84,14 +84,34 @@ class ScenarioEngine:
     Args:
         scenarios_dir: Directory containing scenario TOML files.
             Defaults to the built-in scenarios/ directory.
+        project_root: Optional project root for project-local scenarios.
+            Checks ``<project_root>/.dazzle/scenarios/`` first.
     """
 
-    def __init__(self, scenarios_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        scenarios_dir: Path | None = None,
+        project_root: Path | None = None,
+    ) -> None:
         self._scenarios_dir = scenarios_dir or _SCENARIOS_DIR
+        self._project_root = project_root
         self._active: dict[str, Scenario] = {}  # vendor → active scenario
         self._call_counts: dict[str, int] = {}  # operation → call count
         self._errors: dict[str, ErrorInjection] = {}  # operation → injection
         self._latency: dict[str, int] = {}  # operation → delay_ms
+
+    def _resolve_scenario_path(self, vendor: str, scenario_name: str) -> Path:
+        """Resolve scenario TOML path, checking project-local dir first."""
+        if self._project_root is not None:
+            project_path = (
+                self._project_root / ".dazzle" / "scenarios" / vendor / f"{scenario_name}.toml"
+            )
+            if project_path.exists():
+                return project_path
+        builtin_path = self._scenarios_dir / vendor / f"{scenario_name}.toml"
+        if builtin_path.exists():
+            return builtin_path
+        raise FileNotFoundError(f"Scenario not found: {vendor}/{scenario_name}.toml")
 
     def load_scenario(self, vendor: str, scenario_name: str) -> Scenario:
         """Load and activate a named scenario.
@@ -106,9 +126,7 @@ class ScenarioEngine:
         Raises:
             FileNotFoundError: If the scenario TOML file doesn't exist.
         """
-        path = self._scenarios_dir / vendor / f"{scenario_name}.toml"
-        if not path.exists():
-            raise FileNotFoundError(f"Scenario not found: {path}")
+        path = self._resolve_scenario_path(vendor, scenario_name)
 
         with open(path, "rb") as f:
             data = tomllib.load(f)
@@ -265,6 +283,17 @@ class ScenarioEngine:
 
         return response_data, status
 
+    def _scenario_dirs(self) -> list[Path]:
+        """Return scenario directories to scan (project-local first)."""
+        dirs: list[Path] = []
+        if self._project_root is not None:
+            project_dir = self._project_root / ".dazzle" / "scenarios"
+            if project_dir.is_dir():
+                dirs.append(project_dir)
+        if self._scenarios_dir.exists():
+            dirs.append(self._scenarios_dir)
+        return dirs
+
     def list_scenarios(self, vendor: str | None = None) -> list[str]:
         """List available scenario names.
 
@@ -272,23 +301,28 @@ class ScenarioEngine:
             vendor: Filter by vendor, or None for all.
 
         Returns:
-            List of "vendor/scenario_name" strings.
+            List of "vendor/scenario_name" strings (deduplicated).
         """
+        seen: set[str] = set()
         results: list[str] = []
-        if not self._scenarios_dir.exists():
-            return results
-
-        if vendor:
-            vendor_dir = self._scenarios_dir / vendor
-            if vendor_dir.is_dir():
-                for f in sorted(vendor_dir.glob("*.toml")):
-                    results.append(f"{vendor}/{f.stem}")
-        else:
-            for vendor_dir in sorted(self._scenarios_dir.iterdir()):
+        for scenarios_dir in self._scenario_dirs():
+            if vendor:
+                vendor_dir = scenarios_dir / vendor
                 if vendor_dir.is_dir():
                     for f in sorted(vendor_dir.glob("*.toml")):
-                        results.append(f"{vendor_dir.name}/{f.stem}")
-        return results
+                        key = f"{vendor}/{f.stem}"
+                        if key not in seen:
+                            seen.add(key)
+                            results.append(key)
+            else:
+                for vendor_dir in sorted(scenarios_dir.iterdir()):
+                    if vendor_dir.is_dir():
+                        for f in sorted(vendor_dir.glob("*.toml")):
+                            key = f"{vendor_dir.name}/{f.stem}"
+                            if key not in seen:
+                                seen.add(key)
+                                results.append(key)
+        return sorted(results)
 
     @property
     def active_scenarios(self) -> dict[str, str]:

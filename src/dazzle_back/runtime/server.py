@@ -1806,7 +1806,7 @@ class DazzleBackendApp:
                             project_templates, TEMPLATES_DIR, framework_version=dz_version
                         )
                         if registry.get("template_overrides"):
-                            from dazzle.mcp.server.paths import project_overrides_file
+                            from dazzle.core.paths import project_overrides_file
 
                             save_registry(registry, project_overrides_file(self._project_root))
                     except Exception:

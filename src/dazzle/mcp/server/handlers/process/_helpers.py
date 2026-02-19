@@ -17,8 +17,8 @@ __all__ = ["load_app_spec", "get_process_adapter"]
 
 def get_process_adapter(project_root: Path) -> ProcessAdapter:
     """Get a LiteProcessAdapter for the given project."""
+    from dazzle.core.paths import project_processes_db
     from dazzle.core.process import LiteProcessAdapter
-    from dazzle.mcp.server.paths import project_processes_db
 
     db_path = project_processes_db(project_root)
     return LiteProcessAdapter(db_path=db_path)

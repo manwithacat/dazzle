@@ -151,14 +151,81 @@ token = { type = "str(500)", required = true, pk = true }
 user_id = { type = "str(100)", required = true }
 
 # Webhooks
-[webhooks]
-applicant_created = { description = "New applicant created" }
-applicant_pending = { description = "Applicant submitted for review" }
-applicant_reviewed = { description = "Verification completed (approved/rejected)" }
-applicant_onHold = { description = "Verification needs manual review" }
-applicant_personal_info_changed = { description = "Applicant data updated" }
-applicant_prechecked = { description = "Automated precheck completed" }
-applicant_deleted = { description = "Applicant data deleted" }
+[webhooks.applicant_created]
+description = "New applicant created"
+signing = "sumsub-hmac"
+signing_header = "X-Payload-Digest"
+signing_env_var = "SUMSUB_SECRET_KEY"
+webhook_path = "/webhooks/sumsub"
+
+[webhooks.applicant_created.payload]
+type = "applicant_created"
+applicantId = ""
+inspectionId = ""
+correlationId = ""
+createdAtMs = ""
+
+[webhooks.applicant_pending]
+description = "Applicant submitted for review"
+signing = "sumsub-hmac"
+signing_header = "X-Payload-Digest"
+signing_env_var = "SUMSUB_SECRET_KEY"
+webhook_path = "/webhooks/sumsub"
+
+[webhooks.applicant_pending.payload]
+type = "applicant_pending"
+applicantId = ""
+inspectionId = ""
+reviewStatus = "pending"
+createdAtMs = ""
+
+[webhooks.applicant_reviewed]
+description = "Verification completed (approved/rejected)"
+signing = "sumsub-hmac"
+signing_header = "X-Payload-Digest"
+signing_env_var = "SUMSUB_SECRET_KEY"
+webhook_path = "/webhooks/sumsub"
+
+[webhooks.applicant_reviewed.payload]
+type = "applicant_reviewed"
+applicantId = ""
+inspectionId = ""
+correlationId = ""
+reviewStatus = "completed"
+createdAtMs = ""
+
+[webhooks.applicant_reviewed.payload.reviewResult]
+reviewAnswer = "GREEN"
+moderationComment = ""
+rejectLabels = []
+
+[webhooks.applicant_onHold]
+description = "Verification needs manual review"
+signing = "sumsub-hmac"
+signing_header = "X-Payload-Digest"
+signing_env_var = "SUMSUB_SECRET_KEY"
+webhook_path = "/webhooks/sumsub"
+
+[webhooks.applicant_personal_info_changed]
+description = "Applicant data updated"
+signing = "sumsub-hmac"
+signing_header = "X-Payload-Digest"
+signing_env_var = "SUMSUB_SECRET_KEY"
+webhook_path = "/webhooks/sumsub"
+
+[webhooks.applicant_prechecked]
+description = "Automated precheck completed"
+signing = "sumsub-hmac"
+signing_header = "X-Payload-Digest"
+signing_env_var = "SUMSUB_SECRET_KEY"
+webhook_path = "/webhooks/sumsub"
+
+[webhooks.applicant_deleted]
+description = "Applicant data deleted"
+signing = "sumsub-hmac"
+signing_header = "X-Payload-Digest"
+signing_env_var = "SUMSUB_SECRET_KEY"
+webhook_path = "/webhooks/sumsub"
 
 # DSL generation hints
 [integration_hints]

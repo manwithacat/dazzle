@@ -134,11 +134,75 @@ on_payment_failed = "notify customer, suggest retry"
 on_refund_requested = "create_refund for original payment_intent"
 
 # Webhook events this pack handles
-[webhooks]
-payment_intent_succeeded = { description = "Payment completed successfully" }
-payment_intent_payment_failed = { description = "Payment attempt failed" }
-charge_refunded = { description = "Charge was refunded" }
-charge_dispute_created = { description = "Customer disputed a charge" }
+[webhooks."payment_intent.succeeded"]
+description = "Payment completed successfully"
+signing = "stripe-v1"
+signing_header = "Stripe-Signature"
+signing_env_var = "STRIPE_WEBHOOK_SECRET"
+webhook_path = "/webhooks/stripe"
+
+[webhooks."payment_intent.succeeded".payload]
+id = ""
+object = "event"
+type = "payment_intent.succeeded"
+created = 0
+
+[webhooks."payment_intent.succeeded".payload.data.object]
+id = ""
+object = "payment_intent"
+amount = 0
+currency = "gbp"
+status = "succeeded"
+
+[webhooks."payment_intent.payment_failed"]
+description = "Payment attempt failed"
+signing = "stripe-v1"
+signing_header = "Stripe-Signature"
+signing_env_var = "STRIPE_WEBHOOK_SECRET"
+webhook_path = "/webhooks/stripe"
+
+[webhooks."payment_intent.payment_failed".payload]
+id = ""
+object = "event"
+type = "payment_intent.payment_failed"
+created = 0
+
+[webhooks."payment_intent.payment_failed".payload.data.object]
+id = ""
+object = "payment_intent"
+amount = 0
+currency = "gbp"
+status = "requires_payment_method"
+
+[webhooks."payment_intent.payment_failed".payload.data.object.last_payment_error]
+code = "card_declined"
+message = "Your card was declined."
+
+[webhooks."charge.refunded"]
+description = "Charge was refunded"
+signing = "stripe-v1"
+signing_header = "Stripe-Signature"
+signing_env_var = "STRIPE_WEBHOOK_SECRET"
+webhook_path = "/webhooks/stripe"
+
+[webhooks."charge.refunded".payload]
+id = ""
+object = "event"
+type = "charge.refunded"
+created = 0
+
+[webhooks."charge.refunded".payload.data.object]
+id = ""
+object = "charge"
+amount_refunded = 0
+refunded = true
+
+[webhooks.charge_dispute_created]
+description = "Customer disputed a charge"
+signing = "stripe-v1"
+signing_header = "Stripe-Signature"
+signing_env_var = "STRIPE_WEBHOOK_SECRET"
+webhook_path = "/webhooks/stripe"
 
 [infrastructure]
 hosting = "cloud_only"

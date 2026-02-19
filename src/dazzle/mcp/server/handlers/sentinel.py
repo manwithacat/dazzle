@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, load_project_appspec, wrap_handler_errors
+from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
 # ---------------------------------------------------------------------------
 # scan
@@ -96,7 +96,7 @@ def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
     if scan_id:
         scan = store.load_scan(scan_id)
         if scan is None:
-            return json.dumps({"error": f"Scan '{scan_id}' not found"})
+            return error_response(f"Scan '{scan_id}' not found")
         findings = scan.findings
     else:
         findings = store.load_latest_findings()
@@ -133,13 +133,13 @@ def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
     finding_id = args.get("finding_id")
     reason = args.get("reason")
     if not finding_id or not reason:
-        return json.dumps({"error": "finding_id and reason are required"})
+        return error_response("finding_id and reason are required")
 
     store = FindingStore(project_path)
     ok = store.suppress_finding(finding_id, reason)
     if ok:
         return json.dumps({"status": "suppressed", "finding_id": finding_id})
-    return json.dumps({"error": f"Finding '{finding_id}' not found in latest scan"})
+    return error_response(f"Finding '{finding_id}' not found in latest scan")
 
 
 # ---------------------------------------------------------------------------

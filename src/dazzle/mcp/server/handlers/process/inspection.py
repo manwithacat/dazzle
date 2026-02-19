@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from ..common import extract_progress, wrap_handler_errors
+from ..common import error_response, extract_progress, wrap_handler_errors
 from . import _helpers
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
     process_name = args.get("process_name") if args else None
 
     if not process_name:
-        return json.dumps({"error": "process_name is required"})
+        return error_response("process_name is required")
 
     progress.log_sync(f"Inspecting process '{process_name}'...")
     app_spec = _helpers.load_app_spec(project_root)

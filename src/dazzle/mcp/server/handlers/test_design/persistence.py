@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from ..common import extract_progress, wrap_handler_errors
+from ..common import error_response, extract_progress, wrap_handler_errors
 from ..serializers import serialize_test_design, serialize_test_design_summary
 from .proposals import _parse_test_design_action, _parse_test_design_trigger
 
@@ -32,7 +32,7 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     overwrite = args.get("overwrite", False)
 
     if not designs_data:
-        return json.dumps({"error": "No designs provided"})
+        return error_response("No designs provided")
 
     progress.log_sync("Saving test designs...")
     # Convert dict data to TestDesignSpec objects

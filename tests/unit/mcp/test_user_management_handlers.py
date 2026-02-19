@@ -46,7 +46,7 @@ def _import_user_management():
     """
     # Create a mock state module to satisfy the relative import
     mock_state = MagicMock()
-    mock_state.get_project_path = MagicMock(return_value=None)
+    mock_state.get_active_project_path = MagicMock(return_value=None)
     install_handlers_common_mock = _load_conftest_helper("install_handlers_common_mock")
 
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])

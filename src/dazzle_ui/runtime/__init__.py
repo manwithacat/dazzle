@@ -28,12 +28,11 @@ from dazzle_ui.runtime.combined_server import (
 )
 from dazzle_ui.runtime.dev_server import (
     DazzleDevServer,
-    DNRDevServer,  # Backward compat
     run_dev_server,
     run_dev_server_from_dict,
     run_dev_server_from_json,
 )
-from dazzle_ui.runtime.docker_runner import (
+from dazzle_ui.runtime.docker import (
     DockerRunConfig,
     DockerRunner,
     is_docker_available,
@@ -74,7 +73,6 @@ __all__ = [
     "generate_realtime_init_js",
     # Development server
     "DazzleDevServer",
-    "DNRDevServer",  # Backward compat
     "run_dev_server",
     "run_dev_server_from_dict",
     "run_dev_server_from_json",

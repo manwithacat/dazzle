@@ -30,6 +30,14 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle_back/` | FastAPI runtime (API, auth, channels, events) |
 | `src/dazzle_ui/` | UI runtime — Python/Jinja2 templates rendered server-side, static JS/CSS assets |
 
+## Backward Compatibility Policy
+
+**Backward compatibility is not a requirement.** This project has one major user who is fully engaged with the dev process. When making changes:
+
+- **Prefer clean breaks over shims.** Delete old functions, rename freely, change signatures. Never create wrapper functions, re-exports, or compatibility aliases.
+- **Update all callers** in the same commit rather than preserving old APIs.
+- **Communicate breaking changes** via CHANGELOG.md (`### Changed` / `### Removed`) and GitHub issue comments. That is sufficient notice.
+
 ## LLM-First Style Guide
 
 This is an LLM-first codebase. Optimize for clarity and predictability over cleverness.
@@ -170,11 +178,29 @@ The DAZZLE MCP server (`dazzle mcp`) provides 26 consolidated tools:
 | `bootstrap` | entry point for "build me an app" requests |
 | `spec_analyze` | discover_entities, identify_lifecycles, extract_personas |
 | `demo_data` | propose, save, get, generate |
-| `api_pack` | list, search, get, generate_dsl |
+| `api_pack` | list, search, get, generate_dsl, env_vars, infrastructure, scaffold |
+| `mock` | status, scenarios, fire_webhook, request_log, inject_error, scaffold_scenario |
 | `contribution` | templates, create, validate, examples |
 | `user_management` | list, create, get, update, deactivate |
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
+
+## Vendor Integration Workflow
+
+When integrating a third-party API:
+1. `api_pack search` — check for existing pack
+2. `api_pack scaffold` — create pack TOML (from OpenAPI or blank)
+   - Save to `.dazzle/api_packs/<vendor>/<name>.toml`
+3. `api_pack generate_dsl` — generate service + foreign_model DSL blocks
+4. Write integration + mapping DSL blocks
+5. `dazzle serve --local` — mocks auto-start for all pack references
+6. `mock fire_webhook` — test webhook handling
+7. `mock request_log` — verify integration calls
+8. `mock scenarios action=activate` — test edge cases
+
+### Project-Local Packs
+Place custom packs in `.dazzle/api_packs/<vendor>/<name>.toml`.
+Project-local packs override built-in packs with the same name.
 
 ## Workshop
 
@@ -203,4 +229,4 @@ The `status activity` MCP operation provides the same data for programmatic poll
 - `pip install dazzle-dsl` provides the `dazzle` console command
 
 ---
-**Version**: 0.32.0 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.33.0 | **Python**: 3.12+ | **Status**: Production Ready

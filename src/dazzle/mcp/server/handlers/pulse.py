@@ -21,7 +21,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp.handlers.pulse")
 
@@ -161,7 +161,7 @@ def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     persona_name = args.get("persona")
     if not persona_name:
-        return json.dumps({"error": "persona parameter is required"})
+        return error_response("persona parameter is required")
 
     t0 = time.monotonic()
 

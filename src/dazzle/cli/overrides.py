@@ -18,7 +18,7 @@ def _resolve_paths(
     project_root: Path,
 ) -> tuple[Path, Path, Path]:
     """Resolve project templates, framework templates, and registry paths."""
-    from dazzle.mcp.server.paths import project_overrides_file
+    from dazzle.core.paths import project_overrides_file
     from dazzle_ui.runtime.template_renderer import TEMPLATES_DIR
 
     project_templates = project_root / "templates"

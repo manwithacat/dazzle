@@ -907,15 +907,6 @@ def example_command(
 
 # Export all command functions
 __all__ = [
-    # Helper functions
-    "_is_directory_empty",
-    "_print_human_diagnostics",
-    "_print_vscode_diagnostics",
-    "_print_vscode_parse_error",
-    "_print_analysis_summary",
-    "_run_interactive_qa",
-    "_generate_dsl",
-    # Command functions
     "init_command",
     "validate_command",
     "lint_command",

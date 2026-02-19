@@ -24,7 +24,12 @@ from dazzle.core.ir.domain import (
     PolicyEffect,
 )
 
-from .common import extract_progress, load_project_appspec, wrap_handler_errors
+from .common import (
+    extract_progress,
+    load_project_appspec,
+    unknown_op_response,
+    wrap_handler_errors,
+)
 
 logger = logging.getLogger("dazzle.mcp.policy")
 
@@ -72,7 +77,7 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
             indent=2,
         )
     else:
-        return json.dumps({"error": f"Unknown policy operation: {operation}"})
+        return unknown_op_response(operation, "policy")
 
 
 # ---------------------------------------------------------------------------

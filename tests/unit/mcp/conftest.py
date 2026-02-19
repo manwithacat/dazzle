@@ -69,6 +69,16 @@ def install_handlers_common_mock() -> ModuleType:
 
     _hej = _make_handler_error_json()
     _ahej = _make_async_handler_error_json()
+    import json
+
+    def _error_response(msg: str) -> str:  # noqa: ANN001
+        return json.dumps({"error": msg})
+
+    def _unknown_op_response(operation: str | None, tool: str) -> str:  # noqa: ANN001
+        return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+    common.error_response = _error_response  # type: ignore[attr-defined]
+    common.unknown_op_response = _unknown_op_response  # type: ignore[attr-defined]
     common.extract_progress = _extract_progress  # type: ignore[attr-defined]
     common.wrap_handler_errors = _hej  # type: ignore[attr-defined]
     common.wrap_async_handler_errors = _ahej  # type: ignore[attr-defined]
@@ -109,8 +119,18 @@ def install_handlers_common_real() -> ModuleType:
         modules = parse_modules(dsl_files)
         return build_appspec(modules, manifest.project_root)
 
+    import json as _json
+
+    def _error_response(msg: str) -> str:  # noqa: ANN001
+        return _json.dumps({"error": msg})
+
+    def _unknown_op_response(operation: str | None, tool: str) -> str:  # noqa: ANN001
+        return _json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
     _hej = _make_handler_error_json()
     _ahej = _make_async_handler_error_json()
+    common.error_response = _error_response  # type: ignore[attr-defined]
+    common.unknown_op_response = _unknown_op_response  # type: ignore[attr-defined]
     common.extract_progress = _extract_progress  # type: ignore[attr-defined]
     common.load_project_appspec = _load_project_appspec  # type: ignore[attr-defined]
     common.wrap_handler_errors = _hej  # type: ignore[attr-defined]

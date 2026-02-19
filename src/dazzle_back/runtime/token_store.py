@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import secrets
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -73,7 +72,6 @@ class TokenStore:
         self,
         database_url: str,
         token_lifetime_days: int = 7,
-        db_path: str | Path | None = None,  # Deprecated, ignored. Kept for backward compat.
     ):
         """
         Initialize the token store.
@@ -81,7 +79,6 @@ class TokenStore:
         Args:
             database_url: PostgreSQL connection URL
             token_lifetime_days: Refresh token lifetime in days
-            db_path: Deprecated, ignored. Kept for backward compatibility.
         """
         self._database_url = database_url
         # Normalize Heroku's postgres:// to postgresql://

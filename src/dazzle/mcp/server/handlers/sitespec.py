@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -111,7 +111,7 @@ def get_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(result, indent=2)
 
     except SiteSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -160,7 +160,7 @@ def validate_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
     except SiteSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -370,7 +370,7 @@ def review_copy_handler(project_root: Path, args: dict[str, Any]) -> str:
     parsed = load_copy_file(project_root)
 
     if parsed is None:
-        return json.dumps({"error": "Failed to parse copy.md"}, indent=2)
+        return error_response("Failed to parse copy.md")
 
     # Build a review summary
     section_summaries: list[dict[str, Any]] = []
@@ -481,7 +481,7 @@ def coherence_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(result, indent=2)
 
     except SiteSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -652,7 +652,7 @@ def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
     except SiteSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -724,7 +724,7 @@ def get_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(result, indent=2)
 
     except ThemeSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -815,7 +815,7 @@ def validate_theme_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
     except ThemeSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -859,7 +859,7 @@ def generate_tokens_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
     except ThemeSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))
 
 
 @wrap_handler_errors
@@ -903,4 +903,4 @@ def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -
         )
 
     except ThemeSpecError as e:
-        return json.dumps({"error": str(e)}, indent=2)
+        return error_response(str(e))

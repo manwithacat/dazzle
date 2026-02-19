@@ -15,7 +15,7 @@ from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.semantics import lookup_concept
 
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 
 @wrap_handler_errors
@@ -24,7 +24,7 @@ def lookup_concept_handler(args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     term = args.get("term")
     if not term:
-        return json.dumps({"error": "term parameter required"})
+        return error_response("term parameter required")
 
     progress.log_sync(f"Looking up concept '{term}'...")
     result = lookup_concept(term)
@@ -71,7 +71,7 @@ def get_workflow_guide_handler(args: dict[str, Any]) -> str:
     progress.log_sync("Loading workflow guide...")
     workflow = args.get("workflow")
     if not workflow:
-        return json.dumps({"error": "workflow parameter required"})
+        return error_response("workflow parameter required")
 
     result = get_workflow_guide(workflow)
     return json.dumps(result, indent=2)

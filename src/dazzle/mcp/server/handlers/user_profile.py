@@ -15,7 +15,7 @@ import logging
 import time
 from typing import Any
 
-from .common import extract_progress
+from .common import error_response, extract_progress, unknown_op_response
 
 logger = logging.getLogger("dazzle.mcp.handlers.user_profile")
 
@@ -49,7 +49,7 @@ def handle_user_profile(arguments: dict[str, Any]) -> str:
             indent=2,
         )
     else:
-        return json.dumps({"error": f"Unknown user_profile operation: {operation}"})
+        return unknown_op_response(operation, "user_profile")
 
 
 def _observe(
@@ -104,7 +104,7 @@ def _observe_message(
     """Analyze a user message for vocabulary signals."""
     message_text = arguments.get("message_text", "")
     if not message_text:
-        return json.dumps({"error": "message_text is required for observe_message"})
+        return error_response("message_text is required for observe_message")
 
     profile = load_profile()
     analyze_message(message_text, profile)

@@ -435,7 +435,7 @@ async def _fetch_region_json(
                         ir_filter.model_dump(exclude_none=True), context={}
                     )
                 except Exception:
-                    pass
+                    logger.warning("Failed to evaluate condition filter for region", exc_info=True)
 
             sort_list: list[str] | None = None
             ir_sort = getattr(ctx.ir_region, "sort", [])
@@ -487,7 +487,9 @@ async def _workspace_batch_handler(
                 try:
                     auth_ctx = ctx.auth_middleware.get_auth_context(request)
                 except Exception:
-                    pass
+                    logger.warning(
+                        "Failed to get auth context for batch workspace request", exc_info=True
+                    )
             if not (auth_ctx and auth_ctx.is_authenticated):
                 raise HTTPException(status_code=401, detail="Authentication required")
             if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:

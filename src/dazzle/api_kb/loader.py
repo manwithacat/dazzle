@@ -138,6 +138,19 @@ class InfrastructureSpec:
 
 
 @dataclass
+class WebhookEventSpec:
+    """Specification for a webhook event in an API pack."""
+
+    name: str
+    description: str = ""
+    signing: str = "hmac-sha256"  # hmac-sha256, stripe-v1, sumsub-hmac, xero-hmac, none
+    signing_header: str = "X-Webhook-Signature"
+    signing_env_var: str = ""  # env var for signing secret
+    webhook_path: str = ""  # e.g. /webhooks/stripe
+    payload: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class ApiPack:
     """A complete API pack configuration."""
 
@@ -153,6 +166,7 @@ class ApiPack:
     operations: list[OperationSpec] = field(default_factory=list)
     foreign_models: list[ForeignModelSpec] = field(default_factory=list)
     infrastructure: InfrastructureSpec | None = None
+    webhooks: list[WebhookEventSpec] = field(default_factory=list)
 
     def generate_env_example(self) -> str:
         """Generate .env.example content for this pack."""
@@ -284,10 +298,23 @@ class ApiPack:
 # Module-level cache for loaded packs
 _pack_cache: dict[str, ApiPack] = {}
 _packs_loaded = False
+_project_root: Path | None = None
+
+
+def set_project_root(path: Path | None) -> None:
+    """Set the project root for project-local pack discovery.
+
+    Clears the cache so that subsequent calls to list_packs/load_pack
+    will re-discover packs from both project-local and built-in dirs.
+    """
+    global _project_root, _packs_loaded
+    _project_root = path
+    _packs_loaded = False
+    _pack_cache.clear()
 
 
 def _get_packs_dir() -> Path:
-    """Get the directory containing API pack definitions."""
+    """Get the directory containing built-in API pack definitions."""
     return Path(__file__).parent
 
 
@@ -387,6 +414,24 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
             sandbox=sandbox,
         )
 
+    # Parse webhooks
+    webhooks: list[WebhookEventSpec] = []
+    for wh_name, wh_spec in data.get("webhooks", {}).items():
+        if isinstance(wh_spec, dict):
+            webhooks.append(
+                WebhookEventSpec(
+                    name=wh_name,
+                    description=wh_spec.get("description", ""),
+                    signing=wh_spec.get("signing", "hmac-sha256"),
+                    signing_header=wh_spec.get("signing_header", "X-Webhook-Signature"),
+                    signing_env_var=wh_spec.get("signing_env_var", ""),
+                    webhook_path=wh_spec.get("webhook_path", ""),
+                    payload=wh_spec.get("payload", {}),
+                )
+            )
+        elif isinstance(wh_spec, str):
+            webhooks.append(WebhookEventSpec(name=wh_name, description=wh_spec))
+
     return ApiPack(
         name=pack_info.get("name", toml_path.stem),
         provider=pack_info.get("provider", ""),
@@ -400,25 +445,40 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
         operations=operations,
         foreign_models=foreign_models,
         infrastructure=infrastructure,
+        webhooks=webhooks,
     )
 
 
-def _discover_packs() -> None:
-    """Discover all available packs in the api_kb directory."""
-    global _packs_loaded, _pack_cache
-
-    if _packs_loaded:
+def _discover_packs_from_dir(packs_dir: Path) -> None:
+    """Discover packs in a single directory tree (provider/name.toml)."""
+    if not packs_dir.is_dir():
         return
-
-    packs_dir = _get_packs_dir()
     for provider_dir in packs_dir.iterdir():
         if provider_dir.is_dir() and not provider_dir.name.startswith("_"):
             for toml_file in provider_dir.glob("*.toml"):
                 try:
                     pack = _load_pack_from_toml(toml_file)
-                    _pack_cache[pack.name] = pack
+                    # Don't overwrite — first-discovered wins (project-local first)
+                    if pack.name not in _pack_cache:
+                        _pack_cache[pack.name] = pack
                 except Exception:
                     logger.warning("Failed to load API pack from %s", toml_file, exc_info=True)
+
+
+def _discover_packs() -> None:
+    """Discover all available packs (project-local first, then built-in)."""
+    global _packs_loaded, _pack_cache
+
+    if _packs_loaded:
+        return
+
+    # Project-local packs take priority
+    if _project_root is not None:
+        project_packs_dir = _project_root / ".dazzle" / "api_packs"
+        _discover_packs_from_dir(project_packs_dir)
+
+    # Built-in packs (won't overwrite project-local ones with same name)
+    _discover_packs_from_dir(_get_packs_dir())
 
     _packs_loaded = True
 

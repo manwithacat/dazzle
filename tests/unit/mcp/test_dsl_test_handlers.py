@@ -22,7 +22,6 @@ def _import_dsl_test():
     from types import ModuleType
 
     mock_state = MagicMock()
-    mock_state.get_project_path = MagicMock(return_value=None)
     sys.modules["dazzle.mcp.server.handlers"] = MagicMock(pytest_plugins=[])
 
     common_mock = ModuleType("dazzle.mcp.server.handlers.common")
@@ -52,6 +51,14 @@ def _import_dsl_test():
 
         return wrapper
 
+    def _error_response(msg):
+        return json.dumps({"error": msg})
+
+    def _unknown_op_response(operation, tool):
+        return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+    common_mock.error_response = _error_response
+    common_mock.unknown_op_response = _unknown_op_response
     common_mock.extract_progress = _extract_progress
     common_mock.handler_error_json = _handler_error_json
     common_mock.wrap_handler_errors = _handler_error_json

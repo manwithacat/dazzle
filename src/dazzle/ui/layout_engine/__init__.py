@@ -4,7 +4,7 @@ DAZZLE Semantic Layout Engine.
 Deterministic, compiler-based UI layout planning from workspace specifications.
 
 Key components:
-- Archetype selection (select_archetype.py)
+- Stage selection (select_archetype.py)
 - Surface allocation (allocate.py)
 - Persona adjustments (adjust.py)
 - Layout plan assembly (plan.py)
@@ -22,10 +22,10 @@ from dazzle.ui.layout_engine.converter import (
 )
 from dazzle.ui.layout_engine.plan import build_layout_plan
 from dazzle.ui.layout_engine.select_archetype import (
-    ArchetypeScore,
     SelectionExplanation,
-    explain_archetype_selection,
-    select_archetype,
+    StageScore,
+    explain_stage_selection,
+    select_stage,
 )
 from dazzle.ui.layout_engine.types import (
     AttentionSignalKind,
@@ -48,10 +48,10 @@ from dazzle.ui.layout_engine.variants import (
 __all__ = [
     # Core functions
     "build_layout_plan",
-    "select_archetype",
-    "explain_archetype_selection",
+    "select_stage",
+    "explain_stage_selection",
     "SelectionExplanation",
-    "ArchetypeScore",
+    "StageScore",
     # DSL conversion
     "convert_workspace_to_layout",
     "convert_workspaces_to_layouts",

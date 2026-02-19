@@ -102,7 +102,7 @@ class TestAppCoherenceHandler:
             args["persona"] = persona
 
         with patch(
-            "dazzle.mcp.server.handlers.discovery.status._load_appspec",
+            "dazzle.mcp.server.handlers.discovery.status.load_project_appspec",
             return_value=appspec,
         ):
             result = app_coherence_handler(project_path=SimpleNamespace(), args=args)

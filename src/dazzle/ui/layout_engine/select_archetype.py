@@ -77,10 +77,6 @@ def select_stage(workspace: WorkspaceLayout, persona: PersonaLayout | None = Non
     return _select_from_profile(signal_profile, signal_count, persona)
 
 
-# Backward compatibility alias
-select_archetype = select_stage
-
-
 def _analyze_signal_profile(
     signals: list[LayoutSignal], persona: PersonaLayout | None
 ) -> dict[str, float]:
@@ -188,10 +184,6 @@ class StageScore:
     stage: Stage
     score: float
     reason: str
-
-
-# Backward compatibility alias
-ArchetypeScore = StageScore
 
 
 @dataclass
@@ -380,16 +372,9 @@ def explain_stage_selection(
     )
 
 
-# Backward compatibility alias
-explain_archetype_selection = explain_stage_selection
-
-
 __all__ = [
     "select_stage",
-    "select_archetype",  # Backward compat alias
     "explain_stage_selection",
-    "explain_archetype_selection",  # Backward compat alias
     "SelectionExplanation",
     "StageScore",
-    "ArchetypeScore",  # Backward compat alias
 ]

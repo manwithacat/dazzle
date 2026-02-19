@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from dazzle.mcp.server.paths import project_kg_db
+from dazzle.core.paths import project_kg_db
 
 
 def _open_db(db_path: Path) -> sqlite3.Connection:

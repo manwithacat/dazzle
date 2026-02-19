@@ -16,7 +16,6 @@ from pathlib import Path
 import typer
 
 from dazzle.cli.utils import load_project_appspec
-from dazzle.core import ir
 from dazzle.core.errors import DazzleError, ParseError
 
 story_app = typer.Typer(
@@ -24,13 +23,6 @@ story_app = typer.Typer(
     "accept them, and generate test designs.",
     no_args_is_help=True,
 )
-
-
-def _load_appspec(manifest_path: Path) -> tuple[ir.AppSpec, Path]:
-    """Load AppSpec from manifest path."""
-    root = manifest_path.parent
-    appspec = load_project_appspec(root)
-    return appspec, root
 
 
 @story_app.command("propose")
@@ -77,7 +69,8 @@ def propose_stories(
     manifest_path = Path(manifest).resolve()
 
     try:
-        appspec, root = _load_appspec(manifest_path)
+        root = manifest_path.parent
+        appspec = load_project_appspec(root)
     except (ParseError, DazzleError) as e:
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)

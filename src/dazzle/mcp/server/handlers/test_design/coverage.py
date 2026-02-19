@@ -7,9 +7,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.paths import project_test_results_dir
+from dazzle.core.paths import project_test_results_dir
 
-from ..common import extract_progress, load_project_appspec, wrap_handler_errors
+from ..common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -532,7 +532,7 @@ def save_runtime_coverage_handler(project_root: Path, args: dict[str, Any]) -> s
     coverage_data = args.get("coverage_data")
 
     if not coverage_data:
-        return json.dumps({"error": "coverage_data is required"}, indent=2)
+        return error_response("coverage_data is required")
 
     progress.log_sync("Saving runtime coverage report...")
     # Save to dsl/tests/runtime_coverage.json

@@ -10,7 +10,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 
 @wrap_handler_errors
@@ -86,11 +86,11 @@ def get_api_pack_handler(args: dict[str, Any]) -> str:
     if pack_name:
         progress.log_sync(f"Loading API pack '{pack_name}'...")
     if not pack_name:
-        return json.dumps({"error": "pack_name parameter required"})
+        return error_response("pack_name parameter required")
 
     pack = load_pack(pack_name)
     if pack is None:
-        return json.dumps({"error": f"Pack '{pack_name}' not found"})
+        return error_response(f"Pack '{pack_name}' not found")
 
     return json.dumps(
         {
@@ -174,11 +174,11 @@ def generate_service_dsl_handler(args: dict[str, Any]) -> str:
     progress.log_sync("Generating DSL from API pack...")
     pack_name = args.get("pack_name")
     if not pack_name:
-        return json.dumps({"error": "pack_name parameter required"})
+        return error_response("pack_name parameter required")
 
     pack = load_pack(pack_name)
     if pack is None:
-        return json.dumps({"error": f"Pack '{pack_name}' not found"})
+        return error_response(f"Pack '{pack_name}' not found")
 
     # Generate the DSL code
     dsl_parts = []
@@ -214,7 +214,7 @@ def infrastructure_handler(project_path: Path | None, args: dict[str, Any]) -> s
     from .common import load_project_appspec
 
     if project_path is None:
-        return json.dumps({"error": "No active project"})
+        return error_response("No active project")
 
     appspec = load_project_appspec(Path(project_path))
     services: list[dict[str, Any]] = []

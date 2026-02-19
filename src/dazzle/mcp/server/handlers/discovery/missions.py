@@ -8,10 +8,11 @@ import time
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 from ..common import wrap_async_handler_errors, wrap_handler_errors
 from ._helpers import (
     _get_persona_session_info,
-    _load_appspec,
     _populate_kg_for_discovery,
     save_discovery_report,
 )
@@ -72,7 +73,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
 
     # --- Build mission ---
 
-    appspec = _load_appspec(project_path)
+    appspec = load_project_appspec(project_path)
 
     kg_store = _populate_kg_for_discovery(project_path)
 
@@ -222,7 +223,7 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
 
     t0 = time.monotonic()
 
-    appspec = _load_appspec(project_path)
+    appspec = load_project_appspec(project_path)
     kg_store = _populate_kg_for_discovery(project_path)
 
     report = run_headless_discovery(

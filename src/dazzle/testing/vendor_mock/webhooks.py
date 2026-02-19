@@ -181,6 +181,88 @@ class DeliveryAttempt:
     elapsed_ms: float = 0.0
 
 
+def load_events_from_packs(
+    packs: list[Any] | None = None,
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Build webhook event registry from API pack webhook specs.
+
+    Args:
+        packs: List of ApiPack instances. If None, loads all packs.
+
+    Returns:
+        Dict of vendor → { event_name → payload_template }.
+    """
+    if packs is None:
+        from dazzle.api_kb.loader import list_packs
+
+        packs = list_packs()
+
+    result: dict[str, dict[str, dict[str, Any]]] = {}
+    for pack in packs:
+        if not hasattr(pack, "webhooks") or not pack.webhooks:
+            continue
+        events: dict[str, dict[str, Any]] = {}
+        for wh in pack.webhooks:
+            if wh.payload:
+                events[wh.name] = dict(wh.payload)
+        if events:
+            result[pack.name] = events
+    return result
+
+
+def load_signing_from_packs(
+    packs: list[Any] | None = None,
+) -> dict[str, tuple[str, str]]:
+    """Build signing config from API pack webhook specs.
+
+    Args:
+        packs: List of ApiPack instances. If None, loads all packs.
+
+    Returns:
+        Dict of vendor → (signing_scheme, signing_header).
+    """
+    if packs is None:
+        from dazzle.api_kb.loader import list_packs
+
+        packs = list_packs()
+
+    result: dict[str, tuple[str, str]] = {}
+    for pack in packs:
+        if not hasattr(pack, "webhooks") or not pack.webhooks:
+            continue
+        # Use the first webhook's signing config as the vendor default
+        wh = pack.webhooks[0]
+        result[pack.name] = (wh.signing, wh.signing_header)
+    return result
+
+
+def load_webhook_paths_from_packs(
+    packs: list[Any] | None = None,
+) -> dict[str, str]:
+    """Build webhook path mapping from API pack webhook specs.
+
+    Args:
+        packs: List of ApiPack instances. If None, loads all packs.
+
+    Returns:
+        Dict of vendor → webhook_path.
+    """
+    if packs is None:
+        from dazzle.api_kb.loader import list_packs
+
+        packs = list_packs()
+
+    result: dict[str, str] = {}
+    for pack in packs:
+        if not hasattr(pack, "webhooks") or not pack.webhooks:
+            continue
+        for wh in pack.webhooks:
+            if wh.webhook_path:
+                result[pack.name] = wh.webhook_path
+                break
+    return result
+
+
 class WebhookDispatcher:
     """Fires and tracks webhook deliveries from vendor mocks.
 
@@ -190,6 +272,7 @@ class WebhookDispatcher:
             per-vendor secrets are provided).
         vendor_secrets: Per-vendor signing secrets, keyed by pack_name.
         webhook_paths: Per-vendor webhook URL paths, overriding defaults.
+        packs: Optional list of ApiPack instances for pack-sourced events/signing.
     """
 
     def __init__(
@@ -199,12 +282,24 @@ class WebhookDispatcher:
         signing_secret: str = "test-webhook-secret",
         vendor_secrets: dict[str, str] | None = None,
         webhook_paths: dict[str, str] | None = None,
+        packs: list[Any] | None = None,
     ) -> None:
         self._base_url = target_base_url.rstrip("/")
         self._default_secret = signing_secret
         self._vendor_secrets = vendor_secrets or {}
         self._paths = {**DEFAULT_WEBHOOK_PATHS, **(webhook_paths or {})}
         self._delivery_log: list[DeliveryAttempt] = []
+
+        # Load pack-sourced events and signing configs
+        self._pack_events = load_events_from_packs(packs) if packs else {}
+        self._pack_signing = load_signing_from_packs(packs) if packs else {}
+
+        # Merge pack-sourced paths (pack paths override defaults)
+        if packs:
+            pack_paths = load_webhook_paths_from_packs(packs)
+            for vendor, path in pack_paths.items():
+                if vendor not in self._paths:
+                    self._paths[vendor] = path
 
     @property
     def deliveries(self) -> list[DeliveryAttempt]:
@@ -255,12 +350,15 @@ class WebhookDispatcher:
         Raises:
             ValueError: If the event is not found.
         """
-        vendor_events = WEBHOOK_EVENTS.get(vendor, {})
-        template = vendor_events.get(event_name)
+        # Try pack-sourced events first, then fall back to hardcoded
+        pack_vendor_events = self._pack_events.get(vendor, {})
+        hardcoded_vendor_events = WEBHOOK_EVENTS.get(vendor, {})
+        template = pack_vendor_events.get(event_name) or hardcoded_vendor_events.get(event_name)
         if template is None:
+            all_events = set(pack_vendor_events.keys()) | set(hardcoded_vendor_events.keys())
             raise ValueError(
                 f"Unknown webhook event '{event_name}' for vendor '{vendor}'. "
-                f"Available: {list(vendor_events.keys())}"
+                f"Available: {sorted(all_events)}"
             )
 
         payload = _deep_merge(template, {})  # Deep copy
@@ -298,13 +396,21 @@ class WebhookDispatcher:
             Dict of headers to include with the webhook request.
         """
         secret = self._get_secret(vendor)
-        scheme = SIGNING_SCHEMES.get(vendor, "hmac_sha256")
+
+        # Check pack-sourced signing config, then fall back to hardcoded
+        pack_signing = self._pack_signing.get(vendor)
+        if pack_signing:
+            scheme = pack_signing[0]
+            # Normalize scheme names: pack uses "sumsub-hmac" style, code uses "sumsub_hmac"
+            scheme = scheme.replace("-", "_")
+        else:
+            scheme = SIGNING_SCHEMES.get(vendor, "hmac_sha256")
 
         if scheme == "sumsub_hmac":
             hex_sig = hmac.new(secret.encode(), payload_bytes, hashlib.sha256).hexdigest()
             return {"X-Payload-Digest": hex_sig}
 
-        elif scheme == "stripe_hmac":
+        elif scheme in ("stripe_hmac", "stripe_v1"):
             timestamp = str(int(time.time()))
             signed_payload = f"{timestamp}.".encode() + payload_bytes
             sig = hmac.new(secret.encode(), signed_payload, hashlib.sha256).hexdigest()
@@ -434,17 +540,24 @@ class WebhookDispatcher:
     def list_events(self, vendor: str | None = None) -> list[str]:
         """List available webhook event names.
 
+        Merges pack-sourced and hardcoded events.
+
         Args:
             vendor: Filter by vendor, or None for all.
 
         Returns:
             List of "vendor/event_name" strings.
         """
+        # Merge all vendor keys from both sources
+        all_vendors = set(WEBHOOK_EVENTS.keys()) | set(self._pack_events.keys())
         results: list[str] = []
-        for v, events in WEBHOOK_EVENTS.items():
+        for v in sorted(all_vendors):
             if vendor and v != vendor:
                 continue
-            for event_name in sorted(events.keys()):
+            all_events = set(WEBHOOK_EVENTS.get(v, {}).keys()) | set(
+                self._pack_events.get(v, {}).keys()
+            )
+            for event_name in sorted(all_events):
                 results.append(f"{v}/{event_name}")
         return results
 

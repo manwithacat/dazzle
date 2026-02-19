@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, load_project_appspec, wrap_handler_errors
+from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -27,7 +27,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     try:
         from dazzle.core.fidelity_scorer import score_appspec_fidelity
     except ImportError:
-        return json.dumps({"error": "fidelity_scorer module not available"})
+        return error_response("fidelity_scorer module not available")
 
     # Parse and link DSL
     progress.log_sync("Loading project DSL...")

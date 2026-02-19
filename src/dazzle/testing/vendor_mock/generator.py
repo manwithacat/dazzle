@@ -37,6 +37,7 @@ def create_mock_server(
     seed: int | None = None,
     auth_tokens: dict[str, str] | None = None,
     scenario_engine: ScenarioEngine | None = None,
+    project_root: Any = None,
 ) -> FastAPI:
     """Create a mock FastAPI server from an API pack definition.
 
@@ -47,6 +48,7 @@ def create_mock_server(
             Keys depend on auth type: 'api_key', 'token', 'secret', etc.
             If not provided, any correctly-formatted auth is accepted.
         scenario_engine: Optional scenario engine for overriding responses.
+        project_root: Optional project root for project-local scenarios.
 
     Returns:
         A FastAPI application with routes for all pack operations.
@@ -61,6 +63,16 @@ def create_mock_server(
     pack = load_pack(pack_name)
     if not pack:
         raise ValueError(f"API pack '{pack_name}' not found")
+
+    # Create scenario engine with project-local support if not provided
+    if scenario_engine is None and project_root is not None:
+        from pathlib import Path as _Path
+
+        scenario_engine = ScenarioEngine(
+            project_root=_Path(project_root)
+            if not isinstance(project_root, _Path)
+            else project_root
+        )
 
     return _build_app(pack, seed=seed, auth_tokens=auth_tokens, scenario_engine=scenario_engine)
 

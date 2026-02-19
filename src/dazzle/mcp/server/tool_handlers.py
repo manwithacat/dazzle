@@ -17,6 +17,7 @@ from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
+from dazzle.core.paths import project_log_dir
 from dazzle.core.patterns import detect_crud_patterns, detect_integration_patterns
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
@@ -24,7 +25,6 @@ from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.runtime_tools import set_backend_spec
 from dazzle.mcp.semantics import get_mcp_version, lookup_concept
 
-from .paths import project_log_dir
 from .state import (
     get_active_project,
     get_active_project_path,

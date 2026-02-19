@@ -320,7 +320,7 @@ def create_experience_routes(
         # Build template variables
         auth_ctx = _inject_auth(request)
 
-        from dazzle_back.runtime.htmx_response import HtmxDetails
+        from dazzle_ui.runtime.htmx import HtmxDetails
 
         htmx = HtmxDetails.from_request(request)
         current_route = f"{app_prefix}/experiences/{name}/{step}"
@@ -439,7 +439,7 @@ def create_experience_routes(
 
                 if not success:
                     # Proxy failed — re-render the step with error
-                    from dazzle_back.runtime.htmx_response import HtmxDetails, htmx_error_response
+                    from dazzle_ui.runtime.htmx import HtmxDetails, htmx_error_response
 
                     htmx = HtmxDetails.from_request(request)
                     if htmx.is_htmx:
@@ -489,7 +489,7 @@ def create_experience_routes(
             if step not in completed:
                 completed.append(step)
 
-            from dazzle_back.runtime.htmx_response import HtmxDetails
+            from dazzle_ui.runtime.htmx import HtmxDetails
 
             htmx = HtmxDetails.from_request(request)
             redirect_url = f"{app_prefix}/"
@@ -524,7 +524,7 @@ def create_experience_routes(
 
         redirect_url = f"{app_prefix}/experiences/{name}/{next_step}"
 
-        from dazzle_back.runtime.htmx_response import HtmxDetails
+        from dazzle_ui.runtime.htmx import HtmxDetails
 
         htmx = HtmxDetails.from_request(request)
 

@@ -42,6 +42,14 @@ def _import_fidelity():
         modules = parse_modules(dsl_files)
         return build_appspec(modules, manifest.project_root)
 
+    def _error_response(msg):
+        return json.dumps({"error": msg})
+
+    def _unknown_op_response(operation, tool):
+        return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+    common_mock.error_response = _error_response
+    common_mock.unknown_op_response = _unknown_op_response
     common_mock.extract_progress = _extract_progress
     common_mock.load_project_appspec = _load_project_appspec
 

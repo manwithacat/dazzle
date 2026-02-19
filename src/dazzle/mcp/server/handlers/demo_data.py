@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, load_project_appspec, wrap_handler_errors
+from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -349,7 +349,7 @@ def save_demo_blueprint_handler(project_root: Path, args: dict[str, Any]) -> str
     validate_coverage = args.get("validate", True)  # v0.14.2: Validate against DSL
 
     if not blueprint_data:
-        return json.dumps({"error": "blueprint parameter required"})
+        return error_response("blueprint parameter required")
 
     progress.log_sync("Saving demo data blueprint...")
     # Validate and create blueprint

@@ -275,9 +275,3 @@ def run_dev_server_from_json(
 
 
 # =============================================================================
-# Backward Compatibility
-# =============================================================================
-
-# Backward compatibility aliases (deprecated as of v0.28.0)
-DNRDevHandler = DazzleDevHandler
-DNRDevServer = DazzleDevServer

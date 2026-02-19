@@ -12,35 +12,38 @@ import json
 import logging
 from collections.abc import Callable
 from functools import wraps
-from pathlib import Path
 from typing import Any
 
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.ir.appspec import AppSpec
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
+from dazzle.core.appspec_loader import load_project_appspec
 
 from ..progress import ProgressContext
 from ..progress import noop as _noop_progress
 
 logger = logging.getLogger("dazzle.mcp")
 
+# Re-export so existing `from .common import load_project_appspec` works
+__all__ = [
+    "error_response",
+    "extract_progress",
+    "load_project_appspec",
+    "unknown_op_response",
+    "wrap_handler_errors",
+]
+
+
+def error_response(msg: str) -> str:
+    """Return a JSON error response string."""
+    return json.dumps({"error": msg})
+
+
+def unknown_op_response(operation: str | None, tool: str) -> str:
+    """Return a JSON error for an unknown operation."""
+    return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
 
 def extract_progress(args: dict[str, Any] | None) -> ProgressContext:
     """Extract progress context from handler args, falling back to noop."""
     return (args.get("_progress") if args else None) or _noop_progress()
-
-
-def load_project_appspec(project_root: Path) -> AppSpec:
-    """Load and return the fully-linked AppSpec for a project.
-
-    Combines the four-step boilerplate: manifest → discover → parse → build.
-    """
-    manifest = load_manifest(project_root / "dazzle.toml")
-    dsl_files = discover_dsl_files(project_root, manifest)
-    modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root)
 
 
 def wrap_handler_errors(

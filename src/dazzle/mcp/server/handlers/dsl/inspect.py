@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ..common import extract_progress, load_project_appspec, wrap_handler_errors
+from ..common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
 
 @wrap_handler_errors
@@ -15,14 +15,14 @@ def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     entity_name = args.get("entity_name") or args.get("name")
     if not entity_name:
-        return json.dumps({"error": "entity_name required"})
+        return error_response("entity_name required")
 
     progress.log_sync(f"Inspecting entity '{entity_name}'...")
     app_spec = load_project_appspec(project_root)
 
     entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
     if not entity:
-        return json.dumps({"error": f"Entity '{entity_name}' not found"})
+        return error_response(f"Entity '{entity_name}' not found")
 
     return json.dumps(
         {
@@ -49,14 +49,14 @@ def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     surface_name = args.get("surface_name") or args.get("name")
     if not surface_name:
-        return json.dumps({"error": "surface_name required"})
+        return error_response("surface_name required")
 
     progress.log_sync(f"Inspecting surface '{surface_name}'...")
     app_spec = load_project_appspec(project_root)
 
     surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
     if not surface:
-        return json.dumps({"error": f"Surface '{surface_name}' not found"})
+        return error_response(f"Surface '{surface_name}' not found")
 
     info: dict[str, Any] = {
         "name": surface.name,

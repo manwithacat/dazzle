@@ -20,6 +20,16 @@ from .state import get_available_projects, get_project_root, is_dev_mode, resolv
 logger = logging.getLogger(__name__)
 
 
+def error_response(msg: str) -> str:
+    """Return a JSON error response string."""
+    return json.dumps({"error": msg})
+
+
+def unknown_op_response(operation: str | None, tool: str) -> str:
+    """Return a JSON error for an unknown operation."""
+    return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+
 def _resolve_project(arguments: dict[str, Any]) -> Path | None:
     """Resolve project path from arguments or state."""
     # Check for pre-resolved path (set by dispatch_consolidated_tool via roots)
@@ -64,7 +74,7 @@ def _dispatch_project_ops(
         return _project_error()
     handler = ops.get(operation)  # type: ignore[arg-type]
     if handler is None:
-        return json.dumps({"error": f"Unknown {tool_label} operation: {operation}"})
+        return unknown_op_response(operation, tool_label)
     return handler(project_path, arguments)
 
 
@@ -82,7 +92,7 @@ async def _dispatch_project_ops_async(
         return _project_error()
     handler = ops.get(operation)  # type: ignore[arg-type]
     if handler is None:
-        return json.dumps({"error": f"Unknown {tool_label} operation: {operation}"})
+        return unknown_op_response(operation, tool_label)
     result = handler(project_path, arguments)
     if inspect.isawaitable(result):
         rv: str = await result
@@ -99,7 +109,7 @@ def _dispatch_standalone_ops(
     operation = arguments.get("operation")
     handler = ops.get(operation)  # type: ignore[arg-type]
     if handler is None:
-        return json.dumps({"error": f"Unknown {tool_label} operation: {operation}"})
+        return unknown_op_response(operation, tool_label)
     return handler(arguments)
 
 
@@ -238,8 +248,16 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
         get_env_vars_for_packs_handler,
         infrastructure_handler,
         list_api_packs_handler,
+        scaffold_pack_handler,
         search_api_packs_handler,
     )
+
+    # Set project root for project-local pack discovery
+    project_path = _resolve_project(arguments)
+    if project_path is not None:
+        from dazzle.api_kb.loader import set_project_root
+
+        set_project_root(project_path)
 
     standalone_ops: dict[str, Callable[..., str]] = {
         "list": list_api_packs_handler,
@@ -258,12 +276,36 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
 
     # infrastructure needs project context
     if operation == "infrastructure":
-        project_path = _resolve_project(arguments)
         if project_path is None:
             return _project_error()
         return infrastructure_handler(project_path=project_path, args=arguments)
 
-    return json.dumps({"error": f"Unknown API pack operation: {operation}"})
+    # scaffold needs project context
+    if operation == "scaffold":
+        if project_path is None:
+            return _project_error()
+        return scaffold_pack_handler(project_path=project_path, args=arguments)
+
+    return unknown_op_response(operation, "API pack")
+
+
+# =============================================================================
+# Mock Handler
+# =============================================================================
+
+_MOD_MOCK = "dazzle.mcp.server.handlers.mock"
+
+handle_mock: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "mock",
+    {
+        "status": f"{_MOD_MOCK}:mock_status_handler",
+        "scenarios": f"{_MOD_MOCK}:mock_scenarios_handler",
+        "fire_webhook": f"{_MOD_MOCK}:mock_fire_webhook_handler",
+        "request_log": f"{_MOD_MOCK}:mock_request_log_handler",
+        "inject_error": f"{_MOD_MOCK}:mock_inject_error_handler",
+        "scaffold_scenario": f"{_MOD_MOCK}:mock_scaffold_scenario_handler",
+    },
+)
 
 
 # =============================================================================
@@ -303,7 +345,7 @@ def handle_story(arguments: dict[str, Any]) -> str:
 
     handler = ops.get(operation)  # type: ignore[arg-type]
     if handler is None:
-        return json.dumps({"error": f"Unknown story operation: {operation}"})
+        return unknown_op_response(operation, "story")
     return handler(project_path, arguments)
 
 
@@ -511,7 +553,7 @@ async def handle_e2e_test(arguments: dict[str, Any]) -> str:
             to_dsl=arguments.get("to_dsl", True),
         )
     else:
-        return json.dumps({"error": f"Unknown E2E test operation: {operation}"})
+        return unknown_op_response(operation, "E2E test")
 
 
 # =============================================================================
@@ -548,7 +590,7 @@ def handle_status(arguments: dict[str, Any]) -> str:
         resolved = arguments.get("_resolved_project_path")
         return get_active_project_info(resolved_path=resolved)
 
-    return json.dumps({"error": f"Unknown status operation: {operation}"})
+    return unknown_op_response(operation, "status")
 
 
 # =============================================================================
@@ -589,7 +631,7 @@ def handle_knowledge(arguments: dict[str, Any]) -> str:
 
         return get_product_spec_handler(project_path, arguments)
 
-    return json.dumps({"error": f"Unknown knowledge operation: {operation}"})
+    return unknown_op_response(operation, "knowledge")
 
 
 # =============================================================================
@@ -637,7 +679,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
     elif operation == "create":
         email = arguments.get("email")
         if not email:
-            return json.dumps({"error": "email is required"})
+            return error_response("email is required")
         return json.dumps(
             await create_user_handler(
                 email=email,
@@ -653,7 +695,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
         user_id = arguments.get("user_id")
         email = arguments.get("email")
         if not user_id and not email:
-            return json.dumps({"error": "user_id or email is required"})
+            return error_response("user_id or email is required")
         return json.dumps(
             await get_user_handler(
                 user_id=user_id,
@@ -665,7 +707,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
     elif operation == "update":
         user_id = arguments.get("user_id")
         if not user_id:
-            return json.dumps({"error": "user_id is required"})
+            return error_response("user_id is required")
         return json.dumps(
             await update_user_handler(
                 user_id=user_id,
@@ -680,7 +722,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
     elif operation == "reset_password":
         user_id = arguments.get("user_id")
         if not user_id:
-            return json.dumps({"error": "user_id is required"})
+            return error_response("user_id is required")
         return json.dumps(
             await reset_password_handler(
                 user_id=user_id,
@@ -692,7 +734,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
     elif operation == "deactivate":
         user_id = arguments.get("user_id")
         if not user_id:
-            return json.dumps({"error": "user_id is required"})
+            return error_response("user_id is required")
         return json.dumps(
             await deactivate_user_handler(user_id=user_id, project_path=pp),
             indent=2,
@@ -710,7 +752,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
     elif operation == "revoke_session":
         session_id = arguments.get("session_id")
         if not session_id:
-            return json.dumps({"error": "session_id is required"})
+            return error_response("session_id is required")
         return json.dumps(
             await revoke_session_handler(session_id=session_id, project_path=pp),
             indent=2,
@@ -721,7 +763,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
             indent=2,
         )
     else:
-        return json.dumps({"error": f"Unknown user_management operation: {operation}"})
+        return unknown_op_response(operation, "user_management")
 
 
 # =============================================================================
@@ -731,15 +773,9 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
 
 def _load_appspec(project_path: Path) -> Any:
     """Load and return appspec from project, or raise on failure."""
-    from dazzle.core.fileset import discover_dsl_files
-    from dazzle.core.linker import build_appspec
-    from dazzle.core.manifest import load_manifest
-    from dazzle.core.parser import parse_modules
+    from dazzle.core.appspec_loader import load_project_appspec
 
-    manifest = load_manifest(project_path / "dazzle.toml")
-    dsl_files = discover_dsl_files(project_path, manifest)
-    modules = parse_modules(dsl_files)
-    return build_appspec(modules, manifest.project_root)
+    return load_project_appspec(project_path)
 
 
 def _generate_entity_stories(
@@ -944,7 +980,7 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
     try:
         appspec = _load_appspec(project_path)
     except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}"})
+        return error_response(f"Failed to load DSL: {e}")
 
     # Load existing stories and build a title set for dedup
     existing_stories = load_stories(project_path)
@@ -1153,7 +1189,7 @@ def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
     try:
         appspec = _load_appspec(project_path)
     except Exception as e:
-        return json.dumps({"error": f"Failed to load DSL: {e}"})
+        return error_response(f"Failed to load DSL: {e}")
 
     # Load existing test designs
     existing_designs = load_test_designs(project_path)
@@ -1393,7 +1429,7 @@ def _handle_graph_concept(graph: Any, arguments: dict[str, Any]) -> str:
     name = arguments.get("name", "")
     entity = graph.lookup_concept(name)
     if entity is None:
-        return json.dumps({"error": f"Concept not found: {name}"})
+        return error_response(f"Concept not found: {name}")
     return json.dumps(
         {
             "id": entity.id,
@@ -1456,15 +1492,15 @@ def _handle_graph_import(graph: Any, arguments: dict[str, Any]) -> str:
             with open(file_path) as f:
                 import_data = json.load(f)
         except Exception as e:
-            return json.dumps({"error": f"Failed to read file: {e}"})
+            return error_response(f"Failed to read file: {e}")
     if import_data is None:
-        return json.dumps({"error": "Either 'data' or 'file_path' is required"})
+        return error_response("Either 'data' or 'file_path' is required")
     mode = arguments.get("mode", "merge")
     try:
         stats = graph.import_project_data(import_data, mode=mode)
         return json.dumps({"status": "success", "mode": mode, **stats}, indent=2)
     except ValueError as e:
-        return json.dumps({"error": str(e)})
+        return error_response(str(e))
 
 
 def handle_graph(arguments: dict[str, Any]) -> str:
@@ -1473,7 +1509,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
 
     graph = get_knowledge_graph()
     if graph is None:
-        return json.dumps({"error": "Knowledge graph not initialized"})
+        return error_response("Knowledge graph not initialized")
 
     from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
 
@@ -1501,7 +1537,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
 
     handler_fn = handler_ops.get(operation)  # type: ignore[arg-type]
     if handler_fn is None:
-        return json.dumps({"error": f"Unknown graph operation: {operation}"})
+        return unknown_op_response(operation, "graph")
     return handler_fn(arguments)
 
 
@@ -1654,6 +1690,7 @@ handle_sentinel: Callable[[dict[str, Any]], str] = _make_project_handler(
 CONSOLIDATED_TOOL_HANDLERS = {
     "dsl": handle_dsl,
     "api_pack": handle_api_pack,
+    "mock": handle_mock,
     "story": handle_story,
     "demo_data": handle_demo_data,
     "test_design": handle_test_design,

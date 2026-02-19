@@ -365,10 +365,19 @@ def serve_command(
 
             packs = discover_packs_from_appspec(appspec)
             if packs:
-                mock_orch = MockOrchestrator.from_appspec(appspec, base_port=9001)
+                mock_orch = MockOrchestrator.from_appspec(
+                    appspec, base_port=9001, project_root=project_root
+                )
                 mock_orch.start()
                 for _name, mock in mock_orch.vendors.items():
                     typer.echo(f"  • Mock: {mock.provider} on :{mock.port} ({mock.env_var})")
+                # Store orchestrator for MCP tool access
+                try:
+                    from dazzle.mcp.server.state import set_mock_orchestrator
+
+                    set_mock_orchestrator(mock_orch)
+                except Exception:
+                    pass  # MCP server may not be running
         except Exception as e:
             typer.echo(f"  Warning: Vendor mock setup failed: {e}", err=True)
 

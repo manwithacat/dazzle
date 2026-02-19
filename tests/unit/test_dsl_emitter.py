@@ -557,7 +557,7 @@ class TestEmitDiscoveryHandler:
         result = json.loads(emit_discovery_handler(tmp_path, {"session_id": "empty"}))
         assert result["results"] == []
 
-    @patch("dazzle.mcp.server.handlers.discovery.emitter._load_appspec")
+    @patch("dazzle.mcp.server.handlers.discovery.emitter.load_project_appspec")
     def test_emit_with_observations(
         self,
         mock_load: MagicMock,
@@ -633,7 +633,7 @@ class TestEmitDiscoveryHandler:
         assert result["valid_count"] >= 0
         assert "report_markdown" in result
 
-    @patch("dazzle.mcp.server.handlers.discovery.emitter._load_appspec")
+    @patch("dazzle.mcp.server.handlers.discovery.emitter.load_project_appspec")
     def test_emit_filters_by_proposal_id(
         self,
         mock_load: MagicMock,

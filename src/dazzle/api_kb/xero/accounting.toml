@@ -183,6 +183,28 @@ allocations = { type = "json", description = "Allocations to invoices" }
 currency_code = { type = "str(3)" }
 updated_date_utc = { type = "datetime" }
 
+# Webhooks
+[webhooks."invoice.updated"]
+description = "Invoice was updated"
+signing = "xero-hmac"
+signing_header = "x-xero-signature"
+signing_env_var = "XERO_WEBHOOK_KEY"
+webhook_path = "/webhooks/xero"
+
+[webhooks."invoice.updated".payload]
+firstEventSequence = 1
+lastEventSequence = 1
+entropy = ""
+
+[[webhooks."invoice.updated".payload.events]]
+resourceUrl = ""
+resourceId = ""
+eventDateUtc = ""
+eventType = "UPDATE"
+eventCategory = "INVOICE"
+tenantId = ""
+tenantType = "ORGANISATION"
+
 # DSL generation hints
 [integration_hints]
 on_order_confirmed = "create_invoice with line items from Order"

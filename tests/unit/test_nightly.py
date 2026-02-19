@@ -28,7 +28,7 @@ def _error_result(msg: str = "fail") -> str:
 # ---------------------------------------------------------------------------
 
 
-class TestNightlyStepDefinitions:
+class TestQualityStepDefinitions:
     """Tests for _build_steps()."""
 
     def test_build_steps_count(self) -> None:
@@ -92,16 +92,17 @@ class TestNightlyParallelExecution:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_parallel_faster_than_sequential(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         delay = 0.05
         h = self._make_handler(delay)
 
         mock_build.return_value = [
-            NightlyStep(name="gate", handler=h),
-            NightlyStep(name="a", handler=h, depends_on=["gate"]),
-            NightlyStep(name="b", handler=h, depends_on=["gate"]),
-            NightlyStep(name="c", handler=h, depends_on=["gate"]),
+            QualityStep(name="gate", handler=h),
+            QualityStep(name="a", handler=h, depends_on=["gate"]),
+            QualityStep(name="b", handler=h, depends_on=["gate"]),
+            QualityStep(name="c", handler=h, depends_on=["gate"]),
         ]
 
         t0 = time.monotonic()
@@ -127,19 +128,20 @@ class TestNightlyDependencyGraph:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_gate_failure_skips_all(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         mock_build.return_value = [
-            NightlyStep(
+            QualityStep(
                 name="gate",
                 handler=MagicMock(return_value=_error_result("parse error")),
             ),
-            NightlyStep(
+            QualityStep(
                 name="lint",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gate"],
             ),
-            NightlyStep(
+            QualityStep(
                 name="fidelity",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gate"],
@@ -157,24 +159,25 @@ class TestNightlyDependencyGraph:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_mid_chain_failure_skips_dependent(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         mock_build.return_value = [
-            NightlyStep(
+            QualityStep(
                 name="gate",
                 handler=MagicMock(return_value=_ok_result()),
             ),
-            NightlyStep(
+            QualityStep(
                 name="gen",
                 handler=MagicMock(return_value=_error_result()),
                 depends_on=["gate"],
             ),
-            NightlyStep(
+            QualityStep(
                 name="cov",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gen"],
             ),
-            NightlyStep(
+            QualityStep(
                 name="lint",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gate"],
@@ -201,14 +204,15 @@ class TestNightlyStopOnError:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_stop_on_error(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         mock_build.return_value = [
-            NightlyStep(
+            QualityStep(
                 name="gate",
                 handler=MagicMock(return_value=_error_result("bad")),
             ),
-            NightlyStep(
+            QualityStep(
                 name="a",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gate"],
@@ -232,14 +236,15 @@ class TestNightlyActivityLogging:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_activity_events_logged(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         mock_build.return_value = [
-            NightlyStep(
+            QualityStep(
                 name="gate",
                 handler=MagicMock(return_value=_ok_result()),
             ),
-            NightlyStep(
+            QualityStep(
                 name="lint",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gate"],
@@ -270,10 +275,11 @@ class TestNightlyResponseFormat:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_response_has_parallel_meta(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         mock_build.return_value = [
-            NightlyStep(
+            QualityStep(
                 name="gate",
                 handler=MagicMock(return_value=_ok_result()),
             ),
@@ -290,10 +296,11 @@ class TestNightlyResponseFormat:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_detail_levels(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         mock_build.return_value = [
-            NightlyStep(
+            QualityStep(
                 name="gate",
                 handler=MagicMock(return_value=_ok_result()),
             ),
@@ -306,16 +313,17 @@ class TestNightlyResponseFormat:
 
     @patch("dazzle.mcp.server.handlers.nightly._build_steps")
     def test_step_numbering_matches_order(self, mock_build: MagicMock) -> None:
-        from dazzle.mcp.server.handlers.nightly import NightlyStep, run_nightly_handler
+        from dazzle.mcp.server.handlers.nightly import run_nightly_handler
+        from dazzle.mcp.server.handlers.orchestration import QualityStep
 
         mock_build.return_value = [
-            NightlyStep(name="gate", handler=MagicMock(return_value=_ok_result())),
-            NightlyStep(
+            QualityStep(name="gate", handler=MagicMock(return_value=_ok_result())),
+            QualityStep(
                 name="a",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gate"],
             ),
-            NightlyStep(
+            QualityStep(
                 name="b",
                 handler=MagicMock(return_value=_ok_result()),
                 depends_on=["gate"],

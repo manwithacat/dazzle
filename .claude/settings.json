@@ -46,6 +46,7 @@
       "Bash(tail:*)",
       "Bash(wc:*)",
       "Bash(grep:*)",
+      "Bash(rg:*)",
       "Bash(find:*)",
       "Bash(which:*)",
       "Bash(pwd)",

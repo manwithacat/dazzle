@@ -127,8 +127,9 @@ class TestSiteRendererSSR:
     """Test server-side rendering of sitespec pages via Jinja2 templates."""
 
     def test_render_site_page_html_with_page_data(self) -> None:
-        """Test that render_site_page_html produces SSR content when page_data is provided."""
-        from dazzle_ui.runtime.site_renderer import render_site_page_html
+        """Test that site page SSR produces content when page_data is provided."""
+        from dazzle_ui.runtime.site_context import build_site_page_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec = {
             "brand": {"product_name": "TestApp"},
@@ -140,7 +141,8 @@ class TestSiteRendererSSR:
                 {"type": "hero", "headline": "Welcome", "subhead": "Great app"},
             ],
         }
-        html = render_site_page_html(sitespec, "/", page_data=page_data)
+        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
+        html = render_site_page("site/page.html", ctx)
 
         # SSR content should be present
         assert "Welcome" in html
@@ -149,14 +151,16 @@ class TestSiteRendererSSR:
         assert "og:title" in html
 
     def test_render_site_page_html_without_page_data(self) -> None:
-        """Test that render_site_page_html renders even without page_data."""
-        from dazzle_ui.runtime.site_renderer import render_site_page_html
+        """Test that site page SSR renders even without page_data."""
+        from dazzle_ui.runtime.site_context import build_site_page_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec = {
             "brand": {"product_name": "TestApp"},
             "layout": {"nav": {}, "footer": {}},
         }
-        html = render_site_page_html(sitespec, "/")
+        ctx = build_site_page_context(sitespec, "/")
+        html = render_site_page("site/page.html", ctx)
         # Should render a valid page (no loading state — always SSR now)
         assert "TestApp" in html
         assert "<!DOCTYPE html>" in html.lower() or "<html" in html.lower()
@@ -167,7 +171,8 @@ class TestOGMetaTags:
 
     def test_og_meta_in_rendered_page(self) -> None:
         """Test OG meta tags appear in rendered page HTML."""
-        from dazzle_ui.runtime.site_renderer import render_site_page_html
+        from dazzle_ui.runtime.site_context import build_site_page_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec = {
             "brand": {"product_name": "MyApp"},
@@ -179,7 +184,8 @@ class TestOGMetaTags:
                 {"type": "hero", "headline": "Welcome", "subhead": "The best app"},
             ],
         }
-        html = render_site_page_html(sitespec, "/", page_data=page_data)
+        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
+        html = render_site_page("site/page.html", ctx)
         assert "og:title" in html
         assert "og:type" in html
 
@@ -189,10 +195,12 @@ class TestAuthPageRenderers:
 
     def test_forgot_password_page(self) -> None:
         """Test forgot-password page renders correctly."""
-        from dazzle_ui.runtime.site_renderer import render_forgot_password_page_html
+        from dazzle_ui.runtime.site_context import build_site_auth_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec = {"brand": {"product_name": "TestApp"}}
-        html = render_forgot_password_page_html(sitespec)
+        ctx = build_site_auth_context(sitespec, "forgot_password")
+        html = render_site_page("site/auth/forgot_password.html", ctx)
 
         assert "Reset Password" in html
         assert "/auth/forgot-password" in html
@@ -201,10 +209,12 @@ class TestAuthPageRenderers:
 
     def test_reset_password_page(self) -> None:
         """Test reset-password page renders correctly."""
-        from dazzle_ui.runtime.site_renderer import render_reset_password_page_html
+        from dazzle_ui.runtime.site_context import build_site_auth_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec = {"brand": {"product_name": "TestApp"}}
-        html = render_reset_password_page_html(sitespec)
+        ctx = build_site_auth_context(sitespec, "reset_password")
+        html = render_site_page("site/auth/reset_password.html", ctx)
 
         assert "Set New Password" in html
         assert "/auth/reset-password" in html
@@ -213,20 +223,24 @@ class TestAuthPageRenderers:
 
     def test_login_page_has_forgot_password_link(self) -> None:
         """Test that login page includes forgot-password link."""
-        from dazzle_ui.runtime.site_renderer import render_auth_page_html
+        from dazzle_ui.runtime.site_context import build_site_auth_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec = {"brand": {"product_name": "TestApp"}}
-        html = render_auth_page_html(sitespec, "login")
+        ctx = build_site_auth_context(sitespec, "login")
+        html = render_site_page("site/auth/login.html", ctx)
 
         assert "Forgot password?" in html
         assert "/forgot-password" in html
 
     def test_signup_page_no_forgot_password_link(self) -> None:
         """Test that signup page does NOT show forgot-password link."""
-        from dazzle_ui.runtime.site_renderer import render_auth_page_html
+        from dazzle_ui.runtime.site_context import build_site_auth_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec = {"brand": {"product_name": "TestApp"}}
-        html = render_auth_page_html(sitespec, "signup")
+        ctx = build_site_auth_context(sitespec, "signup")
+        html = render_site_page("site/auth/signup.html", ctx)
 
         assert "Forgot password?" not in html
 
@@ -252,44 +266,54 @@ class TestCustomCssOverride:
         html = get_shared_head_html("Test Page")
         assert "/static/css/custom.css" not in html
 
-    def test_render_site_page_html_passes_custom_css(self) -> None:
-        """render_site_page_html propagates custom_css to head."""
-        from dazzle_ui.runtime.site_renderer import render_site_page_html
+    def test_render_site_page_passes_custom_css(self) -> None:
+        """Site page context propagates custom_css to head."""
+        from dazzle_ui.runtime.site_context import build_site_page_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec: dict = {"brand": {"product_name": "TestApp"}, "layout": {}}
-        html = render_site_page_html(sitespec, "/", custom_css=True)
+        ctx = build_site_page_context(sitespec, "/", custom_css=True)
+        html = render_site_page("site/page.html", ctx)
         assert "/static/css/custom.css" in html
 
-    def test_render_auth_page_html_passes_custom_css(self) -> None:
-        """render_auth_page_html propagates custom_css to head."""
-        from dazzle_ui.runtime.site_renderer import render_auth_page_html
+    def test_render_auth_page_passes_custom_css(self) -> None:
+        """Auth page context propagates custom_css to head."""
+        from dazzle_ui.runtime.site_context import build_site_auth_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec: dict = {"brand": {"product_name": "TestApp"}}
-        html = render_auth_page_html(sitespec, "login", custom_css=True)
+        ctx = build_site_auth_context(sitespec, "login", custom_css=True)
+        html = render_site_page("site/auth/login.html", ctx)
         assert "/static/css/custom.css" in html
 
-    def test_render_404_page_html_passes_custom_css(self) -> None:
-        """render_404_page_html propagates custom_css to head."""
-        from dazzle_ui.runtime.site_renderer import render_404_page_html
+    def test_render_404_page_passes_custom_css(self) -> None:
+        """404 page context propagates custom_css to head."""
+        from dazzle_ui.runtime.site_context import build_site_404_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec: dict = {"brand": {"product_name": "TestApp"}, "layout": {}}
-        html = render_404_page_html(sitespec, "/missing", custom_css=True)
+        ctx = build_site_404_context(sitespec, custom_css=True)
+        html = render_site_page("site/404.html", ctx)
         assert "/static/css/custom.css" in html
 
-    def test_render_forgot_password_html_passes_custom_css(self) -> None:
-        """render_forgot_password_page_html propagates custom_css to head."""
-        from dazzle_ui.runtime.site_renderer import render_forgot_password_page_html
+    def test_render_forgot_password_passes_custom_css(self) -> None:
+        """Forgot password context propagates custom_css to head."""
+        from dazzle_ui.runtime.site_context import build_site_auth_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec: dict = {"brand": {"product_name": "TestApp"}}
-        html = render_forgot_password_page_html(sitespec, custom_css=True)
+        ctx = build_site_auth_context(sitespec, "forgot_password", custom_css=True)
+        html = render_site_page("site/auth/forgot_password.html", ctx)
         assert "/static/css/custom.css" in html
 
-    def test_render_reset_password_html_passes_custom_css(self) -> None:
-        """render_reset_password_page_html propagates custom_css to head."""
-        from dazzle_ui.runtime.site_renderer import render_reset_password_page_html
+    def test_render_reset_password_passes_custom_css(self) -> None:
+        """Reset password context propagates custom_css to head."""
+        from dazzle_ui.runtime.site_context import build_site_auth_context
+        from dazzle_ui.runtime.template_renderer import render_site_page
 
         sitespec: dict = {"brand": {"product_name": "TestApp"}}
-        html = render_reset_password_page_html(sitespec, custom_css=True)
+        ctx = build_site_auth_context(sitespec, "reset_password", custom_css=True)
+        html = render_site_page("site/auth/reset_password.html", ctx)
         assert "/static/css/custom.css" in html
 
     def test_create_site_page_routes_detects_custom_css(self, tmp_path: Path) -> None:

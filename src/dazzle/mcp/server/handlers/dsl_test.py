@@ -10,7 +10,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, wrap_async_handler_errors, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_async_handler_errors, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -32,7 +32,7 @@ def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
         if story_id:
             story_ids_list = [story_id]
         if not story_ids_list:
-            return json.dumps({"error": "story_id or story_ids is required"}, indent=2)
+            return error_response("story_id or story_ids is required")
 
         base_url = args.get("base_url")
 
@@ -152,7 +152,7 @@ def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(response, indent=2)
 
     except ImportError as e:
-        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+        return error_response(f"Testing module not available: {e}")
 
 
 @wrap_handler_errors
@@ -216,7 +216,7 @@ def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(result, indent=2)
 
     except ImportError as e:
-        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+        return error_response(f"Testing module not available: {e}")
 
 
 def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
@@ -486,7 +486,7 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(response, indent=2)
 
     except ImportError as e:
-        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+        return error_response(f"Testing module not available: {e}")
 
 
 @wrap_handler_errors
@@ -588,7 +588,7 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps(response, indent=2)
 
     except ImportError as e:
-        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+        return error_response(f"Testing module not available: {e}")
 
 
 @wrap_async_handler_errors
@@ -625,7 +625,7 @@ async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> s
         )
 
     except ImportError as e:
-        return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
+        return error_response(f"Session manager not available: {e}")
 
 
 @wrap_async_handler_errors
@@ -655,7 +655,7 @@ async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str
             return json.dumps({"diffs": results}, indent=2)
 
     except ImportError as e:
-        return json.dumps({"error": f"Session manager not available: {e}"}, indent=2)
+        return error_response(f"Session manager not available: {e}")
 
 
 @wrap_handler_errors
@@ -758,7 +758,7 @@ def get_dsl_test_coverage_handler(project_root: Path, args: dict[str, Any]) -> s
         return json.dumps(result, indent=2)
 
     except ImportError as e:
-        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+        return error_response(f"Testing module not available: {e}")
 
 
 @wrap_handler_errors
@@ -827,4 +827,4 @@ def list_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
     except ImportError as e:
-        return json.dumps({"error": f"Testing module not available: {e}"}, indent=2)
+        return error_response(f"Testing module not available: {e}")

@@ -8,16 +8,11 @@ import time
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.paths import project_discovery_dir, project_kg_db
+from dazzle.core.paths import project_discovery_dir, project_kg_db
+
+from ..common import error_response
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
-
-
-def _load_appspec(project_path: Path) -> Any:
-    """Load and return AppSpec from a project directory."""
-    from ..common import load_project_appspec
-
-    return load_project_appspec(project_path)
 
 
 def _populate_kg_for_discovery(
@@ -135,20 +130,20 @@ def load_report_data(
         report_file = report_dir / f"{session_id}.json"
     else:
         if not report_dir.exists():
-            return json.dumps({"error": "No discovery reports found"})
+            return error_response("No discovery reports found")
         reports = sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
         if not reports:
-            return json.dumps({"error": "No discovery reports found"})
+            return error_response("No discovery reports found")
         report_file = reports[0]
         session_id = report_file.stem
 
     if not report_file.exists():
-        return json.dumps({"error": f"Report not found: {session_id}"})
+        return error_response(f"Report not found: {session_id}")
 
     try:
         data = json.loads(report_file.read_text())
     except (json.JSONDecodeError, OSError) as e:
-        return json.dumps({"error": f"Could not read report: {e}"})
+        return error_response(f"Could not read report: {e}")
 
     return data, session_id
 

@@ -7,10 +7,10 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.mcp.server.paths import project_discovery_dir, project_kg_db
+from dazzle.core.appspec_loader import load_project_appspec
+from dazzle.core.paths import project_discovery_dir, project_kg_db
 
 from ..common import wrap_handler_errors
-from ._helpers import _load_appspec
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
@@ -84,7 +84,7 @@ def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     # Check DSL
     try:
-        appspec = _load_appspec(project_path)
+        appspec = load_project_appspec(project_path)
         result["dsl_valid"] = True
         result["entities"] = (
             len(appspec.domain.entities) if hasattr(appspec.domain, "entities") else 0
@@ -157,7 +157,7 @@ def app_coherence_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     from dazzle.agent.missions.persona_journey import run_headless_discovery
 
-    appspec = _load_appspec(project_path)
+    appspec = load_project_appspec(project_path)
     persona_filter = args.get("persona")
     persona_ids = [persona_filter] if persona_filter else None
 

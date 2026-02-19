@@ -539,8 +539,10 @@ class TestModeRouting:
 
         from dazzle.mcp.server.handlers.discovery import run_discovery_handler
 
-        # Mock _load_appspec since we don't have a real project
-        with patch("dazzle.mcp.server.handlers.discovery.missions._load_appspec") as mock_load:
+        # Mock load_project_appspec since we don't have a real project
+        with patch(
+            "dazzle.mcp.server.handlers.discovery.missions.load_project_appspec"
+        ) as mock_load:
             result_str = asyncio.run(
                 run_discovery_handler(
                     Path("/fake/path"),
@@ -550,5 +552,5 @@ class TestModeRouting:
             result = json.loads(result_str)
             assert "error" in result
             assert "invalid_mode" in result["error"]
-            # _load_appspec should not have been called
+            # load_project_appspec should not have been called
             mock_load.assert_not_called()

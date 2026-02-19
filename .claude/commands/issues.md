@@ -1,5 +1,13 @@
 Iterative GitHub issue resolver. Run continuously: triage, implement, ship, repeat — until all open issues are resolved or the user stops you.
 
+## Backward Compatibility Policy
+
+**Backward compatibility is NOT a requirement at this stage.** The project has one major user who is fully engaged with the dev process. When implementing fixes and features:
+
+- **Prefer clean breaks over shims.** Delete old functions, rename freely, change signatures. Do not create wrapper functions, re-exports, or compatibility aliases to preserve old call sites.
+- **Update all callers** in the same commit rather than preserving old APIs.
+- **Communicate breaking changes** by noting them in CHANGELOG.md (under `### Changed` or `### Removed`) and in the GitHub issue comment when closing. That is sufficient notice.
+
 ## Loop: Triage → Implement → Ship → Repeat
 
 ### Step 1: Triage

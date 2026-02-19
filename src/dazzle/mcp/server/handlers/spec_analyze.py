@@ -19,7 +19,7 @@ import logging
 import re
 from typing import Any
 
-from .common import extract_progress
+from .common import error_response, extract_progress, unknown_op_response
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ def handle_spec_analyze(arguments: dict[str, Any]) -> str:
     elif operation == "refine_spec":
         return _refine_spec(arguments)
     else:
-        return json.dumps({"error": f"Unknown operation: {operation}"})
+        return unknown_op_response(operation, "spec_analyze")
 
 
 def _discover_entities(arguments: dict[str, Any]) -> str:
@@ -62,7 +62,7 @@ def _discover_entities(arguments: dict[str, Any]) -> str:
     spec_text = arguments.get("spec_text", "")
 
     if not spec_text:
-        return json.dumps({"error": "spec_text is required"})
+        return error_response("spec_text is required")
 
     # Strip markdown headers to avoid extracting header words as entities
     # But keep the content for analysis
@@ -514,7 +514,7 @@ def _identify_lifecycles(arguments: dict[str, Any]) -> str:
     entities = arguments.get("entities", [])
 
     if not spec_text:
-        return json.dumps({"error": "spec_text is required"})
+        return error_response("spec_text is required")
 
     # Common lifecycle patterns
     lifecycle_keywords = {
@@ -600,7 +600,7 @@ def _extract_personas(arguments: dict[str, Any]) -> str:
     spec_text = arguments.get("spec_text", "")
 
     if not spec_text:
-        return json.dumps({"error": "spec_text is required"})
+        return error_response("spec_text is required")
 
     # Role patterns
     role_patterns = [
@@ -677,7 +677,7 @@ def _surface_rules(arguments: dict[str, Any]) -> str:
     spec_text = arguments.get("spec_text", "")
 
     if not spec_text:
-        return json.dumps({"error": "spec_text is required"})
+        return error_response("spec_text is required")
 
     rules = []
 
@@ -773,7 +773,7 @@ def _generate_questions(arguments: dict[str, Any]) -> str:
     entities = arguments.get("entities", [])
 
     if not spec_text:
-        return json.dumps({"error": "spec_text is required"})
+        return error_response("spec_text is required")
 
     questions = []
 
@@ -862,7 +862,7 @@ def _refine_spec(arguments: dict[str, Any]) -> str:
     answers = arguments.get("answers", {})  # Answers to generated questions
 
     if not spec_text:
-        return json.dumps({"error": "spec_text is required"})
+        return error_response("spec_text is required")
 
     # Run all analyses
     entities_result = json.loads(_discover_entities({"spec_text": spec_text}))

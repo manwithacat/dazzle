@@ -8,8 +8,10 @@ import time
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import load_project_appspec
+
 from ..common import wrap_handler_errors
-from ._helpers import _load_appspec, deserialize_observations, load_report_data
+from ._helpers import deserialize_observations, load_report_data
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
@@ -61,7 +63,7 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
         )
 
     # Load appspec for emit context
-    appspec = _load_appspec(project_path)
+    appspec = load_project_appspec(project_path)
     context = build_emit_context(appspec)
 
     # Emit DSL for each proposal

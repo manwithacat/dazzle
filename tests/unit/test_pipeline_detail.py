@@ -5,10 +5,14 @@ from __future__ import annotations
 import json
 import time
 
-from dazzle.mcp.server.handlers.pipeline import (
-    _build_pipeline_response,
-    _filter_issues_result,
-    _step_has_issues,
+from dazzle.mcp.server.handlers.orchestration import (
+    aggregate_results as _build_pipeline_response,
+)
+from dazzle.mcp.server.handlers.orchestration import (
+    filter_issues_result as _filter_issues_result,
+)
+from dazzle.mcp.server.handlers.orchestration import (
+    step_has_issues as _step_has_issues,
 )
 
 

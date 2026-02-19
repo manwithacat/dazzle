@@ -13,11 +13,7 @@ from pathlib import Path
 import typer
 
 from dazzle.core import ir
-from dazzle.core.errors import ParseError
-from dazzle.core.fileset import discover_dsl_files
-from dazzle.core.linker import build_appspec
-from dazzle.core.manifest import load_manifest
-from dazzle.core.parser import parse_modules
+from dazzle.core.appspec_loader import load_project_appspec
 
 specs_app = typer.Typer(
     help="Generate API specifications from DAZZLE projects",
@@ -26,36 +22,12 @@ specs_app = typer.Typer(
 
 
 def _load_appspec(project_dir: Path) -> ir.AppSpec:
-    """Load and build AppSpec from DSL files."""
-    manifest_path = project_dir / "dazzle.toml"
-    if not manifest_path.exists():
-        typer.echo(f"No dazzle.toml found in {project_dir}", err=True)
-        raise typer.Exit(code=1)
-
+    """Load AppSpec with CLI-friendly error messages."""
     try:
-        manifest = load_manifest(manifest_path)
+        return load_project_appspec(project_dir)
     except Exception as e:
-        typer.echo(f"Error loading manifest: {e}", err=True)
+        typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
-
-    dsl_files = discover_dsl_files(project_dir, manifest)
-    if not dsl_files:
-        typer.echo(f"No DSL files found in {project_dir}", err=True)
-        raise typer.Exit(code=1)
-
-    try:
-        modules = parse_modules(dsl_files)
-    except ParseError as e:
-        typer.echo(f"Parse error: {e}", err=True)
-        raise typer.Exit(code=1)
-
-    try:
-        spec = build_appspec(modules, manifest.project_root)
-    except Exception as e:
-        typer.echo(f"Error building spec: {e}", err=True)
-        raise typer.Exit(code=1)
-
-    return spec
 
 
 @specs_app.command(name="openapi")

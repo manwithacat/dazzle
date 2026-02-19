@@ -24,7 +24,7 @@ from ..state import (
     is_dev_mode,
     set_active_project,
 )
-from .common import extract_progress
+from .common import error_response, extract_progress
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -148,7 +148,7 @@ def select_project(args: dict[str, Any]) -> str:
 
     project_name = args.get("project_name")
     if not project_name:
-        return json.dumps({"error": "project_name required"})
+        return error_response("project_name required")
 
     available_projects = get_available_projects()
 

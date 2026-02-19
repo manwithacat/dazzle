@@ -44,6 +44,15 @@ def _import_modules():
 
     # Provide real handler_error_json so the decorator doesn't mask functions
     common_mock = sys.modules["dazzle.mcp.server.handlers.common"]
+
+    def _error_response(msg):
+        return json.dumps({"error": msg})
+
+    def _unknown_op_response(operation, tool):
+        return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+    common_mock.error_response = _error_response
+    common_mock.unknown_op_response = _unknown_op_response
     common_mock.handler_error_json = lambda fn: fn
     common_mock.wrap_handler_errors = lambda fn: fn
     common_mock.extract_progress = lambda args: _noop_ctx

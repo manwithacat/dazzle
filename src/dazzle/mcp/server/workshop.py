@@ -31,6 +31,7 @@ from rich.progress_bar import ProgressBar
 from rich.table import Table
 from rich.text import Text
 
+from dazzle.core.paths import project_activity_log, project_kg_db
 from dazzle.mcp.server.activity_log import (
     TYPE_ERROR,
     TYPE_LOG,
@@ -38,7 +39,6 @@ from dazzle.mcp.server.activity_log import (
     TYPE_TOOL_END,
     TYPE_TOOL_START,
 )
-from dazzle.mcp.server.paths import project_activity_log, project_kg_db
 
 logger = logging.getLogger(__name__)
 

@@ -10,7 +10,7 @@ from dazzle.core.ir import (
 from dazzle.ui.layout_engine import (
     ARCHETYPE_DEFINITIONS,
     build_layout_plan,
-    select_archetype,
+    select_stage,
 )
 from dazzle.ui.layout_engine.adjust import adjust_attention_for_persona
 from dazzle.ui.layout_engine.allocate import assign_signals_to_surfaces
@@ -36,7 +36,7 @@ class TestArchetypeSelection:
             ],
         )
 
-        archetype = select_archetype(workspace)
+        archetype = select_stage(workspace)
         assert archetype == LayoutArchetype.FOCUS_METRIC
 
     def test_select_scanner_table_single_table(self):
@@ -55,7 +55,7 @@ class TestArchetypeSelection:
             ],
         )
 
-        archetype = select_archetype(workspace)
+        archetype = select_stage(workspace)
         assert archetype == LayoutArchetype.SCANNER_TABLE
 
     def test_select_monitor_wall_multiple_signals(self):
@@ -88,7 +88,7 @@ class TestArchetypeSelection:
             ],
         )
 
-        archetype = select_archetype(workspace)
+        archetype = select_stage(workspace)
         assert archetype == LayoutArchetype.MONITOR_WALL
 
     def test_select_dual_pane_list_detail(self):
@@ -114,7 +114,7 @@ class TestArchetypeSelection:
             ],
         )
 
-        archetype = select_archetype(workspace)
+        archetype = select_stage(workspace)
         assert archetype == LayoutArchetype.DUAL_PANE_FLOW
 
     def test_select_command_center_expert_many_signals(self):
@@ -142,7 +142,7 @@ class TestArchetypeSelection:
 
         persona = PersonaLayout(id="expert", label="Expert", proficiency_level="expert")
 
-        archetype = select_archetype(workspace, persona)
+        archetype = select_stage(workspace, persona)
         # With 6 diverse signals and expert persona → COMMAND_CENTER
         assert archetype == LayoutArchetype.COMMAND_CENTER
 
@@ -163,7 +163,7 @@ class TestArchetypeSelection:
             ],
         )
 
-        archetype = select_archetype(workspace)
+        archetype = select_stage(workspace)
         # Should respect hint even though signal profile suggests FOCUS_METRIC
         assert archetype == LayoutArchetype.SCANNER_TABLE
 
@@ -184,7 +184,7 @@ class TestArchetypeSelection:
         )
 
         # Run selection multiple times
-        results = [select_archetype(workspace) for _ in range(10)]
+        results = [select_stage(workspace) for _ in range(10)]
 
         # All results should be identical
         assert len(set(results)) == 1

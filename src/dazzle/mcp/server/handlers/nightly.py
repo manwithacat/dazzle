@@ -20,9 +20,6 @@ from typing import Any
 from .common import wrap_handler_errors
 from .orchestration import QualityStep, aggregate_results, run_step
 
-# Backward-compat alias — tests import NightlyStep by this name
-NightlyStep = QualityStep
-
 logger = logging.getLogger("dazzle.mcp.handlers.nightly")
 
 

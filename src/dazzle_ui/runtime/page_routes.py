@@ -407,7 +407,7 @@ def create_page_routes(
                     if k.startswith("filter[") and k.endswith("]") and v
                 }
 
-            from dazzle_back.runtime.htmx_response import HtmxDetails
+            from dazzle_ui.runtime.htmx import HtmxDetails
 
             htmx = HtmxDetails.from_request(request)
 
@@ -571,7 +571,7 @@ def create_page_routes(
                                 detail="You don't have permission to access this workspace.",
                             )
 
-                    from dazzle_back.runtime.htmx_response import HtmxDetails
+                    from dazzle_ui.runtime.htmx import HtmxDetails
 
                     htmx = HtmxDetails.from_request(request)
 

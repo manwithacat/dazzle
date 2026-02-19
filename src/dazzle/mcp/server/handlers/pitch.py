@@ -9,7 +9,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import extract_progress, wrap_handler_errors
+from .common import error_response, extract_progress, wrap_handler_errors
 
 logger = logging.getLogger(__name__)
 
@@ -572,7 +572,7 @@ def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress.log_sync("Updating pitchspec...")
     patch = args.get("patch")
     if not patch or not isinstance(patch, dict):
-        return json.dumps({"error": "patch parameter is required and must be a dict"}, indent=2)
+        return error_response("patch parameter is required and must be a dict")
 
     spec = merge_pitchspec(project_root, patch)
     missing = _get_missing_sections(spec)

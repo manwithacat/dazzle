@@ -167,7 +167,6 @@ class OpsDatabase:
         self,
         database_url: str,
         retention: RetentionConfig | None = None,
-        db_path: Any = None,
     ):
         """
         Initialize ops database.
@@ -175,7 +174,6 @@ class OpsDatabase:
         Args:
             database_url: PostgreSQL connection URL
             retention: Data retention configuration
-            db_path: Deprecated, ignored. Kept for backward compatibility.
         """
         # Normalize Heroku's postgres:// to postgresql://
         if database_url.startswith("postgres://"):

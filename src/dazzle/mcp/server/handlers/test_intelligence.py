@@ -15,7 +15,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from .common import wrap_handler_errors
+from .common import error_response, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -43,7 +43,7 @@ def test_summary_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Recent runs overview."""
     graph = _get_graph()
     if graph is None:
-        return json.dumps({"error": "Knowledge graph not initialized"})
+        return error_response("Knowledge graph not initialized")
 
     project_name = _project_name_from_root(project_root)
     limit = args.get("limit", 10)
@@ -79,7 +79,7 @@ def test_failures_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Failure patterns across recent runs."""
     graph = _get_graph()
     if graph is None:
-        return json.dumps({"error": "Knowledge graph not initialized"})
+        return error_response("Knowledge graph not initialized")
 
     project_name = _project_name_from_root(project_root)
     limit_runs = args.get("limit", 10)
@@ -115,7 +115,7 @@ def test_regression_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Detect regressions between two most recent runs."""
     graph = _get_graph()
     if graph is None:
-        return json.dumps({"error": "Knowledge graph not initialized"})
+        return error_response("Knowledge graph not initialized")
 
     project_name = _project_name_from_root(project_root)
     result = graph.detect_regressions(project_name=project_name)
@@ -129,7 +129,7 @@ def test_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Coverage trend across recent runs."""
     graph = _get_graph()
     if graph is None:
-        return json.dumps({"error": "Knowledge graph not initialized"})
+        return error_response("Knowledge graph not initialized")
 
     project_name = _project_name_from_root(project_root)
     limit_runs = args.get("limit", 10)
@@ -146,7 +146,7 @@ def test_context_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Single-call AI-ready snapshot combining all test intelligence."""
     graph = _get_graph()
     if graph is None:
-        return json.dumps({"error": "Knowledge graph not initialized"})
+        return error_response("Knowledge graph not initialized")
 
     project_name = _project_name_from_root(project_root)
     limit = args.get("limit", 5)

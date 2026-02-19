@@ -1,5 +1,13 @@
 Run a two-phase code smells analysis: regression checks against established rules, then a scan for new systemic patterns. This is a read-only analysis — do NOT make any code changes.
 
+## Backward Compatibility Policy
+
+**Backward compatibility is NOT a requirement at this stage.** The project has one major user who is fully engaged with the dev process. When recommending fixes:
+
+- **Prefer clean breaks over shims.** Delete old functions, rename freely, change signatures. Do not recommend wrapper functions, re-exports, or compatibility aliases.
+- **Communicate breaking changes** via CHANGELOG.md entries and GitHub issue comments. That is sufficient notice.
+- **Flag duplication caused by compat shims** as a smell. Wrapper functions that exist solely for backward compatibility are themselves a code smell to be eliminated.
+
 ## Scope
 
 Focus on `src/dazzle/`, `src/dazzle_back/`, and `src/dazzle_ui/`. Ignore `tests/`, `examples/`, and auto-generated files.

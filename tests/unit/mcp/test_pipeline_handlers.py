@@ -45,6 +45,15 @@ def _import_pipeline():
     _mock_common = MagicMock()
     _mock_common.handler_error_json = lambda fn: fn  # identity — don't wrap handlers
     _mock_common.wrap_handler_errors = lambda fn: fn
+
+    def _error_response(msg):
+        return json.dumps({"error": msg})
+
+    def _unknown_op_response(operation, tool):
+        return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+    _mock_common.error_response = _error_response
+    _mock_common.unknown_op_response = _unknown_op_response
     _mock_common.extract_progress = MagicMock(return_value=MagicMock())
     sys.modules.setdefault("dazzle.mcp.server.handlers.common", _mock_common)
     # Pre-register sibling modules that _build_quality_steps lazily imports
@@ -82,11 +91,12 @@ def _import_pipeline():
     return module
 
 
+_orch = _import_orchestration()
 _pl = _import_pipeline()
 
-_extract_step_metrics = _pl._extract_step_metrics
-_collect_top_issues = _pl._collect_top_issues
-_build_pipeline_response = _pl._build_pipeline_response
+_extract_step_metrics = _orch.extract_step_metrics
+_collect_top_issues = _orch.collect_top_issues
+_build_pipeline_response = _orch.aggregate_results
 run_pipeline_handler = _pl.run_pipeline_handler
 
 
@@ -735,6 +745,15 @@ class TestFidelityGapsOnly:
         _mock_common = MagicMock()
         _mock_common.handler_error_json = lambda fn: fn
         _mock_common.wrap_handler_errors = lambda fn: fn
+
+        def _error_response(msg):
+            return json.dumps({"error": msg})
+
+        def _unknown_op_response(operation, tool):
+            return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+
+        _mock_common.error_response = _error_response
+        _mock_common.unknown_op_response = _unknown_op_response
         _mock_common.extract_progress = MagicMock(return_value=MagicMock())
         sys.modules.setdefault("dazzle.mcp.server.handlers.common", _mock_common)
         module_path = (
