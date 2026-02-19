@@ -481,6 +481,7 @@ class ServerConfig:
     enable_processes: bool = True  # Enable process workflow execution
     process_adapter_class: type | None = None  # Custom ProcessAdapter (default: LiteProcessAdapter)
     process_specs: list[Any] = field(default_factory=list)  # ProcessSpec list from AppSpec
+    schedule_specs: list[Any] = field(default_factory=list)  # ScheduleSpec list from AppSpec
     entity_status_fields: dict[str, str] = field(default_factory=dict)  # entity_name → status field
 
     # Fragment sources from DSL source= annotations (v0.25.1)
@@ -625,6 +626,7 @@ class DazzleBackendApp:
         self._enable_processes = config.enable_processes
         self._process_adapter_class = config.process_adapter_class  # Custom adapter class
         self._process_specs: list[Any] = config.process_specs  # ProcessSpec list from AppSpec
+        self._schedule_specs: list[Any] = config.schedule_specs  # ScheduleSpec list from AppSpec
         self._entity_status_fields: dict[str, str] = config.entity_status_fields
         self._process_manager: Any | None = None  # ProcessManager type
         self._process_adapter: Any | None = None  # ProcessAdapter type
@@ -956,10 +958,11 @@ class DazzleBackendApp:
             else:
                 self._process_adapter = adapter_cls(database_url=self._database_url)
 
-            # Create ProcessManager with process specs so triggers are registered
+            # Create ProcessManager with process/schedule specs so triggers are registered
             self._process_manager = ProcessManager(
                 adapter=self._process_adapter,
                 process_specs=self._process_specs or None,
+                schedule_specs=self._schedule_specs or None,
             )
             # Pass entity status field mapping for transition detection
             self._process_manager._entity_status_fields = self._entity_status_fields

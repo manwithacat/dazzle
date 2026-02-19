@@ -497,6 +497,71 @@ class SchedulePoller:
                 return (now - last_run).total_seconds() >= spec.interval_seconds
 
             if spec.cron:
-                return (now - last_run).total_seconds() >= 3600
+                return _cron_due(spec.cron, last_run, now)
 
         return True
+
+
+def _cron_match_field(field: str, value: int, min_val: int, max_val: int) -> bool:
+    """Check if a single cron field matches a datetime component.
+
+    Supports: ``*``, exact numbers, comma-separated lists, ranges (``1-5``),
+    and step values (``*/5``, ``1-10/2``).
+    """
+    for part in field.split(","):
+        if "/" in part:
+            base, step_str = part.split("/", 1)
+            step = int(step_str)
+            if base == "*":
+                if (value - min_val) % step == 0:
+                    return True
+            elif "-" in base:
+                lo, hi = base.split("-", 1)
+                if int(lo) <= value <= int(hi) and (value - int(lo)) % step == 0:
+                    return True
+        elif part == "*":
+            return True
+        elif "-" in part:
+            lo, hi = part.split("-", 1)
+            if int(lo) <= value <= int(hi):
+                return True
+        else:
+            if value == int(part):
+                return True
+    return False
+
+
+def _cron_due(cron_expr: str, last_run: datetime, now: datetime) -> bool:
+    """Return True if *cron_expr* has a matching minute between *last_run* and *now*.
+
+    Walks forward minute-by-minute from the minute after *last_run* up to *now*.
+    The window is capped at 24 hours to avoid runaway iteration.
+    """
+    parts = cron_expr.strip().split()
+    if len(parts) < 5:
+        logger.warning("Invalid cron expression (need 5 fields): %s", cron_expr)
+        return False
+
+    c_min, c_hour, c_dom, c_mon, c_dow = parts[:5]
+
+    # Cap search to 24 hours to avoid long loops
+    window = min((now - last_run).total_seconds(), 86400)
+    if window < 60:
+        return False
+
+    # Walk minute-by-minute from last_run+1min to now
+    check = last_run.replace(second=0, microsecond=0) + timedelta(minutes=1)
+    end = now.replace(second=0, microsecond=0)
+
+    while check <= end:
+        if (
+            _cron_match_field(c_min, check.minute, 0, 59)
+            and _cron_match_field(c_hour, check.hour, 0, 23)
+            and _cron_match_field(c_dom, check.day, 1, 31)
+            and _cron_match_field(c_mon, check.month, 1, 12)
+            and _cron_match_field(c_dow, check.isoweekday() % 7, 0, 6)
+        ):
+            return True
+        check += timedelta(minutes=1)
+
+    return False

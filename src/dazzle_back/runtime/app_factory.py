@@ -455,6 +455,7 @@ def create_app_factory(
         entity_list_projections=entity_list_projections,
         entity_auto_includes=entity_auto_includes,
         process_specs=list(appspec.processes),
+        schedule_specs=list(appspec.schedules),
         entity_status_fields=entity_status_fields,
     )
 

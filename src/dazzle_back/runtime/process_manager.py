@@ -43,6 +43,7 @@ class ProcessManager:
         adapter: ProcessAdapter,
         app_spec: AppSpec | None = None,
         process_specs: list[ProcessSpec] | None = None,
+        schedule_specs: list[ScheduleSpec] | None = None,
     ):
         """
         Initialize the process manager.
@@ -51,11 +52,12 @@ class ProcessManager:
             adapter: Process execution adapter (Lite or Temporal)
             app_spec: Application specification with processes and schedules (optional)
             process_specs: List of process specs to register (alternative to app_spec)
+            schedule_specs: List of schedule specs to register (alternative to app_spec)
         """
         self._app_spec = app_spec
         self._adapter = adapter
         self._process_specs = process_specs or []
-        self._schedule_specs: list[ScheduleSpec] = []
+        self._schedule_specs: list[ScheduleSpec] = schedule_specs or []
 
         # If app_spec provided, extract processes and schedules from it
         if app_spec:
