@@ -1,0 +1,116 @@
+# Xero Advisory Reports Pack
+# Curated API configuration for Xero management reporting endpoints
+#
+# Capabilities:
+# - Executive summary (cash, revenue, expenses, debtors, creditors)
+# - Bank account summary and cash movement
+# - Budget vs actuals
+# - System journals for audit trail
+# - Tracking categories for departmental analysis
+# - Tax rates for VAT compliance
+#
+# Complements the core xero_accounting pack with advisory/reporting endpoints
+# needed for health scoring, anomaly detection, and management packs.
+
+[pack]
+name = "xero_advisory_reports"
+provider = "Xero"
+category = "accounting"
+version = "1.0"
+description = "Advisory and management reporting — Executive Summary, Bank Summary, Budget Summary, Journals, Tracking Categories, Tax Rates"
+base_url = "https://api.xero.com/api.xro/2.0"
+docs_url = "https://developer.xero.com/documentation/api/accounting/overview"
+
+[auth]
+type = "oauth2"
+env_var = "XERO"
+token_url = "https://identity.xero.com/connect/token"
+scopes = ["openid", "profile", "email", "accounting.transactions.read", "accounting.reports.read", "accounting.settings.read"]
+
+[env_vars]
+XERO_CLIENT_ID = { required = true, description = "Xero OAuth2 client ID", example = "" }
+XERO_CLIENT_SECRET = { required = true, description = "Xero OAuth2 client secret", example = "" }
+XERO_TENANT_ID = { required = false, description = "Xero tenant ID (for multi-org)", example = "" }
+
+[operations]
+# Reports
+get_executive_summary = { method = "GET", path = "/Reports/ExecutiveSummary", description = "Executive summary with cash, revenue, expenses, debtors, creditors KPIs" }
+get_bank_summary = { method = "GET", path = "/Reports/BankSummary", description = "Bank account balances and cash movement summary" }
+get_budget_summary = { method = "GET", path = "/Reports/BudgetSummary", description = "Budget vs actuals summary (requires budgets configured in Xero)" }
+
+# Reference data
+list_journals = { method = "GET", path = "/Journals", description = "List system journals (auto-generated from transactions)" }
+list_tracking_categories = { method = "GET", path = "/TrackingCategories", description = "List tracking categories (departments, cost centres, locations)" }
+list_tax_rates = { method = "GET", path = "/TaxRates", description = "List tax rate configurations for VAT scheme compliance" }
+
+[foreign_models.ExecutiveSummary]
+description = "Xero Executive Summary report with KPIs"
+key = "report_date"
+cache_ttl = 3600  # Reports update hourly
+
+[foreign_models.ExecutiveSummary.fields]
+report_date = { type = "date", required = true, pk = true }
+cash_opening = { type = "decimal(13,2)", description = "Opening cash balance" }
+cash_closing = { type = "decimal(13,2)", description = "Closing cash balance" }
+cash_movement = { type = "decimal(13,2)", description = "Net cash movement" }
+revenue = { type = "decimal(13,2)", description = "Total revenue" }
+expenses = { type = "decimal(13,2)", description = "Total expenses" }
+net_profit = { type = "decimal(13,2)", description = "Revenue minus expenses" }
+debtors = { type = "decimal(13,2)", description = "Total accounts receivable" }
+creditors = { type = "decimal(13,2)", description = "Total accounts payable" }
+bank_balance = { type = "decimal(13,2)", description = "Current bank balance" }
+
+[foreign_models.TrackingCategory]
+description = "A tracking category for departmental/project analysis"
+key = "tracking_category_id"
+cache_ttl = 86400  # Categories rarely change
+
+[foreign_models.TrackingCategory.fields]
+tracking_category_id = { type = "uuid", required = true, pk = true }
+name = { type = "str(100)", required = true }
+status = { type = "enum[ACTIVE,ARCHIVED,DELETED]" }
+options = { type = "json", description = "Array of tracking options (departments, locations, etc.)" }
+
+[foreign_models.TaxRate]
+description = "A tax rate configuration"
+key = "name"
+cache_ttl = 86400  # Tax rates rarely change
+
+[foreign_models.TaxRate.fields]
+name = { type = "str(100)", required = true, pk = true }
+tax_type = { type = "str(20)", required = true, description = "Tax type code (e.g. OUTPUT2, INPUT2)" }
+effective_rate = { type = "decimal(6,4)", description = "Effective rate as decimal" }
+status = { type = "enum[ACTIVE,DELETED,ARCHIVED]" }
+can_apply_to_assets = { type = "bool" }
+can_apply_to_equity = { type = "bool" }
+can_apply_to_expenses = { type = "bool" }
+can_apply_to_liabilities = { type = "bool" }
+can_apply_to_revenue = { type = "bool" }
+
+[foreign_models.Journal]
+description = "A system journal entry"
+key = "journal_id"
+cache_ttl = 3600
+
+[foreign_models.Journal.fields]
+journal_id = { type = "uuid", required = true, pk = true }
+journal_date = { type = "date", required = true }
+journal_number = { type = "int" }
+source_id = { type = "uuid", description = "Source transaction ID" }
+source_type = { type = "str(30)", description = "Source transaction type" }
+journal_lines = { type = "json", description = "Array of debit/credit line items" }
+created_date_utc = { type = "datetime" }
+
+[integration_hints]
+on_month_end = "get_executive_summary for management reporting KPIs"
+on_advisory_sync = "get_executive_summary, get_bank_summary for health scoring and anomaly detection"
+on_budget_review = "get_budget_summary for variance analysis"
+on_vat_check = "list_tax_rates to verify VAT scheme compliance"
+on_audit = "list_journals for audit trail review"
+on_departmental_review = "list_tracking_categories + P&L by tracking option for departmental analysis"
+
+[notes]
+report_dates = "Reports accept date/fromDate/toDate query parameters"
+multi_period = "P&L and Balance Sheet support periods and timeframe params for trend analysis"
+tracking_options = "Each tracking category contains options (e.g. Sales, Marketing under Department)"
+journal_pagination = "Journals use offset-based pagination, not page numbers"
