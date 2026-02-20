@@ -435,6 +435,21 @@ def create_app_factory(
             if sm:
                 entity_status_fields[ent.name] = getattr(sm, "status_field", "status")
 
+    # Merge DSL-parsed processes with persisted processes (.dazzle/processes/processes.json)
+    from dazzle.core.process_persistence import load_processes
+
+    dsl_processes = list(appspec.processes)
+    persisted = load_processes(project_root)
+    dsl_names = {p.name for p in dsl_processes}
+    all_processes = dsl_processes + [p for p in persisted if p.name not in dsl_names]
+    if persisted:
+        logger.info(
+            "Loaded %d persisted process(es), %d total (%d from DSL)",
+            len(persisted),
+            len(all_processes),
+            len(dsl_processes),
+        )
+
     # Build server config
     config = ServerConfig(
         database_url=database_url if database_url else None,
@@ -454,7 +469,7 @@ def create_app_factory(
         enable_console=enable_dev_mode,
         entity_list_projections=entity_list_projections,
         entity_auto_includes=entity_auto_includes,
-        process_specs=list(appspec.processes),
+        process_specs=all_processes,
         schedule_specs=list(appspec.schedules),
         entity_status_fields=entity_status_fields,
     )

@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cache TTL priority chain: DSL `cache:` directive > pack TOML `cache_ttl` > default 86400
 
 ### Fixed
+- `create_app_factory()` now loads persisted processes from `.dazzle/processes/processes.json` — previously only DSL-parsed processes were used, leaving ProcessManager empty when processes were composed via MCP (#343)
 - Sync Redis in async context — replaced `import redis` with `redis.asyncio` in cache layer
 - `cache=False/None` still created cache — disabled state now respected via `enabled` flag
 - Dedup lock never released — `release_lock()` called in `finally` block after HTTP response

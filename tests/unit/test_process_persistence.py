@@ -141,6 +141,58 @@ class TestProcessIndex:
         assert load_process_index(tmp_path) == []
 
 
+class TestAppFactoryProcessMerge:
+    """Test that create_app_factory merges DSL + persisted processes.
+
+    Verifies the fix for #343: persisted processes from
+    .dazzle/processes/processes.json are now loaded and merged with
+    DSL-parsed processes, with DSL taking precedence on name conflicts.
+    """
+
+    def test_persisted_processes_loaded(self, tmp_path: Path) -> None:
+        """Persisted processes are picked up when DSL has none."""
+        save_processes(tmp_path, [_make_process("persisted_a"), _make_process("persisted_b")])
+
+        dsl_processes: list[ProcessSpec] = []
+        persisted = load_processes(tmp_path)
+        dsl_names = {p.name for p in dsl_processes}
+        merged = dsl_processes + [p for p in persisted if p.name not in dsl_names]
+
+        assert len(merged) == 2
+        assert {p.name for p in merged} == {"persisted_a", "persisted_b"}
+
+    def test_dsl_takes_precedence(self, tmp_path: Path) -> None:
+        """When a process exists in both DSL and persisted, DSL wins."""
+        save_processes(tmp_path, [_make_process("shared", title="Persisted Version")])
+
+        dsl_processes = [_make_process("shared", title="DSL Version")]
+        persisted = load_processes(tmp_path)
+        dsl_names = {p.name for p in dsl_processes}
+        merged = dsl_processes + [p for p in persisted if p.name not in dsl_names]
+
+        assert len(merged) == 1
+        assert merged[0].title == "DSL Version"
+
+    def test_combined_merge(self, tmp_path: Path) -> None:
+        """DSL and persisted processes merge without duplicates."""
+        save_processes(
+            tmp_path,
+            [_make_process("only_persisted"), _make_process("both", title="Persisted")],
+        )
+
+        dsl_processes = [_make_process("only_dsl"), _make_process("both", title="DSL")]
+        persisted = load_processes(tmp_path)
+        dsl_names = {p.name for p in dsl_processes}
+        merged = dsl_processes + [p for p in persisted if p.name not in dsl_names]
+
+        assert len(merged) == 3
+        names = {p.name for p in merged}
+        assert names == {"only_dsl", "only_persisted", "both"}
+        # "both" should be the DSL version
+        both_proc = next(p for p in merged if p.name == "both")
+        assert both_proc.title == "DSL"
+
+
 class TestProcessesContainer:
     """Test the Pydantic container model."""
 
