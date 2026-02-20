@@ -154,6 +154,7 @@ class EventOutbox:
             await conn.execute(CREATE_OUTBOX_TABLE_POSTGRES)
             for index_sql in CREATE_OUTBOX_INDEXES_POSTGRES:
                 await conn.execute(index_sql)
+            await conn.commit()
         else:
             # SQLite (aiosqlite)
             await conn.executescript(CREATE_OUTBOX_TABLE_SQLITE + CREATE_OUTBOX_INDEXES_SQLITE)

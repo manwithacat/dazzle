@@ -122,6 +122,7 @@ class EventInbox:
             await conn.execute(CREATE_INBOX_TABLE_POSTGRES)
             for idx_sql in CREATE_INBOX_INDEXES_POSTGRES:
                 await conn.execute(idx_sql)
+            await conn.commit()
         else:
             await conn.executescript(CREATE_INBOX_TABLE + CREATE_INBOX_INDEXES)
             await conn.commit()

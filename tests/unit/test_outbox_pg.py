@@ -56,12 +56,12 @@ class TestOutboxCreateTablePostgres:
         conn.executescript.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_postgres_does_not_call_commit(self) -> None:
-        """Postgres path should not call commit (autocommit or managed externally)."""
+    async def test_postgres_commits_after_ddl(self) -> None:
+        """Postgres path must commit DDL so tables are visible to other connections."""
         outbox = EventOutbox(use_postgres=True)
         conn = AsyncMock()
         await outbox.create_table(conn)
-        conn.commit.assert_not_called()
+        conn.commit.assert_called_once()
 
 
 class TestOutboxAppendPostgres:

@@ -53,12 +53,12 @@ class TestInboxCreateTablePostgres:
         conn.executescript.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_postgres_does_not_call_commit(self) -> None:
-        """Postgres path should not call commit."""
+    async def test_postgres_commits_after_ddl(self) -> None:
+        """Postgres path must commit DDL so tables are visible to other connections."""
         inbox = EventInbox(backend_type="postgres", placeholder="%s")
         conn = AsyncMock()
         await inbox.create_table(conn)
-        conn.commit.assert_not_called()
+        conn.commit.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_postgres_table_sql_uses_now(self) -> None:
