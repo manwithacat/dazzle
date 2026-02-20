@@ -111,6 +111,7 @@ async def _fetch_json(
 def _inject_integration_actions(appspec: ir.AppSpec, page_contexts: dict[str, Any]) -> None:
     """Populate integration_actions on detail contexts from appspec integrations."""
     from dazzle.core.ir.integrations import MappingTriggerType
+    from dazzle.core.strings import to_api_plural
     from dazzle_ui.runtime.template_context import IntegrationActionContext
 
     # Build entity_name → list of manual trigger actions
@@ -121,13 +122,12 @@ def _inject_integration_actions(appspec: ir.AppSpec, page_contexts: dict[str, An
                 if trigger.trigger_type == MappingTriggerType.MANUAL:
                     entity = mapping.entity_ref
                     label = trigger.label or mapping.name.replace("_", " ").title()
-                    entity_slug = entity.lower().replace("_", "-")
-                    api_plural = entity_slug + "s"  # Simplified; matches to_api_plural
+                    slug = to_api_plural(entity)
                     action = IntegrationActionContext(
                         label=label,
                         integration_name=integration.name,
                         mapping_name=mapping.name,
-                        api_url=f"/{api_plural}/{{id}}/integrations/{integration.name}/{mapping.name}",
+                        api_url=f"/{slug}/{{id}}/integrations/{integration.name}/{mapping.name}",
                     )
                     manual_actions.setdefault(entity, []).append(action)
 

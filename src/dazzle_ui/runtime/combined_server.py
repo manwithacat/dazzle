@@ -220,7 +220,7 @@ def run_unified_server(
         project_root=project_root,
         fragment_sources=frag_sources,
     )
-    builder = DazzleBackendApp(backend_spec, config=server_config)
+    builder = DazzleBackendApp(backend_spec, config=server_config, appspec=appspec)
     app = builder.build()
 
     # ---- Route mounting order (do not reorder) ----

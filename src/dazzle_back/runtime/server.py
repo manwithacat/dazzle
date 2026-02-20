@@ -622,6 +622,8 @@ class DazzleBackendApp:
         # SiteSpec (v0.16.0)
         sitespec_data: dict[str, Any] | None = None,
         project_root: str | Path | None = None,
+        # AppSpec (v0.33.2) — for integration mappings (#340)
+        appspec: Any = None,
     ):
         """
         Initialize the backend application.
@@ -640,6 +642,7 @@ class DazzleBackendApp:
             scenarios: List of scenario configurations for dev mode
             sitespec_data: SiteSpec as dict for public site shell (v0.16.0)
             project_root: Project root for content file loading (v0.16.0)
+            appspec: Full AppSpec for integration mappings (v0.33.2, #340)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError(
@@ -716,6 +719,8 @@ class DazzleBackendApp:
         self._entity_list_projections: dict[str, list[str]] = config.entity_list_projections
         # Auto-eager-load ref relations (v0.26.0)
         self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
+        # AppSpec reference for integration mappings (#340)
+        self._appspec = appspec
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging (delegates to IntegrationManager)."""
@@ -1002,11 +1007,17 @@ class DazzleBackendApp:
         Scans integrations for ``IntegrationMapping`` blocks and registers
         handlers on the global entity event bus to fire HTTP requests on
         entity lifecycle events.
+
+        Uses ``self._appspec.integrations`` (full AppSpec) because BackendSpec
+        does not carry integration definitions (#340).
         """
         try:
+            # Use appspec integrations (BackendSpec doesn't have them — #340)
+            integrations = getattr(self._appspec, "integrations", []) if self._appspec else []
+
             # Check if any integrations have mappings
             has_mappings = False
-            for integration in getattr(self.spec, "integrations", []):
+            for integration in integrations:
                 if getattr(integration, "mappings", []):
                     has_mappings = True
                     break
@@ -1029,7 +1040,7 @@ class DazzleBackendApp:
 
                     await repo.update(UUID(entity_id), fields)
 
-            executor = MappingExecutor(self.spec, event_bus, update_entity=update_entity)
+            executor = MappingExecutor(self._appspec, event_bus, update_entity=update_entity)
             executor.register_all()
 
             # Wire entity lifecycle events to the event bus so MappingExecutor
@@ -1046,12 +1057,13 @@ class DazzleBackendApp:
 
     def _register_manual_trigger_routes(self, executor: Any) -> None:
         """Register POST endpoints for manual integration triggers."""
-        if not self._app:
+        if not self._app or not self._appspec:
             return
 
         from dazzle.core.ir.integrations import MappingTriggerType
+        from dazzle.core.strings import to_api_plural
 
-        for integration in self.spec.integrations:
+        for integration in getattr(self._appspec, "integrations", []):
             for mapping in integration.mappings:
                 has_manual = any(
                     t.trigger_type == MappingTriggerType.MANUAL for t in mapping.triggers
@@ -1060,7 +1072,7 @@ class DazzleBackendApp:
                     continue
 
                 entity_name = mapping.entity_ref
-                slug = entity_name.lower().replace("_", "-") + "s"
+                slug = to_api_plural(entity_name)
                 int_name = integration.name
                 map_name = mapping.name
                 repositories = self._repositories

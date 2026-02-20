@@ -460,7 +460,7 @@ def create_app_factory(
     )
 
     # Build and return the FastAPI app
-    builder = DazzleBackendApp(backend_spec, config=config)
+    builder = DazzleBackendApp(backend_spec, config=config, appspec=appspec)
     app = builder.build()
 
     # Sync DSL schedules to Celery Beat if using CeleryProcessAdapter
