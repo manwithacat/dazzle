@@ -338,7 +338,7 @@ class ImagerySpec(BaseModel):
 # =============================================================================
 
 # Default fields that agents can edit
-DEFAULT_AGENT_EDITABLE_FIELDS: list[str] = [
+DEFAULT_AGENT_EDITABLE_FIELDS: tuple[str, ...] = (
     "palette.brand_hue",
     "palette.brand_chroma",
     "palette.mode",
@@ -349,7 +349,7 @@ DEFAULT_AGENT_EDITABLE_FIELDS: list[str] = [
     "shape.shadow_preset",
     "imagery.vocabulary.style_keywords",
     "imagery.vocabulary.mood_keywords",
-]
+)
 
 
 class ThemeMetaSpec(BaseModel):

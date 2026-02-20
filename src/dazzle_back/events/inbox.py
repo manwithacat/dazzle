@@ -66,10 +66,10 @@ CREATE TABLE IF NOT EXISTS _dazzle_event_inbox (
 );
 """
 
-CREATE_INBOX_INDEXES_POSTGRES = [
+CREATE_INBOX_INDEXES_POSTGRES = (
     "CREATE INDEX IF NOT EXISTS idx_inbox_consumer ON _dazzle_event_inbox(consumer_name)",
     "CREATE INDEX IF NOT EXISTS idx_inbox_processed ON _dazzle_event_inbox(processed_at)",
-]
+)
 
 
 class EventInbox:

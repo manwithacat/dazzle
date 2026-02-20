@@ -114,11 +114,11 @@ API_SERVICES: dict[str, dict[str, Any]] = {
 }
 
 # Tenants for multi-tenant simulation
-TENANTS = [
+TENANTS = (
     {"id": "tenant-acme", "name": "Acme Corporation"},
     {"id": "tenant-techstart", "name": "TechStart Inc"},
     {"id": "tenant-global", "name": "Global Services"},
-]
+)
 
 # Health components
 HEALTH_COMPONENTS: list[dict[str, str | int]] = [
@@ -129,7 +129,7 @@ HEALTH_COMPONENTS: list[dict[str, str | int]] = [
 ]
 
 # Email templates
-EMAIL_TEMPLATES = ["welcome", "notification", "password_reset", "invoice", "alert"]
+EMAIL_TEMPLATES = ("welcome", "notification", "password_reset", "invoice", "alert")
 
 
 @dataclass

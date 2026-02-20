@@ -35,13 +35,13 @@ logger = logging.getLogger("dazzle.console")
 # Template directory (same Jinja2 env as DNR UI)
 TEMPLATES_DIR = Path(__file__).parent.parent.replace("dazzle_back", "dazzle_ui") if False else None  # noqa: E501
 
-NAV_ITEMS = [
+NAV_ITEMS = (
     {"route": "/_console/", "label": "Dashboard", "icon": "chart-bar"},
     {"route": "/_console/app-map", "label": "App Map", "icon": "map"},
     {"route": "/_console/changes", "label": "Changes", "icon": "clock"},
     {"route": "/_console/deploy", "label": "Deploy", "icon": "rocket"},
     {"route": "/_console/performance", "label": "Performance", "icon": "bolt"},
-]
+)
 
 
 def _get_templates_dir() -> Path:

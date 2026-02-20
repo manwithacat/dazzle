@@ -30,7 +30,7 @@ def oklch_to_css(L: float, C: float, H: float, alpha: float = 1.0) -> str:
 
 # Curated lightness stops for a 10-step scale (50 through 950).
 # These are perceptually balanced rather than linearly spaced.
-_LIGHTNESS_STOPS: list[float] = [
+_LIGHTNESS_STOPS: tuple[float, ...] = (
     0.97,  # 50  — very light
     0.93,  # 100
     0.87,  # 200
@@ -41,9 +41,9 @@ _LIGHTNESS_STOPS: list[float] = [
     0.35,  # 700
     0.25,  # 800
     0.15,  # 900/950 — very dark
-]
+)
 
-_STEP_NAMES: list[str] = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "950"]
+_STEP_NAMES: tuple[str, ...] = ("50", "100", "200", "300", "400", "500", "600", "700", "800", "950")
 
 
 def _generate_scale(hue: float, chroma: float, *, invert: bool = False) -> dict[str, str]:

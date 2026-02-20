@@ -187,7 +187,7 @@ def _always(_ctx: PitchContext) -> bool:
 # Ordered slide catalog: (name, builder, condition)
 SlideCatalogEntry = tuple[str, Callable[..., None], Callable[[PitchContext], bool]]
 
-SLIDE_CATALOG: list[SlideCatalogEntry] = [
+SLIDE_CATALOG: tuple[SlideCatalogEntry, ...] = (
     ("title", _build_title_slide, _always),
     ("problem", _build_problem_slide, _has_problem),
     ("solution", _build_solution_slide, _has_solution),
@@ -201,7 +201,7 @@ SLIDE_CATALOG: list[SlideCatalogEntry] = [
     ("milestones", _build_milestones_slide, _has_milestones),
     ("ask", _build_ask_slide, _has_funding_ask),
     ("closing", _build_closing_slide, _always),
-]
+)
 
 
 # =============================================================================
