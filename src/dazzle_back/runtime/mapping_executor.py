@@ -10,14 +10,24 @@ Data flow::
         → resolve base_url and auth from integration spec
         → interpolate URL template with entity fields
         → apply request_mapping (entity → request body)
-        → HTTP call via httpx
+        → check cache (Redis, if available)
+        → HTTP call via httpx (on cache miss)
+        → cache response (for GET requests)
         → apply response_mapping (response → entity field updates)
         → handle errors per ErrorStrategy
+
+Cache layer (optional, requires ``redis`` package and ``REDIS_URL``)::
+
+    Key:  integration:{name}:{mapping}:{url_hash}
+    TTL:  configurable per-mapping, default 24 hours for GET, disabled for mutating methods
+    Lock: integration:lock:{url_hash} (60s dedup, prevents duplicate in-flight calls)
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 import os
 import re
@@ -64,6 +74,10 @@ _EVENT_TO_TRIGGER: dict[EntityEventType, MappingTriggerType] = {
 _MAX_RETRY_ATTEMPTS = 3
 _RETRY_BACKOFF_BASE = 0.5  # seconds
 
+# Cache defaults
+_DEFAULT_CACHE_TTL = 86400  # 24 hours
+_DEDUP_LOCK_TTL = 60  # 1 minute
+
 
 @dataclass
 class MappingResult:
@@ -76,6 +90,107 @@ class MappingResult:
     response_data: dict[str, Any] = field(default_factory=dict)
     mapped_fields: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
+    cache_hit: bool = False
+
+
+# =============================================================================
+# Integration Cache
+# =============================================================================
+
+
+class IntegrationCache:
+    """Redis-backed cache for integration API responses.
+
+    Provides cache-through with dedup locking for external API calls.
+    Gracefully degrades to no-op when Redis is unavailable.
+
+    Cache key structure::
+
+        integration:{integration_name}:{mapping_name}:{url_hash}  → JSON response
+        integration:lock:{url_hash}                                → "1" (dedup)
+    """
+
+    def __init__(self, redis_url: str | None = None) -> None:
+        self._redis: Any = None
+        url = redis_url or os.environ.get("REDIS_URL", "")
+        if not url:
+            return
+        try:
+            import redis
+
+            ssl_params: dict[str, Any] = {}
+            if url.startswith("rediss://"):
+                import ssl
+
+                ssl_params = {"ssl_cert_reqs": ssl.CERT_NONE}
+            self._redis = redis.from_url(url, decode_responses=True, **ssl_params)
+            # Test connectivity
+            self._redis.ping()
+            logger.info("IntegrationCache connected to Redis")
+        except Exception as e:
+            logger.info("IntegrationCache disabled (Redis unavailable: %s)", e)
+            self._redis = None
+
+    @property
+    def available(self) -> bool:
+        """Whether the cache backend is connected."""
+        return self._redis is not None
+
+    @staticmethod
+    def _url_hash(url: str) -> str:
+        """Short hash of a URL for use in cache keys."""
+        return hashlib.sha256(url.encode()).hexdigest()[:16]
+
+    def _key(self, integration_name: str, mapping_name: str, url: str) -> str:
+        return f"integration:{integration_name}:{mapping_name}:{self._url_hash(url)}"
+
+    def get(self, integration_name: str, mapping_name: str, url: str) -> dict[str, Any] | None:
+        """Return cached response data, or None on miss."""
+        if not self._redis:
+            return None
+        try:
+            raw = self._redis.get(self._key(integration_name, mapping_name, url))
+            if raw:
+                return json.loads(raw)
+        except Exception as e:
+            logger.debug("Cache get failed: %s", e)
+        return None
+
+    def put(
+        self,
+        integration_name: str,
+        mapping_name: str,
+        url: str,
+        data: dict[str, Any],
+        ttl: int = _DEFAULT_CACHE_TTL,
+    ) -> None:
+        """Cache a response."""
+        if not self._redis:
+            return
+        try:
+            self._redis.setex(
+                self._key(integration_name, mapping_name, url),
+                ttl,
+                json.dumps(data, default=str),
+            )
+        except Exception as e:
+            logger.debug("Cache put failed: %s", e)
+
+    def acquire_lock(self, url: str) -> bool:
+        """Acquire a dedup lock for an in-flight request. Returns True if acquired."""
+        if not self._redis:
+            return True  # No Redis = no dedup, proceed
+        try:
+            return bool(
+                self._redis.set(
+                    f"integration:lock:{self._url_hash(url)}",
+                    "1",
+                    nx=True,
+                    ex=_DEDUP_LOCK_TTL,
+                )
+            )
+        except Exception:
+            return True  # Fail-open
 
 
 # =============================================================================
@@ -94,6 +209,9 @@ class MappingExecutor:
         event_bus: The entity event bus to register on.
         update_entity: Callback to persist entity field updates from
             response mappings. Signature: ``(entity_name, entity_id, fields) -> None``.
+        cache: Optional ``IntegrationCache`` for Redis-backed response caching.
+            When provided, GET request responses are cached and dedup-locked.
+            Defaults to auto-creating from ``REDIS_URL`` env var if available.
     """
 
     def __init__(
@@ -102,6 +220,7 @@ class MappingExecutor:
         event_bus: EntityEventBus,
         *,
         update_entity: Any | None = None,
+        cache: IntegrationCache | None | bool = True,
     ) -> None:
         self._appspec = appspec
         self._event_bus = event_bus
@@ -109,6 +228,14 @@ class MappingExecutor:
         # Index: entity_name → list of (integration, mapping)
         self._mappings_by_entity: dict[str, list[tuple[IntegrationSpec, IntegrationMapping]]] = {}
         self._results: list[MappingResult] = []
+
+        # Initialize cache: True = auto-detect, None/False = disabled, instance = use it
+        if cache is True:
+            self._cache = IntegrationCache()
+        elif isinstance(cache, IntegrationCache):
+            self._cache = cache
+        else:
+            self._cache = IntegrationCache()  # will be a no-op without REDIS_URL
 
     @property
     def results(self) -> list[MappingResult]:
@@ -179,6 +306,7 @@ class MappingExecutor:
         *,
         entity_name: str | None = None,
         entity_id: str | None = None,
+        force_refresh: bool = False,
     ) -> MappingResult:
         """Execute a manual mapping trigger.
 
@@ -188,6 +316,7 @@ class MappingExecutor:
             entity_data: Current entity record data.
             entity_name: Entity type name (for write-back).
             entity_id: Entity record ID (for write-back).
+            force_refresh: If True, bypass cache and call the API directly.
 
         Returns:
             MappingResult with execution details.
@@ -201,8 +330,10 @@ class MappingExecutor:
             for mapping in getattr(integration, "mappings", []):
                 if mapping.name != mapping_name:
                     continue
-                result = await self._execute_mapping(integration, mapping, entity_data)
-                # Write back mapped fields for manual triggers
+                result = await self._execute_mapping(
+                    integration, mapping, entity_data, force_refresh=force_refresh
+                )
+                # Write back mapped fields for manual triggers (including cache hits)
                 if (
                     result.success
                     and result.mapped_fields
@@ -233,6 +364,8 @@ class MappingExecutor:
         mapping: IntegrationMapping,
         entity_data: dict[str, Any],
         event: EntityEvent | None = None,
+        *,
+        force_refresh: bool = False,
     ) -> MappingResult:
         """Execute a single mapping against an external API."""
         result = MappingResult(
@@ -260,6 +393,36 @@ class MappingExecutor:
         body = self._apply_request_mapping(mapping.request_mapping, entity_data)
         headers = self._resolve_auth_headers(integration)
 
+        # Cache: only for GET requests (reads, not mutations)
+        is_cacheable = method == "GET" and self._cache.available
+
+        # Check cache before making HTTP call
+        if is_cacheable and not force_refresh:
+            cached = self._cache.get(integration.name, mapping.name, url)
+            if cached is not None:
+                logger.info(
+                    "Cache HIT for %s/%s → %s",
+                    integration.name,
+                    mapping.name,
+                    url[:80],
+                )
+                result.success = True
+                result.cache_hit = True
+                result.response_data = cached
+                if mapping.response_mapping:
+                    result.mapped_fields = self._apply_response_mapping(
+                        mapping.response_mapping, cached
+                    )
+                self._results.append(result)
+                return result
+
+        # Dedup lock: prevent duplicate in-flight calls to the same URL
+        if is_cacheable and not self._cache.acquire_lock(url):
+            logger.info("Dedup lock active for %s, skipping", url[:80])
+            result.error = "Duplicate request suppressed (in-flight)"
+            self._results.append(result)
+            return result
+
         # Determine retry behavior
         should_retry = (
             mapping.on_error is not None and ErrorAction.RETRY in mapping.on_error.actions
@@ -284,6 +447,11 @@ class MappingExecutor:
 
                 if 200 <= resp.status_code < 300:
                     result.success = True
+
+                    # Cache successful GET responses
+                    if is_cacheable:
+                        self._cache.put(integration.name, mapping.name, url, result.response_data)
+
                     # Apply response mapping
                     if mapping.response_mapping:
                         mapped = self._apply_response_mapping(

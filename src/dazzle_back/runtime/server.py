@@ -1091,12 +1091,14 @@ class DazzleBackendApp:
                     if isinstance(entity_data, dict)
                     else (entity_data.__dict__ if hasattr(entity_data, "__dict__") else {})
                 )
+                force_refresh = request.query_params.get("force") == "1"
                 result = await _executor.execute_manual(
                     _int_name,
                     _map_name,
                     data,
                     entity_name=_entity_name,
                     entity_id=entity_id,
+                    force_refresh=force_refresh,
                 )
 
                 # htmx requests: redirect back to the detail page (#341)
@@ -1112,6 +1114,7 @@ class DazzleBackendApp:
                     "success": result.success,
                     "message": result.message if hasattr(result, "message") else "",
                     "mapped_fields": result.mapped_fields or {},
+                    "cache_hit": result.cache_hit,
                 }
 
             return _handler
