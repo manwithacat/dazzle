@@ -216,7 +216,7 @@ def register_ses_webhook(app: Any) -> None:
         logger.debug("FastAPI not available, skipping SES webhook registration")
         return
 
-    @app.post("/webhooks/ses/notifications")  # type: ignore[misc]
+    @app.post("/webhooks/ses/notifications")  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def ses_webhook(request: Request) -> JSONResponse:
         """Handle incoming SNS notifications from SES."""
         body = await request.body()

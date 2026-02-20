@@ -1076,7 +1076,7 @@ class DazzleBackendApp:
             _entity_name: str,
             _repositories: Any,
             _slug: str,
-        ):
+        ) -> Any:
             """Factory to capture closure vars without exposing them as route params."""
 
             async def _handler(entity_id: str, request: Request) -> Any:
