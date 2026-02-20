@@ -15,7 +15,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime
+import uuid
+from datetime import date, datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -30,6 +32,21 @@ from dazzle.core.process.adapter import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class _ProcessEncoder(json.JSONEncoder):
+    """JSON encoder that handles common DB types (UUID, datetime, Decimal)."""
+
+    def default(self, obj: object) -> object:
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if isinstance(obj, date):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
 
 
 def _get_redis_client(url: str | None = None) -> redis.Redis:
@@ -81,7 +98,7 @@ class ProcessStateStore:
             "version": getattr(spec, "version", "1.0"),
             "steps": [self._serialize_step(s) for s in spec.steps],
         }
-        self._redis.set(key, json.dumps(data))
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
         logger.debug(f"Registered process spec: {spec.name}")
 
     def get_process_spec(self, name: str) -> dict[str, Any] | None:
@@ -115,7 +132,7 @@ class ProcessStateStore:
             "cron": getattr(spec, "cron", None),
             "interval_seconds": getattr(spec, "interval_seconds", None),
         }
-        self._redis.set(key, json.dumps(data))
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
         logger.debug(f"Registered schedule spec: {spec.name}")
 
     def get_schedule_spec(self, name: str) -> dict[str, Any] | None:
@@ -164,7 +181,7 @@ class ProcessStateStore:
             "updated_at": run.updated_at.isoformat(),
             "completed_at": run.completed_at.isoformat() if run.completed_at else None,
         }
-        self._redis.set(key, json.dumps(data))
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
 
         # Update indexes
         self._redis.sadd(f"run:idx:process:{run.process_name}", run.run_id)
@@ -280,7 +297,7 @@ class ProcessStateStore:
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
             "escalated_at": task.escalated_at.isoformat() if task.escalated_at else None,
         }
-        self._redis.set(key, json.dumps(data))
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
 
         # Update indexes
         self._redis.sadd(f"task:idx:run:{task.run_id}", task.task_id)
