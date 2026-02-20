@@ -1063,6 +1063,33 @@ class DazzleBackendApp:
         from dazzle.core.ir.integrations import MappingTriggerType
         from dazzle.core.strings import to_api_plural
 
+        def _make_handler(
+            _executor: Any,
+            _int_name: str,
+            _map_name: str,
+            _entity_name: str,
+            _repositories: Any,
+        ):
+            """Factory to capture closure vars without exposing them as route params."""
+
+            async def _handler(entity_id: str) -> dict[str, Any]:
+                from uuid import UUID
+
+                repo = _repositories.get(_entity_name)
+                if not repo:
+                    return {"error": f"Entity {_entity_name} not found"}
+                entity_data = await repo.get(UUID(entity_id))
+                if not entity_data:
+                    return {"error": "Record not found"}
+                data = dict(entity_data) if hasattr(entity_data, "__iter__") else {}
+                result = await _executor.execute_manual(_int_name, _map_name, data)
+                return {
+                    "success": result.success,
+                    "message": result.message if hasattr(result, "message") else "",
+                }
+
+            return _handler
+
         for integration in getattr(self._appspec, "integrations", []):
             for mapping in integration.mappings:
                 has_manual = any(
@@ -1075,34 +1102,15 @@ class DazzleBackendApp:
                 slug = to_api_plural(entity_name)
                 int_name = integration.name
                 map_name = mapping.name
-                repositories = self._repositories
 
-                @self._app.post(
+                handler = _make_handler(
+                    executor, int_name, map_name, entity_name, self._repositories
+                )
+
+                self._app.post(
                     f"/{slug}/{{entity_id}}/integrations/{int_name}/{map_name}",
                     tags=[entity_name],
-                )
-                async def _execute_manual(
-                    entity_id: str,
-                    _executor: Any = executor,
-                    _int_name: str = int_name,
-                    _map_name: str = map_name,
-                    _entity_name: str = entity_name,
-                    _repositories: Any = repositories,
-                ) -> dict[str, Any]:
-                    from uuid import UUID
-
-                    repo = _repositories.get(_entity_name)
-                    if not repo:
-                        return {"error": f"Entity {_entity_name} not found"}
-                    entity_data = await repo.get(UUID(entity_id))
-                    if not entity_data:
-                        return {"error": "Record not found"}
-                    data = dict(entity_data) if hasattr(entity_data, "__iter__") else {}
-                    result = await _executor.execute_manual(_int_name, _map_name, data)
-                    return {
-                        "success": result.success,
-                        "message": result.message if hasattr(result, "message") else "",
-                    }
+                )(handler)
 
     def _wire_entity_events_to_bus(self, event_bus: Any) -> None:
         """Wire CRUD service lifecycle callbacks to the EntityEventBus.
