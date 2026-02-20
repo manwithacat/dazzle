@@ -1032,6 +1032,10 @@ class DazzleBackendApp:
             executor = MappingExecutor(self.spec, event_bus, update_entity=update_entity)
             executor.register_all()
 
+            # Wire entity lifecycle events to the event bus so MappingExecutor
+            # receives on_create / on_transition triggers (#339)
+            self._wire_entity_events_to_bus(event_bus)
+
             # Register manual trigger endpoint for each entity with manual mappings
             self._register_manual_trigger_routes(executor)
 
@@ -1087,6 +1091,62 @@ class DazzleBackendApp:
                         "success": result.success,
                         "message": result.message if hasattr(result, "message") else "",
                     }
+
+    def _wire_entity_events_to_bus(self, event_bus: Any) -> None:
+        """Wire CRUD service lifecycle callbacks to the EntityEventBus.
+
+        This ensures that on_create / on_update / on_delete integration
+        triggers actually fire by emitting events when entities change (#339).
+        """
+        from dazzle_back.runtime.event_bus import EntityEventBus
+
+        bus: EntityEventBus = event_bus
+
+        async def _on_created(
+            entity_name: str,
+            entity_id: str,
+            entity_data: dict[str, Any],
+            _old_data: dict[str, Any] | None,
+        ) -> None:
+            await bus.emit_created(entity_name, entity_id, entity_data)
+
+        async def _on_updated(
+            entity_name: str,
+            entity_id: str,
+            entity_data: dict[str, Any],
+            old_data: dict[str, Any] | None,
+        ) -> None:
+            # Inject _previous_state for transition detection
+            data = dict(entity_data)
+            if old_data:
+                for key in ("status", "state"):
+                    if key in old_data and old_data[key] != entity_data.get(key):
+                        data["_previous_state"] = old_data[key]
+                        break
+            await bus.emit_updated(entity_name, entity_id, data)
+
+        async def _on_deleted(
+            entity_name: str,
+            entity_id: str,
+            entity_data: dict[str, Any],
+            _old_data: dict[str, Any] | None,
+        ) -> None:
+            await bus.emit_deleted(entity_name, entity_id)
+
+        wired = 0
+        for service in self._services.values():
+            if isinstance(service, CRUDService):
+                service.on_created(_on_created)
+                service.on_updated(_on_updated)
+                service.on_deleted(_on_deleted)
+                wired += 1
+
+        if wired:
+            import logging
+
+            logging.getLogger("dazzle.server").debug(
+                "Wired entity events to EntityEventBus for %d services", wired
+            )
 
     def _init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""
