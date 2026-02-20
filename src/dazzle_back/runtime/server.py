@@ -1069,18 +1069,23 @@ class DazzleBackendApp:
             _map_name: str,
             _entity_name: str,
             _repositories: Any,
+            _slug: str,
         ):
             """Factory to capture closure vars without exposing them as route params."""
 
-            async def _handler(entity_id: str) -> dict[str, Any]:
+            async def _handler(entity_id: str, request: Request) -> Any:
                 from uuid import UUID
+
+                from starlette.responses import JSONResponse, Response
 
                 repo = _repositories.get(_entity_name)
                 if not repo:
-                    return {"error": f"Entity {_entity_name} not found"}
+                    return JSONResponse(
+                        {"error": f"Entity {_entity_name} not found"}, status_code=404
+                    )
                 entity_data = await repo.read(UUID(entity_id))
                 if not entity_data:
-                    return {"error": "Record not found"}
+                    return JSONResponse({"error": "Record not found"}, status_code=404)
                 data = (
                     dict(entity_data)
                     if isinstance(entity_data, dict)
@@ -1093,6 +1098,16 @@ class DazzleBackendApp:
                     entity_name=_entity_name,
                     entity_id=entity_id,
                 )
+
+                # htmx requests: redirect back to the detail page (#341)
+                is_htmx = request.headers.get("HX-Request") == "true"
+                if is_htmx:
+                    detail_url = f"/{_slug}/{entity_id}"
+                    return Response(
+                        status_code=200,
+                        headers={"HX-Redirect": detail_url},
+                    )
+
                 return {
                     "success": result.success,
                     "message": result.message if hasattr(result, "message") else "",
@@ -1115,7 +1130,7 @@ class DazzleBackendApp:
                 map_name = mapping.name
 
                 handler = _make_handler(
-                    executor, int_name, map_name, entity_name, self._repositories
+                    executor, int_name, map_name, entity_name, self._repositories, slug
                 )
 
                 self._app.post(
