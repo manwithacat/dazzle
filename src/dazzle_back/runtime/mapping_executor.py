@@ -414,10 +414,16 @@ class MappingExecutor:
             if cred_values:
                 headers["Authorization"] = f"Bearer {cred_values[0]}"
         elif auth.auth_type == AuthType.BASIC:
-            if len(cred_values) >= 2:
-                import base64
+            import base64
 
+            if len(cred_values) >= 2:
                 encoded = base64.b64encode(f"{cred_values[0]}:{cred_values[1]}".encode()).decode()
+            elif cred_values:
+                # Single credential = API key as username, empty password (e.g. Companies House)
+                encoded = base64.b64encode(f"{cred_values[0]}:".encode()).decode()
+            else:
+                encoded = None
+            if encoded:
                 headers["Authorization"] = f"Basic {encoded}"
         elif auth.auth_type == AuthType.OAUTH2:
             if cred_values:
