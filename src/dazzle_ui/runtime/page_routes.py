@@ -108,6 +108,40 @@ async def _fetch_json(
         return {"id": str(path_id), "error": "Failed to load"}
 
 
+def _inject_integration_actions(appspec: ir.AppSpec, page_contexts: dict[str, Any]) -> None:
+    """Populate integration_actions on detail contexts from appspec integrations."""
+    from dazzle.core.ir.integrations import MappingTriggerType
+    from dazzle_ui.runtime.template_context import IntegrationActionContext
+
+    # Build entity_name → list of manual trigger actions
+    manual_actions: dict[str, list[IntegrationActionContext]] = {}
+    for integration in appspec.integrations:
+        for mapping in integration.mappings:
+            for trigger in mapping.triggers:
+                if trigger.trigger_type == MappingTriggerType.MANUAL:
+                    entity = mapping.entity_ref
+                    label = trigger.label or mapping.name.replace("_", " ").title()
+                    entity_slug = entity.lower().replace("_", "-")
+                    api_plural = entity_slug + "s"  # Simplified; matches to_api_plural
+                    action = IntegrationActionContext(
+                        label=label,
+                        integration_name=integration.name,
+                        mapping_name=mapping.name,
+                        api_url=f"/{api_plural}/{{id}}/integrations/{integration.name}/{mapping.name}",
+                    )
+                    manual_actions.setdefault(entity, []).append(action)
+
+    if not manual_actions:
+        return
+
+    # Inject into detail contexts
+    for ctx in page_contexts.values():
+        if ctx.detail and ctx.detail.entity_name in manual_actions:
+            ctx.detail = ctx.detail.model_copy(
+                update={"integration_actions": manual_actions[ctx.detail.entity_name]}
+            )
+
+
 def create_page_routes(
     appspec: ir.AppSpec,
     backend_url: str = "http://127.0.0.1:8000",
@@ -151,6 +185,9 @@ def create_page_routes(
     for surface in appspec.surfaces:
         if surface.access is not None:
             access_configs[surface.name] = SurfaceAccessConfig.from_spec(surface.access)
+
+    # Inject integration manual trigger actions into detail contexts
+    _inject_integration_actions(appspec, page_contexts)
 
     # Inject theme CSS into all contexts
     for ctx in page_contexts.values():
@@ -243,6 +280,9 @@ def create_page_routes(
                 for _t in req_detail.transitions:
                     if _t.api_url and "{id}" in _t.api_url:
                         _t.api_url = _t.api_url.replace("{id}", str(path_id))
+                for _a in req_detail.integration_actions:
+                    if _a.api_url and "{id}" in _a.api_url:
+                        _a.api_url = _a.api_url.replace("{id}", str(path_id))
 
                 # Fetch related entity data for tabs (hub-and-spoke, #301)
                 if req_detail.related_tabs and path_id:

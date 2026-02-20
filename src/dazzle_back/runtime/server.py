@@ -1032,10 +1032,61 @@ class DazzleBackendApp:
             executor = MappingExecutor(self.spec, event_bus, update_entity=update_entity)
             executor.register_all()
 
+            # Register manual trigger endpoint for each entity with manual mappings
+            self._register_manual_trigger_routes(executor)
+
         except Exception as e:
             import logging
 
             logging.getLogger("dazzle.server").warning(f"Failed to init mapping executor: {e}")
+
+    def _register_manual_trigger_routes(self, executor: Any) -> None:
+        """Register POST endpoints for manual integration triggers."""
+        if not self._app:
+            return
+
+        from dazzle.core.ir.integrations import MappingTriggerType
+
+        for integration in self.spec.integrations:
+            for mapping in integration.mappings:
+                has_manual = any(
+                    t.trigger_type == MappingTriggerType.MANUAL for t in mapping.triggers
+                )
+                if not has_manual:
+                    continue
+
+                entity_name = mapping.entity_ref
+                slug = entity_name.lower().replace("_", "-") + "s"
+                int_name = integration.name
+                map_name = mapping.name
+                repositories = self._repositories
+
+                @self._app.post(
+                    f"/{slug}/{{entity_id}}/integrations/{int_name}/{map_name}",
+                    tags=[entity_name],
+                )
+                async def _execute_manual(
+                    entity_id: str,
+                    _executor: Any = executor,
+                    _int_name: str = int_name,
+                    _map_name: str = map_name,
+                    _entity_name: str = entity_name,
+                    _repositories: Any = repositories,
+                ) -> dict[str, Any]:
+                    from uuid import UUID
+
+                    repo = _repositories.get(_entity_name)
+                    if not repo:
+                        return {"error": f"Entity {_entity_name} not found"}
+                    entity_data = await repo.get(UUID(entity_id))
+                    if not entity_data:
+                        return {"error": "Record not found"}
+                    data = dict(entity_data) if hasattr(entity_data, "__iter__") else {}
+                    result = await _executor.execute_manual(_int_name, _map_name, data)
+                    return {
+                        "success": result.success,
+                        "message": result.message if hasattr(result, "message") else "",
+                    }
 
     def _init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""

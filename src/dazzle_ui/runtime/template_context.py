@@ -150,6 +150,15 @@ class RelatedTabContext(BaseModel):
     filter_type_value: str | None = None  # e.g. "company"
 
 
+class IntegrationActionContext(BaseModel):
+    """Action button for a manual integration trigger on a detail page."""
+
+    label: str
+    integration_name: str
+    mapping_name: str
+    api_url: str  # POST endpoint, e.g. "/api/companies/{id}/integrations/ch/verify"
+
+
 class DetailContext(BaseModel):
     """Context for rendering a detail/view page."""
 
@@ -163,6 +172,7 @@ class DetailContext(BaseModel):
     transitions: list[TransitionContext] = Field(default_factory=list)
     status_field: str = "status"
     related_tabs: list[RelatedTabContext] = Field(default_factory=list)
+    integration_actions: list[IntegrationActionContext] = Field(default_factory=list)
 
 
 class ReviewActionContext(BaseModel):

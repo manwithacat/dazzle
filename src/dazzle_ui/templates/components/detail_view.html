@@ -45,6 +45,24 @@
   {% endif %}
   {% endblock detail_transitions %}
 
+  {# Integration action buttons (manual triggers) #}
+  {% block detail_integration_actions %}
+  {% if detail.integration_actions %}
+  <div class="flex gap-2 mb-4" data-dazzle-integration-actions="{{ detail.entity_name }}">
+    {% for action in detail.integration_actions %}
+    <button class="btn btn-outline btn-sm"
+            data-dazzle-action="{{ detail.entity_name }}.integration.{{ action.integration_name }}.{{ action.mapping_name }}"
+            hx-post="{{ action.api_url }}"
+            hx-target="body"
+            hx-swap="innerHTML"
+            hx-confirm="Execute {{ action.label }}?">
+      {{ action.label }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endblock detail_integration_actions %}
+
   {# Detail card #}
   {% block detail_fields %}
   <div class="card bg-base-100 shadow-sm">
