@@ -37,6 +37,12 @@ class ParserProtocol(Protocol):
     def expect_identifier_or_keyword(self) -> Token: ...
     def match(self, *token_types: TokenType) -> bool: ...
     def skip_newlines(self) -> None: ...
+    def _parse_construct_header(
+        self,
+        token_type: TokenType,
+        *,
+        allow_keyword_name: bool = False,
+    ) -> tuple[str, str | None, SourceLocation]: ...
 
     # Methods from other mixins that may be called cross-mixin
     def parse_type(self) -> "ir.FieldType": ...
@@ -74,6 +80,27 @@ class BaseParser:
         """Create a SourceLocation from a token (defaults to current token)."""
         t = token or self.current_token()
         return SourceLocation(file=str(self.file), line=t.line, column=t.column)
+
+    def _parse_construct_header(
+        self,
+        token_type: TokenType,
+        *,
+        allow_keyword_name: bool = False,
+    ) -> tuple[str, str | None, SourceLocation]:
+        """Parse standard construct header: KEYWORD name "title"? COLON INDENT."""
+        loc = self._source_location()
+        self.expect(token_type)
+        if allow_keyword_name:
+            name = self.expect_identifier_or_keyword().value
+        else:
+            name = self.expect(TokenType.IDENTIFIER).value
+        title: str | None = None
+        if self.match(TokenType.STRING):
+            title = self.advance().value
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+        return name, title, loc
 
     def current_token(self) -> Token:
         """Get current token."""

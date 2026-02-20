@@ -42,16 +42,7 @@ class WebhookParserMixin:
 
     def parse_webhook(self) -> ir.WebhookSpec:
         """Parse a webhook block."""
-        self.expect(TokenType.WEBHOOK)
-        name = self.expect_identifier_or_keyword().value
-
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.WEBHOOK, allow_keyword_name=True)
 
         entity = ""
         events: list[ir.WebhookEvent] = []

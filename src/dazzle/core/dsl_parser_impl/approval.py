@@ -44,16 +44,7 @@ class ApprovalParserMixin:
 
     def parse_approval(self) -> ir.ApprovalSpec:
         """Parse an approval block."""
-        self.expect(TokenType.APPROVAL)
-        name = self.expect_identifier_or_keyword().value
-
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.APPROVAL, allow_keyword_name=True)
 
         entity = ""
         trigger_field = "status"

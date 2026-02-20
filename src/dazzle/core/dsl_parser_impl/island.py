@@ -37,16 +37,7 @@ class IslandParserMixin:
 
     def parse_island(self) -> ir.IslandSpec:
         """Parse an island block."""
-        self.expect(TokenType.ISLAND)
-        name = self.expect_identifier_or_keyword().value
-
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.ISLAND, allow_keyword_name=True)
 
         entity = None
         src = None

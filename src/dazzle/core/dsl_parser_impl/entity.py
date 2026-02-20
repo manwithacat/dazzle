@@ -48,18 +48,7 @@ class EntityParserMixin:
 
     def parse_entity(self) -> ir.EntitySpec:
         """Parse entity declaration."""
-        loc = self._source_location()
-        self.expect(TokenType.ENTITY)
-
-        name = self.expect(TokenType.IDENTIFIER).value
-        title = None
-
-        if self.match(TokenType.STRING):
-            title = self.advance().value
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, loc = self._parse_construct_header(TokenType.ENTITY)
 
         # v0.7.1: New fields for LLM cognition
         intent: str | None = None

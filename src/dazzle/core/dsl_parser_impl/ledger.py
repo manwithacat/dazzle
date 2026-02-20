@@ -82,17 +82,7 @@ class LedgerParserMixin:
         Returns:
             LedgerSpec with parsed values
         """
-        self.expect(TokenType.LEDGER)
-        name = self.expect_identifier_or_keyword().value
-
-        # Optional label
-        label = None
-        if self.match(TokenType.STRING):
-            label = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, label, _ = self._parse_construct_header(TokenType.LEDGER, allow_keyword_name=True)
 
         # Parse description/intent if present (docstring-style)
         intent = None
@@ -213,17 +203,9 @@ class LedgerParserMixin:
         Returns:
             TransactionSpec with parsed values
         """
-        self.expect(TokenType.TRANSACTION)
-        name = self.expect_identifier_or_keyword().value
-
-        # Optional label
-        label = None
-        if self.match(TokenType.STRING):
-            label = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, label, _ = self._parse_construct_header(
+            TokenType.TRANSACTION, allow_keyword_name=True
+        )
 
         # Parse description/intent if present
         intent = None

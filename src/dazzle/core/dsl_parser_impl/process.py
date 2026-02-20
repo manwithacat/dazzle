@@ -119,18 +119,7 @@ class ProcessParserMixin:
         Returns:
             ProcessSpec with parsed values
         """
-        loc = self._source_location()
-        self.expect(TokenType.PROCESS)
-        name = self.expect_identifier_or_keyword().value
-
-        # Optional title
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, loc = self._parse_construct_header(TokenType.PROCESS, allow_keyword_name=True)
 
         # Parse description if present (docstring-style)
         description = None
@@ -255,17 +244,7 @@ class ProcessParserMixin:
         Returns:
             ScheduleSpec with parsed values
         """
-        self.expect(TokenType.SCHEDULE)
-        name = self.expect_identifier_or_keyword().value
-
-        # Optional title
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.SCHEDULE, allow_keyword_name=True)
 
         # Parse description if present
         description = None

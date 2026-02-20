@@ -38,17 +38,7 @@ class ServiceParserMixin:
         External APIs have: spec, auth_profile, owner
         Domain services have: kind, input, output, guarantees, stub
         """
-        self.expect(TokenType.SERVICE)
-
-        name = self.expect(TokenType.IDENTIFIER).value
-        title = None
-
-        if self.match(TokenType.STRING):
-            title = self.advance().value
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.SERVICE)
 
         # Peek at first directive to determine service type
         self.skip_newlines()
@@ -382,18 +372,7 @@ class ServiceParserMixin:
 
     def parse_experience(self) -> ir.ExperienceSpec:
         """Parse experience declaration."""
-        loc = self._source_location()
-        self.expect(TokenType.EXPERIENCE)
-
-        name = self.expect(TokenType.IDENTIFIER).value
-        title = None
-
-        if self.match(TokenType.STRING):
-            title = self.advance().value
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, loc = self._parse_construct_header(TokenType.EXPERIENCE)
 
         access_spec = None
         priority = ir.BusinessPriority.MEDIUM

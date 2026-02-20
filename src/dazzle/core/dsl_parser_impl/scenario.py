@@ -39,13 +39,11 @@ class ScenarioParserMixin:
               default_workspace: classroom_view
               default_route: "/classes"
         """
-        self.expect(TokenType.PERSONA)
-        persona_id = self.expect_identifier_or_keyword().value
-        label = self.expect(TokenType.STRING).value if self.match(TokenType.STRING) else persona_id
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        persona_id, label, _ = self._parse_construct_header(
+            TokenType.PERSONA, allow_keyword_name=True
+        )
+        if label is None:
+            label = persona_id
 
         description: str | None = None
         goals: list[str] = []

@@ -44,16 +44,7 @@ class EnumParserMixin:
         Returns:
             EnumSpec with parsed values
         """
-        self.expect(TokenType.ENUM)
-        name = self.expect_identifier_or_keyword().value
-
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.ENUM, allow_keyword_name=True)
 
         values: list[ir.EnumValueSpec] = []
         while not self.match(TokenType.DEDENT, TokenType.EOF):

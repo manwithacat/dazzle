@@ -56,16 +56,7 @@ class ViewParserMixin:
         Returns:
             ViewSpec with parsed values
         """
-        self.expect(TokenType.VIEW)
-        name = self.expect_identifier_or_keyword().value
-
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.VIEW, allow_keyword_name=True)
 
         source_entity = ""
         filter_condition = None

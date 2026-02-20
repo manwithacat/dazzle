@@ -34,18 +34,7 @@ class SurfaceParserMixin:
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""
-        loc = self._source_location()
-        self.expect(TokenType.SURFACE)
-
-        name = self.expect(TokenType.IDENTIFIER).value
-        title = None
-
-        if self.match(TokenType.STRING):
-            title = self.advance().value
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, loc = self._parse_construct_header(TokenType.SURFACE)
 
         entity_ref = None
         view_ref = None

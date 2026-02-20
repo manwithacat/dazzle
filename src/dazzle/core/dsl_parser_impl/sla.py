@@ -44,16 +44,7 @@ class SLAParserMixin:
 
     def parse_sla(self) -> ir.SLASpec:
         """Parse an SLA block."""
-        self.expect(TokenType.SLA)
-        name = self.expect_identifier_or_keyword().value
-
-        title = None
-        if self.match(TokenType.STRING):
-            title = str(self.advance().value)
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, _ = self._parse_construct_header(TokenType.SLA, allow_keyword_name=True)
 
         entity = ""
         starts_when = None

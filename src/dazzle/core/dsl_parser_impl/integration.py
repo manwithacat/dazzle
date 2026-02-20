@@ -60,18 +60,7 @@ class IntegrationParserMixin:
 
     def parse_integration(self) -> ir.IntegrationSpec:
         """Parse integration declaration."""
-        loc = self._source_location()
-        self.expect(TokenType.INTEGRATION)
-
-        name = self.expect(TokenType.IDENTIFIER).value
-        title = None
-
-        if self.match(TokenType.STRING):
-            title = self.advance().value
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, loc = self._parse_construct_header(TokenType.INTEGRATION)
 
         base_url = None
         auth = None

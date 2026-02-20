@@ -60,18 +60,9 @@ class WorkspaceParserMixin:
               ux:
                 ...
         """
-        loc = self._source_location()
-        self.expect(TokenType.WORKSPACE)
-
-        name = self.expect_identifier_or_keyword().value
-        title = None
-
-        if self.match(TokenType.STRING):
-            title = self.advance().value
-
-        self.expect(TokenType.COLON)
-        self.skip_newlines()
-        self.expect(TokenType.INDENT)
+        name, title, loc = self._parse_construct_header(
+            TokenType.WORKSPACE, allow_keyword_name=True
+        )
 
         purpose = None
         stage = None
