@@ -233,9 +233,9 @@ class TestPostgresGetConnection:
 
             store = AuthStore(database_url="postgresql://localhost/test")
 
-        with patch("dazzle_back.runtime.auth.psycopg") as patched_pg:
+        with patch("dazzle_back.runtime.auth.store.psycopg") as patched_pg:
             patched_pg.connect.return_value = mock_conn
-            from dazzle_back.runtime.auth import dict_row
+            from dazzle_back.runtime.auth.store import dict_row
 
             store._get_connection()
 
