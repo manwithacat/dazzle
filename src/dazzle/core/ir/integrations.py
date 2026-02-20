@@ -265,6 +265,7 @@ class IntegrationMapping(BaseModel):
     request_mapping: list[MappingRule] = Field(default_factory=list)
     response_mapping: list[MappingRule] = Field(default_factory=list)
     on_error: ErrorStrategy | None = None
+    cache_ttl: int | None = None  # seconds; None = use executor default
 
     model_config = ConfigDict(frozen=True)
 

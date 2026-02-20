@@ -10,7 +10,7 @@ Data flow::
         → resolve base_url and auth from integration spec
         → interpolate URL template with entity fields
         → apply request_mapping (entity → request body)
-        → check cache (Redis, if available)
+        → check cache (ApiResponseCache, if available)
         → HTTP call via httpx (on cache miss)
         → cache response (for GET requests)
         → apply response_mapping (response → entity field updates)
@@ -18,16 +18,13 @@ Data flow::
 
 Cache layer (optional, requires ``redis`` package and ``REDIS_URL``)::
 
-    Key:  integration:{name}:{mapping}:{url_hash}
-    TTL:  configurable per-mapping, default 24 hours for GET, disabled for mutating methods
-    Lock: integration:lock:{url_hash} (60s dedup, prevents duplicate in-flight calls)
+    Uses :class:`~dazzle_back.runtime.api_cache.ApiResponseCache` for
+    async Redis caching with scoped keys and dedup locking.
 """
 
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import logging
 import os
 import re
@@ -54,6 +51,7 @@ if TYPE_CHECKING:
         IntegrationSpec,
         MappingRule,
     )
+    from dazzle_back.runtime.api_cache import ApiResponseCache
     from dazzle_back.runtime.event_bus import EntityEventBus
 
 
@@ -73,10 +71,7 @@ _EVENT_TO_TRIGGER: dict[EntityEventType, MappingTriggerType] = {
 
 _MAX_RETRY_ATTEMPTS = 3
 _RETRY_BACKOFF_BASE = 0.5  # seconds
-
-# Cache defaults
 _DEFAULT_CACHE_TTL = 86400  # 24 hours
-_DEDUP_LOCK_TTL = 60  # 1 minute
 
 
 @dataclass
@@ -91,106 +86,6 @@ class MappingResult:
     mapped_fields: dict[str, Any] = field(default_factory=dict)
     error: str | None = None
     cache_hit: bool = False
-
-
-# =============================================================================
-# Integration Cache
-# =============================================================================
-
-
-class IntegrationCache:
-    """Redis-backed cache for integration API responses.
-
-    Provides cache-through with dedup locking for external API calls.
-    Gracefully degrades to no-op when Redis is unavailable.
-
-    Cache key structure::
-
-        integration:{integration_name}:{mapping_name}:{url_hash}  → JSON response
-        integration:lock:{url_hash}                                → "1" (dedup)
-    """
-
-    def __init__(self, redis_url: str | None = None) -> None:
-        self._redis: Any = None
-        url = redis_url or os.environ.get("REDIS_URL", "")
-        if not url:
-            return
-        try:
-            import redis
-
-            ssl_params: dict[str, Any] = {}
-            if url.startswith("rediss://"):
-                import ssl
-
-                ssl_params = {"ssl_cert_reqs": ssl.CERT_NONE}
-            self._redis = redis.from_url(url, decode_responses=True, **ssl_params)
-            # Test connectivity
-            self._redis.ping()
-            logger.info("IntegrationCache connected to Redis")
-        except Exception as e:
-            logger.info("IntegrationCache disabled (Redis unavailable: %s)", e)
-            self._redis = None
-
-    @property
-    def available(self) -> bool:
-        """Whether the cache backend is connected."""
-        return self._redis is not None
-
-    @staticmethod
-    def _url_hash(url: str) -> str:
-        """Short hash of a URL for use in cache keys."""
-        return hashlib.sha256(url.encode()).hexdigest()[:16]
-
-    def _key(self, integration_name: str, mapping_name: str, url: str) -> str:
-        return f"integration:{integration_name}:{mapping_name}:{self._url_hash(url)}"
-
-    def get(self, integration_name: str, mapping_name: str, url: str) -> dict[str, Any] | None:
-        """Return cached response data, or None on miss."""
-        if not self._redis:
-            return None
-        try:
-            raw = self._redis.get(self._key(integration_name, mapping_name, url))
-            if raw:
-                return json.loads(raw)
-        except Exception as e:
-            logger.debug("Cache get failed: %s", e)
-        return None
-
-    def put(
-        self,
-        integration_name: str,
-        mapping_name: str,
-        url: str,
-        data: dict[str, Any],
-        ttl: int = _DEFAULT_CACHE_TTL,
-    ) -> None:
-        """Cache a response."""
-        if not self._redis:
-            return
-        try:
-            self._redis.setex(
-                self._key(integration_name, mapping_name, url),
-                ttl,
-                json.dumps(data, default=str),
-            )
-        except Exception as e:
-            logger.debug("Cache put failed: %s", e)
-
-    def acquire_lock(self, url: str) -> bool:
-        """Acquire a dedup lock for an in-flight request. Returns True if acquired."""
-        if not self._redis:
-            return True  # No Redis = no dedup, proceed
-        try:
-            return bool(
-                self._redis.set(
-                    f"integration:lock:{self._url_hash(url)}",
-                    "1",
-                    nx=True,
-                    ex=_DEDUP_LOCK_TTL,
-                )
-            )
-        except Exception:
-            return True  # Fail-open
 
 
 # =============================================================================
@@ -209,9 +104,9 @@ class MappingExecutor:
         event_bus: The entity event bus to register on.
         update_entity: Callback to persist entity field updates from
             response mappings. Signature: ``(entity_name, entity_id, fields) -> None``.
-        cache: Optional ``IntegrationCache`` for Redis-backed response caching.
+        cache: Optional :class:`~dazzle_back.runtime.api_cache.ApiResponseCache`.
             When provided, GET request responses are cached and dedup-locked.
-            Defaults to auto-creating from ``REDIS_URL`` env var if available.
+            ``None`` (default) = no caching.
     """
 
     def __init__(
@@ -220,7 +115,7 @@ class MappingExecutor:
         event_bus: EntityEventBus,
         *,
         update_entity: Any | None = None,
-        cache: IntegrationCache | None | bool = True,
+        cache: ApiResponseCache | None = None,
     ) -> None:
         self._appspec = appspec
         self._event_bus = event_bus
@@ -228,14 +123,8 @@ class MappingExecutor:
         # Index: entity_name → list of (integration, mapping)
         self._mappings_by_entity: dict[str, list[tuple[IntegrationSpec, IntegrationMapping]]] = {}
         self._results: list[MappingResult] = []
-
-        # Initialize cache: True = auto-detect, None/False = disabled, instance = use it
-        if cache is True:
-            self._cache = IntegrationCache()
-        elif isinstance(cache, IntegrationCache):
-            self._cache = cache
-        else:
-            self._cache = IntegrationCache()  # will be a no-op without REDIS_URL
+        self._cache = cache
+        self._pack_ttl_cache: dict[str, int | None] = {}  # integration:entity_ref → TTL
 
     @property
     def results(self) -> list[MappingResult]:
@@ -394,11 +283,13 @@ class MappingExecutor:
         headers = self._resolve_auth_headers(integration)
 
         # Cache: only for GET requests (reads, not mutations)
-        is_cacheable = method == "GET" and self._cache.available
+        cache = self._cache
+        scope = f"{integration.name}:{mapping.name}"
+        is_cacheable = method == "GET" and cache is not None
 
         # Check cache before making HTTP call
-        if is_cacheable and not force_refresh:
-            cached = self._cache.get(integration.name, mapping.name, url)
+        if is_cacheable and not force_refresh and cache is not None:
+            cached = await cache.get(scope, url)
             if cached is not None:
                 logger.info(
                     "Cache HIT for %s/%s → %s",
@@ -417,7 +308,13 @@ class MappingExecutor:
                 return result
 
         # Dedup lock: prevent duplicate in-flight calls to the same URL
-        if is_cacheable and not self._cache.acquire_lock(url):
+        # force_refresh bypasses the lock
+        if (
+            is_cacheable
+            and not force_refresh
+            and cache is not None
+            and not await cache.acquire_lock(scope, url)
+        ):
             logger.info("Dedup lock active for %s, skipping", url[:80])
             result.error = "Duplicate request suppressed (in-flight)"
             self._results.append(result)
@@ -430,66 +327,75 @@ class MappingExecutor:
         max_attempts = _MAX_RETRY_ATTEMPTS if should_retry else 1
 
         # Execute HTTP request with optional retry
-        for attempt in range(max_attempts):
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as client:
-                    if method in ("POST", "PUT", "PATCH"):
-                        resp = await client.request(method, url, json=body, headers=headers)
-                    else:
-                        resp = await client.request(method, url, headers=headers)
-
-                result.status_code = resp.status_code
-
+        try:
+            for attempt in range(max_attempts):
                 try:
-                    result.response_data = resp.json()
-                except Exception:
-                    result.response_data = {"raw": resp.text[:1000]}
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        if method in ("POST", "PUT", "PATCH"):
+                            resp = await client.request(method, url, json=body, headers=headers)
+                        else:
+                            resp = await client.request(method, url, headers=headers)
 
-                if 200 <= resp.status_code < 300:
-                    result.success = True
+                    result.status_code = resp.status_code
 
-                    # Cache successful GET responses
-                    if is_cacheable:
-                        self._cache.put(integration.name, mapping.name, url, result.response_data)
+                    try:
+                        result.response_data = resp.json()
+                    except Exception:
+                        result.response_data = {"raw": resp.text[:1000]}
 
-                    # Apply response mapping
-                    if mapping.response_mapping:
-                        mapped = self._apply_response_mapping(
-                            mapping.response_mapping, result.response_data
-                        )
-                        result.mapped_fields = mapped
-                        if mapped and self._update_entity and event:
-                            try:
-                                await self._update_entity(
-                                    event.entity_name, event.entity_id, mapped
-                                )
-                            except Exception as e:
-                                logger.warning(
-                                    "Failed to update entity %s/%s: %s",
-                                    event.entity_name,
-                                    event.entity_id,
-                                    e,
-                                )
-                    break  # Success, no retry needed
+                    if 200 <= resp.status_code < 300:
+                        result.success = True
 
-                # Non-2xx response
-                logger.warning(
-                    "Mapping '%s' returned %d: %s",
-                    mapping.name,
-                    resp.status_code,
-                    resp.text[:200],
-                )
+                        # Cache successful GET responses
+                        if is_cacheable and cache is not None:
+                            cache_ttl = getattr(mapping, "cache_ttl", None)
+                            if cache_ttl is None:
+                                cache_ttl = self._lookup_pack_cache_ttl(integration, mapping)
+                            cache_ttl = cache_ttl or _DEFAULT_CACHE_TTL
+                            await cache.put(scope, url, result.response_data, ttl=cache_ttl)
 
-                if attempt < max_attempts - 1:
-                    await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
-                    continue
+                        # Apply response mapping
+                        if mapping.response_mapping:
+                            mapped = self._apply_response_mapping(
+                                mapping.response_mapping, result.response_data
+                            )
+                            result.mapped_fields = mapped
+                            if mapped and self._update_entity and event:
+                                try:
+                                    await self._update_entity(
+                                        event.entity_name, event.entity_id, mapped
+                                    )
+                                except Exception as e:
+                                    logger.warning(
+                                        "Failed to update entity %s/%s: %s",
+                                        event.entity_name,
+                                        event.entity_id,
+                                        e,
+                                    )
+                        break  # Success, no retry needed
 
-            except Exception as e:
-                result.error = str(e)
-                logger.warning("Mapping '%s' failed: %s", mapping.name, e)
-                if attempt < max_attempts - 1:
-                    await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
-                    continue
+                    # Non-2xx response
+                    logger.warning(
+                        "Mapping '%s' returned %d: %s",
+                        mapping.name,
+                        resp.status_code,
+                        resp.text[:200],
+                    )
+
+                    if attempt < max_attempts - 1:
+                        await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
+                        continue
+
+                except Exception as e:
+                    result.error = str(e)
+                    logger.warning("Mapping '%s' failed: %s", mapping.name, e)
+                    if attempt < max_attempts - 1:
+                        await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
+                        continue
+        finally:
+            # Always release dedup lock after the request completes
+            if is_cacheable and cache is not None:
+                await cache.release_lock(scope, url)
 
         # Handle error strategy if not successful
         if not result.success:
@@ -516,6 +422,52 @@ class MappingExecutor:
         env_name = integration.name.upper().replace("-", "_").replace(".", "_")
         url = os.environ.get(f"DAZZLE_API_{env_name}_URL", "")
         return url.rstrip("/") if url else ""
+
+    def _lookup_pack_cache_ttl(
+        self,
+        integration: IntegrationSpec,
+        mapping: IntegrationMapping,
+    ) -> int | None:
+        """Look up cache_ttl from the API pack's foreign model definition.
+
+        Uses integration's api_refs → first service's spec_inline → pack name,
+        then finds the matching ForeignModelSpec by mapping.entity_ref.
+
+        Results are cached per integration:entity_ref pair.
+        """
+        cache_key = f"{integration.name}:{mapping.entity_ref}"
+        if cache_key in self._pack_ttl_cache:
+            return self._pack_ttl_cache[cache_key]
+
+        ttl: int | None = None
+        try:
+            # Extract pack name from integration's service references
+            pack_name: str | None = None
+            for svc in getattr(self._appspec, "services", []) or []:
+                if svc.name in (integration.api_refs or []):
+                    spec_inline = getattr(svc, "spec_inline", None) or ""
+                    if spec_inline.startswith("pack:"):
+                        pack_name = spec_inline.removeprefix("pack:")
+                        break
+
+            if pack_name:
+                from dazzle.api_kb import load_pack
+
+                pack = load_pack(pack_name)
+                if pack:
+                    for fm in pack.foreign_models:
+                        if fm.name == mapping.entity_ref:
+                            ttl = fm.cache_ttl
+                            break
+        except Exception:
+            logger.debug(
+                "Failed to look up pack cache_ttl for %s:%s",
+                integration.name,
+                mapping.entity_ref,
+            )
+
+        self._pack_ttl_cache[cache_key] = ttl
+        return ttl
 
     def _interpolate_url(
         self, base_url: str, url_template: str, entity_data: dict[str, Any]

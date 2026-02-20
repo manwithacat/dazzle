@@ -490,6 +490,107 @@ integration hmrc:
         assert ErrorAction.REVERT_TRANSITION in mapping.on_error.actions
 
 
+class TestCacheTtl:
+    """Tests for cache: keyword parsing in mapping blocks."""
+
+    def test_cache_24h(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+
+integration ch_api:
+  mapping fetch on Company:
+    request: GET "/company/search"
+    cache: "24h"
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.cache_ttl == 86400
+
+    def test_cache_5m(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+
+integration ch_api:
+  mapping fetch on Company:
+    request: GET "/company/search"
+    cache: "5m"
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.cache_ttl == 300
+
+    def test_cache_30s(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+
+integration ch_api:
+  mapping fetch on Company:
+    request: GET "/company/search"
+    cache: "30s"
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.cache_ttl == 30
+
+    def test_no_cache_defaults_to_none(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+
+integration ch_api:
+  mapping fetch on Company:
+    request: GET "/company/search"
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.cache_ttl is None
+
+    def test_cache_with_other_fields(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+  company_name: str(200)
+
+integration ch_api:
+  mapping fetch on Company:
+    trigger: manual "Look up"
+    request: GET "/company/{self.name}"
+    cache: "2h"
+    map_response:
+      company_name <- response.company_name
+    on_error: ignore
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.cache_ttl == 7200
+        assert mapping.request is not None
+        assert len(mapping.response_mapping) == 1
+        assert mapping.on_error is not None
+
+
 class TestFullIntegration:
     """Tests for complete integration declarations."""
 

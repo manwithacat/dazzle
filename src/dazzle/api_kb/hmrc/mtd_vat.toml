@@ -59,6 +59,7 @@ received = { type = "date", description = "Date HMRC received the return (if ful
 [foreign_models.VATReturn]
 description = "A submitted VAT return"
 key = "period_key"
+cache_ttl = 86400  # Submitted returns don't change
 
 [foreign_models.VATReturn.fields]
 period_key = { type = "str(20)", required = true, pk = true }
@@ -76,6 +77,7 @@ finalised = { type = "bool", description = "Whether the return has been finalise
 [foreign_models.VATLiability]
 description = "A VAT liability owed to HMRC"
 key = "charge_reference"
+cache_ttl = 3600  # Liabilities update with payments
 
 [foreign_models.VATLiability.fields]
 charge_reference = { type = "str(50)", required = true, pk = true }
@@ -89,6 +91,7 @@ due = { type = "date" }
 [foreign_models.VATPayment]
 description = "A VAT payment received by HMRC"
 key = "received"
+cache_ttl = 3600  # Payments update with new receipts
 
 [foreign_models.VATPayment.fields]
 received = { type = "date", required = true }

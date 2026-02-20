@@ -86,6 +86,7 @@ rpc = { type = "str(1)", description = "Representative point code" }
 [foreign_models.DPA]
 description = "Delivery Point Address (Royal Mail PAF data)"
 key = "uprn"
+cache_ttl = 86400  # Addresses rarely change
 
 [foreign_models.DPA.fields]
 uprn = { type = "str(12)", required = true, pk = true }
@@ -114,6 +115,7 @@ welsh_post_town = { type = "str(100)" }
 [foreign_models.LPI]
 description = "Local Property Identifier (Local Authority data)"
 key = "lpi_key"
+cache_ttl = 86400  # Local authority data rarely changes
 
 [foreign_models.LPI.fields]
 lpi_key = { type = "str(20)", required = true, pk = true }

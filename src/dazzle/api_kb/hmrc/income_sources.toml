@@ -77,6 +77,7 @@ delete_foreign_income = { method = "DELETE", path = "/individuals/foreign-income
 [foreign_models.DividendsIncome]
 description = "Dividends income for tax year"
 key = "nino_tax_year"
+cache_ttl = 3600  # Tax return data updated quarterly
 
 [foreign_models.DividendsIncome.fields]
 uk_dividends = { type = "decimal(13,2)", description = "UK company dividends" }
@@ -88,6 +89,7 @@ close_company_loans = { type = "decimal(13,2)", description = "Close company loa
 [foreign_models.SavingsAccount]
 description = "UK savings account"
 key = "savings_id"
+cache_ttl = 3600  # Tax return data updated quarterly
 
 [foreign_models.SavingsAccount.fields]
 savings_id = { type = "str(50)", required = true, pk = true }
@@ -98,6 +100,7 @@ untaxed_uk_interest = { type = "decimal(13,2)" }
 [foreign_models.PensionsIncome]
 description = "Pensions income for tax year"
 key = "nino_tax_year"
+cache_ttl = 3600  # Tax return data updated quarterly
 
 [foreign_models.PensionsIncome.fields]
 foreign_pensions = { type = "json", description = "Array of foreign pension details" }
@@ -106,6 +109,7 @@ overseas_pension_contributions = { type = "json", description = "Overseas pensio
 [foreign_models.StateBenefit]
 description = "State benefit record"
 key = "benefit_id"
+cache_ttl = 3600  # Tax return data updated quarterly
 
 [foreign_models.StateBenefit.fields]
 benefit_id = { type = "uuid", required = true, pk = true }
@@ -119,6 +123,7 @@ submission_source = { type = "enum[customer,hmrcHeld]" }
 [foreign_models.ForeignIncome]
 description = "Foreign income for tax year"
 key = "nino_tax_year"
+cache_ttl = 3600  # Tax return data updated quarterly
 
 [foreign_models.ForeignIncome.fields]
 foreign_earnings = { type = "json", description = "Employment income from abroad" }

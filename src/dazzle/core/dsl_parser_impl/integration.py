@@ -233,6 +233,7 @@ class IntegrationParserMixin:
               trigger: on_create when company_number != null
               trigger: manual "Look up company"
               request: GET "/company/{self.company_number}"
+              cache: "24h"
               map_request:
                 field <- source
               map_response:
@@ -254,6 +255,7 @@ class IntegrationParserMixin:
         request_mapping: list[ir.MappingRule] = []
         response_mapping: list[ir.MappingRule] = []
         on_error: ir.ErrorStrategy | None = None
+        cache_ttl: int | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -275,6 +277,16 @@ class IntegrationParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 request = self._parse_http_request()
+                self.skip_newlines()
+
+            # cache: "24h"
+            elif tok.type == TokenType.IDENTIFIER and tok.value == "cache":
+                self.advance()
+                self.expect(TokenType.COLON)
+                duration_tok = self.expect(TokenType.STRING)
+                from .process import parse_duration
+
+                cache_ttl = parse_duration(duration_tok.value)
                 self.skip_newlines()
 
             # map_request: (indented block of field <- source)
@@ -315,6 +327,7 @@ class IntegrationParserMixin:
             request_mapping=request_mapping,
             response_mapping=response_mapping,
             on_error=on_error,
+            cache_ttl=cache_ttl,
         )
 
     def _parse_mapping_trigger(self) -> ir.MappingTriggerSpec:

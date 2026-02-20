@@ -4,11 +4,16 @@ Provides search and select endpoints that proxy to configured external
 API sources and return rendered HTML fragments.
 """
 
+from __future__ import annotations
+
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
+
+if TYPE_CHECKING:
+    from dazzle_back.runtime.api_cache import ApiResponseCache
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +21,7 @@ logger = logging.getLogger(__name__)
 def create_fragment_router(
     fragment_sources: dict[str, dict[str, Any]] | None = None,
     app_spec: Any | None = None,
+    cache: ApiResponseCache | None = None,
 ) -> APIRouter:
     """Create the fragment routes router.
 
@@ -73,15 +79,26 @@ def create_fragment_router(
             search_url = source_config["url"]
             headers = source_config.get("headers", {})
             params = source_config.get("query_param", "q")
+            full_url = f"{search_url}?{params}={q}"
+            scope = f"fragment:{source}"
 
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(
-                    search_url,
-                    params={params: q},
-                    headers=headers,
-                )
-                resp.raise_for_status()
-                data = resp.json()
+            # Check cache
+            data: Any = None
+            if cache is not None:
+                data = await cache.get(scope, full_url)
+
+            if data is None:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(
+                        search_url,
+                        params={params: q},
+                        headers=headers,
+                    )
+                    resp.raise_for_status()
+                    data = resp.json()
+                # Cache search results for 5 minutes
+                if cache is not None:
+                    await cache.put(scope, full_url, data, ttl=300)
 
             # Extract items from response (support nested results)
             items_key = source_config.get("items_key", "items")
@@ -132,14 +149,22 @@ def create_fragment_router(
 
             detail_url = source_config.get("detail_url", source_config["url"])
             headers = source_config.get("headers", {})
+            full_url = f"{detail_url}/{id}"
+            scope = f"fragment:{source}:detail"
 
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                resp = await client.get(
-                    f"{detail_url}/{id}",
-                    headers=headers,
-                )
-                resp.raise_for_status()
-                record = resp.json()
+            # Check cache
+            record: Any = None
+            if cache is not None:
+                record = await cache.get(scope, full_url)
+
+            if record is None:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.get(full_url, headers=headers)
+                    resp.raise_for_status()
+                    record = resp.json()
+                # Cache detail records for 1 hour
+                if cache is not None:
+                    await cache.put(scope, full_url, record, ttl=3600)
 
             # Build OOB swap fragments for autofill fields
             autofill = source_config.get("autofill", {})

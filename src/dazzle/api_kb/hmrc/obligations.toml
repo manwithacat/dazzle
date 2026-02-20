@@ -46,6 +46,7 @@ get_all_obligations = { method = "GET", path = "/obligations/details/{nino}", de
 [foreign_models.Obligation]
 description = "A filing obligation/deadline"
 key = "obligation_id"
+cache_ttl = 3600  # Deadlines change infrequently
 
 [foreign_models.Obligation.fields]
 obligation_id = { type = "str(50)", required = true, pk = true }
@@ -60,6 +61,7 @@ business_id = { type = "str(50)", description = "Associated business ID" }
 [foreign_models.ObligationsSummary]
 description = "Summary of all obligations for taxpayer"
 key = "nino"
+cache_ttl = 3600  # Deadlines change infrequently
 
 [foreign_models.ObligationsSummary.fields]
 nino = { type = "str(9)", required = true, pk = true }

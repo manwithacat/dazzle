@@ -973,6 +973,7 @@ class DazzleBackendApp:
             return
 
         try:
+            from dazzle_back.runtime.api_cache import ApiResponseCache
             from dazzle_back.runtime.fragment_routes import create_fragment_router
 
             # Build fragment sources from integration specs if available
@@ -989,7 +990,8 @@ class DazzleBackendApp:
             # Merge fragment sources from DSL source= annotations (v0.25.1)
             fragment_sources.update(self._fragment_sources)
 
-            fragment_router = create_fragment_router(fragment_sources)
+            fragment_cache = ApiResponseCache()  # auto-detects REDIS_URL
+            fragment_router = create_fragment_router(fragment_sources, cache=fragment_cache)
             self._app.include_router(fragment_router)
         except Exception as e:
             import logging
@@ -1025,6 +1027,7 @@ class DazzleBackendApp:
             if not has_mappings:
                 return
 
+            from dazzle_back.runtime.api_cache import ApiResponseCache
             from dazzle_back.runtime.event_bus import get_event_bus
             from dazzle_back.runtime.mapping_executor import MappingExecutor
 
@@ -1040,7 +1043,10 @@ class DazzleBackendApp:
 
                     await repo.update(UUID(entity_id), fields)
 
-            executor = MappingExecutor(self._appspec, event_bus, update_entity=update_entity)
+            cache = ApiResponseCache()  # auto-detects REDIS_URL
+            executor = MappingExecutor(
+                self._appspec, event_bus, update_entity=update_entity, cache=cache
+            )
             executor.register_all()
 
             # Wire entity lifecycle events to the event bus so MappingExecutor

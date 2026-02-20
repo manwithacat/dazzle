@@ -66,6 +66,7 @@ get_questionnaire = { method = "GET", path = "/resources/applicants/{applicant_i
 [foreign_models.Applicant]
 description = "A person undergoing identity verification"
 key = "id"
+cache_ttl = 300  # Profile data moderately stable
 
 [foreign_models.Applicant.fields]
 id = { type = "str(50)", required = true, pk = true, description = "SumSub applicant ID" }
@@ -94,6 +95,7 @@ tags = { type = "json", description = "Array of applicant tags" }
 [foreign_models.ApplicantStatus]
 description = "Current verification status of an applicant"
 key = "applicant_id"
+cache_ttl = 60  # Status changes during verification
 
 [foreign_models.ApplicantStatus.fields]
 applicant_id = { type = "str(50)", required = true, pk = true }
@@ -111,6 +113,7 @@ priority = { type = "int" }
 [foreign_models.Document]
 description = "An identity document submitted for verification"
 key = "id"
+cache_ttl = 3600  # Documents don't change after upload
 
 [foreign_models.Document.fields]
 id = { type = "str(50)", required = true, pk = true }
@@ -132,6 +135,7 @@ address = { type = "json", description = "Extracted address" }
 [foreign_models.AMLCheck]
 description = "AML/PEP/Sanctions screening result"
 key = "id"
+cache_ttl = 300  # Results may update during processing
 
 [foreign_models.AMLCheck.fields]
 id = { type = "str(50)", required = true, pk = true }
@@ -145,6 +149,7 @@ sources_checked = { type = "json", description = "Databases checked" }
 [foreign_models.AccessToken]
 description = "SDK access token for client-side verification"
 key = "token"
+cache_ttl = 0  # Never cache — tokens are single-use
 
 [foreign_models.AccessToken.fields]
 token = { type = "str(500)", required = true, pk = true }

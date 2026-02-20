@@ -85,6 +85,7 @@ etag = { type = "str(50)" }
 [foreign_models.CompanyAddress]
 description = "A company address (registered office)"
 key = "company_number"
+cache_ttl = 86400  # Address changes are rare
 
 [foreign_models.CompanyAddress.fields]
 premises = { type = "str(100)" }
@@ -113,6 +114,7 @@ occupation = { type = "str(100)" }
 [foreign_models.Filing]
 description = "A company filing/document"
 key = "transaction_id"
+cache_ttl = 86400  # Historic filings don't change
 
 [foreign_models.Filing.fields]
 transaction_id = { type = "str(50)", required = true, pk = true }
@@ -126,6 +128,7 @@ paper_filed = { type = "bool" }
 [foreign_models.PSC]
 description = "Person with Significant Control"
 key = "psc_id"
+cache_ttl = 86400  # PSC data changes infrequently
 
 [foreign_models.PSC.fields]
 psc_id = { type = "str(50)", required = true, pk = true }
@@ -140,6 +143,7 @@ date_of_birth = { type = "json", description = "Month and year only for privacy"
 [foreign_models.Charge]
 description = "A company charge/mortgage"
 key = "charge_id"
+cache_ttl = 86400  # Charge data changes infrequently
 
 [foreign_models.Charge.fields]
 charge_id = { type = "str(50)", required = true, pk = true }
@@ -156,6 +160,7 @@ secured_details = { type = "json", description = "Details of what is secured" }
 [foreign_models.Insolvency]
 description = "Company insolvency information"
 key = "company_number"
+cache_ttl = 86400  # Insolvency data changes infrequently
 
 [foreign_models.Insolvency.fields]
 status = { type = "json", description = "Insolvency status details" }

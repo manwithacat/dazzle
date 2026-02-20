@@ -72,6 +72,7 @@ def _import_api_packs():
             'service stripe "Stripe":\n    base_url: "https://api.stripe.com"'
         ),
         generate_foreign_model_dsl=lambda m: "",
+        generate_integration_template=lambda: None,
     )
 
     # Mock the api_kb module

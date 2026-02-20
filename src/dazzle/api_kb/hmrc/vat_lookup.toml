@@ -29,6 +29,7 @@ lookup_vat_with_requester = { method = "GET", path = "/organisations/vat/check-v
 [foreign_models.VATRegistration]
 description = "VAT registration lookup result"
 key = "vrn"
+cache_ttl = 86400  # VAT registration data is stable
 
 [foreign_models.VATRegistration.fields]
 vrn = { type = "str(9)", required = true, pk = true, description = "VAT Registration Number" }

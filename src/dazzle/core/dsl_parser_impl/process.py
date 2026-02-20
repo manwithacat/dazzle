@@ -70,6 +70,21 @@ def parse_duration(s: str) -> int:
     return value * multipliers[unit]
 
 
+def format_duration(seconds: int) -> str:
+    """Format seconds as a compact duration string.
+
+    Picks the largest clean unit (d, h, m, s).
+
+    Examples: 86400 → "24h", 300 → "5m", 60 → "1m", 0 → "0s"
+    """
+    if seconds <= 0:
+        return "0s"
+    for unit, divisor in [("d", 86400), ("h", 3600), ("m", 60), ("s", 1)]:
+        if seconds % divisor == 0:
+            return f"{seconds // divisor}{unit}"
+    return f"{seconds}s"
+
+
 class ProcessParserMixin:
     """Parser mixin for process and schedule blocks."""
 

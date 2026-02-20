@@ -191,14 +191,16 @@ def generate_service_dsl_handler(args: dict[str, Any]) -> str:
         dsl_parts.append(pack.generate_foreign_model_dsl(model))
 
     dsl_code = "\n\n".join(dsl_parts)
+    integration_template = pack.generate_integration_template()
 
     return json.dumps(
         {
             "pack": pack_name,
             "provider": pack.provider,
             "dsl": dsl_code,
+            "integration_template": integration_template,
             "env_vars_required": [e.name for e in pack.env_vars if e.required],
-            "hint": "Add this to your DSL file and configure the env vars",
+            "hint": "Add the DSL blocks to your file. The integration_template shows recommended cache settings.",
         },
         indent=2,
     )

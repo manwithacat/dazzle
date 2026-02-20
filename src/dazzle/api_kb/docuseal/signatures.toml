@@ -61,6 +61,7 @@ update_submitter = { method = "PUT", path = "/submitters/{id}", description = "P
 [foreign_models.Template]
 description = "A reusable document template for signing"
 key = "id"
+cache_ttl = 3600  # Templates rarely change
 
 [foreign_models.Template.fields]
 id = { type = "int", required = true, pk = true }
@@ -81,6 +82,7 @@ archived_at = { type = "datetime" }
 [foreign_models.Submission]
 description = "A signature request sent to submitters"
 key = "id"
+cache_ttl = 60  # Status changes frequently
 
 [foreign_models.Submission.fields]
 id = { type = "int", required = true, pk = true }
@@ -106,6 +108,7 @@ metadata = { type = "json", description = "Custom metadata" }
 [foreign_models.Submitter]
 description = "A person who needs to sign a document"
 key = "id"
+cache_ttl = 60  # Status changes frequently
 
 [foreign_models.Submitter.fields]
 id = { type = "int", required = true, pk = true }

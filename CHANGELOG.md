@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `ApiResponseCache` — async Redis cache for external API responses with scoped keys, dedup locking, and lazy connection (`dazzle_back.runtime.api_cache`)
+- `cache:` keyword in integration mapping blocks — per-mapping TTL (e.g. `cache: "24h"`) parsed via `parse_duration()`
+- Fragment route caching — search (5 min TTL) and select (1 hour TTL) endpoints use shared `ApiResponseCache`
+- `cache_ttl` values for all API pack foreign models — data-volatility-appropriate defaults across all 10 packs
+- `format_duration()` helper — converts seconds to compact duration strings (86400 → "1d", 300 → "5m")
+- `ApiPack.generate_integration_template()` — generates DSL integration blocks with `cache:` directives from pack metadata
+- `generate_service_dsl` MCP handler now returns `integration_template` field with recommended cache settings
+- Pack TTL fallback in `MappingExecutor` — when no `mapping.cache_ttl` is set, looks up the pack's foreign model `cache_ttl` before falling back to the default
+
+### Changed
+- `MappingExecutor` now accepts `cache: ApiResponseCache | None` instead of auto-creating sync Redis. All cache operations are async
+- Cache keys scoped to `api_cache:{scope}:{url_hash}` preventing collisions across integrations
+- Cache TTL priority chain: DSL `cache:` directive > pack TOML `cache_ttl` > default 86400
+
+### Fixed
+- Sync Redis in async context — replaced `import redis` with `redis.asyncio` in cache layer
+- `cache=False/None` still created cache — disabled state now respected via `enabled` flag
+- Dedup lock never released — `release_lock()` called in `finally` block after HTTP response
+- Lock key collisions across integrations — keys now include `{integration}:{mapping}` scope
+- `force_refresh=True` blocked by dedup lock — lock check skipped when force-refreshing
+- Blocking `redis.ping()` in constructor — connection is now lazy (first `get()`/`put()`)
+- Hardcoded `ssl.CERT_NONE` — removed, uses redis-py defaults (validates certs)
+
+### Removed
+- `IntegrationCache` class from `mapping_executor.py` — replaced by `ApiResponseCache`
+
 ## [0.33.0] - 2026-02-19
 
 ### Added

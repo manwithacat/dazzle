@@ -275,6 +275,55 @@ class ApiPack:
         result.update(overrides)
         return result
 
+    def generate_integration_template(self) -> str | None:
+        """Generate a DSL integration block template with cache directives.
+
+        For each foreign model with a cache_ttl and matching GET operations,
+        generates an integration + mapping block with cache settings.
+
+        Returns None if no cacheable models exist.
+        """
+        from dazzle.core.dsl_parser_impl.process import format_duration
+
+        service_name = self.name.replace("_", "")
+        cacheable: list[tuple[ForeignModelSpec, list[OperationSpec]]] = []
+
+        for model in self.foreign_models:
+            if model.cache_ttl is None:
+                continue
+            # Find GET operations that match this model (by model name heuristic)
+            model_lower = model.name.lower()
+            get_ops = [
+                op
+                for op in self.operations
+                if op.method == "GET"
+                and (
+                    model_lower in op.name.lower()
+                    or model_lower in op.path.lower()
+                    or model_lower in op.description.lower()
+                )
+            ]
+            if get_ops:
+                cacheable.append((model, get_ops))
+
+        if not cacheable:
+            return None
+
+        lines = [f"integration {service_name}_sync on {service_name}:"]
+
+        for model, ops in cacheable:
+            ttl_str = format_duration(model.cache_ttl or 0)
+            for op in ops:
+                mapping_name = op.name
+                lines.append("")
+                lines.append(f"  mapping {mapping_name}:")
+                lines.append(f"    entity: {model.name}")
+                lines.append(f'    request: GET "{op.path}"')
+                lines.append("    trigger: manual")
+                lines.append(f'    cache: "{ttl_str}"')
+
+        return "\n".join(lines)
+
     def generate_foreign_model_dsl(self, model: ForeignModelSpec) -> str:
         """Generate DSL foreign_model block for a model."""
         service_name = self.name.replace("_", "")

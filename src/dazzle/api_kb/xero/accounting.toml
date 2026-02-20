@@ -130,6 +130,7 @@ updated_date_utc = { type = "datetime" }
 [foreign_models.Payment]
 description = "A payment against an invoice"
 key = "payment_id"
+cache_ttl = 300  # Payments update with reconciliation
 
 [foreign_models.Payment.fields]
 payment_id = { type = "uuid", required = true, pk = true }
@@ -146,6 +147,7 @@ is_reconciled = { type = "bool" }
 [foreign_models.RepeatingInvoice]
 description = "A repeating invoice template"
 key = "repeating_invoice_id"
+cache_ttl = 3600  # Templates rarely change
 
 [foreign_models.RepeatingInvoice.fields]
 repeating_invoice_id = { type = "uuid", required = true, pk = true }
@@ -166,6 +168,7 @@ has_attachments = { type = "bool" }
 [foreign_models.CreditNote]
 description = "A credit note"
 key = "credit_note_id"
+cache_ttl = 300  # Status may change with allocations
 
 [foreign_models.CreditNote.fields]
 credit_note_id = { type = "uuid", required = true, pk = true }
