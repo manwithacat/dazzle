@@ -1078,10 +1078,14 @@ class DazzleBackendApp:
                 repo = _repositories.get(_entity_name)
                 if not repo:
                     return {"error": f"Entity {_entity_name} not found"}
-                entity_data = await repo.get(UUID(entity_id))
+                entity_data = await repo.read(UUID(entity_id))
                 if not entity_data:
                     return {"error": "Record not found"}
-                data = dict(entity_data) if hasattr(entity_data, "__iter__") else {}
+                data = (
+                    dict(entity_data)
+                    if isinstance(entity_data, dict)
+                    else (entity_data.__dict__ if hasattr(entity_data, "__dict__") else {})
+                )
                 result = await _executor.execute_manual(_int_name, _map_name, data)
                 return {
                     "success": result.success,
