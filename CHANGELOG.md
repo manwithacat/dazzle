@@ -20,6 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pack TTL fallback in `MappingExecutor` — when no `mapping.cache_ttl` is set, looks up the pack's foreign model `cache_ttl` before falling back to the default
 - Built-in entity CRUD operations for process service steps — `Entity.create`, `Entity.read`, `Entity.update`, `Entity.delete`, `Entity.transition` now execute directly against PostgreSQL without requiring custom Python service modules (#345)
 - Entity metadata (fields, status_field) stored in Redis at startup by `ProcessManager` for Celery worker access
+- `query` step kind — queries entities matching Django-style filters (e.g. `{"due_date__lt": "today", "status__not_in": ["completed"]}`) with date literal resolution (#346)
+- `foreach` step kind — iterates over query results and executes sub-steps for each item, enabling batch operations like escalation workflows (#346)
 
 ### Changed
 - `MappingExecutor` now accepts `cache: ApiResponseCache | None` instead of auto-creating sync Redis. All cache operations are async

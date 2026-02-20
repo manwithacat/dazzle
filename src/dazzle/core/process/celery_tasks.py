@@ -171,6 +171,10 @@ def _execute_step(
         return _execute_wait_step(run, step)
     elif kind == StepKind.SEND.value or kind == "send":
         return _execute_send_step(run, step)
+    elif kind == StepKind.QUERY.value or kind == "query":
+        return _execute_query_step(store, run, step)
+    elif kind == StepKind.FOREACH.value or kind == "foreach":
+        return _execute_foreach_step(store, run, spec, step)
     else:
         logger.warning(f"Unknown step kind: {kind}")
         return {}
@@ -469,6 +473,170 @@ def _execute_send_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     channel = step.get("channel")
     logger.info(f"Send step {step.get('name')} via channel {channel}")
     return {"output": {"sent": True, "channel": channel}}
+
+
+def _execute_query_step(
+    store: ProcessStateStore,
+    run: ProcessRun,
+    step: dict[str, Any],
+) -> dict[str, Any]:
+    """Execute a query step — SELECT entities matching a filter.
+
+    Step fields:
+        query_entity: Entity name (= table name)
+        query_filter: Django-style filter dict, e.g. {"due_date__lt": "today", "status__not_in": ["completed"]}
+        query_limit: Max rows (default 1000)
+
+    Special filter values:
+        "today" → current date
+        "now" → current datetime
+    """
+    from datetime import UTC, date, datetime
+
+    entity_name = step.get("query_entity")
+    if not entity_name:
+        logger.error("Query step missing query_entity")
+        return {}
+
+    meta = store.get_entity_meta(entity_name)
+    if not meta:
+        logger.error(f"No entity metadata for {entity_name} — cannot execute query")
+        return {}
+
+    table_name = meta["table_name"]
+    valid_fields = set(meta["fields"])
+    raw_filter: dict[str, Any] = step.get("query_filter") or {}
+    limit = step.get("query_limit", 1000)
+
+    # Resolve date literals and validate field names
+    resolved: dict[str, Any] = {}
+    for key, value in raw_filter.items():
+        # Extract base field name (strip __operator suffix)
+        base_field = key.split("__")[0]
+        if base_field not in valid_fields:
+            logger.warning(
+                f"Query filter field '{base_field}' not in {entity_name} metadata — skipping"
+            )
+            continue
+        # Resolve date literals
+        if isinstance(value, str):
+            if value == "today":
+                value = date.today().isoformat()
+            elif value == "now":
+                value = datetime.now(UTC).isoformat()
+        elif isinstance(value, list):
+            value = [
+                date.today().isoformat()
+                if v == "today"
+                else datetime.now(UTC).isoformat()
+                if v == "now"
+                else v
+                for v in value
+            ]
+        resolved[key] = value
+
+    # Build query using QueryBuilder
+    from dazzle_back.runtime.query_builder import QueryBuilder
+
+    builder = QueryBuilder(table_name=table_name)
+    builder.add_filters(resolved)
+    builder.set_pagination(page=1, page_size=limit)
+
+    where_clause, params = builder.build_where_clause()
+    sql = f'SELECT * FROM "{table_name}"'  # noqa: S608
+    if where_clause:
+        sql += f" WHERE {where_clause}"
+    sql += f" LIMIT {limit}"
+
+    logger.info(f"Query step: {sql} (params={params})")
+
+    try:
+        conn = _get_db_connection()
+    except Exception as e:
+        logger.error(f"DB connection failed for query on {entity_name}: {e}")
+        return {}
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, params)
+            rows = cur.fetchall()
+            if not rows:
+                return {"output": []}
+            columns = [desc.name for desc in cur.description]
+            results = []
+            for row in rows:
+                record = dict(zip(columns, row, strict=False))
+                # Convert UUIDs to strings for JSON compatibility
+                results.append({k: str(v) if hasattr(v, "hex") else v for k, v in record.items()})
+        logger.info(f"Query step returned {len(results)} rows from {entity_name}")
+        return {"output": results}
+    except Exception as e:
+        logger.exception(f"Query step on {entity_name} failed: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+def _execute_foreach_step(
+    store: ProcessStateStore,
+    run: ProcessRun,
+    spec: dict[str, Any],
+    step: dict[str, Any],
+) -> dict[str, Any]:
+    """Execute a foreach step — iterate over query results and run sub-steps.
+
+    Step fields:
+        foreach_source: Context key holding the list (e.g. "check_overdue" → run.context["check_overdue"])
+        foreach_steps: List of step dicts to execute for each item
+
+    Each iteration merges the current item into run.context as "item", so sub-steps
+    can reference item fields via run.context["item"]["field_name"].
+    """
+    source_key = step.get("foreach_source")
+    if not source_key:
+        logger.error("Foreach step missing foreach_source")
+        return {}
+
+    items = run.context.get(source_key)
+    if not isinstance(items, list):
+        logger.warning(f"Foreach source '{source_key}' is not a list (got {type(items).__name__})")
+        return {"output": {"processed": 0}}
+
+    sub_steps = step.get("foreach_steps", [])
+    if not sub_steps:
+        logger.warning("Foreach step has no sub-steps")
+        return {"output": {"processed": 0}}
+
+    processed = 0
+    errors = 0
+    results: list[dict[str, Any]] = []
+
+    for i, item in enumerate(items):
+        # Merge current item into context for sub-step access
+        run.context["item"] = item
+        run.context["item_index"] = i
+        item_results: dict[str, Any] = {}
+
+        for sub_step in sub_steps:
+            sub_name = sub_step.get("name", f"sub_{i}")
+            try:
+                result = _execute_step(store, run, spec, sub_step)
+                if result.get("output"):
+                    item_results[sub_name] = result["output"]
+                    run.context[sub_name] = result["output"]
+            except Exception as e:
+                logger.error(f"Foreach item {i} sub-step {sub_name} failed: {e}")
+                errors += 1
+
+        processed += 1
+        results.append(item_results)
+
+    # Clean up iteration context
+    run.context.pop("item", None)
+    run.context.pop("item_index", None)
+
+    logger.info(f"Foreach step processed {processed} items ({errors} errors)")
+    return {"output": {"processed": processed, "errors": errors, "results": results}}
 
 
 def _run_compensation(

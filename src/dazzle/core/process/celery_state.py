@@ -113,13 +113,26 @@ class ProcessStateStore:
 
     def _serialize_step(self, step: ProcessStepSpec) -> dict[str, Any]:
         """Serialize a process step to dict."""
-        return {
+        data: dict[str, Any] = {
             "name": step.name,
             "kind": step.kind.value if hasattr(step.kind, "value") else str(step.kind),
             "service": getattr(step, "service", None),
             "surface": getattr(step, "surface", None),
+            "channel": getattr(step, "channel", None),
             "timeout_seconds": getattr(step, "timeout_seconds", None),
         }
+        # Query step fields
+        if getattr(step, "query_entity", None):
+            data["query_entity"] = step.query_entity
+            data["query_filter"] = getattr(step, "query_filter", None)
+            data["query_limit"] = getattr(step, "query_limit", 1000)
+        # Foreach step fields
+        if getattr(step, "foreach_source", None):
+            data["foreach_source"] = step.foreach_source
+            data["foreach_steps"] = [
+                self._serialize_step(s) for s in getattr(step, "foreach_steps", [])
+            ]
+        return data
 
     # Schedule Specifications
 

@@ -14,6 +14,7 @@ Temporal Mapping:
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -43,6 +44,8 @@ class StepKind(StrEnum):
     PARALLEL = "parallel"  # Execute steps in parallel
     CONDITION = "condition"  # Conditional branch
     SIDE_EFFECT = "side_effect"  # Execute effects only (no service/send/wait)
+    QUERY = "query"  # Query entities matching a filter
+    FOREACH = "foreach"  # Iterate over results from a previous step
 
 
 class RetryBackoff(StrEnum):
@@ -261,6 +264,22 @@ class ProcessStepSpec(BaseModel):
     condition: str | None = Field(default=None, description="Condition expression")
     on_true: str | None = Field(default=None, description="Step to go to if condition is true")
     on_false: str | None = Field(default=None, description="Step to go to if condition is false")
+
+    # For QUERY steps
+    query_entity: str | None = Field(default=None, description="Entity name to query")
+    query_filter: dict[str, Any] | None = Field(
+        default=None,
+        description="Django-style filter dict, e.g. {'due_date__lt': 'today', 'status__not_in': ['completed']}",
+    )
+    query_limit: int = Field(default=1000, description="Maximum rows to return")
+
+    # For FOREACH steps
+    foreach_source: str | None = Field(
+        default=None, description="Context key holding the list to iterate over"
+    )
+    foreach_steps: list[ProcessStepSpec] = Field(
+        default_factory=list, description="Sub-steps to execute for each item"
+    )
 
     # Input/output mappings
     inputs: list[InputMapping] = Field(

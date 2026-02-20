@@ -356,6 +356,250 @@ class TestExecuteBuiltinEntityOp:
 
 
 # ---------------------------------------------------------------------------
+# Query step
+# ---------------------------------------------------------------------------
+
+
+class TestQueryStep:
+    @patch("dazzle.core.process.celery_tasks._get_db_connection")
+    def test_query_returns_rows(self, mock_conn_fn: MagicMock):
+        from dazzle.core.process.celery_tasks import _execute_query_step
+
+        store = MagicMock()
+        store.get_entity_meta.return_value = {
+            "table_name": "ComplianceDeadline",
+            "fields": ["id", "due_date", "status", "description"],
+            "status_field": "status",
+        }
+
+        desc = [_Desc("id"), _Desc("due_date"), _Desc("status"), _Desc("description")]
+        rows = [
+            ("d-1", "2026-01-15", "overdue", "Q4 filing"),
+            ("d-2", "2026-02-01", "overdue", "VAT return"),
+        ]
+        cur = _mock_cursor(rows=rows, description=desc)
+        cur.fetchall.return_value = rows
+        conn = _mock_conn(cur)
+        mock_conn_fn.return_value = conn
+
+        run = _make_run()
+        step = {
+            "name": "check_overdue",
+            "query_entity": "ComplianceDeadline",
+            "query_filter": {"status": "overdue"},
+            "query_limit": 100,
+        }
+
+        result = _execute_query_step(store, run, step)
+
+        assert len(result["output"]) == 2
+        assert result["output"][0]["description"] == "Q4 filing"
+        conn.close.assert_called_once()
+
+    @patch("dazzle.core.process.celery_tasks._get_db_connection")
+    def test_query_empty_result(self, mock_conn_fn: MagicMock):
+        from dazzle.core.process.celery_tasks import _execute_query_step
+
+        store = MagicMock()
+        store.get_entity_meta.return_value = {
+            "table_name": "Task",
+            "fields": ["id", "status"],
+            "status_field": "status",
+        }
+
+        cur = _mock_cursor(rows=[])
+        cur.fetchall.return_value = []
+        conn = _mock_conn(cur)
+        mock_conn_fn.return_value = conn
+
+        run = _make_run()
+        step = {"name": "find", "query_entity": "Task", "query_filter": {"status": "nonexistent"}}
+
+        result = _execute_query_step(store, run, step)
+        assert result["output"] == []
+
+    def test_query_missing_entity_meta(self):
+        from dazzle.core.process.celery_tasks import _execute_query_step
+
+        store = MagicMock()
+        store.get_entity_meta.return_value = None
+
+        run = _make_run()
+        step = {"name": "q", "query_entity": "Unknown"}
+
+        result = _execute_query_step(store, run, step)
+        assert result == {}
+
+    def test_query_skips_invalid_fields(self):
+        from dazzle.core.process.celery_tasks import _execute_query_step
+
+        store = MagicMock()
+        store.get_entity_meta.return_value = {
+            "table_name": "Task",
+            "fields": ["id", "status"],
+            "status_field": "status",
+        }
+
+        # Should not error — just skips invalid field
+        run = _make_run()
+        step = {
+            "name": "q",
+            "query_entity": "Task",
+            "query_filter": {"nonexistent_field__eq": "foo", "status": "open"},
+        }
+
+        # Will fail at DB connection, but the filter validation should work
+        with patch("dazzle.core.process.celery_tasks._get_db_connection") as mock_conn_fn:
+            cur = _mock_cursor(rows=[])
+            cur.fetchall.return_value = []
+            conn = _mock_conn(cur)
+            mock_conn_fn.return_value = conn
+
+            _execute_query_step(store, run, step)
+            # Only 'status' filter should remain (nonexistent_field skipped)
+            sql = cur.execute.call_args[0][0]
+            assert "status" in sql
+            assert "nonexistent_field" not in sql
+
+
+# ---------------------------------------------------------------------------
+# Foreach step
+# ---------------------------------------------------------------------------
+
+
+class TestForeachStep:
+    def test_foreach_iterates_over_items(self):
+        from dazzle.core.process.celery_tasks import _execute_foreach_step
+
+        store = MagicMock()
+        store.get_entity_meta.return_value = {
+            "table_name": "Notification",
+            "fields": ["id", "type", "message"],
+            "status_field": None,
+        }
+
+        run = _make_run(
+            context={
+                "check_overdue": [
+                    {"id": "d-1", "description": "Q4 filing"},
+                    {"id": "d-2", "description": "VAT return"},
+                ],
+            }
+        )
+
+        # Sub-step that just logs (service with no-op fallback)
+        sub_step = {"name": "log_item", "kind": "service", "service": "Audit.log_event"}
+        step = {
+            "name": "escalate_each",
+            "foreach_source": "check_overdue",
+            "foreach_steps": [sub_step],
+        }
+
+        result = _execute_foreach_step(store, run, {}, step)
+
+        assert result["output"]["processed"] == 2
+        # Iteration context cleaned up
+        assert "item" not in run.context
+        assert "item_index" not in run.context
+
+    def test_foreach_empty_source(self):
+        from dazzle.core.process.celery_tasks import _execute_foreach_step
+
+        store = MagicMock()
+        run = _make_run(context={"query_results": []})
+        step = {
+            "name": "iterate",
+            "foreach_source": "query_results",
+            "foreach_steps": [{"name": "sub", "kind": "service", "service": "X.y"}],
+        }
+
+        result = _execute_foreach_step(store, run, {}, step)
+        assert result["output"]["processed"] == 0
+
+    def test_foreach_missing_source_key(self):
+        from dazzle.core.process.celery_tasks import _execute_foreach_step
+
+        store = MagicMock()
+        run = _make_run()
+        step = {
+            "name": "iterate",
+            "foreach_source": "nonexistent",
+            "foreach_steps": [{"name": "sub", "kind": "service", "service": "X.y"}],
+        }
+
+        result = _execute_foreach_step(store, run, {}, step)
+        assert result["output"]["processed"] == 0
+
+    def test_foreach_with_builtin_create(self):
+        """Foreach with Entity.create sub-steps creates entities for each item."""
+        from dazzle.core.process.celery_tasks import _execute_foreach_step
+
+        store = MagicMock()
+        store.get_entity_meta.return_value = {
+            "table_name": "Notification",
+            "fields": ["id", "type", "message", "recipient_id"],
+            "status_field": None,
+        }
+
+        run = _make_run(
+            context={
+                "overdue": [
+                    {"id": "d-1", "description": "Q4 filing", "manager_id": "m-1"},
+                    {"id": "d-2", "description": "VAT return", "manager_id": "m-2"},
+                ],
+            }
+        )
+
+        # Use a service sub-step that routes to builtin create
+        sub_step = {"name": "create_notif", "kind": "service", "service": "Notification.create"}
+        step = {
+            "name": "notify_each",
+            "foreach_source": "overdue",
+            "foreach_steps": [sub_step],
+        }
+
+        with patch("dazzle.core.process.celery_tasks._get_db_connection") as mock_conn_fn:
+            cur = _mock_cursor(rows=[("new-id",)])
+            conn = _mock_conn(cur)
+            mock_conn_fn.return_value = conn
+
+            result = _execute_foreach_step(store, run, {}, step)
+
+        assert result["output"]["processed"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Step dispatch routing
+# ---------------------------------------------------------------------------
+
+
+class TestStepDispatch:
+    def test_dispatch_query_step(self):
+        from dazzle.core.process.celery_tasks import _execute_step
+
+        store = MagicMock()
+        store.get_entity_meta.return_value = None  # Will return {} due to missing meta
+        run = _make_run()
+
+        result = _execute_step(store, run, {}, {"name": "q", "kind": "query", "query_entity": "X"})
+        assert result == {}
+
+    def test_dispatch_foreach_step(self):
+        from dazzle.core.process.celery_tasks import _execute_step
+
+        store = MagicMock()
+        run = _make_run(context={"src": []})
+
+        result = _execute_step(
+            store,
+            run,
+            {},
+            {"name": "f", "kind": "foreach", "foreach_source": "src", "foreach_steps": []},
+        )
+        assert result["output"]["processed"] == 0
+
+
+# ---------------------------------------------------------------------------
 # ProcessManager entity metadata registration
 # ---------------------------------------------------------------------------
 
