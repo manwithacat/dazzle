@@ -534,6 +534,6 @@ def mount_ops_platform(
                 name="ops_ui",
             )
     except Exception:
-        pass  # UI mounting is optional
+        logger.info("Ops UI static files not available, skipping mount")
 
     return platform

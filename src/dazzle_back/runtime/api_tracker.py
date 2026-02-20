@@ -27,6 +27,7 @@ Usage:
 from __future__ import annotations
 
 import functools
+import logging
 import time
 from collections.abc import Callable
 from contextlib import asynccontextmanager
@@ -41,6 +42,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable
 
     from dazzle_back.events.bus import EventBus
+
+logger = logging.getLogger(__name__)
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -339,7 +342,7 @@ class ApiTracker:
             )
             await self.event_bus.publish("ops.api_call", envelope)
         except Exception:
-            pass  # Don't fail on event emission
+            logger.debug("Failed to emit API call event", exc_info=True)
 
 
 # =============================================================================

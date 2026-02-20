@@ -17,6 +17,7 @@ All analytics are tenant-scoped to ensure data isolation.
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -26,6 +27,8 @@ from dazzle_back.runtime.ops_database import AnalyticsEvent, OpsDatabase
 
 if TYPE_CHECKING:
     from dazzle_back.events.bus import EventBus
+
+logger = logging.getLogger(__name__)
 
 
 class AnalyticsEventType:
@@ -498,7 +501,7 @@ class AnalyticsCollector:
             try:
                 await self._flush_batch()
             except Exception:
-                pass  # Don't crash the loop
+                logger.warning("Analytics flush failed", exc_info=True)
 
     async def _emit_event(self, event: AnalyticsEvent) -> None:
         """Emit event to EventBus for SSE streaming."""

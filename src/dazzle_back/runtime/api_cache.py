@@ -152,6 +152,6 @@ class ApiResponseCache:
             try:
                 await self._redis.aclose()
             except Exception:
-                pass
+                logger.debug("Redis close failed during cache shutdown", exc_info=True)
             self._redis = None
             self._connected = False

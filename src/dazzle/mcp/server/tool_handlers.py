@@ -12,6 +12,7 @@ from datetime import UTC
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
@@ -402,10 +403,7 @@ def inspect_entity(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": "entity_name required"})
 
     try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         entity = next((e for e in app_spec.domain.entities if e.name == entity_name), None)
         if not entity:
@@ -439,10 +437,7 @@ def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
         return json.dumps({"error": "surface_name required"})
 
     try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         surface = next((s for s in app_spec.surfaces if s.name == surface_name), None)
         if not surface:
@@ -465,10 +460,7 @@ def inspect_surface(project_root: Path, args: dict[str, Any]) -> str:
 def analyze_patterns(project_root: Path) -> str:
     """Analyze the project for patterns."""
     try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         crud_patterns = detect_crud_patterns(app_spec)
         integration_patterns = detect_integration_patterns(app_spec)
@@ -512,10 +504,7 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     extended = args.get("extended", False)
 
     try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         warnings, _ = lint_appspec(app_spec, extended=extended)
 
@@ -793,10 +782,7 @@ def get_dnr_logs_handler(args: dict[str, Any]) -> str:
 def get_entities(project_path: Path) -> str:
     """Get all entity definitions from project."""
     try:
-        manifest = load_manifest(project_path / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_path, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_path)
 
         entities = {}
         for entity in app_spec.domain.entities:
@@ -823,10 +809,7 @@ def get_entities(project_path: Path) -> str:
 def get_surfaces(project_path: Path) -> str:
     """Get all surface definitions from project."""
     try:
-        manifest = load_manifest(project_path / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_path, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_path)
 
         surfaces = {}
         for surface in app_spec.surfaces:
@@ -1026,10 +1009,7 @@ def get_env_vars_for_packs_handler(args: dict[str, Any]) -> str:
 def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Get complete DSL specification for story generation."""
     try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         # Build comprehensive spec
         spec: dict[str, Any] = {
@@ -1123,10 +1103,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
     from dazzle.core.stories_persistence import get_next_story_id
 
     try:
-        manifest = load_manifest(project_root / "dazzle.toml")
-        dsl_files = discover_dsl_files(project_root, manifest)
-        modules = parse_modules(dsl_files)
-        app_spec = build_appspec(modules, manifest.project_root)
+        app_spec = load_project_appspec(project_root)
 
         max_stories = args.get("max_stories", 30)
         filter_entities = args.get("entities")

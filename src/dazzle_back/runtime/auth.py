@@ -5,6 +5,7 @@ Provides session-based authentication with cookie management.
 """
 
 import hashlib
+import logging
 import secrets
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
@@ -40,6 +41,8 @@ except ImportError:
 
 from dazzle_back.runtime.jwt_auth import JWTService
 from dazzle_back.runtime.token_store import TokenStore
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # User Model
@@ -678,7 +681,7 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                         f"{col} {col_type}{default_clause}"
                     )
                 except Exception:
-                    pass  # Column already exists or DB doesn't support IF NOT EXISTS
+                    logger.debug("Column %s may already exist: %s", col, col_type)
 
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (

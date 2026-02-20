@@ -215,7 +215,7 @@ class BootstrapStage(PreflightStage):
                 self.context.toolchain["aws_cli"] = version
 
         except Exception:
-            pass  # Non-critical
+            logger.debug("AWS CLI version check failed", exc_info=True)
 
     def _load_project_context(self) -> None:
         """Load project context from configuration files."""

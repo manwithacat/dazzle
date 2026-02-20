@@ -1662,7 +1662,7 @@ class DazzleBackendApp:
 
             register_ses_webhook(self._app)
         except Exception:
-            pass  # SES webhooks are optional
+            logger.info("SES webhooks not available, skipping registration")
 
         from dazzle_back.runtime.auth import (
             create_auth_dependency,

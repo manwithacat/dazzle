@@ -183,7 +183,7 @@ async def _workspace_region_handler(
             if _auth and _auth.is_authenticated and _auth.user:
                 _current_user_id = str(_auth.user.id)
         except Exception:
-            pass  # already checked above
+            logger.debug("Failed to resolve current user for filter context", exc_info=True)
     _filter_context: dict[str, Any] = {}
     if _current_user_id:
         _filter_context["current_user_id"] = _current_user_id

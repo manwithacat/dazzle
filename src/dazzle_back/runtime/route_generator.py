@@ -265,6 +265,67 @@ def _extract_condition_filters(
 
 
 # =============================================================================
+# Access Control Helpers
+# =============================================================================
+
+
+def _build_access_context(auth_context: Any) -> tuple[Any, Any]:
+    """Build (user, AccessRuntimeContext) from an AuthContext.
+
+    Returns (user_or_none, runtime_context) for Cedar policy evaluation.
+    """
+    from dazzle_back.runtime.access_evaluator import AccessRuntimeContext
+
+    user = auth_context.user if auth_context.is_authenticated else None
+    ctx = AccessRuntimeContext(
+        user_id=str(user.id) if user else None,
+        roles=list(getattr(user, "roles", [])) if user else [],
+        is_superuser=getattr(user, "is_superuser", False) if user else False,
+    )
+    return user, ctx
+
+
+def _record_to_dict(result: Any) -> dict[str, Any]:
+    """Convert a Pydantic model or dict to a plain dict for Cedar evaluation."""
+    if hasattr(result, "model_dump"):
+        d: dict[str, Any] = result.model_dump()
+        return d
+    if isinstance(result, dict):
+        return result
+    return {}
+
+
+async def _log_audit_decision(
+    audit_logger: Any,
+    request: Any,
+    *,
+    operation: str,
+    entity_name: str,
+    entity_id: str | None,
+    decision: str,
+    matched_policy: str | None,
+    policy_effect: str | None,
+    user: Any | None,
+) -> None:
+    """Log an access-control decision to the audit logger."""
+    from dazzle_back.runtime.audit_log import create_audit_context_from_request
+
+    audit_ctx = create_audit_context_from_request(request)
+    await audit_logger.log_decision(
+        operation=operation,
+        entity_name=entity_name,
+        entity_id=entity_id,
+        decision=decision,
+        matched_policy=matched_policy,
+        policy_effect=policy_effect,
+        user_id=str(user.id) if user else None,
+        user_email=getattr(user, "email", None) if user else None,
+        user_roles=list(getattr(user, "roles", [])) if user else None,
+        **audit_ctx,
+    )
+
+
+# =============================================================================
 # Route Handler Factory
 # =============================================================================
 
@@ -548,55 +609,33 @@ def create_read_handler(
         async def _read_cedar(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle_back.runtime.access_evaluator import (
-                AccessDecision,
-                AccessRuntimeContext,
-                evaluate_permission,
-            )
+            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
             from dazzle_back.specs.auth import AccessOperationKind
 
             result = await service.execute(operation="read", id=id, include=auto_include)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
 
-            # Build runtime context
-            user = auth_context.user if auth_context.is_authenticated else None
-            ctx = AccessRuntimeContext(
-                user_id=str(user.id) if user else None,
-                roles=list(getattr(user, "roles", [])) if user else [],
-                is_superuser=getattr(user, "is_superuser", False) if user else False,
-            )
-
-            # Evaluate Cedar policy
-            record = (
-                result.model_dump()
-                if hasattr(result, "model_dump")
-                else (result if isinstance(result, dict) else {})
-            )
+            user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.READ, record, ctx
+                cedar_access_spec, AccessOperationKind.READ, _record_to_dict(result), ctx
             )
 
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                audit_ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="read",
                     entity_name=entity_name,
                     entity_id=str(id),
                     decision="allow" if decision.allowed else "deny",
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
-                    user_id=str(user.id) if user else None,
-                    user_email=getattr(user, "email", None) if user else None,
-                    user_roles=list(getattr(user, "roles", [])) if user else None,
-                    **audit_ctx,
+                    user=user,
                 )
 
             if not decision.allowed:
-                # Return 404 to prevent enumeration
                 raise HTTPException(status_code=404, detail="Not found")
             return result
 
@@ -617,24 +656,16 @@ def create_read_handler(
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="read",
                     entity_name=entity_name,
                     entity_id=str(id),
                     decision="allow",
                     matched_policy="authenticated",
                     policy_effect="permit",
-                    user_id=str(auth_context.user.id) if auth_context.user else None,
-                    user_email=getattr(auth_context.user, "email", None)
-                    if auth_context.user
-                    else None,
-                    user_roles=list(getattr(auth_context.user, "roles", []))
-                    if auth_context.user
-                    else None,
-                    **ctx,
+                    user=auth_context.user,
                 )
             return result
 
@@ -694,40 +725,26 @@ def create_create_handler(
         async def _create_cedar(
             request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle_back.runtime.access_evaluator import (
-                AccessDecision,
-                AccessRuntimeContext,
-                evaluate_permission,
-            )
+            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
             from dazzle_back.specs.auth import AccessOperationKind
 
-            user = auth_context.user if auth_context.is_authenticated else None
-            ctx = AccessRuntimeContext(
-                user_id=str(user.id) if user else None,
-                roles=list(getattr(user, "roles", [])) if user else [],
-                is_superuser=getattr(user, "is_superuser", False) if user else False,
-            )
-
+            user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
                 cedar_access_spec, AccessOperationKind.CREATE, None, ctx
             )
 
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                audit_ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="create",
                     entity_name=entity_name,
                     entity_id=None,
                     decision="allow" if decision.allowed else "deny",
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
-                    user_id=str(user.id) if user else None,
-                    user_email=getattr(user, "email", None) if user else None,
-                    user_roles=list(getattr(user, "roles", [])) if user else None,
-                    **audit_ctx,
+                    user=user,
                 )
 
             if not decision.allowed:
@@ -756,24 +773,16 @@ def create_create_handler(
             data = input_schema.model_validate(body)
             result = await service.execute(operation="create", data=data)
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="create",
                     entity_name=entity_name,
                     entity_id=_extract_result_id(result),
                     decision="allow",
                     matched_policy="authenticated",
                     policy_effect="permit",
-                    user_id=str(auth_context.user.id) if auth_context.user else None,
-                    user_email=getattr(auth_context.user, "email", None)
-                    if auth_context.user
-                    else None,
-                    user_roles=list(getattr(auth_context.user, "roles", []))
-                    if auth_context.user
-                    else None,
-                    **ctx,
+                    user=auth_context.user,
                 )
             return _with_htmx_triggers(
                 request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
@@ -818,50 +827,30 @@ def create_update_handler(
         async def _update_cedar(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle_back.runtime.access_evaluator import (
-                AccessDecision,
-                AccessRuntimeContext,
-                evaluate_permission,
-            )
+            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
             from dazzle_back.specs.auth import AccessOperationKind
 
-            # Fetch existing record for condition evaluation
             existing = await service.execute(operation="read", id=id)
             if existing is None:
                 raise HTTPException(status_code=404, detail="Not found")
 
-            user = auth_context.user if auth_context.is_authenticated else None
-            ctx = AccessRuntimeContext(
-                user_id=str(user.id) if user else None,
-                roles=list(getattr(user, "roles", [])) if user else [],
-                is_superuser=getattr(user, "is_superuser", False) if user else False,
-            )
-
-            record = (
-                existing.model_dump()
-                if hasattr(existing, "model_dump")
-                else (existing if isinstance(existing, dict) else {})
-            )
+            user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.UPDATE, record, ctx
+                cedar_access_spec, AccessOperationKind.UPDATE, _record_to_dict(existing), ctx
             )
 
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                audit_ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="update",
                     entity_name=entity_name,
                     entity_id=str(id),
                     decision="allow" if decision.allowed else "deny",
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
-                    user_id=str(user.id) if user else None,
-                    user_email=getattr(user, "email", None) if user else None,
-                    user_roles=list(getattr(user, "roles", [])) if user else None,
-                    **audit_ctx,
+                    user=user,
                 )
 
             if not decision.allowed:
@@ -897,24 +886,16 @@ def create_update_handler(
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="update",
                     entity_name=entity_name,
                     entity_id=str(id),
                     decision="allow",
                     matched_policy="authenticated",
                     policy_effect="permit",
-                    user_id=str(auth_context.user.id) if auth_context.user else None,
-                    user_email=getattr(auth_context.user, "email", None)
-                    if auth_context.user
-                    else None,
-                    user_roles=list(getattr(auth_context.user, "roles", []))
-                    if auth_context.user
-                    else None,
-                    **ctx,
+                    user=auth_context.user,
                 )
             return _with_htmx_triggers(
                 request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
@@ -960,50 +941,30 @@ def create_delete_handler(
         async def _delete_cedar(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle_back.runtime.access_evaluator import (
-                AccessDecision,
-                AccessRuntimeContext,
-                evaluate_permission,
-            )
+            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
             from dazzle_back.specs.auth import AccessOperationKind
 
-            # Fetch existing record for condition evaluation
             existing = await service.execute(operation="read", id=id)
             if existing is None:
                 raise HTTPException(status_code=404, detail="Not found")
 
-            user = auth_context.user if auth_context.is_authenticated else None
-            ctx = AccessRuntimeContext(
-                user_id=str(user.id) if user else None,
-                roles=list(getattr(user, "roles", [])) if user else [],
-                is_superuser=getattr(user, "is_superuser", False) if user else False,
-            )
-
-            record = (
-                existing.model_dump()
-                if hasattr(existing, "model_dump")
-                else (existing if isinstance(existing, dict) else {})
-            )
+            user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
             decision: AccessDecision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.DELETE, record, ctx
+                cedar_access_spec, AccessOperationKind.DELETE, _record_to_dict(existing), ctx
             )
 
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                audit_ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="delete",
                     entity_name=entity_name,
                     entity_id=str(id),
                     decision="allow" if decision.allowed else "deny",
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
-                    user_id=str(user.id) if user else None,
-                    user_email=getattr(user, "email", None) if user else None,
-                    user_roles=list(getattr(user, "roles", [])) if user else None,
-                    **audit_ctx,
+                    user=user,
                 )
 
             if not decision.allowed:
@@ -1037,24 +998,16 @@ def create_delete_handler(
             if not result:
                 raise HTTPException(status_code=404, detail="Not found")
             if audit_logger:
-                from dazzle_back.runtime.audit_log import create_audit_context_from_request
-
-                ctx = create_audit_context_from_request(request)
-                await audit_logger.log_decision(
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
                     operation="delete",
                     entity_name=entity_name,
                     entity_id=str(id),
                     decision="allow",
                     matched_policy="authenticated",
                     policy_effect="permit",
-                    user_id=str(auth_context.user.id) if auth_context.user else None,
-                    user_email=getattr(auth_context.user, "email", None)
-                    if auth_context.user
-                    else None,
-                    user_roles=list(getattr(auth_context.user, "roles", []))
-                    if auth_context.user
-                    else None,
-                    **ctx,
+                    user=auth_context.user,
                 )
             return _with_htmx_triggers(
                 request,
