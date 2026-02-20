@@ -1086,10 +1086,17 @@ class DazzleBackendApp:
                     if isinstance(entity_data, dict)
                     else (entity_data.__dict__ if hasattr(entity_data, "__dict__") else {})
                 )
-                result = await _executor.execute_manual(_int_name, _map_name, data)
+                result = await _executor.execute_manual(
+                    _int_name,
+                    _map_name,
+                    data,
+                    entity_name=_entity_name,
+                    entity_id=entity_id,
+                )
                 return {
                     "success": result.success,
                     "message": result.message if hasattr(result, "message") else "",
+                    "mapped_fields": result.mapped_fields or {},
                 }
 
             return _handler

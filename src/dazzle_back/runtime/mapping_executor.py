@@ -176,6 +176,9 @@ class MappingExecutor:
         integration_name: str,
         mapping_name: str,
         entity_data: dict[str, Any],
+        *,
+        entity_name: str | None = None,
+        entity_id: str | None = None,
     ) -> MappingResult:
         """Execute a manual mapping trigger.
 
@@ -183,6 +186,8 @@ class MappingExecutor:
             integration_name: Name of the integration.
             mapping_name: Name of the mapping within the integration.
             entity_data: Current entity record data.
+            entity_name: Entity type name (for write-back).
+            entity_id: Entity record ID (for write-back).
 
         Returns:
             MappingResult with execution details.
@@ -196,7 +201,25 @@ class MappingExecutor:
             for mapping in getattr(integration, "mappings", []):
                 if mapping.name != mapping_name:
                     continue
-                return await self._execute_mapping(integration, mapping, entity_data)
+                result = await self._execute_mapping(integration, mapping, entity_data)
+                # Write back mapped fields for manual triggers
+                if (
+                    result.success
+                    and result.mapped_fields
+                    and self._update_entity
+                    and entity_name
+                    and entity_id
+                ):
+                    try:
+                        await self._update_entity(entity_name, entity_id, result.mapped_fields)
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to update entity %s/%s: %s",
+                            entity_name,
+                            entity_id,
+                            e,
+                        )
+                return result
 
         raise ValueError(f"Mapping '{mapping_name}' not found in integration '{integration_name}'")
 
