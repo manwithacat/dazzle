@@ -154,6 +154,11 @@ class CeleryProcessAdapter(ProcessAdapter):
         if self._initialized:
             self._update_beat_schedule()
 
+    async def register_entity_meta(self, entity_name: str, meta: dict[str, Any]) -> None:
+        """Store entity metadata in Redis for built-in service step operations."""
+        self._store.save_entity_meta(entity_name, meta)
+        logger.debug(f"Registered entity metadata: {entity_name}")
+
     # Process Lifecycle
 
     async def start_process(

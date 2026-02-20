@@ -366,3 +366,19 @@ class ProcessStateStore:
                 tasks.append(task)
 
         return tasks
+
+    # Entity Metadata (for built-in CRUD operations in service steps)
+
+    def save_entity_meta(self, entity_name: str, meta: dict[str, Any]) -> None:
+        """Store entity metadata for use by built-in service step operations."""
+        key = f"entity:meta:{entity_name}"
+        self._redis.set(key, json.dumps(meta, cls=_ProcessEncoder))
+
+    def get_entity_meta(self, entity_name: str) -> dict[str, Any] | None:
+        """Get entity metadata by name."""
+        key = f"entity:meta:{entity_name}"
+        data = self._redis.get(key)
+        if not data:
+            return None
+        result: dict[str, Any] = json.loads(data)
+        return result

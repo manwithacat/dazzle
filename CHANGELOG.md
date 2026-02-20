@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ApiPack.generate_integration_template()` — generates DSL integration blocks with `cache:` directives from pack metadata
 - `generate_service_dsl` MCP handler now returns `integration_template` field with recommended cache settings
 - Pack TTL fallback in `MappingExecutor` — when no `mapping.cache_ttl` is set, looks up the pack's foreign model `cache_ttl` before falling back to the default
+- Built-in entity CRUD operations for process service steps — `Entity.create`, `Entity.read`, `Entity.update`, `Entity.delete`, `Entity.transition` now execute directly against PostgreSQL without requiring custom Python service modules (#345)
+- Entity metadata (fields, status_field) stored in Redis at startup by `ProcessManager` for Celery worker access
 
 ### Changed
 - `MappingExecutor` now accepts `cache: ApiResponseCache | None` instead of auto-creating sync Redis. All cache operations are async

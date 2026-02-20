@@ -247,6 +247,14 @@ class ProcessAdapter(ABC):
         """
         pass
 
+    # Entity Metadata (for built-in CRUD operations in service steps)
+    async def register_entity_meta(self, entity_name: str, meta: dict[str, Any]) -> None:
+        """Store entity metadata for built-in service step operations.
+
+        Default no-op; overridden by adapters that support built-in CRUD
+        (e.g. CeleryProcessAdapter stores metadata in Redis).
+        """
+
     @abstractmethod
     async def count_active_runs_by_version(
         self,

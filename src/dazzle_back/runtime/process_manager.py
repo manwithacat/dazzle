@@ -93,6 +93,22 @@ class ProcessManager:
             await self._adapter.register_schedule(sched)
             logger.debug(f"Registered schedule: {sched.name}")
 
+        # Store entity metadata for built-in CRUD operations in service steps
+        if self._app_spec:
+            domain = getattr(self._app_spec, "domain", None)
+            if domain:
+                for entity in getattr(domain, "entities", []):
+                    fields = getattr(entity, "fields", None)
+                    if fields is None:
+                        continue
+                    sm = getattr(entity, "state_machine", None)
+                    meta = {
+                        "table_name": entity.name,
+                        "fields": [f.name for f in fields],
+                        "status_field": (getattr(sm, "status_field", None) if sm else None),
+                    }
+                    await self._adapter.register_entity_meta(entity.name, meta)
+
         logger.info(
             f"ProcessManager initialized with {len(self._process_specs)} processes "
             f"and {len(self._schedule_specs)} schedules"

@@ -176,8 +176,16 @@ def _execute_step(
         return {}
 
 
+_BUILTIN_OPS = frozenset({"create", "read", "update", "delete", "transition"})
+
+
 def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
-    """Execute a service call step."""
+    """Execute a service call step.
+
+    Supports two modes:
+    1. Built-in entity CRUD: ``Entity.create``, ``Entity.read``, etc.
+    2. Custom Python service: ``services/{module}_service.py``
+    """
     service_name = step.get("service")
     if not service_name:
         return {}
@@ -189,8 +197,14 @@ def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, An
         logger.warning(f"Invalid service name format: {service_name}")
         return {}
 
-    module_name, method_name = parts[0].lower(), parts[1]
+    entity_name, method_name = parts[0], parts[1]
 
+    # Check for built-in entity CRUD operation
+    if method_name in _BUILTIN_OPS:
+        return _execute_builtin_entity_op(entity_name, method_name, run)
+
+    # Fall back to custom Python service module
+    module_name = entity_name.lower()
     try:
         import importlib
 
@@ -208,6 +222,207 @@ def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, An
     except Exception as e:
         logger.exception(f"Service {service_name} failed: {e}")
         raise
+
+
+def _get_db_connection() -> Any:
+    """Get a sync psycopg3 connection using DATABASE_URL."""
+    import psycopg
+
+    database_url = os.environ.get("DATABASE_URL", "")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL not set — cannot execute built-in entity operations")
+    return psycopg.connect(database_url, autocommit=True)
+
+
+def _execute_builtin_entity_op(
+    entity_name: str,
+    operation: str,
+    run: ProcessRun,
+) -> dict[str, Any]:
+    """Execute a built-in entity CRUD operation.
+
+    Reads entity metadata from Redis (stored by ProcessManager at startup)
+    and performs the operation directly against PostgreSQL.
+
+    Supported operations: create, read, update, delete, transition.
+    """
+    import uuid as uuid_mod
+
+    store = _get_store()
+    meta = store.get_entity_meta(entity_name)
+    if not meta:
+        logger.error(f"No entity metadata for {entity_name} — cannot execute {operation}")
+        return {}
+
+    table_name = meta["table_name"]
+    valid_fields = set(meta["fields"])
+    merged = {**run.inputs, **run.context}
+
+    # Strip process-internal keys from merged data
+    _INTERNAL_KEYS = {"entity_id", "entity_name", "event_type", "old_status", "new_status"}
+
+    try:
+        conn = _get_db_connection()
+    except Exception as e:
+        logger.error(f"DB connection failed for {entity_name}.{operation}: {e}")
+        return {}
+
+    try:
+        if operation == "create":
+            return _builtin_create(conn, table_name, valid_fields, merged, _INTERNAL_KEYS, uuid_mod)
+        elif operation == "read":
+            return _builtin_read(conn, table_name, merged)
+        elif operation == "update":
+            return _builtin_update(conn, table_name, valid_fields, merged, _INTERNAL_KEYS)
+        elif operation == "delete":
+            return _builtin_delete(conn, table_name, merged)
+        elif operation == "transition":
+            return _builtin_transition(conn, table_name, meta, merged)
+        else:
+            return {}
+    except Exception as e:
+        logger.exception(f"Built-in {entity_name}.{operation} failed: {e}")
+        raise
+    finally:
+        conn.close()
+
+
+def _builtin_create(
+    conn: Any,
+    table_name: str,
+    valid_fields: set[str],
+    merged: dict[str, Any],
+    internal_keys: set[str],
+    uuid_mod: Any,
+) -> dict[str, Any]:
+    """INSERT a new entity row."""
+    data = {k: v for k, v in merged.items() if k in valid_fields and k not in internal_keys}
+    if "id" not in data:
+        data["id"] = str(uuid_mod.uuid4())
+
+    columns = list(data.keys())
+    placeholders = ", ".join(["%s"] * len(columns))
+    col_list = ", ".join(columns)
+    values = [data[c] for c in columns]
+
+    sql = f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders}) RETURNING id'  # noqa: S608
+    logger.info(f"Built-in create: INSERT INTO {table_name} ({col_list})")
+
+    with conn.cursor() as cur:
+        cur.execute(sql, values)
+        row = cur.fetchone()
+        created_id = str(row[0]) if row else data["id"]
+
+    return {"output": {"id": created_id, **data}}
+
+
+def _builtin_read(
+    conn: Any,
+    table_name: str,
+    merged: dict[str, Any],
+) -> dict[str, Any]:
+    """SELECT an entity row by ID."""
+    entity_id = merged.get("entity_id") or merged.get("id")
+    if not entity_id:
+        logger.error(f"Built-in read: no entity_id in inputs for {table_name}")
+        return {}
+
+    sql = f'SELECT * FROM "{table_name}" WHERE id = %s'  # noqa: S608
+    with conn.cursor() as cur:
+        cur.execute(sql, [entity_id])
+        row = cur.fetchone()
+        if not row:
+            return {"output": None}
+        # psycopg3 returns tuples; convert via description
+        columns = [desc.name for desc in cur.description]
+        result = dict(zip(columns, row, strict=False))
+    return {"output": {k: str(v) if hasattr(v, "hex") else v for k, v in result.items()}}
+
+
+def _builtin_update(
+    conn: Any,
+    table_name: str,
+    valid_fields: set[str],
+    merged: dict[str, Any],
+    internal_keys: set[str],
+) -> dict[str, Any]:
+    """UPDATE entity fields by ID."""
+    entity_id = merged.get("entity_id") or merged.get("id")
+    if not entity_id:
+        logger.error(f"Built-in update: no entity_id in inputs for {table_name}")
+        return {}
+
+    data = {
+        k: v
+        for k, v in merged.items()
+        if k in valid_fields and k not in internal_keys and k != "id"
+    }
+    if not data:
+        logger.warning(f"Built-in update: no valid fields to update for {table_name}")
+        return {"output": {"id": str(entity_id), "updated": False}}
+
+    set_clause = ", ".join(f"{col} = %s" for col in data)
+    values = list(data.values()) + [entity_id]
+
+    sql = f'UPDATE "{table_name}" SET {set_clause} WHERE id = %s'  # noqa: S608
+    logger.info(f"Built-in update: UPDATE {table_name} SET {set_clause}")
+
+    with conn.cursor() as cur:
+        cur.execute(sql, values)
+        updated = cur.rowcount > 0
+
+    return {"output": {"id": str(entity_id), "updated": updated, **data}}
+
+
+def _builtin_delete(
+    conn: Any,
+    table_name: str,
+    merged: dict[str, Any],
+) -> dict[str, Any]:
+    """DELETE an entity row by ID."""
+    entity_id = merged.get("entity_id") or merged.get("id")
+    if not entity_id:
+        logger.error(f"Built-in delete: no entity_id in inputs for {table_name}")
+        return {}
+
+    sql = f'DELETE FROM "{table_name}" WHERE id = %s'  # noqa: S608
+    with conn.cursor() as cur:
+        cur.execute(sql, [entity_id])
+        deleted = cur.rowcount > 0
+
+    return {"output": {"id": str(entity_id), "deleted": deleted}}
+
+
+def _builtin_transition(
+    conn: Any,
+    table_name: str,
+    meta: dict[str, Any],
+    merged: dict[str, Any],
+) -> dict[str, Any]:
+    """Update the entity's status field (state machine transition)."""
+    entity_id = merged.get("entity_id") or merged.get("id")
+    if not entity_id:
+        logger.error(f"Built-in transition: no entity_id in inputs for {table_name}")
+        return {}
+
+    status_field = meta.get("status_field")
+    if not status_field:
+        logger.error(f"Built-in transition: no status_field in metadata for {table_name}")
+        return {}
+
+    new_status = merged.get("new_status") or merged.get(status_field)
+    if not new_status:
+        logger.error(f"Built-in transition: no new_status in inputs for {table_name}")
+        return {}
+
+    sql = f'UPDATE "{table_name}" SET {status_field} = %s WHERE id = %s'  # noqa: S608
+    logger.info(f"Built-in transition: {table_name}.{status_field} -> {new_status}")
+
+    with conn.cursor() as cur:
+        cur.execute(sql, [new_status, entity_id])
+        updated = cur.rowcount > 0
+
+    return {"output": {"id": str(entity_id), status_field: new_status, "transitioned": updated}}
 
 
 def _execute_human_task_step(
