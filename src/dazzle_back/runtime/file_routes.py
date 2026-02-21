@@ -69,7 +69,7 @@ def create_file_routes(
                 pass  # Non-integer Content-Length — let downstream handle it
 
     @app.post(f"{prefix}/upload", dependencies=[Depends(_check_content_length)])
-    @_rl.limiter.limit(_rl.upload_limit)
+    @_rl.limiter.limit(_rl.upload_limit)  # type: ignore[misc]
     async def upload_file(
         request: Request,
         file: UploadFile = File(...),  # noqa: B008

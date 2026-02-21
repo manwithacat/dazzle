@@ -10,14 +10,14 @@ import pytest
 
 # Check if dependencies are available
 try:
-    import markdown  # type: ignore[import-untyped]  # noqa: F401
+    import markdown  # type: ignore[import-untyped,unused-ignore]  # noqa: F401
 
     MARKDOWN_AVAILABLE = True
 except ImportError:
     MARKDOWN_AVAILABLE = False
 
 try:
-    import bleach  # type: ignore[import-untyped]  # noqa: F401
+    import bleach  # type: ignore[import-untyped,unused-ignore]  # noqa: F401
 
     BLEACH_AVAILABLE = True
 except ImportError:

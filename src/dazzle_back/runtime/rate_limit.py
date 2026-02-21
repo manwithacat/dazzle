@@ -137,6 +137,6 @@ def apply_rate_limiting(app: FastAPI, profile: str) -> None:
 
     limiter = Limiter(key_func=get_remote_address)
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
     logger.info("Rate limiting enabled (profile=%s)", profile)

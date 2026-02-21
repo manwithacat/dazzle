@@ -201,7 +201,7 @@ def create_2fa_routes(
     # =========================================================================
 
     @router.post("/verify")
-    @_rl.limiter.limit(_rl.twofa_limit)
+    @_rl.limiter.limit(_rl.twofa_limit)  # type: ignore[misc]
     async def verify_2fa(data: TwoFactorVerifyRequest, request: FastAPIRequest) -> JSONResponse:
         """Verify 2FA code and complete login.
 
@@ -279,7 +279,7 @@ def create_2fa_routes(
     ) -> JSONResponse:
         """Use a recovery code to complete 2FA login."""
         data.method = "recovery"
-        return await verify_2fa(data, request)
+        return await verify_2fa(data, request)  # type: ignore[no-any-return]
 
     @router.post("/recovery/regenerate")
     async def regenerate_recovery_codes(request: FastAPIRequest) -> dict[str, Any]:
