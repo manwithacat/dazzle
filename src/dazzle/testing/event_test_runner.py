@@ -373,9 +373,9 @@ class EventTestClient:
 class EventTestRunner:
     """Run event flow tests against a DNR server."""
 
-    def __init__(self, api_url: str):
+    def __init__(self, api_url: str, http_timeout: float = 10.0):
         self.api_url = api_url
-        self.client = EventTestClient(api_url)
+        self.client = EventTestClient(api_url, timeout=http_timeout)
 
     def close(self) -> None:
         self.client.close()

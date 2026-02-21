@@ -1558,6 +1558,11 @@ def dsl_run(
         "-f",
         help="Output format: table (default) or json",
     ),
+    http_timeout: float = typer.Option(
+        10.0,
+        "--http-timeout",
+        help="Per-request HTTP timeout in seconds (increase for remote/slow servers)",
+    ),
     cleanup: bool = typer.Option(
         False,
         "--cleanup",
@@ -1586,6 +1591,7 @@ def dsl_run(
         dazzle test dsl-run --format json      # JSON output for CI
         dazzle test dsl-run --base-url https://staging.example.com  # Remote server
         dazzle test dsl-run -b https://staging.example.com --email user@example.com --password secret
+        dazzle test dsl-run -b https://staging.example.com --http-timeout 30  # Slow remote
     """
     import json
 
@@ -1636,7 +1642,11 @@ def dsl_run(
 
         with cli_activity(root, "dsl_test", "run_all") as progress:
             runner = UnifiedTestRunner(
-                root, server_timeout=timeout, base_url=base_url, cleanup=cleanup
+                root,
+                server_timeout=timeout,
+                base_url=base_url,
+                cleanup=cleanup,
+                http_timeout=http_timeout,
             )
 
             def _on_progress(msg: str) -> None:

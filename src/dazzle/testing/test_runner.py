@@ -646,6 +646,7 @@ class TestRunner:
         ui_url: str | None = None,
         persona: str | None = None,
         cleanup: bool = False,
+        http_timeout: float = 10.0,
     ):
         self.project_path = project_path
         self.api_port = api_port
@@ -657,6 +658,7 @@ class TestRunner:
         self._server_process: subprocess.Popen[str] | None = None
         self._persona = persona
         self._cleanup = cleanup
+        self._http_timeout = http_timeout
 
     def _inject_persona_session(self) -> None:
         """Inject stored persona session cookie into the client."""
@@ -767,7 +769,9 @@ class TestRunner:
         print(f"  Found {len(designs)} test designs")
 
         # Initialize client
-        self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
+        self.client = DazzleClient(
+            api_url=self.api_url, ui_url=self.ui_url, timeout=self._http_timeout
+        )
 
         # Wait for server
         if not self.client.wait_for_ready(max_wait=20):
@@ -851,7 +855,9 @@ class TestRunner:
             return result
 
         # Initialize client
-        self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
+        self.client = DazzleClient(
+            api_url=self.api_url, ui_url=self.ui_url, timeout=self._http_timeout
+        )
 
         # Inject persona session cookie if configured
         if self._persona:
