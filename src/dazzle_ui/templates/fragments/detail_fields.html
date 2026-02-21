@@ -1,0 +1,25 @@
+{# Detail fields fragment — renders entity item as a definition list.
+   Used by the API read handler for HTMX/browser content negotiation. #}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body">
+    <h2 class="card-title">{{ entity_name }}</h2>
+    <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 mt-4">
+      {% for key, value in item.items() %}
+      {% if value is not none and key != 'id' %}
+      <dt class="font-medium text-base-content/70 text-sm text-right py-1">{{ key | replace('_', ' ') | title }}</dt>
+      <dd class="py-1 text-sm break-all">
+        {% if value is sameas true %}
+        <span class="badge badge-success badge-sm">Yes</span>
+        {% elif value is sameas false %}
+        <span class="badge badge-ghost badge-sm">No</span>
+        {% elif value is string and value | length > 200 %}
+        <span class="whitespace-pre-wrap">{{ value[:200] }}…</span>
+        {% else %}
+        {{ value }}
+        {% endif %}
+      </dd>
+      {% endif %}
+      {% endfor %}
+    </dl>
+  </div>
+</div>

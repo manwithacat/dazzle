@@ -50,7 +50,8 @@ def _is_htmx_request(request: Any) -> bool:
         return True
     # Fallback: Accept header for non-HTMX HTML clients
     if hasattr(request, "headers"):
-        return bool(request.headers.get("Accept") == "text/html")
+        accept = request.headers.get("Accept", "")
+        return "text/html" in accept
     return False
 
 
@@ -588,6 +589,38 @@ async def _list_handler_body(
     return result
 
 
+def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
+    """Render a detail HTML fragment for HTMX/browser requests.
+
+    Returns HTMLResponse if rendering succeeds, None otherwise.
+    """
+    if not _is_htmx_request(request):
+        return None
+    try:
+        from dazzle_ui.runtime.template_renderer import render_fragment
+
+        # Convert Pydantic model to dict
+        if hasattr(result, "model_dump"):
+            item = result.model_dump(mode="json")
+        elif isinstance(result, dict):
+            from fastapi.encoders import jsonable_encoder
+
+            item = jsonable_encoder(result)
+        else:
+            return None
+
+        html = render_fragment(
+            "fragments/detail_fields.html",
+            item=item,
+            entity_name=entity_name,
+        )
+        return HTMLResponse(content=html)
+    except ImportError:
+        return None  # Template renderer not available
+    except Exception:
+        return None  # Fragment not found or render error
+
+
 def create_read_handler(
     service: Any,
     _response_schema: type[BaseModel] | None = None,
@@ -637,7 +670,8 @@ def create_read_handler(
 
             if not decision.allowed:
                 raise HTTPException(status_code=404, detail="Not found")
-            return result
+            html = _render_detail_html(request, result, entity_name)
+            return html if html is not None else result
 
         _read_cedar.__annotations__ = {
             "id": UUID,
@@ -667,7 +701,8 @@ def create_read_handler(
                     policy_effect="permit",
                     user=auth_context.user,
                 )
-            return result
+            html = _render_detail_html(request, result, entity_name)
+            return html if html is not None else result
 
         _read_auth.__annotations__ = {
             "id": UUID,
@@ -681,7 +716,8 @@ def create_read_handler(
         result = await service.execute(operation="read", id=id, include=auto_include)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
-        return result
+        html = _render_detail_html(request, result, entity_name)
+        return html if html is not None else result
 
     _read_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
     return _read_noauth
