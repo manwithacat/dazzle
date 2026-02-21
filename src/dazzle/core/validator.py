@@ -1256,6 +1256,21 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
             if proc_step.human_task and proc_step.human_task.surface:
                 used_surfaces.add(proc_step.human_task.surface)
 
+    # Surfaces belonging to entities used in workspace regions are implicitly
+    # alive — entity CRUD surfaces are navigable from workspace detail pages
+    # even when not explicitly wired to a workspace action.
+    workspace_entities: set[str] = set()
+    for workspace in appspec.workspaces:
+        for region in workspace.regions:
+            if region.source and region.source in all_entities:
+                workspace_entities.add(region.source)
+            for src in region.sources:
+                if src in all_entities:
+                    workspace_entities.add(src)
+    for surface in appspec.surfaces:
+        if surface.entity_ref and surface.entity_ref in workspace_entities:
+            used_surfaces.add(surface.name)
+
     unused_surfaces = all_surfaces - used_surfaces
     if unused_surfaces:
         for name in sorted(unused_surfaces):
