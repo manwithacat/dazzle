@@ -327,8 +327,9 @@ def is_money_field_name(field_name: str) -> bool:
     Check if a field name suggests it contains monetary values.
 
     Used by the linter to detect potential float/Decimal money fields.
-    Excludes fields that contain non-monetary qualifiers like 'percentage',
-    'pct', 'ratio', 'share', 'rate', 'factor', 'score', 'count', or 'grade'.
+    Excludes fields with non-monetary qualifiers: 'percentage', 'pct',
+    'ratio', 'factor' anywhere; '_score', '_count', '_grade', '_level',
+    '_rate' as suffixes.
 
     Args:
         field_name: Field name to check
@@ -339,20 +340,14 @@ def is_money_field_name(field_name: str) -> bool:
     name_lower = field_name.lower()
 
     # Exclude fields that are clearly not monetary despite containing
-    # money-like substrings (e.g., "profit_share_percentage", "balance_score")
-    non_monetary = (
-        "percentage",
-        "pct",
-        "ratio",
-        "share",
-        "rate",
-        "factor",
-        "score",
-        "count",
-        "grade",
-        "level",
-    )
-    if any(q in name_lower for q in non_monetary):
+    # money-like substrings (e.g., "profit_share_percentage", "balance_score").
+    # Use suffix matching for ambiguous words to avoid false negatives
+    # (e.g., "revenue_share" IS monetary, but "profit_share_percentage" is not).
+    non_monetary_anywhere = ("percentage", "pct", "ratio", "factor")
+    if any(q in name_lower for q in non_monetary_anywhere):
+        return False
+    non_monetary_suffixes = ("_score", "_count", "_grade", "_level", "_rate")
+    if any(name_lower.endswith(s) for s in non_monetary_suffixes):
         return False
 
     # Direct match

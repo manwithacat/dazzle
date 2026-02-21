@@ -203,8 +203,8 @@ class TestValidateEntities:
     @pytest.mark.parametrize(
         "entity_name,field_name,expected_name",
         [
-            ("Order", "id", "Order"),
-            ("Task", "order", "order"),
+            ("Select", "id", "Select"),
+            ("Task", "delete", "delete"),
         ],
         ids=["entity_name", "field_name"],
     )
@@ -605,7 +605,7 @@ class TestValidateIntegrations:
         "api_refs,actions,syncs,warning_fragment",
         [
             ([], [], [], "doesn't use any APIs"),
-            (["github"], [], [], "no actions or syncs"),
+            (["github"], [], [], "no actions, syncs, or mappings"),
         ],
         ids=["no_apis", "no_actions_or_syncs"],
     )
