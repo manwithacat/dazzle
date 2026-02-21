@@ -1578,3 +1578,84 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_integration_bindings(appspec))
     warnings.extend(_lint_process_effects(appspec))
     return warnings
+
+
+# =============================================================================
+# Preview construct validation (parsed but not yet enforced at runtime)
+# =============================================================================
+
+
+def validate_webhooks(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate webhook definitions and warn about runtime status."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not appspec.webhooks:
+        return errors, warnings
+
+    entity_names = {e.name for e in appspec.domain.entities}
+
+    warnings.append(
+        f"[Preview] {len(appspec.webhooks)} webhook(s) defined. "
+        "Webhook delivery is not yet enforced at runtime."
+    )
+
+    for wh in appspec.webhooks:
+        if wh.entity and wh.entity not in entity_names:
+            errors.append(f"Webhook '{wh.name}' references unknown entity '{wh.entity}'.")
+        if not wh.events:
+            warnings.append(f"Webhook '{wh.name}' has no events specified.")
+        if not wh.url:
+            warnings.append(f"Webhook '{wh.name}' has no URL configured.")
+
+    return errors, warnings
+
+
+def validate_approvals(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate approval definitions and warn about runtime status."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not appspec.approvals:
+        return errors, warnings
+
+    entity_names = {e.name for e in appspec.domain.entities}
+
+    warnings.append(
+        f"[Preview] {len(appspec.approvals)} approval(s) defined. "
+        "Approval gates are not yet enforced at runtime."
+    )
+
+    for ap in appspec.approvals:
+        if ap.entity and ap.entity not in entity_names:
+            errors.append(f"Approval '{ap.name}' references unknown entity '{ap.entity}'.")
+        if not ap.approver_role:
+            warnings.append(f"Approval '{ap.name}' has no approver_role specified.")
+        if not ap.outcomes:
+            warnings.append(f"Approval '{ap.name}' has no outcomes defined.")
+
+    return errors, warnings
+
+
+def validate_slas(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate SLA definitions and warn about runtime status."""
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    if not appspec.slas:
+        return errors, warnings
+
+    entity_names = {e.name for e in appspec.domain.entities}
+
+    warnings.append(
+        f"[Preview] {len(appspec.slas)} SLA(s) defined. "
+        "SLA monitoring is not yet enforced at runtime."
+    )
+
+    for sla in appspec.slas:
+        if sla.entity and sla.entity not in entity_names:
+            errors.append(f"SLA '{sla.name}' references unknown entity '{sla.entity}'.")
+        if not sla.tiers:
+            warnings.append(f"SLA '{sla.name}' has no tiers defined.")
+
+    return errors, warnings

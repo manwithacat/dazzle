@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -106,14 +107,22 @@ def save_processes(
     container = ProcessesContainer(version=version, processes=processes)
 
     processes_file = get_processes_file(project_root)
-    processes_file.write_text(
-        json.dumps(
-            container.model_dump(mode="json"),
-            indent=2,
-            ensure_ascii=False,
-        ),
-        encoding="utf-8",
+    content = json.dumps(
+        container.model_dump(mode="json"),
+        indent=2,
+        ensure_ascii=False,
     )
+
+    # Atomic write: write to temp file then rename to prevent corruption
+    # on crash (rename is atomic on POSIX filesystems).
+    fd, tmp_path = tempfile.mkstemp(dir=str(processes_dir), suffix=".tmp", prefix=".processes_")
+    try:
+        with open(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        Path(tmp_path).replace(processes_file)
+    except BaseException:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise
 
     return processes_file
 

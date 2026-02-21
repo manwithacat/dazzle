@@ -1,6 +1,7 @@
 from . import ir
 from .validator import (
     extended_lint,
+    validate_approvals,
     validate_entities,
     validate_event_payload_secrets,
     validate_experiences,
@@ -10,8 +11,10 @@ from .validator import (
     validate_money_fields,
     validate_notifications,
     validate_services,
+    validate_slas,
     validate_surfaces,
     validate_ux_specs,
+    validate_webhooks,
 )
 
 
@@ -95,6 +98,19 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
 
     # Notification validation (v0.34.0)
     errors, warnings = validate_notifications(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Preview construct validation (v0.25.0 — parsed but not yet runtime-enforced)
+    errors, warnings = validate_webhooks(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_approvals(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_slas(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
