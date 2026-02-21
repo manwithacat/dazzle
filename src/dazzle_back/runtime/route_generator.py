@@ -1172,6 +1172,7 @@ class RouteGenerator:
         entity_list_projections: dict[str, list[str]] | None = None,
         entity_auto_includes: dict[str, list[str]] | None = None,
         entity_htmx_meta: dict[str, dict[str, Any]] | None = None,
+        entity_audit_configs: dict[str, Any] | None = None,
     ):
         """
         Initialize the route generator.
@@ -1190,6 +1191,7 @@ class RouteGenerator:
             entity_list_projections: Optional dict mapping entity names to projected field lists
             entity_auto_includes: Optional dict mapping entity names to auto-eager-loaded relations
             entity_htmx_meta: Optional dict mapping entity names to HTMX rendering metadata
+            entity_audit_configs: Optional dict of entity_name -> AuditConfig for per-entity filtering
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -1207,6 +1209,7 @@ class RouteGenerator:
         self.entity_list_projections = entity_list_projections or {}
         self.entity_auto_includes = entity_auto_includes or {}
         self.entity_htmx_meta = entity_htmx_meta or {}
+        self.entity_audit_configs = entity_audit_configs or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -1250,8 +1253,31 @@ class RouteGenerator:
         _entity_slug = (entity_name or "").lower().replace("_", "-")
 
         # Resolve audit logger and Cedar access spec for this entity
-        _audit = self.audit_logger
         _cedar_spec = self.cedar_access_specs.get(entity_name or "")
+        _audit_config = self.entity_audit_configs.get(entity_name or "")
+        # Per-entity audit gate: if entity has an AuditConfig, respect its
+        # `enabled` flag. Entities with Cedar access specs always get audit
+        # logging (access-decision logging). Entities with no audit config
+        # and no Cedar spec get no logging.
+        _audit_enabled = False
+        if _audit_config and getattr(_audit_config, "enabled", False):
+            _audit_enabled = True
+        elif _cedar_spec is not None:
+            # Cedar entities always log access decisions
+            _audit_enabled = True
+        _audit = self.audit_logger if _audit_enabled else None
+        # Pre-compute which operations this entity wants audited (empty = all)
+        _audit_ops: set[str] = set()
+        if _audit_config and getattr(_audit_config, "operations", None):
+            _audit_ops = {str(op) for op in _audit_config.operations}
+
+        def _audit_for(op: str) -> Any:
+            """Return the audit logger if this operation should be audited."""
+            if _audit is None:
+                return None
+            if _audit_ops and op not in _audit_ops:
+                return None
+            return _audit
 
         # POST -> CREATE
         if endpoint.method == HttpMethod.POST or operation_kind == OperationKind.CREATE:
@@ -1265,7 +1291,7 @@ class RouteGenerator:
                     require_auth_by_default=self.require_auth_by_default,
                     entity_name=entity_name or "Item",
                     entity_slug=_entity_slug,
-                    audit_logger=_audit,
+                    audit_logger=_audit_for("create"),
                     cedar_access_spec=_cedar_spec,
                     optional_auth_dep=self.optional_auth_dep,
                 )
@@ -1284,7 +1310,7 @@ class RouteGenerator:
                 auth_dep=self.auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
                 entity_name=entity_name or "Item",
-                audit_logger=_audit,
+                audit_logger=_audit_for("read"),
                 cedar_access_spec=_cedar_spec,
                 optional_auth_dep=self.optional_auth_dep,
                 auto_include=includes,
@@ -1333,7 +1359,7 @@ class RouteGenerator:
                     auth_dep=self.auth_dep,
                     require_auth_by_default=self.require_auth_by_default,
                     entity_name=entity_name or "Item",
-                    audit_logger=_audit,
+                    audit_logger=_audit_for("update"),
                     cedar_access_spec=_cedar_spec,
                     optional_auth_dep=self.optional_auth_dep,
                 )
@@ -1348,7 +1374,7 @@ class RouteGenerator:
                 auth_dep=self.auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
                 entity_name=entity_name or "Item",
-                audit_logger=_audit,
+                audit_logger=_audit_for("delete"),
                 cedar_access_spec=_cedar_spec,
                 optional_auth_dep=self.optional_auth_dep,
             )

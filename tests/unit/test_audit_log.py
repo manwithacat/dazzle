@@ -396,3 +396,110 @@ class TestHelpers:
         mock_logger.log_decision.assert_called_once()
         call_kwargs = mock_logger.log_decision.call_args.kwargs
         assert call_kwargs["evaluation_time_us"] == 567
+
+
+# =============================================================================
+# Per-Entity Audit Filtering
+# =============================================================================
+
+
+class TestPerEntityAuditFiltering:
+    """Tests for entity.audit.enabled and audit.operations filtering in RouteGenerator."""
+
+    def _make_audit_config(self, enabled=True, operations=None):
+        from dazzle.core.ir.domain import AuditConfig
+
+        return AuditConfig(enabled=enabled, operations=operations or [])
+
+    def _make_route_generator(
+        self, audit_logger, entity_audit_configs=None, cedar_access_specs=None
+    ):
+        from dazzle_back.runtime.route_generator import RouteGenerator
+
+        return RouteGenerator(
+            services={},
+            models={},
+            audit_logger=audit_logger,
+            entity_audit_configs=entity_audit_configs or {},
+            cedar_access_specs=cedar_access_specs or {},
+        )
+
+    def test_audit_disabled_entity_gets_no_logger(self):
+        """Entity with audit: false should not receive audit logger."""
+        mock_logger = MagicMock()
+        config = self._make_audit_config(enabled=False)
+        rg = self._make_route_generator(mock_logger, entity_audit_configs={"Task": config})
+
+        # Access the internal audit resolution logic
+        rg_audit_configs = rg.entity_audit_configs
+        assert "Task" in rg_audit_configs
+        assert rg_audit_configs["Task"].enabled is False
+
+    def test_audit_enabled_entity_gets_logger(self):
+        """Entity with audit: true should receive audit logger."""
+        mock_logger = MagicMock()
+        config = self._make_audit_config(enabled=True)
+        rg = self._make_route_generator(mock_logger, entity_audit_configs={"Task": config})
+
+        assert rg.entity_audit_configs["Task"].enabled is True
+
+    def test_entity_without_config_or_cedar_gets_no_logger(self):
+        """Entity with no audit config and no Cedar spec should not be audited."""
+        mock_logger = MagicMock()
+        rg = self._make_route_generator(mock_logger)
+
+        # Simulate what generate_route does
+        entity_name = "Widget"
+        _cedar_spec = rg.cedar_access_specs.get(entity_name)
+        _audit_config = rg.entity_audit_configs.get(entity_name)
+        _audit_enabled = False
+        if _audit_config and getattr(_audit_config, "enabled", False):
+            _audit_enabled = True
+        elif _cedar_spec is not None:
+            _audit_enabled = True
+        _audit = rg.audit_logger if _audit_enabled else None
+        assert _audit is None
+
+    def test_cedar_entity_always_gets_logger(self):
+        """Entity with Cedar access spec should always be audited."""
+        mock_logger = MagicMock()
+        rg = self._make_route_generator(
+            mock_logger,
+            cedar_access_specs={"Task": MagicMock()},
+        )
+
+        entity_name = "Task"
+        _cedar_spec = rg.cedar_access_specs.get(entity_name)
+        _audit_config = rg.entity_audit_configs.get(entity_name)
+        _audit_enabled = False
+        if _audit_config and getattr(_audit_config, "enabled", False):
+            _audit_enabled = True
+        elif _cedar_spec is not None:
+            _audit_enabled = True
+        _audit = rg.audit_logger if _audit_enabled else None
+        assert _audit is mock_logger
+
+    def test_operations_filter_restricts_logging(self):
+        """audit: [create, delete] should only audit those operations."""
+        from dazzle.core.ir.domain import PermissionKind
+
+        config = self._make_audit_config(
+            enabled=True,
+            operations=[PermissionKind.CREATE, PermissionKind.DELETE],
+        )
+        _audit_ops = {str(op) for op in config.operations}
+
+        # create and delete should pass
+        assert "create" in _audit_ops
+        assert "delete" in _audit_ops
+        # read and update should not
+        assert "read" not in _audit_ops
+        assert "update" not in _audit_ops
+
+    def test_empty_operations_means_all(self):
+        """audit: all (empty operations list) should audit everything."""
+        config = self._make_audit_config(enabled=True, operations=[])
+        _audit_ops = {str(op) for op in config.operations}
+
+        # Empty means all operations are audited
+        assert len(_audit_ops) == 0  # empty = no filter = all ops

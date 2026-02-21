@@ -1748,6 +1748,13 @@ class DazzleBackendApp:
                 "entity_name": entity.name,
             }
 
+        # Build per-entity audit config mapping
+        entity_audit_configs: dict[str, Any] = {}
+        for entity in self.spec.entities:
+            _ac = getattr(entity, "audit", None)
+            if _ac is not None:
+                entity_audit_configs[entity.name] = _ac
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -1762,6 +1769,7 @@ class DazzleBackendApp:
             entity_list_projections=self._entity_list_projections,
             entity_auto_includes=self._entity_auto_includes,
             entity_htmx_meta=entity_htmx_meta,
+            entity_audit_configs=entity_audit_configs,
         )
         router = route_generator.generate_all_routes(
             self.spec.endpoints,
