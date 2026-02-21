@@ -30,16 +30,14 @@ class TestLoginWithCredentials:
     def test_admin_uses_env_vars(self, runner: DazzleClient) -> None:
         resp = MagicMock(status_code=200)
         resp.json.return_value = {"token": "admin-tok"}
-        runner.client.post = MagicMock(return_value=resp)
+        runner.client.request = MagicMock(return_value=resp)
 
         with patch.dict(
             "os.environ", {"DAZZLE_TEST_EMAIL": "a@b.com", "DAZZLE_TEST_PASSWORD": "pw"}
         ):
             assert runner._login_with_credentials("admin") is True
-        runner.client.post.assert_called_once()
-        call_json = runner.client.post.call_args.kwargs.get("json") or runner.client.post.call_args[
-            1
-        ].get("json")
+        runner.client.request.assert_called_once()
+        call_json = runner.client.request.call_args.kwargs.get("json")
         assert call_json["email"] == "a@b.com"
 
     def test_non_admin_ignores_env_vars(self, runner: DazzleClient, tmp_path: Path) -> None:
@@ -50,7 +48,7 @@ class TestLoginWithCredentials:
 
         resp = MagicMock(status_code=200)
         resp.json.return_value = {"token": "cust-tok"}
-        runner.client.post = MagicMock(return_value=resp)
+        runner.client.request = MagicMock(return_value=resp)
 
         with (
             patch.dict(
@@ -59,9 +57,7 @@ class TestLoginWithCredentials:
             patch("dazzle.testing.test_runner.Path", return_value=creds_path),
         ):
             assert runner._login_with_credentials("customer") is True
-        call_json = runner.client.post.call_args.kwargs.get("json") or runner.client.post.call_args[
-            1
-        ].get("json")
+        call_json = runner.client.request.call_args.kwargs.get("json")
         assert call_json["email"] == "cust@test"
 
     def test_persona_from_creds_file(self, runner: DazzleClient, tmp_path: Path) -> None:
@@ -77,16 +73,14 @@ class TestLoginWithCredentials:
 
         resp = MagicMock(status_code=200)
         resp.json.return_value = {"token": "agent-tok"}
-        runner.client.post = MagicMock(return_value=resp)
+        runner.client.request = MagicMock(return_value=resp)
 
         with (
             patch.dict("os.environ", {}, clear=True),
             patch("dazzle.testing.test_runner.Path", return_value=creds_path),
         ):
             assert runner._login_with_credentials("agent") is True
-        call_json = runner.client.post.call_args.kwargs.get("json") or runner.client.post.call_args[
-            1
-        ].get("json")
+        call_json = runner.client.request.call_args.kwargs.get("json")
         assert call_json["email"] == "agent@test"
         assert call_json["password"] == "agpw"
 
@@ -110,16 +104,14 @@ class TestLoginWithCredentials:
 
         resp = MagicMock(status_code=200)
         resp.json.return_value = {"token": "tok"}
-        runner.client.post = MagicMock(return_value=resp)
+        runner.client.request = MagicMock(return_value=resp)
 
         with (
             patch.dict("os.environ", {}, clear=True),
             patch("dazzle.testing.test_runner.Path", return_value=creds_path),
         ):
             assert runner._login_with_credentials("admin") is True
-        call_json = runner.client.post.call_args.kwargs.get("json") or runner.client.post.call_args[
-            1
-        ].get("json")
+        call_json = runner.client.request.call_args.kwargs.get("json")
         assert call_json["email"] == "top@test"
 
     def test_non_admin_no_top_level_fallback(self, runner: DazzleClient, tmp_path: Path) -> None:

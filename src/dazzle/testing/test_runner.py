@@ -109,6 +109,9 @@ class TestRunResult:
 class DazzleClient:
     """HTTP client for interacting with a DNR server."""
 
+    MAX_RETRIES = 3
+    BACKOFF_SECONDS = (1.0, 2.0, 4.0)
+
     def __init__(self, api_url: str, ui_url: str, timeout: float = 10.0):
         self.api_url = api_url.rstrip("/")
         self.ui_url = ui_url.rstrip("/")
@@ -116,6 +119,31 @@ class DazzleClient:
         self._auth_token: str | None = None
         self._test_routes_available: bool | None = None  # None = unknown
         self._created_entities: list[tuple[str, str]] = []  # (entity_name, entity_id)
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+        """HTTP request with automatic retry on timeout.
+
+        Retries up to MAX_RETRIES times with exponential backoff (1s, 2s, 4s)
+        when a request times out. Non-timeout errors are raised immediately.
+        """
+        last_exc: httpx.TimeoutException | None = None
+        for attempt in range(self.MAX_RETRIES + 1):
+            try:
+                return self.client.request(method, url, **kwargs)
+            except httpx.TimeoutException as exc:
+                last_exc = exc
+                if attempt < self.MAX_RETRIES:
+                    delay = self.BACKOFF_SECONDS[attempt]
+                    logger.debug(
+                        "Timeout on %s %s (attempt %d/%d), retrying in %.1fs",
+                        method,
+                        url,
+                        attempt + 1,
+                        self.MAX_RETRIES + 1,
+                        delay,
+                    )
+                    time.sleep(delay)
+        raise last_exc  # type: ignore[misc]
 
     def close(self) -> None:
         self.client.close()
@@ -146,7 +174,7 @@ class DazzleClient:
         if self._test_routes_available is False:
             return False
         try:
-            resp = self.client.post(f"{self.api_url}/__test__/reset")
+            resp = self._request("POST", f"{self.api_url}/__test__/reset")
             if resp.status_code == 404:
                 self._test_routes_available = False
                 return False
@@ -215,7 +243,9 @@ class DazzleClient:
             if not fixtures:
                 return True  # Nothing to seed
 
-            resp = self.client.post(f"{self.api_url}/__test__/seed", json={"fixtures": fixtures})
+            resp = self._request(
+                "POST", f"{self.api_url}/__test__/seed", json={"fixtures": fixtures}
+            )
             return resp.status_code == 200
         except Exception:
             return False
@@ -231,7 +261,8 @@ class DazzleClient:
         # Try test endpoint first (unless we know it's unavailable)
         if self._test_routes_available is not False:
             try:
-                resp = self.client.post(
+                resp = self._request(
+                    "POST",
                     f"{self.api_url}/__test__/authenticate",
                     json={"role": persona, "username": f"test_{persona}"},
                 )
@@ -288,7 +319,8 @@ class DazzleClient:
             return False
 
         try:
-            resp = self.client.post(
+            resp = self._request(
+                "POST",
                 f"{self.api_url}/auth/login",
                 json={"email": email, "password": password},
             )
@@ -309,7 +341,8 @@ class DazzleClient:
         try:
             # Prefer test endpoint (returns raw JSON)
             if self._test_routes_available is not False:
-                resp = self.client.get(
+                resp = self._request(
+                    "GET",
                     f"{self.api_url}/__test__/entity/{entity_name}",
                     headers=self._auth_headers(),
                 )
@@ -320,7 +353,8 @@ class DazzleClient:
 
             # Fallback to standard list endpoint
             endpoint = self._entity_endpoint(entity_name)
-            resp = self.client.get(
+            resp = self._request(
+                "GET",
                 f"{self.api_url}{endpoint}",
                 headers=self._auth_headers(),
             )
@@ -342,8 +376,8 @@ class DazzleClient:
             if self._test_routes_available is not False:
                 fixture_id = f"test-{entity_name.lower()}-{int(time.time())}"
                 fixtures = [{"id": fixture_id, "entity": entity_name, "data": data}]
-                resp = self.client.post(
-                    f"{self.api_url}/__test__/seed", json={"fixtures": fixtures}
+                resp = self._request(
+                    "POST", f"{self.api_url}/__test__/seed", json={"fixtures": fixtures}
                 )
                 if resp.status_code == 200:
                     result: dict[str, Any] = resp.json()
@@ -357,8 +391,8 @@ class DazzleClient:
 
             # Standard CRUD endpoint with auth
             endpoint = self._entity_endpoint(entity_name)
-            resp = self.client.post(
-                f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
+            resp = self._request(
+                "POST", f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
             )
             if resp.status_code in (200, 201):
                 result_data = dict(resp.json())
@@ -386,8 +420,8 @@ class DazzleClient:
         """Update an entity."""
         try:
             endpoint = f"{self._entity_endpoint(entity_name)}/{entity_id}"
-            resp = self.client.put(
-                f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
+            resp = self._request(
+                "PUT", f"{self.api_url}{endpoint}", json=data, headers=self._auth_headers()
             )
             if resp.status_code == 200:
                 return dict(resp.json())
@@ -399,8 +433,8 @@ class DazzleClient:
         """Delete an entity by ID. Tries __test__ route first, then standard REST."""
         try:
             if self._test_routes_available is not False:
-                resp = self.client.delete(
-                    f"{self.api_url}/__test__/entity/{entity_name}/{entity_id}"
+                resp = self._request(
+                    "DELETE", f"{self.api_url}/__test__/entity/{entity_name}/{entity_id}"
                 )
                 if resp.status_code == 200:
                     return True
@@ -408,7 +442,8 @@ class DazzleClient:
                     self._test_routes_available = False
 
             endpoint = self._entity_endpoint(entity_name)
-            resp = self.client.delete(
+            resp = self._request(
+                "DELETE",
                 f"{self.api_url}{endpoint}/{entity_id}",
                 headers=self._auth_headers(),
             )
@@ -447,7 +482,7 @@ class DazzleClient:
         """Get the app spec."""
         try:
             # Use /spec endpoint which returns full spec including workspaces
-            resp = self.client.get(f"{self.api_url}/spec")
+            resp = self._request("GET", f"{self.api_url}/spec")
             if resp.status_code == 200:
                 return dict(resp.json())
             return None
@@ -457,7 +492,7 @@ class DazzleClient:
     def get_entity_schema(self, entity_name: str) -> dict[str, Any] | None:
         """Get entity schema including required fields."""
         try:
-            resp = self.client.get(f"{self.api_url}/_dazzle/entity/{entity_name}")
+            resp = self._request("GET", f"{self.api_url}/_dazzle/entity/{entity_name}")
             if resp.status_code == 200:
                 return dict(resp.json())
             return None
@@ -622,7 +657,7 @@ class DazzleClient:
     def check_ui_loads(self) -> bool:
         """Check if the UI loads successfully."""
         try:
-            resp = self.client.get(self.ui_url)
+            resp = self._request("GET", self.ui_url)
             return resp.status_code == 200 and "<title>" in resp.text
         except Exception:
             return False
@@ -646,7 +681,6 @@ class TestRunner:
         ui_url: str | None = None,
         persona: str | None = None,
         cleanup: bool = False,
-        http_timeout: float = 10.0,
     ):
         self.project_path = project_path
         self.api_port = api_port
@@ -658,7 +692,6 @@ class TestRunner:
         self._server_process: subprocess.Popen[str] | None = None
         self._persona = persona
         self._cleanup = cleanup
-        self._http_timeout = http_timeout
 
     def _inject_persona_session(self) -> None:
         """Inject stored persona session cookie into the client."""
@@ -769,9 +802,7 @@ class TestRunner:
         print(f"  Found {len(designs)} test designs")
 
         # Initialize client
-        self.client = DazzleClient(
-            api_url=self.api_url, ui_url=self.ui_url, timeout=self._http_timeout
-        )
+        self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
 
         # Wait for server
         if not self.client.wait_for_ready(max_wait=20):
@@ -855,9 +886,7 @@ class TestRunner:
             return result
 
         # Initialize client
-        self.client = DazzleClient(
-            api_url=self.api_url, ui_url=self.ui_url, timeout=self._http_timeout
-        )
+        self.client = DazzleClient(api_url=self.api_url, ui_url=self.ui_url)
 
         # Inject persona session cookie if configured
         if self._persona:
@@ -1154,8 +1183,8 @@ class TestRunner:
                     route = data.get("route", f"/app/workspaces/{workspace_name}")
                     try:
                         # Check if UI route responds
-                        resp = self.client.client.get(
-                            f"{self.client.ui_url}{route}", follow_redirects=True
+                        resp = self.client._request(
+                            "GET", f"{self.client.ui_url}{route}", follow_redirects=True
                         )
                         # 200/304 = success, 401 = protected (exists but needs auth)
                         if resp.status_code in (200, 304, 401):
@@ -1232,7 +1261,7 @@ class TestRunner:
             elif action == "post":
                 # HTTP POST request (used by auth login/logout tests)
                 url = f"{self.client.ui_url}{target}"
-                resp = self.client.client.post(url, data=resolved_data, follow_redirects=False)
+                resp = self.client._request("POST", url, data=resolved_data, follow_redirects=False)
                 context["last_response"] = resp
                 return StepResult(
                     action=action,
@@ -1245,7 +1274,7 @@ class TestRunner:
             elif action == "post_json":
                 # HTTP POST request with JSON body (used by auth login tests)
                 url = f"{self.client.api_url}{target}"
-                resp = self.client.client.post(url, json=resolved_data, follow_redirects=False)
+                resp = self.client._request("POST", url, json=resolved_data, follow_redirects=False)
                 context["last_response"] = resp
                 return StepResult(
                     action=action,
@@ -1269,7 +1298,7 @@ class TestRunner:
             elif action == "get":
                 # HTTP GET request (used by session/post-logout tests)
                 url = f"{self.client.ui_url}{target}"
-                resp = self.client.client.get(url, follow_redirects=False)
+                resp = self.client._request("GET", url, follow_redirects=False)
                 context["last_response"] = resp
                 return StepResult(
                     action=action,
@@ -1284,7 +1313,8 @@ class TestRunner:
                 cookie_name = resolved_data.get("cookie", "dazzle_session")
                 cookie_value = resolved_data.get("value", "invalid-token")
                 url = f"{self.client.ui_url}{target}"
-                resp = self.client.client.get(
+                resp = self.client._request(
+                    "GET",
                     url,
                     cookies={cookie_name: cookie_value},
                     follow_redirects=False,

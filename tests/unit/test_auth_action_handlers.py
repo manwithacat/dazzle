@@ -67,7 +67,7 @@ def _make_response(
 class TestPostAction:
     def test_post_returns_passed_with_status(self, runner: TestRunner) -> None:
         resp = _make_response(status_code=200)
-        runner.client.client.post.return_value = resp
+        runner.client._request = MagicMock(return_value=resp)
 
         result = runner.execute_step(
             {
@@ -79,11 +79,11 @@ class TestPostAction:
         )
         assert result.result == TestResult.PASSED
         assert "200" in result.message
-        runner.client.client.post.assert_called_once()
+        runner.client._request.assert_called_once()
 
     def test_post_stores_last_response_in_context(self, runner: TestRunner) -> None:
         resp = _make_response(status_code=401)
-        runner.client.client.post.return_value = resp
+        runner.client._request = MagicMock(return_value=resp)
         context: dict = {}
 
         runner.execute_step(
@@ -97,7 +97,7 @@ class TestPostAction:
 class TestGetAction:
     def test_get_returns_passed(self, runner: TestRunner) -> None:
         resp = _make_response(status_code=200)
-        runner.client.client.get.return_value = resp
+        runner.client._request = MagicMock(return_value=resp)
 
         result = runner.execute_step(
             {"action": "get", "target": "/app"},
@@ -108,7 +108,7 @@ class TestGetAction:
 
     def test_get_stores_last_response(self, runner: TestRunner) -> None:
         resp = _make_response(status_code=302)
-        runner.client.client.get.return_value = resp
+        runner.client._request = MagicMock(return_value=resp)
         context: dict = {}
 
         runner.execute_step(
@@ -122,7 +122,7 @@ class TestGetAction:
 class TestGetWithCookieAction:
     def test_sends_custom_cookie(self, runner: TestRunner) -> None:
         resp = _make_response(status_code=401)
-        runner.client.client.get.return_value = resp
+        runner.client._request = MagicMock(return_value=resp)
 
         result = runner.execute_step(
             {
@@ -134,8 +134,8 @@ class TestGetWithCookieAction:
         )
         assert result.result == TestResult.PASSED
         # Verify cookie was passed
-        runner.client.client.get.assert_called_once()
-        call_kwargs = runner.client.client.get.call_args
+        runner.client._request.assert_called_once()
+        call_kwargs = runner.client._request.call_args
         assert call_kwargs.kwargs["cookies"] == {"dazzle_session": "invalid-token"}
 
 

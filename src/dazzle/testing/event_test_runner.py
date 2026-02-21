@@ -134,11 +134,27 @@ class EventTestRunResult:
 class EventTestClient:
     """Client for event testing against a DNR server."""
 
+    MAX_RETRIES = 3
+    BACKOFF_SECONDS = (1.0, 2.0, 4.0)
+
     def __init__(self, api_url: str, timeout: float = 10.0):
         self.api_url = api_url.rstrip("/")
         self.client = httpx.Client(timeout=timeout)
         self._event_log: list[EventLogEntry] = []
         self._offset = 0
+
+    def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+        """HTTP request with automatic retry on timeout."""
+        last_exc: httpx.TimeoutException | None = None
+        for attempt in range(self.MAX_RETRIES + 1):
+            try:
+                return self.client.request(method, url, **kwargs)
+            except httpx.TimeoutException as exc:
+                last_exc = exc
+                if attempt < self.MAX_RETRIES:
+                    delay = self.BACKOFF_SECONDS[attempt]
+                    time.sleep(delay)
+        raise last_exc  # type: ignore[misc]
 
     def close(self) -> None:
         self.client.close()
@@ -146,7 +162,7 @@ class EventTestClient:
     def reset(self) -> bool:
         """Reset database and event log."""
         try:
-            resp = self.client.post(f"{self.api_url}/__test__/reset")
+            resp = self._request("POST", f"{self.api_url}/__test__/reset")
             self._event_log = []
             self._offset = 0
             return resp.status_code == 200
@@ -166,7 +182,9 @@ class EventTestClient:
             self._offset += 1
 
             # Call the event ingestion endpoint
-            resp = self.client.post(f"{self.api_url}/__test__/events/ingest", json=event.to_dict())
+            resp = self._request(
+                "POST", f"{self.api_url}/__test__/events/ingest", json=event.to_dict()
+            )
 
             if resp.status_code == 200:
                 self._event_log.append(event)
@@ -221,7 +239,8 @@ class EventTestClient:
     def _create_entity(self, entity_name: str, data: dict[str, Any]) -> bool:
         """Create an entity via seed endpoint."""
         fixture_id = f"evt-{entity_name.lower()}-{int(time.time() * 1000)}"
-        resp = self.client.post(
+        resp = self._request(
+            "POST",
             f"{self.api_url}/__test__/seed",
             json={"fixtures": [{"id": fixture_id, "entity": entity_name, "data": data}]},
         )
@@ -232,7 +251,7 @@ class EventTestClient:
         from dazzle.core.strings import to_api_plural
 
         endpoint = f"/{to_api_plural(entity_name)}/{entity_id}"
-        resp = self.client.put(f"{self.api_url}{endpoint}", json=data)
+        resp = self._request("PUT", f"{self.api_url}{endpoint}", json=data)
         return resp.status_code == 200
 
     def _delete_entity(self, entity_name: str, entity_id: str) -> bool:
@@ -240,13 +259,13 @@ class EventTestClient:
         from dazzle.core.strings import to_api_plural
 
         endpoint = f"/{to_api_plural(entity_name)}/{entity_id}"
-        resp = self.client.delete(f"{self.api_url}{endpoint}")
+        resp = self._request("DELETE", f"{self.api_url}{endpoint}")
         return resp.status_code in (200, 204)
 
     def get_entity_count(self, entity_name: str) -> int:
         """Get count of entities."""
         try:
-            resp = self.client.get(f"{self.api_url}/__test__/entity/{entity_name}")
+            resp = self._request("GET", f"{self.api_url}/__test__/entity/{entity_name}")
             if resp.status_code == 200:
                 return len(resp.json())
             return 0
@@ -258,7 +277,7 @@ class EventTestClient:
         try:
             from dazzle.core.strings import to_api_plural
 
-            resp = self.client.get(f"{self.api_url}/{to_api_plural(entity_name)}/{entity_id}")
+            resp = self._request("GET", f"{self.api_url}/{to_api_plural(entity_name)}/{entity_id}")
             if resp.status_code == 200:
                 return resp.json()
             return None
@@ -268,7 +287,7 @@ class EventTestClient:
     def get_entities(self, entity_name: str) -> Any:
         """Get all entities of a type."""
         try:
-            resp = self.client.get(f"{self.api_url}/__test__/entity/{entity_name}")
+            resp = self._request("GET", f"{self.api_url}/__test__/entity/{entity_name}")
             if resp.status_code == 200:
                 return resp.json()
             return []
@@ -278,8 +297,8 @@ class EventTestClient:
     def get_emitted_events(self, since_offset: int = 0) -> Any:
         """Get events emitted by the system since offset."""
         try:
-            resp = self.client.get(
-                f"{self.api_url}/__test__/events", params={"since_offset": since_offset}
+            resp = self._request(
+                "GET", f"{self.api_url}/__test__/events", params={"since_offset": since_offset}
             )
             if resp.status_code == 200:
                 return resp.json()
@@ -293,7 +312,7 @@ class EventTestClient:
             url = f"{self.api_url}/__test__/processes/{process_name}"
             if run_id:
                 url += f"/{run_id}"
-            resp = self.client.get(url)
+            resp = self._request("GET", url)
             if resp.status_code == 200:
                 return resp.json()
             return None
@@ -373,9 +392,9 @@ class EventTestClient:
 class EventTestRunner:
     """Run event flow tests against a DNR server."""
 
-    def __init__(self, api_url: str, http_timeout: float = 10.0):
+    def __init__(self, api_url: str):
         self.api_url = api_url
-        self.client = EventTestClient(api_url, timeout=http_timeout)
+        self.client = EventTestClient(api_url)
 
     def close(self) -> None:
         self.client.close()

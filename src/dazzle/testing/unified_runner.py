@@ -164,7 +164,6 @@ class UnifiedTestRunner:
         server_timeout: int = 30,
         base_url: str | None = None,
         cleanup: bool = False,
-        http_timeout: float = 10.0,
     ):
         self.project_path = project_path.resolve()
         self.designs_path = self.project_path / "dsl" / "tests" / "dsl_generated_tests.json"
@@ -175,7 +174,6 @@ class UnifiedTestRunner:
         self.server_timeout = server_timeout
         self.base_url = base_url
         self._cleanup = cleanup
-        self._http_timeout = http_timeout
         self.api_url: str | None = None
         self.ui_url: str | None = None
         if base_url:
@@ -427,7 +425,6 @@ class UnifiedTestRunner:
             ui_url=self.ui_url,
             persona=persona,
             cleanup=self._cleanup,
-            http_timeout=self._http_timeout,
         )
 
         # Merge generated tests with existing tests
@@ -483,7 +480,7 @@ class UnifiedTestRunner:
         print(f"  Running {len(test_cases)} event flow tests...")
 
         api_url = self.api_url or f"http://localhost:{self.api_port}"
-        runner = EventTestRunner(api_url, http_timeout=self._http_timeout)
+        runner = EventTestRunner(api_url)
         try:
             return runner.run_all(test_cases)
         finally:
