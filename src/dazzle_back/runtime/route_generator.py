@@ -42,13 +42,16 @@ APIRouter = _APIRouter
 
 
 def _is_htmx_request(request: Any) -> bool:
-    """Check if this is an HTMX request that wants HTML fragments."""
+    """Check if this is a genuine HTMX request (HX-Request header present)."""
     from dazzle_back.runtime.htmx_response import HtmxDetails
 
-    htmx = HtmxDetails.from_request(request)
-    if htmx.is_htmx:
+    return HtmxDetails.from_request(request).is_htmx
+
+
+def _wants_html(request: Any) -> bool:
+    """Check if the client wants an HTML response (HTMX or browser navigation)."""
+    if _is_htmx_request(request):
         return True
-    # Fallback: Accept header for non-HTMX HTML clients
     if hasattr(request, "headers"):
         accept = request.headers.get("Accept", "")
         return "text/html" in accept
@@ -590,11 +593,13 @@ async def _list_handler_body(
 
 
 def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
-    """Render a detail HTML fragment for HTMX/browser requests.
+    """Render a detail view for HTMX or browser requests.
 
-    Returns HTMLResponse if rendering succeeds, None otherwise.
+    - HTMX request → bare HTML fragment (for partial swap)
+    - Direct browser navigation → full page with app shell (#349)
+    - API client (JSON) → None (let FastAPI serialize)
     """
-    if not _is_htmx_request(request):
+    if not _wants_html(request):
         return None
     try:
         from dazzle_ui.runtime.template_renderer import render_fragment
@@ -609,12 +614,27 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
         else:
             return None
 
-        html = render_fragment(
+        fragment_html = render_fragment(
             "fragments/detail_fields.html",
             item=item,
             entity_name=entity_name,
         )
-        return HTMLResponse(content=html)
+
+        if _is_htmx_request(request):
+            # HTMX partial swap: return bare fragment
+            return HTMLResponse(content=fragment_html)
+
+        # Direct browser navigation: wrap fragment in a full page (#349)
+        from dazzle_ui.runtime.template_renderer import get_jinja_env
+
+        env = get_jinja_env()
+        wrapper_source = (  # noqa: UP031
+            "{%% extends 'layouts/single_column.html' %%}{%% block content %%}%s{%% endblock %%}"
+        ) % fragment_html
+        full_html = env.from_string(wrapper_source).render(
+            page_title=f"{entity_name} Detail",
+        )
+        return HTMLResponse(content=full_html)
     except ImportError:
         return None  # Template renderer not available
     except Exception:
