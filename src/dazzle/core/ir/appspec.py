@@ -164,6 +164,8 @@ class AppSpec(BaseModel):
     islands: list[IslandSpec] = Field(default_factory=list)
     # Notifications (v0.34.0)
     notifications: list[NotificationSpec] = Field(default_factory=list)
+    # Global audit trail (v0.34.0) — when True, all entities are audited by default
+    audit_trail: bool = False
 
     model_config = ConfigDict(frozen=True)
 

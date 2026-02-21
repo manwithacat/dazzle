@@ -9,6 +9,7 @@
     ]),
     'assets': list([
     ]),
+    'audit_trail': False,
     'channels': list([
     ]),
     'data_products': None,

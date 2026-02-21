@@ -135,6 +135,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         approvals=merged_fragment.approvals,  # v0.25.0 Approvals
         slas=merged_fragment.slas,  # v0.25.0 SLAs
         islands=merged_fragment.islands,  # UI Islands
+        audit_trail=root_module.app_config.audit_trail if root_module.app_config else False,
         metadata={
             "modules": [m.name for m in sorted_modules],
             "root_module": root_module_name,

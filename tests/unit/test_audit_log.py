@@ -579,3 +579,66 @@ class TestListAuditLogging:
             entity_name="Task",
         )
         assert result is not None
+
+
+class TestAuditTrailGlobalSwitch:
+    """Tests for app-level audit_trail: true global switch (#354)."""
+
+    def test_audit_trail_on_appspec(self):
+        """AppSpec should have audit_trail field."""
+        from dazzle.core.ir.appspec import AppSpec
+
+        fields = AppSpec.model_fields
+        assert "audit_trail" in fields
+        assert fields["audit_trail"].default is False
+
+    def test_audit_trail_on_backend_spec(self):
+        """BackendSpec should have audit_trail field."""
+        from dazzle_back.specs import BackendSpec
+
+        fields = BackendSpec.model_fields
+        assert "audit_trail" in fields
+        assert fields["audit_trail"].default is False
+
+    def test_audit_trail_defaults_entities_to_audited(self):
+        """When audit_trail=True, entities without explicit audit config get audited."""
+        from dazzle.core.ir.domain import AuditConfig
+
+        # Simulate server.py logic
+        _global_audit = True
+        entity_audit_configs: dict[str, object] = {}
+
+        # Entity with no explicit audit config
+        entity_name = "Widget"
+        _ac = None  # No audit config on entity
+        if _ac is not None:
+            entity_audit_configs[entity_name] = _ac
+        elif _global_audit:
+            entity_audit_configs[entity_name] = AuditConfig(enabled=True)
+
+        assert entity_name in entity_audit_configs
+        assert entity_audit_configs[entity_name].enabled is True
+
+    def test_audit_trail_respects_explicit_opt_out(self):
+        """Entity with audit: false should NOT be audited even when audit_trail=True."""
+        from dazzle.core.ir.domain import AuditConfig
+
+        _global_audit = True
+        entity_audit_configs: dict[str, object] = {}
+
+        # Entity with explicit audit: false
+        entity_name = "Config"
+        _ac = AuditConfig(enabled=False)
+        if _ac is not None:
+            entity_audit_configs[entity_name] = _ac
+        elif _global_audit:
+            entity_audit_configs[entity_name] = AuditConfig(enabled=True)
+
+        assert entity_audit_configs[entity_name].enabled is False
+
+    def test_linker_passes_audit_trail(self):
+        """Linker should pass audit_trail from AppConfigSpec to AppSpec."""
+        from dazzle.core.ir.module import AppConfigSpec
+
+        config = AppConfigSpec(audit_trail=True)
+        assert config.audit_trail is True

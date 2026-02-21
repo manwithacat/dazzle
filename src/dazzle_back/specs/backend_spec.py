@@ -90,6 +90,9 @@ class BackendSpec(BaseModel):
         default_factory=list, description="Persona definitions from DSL"
     )
 
+    # Audit trail (v0.34.0) — when True, all entities are audited by default
+    audit_trail: bool = Field(default=False, description="Global audit trail switch")
+
     # Additional metadata
     metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 

@@ -1748,12 +1748,20 @@ class DazzleBackendApp:
                 "entity_name": entity.name,
             }
 
-        # Build per-entity audit config mapping
+        # Build per-entity audit config mapping.
+        # When audit_trail is True (app-level switch), all entities get audit
+        # logging by default. Entities can still opt out with audit: false.
         entity_audit_configs: dict[str, Any] = {}
+        _global_audit = getattr(self.spec, "audit_trail", False)
         for entity in self.spec.entities:
             _ac = getattr(entity, "audit", None)
             if _ac is not None:
                 entity_audit_configs[entity.name] = _ac
+            elif _global_audit:
+                # Default to audit: all when audit_trail is globally enabled
+                from dazzle.core.ir.domain import AuditConfig
+
+                entity_audit_configs[entity.name] = AuditConfig(enabled=True)
 
         route_generator = RouteGenerator(
             services=self._services,
