@@ -35,6 +35,7 @@ class AuditDecision:
     request_method: str | None = None
     tenant_id: str | None = None
     evaluation_time_us: int | None = None
+    field_changes: str | None = None
 
 
 # =============================================================================
@@ -108,7 +109,8 @@ class AuditLogger:
                         request_path TEXT,
                         request_method TEXT,
                         tenant_id TEXT,
-                        evaluation_time_us INTEGER
+                        evaluation_time_us INTEGER,
+                        field_changes TEXT
                     )
                 """)
                 cursor.execute(
@@ -162,6 +164,7 @@ class AuditLogger:
         request_method: str | None = None,
         tenant_id: str | None = None,
         evaluation_time_us: int | None = None,
+        field_changes: str | None = None,
         *,
         audit_decision: AuditDecision | None = None,
     ) -> None:
@@ -200,6 +203,7 @@ class AuditLogger:
             request_method = d.request_method
             tenant_id = d.tenant_id
             evaluation_time_us = d.evaluation_time_us
+            field_changes = d.field_changes
 
         import json
         from datetime import UTC, datetime
@@ -221,6 +225,7 @@ class AuditLogger:
             "request_method": request_method,
             "tenant_id": tenant_id,
             "evaluation_time_us": evaluation_time_us,
+            "field_changes": field_changes,
         }
 
         try:
@@ -266,8 +271,8 @@ class AuditLogger:
                                  operation, entity_name, entity_id, decision,
                                  matched_policy, policy_effect, ip_address,
                                  request_path, request_method, tenant_id,
-                                 evaluation_time_us)
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                                 evaluation_time_us, field_changes)
+                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                             """,
                             tuple(entry.values()),
                         )
@@ -279,8 +284,8 @@ class AuditLogger:
                                  operation, entity_name, entity_id, decision,
                                  matched_policy, policy_effect, ip_address,
                                  request_path, request_method, tenant_id,
-                                 evaluation_time_us)
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                                 evaluation_time_us, field_changes)
+                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                             """,
                             tuple(entry.values()),
                         )

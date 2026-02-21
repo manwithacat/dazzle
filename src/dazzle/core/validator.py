@@ -1687,13 +1687,12 @@ def validate_audit_config(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
             f"{count} {noun} audit: enabled. "
             "CRUD operations and access decisions will be logged to the audit trail."
         )
-        # include_field_changes is declared but not yet implemented
         fcs = [e.name for e in appspec.domain.entities if e.audit and e.audit.include_field_changes]
         if fcs:
             warnings.append(
-                f"[Preview] {len(fcs)} audited entity/entities have "
-                "include_field_changes enabled. Field-level change tracking "
-                "is not yet recorded at runtime."
+                f"{len(fcs)} audited entity/entities have "
+                "include_field_changes enabled. Field-level diffs will be "
+                "captured for update and delete operations."
             )
 
     return errors, warnings

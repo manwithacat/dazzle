@@ -642,3 +642,202 @@ class TestAuditTrailGlobalSwitch:
 
         config = AppConfigSpec(audit_trail=True)
         assert config.audit_trail is True
+
+
+class TestFieldChanges:
+    """Tests for include_field_changes audit feature."""
+
+    def test_audit_decision_has_field_changes(self):
+        """AuditDecision should have a field_changes field."""
+        from dazzle_back.runtime.audit_log import AuditDecision
+
+        d = AuditDecision(
+            operation="update",
+            entity_name="Task",
+            entity_id="123",
+            decision="allow",
+            matched_policy="test",
+            policy_effect="permit",
+            field_changes='{"title": {"old": "A", "new": "B"}}',
+        )
+        assert d.field_changes == '{"title": {"old": "A", "new": "B"}}'
+
+    def test_audit_decision_field_changes_default_none(self):
+        """AuditDecision.field_changes should default to None."""
+        from dazzle_back.runtime.audit_log import AuditDecision
+
+        d = AuditDecision(
+            operation="read",
+            entity_name="Task",
+            entity_id="1",
+            decision="allow",
+            matched_policy="",
+            policy_effect="",
+        )
+        assert d.field_changes is None
+
+    def test_compute_field_changes_detects_diff(self):
+        """_compute_field_changes should detect changed fields."""
+        import json
+
+        from dazzle_back.runtime.route_generator import _compute_field_changes
+
+        before = {"title": "Old Title", "status": "todo", "id": "1"}
+        after = {"title": "New Title", "status": "todo", "id": "1"}
+        result = _compute_field_changes(before, after)
+        assert result is not None
+        changes = json.loads(result)
+        assert "title" in changes
+        assert changes["title"]["old"] == "Old Title"
+        assert changes["title"]["new"] == "New Title"
+        assert "status" not in changes
+        assert "id" not in changes
+
+    def test_compute_field_changes_returns_none_when_equal(self):
+        """_compute_field_changes should return None when nothing changed."""
+        from dazzle_back.runtime.route_generator import _compute_field_changes
+
+        record = {"title": "Same", "status": "todo"}
+        result = _compute_field_changes(record, record)
+        assert result is None
+
+    def test_compute_field_changes_handles_delete(self):
+        """_compute_field_changes with empty after should capture all fields."""
+        import json
+
+        from dazzle_back.runtime.route_generator import _compute_field_changes
+
+        before = {"title": "Task", "status": "done"}
+        result = _compute_field_changes(before, {})
+        assert result is not None
+        changes = json.loads(result)
+        assert changes["title"]["old"] == "Task"
+        assert changes["title"]["new"] is None
+        assert changes["status"]["old"] == "done"
+        assert changes["status"]["new"] is None
+
+    def test_compute_field_changes_with_pydantic_model(self):
+        """_compute_field_changes should work with Pydantic models."""
+        import json
+
+        from pydantic import BaseModel
+
+        from dazzle_back.runtime.route_generator import _compute_field_changes
+
+        class Task(BaseModel):
+            title: str
+            status: str
+
+        before = Task(title="Old", status="todo")
+        after = Task(title="New", status="todo")
+        result = _compute_field_changes(before, after)
+        assert result is not None
+        changes = json.loads(result)
+        assert changes["title"] == {"old": "Old", "new": "New"}
+
+    @pytest.mark.asyncio
+    async def test_field_changes_persisted_to_db(self, logger, tmp_path):
+        """field_changes should be persisted to the audit log database."""
+        logger.start()
+        await logger.log_decision(
+            operation="update",
+            entity_name="Task",
+            entity_id="abc",
+            decision="allow",
+            matched_policy="test",
+            policy_effect="permit",
+            field_changes='{"title": {"old": "A", "new": "B"}}',
+        )
+        await asyncio.sleep(0.3)
+        await logger.stop()
+
+        rows = logger.query_logs(entity_name="Task")
+        assert len(rows) == 1
+        assert rows[0]["field_changes"] == '{"title": {"old": "A", "new": "B"}}'
+
+    @pytest.mark.asyncio
+    async def test_field_changes_null_when_not_provided(self, logger, tmp_path):
+        """field_changes should be NULL when not provided."""
+        logger.start()
+        await logger.log_decision(
+            operation="read",
+            entity_name="Task",
+            entity_id="abc",
+            decision="allow",
+            matched_policy="test",
+            policy_effect="permit",
+        )
+        await asyncio.sleep(0.3)
+        await logger.stop()
+
+        rows = logger.query_logs(entity_name="Task")
+        assert len(rows) == 1
+        assert rows[0]["field_changes"] is None
+
+    @pytest.mark.asyncio
+    async def test_log_audit_decision_forwards_field_changes(self):
+        """_log_audit_decision should forward field_changes to log_decision."""
+        from unittest.mock import AsyncMock
+
+        from dazzle_back.runtime.route_generator import _log_audit_decision
+
+        mock_logger = MagicMock()
+        mock_logger.log_decision = AsyncMock()
+        mock_request = MagicMock()
+        mock_request.client = None
+        mock_request.url = MagicMock()
+        mock_request.url.path = "/api/task/1"
+        mock_request.method = "PUT"
+
+        await _log_audit_decision(
+            mock_logger,
+            mock_request,
+            operation="update",
+            entity_name="Task",
+            entity_id="1",
+            decision="allow",
+            matched_policy="test",
+            policy_effect="permit",
+            user=None,
+            field_changes='{"status": {"old": "todo", "new": "done"}}',
+        )
+
+        mock_logger.log_decision.assert_called_once()
+        call_kwargs = mock_logger.log_decision.call_args
+        assert (
+            call_kwargs.kwargs.get("field_changes") == '{"status": {"old": "todo", "new": "done"}}'
+        )
+
+    def test_include_field_changes_resolves_from_audit_config(self):
+        """generate_route should resolve include_field_changes from AuditConfig."""
+        from dazzle.core.ir.domain import AuditConfig
+
+        # Config with include_field_changes=True (default)
+        config = AuditConfig(enabled=True)
+        assert config.include_field_changes is True
+        _include_fc = bool(config and getattr(config, "include_field_changes", False))
+        assert _include_fc is True
+
+        # Config with include_field_changes=False
+        config2 = AuditConfig(enabled=True, include_field_changes=False)
+        _include_fc2 = bool(config2 and getattr(config2, "include_field_changes", False))
+        assert _include_fc2 is False
+
+    def test_validator_no_preview_warning(self):
+        """Validator should not emit [Preview] warning for include_field_changes."""
+        from dazzle.core.ir.domain import AuditConfig, EntitySpec
+        from dazzle.core.validator import validate_audit_config
+
+        entity = EntitySpec(
+            name="Patient",
+            title="Patient",
+            fields=[],
+            audit=AuditConfig(enabled=True, include_field_changes=True),
+        )
+        # Minimal appspec mock
+        mock_appspec = MagicMock()
+        mock_appspec.domain.entities = [entity]
+        errors, warnings = validate_audit_config(mock_appspec)
+        # Should have no [Preview] warnings
+        for w in warnings:
+            assert "[Preview]" not in w

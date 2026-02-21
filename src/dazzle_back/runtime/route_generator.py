@@ -299,6 +299,37 @@ def _record_to_dict(result: Any) -> dict[str, Any]:
     return {}
 
 
+def _compute_field_changes(before: Any, after: Any) -> str | None:
+    """Compute a JSON diff of changed fields between two records.
+
+    Returns a JSON string mapping field names to {"old": ..., "new": ...},
+    or None if no fields changed.
+    """
+    import json
+
+    before_dict = _record_to_dict(before)
+    after_dict = _record_to_dict(after)
+
+    changes: dict[str, dict[str, Any]] = {}
+    all_keys = set(before_dict.keys()) | set(after_dict.keys())
+    for key in sorted(all_keys):
+        old_val = before_dict.get(key)
+        new_val = after_dict.get(key)
+        if old_val != new_val:
+            changes[key] = {"old": _json_safe(old_val), "new": _json_safe(new_val)}
+
+    if not changes:
+        return None
+    return json.dumps(changes)
+
+
+def _json_safe(val: Any) -> Any:
+    """Convert a value to a JSON-serializable form."""
+    if val is None or isinstance(val, (str, int, float, bool)):
+        return val
+    return str(val)
+
+
 async def _log_audit_decision(
     audit_logger: Any,
     request: Any,
@@ -311,6 +342,7 @@ async def _log_audit_decision(
     policy_effect: str | None,
     user: Any | None,
     evaluation_time_us: int | None = None,
+    field_changes: str | None = None,
 ) -> None:
     """Log an access-control decision to the audit logger."""
     from dazzle_back.runtime.audit_log import create_audit_context_from_request
@@ -327,6 +359,7 @@ async def _log_audit_decision(
         user_email=getattr(user, "email", None) if user else None,
         user_roles=list(getattr(user, "roles", [])) if user else None,
         evaluation_time_us=evaluation_time_us,
+        field_changes=field_changes,
         **audit_ctx,
     )
 
@@ -911,6 +944,7 @@ def create_update_handler(
     audit_logger: Any | None = None,
     cedar_access_spec: Any | None = None,
     optional_auth_dep: Callable[..., Any] | None = None,
+    include_field_changes: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for update operations with optional Cedar-style access control."""
 
@@ -938,21 +972,20 @@ def create_update_handler(
                 )
             )
 
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="update",
-                    entity_name=entity_name,
-                    entity_id=str(id),
-                    decision="allow" if decision.allowed else "deny",
-                    matched_policy=decision.matched_policy,
-                    policy_effect=decision.effect,
-                    user=user,
-                    evaluation_time_us=eval_us,
-                )
-
             if not decision.allowed:
+                if audit_logger:
+                    await _log_audit_decision(
+                        audit_logger,
+                        request,
+                        operation="update",
+                        entity_name=entity_name,
+                        entity_id=str(id),
+                        decision="deny",
+                        matched_policy=decision.matched_policy,
+                        policy_effect=decision.effect,
+                        user=user,
+                        evaluation_time_us=eval_us,
+                    )
                 raise HTTPException(status_code=403, detail="Forbidden")
 
             body = await _parse_request_body(request)
@@ -961,6 +994,22 @@ def create_update_handler(
             result = await service.execute(operation="update", id=id, data=data, current_user=_cu)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
+
+            _fc = _compute_field_changes(existing, result) if include_field_changes else None
+            if audit_logger:
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
+                    operation="update",
+                    entity_name=entity_name,
+                    entity_id=str(id),
+                    decision="allow",
+                    matched_policy=decision.matched_policy,
+                    policy_effect=decision.effect,
+                    user=user,
+                    evaluation_time_us=eval_us,
+                    field_changes=_fc,
+                )
             return _with_htmx_triggers(
                 request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
             )
@@ -978,12 +1027,16 @@ def create_update_handler(
         async def _update_auth(
             id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
         ) -> Any:
+            existing = None
+            if include_field_changes and audit_logger:
+                existing = await service.execute(operation="read", id=id)
             body = await _parse_request_body(request)
             data = input_schema.model_validate(body)
             _cu = str(auth_context.user.id) if auth_context.user else None
             result = await service.execute(operation="update", id=id, data=data, current_user=_cu)
             if result is None:
                 raise HTTPException(status_code=404, detail="Not found")
+            _fc = _compute_field_changes(existing, result) if existing is not None else None
             if audit_logger:
                 await _log_audit_decision(
                     audit_logger,
@@ -995,6 +1048,7 @@ def create_update_handler(
                     matched_policy="authenticated",
                     policy_effect="permit",
                     user=auth_context.user,
+                    field_changes=_fc,
                 )
             return _with_htmx_triggers(
                 request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
@@ -1030,6 +1084,7 @@ def create_delete_handler(
     audit_logger: Any | None = None,
     cedar_access_spec: Any | None = None,
     optional_auth_dep: Callable[..., Any] | None = None,
+    include_field_changes: bool = False,
 ) -> Callable[..., Any]:
     """Create a handler for delete operations with optional Cedar-style access control."""
 
@@ -1057,6 +1112,27 @@ def create_delete_handler(
                 )
             )
 
+            if not decision.allowed:
+                if audit_logger:
+                    await _log_audit_decision(
+                        audit_logger,
+                        request,
+                        operation="delete",
+                        entity_name=entity_name,
+                        entity_id=str(id),
+                        decision="deny",
+                        matched_policy=decision.matched_policy,
+                        policy_effect=decision.effect,
+                        user=user,
+                        evaluation_time_us=eval_us,
+                    )
+                raise HTTPException(status_code=403, detail="Forbidden")
+
+            result = await service.execute(operation="delete", id=id)
+            if not result:
+                raise HTTPException(status_code=404, detail="Not found")
+
+            _fc = _compute_field_changes(existing, {}) if include_field_changes else None
             if audit_logger:
                 await _log_audit_decision(
                     audit_logger,
@@ -1064,19 +1140,13 @@ def create_delete_handler(
                     operation="delete",
                     entity_name=entity_name,
                     entity_id=str(id),
-                    decision="allow" if decision.allowed else "deny",
+                    decision="allow",
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
                     user=user,
                     evaluation_time_us=eval_us,
+                    field_changes=_fc,
                 )
-
-            if not decision.allowed:
-                raise HTTPException(status_code=403, detail="Forbidden")
-
-            result = await service.execute(operation="delete", id=id)
-            if not result:
-                raise HTTPException(status_code=404, detail="Not found")
             return _with_htmx_triggers(
                 request,
                 {"deleted": True},
@@ -1098,9 +1168,13 @@ def create_delete_handler(
         async def _delete_auth(
             id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
         ) -> Any:
+            existing = None
+            if include_field_changes and audit_logger:
+                existing = await service.execute(operation="read", id=id)
             result = await service.execute(operation="delete", id=id)
             if not result:
                 raise HTTPException(status_code=404, detail="Not found")
+            _fc = _compute_field_changes(existing, {}) if existing is not None else None
             if audit_logger:
                 await _log_audit_decision(
                     audit_logger,
@@ -1112,6 +1186,7 @@ def create_delete_handler(
                     matched_policy="authenticated",
                     policy_effect="permit",
                     user=auth_context.user,
+                    field_changes=_fc,
                 )
             return _with_htmx_triggers(
                 request,
@@ -1296,6 +1371,8 @@ class RouteGenerator:
         _audit_ops: set[str] = set()
         if _audit_config and getattr(_audit_config, "operations", None):
             _audit_ops = {str(op) for op in _audit_config.operations}
+        # Check whether to capture field-level diffs for update/delete
+        _include_fc = bool(_audit_config and getattr(_audit_config, "include_field_changes", False))
 
         def _audit_for(op: str) -> Any:
             """Return the audit logger if this operation should be audited."""
@@ -1390,6 +1467,7 @@ class RouteGenerator:
                     audit_logger=_audit_for("update"),
                     cedar_access_spec=_cedar_spec,
                     optional_auth_dep=self.optional_auth_dep,
+                    include_field_changes=_include_fc,
                 )
                 self._add_route(endpoint, handler, response_model=model)
             else:
@@ -1405,6 +1483,7 @@ class RouteGenerator:
                 audit_logger=_audit_for("delete"),
                 cedar_access_spec=_cedar_spec,
                 optional_auth_dep=self.optional_auth_dep,
+                include_field_changes=_include_fc,
             )
             self._add_route(endpoint, handler, response_model=None)
 
