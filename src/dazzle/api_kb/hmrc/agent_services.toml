@@ -1,0 +1,83 @@
+# HMRC Agent Services Pack
+# Curated API configuration for HMRC Agent Authorisation
+#
+# Capabilities:
+# - Create agent-client invitations (VAT, ITSA)
+# - List and manage pending invitations
+# - Check active agent-client relationships
+# - Cancel invitations
+#
+# Note: Requires agent-services scopes on OAuth2 token.
+# ARN (Agent Reference Number) is assigned by HMRC on agent registration.
+
+[pack]
+name = "hmrc_agent_services"
+provider = "HMRC"
+category = "tax"
+version = "1.0"
+description = "Agent-client relationship management — invitations and authorisation checks for VAT and ITSA MTD services"
+base_url = "https://api.service.hmrc.gov.uk"
+docs_url = "https://developer.service.hmrc.gov.uk/api-documentation/docs/api/service/agent-authorisation-api"
+
+[auth]
+type = "oauth2"
+env_var = "HMRC"
+token_url = "https://api.service.hmrc.gov.uk/oauth/token"
+scopes = ["read:sent-invitations", "write:sent-invitations", "read:check-relationship"]
+
+[env_vars]
+HMRC_CLIENT_ID = { required = true, description = "HMRC Developer Hub client ID", example = "" }
+HMRC_CLIENT_SECRET = { required = true, description = "HMRC Developer Hub client secret", example = "" }
+HMRC_ARN = { required = false, description = "Agent Reference Number", example = "AARN1234567" }
+
+[operations]
+# Invitations
+create_invitation = { method = "POST", path = "/agents/{arn}/invitations", description = "Create agent-client invitation (specify service in body)" }
+list_invitations = { method = "GET", path = "/agents/{arn}/invitations", description = "List all agent invitations (pending, accepted, rejected, expired)" }
+get_invitation = { method = "GET", path = "/agents/{arn}/invitations/{invitation_id}", description = "Get specific invitation details" }
+cancel_invitation = { method = "DELETE", path = "/agents/{arn}/invitations/{invitation_id}", description = "Cancel a pending invitation" }
+
+# Relationship checks
+check_vat_relationship = { method = "GET", path = "/agents/{arn}/relationships/service/HMRC-MTD-VAT/client/vrn/{vrn}", description = "Check VAT agent-client relationship by VRN" }
+check_itsa_relationship = { method = "GET", path = "/agents/{arn}/relationships/service/HMRC-MTD-IT/client/ni/{nino}", description = "Check ITSA agent-client relationship by NINO" }
+
+[foreign_models.Invitation]
+description = "An agent-client authorisation invitation"
+key = "invitation_id"
+cache_ttl = 300  # Invitation status can change quickly
+
+[foreign_models.Invitation.fields]
+invitation_id = { type = "str(50)", required = true, pk = true }
+arn = { type = "str(20)", required = true, description = "Agent Reference Number" }
+service = { type = "enum[HMRC-MTD-VAT,HMRC-MTD-IT,PERSONAL-INCOME-RECORD,HMRC-CGT]", required = true }
+client_type = { type = "enum[personal,business]", required = true }
+client_id = { type = "str(20)", required = true, description = "VRN or NINO" }
+client_id_type = { type = "enum[vrn,ni]", required = true }
+status = { type = "enum[Pending,Accepted,Rejected,Expired,Cancelled,Deauthorised]" }
+created = { type = "datetime" }
+updated = { type = "datetime" }
+expires_on = { type = "date" }
+
+[foreign_models.Relationship]
+description = "An active agent-client relationship"
+key = "arn"
+cache_ttl = 3600  # Relationships change infrequently
+
+[foreign_models.Relationship.fields]
+arn = { type = "str(20)", required = true }
+service = { type = "enum[HMRC-MTD-VAT,HMRC-MTD-IT]", required = true }
+client_id = { type = "str(20)", required = true }
+client_id_type = { type = "enum[vrn,ni]", required = true }
+active = { type = "bool", required = true }
+
+[integration_hints]
+on_client_onboarded = "create_invitation to establish agent authority"
+on_daily_check = "list_invitations to follow up on pending invitations"
+on_vat_submission = "check_vat_relationship to verify authorisation before filing"
+on_itsa_submission = "check_itsa_relationship to verify authorisation before filing"
+
+[notes]
+fraud_headers = "All requests require Gov-Client-* fraud prevention headers"
+sandbox = "Test at: https://test-api.service.hmrc.gov.uk"
+invitation_expiry = "Invitations expire after 21 days if not accepted"
+agent_registration = "Agent must be registered with HMRC and have a valid ARN"
