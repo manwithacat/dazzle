@@ -198,11 +198,13 @@ def create_console_routes(
 
         token = session_manager.create_session(username)
         resp = RedirectResponse(url="/_console/", status_code=302)
+        from dazzle_back.runtime.auth.crypto import cookie_secure
+
         resp.set_cookie(
             key="ops_session",
             value=token,
             httponly=True,
-            secure=False,
+            secure=cookie_secure(request),
             samesite="lax",
             max_age=86400,
         )

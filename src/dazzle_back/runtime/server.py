@@ -771,6 +771,12 @@ class DazzleBackendApp:
         }
         if jwt_secret:
             jwt_config_kwargs["secret_key"] = jwt_secret
+        else:
+            logger.warning(
+                "JWT_SECRET not set — using auto-generated secret. "
+                "Sessions will be invalidated on server restart. "
+                "Set JWT_SECRET in your environment for production use."
+            )
         self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
 
         # Create token store (PostgreSQL-only)

@@ -104,6 +104,16 @@ class TestSecurityMiddleware:
         config = configure_cors_for_profile("basic")
 
         assert config.allow_origins == ["*"]
+        # credentials must be False when origins=["*"] (CORS spec violation)
+        assert config.allow_credentials is False
+
+    def test_basic_cors_with_explicit_origins_allows_credentials(self) -> None:
+        """Basic profile with explicit origins should allow credentials."""
+        from dazzle_back.runtime.security_middleware import configure_cors_for_profile
+
+        config = configure_cors_for_profile("basic", custom_origins=["https://myapp.com"])
+
+        assert config.allow_origins == ["https://myapp.com"]
         assert config.allow_credentials is True
 
     def test_standard_cors_config(self) -> None:

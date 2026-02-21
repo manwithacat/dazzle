@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
-from .crypto import verify_password
+from .crypto import cookie_secure, verify_password
 from .models import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
@@ -138,7 +138,7 @@ def create_auth_routes(
             key=cookie_name,
             value=session.id,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
+            secure=cookie_secure(request),
             samesite="lax",
             max_age=session_expires_days * 24 * 60 * 60,
         )
@@ -240,7 +240,7 @@ def create_auth_routes(
             key=cookie_name,
             value=session.id,
             httponly=True,
-            secure=False,
+            secure=cookie_secure(request),
             samesite="lax",
             max_age=session_expires_days * 24 * 60 * 60,
         )
@@ -325,7 +325,7 @@ def create_auth_routes(
             key=cookie_name,
             value=session.id,
             httponly=True,
-            secure=False,
+            secure=cookie_secure(request),
             samesite="lax",
             max_age=session_expires_days * 24 * 60 * 60,
         )
@@ -408,7 +408,7 @@ def create_auth_routes(
             key=cookie_name,
             value=session.id,
             httponly=True,
-            secure=False,
+            secure=cookie_secure(request),
             samesite="lax",
             max_age=session_expires_days * 24 * 60 * 60,
         )

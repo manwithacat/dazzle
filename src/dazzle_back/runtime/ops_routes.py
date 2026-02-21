@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 try:
-    from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response
+    from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response
 
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -192,6 +192,7 @@ def create_ops_routes(
     async def setup_ops_admin(
         request: OpsSetupRequest,
         response: Response,
+        http_request: Request,
     ) -> OpsLoginResponse:
         """
         Initial ops admin setup.
@@ -199,6 +200,8 @@ def create_ops_routes(
         Creates the first ops admin account. Only works if no
         credentials exist yet.
         """
+        from dazzle_back.runtime.auth.crypto import cookie_secure
+
         if ops_db.has_credentials():
             raise HTTPException(
                 status_code=400,
@@ -218,7 +221,7 @@ def create_ops_routes(
             key="ops_session",
             value=token,
             httponly=True,
-            secure=False,  # Set True in production with HTTPS
+            secure=cookie_secure(http_request),
             samesite="lax",
             max_age=86400,  # 24 hours
         )
@@ -233,12 +236,15 @@ def create_ops_routes(
     async def login(
         request: OpsLoginRequest,
         response: Response,
+        http_request: Request,
     ) -> OpsLoginResponse:
         """
         Ops admin login.
 
         Returns a session token for authenticated access.
         """
+        from dazzle_back.runtime.auth.crypto import cookie_secure
+
         if not ops_db.verify_credentials(request.username, request.password):
             raise HTTPException(
                 status_code=401,
@@ -251,7 +257,7 @@ def create_ops_routes(
             key="ops_session",
             value=token,
             httponly=True,
-            secure=False,  # Set True in production
+            secure=cookie_secure(http_request),
             samesite="lax",
             max_age=86400,
         )

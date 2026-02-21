@@ -116,9 +116,11 @@ def configure_cors_for_profile(profile: str, custom_origins: list[str] | None = 
     """
     if profile == "basic":
         # Permissive CORS for development/internal tools
+        origins = custom_origins or ["*"]
         return CORSConfig(
-            allow_origins=custom_origins or ["*"],
-            allow_credentials=True,
+            allow_origins=origins,
+            # credentials=True with origins=["*"] violates the CORS spec
+            allow_credentials=origins != ["*"],
             allow_methods=["*"],
             allow_headers=["*"],
         )

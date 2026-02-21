@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
+from .crypto import cookie_secure
 from .models import TwoFactorSetupRequest, TwoFactorVerifyRequest, UserRecord
 from .store import AuthStore
 
@@ -257,7 +258,7 @@ def create_2fa_routes(
             key=cookie_name,
             value=session.id,
             httponly=True,
-            secure=False,
+            secure=cookie_secure(request),
             samesite="lax",
             max_age=session_expires_days * 24 * 60 * 60,
         )

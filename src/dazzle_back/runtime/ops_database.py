@@ -135,18 +135,16 @@ class OpsCredentials:
 
     @classmethod
     def create(cls, username: str, password: str) -> OpsCredentials:
-        """Create credentials with hashed password."""
-        import hashlib
+        """Create credentials with hashed password (PBKDF2-SHA256)."""
+        from dazzle_back.runtime.auth.crypto import hash_password
 
-        # Simple hash for now - in production use bcrypt/argon2
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        return cls(username=username, password_hash=password_hash)
+        return cls(username=username, password_hash=hash_password(password))
 
     def verify(self, password: str) -> bool:
-        """Verify password against hash."""
-        import hashlib
+        """Verify password against hash (constant-time comparison)."""
+        from dazzle_back.runtime.auth.crypto import verify_password
 
-        return self.password_hash == hashlib.sha256(password.encode()).hexdigest()
+        return verify_password(password, self.password_hash)
 
 
 class OpsDatabase:
