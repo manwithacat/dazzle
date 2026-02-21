@@ -11,9 +11,15 @@
         const data = Object.fromEntries(formData.entries());
 
         try {
+            const headers = { 'Content-Type': 'application/json' };
+            const csrfCookie = document.cookie.split('; ').find(c => c.startsWith('dazzle_csrf='));
+            if (csrfCookie) {
+                headers['X-CSRF-Token'] = csrfCookie.split('=')[1];
+            }
+
             const response = await fetch(form.action, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify(data),
             });
 

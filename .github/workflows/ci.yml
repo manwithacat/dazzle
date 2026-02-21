@@ -65,10 +65,24 @@ jobs:
       run: |
         pytest tests/unit/test_jwt_fuzzing.py -v --tb=short
 
+    - name: Run ASVS security tests
+      run: |
+        pytest tests/security/ -v --tb=short
+
+    - name: Run input sanitization tests
+      run: |
+        pytest tests/unit/test_input_sanitization.py -v --tb=short
+
     - name: Run bandit security scanner
       run: |
         pip install bandit[toml]
         bandit -c pyproject.toml -r src/dazzle_back/runtime/ --severity-level medium
+
+    - name: Run pip-audit (informational)
+      run: |
+        pip install pip-audit
+        pip-audit --strict --desc 2>&1 || true
+      continue-on-error: true
 
   lint:
     runs-on: ubuntu-latest

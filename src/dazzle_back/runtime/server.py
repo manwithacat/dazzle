@@ -1500,6 +1500,16 @@ class DazzleBackendApp:
             cors_origins=self._cors_origins,
         )
 
+        # Rate limiting (v1.0.0)
+        from dazzle_back.runtime.rate_limit import apply_rate_limiting
+
+        apply_rate_limiting(self._app, self._security_profile)
+
+        # CSRF protection (v1.0.0)
+        from dazzle_back.runtime.csrf import apply_csrf_protection
+
+        apply_csrf_protection(self._app, self._security_profile)
+
         # GZip compression (v0.33.0) — must be added before other middleware
         from starlette.middleware.gzip import GZipMiddleware
 
@@ -1781,7 +1791,15 @@ class DazzleBackendApp:
             metadata_store = FileMetadataStore(database_url=self._database_url)
             validator = FileValidator()
             self._file_service = FileService(storage, metadata_store, validator)
-            create_file_routes(self._app, self._file_service)
+
+            # Profile-based upload size limits (v1.0.0)
+            _upload_limits = {"basic": 50, "standard": 10, "strict": 5}
+            _max_mb = _upload_limits.get(self._security_profile, 10)
+            create_file_routes(
+                self._app,
+                self._file_service,
+                max_upload_size=_max_mb * 1024 * 1024,
+            )
             create_static_file_routes(
                 self._app,
                 base_path=str(self._files_path),

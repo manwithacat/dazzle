@@ -2,14 +2,17 @@ from . import ir
 from .validator import (
     extended_lint,
     validate_approvals,
+    validate_audit_config,
     validate_entities,
     validate_event_payload_secrets,
     validate_experiences,
     validate_foreign_models,
+    validate_governance_policies,
     validate_integrations,
     validate_ledgers,
     validate_money_fields,
     validate_notifications,
+    validate_sensitive_fields,
     validate_services,
     validate_slas,
     validate_surfaces,
@@ -111,6 +114,18 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
     all_warnings.extend(warnings)
 
     errors, warnings = validate_slas(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_audit_config(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_governance_policies(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    errors, warnings = validate_sensitive_fields(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 

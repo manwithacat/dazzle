@@ -20,6 +20,7 @@ def create_file_routes(
     file_service: FileService,
     prefix: str = "/files",
     require_auth: bool = False,
+    max_upload_size: int = 10 * 1024 * 1024,  # 10MB default
 ) -> None:
     """
     Add file upload routes to FastAPI app.
@@ -38,18 +39,39 @@ def create_file_routes(
         require_auth: Whether to require authentication
     """
     try:
-        from fastapi import File, HTTPException, Query, UploadFile
+        from fastapi import Depends, File, HTTPException, Query, Request, UploadFile
         from fastapi.responses import Response, StreamingResponse
     except ImportError:
         raise ImportError("FastAPI is required for file routes. Install with: pip install fastapi")
+
+    # Rate limiting
+    import dazzle_back.runtime.rate_limit as _rl
 
     from .file_storage import FileValidationError
     from .image_processor import ImageProcessor, ThumbnailService
 
     thumbnail_service = ThumbnailService()
 
-    @app.post(f"{prefix}/upload")
+    def _check_content_length(request: Request) -> None:
+        """Reject requests whose Content-Length exceeds the upload size limit."""
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                if int(content_length) > max_upload_size:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            f"Request body too large. "
+                            f"Maximum upload size is {max_upload_size // (1024 * 1024)}MB."
+                        ),
+                    )
+            except ValueError:
+                pass  # Non-integer Content-Length — let downstream handle it
+
+    @app.post(f"{prefix}/upload", dependencies=[Depends(_check_content_length)])
+    @_rl.limiter.limit(_rl.upload_limit)
     async def upload_file(
+        request: Request,
         file: UploadFile = File(...),  # noqa: B008
         entity: str | None = Query(None, description="Associated entity name"),
         entity_id: str | None = Query(None, description="Associated entity ID"),

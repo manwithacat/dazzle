@@ -44,6 +44,9 @@ def create_2fa_routes(
 
     router = APIRouter(prefix="/auth/2fa", tags=["Two-Factor Authentication"])
 
+    # Rate limiting
+    import dazzle_back.runtime.rate_limit as _rl
+
     # Lazy initialization of stores
     _stores: dict[str, Any] = {}
 
@@ -198,6 +201,7 @@ def create_2fa_routes(
     # =========================================================================
 
     @router.post("/verify")
+    @_rl.limiter.limit(_rl.twofa_limit)
     async def verify_2fa(data: TwoFactorVerifyRequest, request: FastAPIRequest) -> JSONResponse:
         """Verify 2FA code and complete login.
 

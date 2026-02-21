@@ -64,7 +64,12 @@ def create_auth_routes(
     # Login
     # =========================================================================
 
+    # Rate limiting — the module-level limiter is set by apply_rate_limiting()
+    # which runs in _create_app() before routes are mounted.
+    import dazzle_back.runtime.rate_limit as _rl
+
     @router.post("/login")
+    @_rl.limiter.limit(_rl.auth_limit)
     async def login(credentials: LoginRequest, request: FastAPIRequest) -> JSONResponse:
         """
         Login with email and password.
@@ -186,6 +191,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/register", status_code=201)
+    @_rl.limiter.limit(_rl.auth_limit)
     async def register(data: RegisterRequest, request: FastAPIRequest) -> JSONResponse:
         """
         Register a new user.
@@ -337,7 +343,8 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/forgot-password")
-    async def forgot_password(data: ForgotPasswordRequest) -> JSONResponse:
+    @_rl.limiter.limit(_rl.auth_limit)
+    async def forgot_password(data: ForgotPasswordRequest, request: FastAPIRequest) -> JSONResponse:
         """
         Request a password reset.
 
@@ -375,6 +382,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/reset-password")
+    @_rl.limiter.limit(_rl.auth_limit)
     async def reset_password(data: ResetPasswordRequest, request: FastAPIRequest) -> JSONResponse:
         """
         Reset password using a valid reset token.

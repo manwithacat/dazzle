@@ -43,6 +43,7 @@ dependencies = [
     "psycopg-pool>=3.2",
     "sqlalchemy>=2.0",
     "alembic>=1.14",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

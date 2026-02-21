@@ -36,6 +36,16 @@
   <script defer src="/static/js/dz-a11y.js"></script>
   <script defer src="/static/js/dz-islands.js"></script>
 
+  {# CSRF token injection for HTMX requests (v1.0.0) #}
+  <script>
+  document.addEventListener('htmx:configRequest', function(e) {
+    var cookie = document.cookie.split('; ').find(function(c) { return c.startsWith('dazzle_csrf='); });
+    if (cookie) {
+      e.detail.headers['X-CSRF-Token'] = cookie.split('=')[1];
+    }
+  });
+  </script>
+
   {# Design token CSS custom properties #}
   <style>
     :root {
