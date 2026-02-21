@@ -349,3 +349,50 @@ class TestHelpers:
         assert result == 42
         assert isinstance(elapsed_us, int)
         assert elapsed_us >= 0
+
+    @pytest.mark.asyncio
+    async def test_evaluation_time_persisted(self, logger) -> None:
+        """evaluation_time_us should be written to the DB when provided."""
+        await logger.log_decision(
+            operation="read",
+            entity_name="Task",
+            entity_id="t-1",
+            decision="allow",
+            matched_policy="permit read",
+            policy_effect="permit",
+            evaluation_time_us=1234,
+        )
+        await logger._flush()
+        logs = logger.query_logs(entity_name="Task")
+        assert len(logs) == 1
+        assert logs[0]["evaluation_time_us"] == 1234
+
+    @pytest.mark.asyncio
+    async def test_log_audit_decision_passes_evaluation_time(self) -> None:
+        """_log_audit_decision should forward evaluation_time_us to log_decision."""
+        from unittest.mock import AsyncMock
+
+        from dazzle_back.runtime.route_generator import _log_audit_decision
+
+        mock_logger = AsyncMock()
+        mock_request = MagicMock()
+        mock_request.client.host = "10.0.0.1"
+        mock_request.url.path = "/api/tasks/1"
+        mock_request.method = "GET"
+
+        await _log_audit_decision(
+            mock_logger,
+            mock_request,
+            operation="read",
+            entity_name="Task",
+            entity_id="t-1",
+            decision="allow",
+            matched_policy="permit read",
+            policy_effect="permit",
+            user=None,
+            evaluation_time_us=567,
+        )
+
+        mock_logger.log_decision.assert_called_once()
+        call_kwargs = mock_logger.log_decision.call_args.kwargs
+        assert call_kwargs["evaluation_time_us"] == 567

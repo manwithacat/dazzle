@@ -310,6 +310,7 @@ async def _log_audit_decision(
     matched_policy: str | None,
     policy_effect: str | None,
     user: Any | None,
+    evaluation_time_us: int | None = None,
 ) -> None:
     """Log an access-control decision to the audit logger."""
     from dazzle_back.runtime.audit_log import create_audit_context_from_request
@@ -325,6 +326,7 @@ async def _log_audit_decision(
         user_id=str(user.id) if user else None,
         user_email=getattr(user, "email", None) if user else None,
         user_roles=list(getattr(user, "roles", [])) if user else None,
+        evaluation_time_us=evaluation_time_us,
         **audit_ctx,
     )
 
@@ -663,6 +665,7 @@ def create_read_handler(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
             from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
+            from dazzle_back.runtime.audit_log import measure_evaluation_time
             from dazzle_back.specs.auth import AccessOperationKind
 
             result = await service.execute(operation="read", id=id, include=auto_include)
@@ -671,8 +674,11 @@ def create_read_handler(
 
             user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
-            decision: AccessDecision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.READ, _record_to_dict(result), ctx
+            decision: AccessDecision
+            decision, eval_us = measure_evaluation_time(
+                lambda: evaluate_permission(
+                    cedar_access_spec, AccessOperationKind.READ, _record_to_dict(result), ctx
+                )
             )
 
             if audit_logger:
@@ -686,6 +692,7 @@ def create_read_handler(
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
                     user=user,
+                    evaluation_time_us=eval_us,
                 )
 
             if not decision.allowed:
@@ -782,12 +789,16 @@ def create_create_handler(
             request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
             from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
+            from dazzle_back.runtime.audit_log import measure_evaluation_time
             from dazzle_back.specs.auth import AccessOperationKind
 
             user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
-            decision: AccessDecision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.CREATE, None, ctx
+            decision: AccessDecision
+            decision, eval_us = measure_evaluation_time(
+                lambda: evaluate_permission(
+                    cedar_access_spec, AccessOperationKind.CREATE, None, ctx
+                )
             )
 
             if audit_logger:
@@ -801,6 +812,7 @@ def create_create_handler(
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
                     user=user,
+                    evaluation_time_us=eval_us,
                 )
 
             if not decision.allowed:
@@ -884,6 +896,7 @@ def create_update_handler(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
             from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
+            from dazzle_back.runtime.audit_log import measure_evaluation_time
             from dazzle_back.specs.auth import AccessOperationKind
 
             existing = await service.execute(operation="read", id=id)
@@ -892,8 +905,11 @@ def create_update_handler(
 
             user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
-            decision: AccessDecision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.UPDATE, _record_to_dict(existing), ctx
+            decision: AccessDecision
+            decision, eval_us = measure_evaluation_time(
+                lambda: evaluate_permission(
+                    cedar_access_spec, AccessOperationKind.UPDATE, _record_to_dict(existing), ctx
+                )
             )
 
             if audit_logger:
@@ -907,6 +923,7 @@ def create_update_handler(
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
                     user=user,
+                    evaluation_time_us=eval_us,
                 )
 
             if not decision.allowed:
@@ -998,6 +1015,7 @@ def create_delete_handler(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
             from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
+            from dazzle_back.runtime.audit_log import measure_evaluation_time
             from dazzle_back.specs.auth import AccessOperationKind
 
             existing = await service.execute(operation="read", id=id)
@@ -1006,8 +1024,11 @@ def create_delete_handler(
 
             user, ctx = _build_access_context(auth_context)
             assert cedar_access_spec is not None
-            decision: AccessDecision = evaluate_permission(
-                cedar_access_spec, AccessOperationKind.DELETE, _record_to_dict(existing), ctx
+            decision: AccessDecision
+            decision, eval_us = measure_evaluation_time(
+                lambda: evaluate_permission(
+                    cedar_access_spec, AccessOperationKind.DELETE, _record_to_dict(existing), ctx
+                )
             )
 
             if audit_logger:
@@ -1021,6 +1042,7 @@ def create_delete_handler(
                     matched_policy=decision.matched_policy,
                     policy_effect=decision.effect,
                     user=user,
+                    evaluation_time_us=eval_us,
                 )
 
             if not decision.allowed:
