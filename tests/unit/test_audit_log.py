@@ -503,3 +503,79 @@ class TestPerEntityAuditFiltering:
 
         # Empty means all operations are audited
         assert len(_audit_ops) == 0  # empty = no filter = all ops
+
+
+class TestListAuditLogging:
+    """Tests for LIST operation audit logging (#351)."""
+
+    @pytest.mark.asyncio
+    async def test_list_handler_calls_audit_logger(self) -> None:
+        """create_list_handler should log list access when audit_logger is provided."""
+        from unittest.mock import AsyncMock
+
+        from dazzle_back.runtime.route_generator import _list_handler_body
+
+        mock_logger = AsyncMock()
+        mock_service = AsyncMock()
+        mock_service.execute.return_value = {"items": [], "total": 0, "page": 1, "page_size": 20}
+
+        mock_request = MagicMock()
+        mock_request.client.host = "10.0.0.1"
+        mock_request.url.path = "/api/tasks"
+        mock_request.method = "GET"
+        mock_request.query_params = {}
+
+        await _list_handler_body(
+            service=mock_service,
+            access_spec=None,
+            is_authenticated=True,
+            user_id="user-1",
+            request=mock_request,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            audit_logger=mock_logger,
+            entity_name="Task",
+            user=None,
+        )
+
+        mock_logger.log_decision.assert_called_once()
+        call_kwargs = mock_logger.log_decision.call_args.kwargs
+        assert call_kwargs["operation"] == "list"
+        assert call_kwargs["entity_name"] == "Task"
+        assert call_kwargs["decision"] == "allow"
+
+    @pytest.mark.asyncio
+    async def test_list_handler_no_audit_when_logger_none(self) -> None:
+        """create_list_handler should not crash when audit_logger is None."""
+        from unittest.mock import AsyncMock
+
+        from dazzle_back.runtime.route_generator import _list_handler_body
+
+        mock_service = AsyncMock()
+        mock_service.execute.return_value = {"items": [], "total": 0}
+
+        mock_request = MagicMock()
+        mock_request.client.host = "10.0.0.1"
+        mock_request.url.path = "/api/tasks"
+        mock_request.method = "GET"
+        mock_request.query_params = {}
+
+        # Should not raise
+        result = await _list_handler_body(
+            service=mock_service,
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=mock_request,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            audit_logger=None,
+            entity_name="Task",
+        )
+        assert result is not None

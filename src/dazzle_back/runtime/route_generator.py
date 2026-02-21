@@ -349,6 +349,8 @@ def create_list_handler(
     htmx_entity_name: str = "Item",
     htmx_empty_message: str = "No items found.",
     cedar_access_spec: Any | None = None,
+    audit_logger: Any | None = None,
+    entity_name: str = "Item",
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -364,6 +366,8 @@ def create_list_handler(
         htmx_detail_url: Detail URL template for row click navigation
         htmx_entity_name: Entity name for HTMX rendering context
         htmx_empty_message: Message when no items found
+        audit_logger: Optional AuditLogger for recording list access decisions
+        entity_name: Entity name for audit logging
     """
 
     def _inject_htmx_meta(request: Request) -> None:
@@ -412,6 +416,9 @@ def create_list_handler(
                 auto_include=auto_include,
                 cedar_access_spec=cedar_access_spec,
                 auth_context=auth_context,
+                audit_logger=audit_logger,
+                entity_name=entity_name,
+                user=auth_context.user if auth_context and auth_context.is_authenticated else None,
             )
 
         _auth_handler.__annotations__ = {
@@ -448,6 +455,8 @@ def create_list_handler(
             search,
             select_fields=select_fields,
             auto_include=auto_include,
+            audit_logger=audit_logger,
+            entity_name=entity_name,
         )
 
     _noauth_handler.__annotations__ = {
@@ -477,6 +486,9 @@ async def _list_handler_body(
     auto_include: list[str] | None = None,
     cedar_access_spec: Any | None = None,
     auth_context: Any | None = None,
+    audit_logger: Any | None = None,
+    entity_name: str = "Item",
+    user: Any | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -518,6 +530,20 @@ async def _list_handler_body(
         select_fields=select_fields,
         include=auto_include,
     )
+
+    # Audit log the list access
+    if audit_logger:
+        await _log_audit_decision(
+            audit_logger,
+            request,
+            operation="list",
+            entity_name=entity_name,
+            entity_id=None,
+            decision="allow",
+            matched_policy="authenticated" if is_authenticated else "public",
+            policy_effect="permit",
+            user=user,
+        )
 
     # Apply post-filtering if needed (for OR conditions)
     if post_filter and result and "items" in result:
@@ -1342,6 +1368,8 @@ class RouteGenerator:
                 htmx_entity_name=_htmx.get("entity_name", entity_name or "Item"),
                 htmx_empty_message=_htmx.get("empty_message", "No items found."),
                 cedar_access_spec=_cedar_spec,
+                audit_logger=_audit_for("list"),
+                entity_name=entity_name or "Item",
             )
             self._add_route(endpoint, handler, response_model=None)
 
