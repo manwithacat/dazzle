@@ -31,6 +31,7 @@ class SurfaceParserMixin:
         _parse_workspace_access: Any  # From WorkspaceParserMixin
         collect_line_as_expr: Any  # From BaseParser
         _source_location: Any  # v0.31.0: Source location helper from BaseParser
+        _parse_construct_header: Any
 
     def parse_surface(self) -> ir.SurfaceSpec:
         """Parse surface declaration."""

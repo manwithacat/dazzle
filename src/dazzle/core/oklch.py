@@ -59,7 +59,7 @@ def _generate_scale(hue: float, chroma: float, *, invert: bool = False) -> dict[
     """
     stops = _LIGHTNESS_STOPS
     if invert:
-        stops = list(reversed(stops))
+        stops = tuple(reversed(stops))
 
     scale: dict[str, str] = {}
     for name, lightness in zip(_STEP_NAMES, stops, strict=True):

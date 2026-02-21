@@ -26,6 +26,7 @@ class ScenarioParserMixin:
         expect_identifier_or_keyword: Any
         skip_newlines: Any
         file: Any
+        _parse_construct_header: Any
 
     def parse_persona(self) -> ir.PersonaSpec:
         """

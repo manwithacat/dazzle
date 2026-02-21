@@ -41,6 +41,7 @@ class ApprovalParserMixin:
         current_token: Any
         file: Any
         parse_condition_expr: Any
+        _parse_construct_header: Any
 
     def parse_approval(self) -> ir.ApprovalSpec:
         """Parse an approval block."""

@@ -57,6 +57,7 @@ class IntegrationParserMixin:
         file: Any
         collect_line_as_expr: Any
         _source_location: Any
+        _parse_construct_header: Any
 
     def parse_integration(self) -> ir.IntegrationSpec:
         """Parse integration declaration."""

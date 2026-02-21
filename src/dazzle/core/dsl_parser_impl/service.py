@@ -31,6 +31,7 @@ class ServiceParserMixin:
         _parse_surface_access: Any  # From SurfaceParserMixin
         _parse_dotted_path: Any  # From ProcessParserMixin
         _source_location: Any  # v0.31.0: Source location helper from BaseParser
+        _parse_construct_header: Any
 
     def parse_service(self) -> ir.APISpec | ir.DomainServiceSpec:
         """Parse service declaration (external API or domain service).

@@ -39,6 +39,7 @@ class WorkspaceParserMixin:
         current_token: Any
         file: Any
         _source_location: Any
+        _parse_construct_header: Any
 
     def parse_workspace(self) -> ir.WorkspaceSpec:
         """

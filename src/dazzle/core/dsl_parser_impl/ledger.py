@@ -61,6 +61,7 @@ class LedgerParserMixin:
         expect_identifier_or_keyword: Any
         current_token: Any
         file: Any
+        _parse_construct_header: Any
 
     def parse_ledger(self) -> ir.LedgerSpec:
         """

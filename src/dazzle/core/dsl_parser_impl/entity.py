@@ -45,6 +45,7 @@ class EntityParserMixin:
         collect_line_as_expr: Any
         # v0.31.0: Source location helper from BaseParser
         _source_location: Any
+        _parse_construct_header: Any
 
     def parse_entity(self) -> ir.EntitySpec:
         """Parse entity declaration."""

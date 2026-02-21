@@ -38,6 +38,7 @@ class ViewParserMixin:
         file: Any
         parse_type_spec: Any
         parse_condition_expr: Any
+        _parse_construct_header: Any
 
     def parse_view(self) -> ir.ViewSpec:
         """
