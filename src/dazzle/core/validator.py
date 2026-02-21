@@ -23,136 +23,50 @@ STRING_MAX_LENGTH_WARN_THRESHOLD = 10000  # Suggest TEXT type above this
 
 # SQL reserved words (common across SQLite, PostgreSQL, MySQL)
 # These can cause issues when used unquoted in SQL statements
+# SQL keywords that are genuinely dangerous as identifiers — DML/DDL commands
+# and clauses that could cause ambiguity. SQLAlchemy quotes all identifiers,
+# so even these are technically safe, but they deserve a warning.
 SQL_RESERVED_WORDS = frozenset(
     {
-        # Most common/problematic
-        "order",
-        "group",
+        # DML/DDL commands — these look like SQL statements
         "select",
-        "table",
-        "index",
-        "key",
-        "user",
-        "check",
-        "primary",
-        "foreign",
-        "references",
-        "constraint",
-        "default",
-        "null",
-        "not",
-        "and",
-        "or",
-        "where",
-        "from",
-        "join",
-        "on",
-        "as",
-        "in",
-        "is",
-        "like",
-        "between",
-        "case",
-        "when",
-        "then",
-        "else",
-        "end",
-        "create",
-        "alter",
-        "drop",
         "insert",
         "update",
         "delete",
-        "set",
-        "values",
-        "into",
-        "add",
-        "column",
-        "all",
-        "distinct",
-        "limit",
-        "offset",
+        "create",
+        "alter",
+        "drop",
+        "table",
+        "index",
+        "trigger",
+        "database",
+        # Clauses that could genuinely confuse
+        "from",
+        "where",
+        "join",
+        "having",
         "union",
         "except",
         "intersect",
-        "having",
-        "by",
-        "asc",
-        "desc",
-        "trigger",
-        "view",
-        "exists",
-        "unique",
-        "current",
-        "current_date",
-        "current_time",
-        "current_timestamp",
-        "transaction",
-        "commit",
-        "rollback",
-        "grant",
-        "revoke",
-        "with",
-        "recursive",
-        "escape",
-        "collate",
-        "natural",
-        "left",
-        "right",
-        "inner",
-        "outer",
-        "cross",
-        "full",
-        # Additional SQL keywords
-        "abort",
-        "action",
-        "after",
-        "analyze",
-        "attach",
-        "autoincrement",
-        "before",
-        "begin",
-        "cascade",
-        "cast",
-        "conflict",
-        "database",
-        "deferrable",
-        "deferred",
-        "detach",
-        "each",
-        "exclusive",
-        "explain",
-        "fail",
-        "glob",
-        "if",
-        "ignore",
-        "immediate",
-        "indexed",
-        "initially",
-        "instead",
-        "isnull",
-        "match",
-        "no",
-        "notnull",
-        "of",
-        "plan",
-        "pragma",
-        "query",
-        "raise",
-        "regexp",
-        "reindex",
-        "release",
-        "rename",
-        "replace",
-        "restrict",
-        "row",
-        "savepoint",
-        "temp",
-        "temporary",
+        "values",
+        "constraint",
+        "foreign",
+        "primary",
+        "references",
+        # Uncommonly used as domain names
         "vacuum",
-        "virtual",
+        "pragma",
+        "savepoint",
+        "rollback",
+        "commit",
+        "recursive",
     }
 )
+
+# Words that are SQL-reserved but commonly used in domain modelling.
+# SQLAlchemy safely quotes them — warning about these creates noise.
+# Examples: User, Order, Group, Action, Key, Check, View, Column, etc.
+# These are intentionally excluded from SQL_RESERVED_WORDS.
 
 # Secret/sensitive field patterns that should not appear in event payloads
 # These can leak credentials, API keys, or other sensitive data via event logs
@@ -518,13 +432,16 @@ def validate_experiences(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         f"has kind 'integration' but missing integration or action"
                     )
 
-            # Warn about steps with no transitions (potential dead ends)
+            # Warn about steps with no transitions — but only if the step
+            # is NOT the last defined step (terminal steps at the end of a
+            # flow are expected, e.g. "complete", "done", "success").
             if not step.transitions:
-                # This is ok if it's a terminal step
-                warnings.append(
-                    f"Experience '{experience.name}' step '{step.name}' "
-                    f"has no transitions (terminal step)"
-                )
+                is_last = step == experience.steps[-1] if experience.steps else False
+                if not is_last:
+                    warnings.append(
+                        f"Experience '{experience.name}' step '{step.name}' "
+                        f"has no transitions (terminal step)"
+                    )
 
             # Validate saves_to format
             if step.saves_to:
@@ -670,9 +587,9 @@ def validate_integrations(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         if not integration.api_refs:
             warnings.append(f"Integration '{integration.name}' doesn't use any APIs")
 
-        # Check that integration has actions or syncs
-        if not integration.actions and not integration.syncs:
-            warnings.append(f"Integration '{integration.name}' has no actions or syncs")
+        # Check that integration has actions, syncs, or mappings (v0.30.0+)
+        if not integration.actions and not integration.syncs and not integration.mappings:
+            warnings.append(f"Integration '{integration.name}' has no actions, syncs, or mappings")
 
     return errors, warnings
 
@@ -1699,13 +1616,13 @@ def validate_audit_config(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         count = len(audited_entities)
         noun = "entity has" if count == 1 else "entities have"
         warnings.append(
-            f"{count} {noun} audit: enabled. "
+            f"[Info] {count} {noun} audit: enabled. "
             "CRUD operations and access decisions will be logged to the audit trail."
         )
         fcs = [e.name for e in appspec.domain.entities if e.audit and e.audit.include_field_changes]
         if fcs:
             warnings.append(
-                f"{len(fcs)} audited entity/entities have "
+                f"[Info] {len(fcs)} audited entity/entities have "
                 "include_field_changes enabled. Field-level diffs will be "
                 "captured for update and delete operations."
             )
@@ -1778,7 +1695,7 @@ def validate_sensitive_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]
         count = len(sensitive_fields)
         noun = "field" if count == 1 else "fields"
         warnings.append(
-            f"[Preview] {count} {noun} marked 'sensitive'. "
+            f"[Info] {count} {noun} marked 'sensitive'. "
             "Response masking is not yet enforced at runtime."
         )
 

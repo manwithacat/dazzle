@@ -327,6 +327,8 @@ def is_money_field_name(field_name: str) -> bool:
     Check if a field name suggests it contains monetary values.
 
     Used by the linter to detect potential float/Decimal money fields.
+    Excludes fields that contain non-monetary qualifiers like 'percentage',
+    'pct', 'ratio', 'share', 'rate', 'factor', 'score', 'count', or 'grade'.
 
     Args:
         field_name: Field name to check
@@ -335,6 +337,23 @@ def is_money_field_name(field_name: str) -> bool:
         True if the field name matches money-like patterns
     """
     name_lower = field_name.lower()
+
+    # Exclude fields that are clearly not monetary despite containing
+    # money-like substrings (e.g., "profit_share_percentage", "balance_score")
+    non_monetary = (
+        "percentage",
+        "pct",
+        "ratio",
+        "share",
+        "rate",
+        "factor",
+        "score",
+        "count",
+        "grade",
+        "level",
+    )
+    if any(q in name_lower for q in non_monetary):
+        return False
 
     # Direct match
     if name_lower in MONEY_FIELD_PATTERNS:
