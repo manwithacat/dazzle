@@ -402,6 +402,7 @@ class RedisBus(BaseEventBus):
         try:
             last_offset = int(last_id.split("-")[0])
         except (ValueError, IndexError):
+            logger.debug("Could not parse stream offset from %r, defaulting to 0", last_id)
             last_offset = 0
 
         # Get last processed timestamp
@@ -411,7 +412,12 @@ class RedisBus(BaseEventBus):
             try:
                 last_processed_at = datetime.fromisoformat(last_processed.decode())
             except (ValueError, AttributeError):
-                pass
+                logger.warning(
+                    "Could not parse last_processed_at for %s/%s: %r",
+                    topic,
+                    group_id,
+                    last_processed,
+                )
 
         return ConsumerStatus(
             topic=topic,
@@ -449,6 +455,7 @@ class RedisBus(BaseEventBus):
                 for g in groups
             ]
         except aioredis.ResponseError:
+            logger.debug("No consumer groups found for topic %s (stream may not exist)", topic)
             return []
 
     async def get_topic_info(self, topic: str) -> dict[str, Any]:
@@ -460,6 +467,7 @@ class RedisBus(BaseEventBus):
         try:
             info = await redis.xinfo_stream(stream_key)
         except aioredis.ResponseError:
+            logger.debug("Stream %s does not exist, returning empty topic info", topic)
             return {
                 "topic": topic,
                 "event_count": 0,
@@ -488,7 +496,7 @@ class RedisBus(BaseEventBus):
                     int(msg_id.split("-")[0]) / 1000, UTC
                 ).isoformat()
             except (ValueError, IndexError):
-                pass
+                logger.debug("Could not parse oldest event timestamp from %r", msg_id)
 
         if last_entry:
             msg_id = last_entry[0]
@@ -499,7 +507,7 @@ class RedisBus(BaseEventBus):
                     int(msg_id.split("-")[0]) / 1000, UTC
                 ).isoformat()
             except (ValueError, IndexError):
-                pass
+                logger.debug("Could not parse newest event timestamp from %r", msg_id)
 
         # Get consumer groups
         groups = await self.list_consumer_groups(topic)
@@ -508,6 +516,7 @@ class RedisBus(BaseEventBus):
         try:
             dlq_count = await redis.xlen(dlq_key)
         except aioredis.ResponseError:
+            logger.debug("DLQ stream not found for topic %s", topic)
             dlq_count = 0
 
         return {
@@ -725,6 +734,7 @@ class RedisBus(BaseEventBus):
                 result = await redis.xlen(self._dlq_key(topic))
                 return int(result) if result else 0
             except aioredis.ResponseError:
+                logger.debug("DLQ stream not found for topic %s", topic)
                 return 0
 
         # Sum all DLQ streams
@@ -733,7 +743,7 @@ class RedisBus(BaseEventBus):
             try:
                 total += await redis.xlen(key)
             except aioredis.ResponseError:
-                pass
+                logger.debug("Could not read DLQ stream %s", key)
         return total
 
     async def _fetch_dlq_event(
@@ -802,6 +812,6 @@ class RedisBus(BaseEventBus):
                     await redis.delete(dlq_key)
                     count += stream_len
                 except aioredis.ResponseError:
-                    pass
+                    logger.warning("Failed to clear DLQ stream for topic %s", t)
 
         return count

@@ -80,7 +80,7 @@ class RedisStreamAdapter(StreamAdapter):
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # Expected during shutdown — task was intentionally cancelled
         self._subscriptions.clear()
 
         if self._client:
@@ -208,13 +208,19 @@ class RedisStreamAdapter(StreamAdapter):
                                 try:
                                     msg["payload"] = json.loads(msg["payload"])
                                 except json.JSONDecodeError:
-                                    pass
+                                    logger.warning(
+                                        "Malformed JSON in payload field of stream message %s",
+                                        entry_id,
+                                    )
 
                             if "metadata" in msg:
                                 try:
                                     msg["metadata"] = json.loads(msg["metadata"])
                                 except json.JSONDecodeError:
-                                    pass
+                                    logger.warning(
+                                        "Malformed JSON in metadata field of stream message %s",
+                                        entry_id,
+                                    )
 
                             await callback(msg)
 
@@ -238,7 +244,7 @@ class RedisStreamAdapter(StreamAdapter):
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # Expected during shutdown — task was intentionally cancelled
             del self._subscriptions[key]
         logger.info("Unsubscribed from all Redis streams")
 
@@ -303,7 +309,7 @@ class KafkaAdapter(StreamAdapter):
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # Expected during shutdown — task was intentionally cancelled
         self._consumer_tasks.clear()
 
         for consumer in self._consumers.values():
@@ -429,7 +435,7 @@ class KafkaAdapter(StreamAdapter):
                         except Exception as e:
                             logger.error(f"Error processing Kafka message: {e}")
                 except asyncio.CancelledError:
-                    pass
+                    pass  # Expected during shutdown — task was intentionally cancelled
 
             task = asyncio.create_task(consume_loop())
             self._consumer_tasks[f"{topic}:{group}"] = task
@@ -448,7 +454,7 @@ class KafkaAdapter(StreamAdapter):
             try:
                 await task
             except asyncio.CancelledError:
-                pass
+                pass  # Expected during shutdown — task was intentionally cancelled
 
         for _key, consumer in list(self._consumers.items()):
             try:
@@ -516,7 +522,7 @@ class InMemoryStreamAdapter(StreamAdapter):
             try:
                 await self._subscription_task
             except asyncio.CancelledError:
-                pass
+                pass  # Expected during shutdown — task was intentionally cancelled
         await super().shutdown()
         logger.info("In-memory stream adapter shut down")
 
