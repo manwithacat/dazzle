@@ -48,6 +48,19 @@ grep -rn "project_path: Any" src/dazzle/mcp/server/handlers/
 ### 1.5 All fallback paths log at WARNING or above
 Spot-check the patterns from 1.1 and 1.2. If a fallback catches a connection/runtime error, it must log at WARNING+ (not debug or silent). INFO is acceptable only for expected conditions like ImportError for optional dependencies.
 
+### 1.5a No silent handlers in event delivery path (#365)
+```bash
+# Count silent except blocks (pass or bare return, no logging) in event/channel files
+grep -rn "except" src/dazzle_back/events/ src/dazzle_back/channels/ --include="*.py" -A2 | grep -E "pass$|return$"
+```
+**PASS** = 0 silent handlers in `events/` and `channels/` directories. Event delivery failures MUST log at WARNING+.
+
+### 1.5b getattr() with string literals (#367)
+```bash
+grep -rn "getattr(" src/ --include="*.py" | wc -l
+```
+**PASS** = count < 200. **TRACK** = report count if ≥200. Target: replace with typed attribute access on IR models.
+
 ### 1.6 Function length (aspirational)
 ```bash
 # Count functions >150 lines in src/
@@ -111,6 +124,8 @@ Produce a structured report:
 | 1.3 | Core→MCP isolation | PASS/FAIL | count |
 | 1.4 | project_path: Any | PASS/FAIL | count |
 | 1.5 | Fallback logging | PASS/FAIL | notes |
+| 1.5a | Silent handlers in event path | PASS/FAIL | count |
+| 1.5b | getattr() string literals | PASS/TRACK | count (target <200) |
 | 1.6 | Functions >150 lines | TRACK | count, top 5 |
 | 1.7 | Classes >800 lines | TRACK | count, top offenders |
 
