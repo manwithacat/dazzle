@@ -20,7 +20,7 @@ from .adapter import ProcessAdapter
 logger = logging.getLogger(__name__)
 
 
-BackendType = Literal["auto", "lite", "celery", "temporal"]
+BackendType = Literal["auto", "lite", "celery", "eventbus", "temporal"]
 
 
 @dataclass
@@ -30,6 +30,13 @@ class LiteConfig:
     db_path: str = ".dazzle/processes.db"
     poll_interval_seconds: float = 1.0
     scheduler_interval_seconds: float = 60.0
+
+
+@dataclass
+class EventBusConfig:
+    """Configuration for EventBusProcessAdapter."""
+
+    redis_url: str | None = None  # Defaults to REDIS_URL env var
 
 
 @dataclass
@@ -70,6 +77,7 @@ class ProcessConfig:
 
     backend: BackendType = "auto"
     lite: LiteConfig = field(default_factory=LiteConfig)
+    eventbus: EventBusConfig = field(default_factory=EventBusConfig)
     celery: CeleryConfig = field(default_factory=CeleryConfig)
     temporal: TemporalConfig = field(default_factory=TemporalConfig)
 
@@ -105,6 +113,8 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
 
     if backend == "temporal":
         return _create_temporal_adapter(config)
+    elif backend == "eventbus":
+        return _create_eventbus_adapter(config)
     elif backend == "celery":
         return _create_celery_adapter(config)
     elif backend == "lite":
@@ -137,18 +147,18 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
     except ImportError:
         logger.debug("Temporal SDK not installed")
 
-    # Check for Redis → Celery
-    redis_url = config.celery.redis_url or os.environ.get("REDIS_URL")
+    # Check for Redis → EventBus (preferred over Celery)
+    redis_url = config.eventbus.redis_url or config.celery.redis_url or os.environ.get("REDIS_URL")
     if redis_url:
-        logger.debug("REDIS_URL set, using Celery backend")
-        return "celery"
+        logger.debug("REDIS_URL set, using EventBus backend (native event-driven)")
+        return "eventbus"
 
     # Fallback to lite with deprecation warning
     import warnings
 
     warnings.warn(
         "LiteProcessAdapter is deprecated for production use. "
-        "Set REDIS_URL to enable CeleryProcessAdapter.",
+        "Set REDIS_URL to enable EventBusProcessAdapter.",
         DeprecationWarning,
         stacklevel=3,
     )
@@ -201,6 +211,14 @@ def _create_temporal_adapter(config: ProcessConfig) -> ProcessAdapter:
     )
 
 
+def _create_eventbus_adapter(config: ProcessConfig) -> ProcessAdapter:
+    """Create EventBusProcessAdapter with configuration."""
+    from .eventbus_adapter import EventBusProcessAdapter
+
+    redis_url = config.eventbus.redis_url or config.celery.redis_url or os.environ.get("REDIS_URL")
+    return EventBusProcessAdapter(redis_url=redis_url)
+
+
 def _create_celery_adapter(config: ProcessConfig) -> ProcessAdapter:
     """Create CeleryProcessAdapter with configuration."""
     try:
@@ -241,6 +259,7 @@ def get_backend_info(config: ProcessConfig) -> dict[str, str | bool]:
     info: dict[str, str | bool] = {
         "configured_backend": config.backend,
         "lite_available": True,  # Always available
+        "eventbus_available": bool(os.environ.get("REDIS_URL")),
         "celery_available": False,
         "redis_url_set": bool(os.environ.get("REDIS_URL")),
         "temporal_sdk_installed": False,

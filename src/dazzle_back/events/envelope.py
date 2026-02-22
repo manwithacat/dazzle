@@ -63,6 +63,7 @@ class EventEnvelope:
     headers: dict[str, str] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=_utc_now)
     producer: str = "dazzle"
+    deliver_at: datetime | None = None  # Delayed delivery: hold until this time
 
     @property
     def topic(self) -> str:
@@ -110,6 +111,7 @@ class EventEnvelope:
             "headers": self.headers,
             "timestamp": self.timestamp.isoformat(),
             "producer": self.producer,
+            "deliver_at": self.deliver_at.isoformat() if self.deliver_at else None,
         }
 
     def to_json(self) -> str:
@@ -130,6 +132,9 @@ class EventEnvelope:
             headers=data.get("headers", {}),
             timestamp=datetime.fromisoformat(data["timestamp"]),
             producer=data.get("producer", "dazzle"),
+            deliver_at=(
+                datetime.fromisoformat(data["deliver_at"]) if data.get("deliver_at") else None
+            ),
         )
 
     @classmethod
@@ -174,6 +179,31 @@ class EventEnvelope:
             headers=headers or {},
             producer=producer,
             timestamp=_utc_now(),
+        )
+
+    @classmethod
+    def create_delayed(
+        cls,
+        event_type: str,
+        key: str,
+        payload: dict[str, Any],
+        deliver_at: datetime,
+        *,
+        correlation_id: UUID | None = None,
+        headers: dict[str, str] | None = None,
+        producer: str = "dazzle",
+    ) -> EventEnvelope:
+        """Create a delayed event that won't be delivered until deliver_at."""
+        return cls(
+            event_id=uuid4(),
+            event_type=event_type,
+            key=key,
+            payload=payload,
+            correlation_id=correlation_id,
+            headers=headers or {},
+            producer=producer,
+            timestamp=_utc_now(),
+            deliver_at=deliver_at,
         )
 
     def with_correlation(self, correlation_id: UUID) -> EventEnvelope:
