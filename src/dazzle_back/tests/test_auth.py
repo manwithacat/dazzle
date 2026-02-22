@@ -728,9 +728,9 @@ class TestServerAuthIntegration:
         from dazzle.core.ir.appspec import AppSpec
         from dazzle.core.ir.domain import DomainSpec
         from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
         from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
         from dazzle.core.ir.fields import FieldType as IRFieldType
-        from dazzle.core.ir.fields import FieldTypeKind
 
         return AppSpec(
             name="test_app",
@@ -744,7 +744,7 @@ class TestServerAuthIntegration:
                             IRFieldSpec(
                                 name="id",
                                 type=IRFieldType(kind=FieldTypeKind.UUID),
-                                modifiers=["pk"],
+                                modifiers=[FieldModifier.PK],
                             ),
                             IRFieldSpec(
                                 name="title",

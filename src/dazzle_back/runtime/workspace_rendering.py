@@ -28,7 +28,7 @@ def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
                 is the state-machine status field and returns ``"badge"``.
     """
     kind = field.type.kind
-    kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
+    kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
     if kind_val == "enum":
         return "badge"
     if kind_val == "bool":
@@ -77,9 +77,7 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
             continue
         ft = f.type
         kind = ft.kind
-        kind_val: str = (
-            kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
-        )
+        kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
         # Ref fields
         if kind_val == "ref":
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
@@ -146,9 +144,7 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
             continue
         ft = f.type
         kind = ft.kind
-        kind_val: str = (
-            kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
-        )
+        kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
         # Show ref columns with resolved display name; hide other relation types
         if kind_val == "ref":
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name

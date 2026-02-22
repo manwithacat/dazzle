@@ -21,19 +21,13 @@ except ImportError:
     _TestClient = None  # type: ignore[misc,assignment]
     TESTCLIENT_AVAILABLE = False
 
+from dazzle.core.ir.appspec import AppSpec
+from dazzle.core.ir.domain import DomainSpec
+from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
+from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
+from dazzle.core.ir.fields import FieldType as IRFieldType
 from dazzle_back.runtime.server import create_app
-from dazzle_back.specs import (
-    BackendSpec,
-    DomainOperation,
-    EndpointSpec,
-    EntitySpec,
-    FieldSpec,
-    FieldType,
-    HttpMethod,
-    OperationKind,
-    ScalarType,
-    ServiceSpec,
-)
 
 # =============================================================================
 # Fixtures
@@ -41,72 +35,39 @@ from dazzle_back.specs import (
 
 
 @pytest.fixture
-def task_spec() -> BackendSpec:
+def task_spec() -> AppSpec:
     """Create a simple task management spec."""
-    return BackendSpec(
+    return AppSpec(
         name="task_app",
         version="1.0.0",
-        entities=[
-            EntitySpec(
-                name="Task",
-                fields=[
-                    FieldSpec(
-                        name="id",
-                        type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        required=True,
-                    ),
-                    FieldSpec(
-                        name="title",
-                        type=FieldType(kind="scalar", scalar_type=ScalarType.STR, max_length=200),
-                        required=True,
-                    ),
-                    FieldSpec(
-                        name="status",
-                        type=FieldType(kind="enum", enum_values=["pending", "done"]),
-                        required=True,
-                        default="pending",
-                    ),
-                ],
-            ),
-        ],
-        services=[
-            ServiceSpec(
-                name="task_service",
-                domain_operation=DomainOperation(kind=OperationKind.LIST, entity="Task"),
-            ),
-        ],
-        endpoints=[
-            EndpointSpec(
-                name="list_tasks",
-                service="task_service",
-                method=HttpMethod.GET,
-                path="/tasks",
-            ),
-            EndpointSpec(
-                name="get_task",
-                service="task_service",
-                method=HttpMethod.GET,
-                path="/tasks/{id}",
-            ),
-            EndpointSpec(
-                name="create_task",
-                service="task_service",
-                method=HttpMethod.POST,
-                path="/tasks",
-            ),
-            EndpointSpec(
-                name="update_task",
-                service="task_service",
-                method=HttpMethod.PUT,
-                path="/tasks/{id}",
-            ),
-            EndpointSpec(
-                name="delete_task",
-                service="task_service",
-                method=HttpMethod.DELETE,
-                path="/tasks/{id}",
-            ),
-        ],
+        domain=DomainSpec(
+            entities=[
+                IREntitySpec(
+                    name="Task",
+                    title="Task",
+                    fields=[
+                        IRFieldSpec(
+                            name="id",
+                            type=IRFieldType(kind=FieldTypeKind.UUID),
+                            modifiers=[FieldModifier.PK],
+                        ),
+                        IRFieldSpec(
+                            name="title",
+                            type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
+                            modifiers=[FieldModifier.REQUIRED],
+                        ),
+                        IRFieldSpec(
+                            name="status",
+                            type=IRFieldType(
+                                kind=FieldTypeKind.ENUM, enum_values=["pending", "done"]
+                            ),
+                            modifiers=[FieldModifier.REQUIRED],
+                            default="pending",
+                        ),
+                    ],
+                ),
+            ]
+        ),
     )
 
 
@@ -124,7 +85,7 @@ class TestE2EEndpoints:
     """End-to-end endpoint tests."""
 
     @pytest.fixture
-    def client(self, task_spec: BackendSpec) -> TestClient:
+    def client(self, task_spec: AppSpec) -> TestClient:
         """Create a test client with clean database."""
         import os
 

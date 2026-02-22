@@ -447,24 +447,28 @@ class TestServerWithDatabase:
         from dazzle.core.ir.appspec import AppSpec
         from dazzle.core.ir.domain import DomainSpec
         from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
         from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
         from dazzle.core.ir.fields import FieldType as IRFieldType
-        from dazzle.core.ir.fields import FieldTypeKind
 
         task_entity = IREntitySpec(
             name="Task",
             title="Task",
             fields=[
-                IRFieldSpec(name="id", type=IRFieldType(kind=FieldTypeKind.UUID), modifiers=["pk"]),
+                IRFieldSpec(
+                    name="id",
+                    type=IRFieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
                 IRFieldSpec(
                     name="title",
                     type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
-                    modifiers=["required"],
+                    modifiers=[FieldModifier.REQUIRED],
                 ),
                 IRFieldSpec(
                     name="status",
                     type=IRFieldType(kind=FieldTypeKind.ENUM, enum_values=["pending", "done"]),
-                    modifiers=["required"],
+                    modifiers=[FieldModifier.REQUIRED],
                     default="pending",
                 ),
             ],
