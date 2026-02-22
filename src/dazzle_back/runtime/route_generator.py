@@ -369,6 +369,291 @@ async def _log_audit_decision(
 # =============================================================================
 
 
+# =============================================================================
+# Auth wrapper — eliminates cedar / auth / noauth triplication
+# =============================================================================
+
+
+def _wrap_with_auth(
+    core_fn: Callable[..., Any],
+    *,
+    cedar_access_spec: Any | None,
+    auth_dep: Callable[..., Any] | None,
+    optional_auth_dep: Callable[..., Any] | None,
+    require_auth_by_default: bool,
+    operation: str,
+    entity_name: str,
+    audit_logger: Any | None,
+    include_field_changes: bool = False,
+    needs_pre_read: bool = False,
+) -> Callable[..., Any]:
+    """Wrap a core handler with cedar / auth / noauth variant selection.
+
+    ``core_fn`` signature must be::
+
+        async def core(id_or_none, request, *, current_user=None, existing=None) -> Any
+
+    For create the first positional arg is *None*; for read/update/delete it
+    is the resource UUID.
+
+    ``needs_pre_read`` — if True the wrapper fetches the existing record
+    *before* calling ``core_fn`` (required by Cedar update/delete for policy
+    evaluation and by auth-mode update/delete for field-change diffs).
+    """
+    _is_create = operation == "create"
+
+    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
+
+    if _use_cedar:
+        assert optional_auth_dep is not None  # narrowing for mypy
+        return _build_cedar_handler(
+            core_fn,
+            cedar_access_spec=cedar_access_spec,
+            optional_auth_dep=optional_auth_dep,
+            operation=operation,
+            entity_name=entity_name,
+            audit_logger=audit_logger,
+            include_field_changes=include_field_changes,
+            needs_pre_read=needs_pre_read,
+            is_create=_is_create,
+        )
+
+    if require_auth_by_default and auth_dep:
+        return _build_auth_handler(
+            core_fn,
+            auth_dep=auth_dep,
+            operation=operation,
+            entity_name=entity_name,
+            audit_logger=audit_logger,
+            include_field_changes=include_field_changes,
+            needs_pre_read=needs_pre_read,
+            is_create=_is_create,
+        )
+
+    return _build_noauth_handler(core_fn, is_create=_is_create)
+
+
+def _build_cedar_handler(
+    core_fn: Callable[..., Any],
+    *,
+    cedar_access_spec: Any,
+    optional_auth_dep: Callable[..., Any],
+    operation: str,
+    entity_name: str,
+    audit_logger: Any | None,
+    include_field_changes: bool,
+    needs_pre_read: bool,
+    is_create: bool,
+) -> Callable[..., Any]:
+    """Build a Cedar-policy-checked handler (with or without id param)."""
+    from dazzle_back.specs.auth import AccessOperationKind
+
+    _op_kind = getattr(AccessOperationKind, operation.upper())
+
+    async def _cedar_impl(
+        id: UUID | None,
+        request: Request,
+        auth_context: Any,
+    ) -> Any:
+        from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
+        from dazzle_back.runtime.audit_log import measure_evaluation_time
+
+        # Pre-read for operations that need existing record for policy eval
+        existing = None
+        if needs_pre_read and id is not None:
+            existing = await core_fn.__self_service__.execute(operation="read", id=id)  # type: ignore[attr-defined]
+            if existing is None:
+                raise HTTPException(status_code=404, detail="Not found")
+
+        user, ctx = _build_access_context(auth_context)
+        record_dict = _record_to_dict(existing) if existing is not None else None
+        decision: AccessDecision
+        decision, eval_us = measure_evaluation_time(
+            lambda: evaluate_permission(cedar_access_spec, _op_kind, record_dict, ctx)
+        )
+
+        # Create logs both allow+deny before checking; update/delete only log deny on denial
+        if is_create and audit_logger:
+            await _log_audit_decision(
+                audit_logger,
+                request,
+                operation=operation,
+                entity_name=entity_name,
+                entity_id=None,
+                decision="allow" if decision.allowed else "deny",
+                matched_policy=decision.matched_policy,
+                policy_effect=decision.effect,
+                user=user,
+                evaluation_time_us=eval_us,
+            )
+
+        if not decision.allowed:
+            if not is_create and audit_logger:
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
+                    operation=operation,
+                    entity_name=entity_name,
+                    entity_id=str(id) if id is not None else None,
+                    decision="deny",
+                    matched_policy=decision.matched_policy,
+                    policy_effect=decision.effect,
+                    user=user,
+                    evaluation_time_us=eval_us,
+                )
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+        current_user = str(user.id) if user else None
+        result = await core_fn(id, request, current_user=current_user, existing=existing)
+
+        # Post-operation audit (create already logged above)
+        if not is_create:
+            _fc = None
+            if include_field_changes and existing is not None:
+                after = {} if operation == "delete" else result
+                _fc = _compute_field_changes(existing, after)
+            if audit_logger:
+                await _log_audit_decision(
+                    audit_logger,
+                    request,
+                    operation=operation,
+                    entity_name=entity_name,
+                    entity_id=str(id) if id is not None else _extract_result_id(result),
+                    decision="allow",
+                    matched_policy=decision.matched_policy,
+                    policy_effect=decision.effect,
+                    user=user,
+                    evaluation_time_us=eval_us,
+                    field_changes=_fc,
+                )
+
+        return result
+
+    # Build properly-typed FastAPI handlers with correct signatures
+    if is_create:
+
+        async def _cedar_create(
+            request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
+        ) -> Any:
+            return await _cedar_impl(None, request, auth_context)
+
+        _cedar_create.__annotations__ = {
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _cedar_create
+
+    async def _cedar_with_id(
+        id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
+    ) -> Any:
+        return await _cedar_impl(id, request, auth_context)
+
+    _cedar_with_id.__annotations__ = {
+        "id": UUID,
+        "request": Request,
+        "auth_context": AuthContext,
+        "return": Any,
+    }
+    return _cedar_with_id
+
+
+def _build_auth_handler(
+    core_fn: Callable[..., Any],
+    *,
+    auth_dep: Callable[..., Any],
+    operation: str,
+    entity_name: str,
+    audit_logger: Any | None,
+    include_field_changes: bool,
+    needs_pre_read: bool,
+    is_create: bool,
+) -> Callable[..., Any]:
+    """Build an authenticated handler (with or without id param)."""
+
+    async def _auth_impl(
+        id: UUID | None,
+        request: Request,
+        auth_context: Any,
+    ) -> Any:
+        user = auth_context.user
+        current_user = str(user.id) if user else None
+
+        # Pre-read for field-change diffs
+        existing = None
+        if needs_pre_read and include_field_changes and audit_logger and id is not None:
+            existing = await core_fn.__self_service__.execute(operation="read", id=id)  # type: ignore[attr-defined]
+
+        result = await core_fn(id, request, current_user=current_user, existing=existing)
+
+        _fc = None
+        if existing is not None:
+            after = {} if operation == "delete" else result
+            _fc = _compute_field_changes(existing, after)
+        if audit_logger:
+            await _log_audit_decision(
+                audit_logger,
+                request,
+                operation=operation,
+                entity_name=entity_name,
+                entity_id=str(id) if id is not None else _extract_result_id(result),
+                decision="allow",
+                matched_policy="authenticated",
+                policy_effect="permit",
+                user=user,
+                field_changes=_fc,
+            )
+        return result
+
+    if is_create:
+
+        async def _auth_create(
+            request: Request, auth_context: AuthContext = Depends(auth_dep)
+        ) -> Any:
+            return await _auth_impl(None, request, auth_context)
+
+        _auth_create.__annotations__ = {
+            "request": Request,
+            "auth_context": AuthContext,
+            "return": Any,
+        }
+        return _auth_create
+
+    async def _auth_with_id(
+        id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
+    ) -> Any:
+        return await _auth_impl(id, request, auth_context)
+
+    _auth_with_id.__annotations__ = {
+        "id": UUID,
+        "request": Request,
+        "auth_context": AuthContext,
+        "return": Any,
+    }
+    return _auth_with_id
+
+
+def _build_noauth_handler(
+    core_fn: Callable[..., Any],
+    *,
+    is_create: bool,
+) -> Callable[..., Any]:
+    """Build an unauthenticated handler (with or without id param)."""
+    if is_create:
+
+        async def _noauth_create(request: Request) -> Any:
+            return await core_fn(None, request, current_user=None, existing=None)
+
+        _noauth_create.__annotations__ = {"request": Request, "return": Any}
+        return _noauth_create
+
+    async def _noauth_with_id(id: UUID, request: Request) -> Any:
+        return await core_fn(id, request, current_user=None, existing=None)
+
+    _noauth_with_id.__annotations__ = {"id": UUID, "request": Request, "return": Any}
+    return _noauth_with_id
+
+
 def create_list_handler(
     service: Any,
     _response_schema: type[BaseModel] | None = None,
@@ -751,9 +1036,20 @@ def create_read_handler(
 ) -> Callable[..., Any]:
     """Create a handler for read operations with optional Cedar-style access control."""
 
-    # If we have Cedar access spec with READ rules, use optional auth for evaluation
-    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
+    async def _core(
+        id: UUID, request: Request, *, current_user: str | None = None, existing: Any = None
+    ) -> Any:
+        result = await service.execute(operation="read", id=id, include=auto_include)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Not found")
+        html = _render_detail_html(request, result, entity_name)
+        return html if html is not None else result
 
+    # READ is special: Cedar needs the *fetched* record for policy eval, but
+    # the core already does the fetch.  The generic wrapper's pre-read would
+    # double-fetch.  So for Cedar-READ we inline a lightweight wrapper that
+    # fetches once, evaluates, then returns.
+    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
     if _use_cedar:
 
         async def _read_cedar(
@@ -803,46 +1099,18 @@ def create_read_handler(
         }
         return _read_cedar
 
-    if require_auth_by_default and auth_dep:
-
-        async def _read_auth(
-            id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
-        ) -> Any:
-            result = await service.execute(operation="read", id=id, include=auto_include)
-            if result is None:
-                raise HTTPException(status_code=404, detail="Not found")
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="read",
-                    entity_name=entity_name,
-                    entity_id=str(id),
-                    decision="allow",
-                    matched_policy="authenticated",
-                    policy_effect="permit",
-                    user=auth_context.user,
-                )
-            html = _render_detail_html(request, result, entity_name)
-            return html if html is not None else result
-
-        _read_auth.__annotations__ = {
-            "id": UUID,
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
-        return _read_auth
-
-    async def _read_noauth(id: UUID, request: Request) -> Any:
-        result = await service.execute(operation="read", id=id, include=auto_include)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Not found")
-        html = _render_detail_html(request, result, entity_name)
-        return html if html is not None else result
-
-    _read_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
-    return _read_noauth
+    # Non-cedar: use the generic wrapper (no pre-read needed)
+    _core.__self_service__ = service  # type: ignore[attr-defined]
+    return _wrap_with_auth(
+        _core,
+        cedar_access_spec=None,
+        auth_dep=auth_dep,
+        optional_auth_dep=optional_auth_dep,
+        require_auth_by_default=require_auth_by_default,
+        operation="read",
+        entity_name=entity_name,
+        audit_logger=audit_logger,
+    )
 
 
 def _extract_result_id(result: Any) -> str | None:
@@ -876,89 +1144,9 @@ def create_create_handler(
             return f"/app/{entity_slug}/{result_id}"
         return None
 
-    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
-
-    if _use_cedar:
-
-        async def _create_cedar(
-            request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
-        ) -> Any:
-            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
-            from dazzle_back.runtime.audit_log import measure_evaluation_time
-            from dazzle_back.specs.auth import AccessOperationKind
-
-            user, ctx = _build_access_context(auth_context)
-            assert cedar_access_spec is not None
-            decision: AccessDecision
-            decision, eval_us = measure_evaluation_time(
-                lambda: evaluate_permission(
-                    cedar_access_spec, AccessOperationKind.CREATE, None, ctx
-                )
-            )
-
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="create",
-                    entity_name=entity_name,
-                    entity_id=None,
-                    decision="allow" if decision.allowed else "deny",
-                    matched_policy=decision.matched_policy,
-                    policy_effect=decision.effect,
-                    user=user,
-                    evaluation_time_us=eval_us,
-                )
-
-            if not decision.allowed:
-                raise HTTPException(status_code=403, detail="Forbidden")
-
-            body = await _parse_request_body(request)
-            data = input_schema.model_validate(body)
-            result = await service.execute(operation="create", data=data)
-            return _with_htmx_triggers(
-                request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
-            )
-
-        _create_cedar.__annotations__ = {
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
-        return _create_cedar
-
-    if require_auth_by_default and auth_dep:
-
-        async def _create_auth(
-            request: Request, auth_context: AuthContext = Depends(auth_dep)
-        ) -> Any:
-            body = await _parse_request_body(request)
-            data = input_schema.model_validate(body)
-            result = await service.execute(operation="create", data=data)
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="create",
-                    entity_name=entity_name,
-                    entity_id=_extract_result_id(result),
-                    decision="allow",
-                    matched_policy="authenticated",
-                    policy_effect="permit",
-                    user=auth_context.user,
-                )
-            return _with_htmx_triggers(
-                request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
-            )
-
-        _create_auth.__annotations__ = {
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
-        return _create_auth
-
-    async def _create_noauth(request: Request) -> Any:
+    async def _core(
+        _id: Any, request: Request, *, current_user: str | None = None, existing: Any = None
+    ) -> Any:
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         result = await service.execute(operation="create", data=data)
@@ -966,8 +1154,17 @@ def create_create_handler(
             request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
         )
 
-    _create_noauth.__annotations__ = {"request": Request, "return": Any}
-    return _create_noauth
+    _core.__self_service__ = service  # type: ignore[attr-defined]
+    return _wrap_with_auth(
+        _core,
+        cedar_access_spec=cedar_access_spec,
+        auth_dep=auth_dep,
+        optional_auth_dep=optional_auth_dep,
+        require_auth_by_default=require_auth_by_default,
+        operation="create",
+        entity_name=entity_name,
+        audit_logger=audit_logger,
+    )
 
 
 def create_update_handler(
@@ -984,132 +1181,34 @@ def create_update_handler(
 ) -> Callable[..., Any]:
     """Create a handler for update operations with optional Cedar-style access control."""
 
-    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
-
-    if _use_cedar:
-
-        async def _update_cedar(
-            id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
-        ) -> Any:
-            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
-            from dazzle_back.runtime.audit_log import measure_evaluation_time
-            from dazzle_back.specs.auth import AccessOperationKind
-
-            existing = await service.execute(operation="read", id=id)
-            if existing is None:
-                raise HTTPException(status_code=404, detail="Not found")
-
-            user, ctx = _build_access_context(auth_context)
-            assert cedar_access_spec is not None
-            decision: AccessDecision
-            decision, eval_us = measure_evaluation_time(
-                lambda: evaluate_permission(
-                    cedar_access_spec, AccessOperationKind.UPDATE, _record_to_dict(existing), ctx
-                )
-            )
-
-            if not decision.allowed:
-                if audit_logger:
-                    await _log_audit_decision(
-                        audit_logger,
-                        request,
-                        operation="update",
-                        entity_name=entity_name,
-                        entity_id=str(id),
-                        decision="deny",
-                        matched_policy=decision.matched_policy,
-                        policy_effect=decision.effect,
-                        user=user,
-                        evaluation_time_us=eval_us,
-                    )
-                raise HTTPException(status_code=403, detail="Forbidden")
-
-            body = await _parse_request_body(request)
-            data = input_schema.model_validate(body)
-            _cu = str(user.id) if user else None
-            result = await service.execute(operation="update", id=id, data=data, current_user=_cu)
-            if result is None:
-                raise HTTPException(status_code=404, detail="Not found")
-
-            _fc = _compute_field_changes(existing, result) if include_field_changes else None
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="update",
-                    entity_name=entity_name,
-                    entity_id=str(id),
-                    decision="allow",
-                    matched_policy=decision.matched_policy,
-                    policy_effect=decision.effect,
-                    user=user,
-                    evaluation_time_us=eval_us,
-                    field_changes=_fc,
-                )
-            return _with_htmx_triggers(
-                request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
-            )
-
-        _update_cedar.__annotations__ = {
-            "id": UUID,
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
-        return _update_cedar
-
-    if require_auth_by_default and auth_dep:
-
-        async def _update_auth(
-            id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
-        ) -> Any:
-            existing = None
-            if include_field_changes and audit_logger:
-                existing = await service.execute(operation="read", id=id)
-            body = await _parse_request_body(request)
-            data = input_schema.model_validate(body)
-            _cu = str(auth_context.user.id) if auth_context.user else None
-            result = await service.execute(operation="update", id=id, data=data, current_user=_cu)
-            if result is None:
-                raise HTTPException(status_code=404, detail="Not found")
-            _fc = _compute_field_changes(existing, result) if existing is not None else None
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="update",
-                    entity_name=entity_name,
-                    entity_id=str(id),
-                    decision="allow",
-                    matched_policy="authenticated",
-                    policy_effect="permit",
-                    user=auth_context.user,
-                    field_changes=_fc,
-                )
-            return _with_htmx_triggers(
-                request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
-            )
-
-        _update_auth.__annotations__ = {
-            "id": UUID,
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
-        return _update_auth
-
-    async def _update_noauth(id: UUID, request: Request) -> Any:
+    async def _core(
+        id: UUID, request: Request, *, current_user: str | None = None, existing: Any = None
+    ) -> Any:
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
-        result = await service.execute(operation="update", id=id, data=data)
+        kwargs: dict[str, Any] = {"operation": "update", "id": id, "data": data}
+        if current_user is not None:
+            kwargs["current_user"] = current_user
+        result = await service.execute(**kwargs)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
         return _with_htmx_triggers(
             request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
         )
 
-    _update_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
-    return _update_noauth
+    _core.__self_service__ = service  # type: ignore[attr-defined]
+    return _wrap_with_auth(
+        _core,
+        cedar_access_spec=cedar_access_spec,
+        auth_dep=auth_dep,
+        optional_auth_dep=optional_auth_dep,
+        require_auth_by_default=require_auth_by_default,
+        operation="update",
+        entity_name=entity_name,
+        audit_logger=audit_logger,
+        include_field_changes=include_field_changes,
+        needs_pre_read=True,
+    )
 
 
 def create_delete_handler(
@@ -1124,123 +1223,9 @@ def create_delete_handler(
 ) -> Callable[..., Any]:
     """Create a handler for delete operations with optional Cedar-style access control."""
 
-    _use_cedar = cedar_access_spec is not None and optional_auth_dep is not None
-
-    if _use_cedar:
-
-        async def _delete_cedar(
-            id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
-        ) -> Any:
-            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
-            from dazzle_back.runtime.audit_log import measure_evaluation_time
-            from dazzle_back.specs.auth import AccessOperationKind
-
-            existing = await service.execute(operation="read", id=id)
-            if existing is None:
-                raise HTTPException(status_code=404, detail="Not found")
-
-            user, ctx = _build_access_context(auth_context)
-            assert cedar_access_spec is not None
-            decision: AccessDecision
-            decision, eval_us = measure_evaluation_time(
-                lambda: evaluate_permission(
-                    cedar_access_spec, AccessOperationKind.DELETE, _record_to_dict(existing), ctx
-                )
-            )
-
-            if not decision.allowed:
-                if audit_logger:
-                    await _log_audit_decision(
-                        audit_logger,
-                        request,
-                        operation="delete",
-                        entity_name=entity_name,
-                        entity_id=str(id),
-                        decision="deny",
-                        matched_policy=decision.matched_policy,
-                        policy_effect=decision.effect,
-                        user=user,
-                        evaluation_time_us=eval_us,
-                    )
-                raise HTTPException(status_code=403, detail="Forbidden")
-
-            result = await service.execute(operation="delete", id=id)
-            if not result:
-                raise HTTPException(status_code=404, detail="Not found")
-
-            _fc = _compute_field_changes(existing, {}) if include_field_changes else None
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="delete",
-                    entity_name=entity_name,
-                    entity_id=str(id),
-                    decision="allow",
-                    matched_policy=decision.matched_policy,
-                    policy_effect=decision.effect,
-                    user=user,
-                    evaluation_time_us=eval_us,
-                    field_changes=_fc,
-                )
-            return _with_htmx_triggers(
-                request,
-                {"deleted": True},
-                entity_name,
-                "deleted",
-                redirect_url=_htmx_parent_url(request),
-            )
-
-        _delete_cedar.__annotations__ = {
-            "id": UUID,
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
-        return _delete_cedar
-
-    if require_auth_by_default and auth_dep:
-
-        async def _delete_auth(
-            id: UUID, request: Request, auth_context: AuthContext = Depends(auth_dep)
-        ) -> Any:
-            existing = None
-            if include_field_changes and audit_logger:
-                existing = await service.execute(operation="read", id=id)
-            result = await service.execute(operation="delete", id=id)
-            if not result:
-                raise HTTPException(status_code=404, detail="Not found")
-            _fc = _compute_field_changes(existing, {}) if existing is not None else None
-            if audit_logger:
-                await _log_audit_decision(
-                    audit_logger,
-                    request,
-                    operation="delete",
-                    entity_name=entity_name,
-                    entity_id=str(id),
-                    decision="allow",
-                    matched_policy="authenticated",
-                    policy_effect="permit",
-                    user=auth_context.user,
-                    field_changes=_fc,
-                )
-            return _with_htmx_triggers(
-                request,
-                {"deleted": True},
-                entity_name,
-                "deleted",
-                redirect_url=_htmx_parent_url(request),
-            )
-
-        _delete_auth.__annotations__ = {
-            "id": UUID,
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
-        return _delete_auth
-
-    async def _delete_noauth(id: UUID, request: Request) -> Any:
+    async def _core(
+        id: UUID, request: Request, *, current_user: str | None = None, existing: Any = None
+    ) -> Any:
         result = await service.execute(operation="delete", id=id)
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
@@ -1252,8 +1237,19 @@ def create_delete_handler(
             redirect_url=_htmx_parent_url(request),
         )
 
-    _delete_noauth.__annotations__ = {"id": UUID, "request": Request, "return": Any}
-    return _delete_noauth
+    _core.__self_service__ = service  # type: ignore[attr-defined]
+    return _wrap_with_auth(
+        _core,
+        cedar_access_spec=cedar_access_spec,
+        auth_dep=auth_dep,
+        optional_auth_dep=optional_auth_dep,
+        require_auth_by_default=require_auth_by_default,
+        operation="delete",
+        entity_name=entity_name,
+        audit_logger=audit_logger,
+        include_field_changes=include_field_changes,
+        needs_pre_read=True,
+    )
 
 
 def create_custom_handler(
