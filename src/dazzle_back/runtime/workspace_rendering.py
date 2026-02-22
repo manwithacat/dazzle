@@ -220,6 +220,9 @@ class WorkspaceRegionContext:
     auth_middleware: Any
     # Pre-computed at startup (constant-folded from IR)
     precomputed_columns: list[dict[str, Any]] = field(default_factory=list)
+    # Surface UX metadata (#362)
+    surface_default_sort: list[Any] = field(default_factory=list)
+    surface_empty_message: str = ""
 
 
 async def _workspace_region_handler(
@@ -298,7 +301,7 @@ async def _workspace_region_handler(
                 except Exception:
                     logger.warning("Failed to evaluate condition filter", exc_info=True)
 
-            # Build sort — user sort param overrides IR sort
+            # Build sort — user sort param > IR region sort > surface UX sort (#362)
             sort_list: list[str] | None = None
             if sort:
                 sort_list = [f"-{sort}" if dir == "desc" else sort]
@@ -308,6 +311,11 @@ async def _workspace_region_handler(
                     sort_list = [
                         f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
                         for s in ir_sort
+                    ]
+                elif ctx.surface_default_sort:
+                    sort_list = [
+                        f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
+                        for s in ctx.surface_default_sort
                     ]
 
             # Collect interactive filters from query params
@@ -475,7 +483,7 @@ async def _workspace_region_handler(
         total=total,
         columns=columns,
         metrics=metrics,
-        empty_message=ctx.ctx_region.empty_message,
+        empty_message=ctx.surface_empty_message or ctx.ctx_region.empty_message,
         display_key=columns[0]["key"] if columns else "name",
         item=items[0] if items else None,
         action_url=ctx.ctx_region.action_url,

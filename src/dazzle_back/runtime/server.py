@@ -387,11 +387,18 @@ class WorkspaceRouteBuilder:
                             break
 
                     _attention_signals: list[Any] = []
+                    _surface_default_sort: list[Any] = []
+                    _surface_empty_message = ""
                     for _surf in getattr(spec, "surfaces", []):
                         if getattr(_surf, "entity_ref", None) == _source:
                             ux = getattr(_surf, "ux", None)
-                            if ux and getattr(ux, "attention_signals", None):
-                                _attention_signals = list(ux.attention_signals)
+                            if ux:
+                                if getattr(ux, "attention_signals", None):
+                                    _attention_signals = list(ux.attention_signals)
+                                if getattr(ux, "sort", None):
+                                    _surface_default_sort = list(ux.sort)
+                                if getattr(ux, "empty_message", None):
+                                    _surface_empty_message = ux.empty_message
 
                     _columns = _columns_for_entity(_entity_spec, _source)
 
@@ -406,6 +413,8 @@ class WorkspaceRouteBuilder:
                         require_auth=require_auth,
                         auth_middleware=auth_middleware,
                         precomputed_columns=_columns,
+                        surface_default_sort=_surface_default_sort,
+                        surface_empty_message=_surface_empty_message,
                     )
                     _ws_region_ctxs.append(_region_ctx)
 

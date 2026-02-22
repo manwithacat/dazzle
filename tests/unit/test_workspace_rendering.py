@@ -682,3 +682,105 @@ class TestBuildSurfaceColumns:
         assert col_map["status"]["type"] == "badge"
         assert col_map["created_at"]["type"] == "date"
         assert col_map["completed"]["type"] == "bool"
+
+
+# ---------------------------------------------------------------------------
+# Surface UX Metadata on WorkspaceRegionContext (#362)
+# ---------------------------------------------------------------------------
+
+
+class TestWorkspaceRegionContextUXMetadata:
+    """WorkspaceRegionContext should carry surface UX sort and empty_message."""
+
+    def test_default_sort_stored(self) -> None:
+        """surface_default_sort should store SortSpec-like objects."""
+        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+
+        sort_specs = [SimpleNamespace(field="due_date", direction="desc")]
+        ctx = WorkspaceRegionContext(
+            ctx_region=SimpleNamespace(
+                display="LIST",
+                limit=None,
+                empty_message="No data available.",
+                aggregates={},
+                group_by="",
+                template="workspace/regions/list.html",
+                title="Tasks",
+                name="tasks",
+                endpoint="/api/workspaces/dash/regions/tasks",
+                action_url="",
+                source_tabs=[],
+            ),
+            ir_region=SimpleNamespace(sort=[], filter=None),
+            source="Task",
+            entity_spec=None,
+            attention_signals=[],
+            ws_access=None,
+            repositories={},
+            require_auth=False,
+            auth_middleware=None,
+            surface_default_sort=sort_specs,
+        )
+        assert ctx.surface_default_sort == sort_specs
+        assert ctx.surface_default_sort[0].field == "due_date"
+        assert ctx.surface_default_sort[0].direction == "desc"
+
+    def test_empty_message_stored(self) -> None:
+        """surface_empty_message should store the surface's empty message."""
+        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+
+        ctx = WorkspaceRegionContext(
+            ctx_region=SimpleNamespace(
+                display="LIST",
+                limit=None,
+                empty_message="No data available.",
+                aggregates={},
+                group_by="",
+                template="workspace/regions/list.html",
+                title="Tasks",
+                name="tasks",
+                endpoint="/api/workspaces/dash/regions/tasks",
+                action_url="",
+                source_tabs=[],
+            ),
+            ir_region=SimpleNamespace(sort=[], filter=None),
+            source="Task",
+            entity_spec=None,
+            attention_signals=[],
+            ws_access=None,
+            repositories={},
+            require_auth=False,
+            auth_middleware=None,
+            surface_empty_message="No tasks assigned yet.",
+        )
+        assert ctx.surface_empty_message == "No tasks assigned yet."
+
+    def test_defaults_when_not_provided(self) -> None:
+        """Default values should be empty list/string when not provided."""
+        from dazzle_back.runtime.workspace_rendering import WorkspaceRegionContext
+
+        ctx = WorkspaceRegionContext(
+            ctx_region=SimpleNamespace(
+                display="LIST",
+                limit=None,
+                empty_message="fallback",
+                aggregates={},
+                group_by="",
+                template="workspace/regions/list.html",
+                title="T",
+                name="t",
+                endpoint="",
+                action_url="",
+                source_tabs=[],
+            ),
+            ir_region=SimpleNamespace(sort=[], filter=None),
+            source="Task",
+            entity_spec=None,
+            attention_signals=[],
+            ws_access=None,
+            repositories={},
+            require_auth=False,
+            auth_middleware=None,
+        )
+        assert ctx.surface_default_sort == []
+        assert ctx.surface_empty_message == ""
