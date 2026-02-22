@@ -376,6 +376,7 @@ def create_list_handler(
     optional_auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     select_fields: list[str] | None = None,
+    json_projection: list[str] | None = None,
     auto_include: list[str] | None = None,
     htmx_columns: list[dict[str, Any]] | None = None,
     htmx_detail_url: str | None = None,
@@ -394,6 +395,7 @@ def create_list_handler(
         optional_auth_dep: FastAPI dependency for optional auth (returns AuthContext)
         require_auth_by_default: If True, require authentication when no access_spec is defined
         select_fields: Optional field projection for SQL queries
+        json_projection: Optional field names to include in JSON API responses (#360)
         auto_include: Optional relation names to auto-eager-load (prevents N+1)
         htmx_columns: Column definitions for HTMX table row rendering
         htmx_detail_url: Detail URL template for row click navigation
@@ -446,6 +448,7 @@ def create_list_handler(
                 dir,
                 search,
                 select_fields=select_fields,
+                json_projection=json_projection,
                 auto_include=auto_include,
                 cedar_access_spec=cedar_access_spec,
                 auth_context=auth_context,
@@ -487,6 +490,7 @@ def create_list_handler(
             dir,
             search,
             select_fields=select_fields,
+            json_projection=json_projection,
             auto_include=auto_include,
             audit_logger=audit_logger,
             entity_name=entity_name,
@@ -516,6 +520,7 @@ async def _list_handler_body(
     dir: str,
     search: str | None,
     select_fields: list[str] | None = None,
+    json_projection: list[str] | None = None,
     auto_include: list[str] | None = None,
     cedar_access_spec: Any | None = None,
     auth_context: Any | None = None,
@@ -659,6 +664,21 @@ async def _list_handler_body(
             return HTMLResponse(content=html)
         except ImportError:
             pass  # Template renderer not available, fall through to JSON
+
+    # Apply field projection to JSON responses (#360)
+    if json_projection and result and isinstance(result, dict) and "items" in result:
+        allowed = set(json_projection)
+        projected_items = []
+        for item in result["items"]:
+            if hasattr(item, "model_dump"):
+                d = item.model_dump(mode="json")
+            elif isinstance(item, dict):
+                d = item
+            else:
+                projected_items.append(item)
+                continue
+            projected_items.append({k: v for k, v in d.items() if k in allowed})
+        result = {**result, "items": projected_items}
 
     return result
 
@@ -1449,6 +1469,7 @@ class RouteGenerator:
                 optional_auth_dep=self.optional_auth_dep,
                 require_auth_by_default=self.require_auth_by_default,
                 select_fields=projection,
+                json_projection=projection,
                 auto_include=includes,
                 htmx_columns=_htmx.get("columns"),
                 htmx_detail_url=_htmx.get("detail_url"),

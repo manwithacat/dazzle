@@ -234,3 +234,145 @@ class TestListContentNegotiation:
         )
         assert isinstance(result, RedirectResponse)
         assert result.headers["location"] == "/app/ibg-policy"
+
+
+class TestJsonProjection:
+    """JSON API responses should only include projected fields (#360)."""
+
+    @pytest.mark.asyncio
+    async def test_projection_filters_dict_items(self) -> None:
+        """Items returned as dicts should be filtered to projected fields."""
+        items = [
+            {"id": "1", "name": "Alice", "ssn": "123-45-6789", "notes": "secret"},
+            {"id": "2", "name": "Bob", "ssn": "987-65-4321", "notes": "private"},
+        ]
+        req = _mock_request(accept="application/json")
+        result = await _list_handler_body(
+            service=_mock_service(items=items),
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=req,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            json_projection=["id", "name"],
+        )
+        assert isinstance(result, dict)
+        for item in result["items"]:
+            assert set(item.keys()) == {"id", "name"}
+            assert "ssn" not in item
+            assert "notes" not in item
+
+    @pytest.mark.asyncio
+    async def test_projection_preserves_values(self) -> None:
+        """Projected fields should retain their original values."""
+        items = [{"id": "1", "name": "Alice", "ssn": "123"}]
+        req = _mock_request(accept="application/json")
+        result = await _list_handler_body(
+            service=_mock_service(items=items),
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=req,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            json_projection=["id", "name"],
+        )
+        assert result["items"][0] == {"id": "1", "name": "Alice"}
+
+    @pytest.mark.asyncio
+    async def test_no_projection_returns_all_fields(self) -> None:
+        """Without json_projection, all fields are returned."""
+        items = [{"id": "1", "name": "Alice", "ssn": "123"}]
+        req = _mock_request(accept="application/json")
+        result = await _list_handler_body(
+            service=_mock_service(items=items),
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=req,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+        )
+        assert result["items"][0] == {"id": "1", "name": "Alice", "ssn": "123"}
+
+    @pytest.mark.asyncio
+    async def test_projection_with_pydantic_models(self) -> None:
+        """Items returned as Pydantic models should be projected."""
+        from pydantic import BaseModel
+
+        class Patient(BaseModel):
+            id: str
+            name: str
+            ssn: str
+            diagnosis: str
+
+        items = [Patient(id="1", name="Alice", ssn="123-45-6789", diagnosis="flu")]
+        req = _mock_request(accept="application/json")
+        result = await _list_handler_body(
+            service=_mock_service(items=items),
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=req,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            json_projection=["id", "name", "diagnosis"],
+        )
+        assert isinstance(result, dict)
+        item = result["items"][0]
+        assert set(item.keys()) == {"id", "name", "diagnosis"}
+        assert "ssn" not in item
+
+    @pytest.mark.asyncio
+    async def test_projection_preserves_pagination_metadata(self) -> None:
+        """Projection should not affect pagination metadata."""
+        items = [{"id": "1", "name": "A", "secret": "x"}]
+        req = _mock_request(accept="application/json")
+        result = await _list_handler_body(
+            service=_mock_service(items=items),
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=req,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            json_projection=["id", "name"],
+        )
+        assert result["total"] == 1
+        assert result["page"] == 1
+        assert result["page_size"] == 20
+
+    @pytest.mark.asyncio
+    async def test_projection_empty_items(self) -> None:
+        """Projection on empty items list should work."""
+        req = _mock_request(accept="application/json")
+        result = await _list_handler_body(
+            service=_mock_service(items=[]),
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=req,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            json_projection=["id", "name"],
+        )
+        assert result["items"] == []
