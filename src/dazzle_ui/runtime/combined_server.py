@@ -17,14 +17,14 @@ from typing import TYPE_CHECKING, Any
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from dazzle_back.specs import BackendSpec
+    from dazzle.core.ir import AppSpec
 
 
 @dataclass
 class UnifiedServerConfig:
     """Configuration for run_unified_server(), replacing 19 individual parameters."""
 
-    backend_spec: BackendSpec
+    appspec: AppSpec
     ui_spec: Any = None
     port: int = 3000
     db_path: str | Path | None = None
@@ -41,7 +41,6 @@ class UnifiedServerConfig:
     sitespec_data: dict[str, Any] | None = None
     theme_preset: str = "saas-default"
     theme_overrides: dict[str, Any] | None = None
-    appspec: Any = None
     redis_url: str = ""
 
 
@@ -95,7 +94,7 @@ def _clickable_url(url: str, label: str | None = None) -> str:
 
 
 def run_unified_server(
-    backend_spec: BackendSpec | None = None,
+    appspec: AppSpec | None = None,
     ui_spec: Any = None,
     port: int = 3000,
     db_path: str | Path | None = None,
@@ -112,7 +111,6 @@ def run_unified_server(
     sitespec_data: dict[str, Any] | None = None,
     theme_preset: str = "saas-default",
     theme_overrides: dict[str, Any] | None = None,
-    appspec: Any = None,
     redis_url: str = "",
     *,
     config: UnifiedServerConfig | None = None,
@@ -123,12 +121,13 @@ def run_unified_server(
     Accepts either individual parameters (backward compat) or a UnifiedServerConfig.
 
     Args:
+        appspec: Dazzle AppSpec (parsed IR).
         config: UnifiedServerConfig with all options (preferred).
             When provided, individual parameters are ignored.
     """
     # If config provided, unpack it — otherwise use individual params
     if config is not None:
-        backend_spec = config.backend_spec
+        appspec = config.appspec
         ui_spec = config.ui_spec  # noqa: F841 — reserved for future use
         port = config.port
         db_path = config.db_path
@@ -145,7 +144,6 @@ def run_unified_server(
         sitespec_data = config.sitespec_data
         theme_preset = config.theme_preset
         theme_overrides = config.theme_overrides
-        appspec = config.appspec
         redis_url = config.redis_url
     try:
         import uvicorn
@@ -204,8 +202,8 @@ def run_unified_server(
     if redis_url:
         os.environ.setdefault("REDIS_URL", redis_url)
 
-    if backend_spec is None:
-        print("[Dazzle] Error: backend_spec is required")
+    if appspec is None:
+        print("[Dazzle] Error: appspec is required")
         return
 
     server_config = ServerConfig(
@@ -220,7 +218,7 @@ def run_unified_server(
         project_root=project_root,
         fragment_sources=frag_sources,
     )
-    builder = DazzleBackendApp(backend_spec, config=server_config, appspec=appspec)
+    builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
 
     # ---- Route mounting order (do not reorder) ----
@@ -390,7 +388,7 @@ def run_unified_server(
 
 
 def run_backend_only(
-    backend_spec: BackendSpec,
+    appspec: AppSpec,
     host: str = "127.0.0.1",
     port: int = 8000,
     db_path: str | Path | None = None,
@@ -405,7 +403,7 @@ def run_backend_only(
     Run only the FastAPI backend server.
 
     Args:
-        backend_spec: Backend specification
+        appspec: Dazzle AppSpec (parsed IR)
         host: Host to bind to
         port: Port to bind to
         db_path: Path to SQLite database
@@ -438,7 +436,7 @@ def run_backend_only(
         database_url = database_url.replace("postgres://", "postgresql://", 1)
 
     app_builder = DazzleBackendApp(
-        backend_spec,
+        appspec,
         database_url=database_url or None,
         enable_test_mode=enable_test_mode,
         enable_dev_mode=enable_dev_mode,
@@ -454,7 +452,7 @@ def run_backend_only(
 
             mount_graphql(
                 app,
-                backend_spec,
+                appspec,
                 services=app_builder.services,
                 repositories=app_builder.repositories,
             )

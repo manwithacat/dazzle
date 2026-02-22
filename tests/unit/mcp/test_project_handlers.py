@@ -44,7 +44,7 @@ def _import_project():
 
     # Mock runtime_tools module
     mock_runtime = MagicMock()
-    mock_runtime.set_backend_spec = MagicMock()
+    mock_runtime.set_appspec_data = MagicMock()
     sys.modules["dazzle.mcp.runtime_tools"] = mock_runtime
 
     module_path = (
@@ -79,7 +79,7 @@ list_projects = _pr.list_projects
 select_project = _pr.select_project
 get_active_project_info = _pr.get_active_project_info
 validate_all_projects = _pr.validate_all_projects
-load_backend_spec_for_project = _pr.load_backend_spec_for_project
+load_appspec_for_project = _pr.load_appspec_for_project
 
 
 # =============================================================================
@@ -309,14 +309,14 @@ class TestValidateAllProjects:
 
 
 class TestLoadBackendSpecForProject:
-    """Tests for load_backend_spec_for_project helper."""
+    """Tests for load_appspec_for_project helper."""
 
     def test_returns_false_for_missing_manifest(self, tmp_path) -> None:
         """Test returns False when no dazzle.toml."""
         project_dir = tmp_path / "no_manifest"
         project_dir.mkdir()
 
-        result = load_backend_spec_for_project(project_dir)
+        result = load_appspec_for_project(project_dir)
         assert result is False
 
     def test_returns_false_for_no_dsl_files(self, tmp_path) -> None:
@@ -337,5 +337,5 @@ paths = ["./dsl"]
 """
         )
 
-        result = load_backend_spec_for_project(project_dir)
+        result = load_appspec_for_project(project_dir)
         assert result is False

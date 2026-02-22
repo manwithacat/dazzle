@@ -97,23 +97,16 @@ def build_api_command(
     ),
 ) -> None:
     """
-    Generate API spec from AppSpec.
+    Export AppSpec as JSON.
 
-    Converts AppSpec to BackendSpec suitable for FastAPI runtime.
+    Serializes the parsed AppSpec to JSON for use by the FastAPI runtime
+    or other consumers.
 
     Examples:
         dazzle build-api                        # JSON spec in ./dazzle-api
         dazzle build-api --format python        # Python module stub
     """
     from dazzle.cli.services.build_service import BuildService
-
-    try:
-        from dazzle_back.specs import BackendSpec as _BackendSpec  # noqa: F401
-    except ImportError as e:
-        typer.echo(f"Dazzle Backend not available: {e}", err=True)
-        typer.echo("Install with: pip install dazzle-app-back", err=True)
-        raise typer.Exit(code=1)
-    del _BackendSpec  # Used only to verify import availability
 
     manifest_path = Path(manifest).resolve()
     svc = BuildService(manifest_path)
@@ -135,21 +128,18 @@ def build_api_command(
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
 
-    # Convert to BackendSpec
-    typer.echo(f"Converting AppSpec '{appspec.name}' to BackendSpec...")
-    backend_spec = svc.convert_to_backend(appspec)
-    typer.echo(f"  • {len(backend_spec.entities)} entities")
-    typer.echo(f"  • {len(backend_spec.services)} services")
-    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+    typer.echo(f"Exporting AppSpec '{appspec.name}'...")
+    typer.echo(f"  • {len(appspec.domain.entities)} entities")
+    typer.echo(f"  • {len(appspec.surfaces)} surfaces")
 
     # Output
     output_dir = Path(out).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if format == "json":
-        spec_file = output_dir / "backend-spec.json"
-        typer.echo(f"\nWriting BackendSpec → {spec_file}")
-        spec_file.write_text(backend_spec.model_dump_json(indent=2))
+        spec_file = output_dir / "appspec.json"
+        typer.echo(f"\nWriting AppSpec → {spec_file}")
+        spec_file.write_text(appspec.model_dump_json(indent=2))
         typer.echo(f"  ✓ Written {spec_file.stat().st_size} bytes")
 
     elif format == "python":
@@ -157,11 +147,11 @@ def build_api_command(
         typer.echo(f"\nWriting Python stub → {stub_file}")
 
         stub_content = f'''"""
-Auto-generated API stub for {backend_spec.name}.
+Auto-generated API stub for {appspec.name}.
 
 Usage:
     from dazzle_back.runtime import create_app_from_json
-    app = create_app_from_json('backend-spec.json')
+    app = create_app_from_json('appspec.json')
 
 Or run directly:
     uvicorn api_stub:app --reload
@@ -174,7 +164,7 @@ try:
     if not FASTAPI_AVAILABLE:
         raise ImportError("FastAPI not installed")
 
-    spec_path = Path(__file__).parent / "backend-spec.json"
+    spec_path = Path(__file__).parent / "appspec.json"
     app = create_app_from_json(str(spec_path))
 
 except ImportError as e:
@@ -185,8 +175,8 @@ except ImportError as e:
         stub_file.write_text(stub_content)
 
         # Also write the JSON spec
-        spec_file = output_dir / "backend-spec.json"
-        spec_file.write_text(backend_spec.model_dump_json(indent=2))
+        spec_file = output_dir / "appspec.json"
+        spec_file.write_text(appspec.model_dump_json(indent=2))
 
         typer.echo("  ✓ Generated stub and spec")
         typer.echo("\nTo run:")
@@ -260,9 +250,6 @@ def migrate_command(
         typer.echo(f"Failed to load spec: {e}", err=True)
         raise typer.Exit(code=1)
 
-    # Convert to backend spec
-    backend_spec = svc.convert_to_backend(appspec)
-
     # Resolve database URL: CLI flag → env → dazzle.toml → default
     from dazzle.core.manifest import _DEFAULT_DATABASE_URL, load_manifest
 
@@ -282,11 +269,12 @@ def migrate_command(
 
     if dry_run:
         # Plan only, don't apply
+        entities = appspec.domain.entities
         typer.echo(f"Analyzing database: {database_url}")
-        typer.echo(f"Entities: {len(backend_spec.entities)}")
+        typer.echo(f"Entities: {len(entities)}")
         typer.echo()
 
-        plan = svc.plan_migrations(database_url, backend_spec.entities)
+        plan = svc.plan_migrations(database_url, entities)
 
         if plan.is_empty:
             typer.echo("No migrations needed. Database is up to date.")
@@ -342,7 +330,7 @@ def migrate_command(
 
         plan = svc.auto_migrate(
             database_url,
-            backend_spec.entities,
+            appspec.domain.entities,
             record_history=True,
         )
 
@@ -409,11 +397,10 @@ def build_command(
     from dazzle.cli.services.build_service import BuildService
 
     try:
-        from dazzle_back.converters import convert_appspec_to_backend as _check1  # noqa: F401
-        from dazzle_ui.runtime.static_preview import generate_preview_files as _check2  # noqa: F401
+        from dazzle_ui.runtime.static_preview import generate_preview_files as _check  # noqa: F401
     except ImportError as e:
-        typer.echo(f"Dazzle packages not available: {e}", err=True)
-        typer.echo("Install with: pip install dazzle-app-back dazzle-app-ui", err=True)
+        typer.echo(f"Dazzle UI not available: {e}", err=True)
+        typer.echo("Install with: pip install dazzle-app-ui", err=True)
         raise typer.Exit(code=1)
 
     manifest_path = Path(manifest).resolve()
@@ -464,16 +451,15 @@ def build_command(
     output_dir = Path(out).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # 1. Generate BackendSpec
-    typer.echo("\n[1/5] Generating backend...")
-    backend_spec = svc.convert_to_backend(appspec)
-    typer.echo(f"  • {len(backend_spec.entities)} entities")
-    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+    # 1. Export AppSpec
+    typer.echo("\n[1/5] Exporting AppSpec...")
+    typer.echo(f"  • {len(appspec.domain.entities)} entities")
+    typer.echo(f"  • {len(appspec.surfaces)} surfaces")
 
     backend_dir = output_dir / "backend"
     backend_dir.mkdir(exist_ok=True)
-    spec_file = backend_dir / "backend-spec.json"
-    spec_file.write_text(backend_spec.model_dump_json(indent=2))
+    spec_file = backend_dir / "appspec.json"
+    spec_file.write_text(appspec.model_dump_json(indent=2))
 
     # 2. Generate Frontend (optional)
     if frontend:
@@ -581,21 +567,19 @@ def _run_codegen_targets(appspec: Any, output_dir: Path, target: str) -> None:
 def _generate_sql_target(appspec: Any, output_dir: Path) -> None:
     """Generate SQL DDL schema from AppSpec."""
     try:
+        from dazzle_back.converters.entity_converter import convert_entities
         from dazzle_back.runtime.sa_schema import build_metadata
     except ImportError as e:
         typer.echo(f"  SQL target requires dazzle-app-back: {e}", err=True)
         return
 
-    from dazzle.cli.services.build_service import BuildService
-
-    svc = BuildService()
-    backend_spec = svc.convert_to_backend(appspec)
-    metadata = build_metadata(backend_spec.entities)
+    entities = convert_entities(appspec.domain.entities)
+    metadata = build_metadata(entities)
 
     lines: list[str] = []
     lines.append(f"-- SQL schema for {appspec.name}")
     lines.append("-- Generated by dazzle build --target sql")
-    lines.append(f"-- {len(backend_spec.entities)} tables\n")
+    lines.append(f"-- {len(entities)} tables\n")
 
     for table in metadata.sorted_tables:
         lines.append(f'CREATE TABLE IF NOT EXISTS "{table.name}" (')
@@ -624,7 +608,7 @@ def _generate_sql_target(appspec: Any, output_dir: Path) -> None:
     sql_content = "\n".join(lines)
     sql_file = output_dir / "schema.sql"
     sql_file.write_text(sql_content)
-    typer.echo(f"  SQL schema -> {sql_file} ({len(backend_spec.entities)} tables)")
+    typer.echo(f"  SQL schema -> {sql_file} ({len(entities)} tables)")
 
 
 def _generate_openapi_target(appspec: Any, output_dir: Path) -> None:

@@ -1,7 +1,7 @@
 """
 DNR state management for MCP tools.
 
-Stores active backend and UI specs in memory.
+Stores active AppSpec data and UI specs in memory.
 """
 
 from __future__ import annotations
@@ -9,19 +9,19 @@ from __future__ import annotations
 from typing import Any
 
 # Store active specs (would be persisted in real implementation)
-_backend_spec: dict[str, Any] | None = None
+_appspec_data: dict[str, Any] | None = None
 _ui_spec: dict[str, Any] | None = None
 
 
-def set_backend_spec(spec: dict[str, Any]) -> None:
-    """Set the active backend spec."""
-    global _backend_spec
-    _backend_spec = spec
+def set_appspec_data(spec: dict[str, Any]) -> None:
+    """Set the active AppSpec data."""
+    global _appspec_data
+    _appspec_data = spec
 
 
-def get_backend_spec() -> dict[str, Any] | None:
-    """Get the active backend spec."""
-    return _backend_spec
+def get_appspec_data() -> dict[str, Any] | None:
+    """Get the active AppSpec data."""
+    return _appspec_data
 
 
 def set_ui_spec(spec: dict[str, Any]) -> None:

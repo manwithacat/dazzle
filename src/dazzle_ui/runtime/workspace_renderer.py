@@ -133,8 +133,7 @@ def build_workspace_context(
     # Build entity name → display title lookup from app spec (#358)
     _entity_titles: dict[str, str] = {}
     if app_spec:
-        _domain = getattr(app_spec, "domain", None)
-        for _e in _domain.entities if _domain else []:
+        for _e in app_spec.domain.entities:
             _entity_titles[_e.name] = getattr(_e, "title", "") or _e.name
 
     regions: list[RegionContext] = []
@@ -266,10 +265,9 @@ def _resolve_fk_field(
     Searches the source entity's fields for a ``ref`` type pointing at the
     target entity.  Returns the field name (e.g. ``"customer_id"``) or None.
     """
-    domain = getattr(app_spec, "domain", None)
-    if not domain:
+    if not app_spec:
         return None
-    for ent in domain.entities:
+    for ent in app_spec.domain.entities:
         if ent.name != source_entity:
             continue
         for f in ent.fields:

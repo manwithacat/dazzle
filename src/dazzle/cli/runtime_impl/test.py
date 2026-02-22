@@ -123,18 +123,9 @@ def check_command(
         typer.echo(f"Error loading spec: {e}", err=True)
         raise typer.Exit(code=1)
 
-    # Convert to BackendSpec for API testing
-    try:
-        from dazzle_back.converters import convert_appspec_to_backend
-    except ImportError as e:
-        typer.echo(f"Dazzle backend not available: {e}", err=True)
-        raise typer.Exit(code=1)
-
-    backend_spec = convert_appspec_to_backend(appspec)
-
     typer.echo(f"Testing Dazzle application: {appspec.name}")
-    typer.echo(f"  • {len(backend_spec.entities)} entities")
-    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+    typer.echo(f"  • {len(appspec.domain.entities)} entities")
+    typer.echo(f"  • {len(appspec.surfaces)} surfaces")
     typer.echo()
 
     # Start server if requested
@@ -265,7 +256,7 @@ def check_command(
 
         # Run API contract tests
         typer.echo("Running API contract tests...")
-        api_results = run_api_contract_tests(backend_spec, api_url, verbose)
+        api_results = run_api_contract_tests(appspec, api_url, verbose)
         results["api_tests"] = api_results["tests"]
         results["summary"]["api_passed"] = api_results["passed"]
         results["summary"]["api_failed"] = api_results["failed"]
@@ -291,7 +282,7 @@ def check_command(
         if benchmark:
             typer.echo()
             typer.echo("Running performance benchmarks...")
-            bench_results = run_benchmarks(backend_spec, api_url, verbose)
+            bench_results = run_benchmarks(appspec, api_url, verbose)
             results["benchmarks"] = bench_results
 
             # Display benchmark summary

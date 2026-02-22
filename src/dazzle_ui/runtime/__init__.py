@@ -15,7 +15,7 @@ Example usage:
     >>> from dazzle_ui.runtime import run_unified_server
     >>>
     >>> # Run unified server (backend + page routes on one port)
-    >>> run_unified_server(backend_spec, appspec=appspec)
+    >>> run_unified_server(appspec)
     >>>
     >>> # Generate static preview files
     >>> from dazzle_ui.runtime.static_preview import generate_preview_files

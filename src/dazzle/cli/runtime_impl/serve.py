@@ -322,7 +322,6 @@ def serve_command(
 
     # Local mode execution
     try:
-        from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_back.runtime import FASTAPI_AVAILABLE
         from dazzle_ui.converters import compute_persona_default_routes, convert_appspec_to_ui
         from dazzle_ui.runtime import run_unified_server
@@ -421,11 +420,9 @@ def serve_command(
         # Serve backend API only (no frontend UI)
         from dazzle_ui.runtime import run_backend_only
 
-        backend_spec = convert_appspec_to_backend(appspec)
-
         typer.echo(f"Starting Dazzle backend for '{appspec.name}'...")
-        typer.echo(f"  • {len(backend_spec.entities)} entities")
-        typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+        typer.echo(f"  • {len(appspec.domain.entities)} entities")
+        typer.echo(f"  • {len(appspec.surfaces)} surfaces")
         typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
         if enable_test_mode:
             typer.echo("  • Test mode: ENABLED (/__test__/* endpoints available)")
@@ -439,7 +436,7 @@ def serve_command(
         typer.echo()
 
         run_backend_only(
-            backend_spec=backend_spec,
+            appspec=appspec,
             port=api_port,
             enable_test_mode=enable_test_mode,
             enable_dev_mode=enable_dev_mode,
@@ -456,11 +453,10 @@ def serve_command(
 
     # Convert specs (pass shell config from manifest)
     assert mf is not None, "Manifest must be loaded for combined server mode"
-    backend_spec = convert_appspec_to_backend(appspec)
     ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
 
-    typer.echo(f"  • {len(backend_spec.entities)} entities")
-    typer.echo(f"  • {len(backend_spec.endpoints)} endpoints")
+    typer.echo(f"  • {len(appspec.domain.entities)} entities")
+    typer.echo(f"  • {len(appspec.surfaces)} surfaces")
     typer.echo(f"  • {len(ui_spec.workspaces)} workspaces")
     typer.echo("  • Database: PostgreSQL (DATABASE_URL)")
 
@@ -541,7 +537,7 @@ def serve_command(
         theme_overrides["custom"] = mf.theme.custom
 
     run_unified_server(
-        backend_spec=backend_spec,
+        appspec=appspec,
         ui_spec=ui_spec,
         port=port,
         enable_test_mode=enable_test_mode,
@@ -557,6 +553,5 @@ def serve_command(
         sitespec_data=sitespec_data,
         theme_preset=mf.theme.preset,
         theme_overrides=theme_overrides if theme_overrides else None,
-        appspec=appspec,
         redis_url=redis_url,
     )

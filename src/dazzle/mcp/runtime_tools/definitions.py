@@ -21,7 +21,7 @@ def get_runtime_tools() -> list[Tool]:
         # Backend Tools
         Tool(
             name="list_dnr_entities",
-            description="List all entities in the DNR BackendSpec with field summaries. BackendSpec is auto-loaded when you select a project or call get_active_project.",
+            description="List all entities in the AppSpec with field summaries. AppSpec is auto-loaded when you select a project or call get_active_project.",
             inputSchema={
                 "type": "object",
                 "properties": {},
@@ -44,7 +44,7 @@ def get_runtime_tools() -> list[Tool]:
         ),
         Tool(
             name="list_backend_services",
-            description="List available backend services (from BackendSpec) with input/output summaries",
+            description="List surfaces (from AppSpec) that drive backend service generation",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -58,7 +58,7 @@ def get_runtime_tools() -> list[Tool]:
         ),
         Tool(
             name="get_backend_service_spec",
-            description="Get the full ServiceSpec JSON for a backend service by name",
+            description="Get the full SurfaceSpec JSON for a surface by name",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -208,7 +208,7 @@ def get_runtime_tools() -> list[Tool]:
         # GraphQL BFF Tools (v0.6)
         Tool(
             name="get_graphql_schema",
-            description="Get the auto-generated GraphQL schema (SDL) from BackendSpec entities. Requires strawberry-graphql to be installed.",
+            description="Get the auto-generated GraphQL schema (SDL) from AppSpec entities. Requires strawberry-graphql to be installed.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -223,7 +223,7 @@ def get_runtime_tools() -> list[Tool]:
         ),
         Tool(
             name="list_graphql_types",
-            description="List all GraphQL types generated from BackendSpec entities with their fields.",
+            description="List all GraphQL types generated from AppSpec entities with their fields.",
             inputSchema={
                 "type": "object",
                 "properties": {},

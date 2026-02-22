@@ -18,7 +18,6 @@ from dazzle.cli.utils import load_project_appspec
 
 if TYPE_CHECKING:
     from dazzle.core import ir
-    from dazzle_back.specs import BackendSpec
     from dazzle_ui.specs import UISpec
 
 
@@ -111,41 +110,48 @@ def schema_command(
         typer.echo(f"Error loading project: {e}", err=True)
         raise typer.Exit(code=1)
 
-    # Import converters
+    # Import UI converter (optional)
+    ui_spec = None
     try:
         from dazzle.core.manifest import load_manifest
-        from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_ui.converters import convert_appspec_to_ui
 
         mf = load_manifest(manifest_path)
-        backend_spec = convert_appspec_to_backend(appspec)
         ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
-    except ImportError as e:
-        typer.echo(f"Dazzle runtime not available: {e}", err=True)
-        raise typer.Exit(code=1)
+    except ImportError:
+        pass  # UI package not installed; non-UI inspection still works
 
     # Handle specific item inspection
     if entity:
-        _inspect_entity(appspec, backend_spec, entity, format_output)
+        _inspect_entity(appspec, entity, format_output)
         return
 
     if surface:
+        if ui_spec is None:
+            typer.echo("Dazzle UI not available for surface inspection", err=True)
+            raise typer.Exit(code=1)
         _inspect_surface(appspec, ui_spec, surface, format_output)
         return
 
     if workspace:
+        if ui_spec is None:
+            typer.echo("Dazzle UI not available for workspace inspection", err=True)
+            raise typer.Exit(code=1)
         _inspect_workspace(appspec, ui_spec, workspace, format_output)
         return
 
     if endpoints:
-        _inspect_endpoints(backend_spec, format_output)
+        _inspect_endpoints(appspec, format_output)
         return
 
     if schema:
-        _inspect_schema(backend_spec, format_output)
+        _inspect_schema(appspec, format_output)
         return
 
     if components:
+        if ui_spec is None:
+            typer.echo("Dazzle UI not available for component inspection", err=True)
+            raise typer.Exit(code=1)
         _inspect_components(ui_spec, format_output)
         return
 
@@ -154,22 +160,22 @@ def schema_command(
 
     # Full inspection
     if format_output == "json":
-        output = {
+        output: dict[str, Any] = {
             "app": appspec.name,
             "entities": [e.name for e in entities],
             "surfaces": [s.name for s in appspec.surfaces],
             "workspaces": [w.name for w in appspec.workspaces],
-            "endpoints": len(backend_spec.endpoints),
-            "components": len(ui_spec.components),
         }
+        if ui_spec is not None:
+            output["components"] = len(ui_spec.components)
         typer.echo(json_module.dumps(output, indent=2))
     elif format_output == "summary":
         typer.echo(f"App: {appspec.name}")
         typer.echo(f"  Entities:   {len(entities)}")
         typer.echo(f"  Surfaces:   {len(appspec.surfaces)}")
         typer.echo(f"  Workspaces: {len(appspec.workspaces)}")
-        typer.echo(f"  Endpoints:  {len(backend_spec.endpoints)}")
-        typer.echo(f"  Components: {len(ui_spec.components)}")
+        if ui_spec is not None:
+            typer.echo(f"  Components: {len(ui_spec.components)}")
     else:  # tree format
         typer.echo(f"📦 {appspec.name}")
         typer.echo("│")
@@ -200,18 +206,17 @@ def schema_command(
                 region_count = len(w.regions)
                 typer.echo(f"{prefix} {w.name} ({region_count} regions)")
 
-        # Backend summary
-        typer.echo("│")
-        typer.echo(f"├── 🔧 Backend: {len(backend_spec.endpoints)} endpoints")
-
-        # UI summary
-        typer.echo("│")
-        typer.echo(f"└── 🎨 UI: {len(ui_spec.components)} components")
+        # UI summary (if available)
+        if ui_spec is not None:
+            typer.echo("│")
+            typer.echo(f"└── 🎨 UI: {len(ui_spec.components)} components")
+        else:
+            typer.echo("│")
+            typer.echo(f"└── {len(appspec.surfaces)} surfaces")
 
 
 def _inspect_entity(
     appspec: ir.AppSpec,
-    backend_spec: BackendSpec,
     entity_name: str,
     format_output: str,
 ) -> None:
@@ -225,10 +230,8 @@ def _inspect_entity(
         typer.echo(f"Available: {', '.join(e.name for e in entities)}")
         raise typer.Exit(code=1)
 
-    # Find related endpoints
-    related_endpoints = [
-        ep for ep in backend_spec.endpoints if entity_name.lower() in ep.path.lower()
-    ]
+    # Find surfaces that reference this entity
+    related_surfaces = [s for s in appspec.surfaces if s.entity_ref and s.entity_ref == entity_name]
 
     if format_output == "json":
         output = {
@@ -243,7 +246,7 @@ def _inspect_entity(
                 }
                 for f in entity.fields
             ],
-            "endpoints": [{"method": str(ep.method), "path": ep.path} for ep in related_endpoints],
+            "surfaces": [{"name": s.name, "mode": str(s.mode)} for s in related_surfaces],
         }
         typer.echo(json_module.dumps(output, indent=2))
     else:
@@ -257,11 +260,11 @@ def _inspect_entity(
             req = " (required)" if f.is_required else ""
             typer.echo(f"   • {f.name}: {f.type}{pk}{req}")
 
-        if related_endpoints:
+        if related_surfaces:
             typer.echo()
-            typer.echo("   Endpoints:")
-            for ep in related_endpoints:
-                typer.echo(f"   • {ep.method:6} {ep.path}")
+            typer.echo("   Surfaces:")
+            for s in related_surfaces:
+                typer.echo(f"   • {s.name} ({s.mode})")
 
 
 def _inspect_surface(
@@ -336,20 +339,32 @@ def _inspect_workspace(
             typer.echo(f"   • {r.name}: {r.source}")
 
 
-def _inspect_endpoints(backend_spec: BackendSpec, format_output: str) -> None:
-    """Inspect API endpoints."""
+def _inspect_endpoints(appspec: ir.AppSpec, format_output: str) -> None:
+    """Inspect API surfaces (endpoint sources)."""
+    from dazzle.core.strings import to_api_plural
+
+    entities = appspec.domain.entities
     if format_output == "json":
-        output = [
-            {"method": str(ep.method), "path": ep.path, "name": ep.name}
-            for ep in backend_spec.endpoints
-        ]
+        output = []
+        for entity in entities:
+            plural = to_api_plural(entity.name)
+            for method in ("GET", "POST"):
+                output.append({"method": method, "path": f"/{plural}", "entity": entity.name})
+            for method in ("GET", "PATCH", "DELETE"):
+                output.append(
+                    {"method": method, "path": f"/{plural}/{{id}}", "entity": entity.name}
+                )
         typer.echo(json_module.dumps(output, indent=2))
     else:
-        typer.echo("🔧 API Endpoints")
+        typer.echo("🔧 API Endpoints (derived from entities)")
         typer.echo()
-        # Group by entity/path prefix
-        for ep in sorted(backend_spec.endpoints, key=lambda e: (e.path, str(e.method))):
-            typer.echo(f"   {str(ep.method):6} {ep.path}")
+        for entity in entities:
+            plural = to_api_plural(entity.name)
+            typer.echo(f"   GET    /{plural}")
+            typer.echo(f"   POST   /{plural}")
+            typer.echo(f"   GET    /{plural}/{{id}}")
+            typer.echo(f"   PATCH  /{plural}/{{id}}")
+            typer.echo(f"   DELETE /{plural}/{{id}}")
 
 
 def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
@@ -364,9 +379,10 @@ def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
             typer.echo(f"   • {c.name} ({c.category})")
 
 
-def _inspect_schema(backend_spec: BackendSpec, format_output: str) -> None:
+def _inspect_schema(appspec: ir.AppSpec, format_output: str) -> None:
     """Inspect GraphQL schema."""
     try:
+        from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_back.graphql.integration import inspect_schema, print_schema
     except ImportError:
         typer.echo(
@@ -374,6 +390,8 @@ def _inspect_schema(backend_spec: BackendSpec, format_output: str) -> None:
             err=True,
         )
         raise typer.Exit(code=1)
+
+    backend_spec = convert_appspec_to_backend(appspec)
 
     if format_output == "json":
         info = inspect_schema(backend_spec)

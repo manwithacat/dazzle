@@ -15,7 +15,7 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.mcp.runtime_tools import set_backend_spec
+from dazzle.mcp.runtime_tools import set_appspec_data
 
 from ..state import (
     get_active_project,
@@ -78,20 +78,17 @@ def list_projects() -> str:
     )
 
 
-def load_backend_spec_for_project(project_path: Path) -> bool:
+def load_appspec_for_project(project_path: Path) -> bool:
     """
-    Load BackendSpec for a project to enable DNR tools.
+    Load AppSpec for a project to enable DNR tools.
 
     Args:
         project_path: Path to the project directory
 
     Returns:
-        True if BackendSpec was successfully loaded, False otherwise
+        True if AppSpec was successfully loaded, False otherwise
     """
     try:
-        # Import here to avoid circular imports
-        from dazzle_back.converters import convert_appspec_to_backend
-
         # Load manifest first
         manifest_path = project_path / "dazzle.toml"
         if not manifest_path.exists():
@@ -118,20 +115,17 @@ def load_backend_spec_for_project(project_path: Path) -> bool:
             logger.warning(f"No entities found in {project_path}")
             return False
 
-        # Convert to BackendSpec
-        backend_spec = convert_appspec_to_backend(appspec)
-
-        # Set the BackendSpec for DNR tools
-        set_backend_spec(backend_spec.model_dump())
+        # Store AppSpec data for DNR tools
+        set_appspec_data(appspec.model_dump())
 
         logger.info(
-            f"Loaded BackendSpec for {project_path.name}: "
-            f"{len(backend_spec.entities)} entities, {len(backend_spec.services)} services"
+            f"Loaded AppSpec for {project_path.name}: "
+            f"{len(appspec.domain.entities)} entities, {len(appspec.surfaces)} surfaces"
         )
         return True
 
     except Exception as e:
-        logger.warning(f"Failed to load BackendSpec for {project_path}: {e}")
+        logger.warning(f"Failed to load AppSpec for {project_path}: {e}")
         return False
 
 
@@ -193,12 +187,12 @@ def select_project(args: dict[str, Any]) -> str:
     except Exception as e:
         result["warning"] = f"Could not load manifest: {e}"
 
-    # Auto-load BackendSpec for DNR tools
-    backend_spec_loaded = load_backend_spec_for_project(project_path)
-    if backend_spec_loaded:
-        result["backend_spec"] = "loaded"
+    # Auto-load AppSpec for DNR tools
+    appspec_loaded = load_appspec_for_project(project_path)
+    if appspec_loaded:
+        result["appspec"] = "loaded"
     else:
-        result["backend_spec"] = "not loaded (DSL parse error or no entities)"
+        result["appspec"] = "not loaded (DSL parse error or no entities)"
 
     return json.dumps(result, indent=2)
 
@@ -220,8 +214,8 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
             "version": manifest.version,
         }
 
-        backend_spec_loaded = load_backend_spec_for_project(resolved_path)
-        result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+        appspec_loaded = load_appspec_for_project(resolved_path)
+        result["appspec"] = "loaded" if appspec_loaded else "not loaded"
 
         return json.dumps(result, indent=2)
 
@@ -239,9 +233,9 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
                 "version": manifest.version,
             }
 
-            # Auto-load BackendSpec for DNR tools
-            backend_spec_loaded = load_backend_spec_for_project(project_root)
-            result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+            # Auto-load AppSpec for DNR tools
+            appspec_loaded = load_appspec_for_project(project_root)
+            result["appspec"] = "loaded" if appspec_loaded else "not loaded"
 
             return json.dumps(result, indent=2)
         else:
@@ -267,8 +261,8 @@ def get_active_project_info(resolved_path: Path | None = None) -> str:
             "version": manifest.version,
         }
 
-        backend_spec_loaded = load_backend_spec_for_project(project_root)
-        result["backend_spec"] = "loaded" if backend_spec_loaded else "not loaded"
+        appspec_loaded = load_appspec_for_project(project_root)
+        result["appspec"] = "loaded" if appspec_loaded else "not loaded"
 
         return json.dumps(result, indent=2)
 

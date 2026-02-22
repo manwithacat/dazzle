@@ -724,28 +724,36 @@ class TestServerAuthIntegration:
 
     @pytest.fixture
     def simple_spec(self) -> Any:
-        """Create a simple BackendSpec for testing."""
-        from dazzle_back.specs import BackendSpec, EntitySpec, FieldSpec
-        from dazzle_back.specs.entity import FieldType, ScalarType
+        """Create a simple AppSpec for testing."""
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle.core.ir.domain import DomainSpec
+        from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
+        from dazzle.core.ir.fields import FieldType as IRFieldType
+        from dazzle.core.ir.fields import FieldTypeKind
 
-        return BackendSpec(
+        return AppSpec(
             name="test_app",
             version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="Task",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        ),
-                        FieldSpec(
-                            name="title",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                        ),
-                    ],
-                )
-            ],
+            domain=DomainSpec(
+                entities=[
+                    IREntitySpec(
+                        name="Task",
+                        title="Task",
+                        fields=[
+                            IRFieldSpec(
+                                name="id",
+                                type=IRFieldType(kind=FieldTypeKind.UUID),
+                                modifiers=["pk"],
+                            ),
+                            IRFieldSpec(
+                                name="title",
+                                type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
+                            ),
+                        ],
+                    ),
+                ]
+            ),
         )
 
     def test_build_without_auth(self, simple_spec: Any, tmp_path: Any) -> None:

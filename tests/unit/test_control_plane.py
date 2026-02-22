@@ -13,7 +13,7 @@ import pytest
 if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
-    from dazzle_back.specs import BackendSpec
+    from dazzle.core.ir.appspec import AppSpec
 
 # Check if FastAPI is available (needed for integration tests)
 try:
@@ -110,53 +110,46 @@ class TestControlPlaneIntegration:
     """
 
     @pytest.fixture(scope="class")
-    def backend_spec(self) -> BackendSpec:
-        """Create a test backend spec (class-scoped for reuse)."""
-        from dazzle_back.specs import BackendSpec
-        from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
-        from dazzle_back.specs.service import DomainOperation, OperationKind, ServiceSpec
+    def appspec(self) -> AppSpec:
+        """Create a test AppSpec (class-scoped for reuse)."""
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle.core.ir.domain import DomainSpec
+        from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
+        from dazzle.core.ir.fields import FieldType as IRFieldType
+        from dazzle.core.ir.fields import FieldTypeKind
 
-        task_entity = EntitySpec(
+        task_entity = IREntitySpec(
             name="Task",
-            label="Task",
+            title="Task",
             fields=[
-                FieldSpec(
+                IRFieldSpec(
                     name="id",
-                    type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                    type=IRFieldType(kind=FieldTypeKind.UUID),
+                    modifiers=["pk"],
                 ),
-                FieldSpec(
+                IRFieldSpec(
                     name="title",
-                    type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                    required=True,
+                    type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
+                    modifiers=["required"],
                 ),
-                FieldSpec(
+                IRFieldSpec(
                     name="completed",
-                    type=FieldType(kind="scalar", scalar_type=ScalarType.BOOL),
+                    type=IRFieldType(kind=FieldTypeKind.BOOL),
                     default=False,
                 ),
             ],
         )
 
-        return BackendSpec(
+        return AppSpec(
             name="test_app",
             version="0.1.0",
-            entities=[task_entity],
-            services=[
-                ServiceSpec(
-                    name="TaskCreate",
-                    domain_operation=DomainOperation(kind=OperationKind.CREATE, entity="Task"),
-                ),
-                ServiceSpec(
-                    name="TaskList",
-                    domain_operation=DomainOperation(kind=OperationKind.LIST, entity="Task"),
-                ),
-            ],
-            endpoints=[],
+            domain=DomainSpec(entities=[task_entity]),
         )
 
     @pytest.fixture(scope="class")
     def shared_test_client(
-        self, backend_spec: BackendSpec, tmp_path_factory: pytest.TempPathFactory
+        self, appspec: AppSpec, tmp_path_factory: pytest.TempPathFactory
     ) -> TestClient:
         """Create a shared test client for the class (reused across tests)."""
         from unittest.mock import patch
@@ -170,7 +163,7 @@ class TestControlPlaneIntegration:
             patch("dazzle_back.runtime.server.auto_migrate"),
         ):
             app = create_app(
-                backend_spec,
+                appspec,
                 database_url="postgresql://mock/test",
                 enable_dev_mode=True,
                 personas=[
@@ -276,37 +269,39 @@ class TestDevModeDisabled:
     """Test that control plane endpoints are not available when dev mode is disabled."""
 
     @pytest.fixture(scope="class")
-    def backend_spec(self) -> BackendSpec:
-        """Create a test backend spec."""
-        from dazzle_back.specs import BackendSpec
-        from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
+    def appspec(self) -> AppSpec:
+        """Create a test AppSpec."""
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle.core.ir.domain import DomainSpec
+        from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
+        from dazzle.core.ir.fields import FieldType as IRFieldType
+        from dazzle.core.ir.fields import FieldTypeKind
 
-        task_entity = EntitySpec(
+        task_entity = IREntitySpec(
             name="Task",
+            title="Task",
             fields=[
-                FieldSpec(
+                IRFieldSpec(
                     name="id",
-                    type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
+                    type=IRFieldType(kind=FieldTypeKind.UUID),
+                    modifiers=["pk"],
                 ),
-                FieldSpec(
+                IRFieldSpec(
                     name="title",
-                    type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
+                    type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
                 ),
             ],
         )
 
-        return BackendSpec(
+        return AppSpec(
             name="test_app",
             version="0.1.0",
-            entities=[task_entity],
-            services=[],
-            endpoints=[],
+            domain=DomainSpec(entities=[task_entity]),
         )
 
     @pytest.fixture(scope="class")
-    def test_client(
-        self, backend_spec: BackendSpec, tmp_path_factory: pytest.TempPathFactory
-    ) -> TestClient:
+    def test_client(self, appspec: AppSpec, tmp_path_factory: pytest.TempPathFactory) -> TestClient:
         """Create a test client WITHOUT dev mode enabled."""
         from unittest.mock import patch
 
@@ -319,7 +314,7 @@ class TestDevModeDisabled:
             patch("dazzle_back.runtime.server.auto_migrate"),
         ):
             app = create_app(
-                backend_spec,
+                appspec,
                 database_url="postgresql://mock/test",
                 enable_dev_mode=False,
                 enable_test_mode=False,

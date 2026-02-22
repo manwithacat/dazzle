@@ -32,7 +32,7 @@ from .knowledge import (
 from .project import (
     get_active_project_info,
     list_projects,
-    load_backend_spec_for_project,
+    load_appspec_for_project,
     select_project,
     validate_all_projects,
 )
@@ -58,7 +58,7 @@ from .testing import (
 __all__ = [
     # Project handlers
     "list_projects",
-    "load_backend_spec_for_project",
+    "load_appspec_for_project",
     "select_project",
     "get_active_project_info",
     "validate_all_projects",

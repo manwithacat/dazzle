@@ -1,5 +1,5 @@
 """
-DNR Testing utilities.
+Dazzle Testing utilities.
 
 This module contains test helper functions used by the `dazzle check` command.
 It includes API contract testing, E2E tests, benchmarks, and accessibility checks.
@@ -14,15 +14,13 @@ import typer
 from dazzle.core.strings import to_api_plural
 
 if TYPE_CHECKING:
-    from dazzle_back.specs.backend import BackendSpec
-
     from dazzle.core import ir
 
 logger = logging.getLogger(__name__)
 
 
 def run_api_contract_tests(
-    backend_spec: "BackendSpec",
+    appspec: "ir.AppSpec",
     api_url: str,
     verbose: bool,
 ) -> dict[str, Any]:
@@ -64,7 +62,7 @@ def run_api_contract_tests(
     created_entities: dict[str, str] = {}
 
     # Test each entity's CRUD endpoints
-    for entity in backend_spec.entities:
+    for entity in appspec.domain.entities:
         plural_name = to_api_plural(entity.name)
         base_path = f"/{plural_name}"
 
@@ -198,7 +196,7 @@ def generate_test_data(
     """Generate minimal test data for an entity.
 
     Args:
-        entity: The entity spec to generate data for
+        entity: The IR EntitySpec to generate data for
         update: If True, generate update data (different values)
         created_entities: Dict mapping entity names to created IDs for ref fields
 
@@ -206,10 +204,6 @@ def generate_test_data(
         Dict with test data for the entity
     """
     import uuid as uuid_module
-
-    from dazzle_back.specs.entity import (
-        ScalarType,  # Intentional layer crossing: test data generation
-    )
 
     data: dict[str, Any] = {}
     created_entities = created_entities or {}
@@ -223,7 +217,7 @@ def generate_test_data(
             continue
 
         # Skip non-required fields for create, include for update
-        if not field.required and not update:
+        if not field.is_required and not update:
             continue
 
         # Handle ref fields (foreign keys)
@@ -236,13 +230,13 @@ def generate_test_data(
                 # This will cause validation errors but is better than crashing
                 continue
 
-        # Generate appropriate test value based on type
-        scalar = field.type.scalar_type
+        # Generate appropriate test value based on field type kind
+        kind = field.type.kind
         max_length = getattr(field.type, "max_length", None)
 
-        if scalar in (ScalarType.STR, ScalarType.TEXT):
+        if kind in ("str", "text"):
             # Use unique suffix for unique fields to avoid constraint violations
-            if field.unique:
+            if field.is_unique:
                 value = f"t_{unique_suffix}" if not update else f"u_{unique_suffix}"
             else:
                 value = f"test_{field.name}" if not update else f"upd_{field.name}"
@@ -250,32 +244,32 @@ def generate_test_data(
             if max_length and len(value) > max_length:
                 value = value[:max_length]
             data[field.name] = value
-        elif scalar == ScalarType.EMAIL:
+        elif kind == "email":
             # Email fields are often unique
             data[field.name] = (
                 f"test_{unique_suffix}@example.com"
                 if not update
                 else f"upd_{unique_suffix}@example.com"
             )
-        elif scalar == ScalarType.URL:
+        elif kind == "url":
             data[field.name] = (
                 f"https://example.com/{unique_suffix}"
                 if not update
                 else f"https://example.com/upd_{unique_suffix}"
             )
-        elif scalar == ScalarType.INT:
+        elif kind == "int":
             data[field.name] = 42 if not update else 43
-        elif scalar == ScalarType.DECIMAL:
+        elif kind in ("decimal", "money"):
             data[field.name] = 3.14 if not update else 3.15
-        elif scalar == ScalarType.BOOL:
+        elif kind == "bool":
             data[field.name] = True if not update else False
-        elif scalar == ScalarType.UUID:
+        elif kind == "uuid":
             data[field.name] = str(uuid_module.uuid4())
-        elif scalar == ScalarType.DATETIME:
+        elif kind == "datetime":
             data[field.name] = "2024-01-01T00:00:00Z"
-        elif scalar == ScalarType.DATE:
+        elif kind == "date":
             data[field.name] = "2024-01-01"
-        elif field.type.kind == "enum" and field.type.enum_values:
+        elif kind == "enum" and field.type.enum_values:
             data[field.name] = field.type.enum_values[0]
 
     return data
@@ -351,7 +345,7 @@ def run_e2e_tests(
 
 
 def run_benchmarks(
-    backend_spec: "BackendSpec",
+    appspec: "ir.AppSpec",
     api_url: str,
     verbose: bool,
 ) -> dict[str, Any]:
@@ -372,7 +366,7 @@ def run_benchmarks(
 
     # Find a list endpoint to benchmark
     list_endpoint = None
-    for entity in backend_spec.entities:
+    for entity in appspec.domain.entities:
         plural_name = to_api_plural(entity.name)
         list_endpoint = f"/{plural_name}"
         break

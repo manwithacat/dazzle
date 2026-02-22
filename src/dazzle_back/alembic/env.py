@@ -60,11 +60,10 @@ def _load_target_metadata() -> sqlalchemy.MetaData:
             if dsl_files:
                 modules = parse_modules(dsl_files)
                 appspec = build_appspec(modules, str(project_root))
-                # Convert IR entities to BackendSpec EntitySpec
-                from dazzle_back.converters import convert_appspec_to_backend
+                from dazzle_back.converters.entity_converter import convert_entities
 
-                backend_spec = convert_appspec_to_backend(appspec)
-                return build_metadata(backend_spec.entities)
+                entities = convert_entities(appspec.domain.entities)
+                return build_metadata(entities)
     except Exception:
         logger.debug("Failed to load target metadata from DSL", exc_info=True)
 

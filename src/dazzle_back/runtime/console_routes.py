@@ -481,7 +481,7 @@ def _get_app_summary(appspec: Any) -> dict[str, Any]:
             "integrations": 0,
         }
 
-    # AppSpec stores entities under .domain.entities; BackendSpec has .entities directly
+    # AppSpec stores entities under .domain.entities
     entities = getattr(appspec, "entities", None)
     if not entities:
         domain = getattr(appspec, "domain", None)
@@ -538,7 +538,7 @@ def _get_entities(appspec: Any) -> list[dict[str, Any]]:
     """Extract entity data from AppSpec."""
     if not appspec:
         return []
-    # AppSpec stores entities under .domain.entities; BackendSpec has .entities directly
+    # AppSpec stores entities under .domain.entities
     entities = getattr(appspec, "entities", None)
     if not entities:
         domain = getattr(appspec, "domain", None)

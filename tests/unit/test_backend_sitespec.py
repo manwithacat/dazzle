@@ -11,39 +11,34 @@ import pytest
 # Skip if FastAPI not installed
 pytest.importorskip("fastapi")
 
+from dazzle.core.ir.appspec import AppSpec  # noqa: E402
+from dazzle.core.ir.domain import DomainSpec, EntitySpec  # noqa: E402
+from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind  # noqa: E402
 from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig  # noqa: E402
-from dazzle_back.specs import BackendSpec, EntitySpec, FieldSpec  # noqa: E402
-from dazzle_back.specs.entity import FieldType, ScalarType  # noqa: E402
 
 
-def _create_minimal_backend_spec() -> BackendSpec:
-    """Create a minimal BackendSpec for testing."""
-    return BackendSpec(
-        name="test_app",
-        description="Test application",
-        entities=[
-            EntitySpec(
-                name="Task",
-                label="Task",
-                description="A task",
-                fields=[
-                    FieldSpec(
-                        name="id",
-                        type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        required=True,
-                        unique=True,
-                        indexed=True,
-                    ),
-                    FieldSpec(
-                        name="title",
-                        type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                        required=True,
-                    ),
-                ],
-            )
+def _create_minimal_appspec() -> AppSpec:
+    """Create a minimal AppSpec for testing."""
+    entity = EntitySpec(
+        name="Task",
+        title="Task",
+        fields=[
+            FieldSpec(
+                name="id",
+                type=FieldType(kind=FieldTypeKind.UUID),
+                modifiers=["pk", "required"],
+            ),
+            FieldSpec(
+                name="title",
+                type=FieldType(kind=FieldTypeKind.STR, max_length=200),
+                modifiers=["required"],
+            ),
         ],
-        endpoints=[],
-        channels=[],
+    )
+    return AppSpec(
+        name="test_app",
+        title="Test application",
+        domain=DomainSpec(entities=[entity]),
     )
 
 
@@ -56,7 +51,7 @@ class TestDazzleBackendAppSitespec:
         Regression test: Previously, the constructor had duplicate assignments
         that would overwrite the explicit parameter with config.sitespec_data (None).
         """
-        spec = _create_minimal_backend_spec()
+        spec = _create_minimal_appspec()
 
         # Create sitespec data
         sitespec_data = {
@@ -80,7 +75,7 @@ class TestDazzleBackendAppSitespec:
 
     def test_sitespec_data_falls_back_to_config_when_not_provided(self) -> None:
         """Test that config.sitespec_data is used when param not provided."""
-        spec = _create_minimal_backend_spec()
+        spec = _create_minimal_appspec()
 
         config_sitespec = {
             "version": 1,
@@ -98,7 +93,7 @@ class TestDazzleBackendAppSitespec:
 
     def test_sitespec_data_none_when_not_provided(self) -> None:
         """Test that sitespec_data is None when not provided anywhere."""
-        spec = _create_minimal_backend_spec()
+        spec = _create_minimal_appspec()
         app_builder = DazzleBackendApp(
             spec,
         )
@@ -111,7 +106,7 @@ class TestDazzleBackendAppSitespec:
         self, mock_migrate: MagicMock, mock_pg: MagicMock
     ) -> None:
         """Test that /_site/* routes are registered when sitespec_data provided."""
-        spec = _create_minimal_backend_spec()
+        spec = _create_minimal_appspec()
 
         sitespec_data = {
             "version": 1,
@@ -139,7 +134,7 @@ class TestDazzleBackendAppSitespec:
         self, mock_migrate: MagicMock, mock_pg: MagicMock
     ) -> None:
         """Test that /_site/* routes are NOT registered when no sitespec_data."""
-        spec = _create_minimal_backend_spec()
+        spec = _create_minimal_appspec()
 
         app_builder = DazzleBackendApp(
             spec,

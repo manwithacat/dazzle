@@ -1,5 +1,5 @@
 """
-Runtime server - creates and runs a FastAPI application from BackendSpec.
+Runtime server - creates and runs a FastAPI application from AppSpec.
 
 This module provides the main entry point for running a Dazzle backend application.
 """
@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from dazzle.core.ir import AppSpec
 from dazzle_back.runtime.auth import (
     AuthMiddleware,
     AuthStore,
@@ -44,7 +45,6 @@ from dazzle_back.runtime.workspace_rendering import (  # noqa: F401
     _workspace_batch_handler,
     _workspace_region_handler,
 )
-from dazzle_back.specs import BackendSpec
 
 # FastAPI is optional - use TYPE_CHECKING for type hints
 if TYPE_CHECKING:
@@ -53,6 +53,67 @@ if TYPE_CHECKING:
     from dazzle_back.runtime.pg_backend import PostgresBackend
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Channel conversion (moved from dazzle_back.converters)
+# =============================================================================
+
+
+def _convert_channels(ir_channels: list[Any]) -> list[Any]:
+    """Convert IR ChannelSpecs to backend ChannelSpecs.
+
+    Trigger info from IR send operations is serialized into channel
+    metadata under ``send_triggers`` so the runtime can wire entity
+    lifecycle events to channel dispatches.
+    """
+    from dazzle_back.specs.channel import ChannelSpec, SendOperationSpec
+
+    result: list[ChannelSpec] = []
+    for ch in ir_channels:
+        send_ops: list[SendOperationSpec] = []
+        send_triggers: dict[str, dict[str, Any]] = {}
+
+        for op in ch.send_operations:
+            send_ops.append(
+                SendOperationSpec(
+                    name=op.name,
+                    message=op.message_name,
+                    template=op.options.get("template"),
+                    subject_template=op.options.get("subject_template"),
+                )
+            )
+            if op.trigger:
+                trigger_data: dict[str, Any] = {"kind": str(op.trigger.kind)}
+                if op.trigger.entity_name:
+                    trigger_data["entity_name"] = op.trigger.entity_name
+                if op.trigger.event:
+                    trigger_data["event"] = str(op.trigger.event)
+                if op.trigger.field_name:
+                    trigger_data["field_name"] = op.trigger.field_name
+                if op.trigger.field_value:
+                    trigger_data["field_value"] = op.trigger.field_value
+                if op.trigger.from_state:
+                    trigger_data["from_state"] = op.trigger.from_state
+                if op.trigger.to_state:
+                    trigger_data["to_state"] = op.trigger.to_state
+                send_triggers[op.name] = trigger_data
+
+        metadata: dict[str, Any] = {}
+        if send_triggers:
+            metadata["send_triggers"] = send_triggers
+
+        result.append(
+            ChannelSpec(
+                name=ch.name,
+                kind=ch.kind.value,
+                provider=ch.provider,
+                send_operations=send_ops,
+                metadata=metadata,
+            )
+        )
+    return result
+
 
 # =============================================================================
 # Extracted delegate classes
@@ -66,12 +127,14 @@ class IntegrationManager:
         self,
         *,
         app: FastAPI,
-        spec: BackendSpec,
+        appspec: AppSpec,
+        channels: list[Any],
         db_manager: PostgresBackend | None,
         fragment_sources: dict[str, dict[str, Any]],
     ) -> None:
         self._app = app
-        self._spec = spec
+        self._appspec = appspec
+        self._channels = channels
         self._db_manager = db_manager
         self._fragment_sources = fragment_sources
         self.channel_manager: Any | None = None
@@ -85,7 +148,7 @@ class IntegrationManager:
             from dazzle_back.channels import create_channel_manager
 
             ir_channels = []
-            for channel in self._spec.channels:
+            for channel in self._channels:
                 kind_map = {
                     "email": ChannelKind.EMAIL,
                     "queue": ChannelKind.QUEUE,
@@ -101,7 +164,7 @@ class IntegrationManager:
             self.channel_manager = create_channel_manager(
                 db_manager=self._db_manager,
                 channel_specs=ir_channels,
-                build_id=f"{self._spec.name}-{self._spec.version}",
+                build_id=f"{self._appspec.name}-{self._appspec.version}",
             )
 
             self._add_channel_routes()
@@ -203,7 +266,7 @@ class IntegrationManager:
             from dazzle_back.runtime.integration_executor import IntegrationExecutor
 
             has_actions = False
-            for integration in getattr(self._spec, "integrations", []):
+            for integration in self._appspec.integrations:
                 if getattr(integration, "actions", []):
                     has_actions = True
                     break
@@ -212,7 +275,7 @@ class IntegrationManager:
                 return
 
             self.integration_executor = IntegrationExecutor(
-                app_spec=self._spec,
+                app_spec=self._appspec,
                 fragment_sources=self._fragment_sources,
             )
 
@@ -237,14 +300,16 @@ class WorkspaceRouteBuilder:
         self,
         *,
         app: FastAPI,
-        spec: BackendSpec,
+        appspec: AppSpec,
+        entities: list[Any],
         repositories: dict[str, Any],
         auth_middleware: AuthMiddleware | None,
         enable_auth: bool,
         enable_test_mode: bool,
     ) -> None:
         self._app = app
-        self._spec = spec
+        self._appspec = appspec
+        self._entities = entities
         self._repositories = repositories
         self._auth_middleware = auth_middleware
         self._enable_auth = enable_auth
@@ -255,7 +320,7 @@ class WorkspaceRouteBuilder:
         if not self._app:
             return
 
-        workspaces = getattr(self._spec, "workspaces", [])
+        workspaces = self._appspec.workspaces
         if not workspaces:
             import logging
 
@@ -268,7 +333,8 @@ class WorkspaceRouteBuilder:
             from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
             app = self._app
-            spec = self._spec
+            appspec = self._appspec
+            entities = self._entities
             repositories = self._repositories
             auth_middleware = self._auth_middleware
 
@@ -276,9 +342,9 @@ class WorkspaceRouteBuilder:
 
             # Build entity → list surface lookup for column projection (#357, #359)
             _entity_list_surfaces: dict[str, Any] = {}
-            for _surf in getattr(spec, "surfaces", []):
-                _eref = getattr(_surf, "entity_ref", None)
-                _mode = str(getattr(_surf, "mode", "")).lower()
+            for _surf in appspec.surfaces:
+                _eref = _surf.entity_ref
+                _mode = str(_surf.mode or "").lower()
                 if _eref and _mode == "list" and _eref not in _entity_list_surfaces:
                     _entity_list_surfaces[_eref] = _surf
 
@@ -290,7 +356,7 @@ class WorkspaceRouteBuilder:
                 return _build_entity_columns(entity_spec)
 
             for workspace in workspaces:
-                ws_ctx = build_workspace_context(workspace, spec)
+                ws_ctx = build_workspace_context(workspace, appspec)
                 ws_name = workspace.name
 
                 _ws_access = workspace.access
@@ -303,8 +369,7 @@ class WorkspaceRouteBuilder:
                         for src_tab in ctx_region.source_tabs:
                             _src_name = src_tab.entity_name
                             _src_entity_spec = None
-                            _entities = getattr(spec, "entities", [])
-                            for _e in _entities:
+                            for _e in entities:
                                 if _e.name == _src_name:
                                     _src_entity_spec = _e
                                     break
@@ -380,8 +445,7 @@ class WorkspaceRouteBuilder:
                     _source = ctx_region.source
 
                     _entity_spec = None
-                    _entities = getattr(spec, "entities", [])
-                    for _e in _entities:
+                    for _e in entities:
                         if _e.name == _source:
                             _entity_spec = _e
                             break
@@ -389,8 +453,8 @@ class WorkspaceRouteBuilder:
                     _attention_signals: list[Any] = []
                     _surface_default_sort: list[Any] = []
                     _surface_empty_message = ""
-                    for _surf in getattr(spec, "surfaces", []):
-                        if getattr(_surf, "entity_ref", None) == _source:
+                    for _surf in appspec.surfaces:
+                        if _surf.entity_ref == _source:
                             ux = getattr(_surf, "ux", None)
                             if ux:
                                 if getattr(ux, "attention_signals", None):
@@ -629,12 +693,12 @@ class DazzleBackendApp:
     """
     Dazzle Backend Application.
 
-    Creates a complete FastAPI application from a BackendSpec.
+    Creates a complete FastAPI application from an AppSpec.
     """
 
     def __init__(
         self,
-        spec: BackendSpec,
+        appspec: AppSpec,
         config: ServerConfig | None = None,
         *,
         database_url: str | None = None,
@@ -651,14 +715,12 @@ class DazzleBackendApp:
         # SiteSpec (v0.16.0)
         sitespec_data: dict[str, Any] | None = None,
         project_root: str | Path | None = None,
-        # AppSpec (v0.33.2) — for integration mappings (#340)
-        appspec: Any = None,
     ):
         """
         Initialize the backend application.
 
         Args:
-            spec: Backend specification
+            appspec: Dazzle AppSpec (parsed IR)
             config: Server configuration object (preferred)
             database_url: PostgreSQL connection URL (or set DATABASE_URL env var)
             enable_auth: Whether to enable authentication (default: False)
@@ -671,7 +733,6 @@ class DazzleBackendApp:
             scenarios: List of scenario configurations for dev mode
             sitespec_data: SiteSpec as dict for public site shell (v0.16.0)
             project_root: Project root for content file loading (v0.16.0)
-            appspec: Full AppSpec for integration mappings (v0.33.2, #340)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError(
@@ -684,8 +745,16 @@ class DazzleBackendApp:
 
         import os
 
-        # Override config with any explicit parameters
-        self.spec = spec
+        # Convert AppSpec to runtime-ready specs
+        from dazzle_back.converters.entity_converter import convert_entities
+        from dazzle_back.converters.surface_converter import convert_surfaces_to_services
+
+        self._appspec = appspec
+        self._entities = convert_entities(appspec.domain.entities)
+        self._service_specs, self._endpoint_specs = convert_surfaces_to_services(
+            appspec.surfaces, appspec.domain
+        )
+        self._channels = _convert_channels(appspec.channels)
         self._database_url = database_url or config.database_url or os.environ.get("DATABASE_URL")
         self._enable_auth = enable_auth if enable_auth is not None else config.enable_auth
         self._auth_config = auth_config if auth_config is not None else config.auth_config
@@ -750,8 +819,6 @@ class DazzleBackendApp:
         self._entity_search_fields: dict[str, list[str]] = config.entity_search_fields
         # Auto-eager-load ref relations (v0.26.0)
         self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
-        # AppSpec reference for integration mappings (#340)
-        self._appspec = appspec
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging (delegates to IntegrationManager)."""
@@ -967,7 +1034,7 @@ class DazzleBackendApp:
             deploy_history_store = DeployHistoryStore(ops_db)
 
             # Save current spec version
-            spec_version_store.save_version(self.spec)
+            spec_version_store.save_version(self._appspec)
 
             # Rollback manager
             rollback_manager = RollbackManager(
@@ -977,7 +1044,7 @@ class DazzleBackendApp:
 
             console_router = create_console_routes(
                 ops_db=ops_db,
-                appspec=self.spec,
+                appspec=self._appspec,
                 spec_version_store=spec_version_store,
                 deploy_history_store=deploy_history_store,
             )
@@ -987,7 +1054,7 @@ class DazzleBackendApp:
                 deploy_history_store=deploy_history_store,
                 spec_version_store=spec_version_store,
                 rollback_manager=rollback_manager,
-                appspec=self.spec,
+                appspec=self._appspec,
             )
             self._app.include_router(deploy_router)
 
@@ -1015,7 +1082,7 @@ class DazzleBackendApp:
 
             # Build fragment sources from integration specs if available
             fragment_sources: dict[str, dict[str, Any]] = {}
-            for integration in getattr(self.spec, "integrations", []):
+            for integration in self._appspec.integrations:
                 if hasattr(integration, "base_url") and integration.base_url:
                     fragment_sources[integration.name] = {
                         "url": integration.base_url,
@@ -1047,11 +1114,11 @@ class DazzleBackendApp:
         handlers on the global entity event bus to fire HTTP requests on
         entity lifecycle events.
 
-        Uses ``self._appspec.integrations`` (full AppSpec) because BackendSpec
+        Uses ``self._appspec.integrations`` because older code paths
         does not carry integration definitions (#340).
         """
         try:
-            # Use appspec integrations (BackendSpec doesn't have them — #340)
+            # Use appspec integrations
             integrations = getattr(self._appspec, "integrations", []) if self._appspec else []
 
             # Check if any integrations have mappings
@@ -1427,7 +1494,7 @@ class DazzleBackendApp:
     def _wire_entity_events_to_channels(self) -> None:
         """Wire entity lifecycle events to channel send operations.
 
-        Scans channel send operations in the BackendSpec for entity_event
+        Scans channel send operations for entity_event
         triggers (stored in channel metadata by the converter) and registers
         callbacks on the corresponding CRUDService.
         """
@@ -1438,7 +1505,7 @@ class DazzleBackendApp:
         # Build trigger map: (entity_name, event_type) → [(channel, op, message)]
         trigger_map: dict[tuple[str, str], list[tuple[str, str, str]]] = {}
 
-        for channel in self.spec.channels:
+        for channel in self._channels:
             trigger_meta = channel.metadata.get("send_triggers", {})
             for send_op in channel.send_operations:
                 op_trigger = trigger_meta.get(send_op.name)
@@ -1517,9 +1584,9 @@ class DazzleBackendApp:
     def _create_app(self) -> None:
         """Create the FastAPI app instance and apply middleware."""
         self._app = _FastAPI(
-            title=self.spec.name,
-            description=self.spec.description or f"Dazzle Backend: {self.spec.name}",
-            version=self.spec.version,
+            title=self._appspec.name,
+            description=self._appspec.title or f"Dazzle Backend: {self._appspec.name}",
+            version=self._appspec.version,
         )
 
         # Security middleware (v0.11.0)
@@ -1561,8 +1628,8 @@ class DazzleBackendApp:
 
     def _setup_models(self) -> None:
         """Generate Pydantic models and create/update schemas from the spec."""
-        self._models = generate_all_entity_models(self.spec.entities)
-        for entity in self.spec.entities:
+        self._models = generate_all_entity_models(self._entities)
+        for entity in self._entities:
             self._schemas[entity.name] = {
                 "create": generate_create_schema(entity),
                 "update": generate_update_schema(entity),
@@ -1581,17 +1648,17 @@ class DazzleBackendApp:
         self._db_manager = PostgresBackend(self._database_url)
         self._last_migration = auto_migrate(
             self._db_manager,
-            self.spec.entities,
+            self._entities,
             record_history=True,
         )
 
         # Build relation loader for nested ref resolution (#272)
         from dazzle_back.runtime.relation_loader import RelationLoader, RelationRegistry
 
-        relation_registry = RelationRegistry.from_entities(self.spec.entities)
+        relation_registry = RelationRegistry.from_entities(self._entities)
         relation_loader = RelationLoader(
             registry=relation_registry,
-            entities=self.spec.entities,
+            entities=self._entities,
             conn_factory=self._db_manager.get_persistent_connection,
         )
 
@@ -1600,20 +1667,18 @@ class DazzleBackendApp:
             self._models,
             relation_loader=relation_loader,
         )
-        self._repositories = repo_factory.create_all_repositories(self.spec.entities)
+        self._repositories = repo_factory.create_all_repositories(self._entities)
 
     def _setup_services(self) -> None:
         """Create CRUD services and wire them to repositories."""
         state_machines = {
-            entity.name: entity.state_machine
-            for entity in self.spec.entities
-            if entity.state_machine
+            entity.name: entity.state_machine for entity in self._entities if entity.state_machine
         }
-        entity_specs = {entity.name: entity for entity in self.spec.entities}
+        entity_specs = {entity.name: entity for entity in self._entities}
 
         factory = ServiceFactory(self._models, state_machines, entity_specs)
         self._services = factory.create_all_services(
-            self.spec.services,
+            self._service_specs,
             self._schemas,
         )
 
@@ -1730,12 +1795,12 @@ class DazzleBackendApp:
 
         # Extract access specs
         entity_access_specs: dict[str, dict[str, Any]] = {}
-        for entity in self.spec.entities:
+        for entity in self._entities:
             if entity.metadata and "access" in entity.metadata:
                 entity_access_specs[entity.name] = entity.metadata["access"]
 
         cedar_access_specs: dict[str, Any] = {}
-        for entity in self.spec.entities:
+        for entity in self._entities:
             if entity.access:
                 cedar_access_specs[entity.name] = entity.access
 
@@ -1745,7 +1810,7 @@ class DazzleBackendApp:
             (entity.metadata and "access" in entity.metadata)
             or getattr(entity, "audit", None)
             or entity.access
-            for entity in self.spec.entities
+            for entity in self._entities
         )
         if _has_auditable_entities and self._database_url:
             from dazzle_back.runtime.audit_log import AuditLogger
@@ -1765,13 +1830,13 @@ class DazzleBackendApp:
                 logger.debug("Route override discovery skipped", exc_info=True)
 
         # Entity CRUD routes
-        service_specs = {svc.name: svc for svc in self.spec.services}
+        service_specs = {svc.name: svc for svc in self._service_specs}
 
         # Pre-compute HTMX metadata per entity so list API endpoints can
         # render table row fragments with correct column definitions.
         entity_htmx_meta: dict[str, dict[str, Any]] = {}
         app_prefix = "/app"
-        for entity in self.spec.entities:
+        for entity in self._entities:
             entity_slug = entity.name.lower().replace("_", "-")
             entity_htmx_meta[entity.name] = {
                 "columns": _build_entity_columns(entity),
@@ -1783,8 +1848,8 @@ class DazzleBackendApp:
         # When audit_trail is True (app-level switch), all entities get audit
         # logging by default. Entities can still opt out with audit: false.
         entity_audit_configs: dict[str, Any] = {}
-        _global_audit = getattr(self.spec, "audit_trail", False)
-        for entity in self.spec.entities:
+        _global_audit = self._appspec.audit_trail
+        for entity in self._entities:
             _ac = getattr(entity, "audit", None)
             if _ac is not None:
                 entity_audit_configs[entity.name] = _ac
@@ -1812,7 +1877,7 @@ class DazzleBackendApp:
             entity_audit_configs=entity_audit_configs,
         )
         router = route_generator.generate_all_routes(
-            self.spec.endpoints,
+            self._endpoint_specs,
             service_specs,
         )
         self._app.include_router(router)
@@ -1861,7 +1926,7 @@ class DazzleBackendApp:
             test_router = create_test_routes(
                 db_manager=self._db_manager,
                 repositories=self._repositories,
-                entities=self.spec.entities,
+                entities=self._entities,
                 auth_store=self._auth_store,
             )
             self._app.include_router(test_router)
@@ -1873,7 +1938,7 @@ class DazzleBackendApp:
             control_plane_router = create_control_plane_routes(
                 db_manager=self._db_manager,
                 repositories=self._repositories if self._db_manager else None,
-                entities=self.spec.entities,
+                entities=self._entities,
                 personas=self._personas,
                 scenarios=self._scenarios,
                 auth_store=self._auth_store,
@@ -1887,13 +1952,15 @@ class DazzleBackendApp:
         # Create delegate instances
         self._integration_mgr = IntegrationManager(
             app=self._app,
-            spec=self.spec,
+            appspec=self._appspec,
+            channels=self._channels,
             db_manager=self._db_manager,
             fragment_sources=self._fragment_sources,
         )
         self._workspace_builder = WorkspaceRouteBuilder(
             app=self._app,
-            spec=self.spec,
+            appspec=self._appspec,
+            entities=self._entities,
             repositories=self._repositories,
             auth_middleware=self._auth_middleware,
             enable_auth=self._enable_auth,
@@ -1909,9 +1976,9 @@ class DazzleBackendApp:
 
             self._start_time = datetime.now()
             debug_router = create_debug_routes(
-                spec=self.spec,
+                appspec=self._appspec,
                 db_manager=self._db_manager,
-                entities=self.spec.entities,
+                entities=self._entities,
                 start_time=self._start_time,
             )
             self._app.include_router(debug_router)
@@ -1941,7 +2008,7 @@ class DazzleBackendApp:
             self._app.include_router(page_router)
 
         # Messaging channels (v0.9)
-        if self._enable_channels and self.spec.channels:
+        if self._enable_channels and self._channels:
             self._init_channel_manager()
 
         # Founder Console (v0.26.0)
@@ -2013,11 +2080,11 @@ class DazzleBackendApp:
 
         @self._app.get("/health", tags=["System"])
         async def health_check() -> dict[str, str]:
-            return {"status": "healthy", "app": self.spec.name}
+            return {"status": "healthy", "app": self._appspec.name}
 
         @self._app.get("/spec", tags=["System"])
         async def get_spec() -> dict[str, Any]:
-            return self.spec.model_dump()
+            return self._appspec.model_dump()
 
         def _mask_database_url(url: str | None) -> str | None:
             """Mask password in database URL for safe display."""
@@ -2045,7 +2112,7 @@ class DazzleBackendApp:
             return {
                 "database_url": masked_db_url,
                 "database_backend": "postgresql",
-                "tables": [e.name for e in self.spec.entities],
+                "tables": [e.name for e in self._entities],
                 "last_migration": migration_info,
                 "auth_enabled": auth_enabled,
                 "files_enabled": files_enabled,
@@ -2222,7 +2289,7 @@ class DazzleBackendApp:
 
 
 # =============================================================================
-# Backward-compat re-exports (moved to app_factory.py)
+# Re-exports (moved to app_factory.py)
 # =============================================================================
 
 from dazzle_back.runtime.app_factory import (  # noqa: E402, F401
@@ -2230,22 +2297,14 @@ from dazzle_back.runtime.app_factory import (  # noqa: E402, F401
     build_entity_search_fields,
     create_app,
     create_app_factory,
-    create_app_from_dict,
-    create_app_from_json,
     run_app,
 )
 
-# Backward compatibility alias (deprecated as of v0.28.0)
-DNRBackendApp = DazzleBackendApp
-
 __all__ = [
     "DazzleBackendApp",
-    "DNRBackendApp",
     "ServerConfig",
     "create_app",
     "create_app_factory",
-    "create_app_from_dict",
-    "create_app_from_json",
     "run_app",
     "build_entity_list_projections",
     "build_entity_search_fields",

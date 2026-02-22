@@ -16,55 +16,6 @@ from dazzle_ui.runtime.combined_server import (
     run_unified_server,
 )
 
-# Check if backend modules are available
-try:
-    from dazzle_back.specs import (
-        BackendSpec,
-        EntitySpec,
-        FieldSpec,
-        FieldType,
-        ScalarType,
-    )
-
-    BACKEND_AVAILABLE = True
-except ImportError:
-    BACKEND_AVAILABLE = False
-
-
-# =============================================================================
-# Fixtures
-# =============================================================================
-
-
-@pytest.fixture
-def simple_backend_spec() -> BackendSpec:
-    """Create a simple backend spec for testing."""
-    if not BACKEND_AVAILABLE:
-        pytest.skip("Backend module not available")
-
-    return BackendSpec(
-        name="test_app",
-        version="1.0.0",
-        entities=[
-            EntitySpec(
-                name="Task",
-                fields=[
-                    FieldSpec(
-                        name="id",
-                        type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                        required=True,
-                    ),
-                    FieldSpec(
-                        name="title",
-                        type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                        required=True,
-                    ),
-                ],
-            ),
-        ],
-    )
-
-
 # =============================================================================
 # Terminal Utility Tests
 # =============================================================================
@@ -118,7 +69,7 @@ class TestRunUnifiedServerSignature:
         """run_unified_server accepts all expected keyword arguments."""
         sig = inspect.signature(run_unified_server)
         expected = {
-            "backend_spec",
+            "appspec",
             "ui_spec",
             "port",
             "db_path",
@@ -135,7 +86,8 @@ class TestRunUnifiedServerSignature:
             "sitespec_data",
             "theme_preset",
             "theme_overrides",
-            "appspec",
+            "redis_url",
+            "config",
         }
         assert expected == set(sig.parameters.keys())
 
@@ -166,7 +118,7 @@ class TestRunBackendOnlySignature:
         """run_backend_only accepts all expected keyword arguments."""
         sig = inspect.signature(run_backend_only)
         expected = {
-            "backend_spec",
+            "appspec",
             "host",
             "port",
             "db_path",
@@ -175,6 +127,7 @@ class TestRunBackendOnlySignature:
             "enable_graphql",
             "sitespec_data",
             "project_root",
+            "redis_url",
         }
         assert expected == set(sig.parameters.keys())
 

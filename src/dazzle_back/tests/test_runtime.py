@@ -442,53 +442,36 @@ class TestServerWithDatabase:
     """Integration tests for server with PostgreSQL persistence."""
 
     @pytest.fixture
-    def simple_backend_spec(self) -> BackendSpec:
-        """Create a simple BackendSpec for testing."""
-        return BackendSpec(
-            name="test_app",
-            version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="Task",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                            required=True,
-                        ),
-                        FieldSpec(
-                            name="title",
-                            type=FieldType(
-                                kind="scalar", scalar_type=ScalarType.STR, max_length=200
-                            ),
-                            required=True,
-                        ),
-                        FieldSpec(
-                            name="status",
-                            type=FieldType(kind="enum", enum_values=["pending", "done"]),
-                            required=True,
-                            default="pending",
-                        ),
-                    ],
+    def simple_appspec(self) -> Any:
+        """Create a simple AppSpec for testing."""
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle.core.ir.domain import DomainSpec
+        from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
+        from dazzle.core.ir.fields import FieldType as IRFieldType
+        from dazzle.core.ir.fields import FieldTypeKind
+
+        task_entity = IREntitySpec(
+            name="Task",
+            title="Task",
+            fields=[
+                IRFieldSpec(name="id", type=IRFieldType(kind=FieldTypeKind.UUID), modifiers=["pk"]),
+                IRFieldSpec(
+                    name="title",
+                    type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
+                    modifiers=["required"],
                 ),
-            ],
-            services=[
-                ServiceSpec(
-                    name="task_service",
-                    domain_operation=DomainOperation(kind=OperationKind.LIST, entity="Task"),
-                ),
-            ],
-            endpoints=[
-                EndpointSpec(
-                    name="list_tasks",
-                    service="task_service",
-                    method=HttpMethod.GET,
-                    path="/tasks",
+                IRFieldSpec(
+                    name="status",
+                    type=IRFieldType(kind=FieldTypeKind.ENUM, enum_values=["pending", "done"]),
+                    modifiers=["required"],
+                    default="pending",
                 ),
             ],
         )
+        return AppSpec(name="test_app", version="1.0.0", domain=DomainSpec(entities=[task_entity]))
 
-    def test_server_creates_database(self, simple_backend_spec: BackendSpec) -> None:
+    def test_server_creates_database(self, simple_appspec: Any) -> None:
         """Test that server creates database manager with PostgreSQL."""
         import os
 
@@ -496,7 +479,7 @@ class TestServerWithDatabase:
 
         database_url = os.environ["DATABASE_URL"]
         app_builder = DazzleBackendApp(
-            simple_backend_spec,
+            simple_appspec,
             database_url=database_url,
         )
         app_builder.build()
@@ -504,7 +487,7 @@ class TestServerWithDatabase:
         # Check for database manager
         assert app_builder._db_manager is not None
 
-    def test_server_without_database_raises(self, simple_backend_spec: BackendSpec) -> None:
+    def test_server_without_database_raises(self, simple_appspec: Any) -> None:
         """Test that server raises ValueError without database_url."""
         import os
 
@@ -513,14 +496,14 @@ class TestServerWithDatabase:
         # Temporarily clear DATABASE_URL so the builder doesn't pick it up
         saved = os.environ.pop("DATABASE_URL", None)
         try:
-            app_builder = DazzleBackendApp(simple_backend_spec)
+            app_builder = DazzleBackendApp(simple_appspec)
             with pytest.raises(ValueError, match="database_url is required"):
                 app_builder.build()
         finally:
             if saved is not None:
                 os.environ["DATABASE_URL"] = saved
 
-    def test_crud_service_with_repository(self, simple_backend_spec: BackendSpec) -> None:
+    def test_crud_service_with_repository(self, simple_appspec: Any) -> None:
         """Test that CRUD service is wired up to repository."""
         import os
 
@@ -528,7 +511,7 @@ class TestServerWithDatabase:
 
         database_url = os.environ["DATABASE_URL"]
         app_builder = DazzleBackendApp(
-            simple_backend_spec,
+            simple_appspec,
             database_url=database_url,
         )
         app_builder.build()
@@ -542,7 +525,7 @@ class TestServerWithDatabase:
         assert task_service._repository is not None
 
     @pytest.mark.asyncio
-    async def test_crud_operations_persist(self, simple_backend_spec: BackendSpec) -> None:
+    async def test_crud_operations_persist(self, simple_appspec: Any) -> None:
         """Test that CRUD operations persist data to PostgreSQL."""
         import os
 
@@ -550,7 +533,7 @@ class TestServerWithDatabase:
 
         database_url = os.environ["DATABASE_URL"]
         app_builder = DazzleBackendApp(
-            simple_backend_spec,
+            simple_appspec,
             database_url=database_url,
         )
         app_builder.build()
@@ -559,7 +542,10 @@ class TestServerWithDatabase:
         assert isinstance(task_service, CRUDService)
 
         # Create schema for test
-        CreateSchema = generate_create_schema(simple_backend_spec.entities[0])
+        from dazzle_back.converters.entity_converter import convert_entities
+
+        backend_entities = convert_entities(simple_appspec.domain.entities)
+        CreateSchema = generate_create_schema(backend_entities[0])
 
         # Create a task
         create_data = CreateSchema(title="Test Task", status="pending")
@@ -574,7 +560,7 @@ class TestServerWithDatabase:
 
         # Create a new app instance to verify persistence
         app_builder2 = DazzleBackendApp(
-            simple_backend_spec,
+            simple_appspec,
             database_url=database_url,
         )
         app_builder2.build()

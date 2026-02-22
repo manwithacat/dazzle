@@ -17,7 +17,7 @@ from .components import (
     get_component_by_name,
     get_valid_layout_kinds,
 )
-from .state import get_backend_spec, get_or_create_ui_spec, get_ui_spec
+from .state import get_appspec_data, get_or_create_ui_spec, get_ui_spec
 
 
 def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:
@@ -76,24 +76,25 @@ def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:
 
 
 def _list_dnr_entities() -> str:
-    """List all entities in BackendSpec."""
-    spec = get_backend_spec()
+    """List all entities from AppSpec."""
+    spec = get_appspec_data()
     if not spec:
         return json.dumps(
             {
                 "status": "no_spec",
-                "message": "No BackendSpec loaded. Use AppSpec converter or load a spec first.",
+                "message": "No AppSpec loaded. Select a project first.",
                 "entities": [],
             }
         )
 
-    entities = spec.get("entities", [])
+    domain = spec.get("domain", {})
+    entities = domain.get("entities", [])
     summaries = []
     for entity in entities:
         summaries.append(
             {
                 "name": entity.get("name"),
-                "label": entity.get("label"),
+                "label": entity.get("title"),
                 "field_count": len(entity.get("fields", [])),
                 "relation_count": len(entity.get("relations", [])),
             }
@@ -114,11 +115,12 @@ def _get_dnr_entity(args: dict[str, Any]) -> str:
     if not name:
         return json.dumps({"error": "name parameter required"})
 
-    spec = get_backend_spec()
+    spec = get_appspec_data()
     if not spec:
-        return json.dumps({"error": "No BackendSpec loaded"})
+        return json.dumps({"error": "No AppSpec loaded"})
 
-    entities = spec.get("entities", [])
+    domain = spec.get("domain", {})
+    entities = domain.get("entities", [])
     entity = next((e for e in entities if e.get("name") == name), None)
 
     if not entity:
@@ -133,37 +135,33 @@ def _get_dnr_entity(args: dict[str, Any]) -> str:
 
 
 def _list_backend_services(args: dict[str, Any]) -> str:
-    """List backend services."""
+    """List surfaces (which drive backend service generation)."""
     entity_filter = args.get("entity_name")
 
-    spec = get_backend_spec()
+    spec = get_appspec_data()
     if not spec:
         return json.dumps(
             {
                 "status": "no_spec",
-                "message": "No BackendSpec loaded",
-                "services": [],
+                "message": "No AppSpec loaded",
+                "surfaces": [],
             }
         )
 
-    services = spec.get("services", [])
+    surfaces = spec.get("surfaces", [])
 
     # Apply filter if provided
     if entity_filter:
-        services = [
-            s for s in services if s.get("domain_operation", {}).get("entity") == entity_filter
-        ]
+        surfaces = [s for s in surfaces if s.get("entity_ref") == entity_filter]
 
     summaries = []
-    for svc in services:
-        domain_op = svc.get("domain_operation", {})
+    for surface in surfaces:
         summaries.append(
             {
-                "name": svc.get("name"),
-                "entity": domain_op.get("entity"),
-                "kind": domain_op.get("kind"),
-                "input_summary": _summarize_schema(svc.get("inputs", {})),
-                "output_summary": _summarize_schema(svc.get("outputs", {})),
+                "name": surface.get("name"),
+                "entity": surface.get("entity_ref"),
+                "mode": surface.get("mode"),
+                "title": surface.get("title"),
             }
         )
 
@@ -171,42 +169,34 @@ def _list_backend_services(args: dict[str, Any]) -> str:
         {
             "count": len(summaries),
             "filter": entity_filter,
-            "services": summaries,
+            "surfaces": summaries,
         },
         indent=2,
     )
 
 
 def _get_backend_service_spec(args: dict[str, Any]) -> str:
-    """Get full ServiceSpec."""
+    """Get full SurfaceSpec (surfaces drive backend service generation)."""
     name = args.get("name")
     if not name:
         return json.dumps({"error": "name parameter required"})
 
-    spec = get_backend_spec()
+    spec = get_appspec_data()
     if not spec:
-        return json.dumps({"error": "No BackendSpec loaded"})
+        return json.dumps({"error": "No AppSpec loaded"})
 
-    services = spec.get("services", [])
-    service = next((s for s in services if s.get("name") == name), None)
+    surfaces = spec.get("surfaces", [])
+    surface = next((s for s in surfaces if s.get("name") == name), None)
 
-    if not service:
+    if not surface:
         return json.dumps(
             {
-                "error": f"Service '{name}' not found",
-                "available": [s.get("name") for s in services],
+                "error": f"Surface '{name}' not found",
+                "available": [s.get("name") for s in surfaces],
             }
         )
 
-    return json.dumps({"serviceSpec": service}, indent=2)
-
-
-def _summarize_schema(schema: dict[str, Any]) -> str:
-    """Create a brief summary of a schema."""
-    fields = schema.get("fields", [])
-    if not fields:
-        return "(empty)"
-    return ", ".join(f["name"] for f in fields[:3]) + ("..." if len(fields) > 3 else "")
+    return json.dumps({"surfaceSpec": surface}, indent=2)
 
 
 # =============================================================================
@@ -492,13 +482,13 @@ def _compose_workspace(args: dict[str, Any]) -> str:
 
 
 def _get_graphql_schema(args: dict[str, Any]) -> str:
-    """Get the GraphQL schema from BackendSpec."""
-    spec = get_backend_spec()
+    """Get the GraphQL schema from AppSpec."""
+    spec = get_appspec_data()
     if not spec:
         return json.dumps(
             {
                 "status": "no_spec",
-                "message": "No BackendSpec loaded. Select a project first.",
+                "message": "No AppSpec loaded. Select a project first.",
             }
         )
 
@@ -506,14 +496,13 @@ def _get_graphql_schema(args: dict[str, Any]) -> str:
 
     # Try to import GraphQL support
     try:
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_back.graphql.integration import inspect_schema, print_schema
-        from dazzle_back.specs import BackendSpec
 
-        # Convert dict to BackendSpec if needed
-        if isinstance(spec, dict):
-            backend_spec = BackendSpec.model_validate(spec)
-        else:
-            backend_spec = spec
+        # Reconstruct AppSpec and convert to BackendSpec for GraphQL generation
+        appspec = AppSpec.model_validate(spec)
+        backend_spec = convert_appspec_to_backend(appspec)
 
         if output_format == "info":
             info = inspect_schema(backend_spec)
@@ -538,18 +527,19 @@ def _get_graphql_schema(args: dict[str, Any]) -> str:
 
 
 def _list_graphql_types() -> str:
-    """List GraphQL types from BackendSpec entities."""
-    spec = get_backend_spec()
+    """List GraphQL types from AppSpec entities."""
+    spec = get_appspec_data()
     if not spec:
         return json.dumps(
             {
                 "status": "no_spec",
-                "message": "No BackendSpec loaded. Select a project first.",
+                "message": "No AppSpec loaded. Select a project first.",
                 "types": [],
             }
         )
 
-    entities = spec.get("entities", [])
+    domain = spec.get("domain", {})
+    entities = domain.get("entities", [])
     types = []
 
     for entity in entities:
@@ -560,8 +550,15 @@ def _list_graphql_types() -> str:
         graphql_fields = []
         for field in fields:
             field_name = field.get("name", "")
-            field_type = field.get("type", "String")
-            is_required = field.get("required", False) or field.get("pk", False)
+            field_type_obj = field.get("type", {})
+            # In AppSpec dict, type is {"kind": "str", ...}
+            field_type = (
+                field_type_obj.get("kind", "str")
+                if isinstance(field_type_obj, dict)
+                else str(field_type_obj)
+            )
+            modifiers = field.get("modifiers", [])
+            is_required = "required" in modifiers or "pk" in modifiers
 
             # Map DAZZLE types to GraphQL
             graphql_type = _map_to_graphql_type(field_type)
@@ -662,13 +659,13 @@ def _get_adapter_guide(args: dict[str, Any]) -> str:
 
 
 def _list_channels() -> str:
-    """List all messaging channels from BackendSpec."""
-    spec = get_backend_spec()
+    """List all messaging channels from AppSpec."""
+    spec = get_appspec_data()
     if not spec:
         return json.dumps(
             {
                 "status": "no_spec",
-                "message": "No BackendSpec loaded. Select a project first.",
+                "message": "No AppSpec loaded. Select a project first.",
                 "channels": [],
             }
         )
@@ -712,9 +709,9 @@ def _get_channel_status(args: dict[str, Any]) -> str:
     if not channel_name:
         return json.dumps({"error": "channel_name parameter required"})
 
-    spec = get_backend_spec()
+    spec = get_appspec_data()
     if not spec:
-        return json.dumps({"error": "No BackendSpec loaded. Select a project first."})
+        return json.dumps({"error": "No AppSpec loaded. Select a project first."})
 
     channels = spec.get("channels", [])
     channel = next((c for c in channels if c.get("name") == channel_name), None)
@@ -761,13 +758,13 @@ def _get_channel_status(args: dict[str, Any]) -> str:
 
 
 def _list_messages(args: dict[str, Any]) -> str:
-    """List message schemas from BackendSpec."""
-    spec = get_backend_spec()
+    """List message schemas from AppSpec."""
+    spec = get_appspec_data()
     if not spec:
         return json.dumps(
             {
                 "status": "no_spec",
-                "message": "No BackendSpec loaded. Select a project first.",
+                "message": "No AppSpec loaded. Select a project first.",
                 "messages": [],
             }
         )
@@ -816,12 +813,12 @@ def _list_messages(args: dict[str, Any]) -> str:
 
 def _get_outbox_status() -> str:
     """Get outbox statistics."""
-    spec = get_backend_spec()
+    spec = get_appspec_data()
     if not spec:
         return json.dumps(
             {
                 "status": "no_spec",
-                "message": "No BackendSpec loaded. Select a project first.",
+                "message": "No AppSpec loaded. Select a project first.",
             }
         )
 

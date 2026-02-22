@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dazzle_back.specs import BackendSpec
+    from dazzle.core.ir import AppSpec
     from dazzle_ui.specs import UISpec
 
 
@@ -144,7 +144,7 @@ class HotReloadManager:
     def __init__(
         self,
         project_root: Path,
-        on_reload: Callable[[], tuple[BackendSpec, UISpec] | None] | None = None,
+        on_reload: Callable[[], tuple[AppSpec, UISpec] | None] | None = None,
         watch_source: bool = False,
     ):
         """
@@ -152,7 +152,7 @@ class HotReloadManager:
 
         Args:
             project_root: Root directory of the DAZZLE project
-            on_reload: Callback to regenerate specs. Returns (BackendSpec, UISpec) or None on error.
+            on_reload: Callback to regenerate specs. Returns (AppSpec, UISpec) or None on error.
             watch_source: If True, also watch framework source files (Python, CSS, JS)
         """
         self.project_root = project_root
@@ -173,7 +173,7 @@ class HotReloadManager:
         self._source_watcher: FileWatcher | None = None
 
         # Current specs (can be updated on reload)
-        self._backend_spec: BackendSpec | None = None
+        self._appspec: AppSpec | None = None
         self._ui_spec: UISpec | None = None
         self._spec_lock = threading.Lock()
 
@@ -279,15 +279,15 @@ class HotReloadManager:
             if event in self._sse_clients:
                 self._sse_clients.remove(event)
 
-    def get_specs(self) -> tuple[BackendSpec | None, UISpec | None]:
+    def get_specs(self) -> tuple[AppSpec | None, UISpec | None]:
         """Get current specs (thread-safe)."""
         with self._spec_lock:
-            return self._backend_spec, self._ui_spec
+            return self._appspec, self._ui_spec
 
-    def set_specs(self, backend_spec: BackendSpec, ui_spec: UISpec) -> None:
+    def set_specs(self, appspec: AppSpec, ui_spec: UISpec) -> None:
         """Set current specs (thread-safe)."""
         with self._spec_lock:
-            self._backend_spec = backend_spec
+            self._appspec = appspec
             self._ui_spec = ui_spec
 
     def _on_file_change(self, file_path: Path) -> None:
@@ -307,8 +307,8 @@ class HotReloadManager:
             try:
                 result = self.on_reload()
                 if result:
-                    backend_spec, ui_spec = result
-                    self.set_specs(backend_spec, ui_spec)
+                    appspec, ui_spec = result
+                    self.set_specs(appspec, ui_spec)
                     print("[Dazzle] Specs regenerated successfully")
                 else:
                     print("[Dazzle] Spec regeneration failed (validation error?)")
@@ -414,7 +414,7 @@ class HotReloadManager:
 
 def create_reload_callback(
     project_root: Path,
-) -> Callable[[], tuple[BackendSpec, UISpec] | None]:
+) -> Callable[[], tuple[AppSpec, UISpec] | None]:
     """
     Create a reload callback that regenerates specs from DSL.
 
@@ -422,17 +422,16 @@ def create_reload_callback(
         project_root: Root directory of the DAZZLE project
 
     Returns:
-        Callback function that returns (BackendSpec, UISpec) or None on error
+        Callback function that returns (AppSpec, UISpec) or None on error
     """
 
-    def reload_specs() -> tuple[BackendSpec, UISpec] | None:
+    def reload_specs() -> tuple[AppSpec, UISpec] | None:
         try:
             from dazzle.core.fileset import discover_dsl_files
             from dazzle.core.linker import build_appspec
             from dazzle.core.lint import lint_appspec
             from dazzle.core.manifest import load_manifest
             from dazzle.core.parser import parse_modules
-            from dazzle_back.converters import convert_appspec_to_backend
             from dazzle_ui.converters import convert_appspec_to_ui
 
             # Load manifest
@@ -452,11 +451,10 @@ def create_reload_callback(
                     print(f"[Dazzle] Validation error: {error}")
                 return None
 
-            # Generate specs
-            backend_spec = convert_appspec_to_backend(app_spec)
+            # Generate UI spec
             ui_spec = convert_appspec_to_ui(app_spec, shell_config=manifest.shell)
 
-            return backend_spec, ui_spec
+            return app_spec, ui_spec
 
         except Exception as e:
             print(f"[Dazzle] Error parsing DSL: {e}")

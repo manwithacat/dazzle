@@ -29,12 +29,6 @@ class BuildService:
 
         return lint_appspec(appspec)
 
-    def convert_to_backend(self, appspec: Any) -> Any:
-        """Convert AppSpec to BackendSpec."""
-        from dazzle_back.converters import convert_appspec_to_backend
-
-        return convert_appspec_to_backend(appspec)
-
     def plan_migrations(self, database_url: str, entities: Any) -> Any:
         """Plan migrations without applying. Returns MigrationPlan."""
         from dazzle_back.runtime.migrations import plan_migrations

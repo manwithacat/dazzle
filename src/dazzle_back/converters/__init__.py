@@ -1,62 +1,20 @@
 """
-AppSpec to BackendSpec Converters
+AppSpec to Backend Spec Converters
 
-Converts Dazzle AppSpec (IR) to BackendSpec.
+Converts Dazzle AppSpec (IR) to backend specification types.
 """
 
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core import ir
+
+if TYPE_CHECKING:
+    from dazzle_back.specs.backend_spec import BackendSpec
 from dazzle_back.converters.entity_converter import convert_entities
 from dazzle_back.converters.surface_converter import convert_surfaces_to_services
-from dazzle_back.specs import BackendSpec
 from dazzle_back.specs.channel import ChannelSpec, SendOperationSpec
-
-
-def convert_appspec_to_backend(appspec: ir.AppSpec) -> BackendSpec:
-    """
-    Convert a complete Dazzle AppSpec to DNR BackendSpec.
-
-    This is the main entry point for converting Dazzle's internal representation
-    to the framework-agnostic BackendSpec.
-
-    Args:
-        appspec: Complete Dazzle application specification
-
-    Returns:
-        DNR BackendSpec with entities, services, and endpoints
-
-    Example:
-        >>> from dazzle.core.linker import build_appspec
-        >>> appspec = build_appspec(modules, project_root)
-        >>> backend_spec = convert_appspec_to_backend(appspec)
-    """
-    # Convert entities
-    entities = convert_entities(appspec.domain.entities)
-
-    # Convert surfaces to services and endpoints
-    services, endpoints = convert_surfaces_to_services(
-        appspec.surfaces,
-        appspec.domain,
-    )
-
-    # Convert channels (preserving trigger info in metadata)
-    channels = _convert_channels(appspec.channels)
-
-    # Build the BackendSpec
-    return BackendSpec(
-        name=appspec.name,
-        version=appspec.version,
-        description=appspec.title,
-        entities=entities,
-        services=services,
-        endpoints=endpoints,
-        channels=channels,
-        workspaces=appspec.workspaces,
-        surfaces=appspec.surfaces,
-        personas=appspec.personas,
-        audit_trail=appspec.audit_trail,
-    )
 
 
 def _convert_channels(ir_channels: list[ir.ChannelSpec]) -> list[ChannelSpec]:
@@ -112,7 +70,35 @@ def _convert_channels(ir_channels: list[ir.ChannelSpec]) -> list[ChannelSpec]:
     return result
 
 
+def convert_appspec_to_backend(appspec: ir.AppSpec) -> BackendSpec:
+    """Convert AppSpec to BackendSpec.
+
+    Only used by the GraphQL subsystem which still requires BackendSpec.
+    All other code paths now use AppSpec directly.
+    """
+    from dazzle_back.specs.backend_spec import BackendSpec
+
+    entities = convert_entities(appspec.domain.entities)
+    services, endpoints = convert_surfaces_to_services(appspec.surfaces, appspec.domain)
+    channels = _convert_channels(appspec.channels)
+
+    return BackendSpec(
+        name=appspec.name,
+        version=appspec.version,
+        description=appspec.title,
+        entities=entities,
+        services=services,
+        endpoints=endpoints,
+        channels=channels,
+        workspaces=appspec.workspaces,
+        surfaces=appspec.surfaces,
+        personas=appspec.personas,
+        audit_trail=appspec.audit_trail,
+    )
+
+
 __all__ = [
+    "_convert_channels",
     "convert_appspec_to_backend",
     "convert_entities",
     "convert_surfaces_to_services",

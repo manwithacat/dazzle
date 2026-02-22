@@ -6,13 +6,12 @@ including the production ASGI factory for deployment.
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from dazzle_back.specs import BackendSpec
+from dazzle.core.ir import AppSpec
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -23,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 def create_app(
-    spec: BackendSpec,
+    appspec: AppSpec,
     database_url: str | None = None,
     enable_auth: bool = False,
     enable_files: bool = False,
@@ -35,12 +34,12 @@ def create_app(
     scenarios: list[dict[str, Any]] | None = None,
 ) -> FastAPI:
     """
-    Create a FastAPI application from a BackendSpec.
+    Create a FastAPI application from an AppSpec.
 
     This is the main entry point for creating a Dazzle backend application.
 
     Args:
-        spec: Backend specification
+        appspec: Dazzle AppSpec (parsed IR)
         database_url: PostgreSQL connection URL (or set DATABASE_URL env var)
         enable_auth: Whether to enable authentication (default: False)
         enable_files: Whether to enable file uploads (default: False)
@@ -55,15 +54,15 @@ def create_app(
         FastAPI application
 
     Example:
-        >>> from dazzle_back.specs import BackendSpec
-        >>> spec = BackendSpec(name="my_app", ...)
-        >>> app = create_app(spec, database_url="postgresql://...")
+        >>> from dazzle.core.linker import build_appspec
+        >>> appspec = build_appspec(modules, project_root)
+        >>> app = create_app(appspec, database_url="postgresql://...")
         >>> # Run with uvicorn: uvicorn mymodule:app
     """
     from dazzle_back.runtime.server import DazzleBackendApp
 
     builder = DazzleBackendApp(
-        spec,
+        appspec,
         database_url=database_url,
         enable_auth=enable_auth,
         enable_files=enable_files,
@@ -78,7 +77,7 @@ def create_app(
 
 
 def run_app(
-    spec: BackendSpec,
+    appspec: AppSpec,
     host: str = "127.0.0.1",
     port: int = 8000,
     reload: bool = False,
@@ -96,7 +95,7 @@ def run_app(
     Run a Dazzle backend application.
 
     Args:
-        spec: Backend specification
+        appspec: Dazzle AppSpec (parsed IR)
         host: Host to bind to
         port: Port to bind to
         reload: Enable auto-reload (for development)
@@ -109,11 +108,6 @@ def run_app(
         enable_dev_mode: Enable dev control plane (default: False)
         personas: List of persona configurations for dev mode
         scenarios: List of scenario configurations for dev mode
-
-    Example:
-        >>> from dazzle_back.specs import BackendSpec
-        >>> spec = BackendSpec(name="my_app", ...)
-        >>> run_app(spec, database_url="postgresql://...")
     """
     try:
         import uvicorn
@@ -121,7 +115,7 @@ def run_app(
         raise RuntimeError("uvicorn is not installed. Install with: pip install uvicorn")
 
     app = create_app(
-        spec,
+        appspec,
         database_url=database_url,
         enable_auth=enable_auth,
         enable_files=enable_files,
@@ -133,41 +127,6 @@ def run_app(
         scenarios=scenarios,
     )
     uvicorn.run(app, host=host, port=port, reload=reload)
-
-
-# =============================================================================
-# App from JSON/Dict
-# =============================================================================
-
-
-def create_app_from_dict(spec_dict: dict[str, Any]) -> FastAPI:
-    """
-    Create a FastAPI application from a dictionary specification.
-
-    Useful for loading specs from JSON files or API responses.
-
-    Args:
-        spec_dict: Dictionary representation of BackendSpec
-
-    Returns:
-        FastAPI application
-    """
-    spec = BackendSpec.model_validate(spec_dict)
-    return create_app(spec)
-
-
-def create_app_from_json(json_path: str) -> FastAPI:
-    """
-    Create a FastAPI application from a JSON file.
-
-    Args:
-        json_path: Path to JSON file containing BackendSpec
-
-    Returns:
-        FastAPI application
-    """
-    spec_dict = json.loads(Path(json_path).read_text())
-    return create_app_from_dict(spec_dict)
 
 
 # =============================================================================
@@ -345,7 +304,6 @@ def create_app_factory(
         from dazzle.core.manifest import load_manifest
         from dazzle.core.parser import parse_modules
         from dazzle.core.sitespec_loader import load_sitespec_with_copy, sitespec_exists
-        from dazzle_back.converters import convert_appspec_to_backend
     except ImportError as e:
         raise RuntimeError(
             f"Dazzle core modules not available: {e}. "
@@ -382,9 +340,6 @@ def create_app_factory(
         appspec = build_appspec(modules, manifest.project_root)
     except (ParseError, DazzleError) as e:
         raise RuntimeError(f"Failed to parse DSL: {e}")
-
-    # Convert to backend spec
-    backend_spec = convert_appspec_to_backend(appspec)
 
     # Load SiteSpec if available (merges copy.md content if present)
     sitespec_data = None
@@ -455,7 +410,7 @@ def create_app_factory(
 
     # Auto-detect ref fields for eager loading (prevents N+1 queries)
     entity_auto_includes: dict[str, list[str]] = {}
-    for entity in backend_spec.entities:
+    for entity in appspec.domain.entities:
         ref_names = [f.name for f in entity.fields if f.type.kind == "ref" and f.type.ref_entity]
         if ref_names:
             entity_auto_includes[entity.name] = ref_names
@@ -509,7 +464,7 @@ def create_app_factory(
     )
 
     # Build and return the FastAPI app
-    builder = DazzleBackendApp(backend_spec, config=config, appspec=appspec)
+    builder = DazzleBackendApp(appspec, config=config)
     app = builder.build()
 
     # Sync DSL schedules to process adapter (EventBus scheduler or Celery Beat)
@@ -619,8 +574,8 @@ def create_app_factory(
 
     # Log startup info
     logger.info(f"Dazzle app '{appspec.name}' ready")
-    logger.info(f"  Entities: {len(backend_spec.entities)}")
-    logger.info(f"  Endpoints: {len(backend_spec.endpoints)}")
+    logger.info(f"  Entities: {len(appspec.domain.entities)}")
+    logger.info(f"  Surfaces: {len(appspec.surfaces)}")
     logger.info(f"  Environment: {dazzle_env}")
     logger.info("  Database: PostgreSQL")
     if enable_dev_mode:

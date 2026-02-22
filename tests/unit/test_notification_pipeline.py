@@ -274,9 +274,7 @@ class TestWireEntityEventsToChannels:
     ) -> Any:
         """Create a minimal mock DazzleBackendApp."""
         app = MagicMock()
-        spec = MagicMock()
-        spec.channels = channels or []
-        app.spec = spec
+        app._channels = channels or []
         app.channel_manager = channel_mgr
         app._services = services or {}
         return app

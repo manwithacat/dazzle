@@ -22,7 +22,7 @@ from dazzle.mcp.runtime_tools import (  # noqa: E402
     RUNTIME_TOOL_NAMES,
     get_ui_spec,
     handle_runtime_tool,
-    set_backend_spec,
+    set_appspec_data,
     set_ui_spec,
 )
 
@@ -61,7 +61,7 @@ class TestBackendTools:
     def setup_method(self):
         """Set up test fixtures."""
         # Clear any existing spec
-        set_backend_spec(None)
+        set_appspec_data(None)
 
     def test_list_entities_no_spec(self):
         """Test list_dnr_entities with no spec loaded."""
@@ -71,22 +71,24 @@ class TestBackendTools:
 
     def test_list_entities_with_spec(self):
         """Test list_dnr_entities with a spec loaded."""
-        set_backend_spec(
+        set_appspec_data(
             {
                 "name": "test_backend",
-                "entities": [
-                    {
-                        "name": "Client",
-                        "label": "Client",
-                        "fields": [{"name": "id"}, {"name": "name"}],
-                    },
-                    {
-                        "name": "Invoice",
-                        "label": "Invoice",
-                        "fields": [{"name": "id"}],
-                        "relations": [{"name": "client"}],
-                    },
-                ],
+                "domain": {
+                    "entities": [
+                        {
+                            "name": "Client",
+                            "title": "Client",
+                            "fields": [{"name": "id"}, {"name": "name"}],
+                        },
+                        {
+                            "name": "Invoice",
+                            "title": "Invoice",
+                            "fields": [{"name": "id"}],
+                            "relations": [{"name": "client"}],
+                        },
+                    ],
+                },
             }
         )
 
@@ -98,15 +100,17 @@ class TestBackendTools:
 
     def test_get_entity(self):
         """Test get_dnr_entity."""
-        set_backend_spec(
+        set_appspec_data(
             {
-                "entities": [
-                    {
-                        "name": "Client",
-                        "label": "Client",
-                        "fields": [{"name": "id"}, {"name": "name"}],
-                    },
-                ],
+                "domain": {
+                    "entities": [
+                        {
+                            "name": "Client",
+                            "title": "Client",
+                            "fields": [{"name": "id"}, {"name": "name"}],
+                        },
+                    ],
+                },
             }
         )
 
@@ -116,7 +120,7 @@ class TestBackendTools:
 
     def test_get_entity_not_found(self):
         """Test get_dnr_entity with unknown entity."""
-        set_backend_spec({"entities": []})
+        set_appspec_data({"domain": {"entities": []}})
 
         result = json.loads(handle_runtime_tool("get_dnr_entity", {"name": "Unknown"}))
         assert "error" in result
@@ -124,14 +128,14 @@ class TestBackendTools:
 
     def test_list_services(self):
         """Test list_backend_services."""
-        set_backend_spec(
+        set_appspec_data(
             {
-                "services": [
+                "surfaces": [
                     {
-                        "name": "create_client",
-                        "domain_operation": {"kind": "create", "entity": "Client"},
-                        "inputs": {"fields": [{"name": "name"}]},
-                        "outputs": {"fields": [{"name": "client"}]},
+                        "name": "client_list",
+                        "entity_ref": "Client",
+                        "mode": "list",
+                        "title": "Client List",
                     },
                 ],
             }
@@ -139,25 +143,27 @@ class TestBackendTools:
 
         result = json.loads(handle_runtime_tool("list_backend_services", {}))
         assert result["count"] == 1
-        assert result["services"][0]["name"] == "create_client"
-        assert result["services"][0]["entity"] == "Client"
+        assert result["surfaces"][0]["name"] == "client_list"
+        assert result["surfaces"][0]["entity"] == "Client"
+        assert result["surfaces"][0]["mode"] == "list"
+        assert result["surfaces"][0]["title"] == "Client List"
 
     def test_list_services_filtered(self):
         """Test list_backend_services with entity filter."""
-        set_backend_spec(
+        set_appspec_data(
             {
-                "services": [
+                "surfaces": [
                     {
-                        "name": "create_client",
-                        "domain_operation": {"entity": "Client"},
-                        "inputs": {},
-                        "outputs": {},
+                        "name": "client_list",
+                        "entity_ref": "Client",
+                        "mode": "list",
+                        "title": "Client List",
                     },
                     {
-                        "name": "create_invoice",
-                        "domain_operation": {"entity": "Invoice"},
-                        "inputs": {},
-                        "outputs": {},
+                        "name": "invoice_list",
+                        "entity_ref": "Invoice",
+                        "mode": "list",
+                        "title": "Invoice List",
                     },
                 ],
             }
@@ -165,7 +171,7 @@ class TestBackendTools:
 
         result = json.loads(handle_runtime_tool("list_backend_services", {"entity_name": "Client"}))
         assert result["count"] == 1
-        assert result["services"][0]["name"] == "create_client"
+        assert result["surfaces"][0]["name"] == "client_list"
 
 
 class TestUITools:

@@ -112,7 +112,8 @@ class TestRegionContextWiring:
     def _make_app_spec_with_surface(self, surface_name: str, entity_ref: str) -> Any:
         """Create minimal app_spec with one surface."""
         surface = SimpleNamespace(name=surface_name, entity_ref=entity_ref)
-        return SimpleNamespace(surfaces=[surface])
+        domain = SimpleNamespace(entities=[])
+        return SimpleNamespace(surfaces=[surface], domain=domain)
 
     def test_filter_expr_populated_from_condition(self) -> None:
         import json
@@ -328,30 +329,38 @@ class TestWorkspaceAuthEnforcement:
     """Workspace page routes must require authentication when auth is enabled."""
 
     def _make_spec(self) -> Any:
-        """Build a BackendSpec with one workspace."""
+        """Build an AppSpec with one workspace."""
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle.core.ir.domain import DomainSpec
+        from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
+        from dazzle.core.ir.fields import FieldType as IRFieldType
+        from dazzle.core.ir.fields import FieldTypeKind
         from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
-        from dazzle_back.specs import BackendSpec, EntitySpec, FieldSpec, FieldType, ScalarType
 
-        return BackendSpec(
+        return AppSpec(
             name="test_app",
             version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="Task",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                            required=True,
-                        ),
-                        FieldSpec(
-                            name="title",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                            required=True,
-                        ),
-                    ],
-                ),
-            ],
+            domain=DomainSpec(
+                entities=[
+                    IREntitySpec(
+                        name="Task",
+                        title="Task",
+                        fields=[
+                            IRFieldSpec(
+                                name="id",
+                                type=IRFieldType(kind=FieldTypeKind.UUID),
+                                modifiers=["pk"],
+                            ),
+                            IRFieldSpec(
+                                name="title",
+                                type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
+                                modifiers=["required"],
+                            ),
+                        ],
+                    ),
+                ]
+            ),
             workspaces=[
                 WorkspaceSpec(
                     name="admin_dashboard",
@@ -1569,45 +1578,54 @@ class TestWorkspaceBatchEndpoint:
     """Batch endpoint fetches all regions concurrently."""
 
     def _make_spec_with_aggregates(self) -> Any:
-        """Build a BackendSpec with a workspace that has multiple regions."""
+        """Build an AppSpec with a workspace that has multiple regions."""
+        from dazzle.core.ir.appspec import AppSpec
+        from dazzle.core.ir.domain import DomainSpec
+        from dazzle.core.ir.domain import EntitySpec as IREntitySpec
+        from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
+        from dazzle.core.ir.fields import FieldType as IRFieldType
+        from dazzle.core.ir.fields import FieldTypeKind
         from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
-        from dazzle_back.specs import BackendSpec, EntitySpec, FieldSpec, FieldType, ScalarType
 
-        return BackendSpec(
+        return AppSpec(
             name="test_app",
             version="1.0.0",
-            entities=[
-                EntitySpec(
-                    name="Task",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                            required=True,
-                        ),
-                        FieldSpec(
-                            name="title",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.STR),
-                            required=True,
-                        ),
-                    ],
-                ),
-                EntitySpec(
-                    name="Invoice",
-                    fields=[
-                        FieldSpec(
-                            name="id",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.UUID),
-                            required=True,
-                        ),
-                        FieldSpec(
-                            name="amount",
-                            type=FieldType(kind="scalar", scalar_type=ScalarType.INT),
-                            required=True,
-                        ),
-                    ],
-                ),
-            ],
+            domain=DomainSpec(
+                entities=[
+                    IREntitySpec(
+                        name="Task",
+                        title="Task",
+                        fields=[
+                            IRFieldSpec(
+                                name="id",
+                                type=IRFieldType(kind=FieldTypeKind.UUID),
+                                modifiers=["pk"],
+                            ),
+                            IRFieldSpec(
+                                name="title",
+                                type=IRFieldType(kind=FieldTypeKind.STR, max_length=200),
+                                modifiers=["required"],
+                            ),
+                        ],
+                    ),
+                    IREntitySpec(
+                        name="Invoice",
+                        title="Invoice",
+                        fields=[
+                            IRFieldSpec(
+                                name="id",
+                                type=IRFieldType(kind=FieldTypeKind.UUID),
+                                modifiers=["pk"],
+                            ),
+                            IRFieldSpec(
+                                name="amount",
+                                type=IRFieldType(kind=FieldTypeKind.INT),
+                                modifiers=["required"],
+                            ),
+                        ],
+                    ),
+                ]
+            ),
             workspaces=[
                 WorkspaceSpec(
                     name="overview",

@@ -1,5 +1,5 @@
 """
-BackendSpec type definitions.
+Backend specification type definitions.
 
 This module exports all backend specification types.
 """
@@ -70,6 +70,8 @@ from dazzle_back.specs.service import (
 )
 
 __all__ = [
+    # BackendSpec (used by GraphQL subsystem and tests)
+    "BackendSpec",
     # Entity types
     "EntitySpec",
     "FieldSpec",
@@ -132,6 +134,4 @@ __all__ = [
     "MessageFieldSpec",
     "SendOperationSpec",
     "ReceiveOperationSpec",
-    # Main spec
-    "BackendSpec",
 ]

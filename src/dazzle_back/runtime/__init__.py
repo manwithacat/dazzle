@@ -65,11 +65,8 @@ from dazzle_back.runtime.route_generator import (
 )
 from dazzle_back.runtime.server import (
     DazzleBackendApp,
-    DNRBackendApp,  # Backward compat
     ServerConfig,
     create_app,
-    create_app_from_dict,
-    create_app_from_json,
     run_app,
 )
 from dazzle_back.runtime.service_generator import (
@@ -109,12 +106,9 @@ __all__ = [
     "FASTAPI_AVAILABLE",
     # Server
     "DazzleBackendApp",
-    "DNRBackendApp",  # Backward compat
     "ServerConfig",
     "create_app",
     "run_app",
-    "create_app_from_dict",
-    "create_app_from_json",
     # Repository
     "Repository",
     "DatabaseManager",

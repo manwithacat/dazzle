@@ -139,7 +139,6 @@ class DockerRunner:
         from dazzle.core.linker import build_appspec
         from dazzle.core.manifest import load_manifest
         from dazzle.core.parser import parse_modules
-        from dazzle_back.converters import convert_appspec_to_backend
         from dazzle_ui.converters import convert_appspec_to_ui
 
         manifest_path = self.project_path / "dazzle.toml"
@@ -148,11 +147,10 @@ class DockerRunner:
         modules = parse_modules(dsl_files)
         appspec = build_appspec(modules, mf.project_root)
 
-        backend_spec = convert_appspec_to_backend(appspec)
         ui_spec = convert_appspec_to_ui(appspec, shell_config=mf.shell)
 
         return (
-            backend_spec.model_dump(by_alias=True),
+            appspec.model_dump(by_alias=True),
             ui_spec.model_dump(by_alias=True),
         )
 

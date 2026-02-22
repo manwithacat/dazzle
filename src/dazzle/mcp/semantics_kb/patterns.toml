@@ -525,7 +525,7 @@ v0_6_changes = "NEW in v0.6"
 name = "GraphQL BFF Pattern"
 description = "Backend-for-Frontend using GraphQL as the API layer between UI and backend services"
 v0_6_feature = true
-components = ["GraphQL schema generated from BackendSpec entities", "Auto-generated resolvers for CRUD operations", "External API adapters for third-party integrations", "Unified error normalization"]
+components = ["GraphQL schema generated from entity specs", "Auto-generated resolvers for CRUD operations", "External API adapters for third-party integrations", "Unified error normalization"]
 example = '''
 # GraphQL schema is auto-generated from your entities:
 # entity Task → GraphQL type Task with Query/Mutation
@@ -558,7 +558,7 @@ use_cases = ["Mobile apps needing flexible data fetching", "Complex UIs with nes
 
 [patterns.graphql_schema_inspection]
 category = "CLI (v0.6)"
-definition = "CLI command to inspect the auto-generated GraphQL schema from BackendSpec."
+definition = "CLI command to inspect the auto-generated GraphQL schema from entity specs."
 syntax = '''
 # Display GraphQL SDL
 dazzle dnr inspect --schema

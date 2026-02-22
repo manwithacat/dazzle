@@ -27,7 +27,6 @@ from dazzle_back.runtime.query_builder import quote_identifier, validate_sql_ide
 
 if TYPE_CHECKING:
     from dazzle_back.runtime.repository import DatabaseManager
-    from dazzle_back.specs import BackendSpec
     from dazzle_back.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -94,7 +93,7 @@ class SpecInfo(BaseModel):
 
 
 def create_debug_routes(
-    spec: BackendSpec,
+    appspec: Any,
     db_manager: DatabaseManager,
     entities: list[EntitySpec],
     start_time: datetime,
@@ -103,7 +102,7 @@ def create_debug_routes(
     Create debug routes for runtime inspection.
 
     Args:
-        spec: Backend specification
+        appspec: Dazzle AppSpec (parsed IR)
         db_manager: Database manager instance
         entities: List of entity specifications
         start_time: Server start time
@@ -203,8 +202,8 @@ def create_debug_routes(
         uptime = (datetime.now() - start_time).total_seconds()
 
         return RuntimeStats(
-            app_name=spec.name,
-            app_description=spec.description,
+            app_name=appspec.name,
+            app_description=appspec.title,
             uptime_seconds=uptime,
             entities=entity_stats,
             total_records=total_records,
@@ -218,11 +217,11 @@ def create_debug_routes(
         Returns entity names, service names, and endpoint count.
         """
         return SpecInfo(
-            name=spec.name,
-            description=spec.description,
+            name=appspec.name,
+            description=appspec.title,
             entities=[e.name for e in entities],
-            services=[s.name for s in spec.services],
-            endpoints=len(spec.endpoints),
+            services=[s.name for s in appspec.surfaces],
+            endpoints=len(appspec.surfaces),
         )
 
     @router.get("/entity/{entity_name}")

@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
-    from dazzle_back.specs import BackendSpec
+    from dazzle_back.specs import EntitySpec
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class DemoDataSeeder:
 
     def __init__(
         self,
-        backend_spec: BackendSpec,
+        entities: list[EntitySpec],
         db_manager: DatabaseManager,
         repositories: dict[str, SQLiteRepository[Any]],
         project_root: Path | None = None,
@@ -45,20 +45,20 @@ class DemoDataSeeder:
         Initialize the seeder.
 
         Args:
-            backend_spec: Backend specification with entity definitions
+            entities: Entity specifications for seeding
             db_manager: Database manager instance
             repositories: Dictionary of repositories by entity name
             project_root: Root directory for resolving paths
             seed: Random seed for reproducible data generation
         """
-        self.backend_spec = backend_spec
+        self.entities = entities
         self.db_manager = db_manager
         self.repositories = repositories
         self.generator = DemoDataGenerator(seed=seed)
         self.loader = DemoDataLoader(project_root=project_root)
 
         # Build entity lookup
-        self._entity_lookup = {e.name: e for e in backend_spec.entities}
+        self._entity_lookup = {e.name: e for e in entities}
 
     def reset(self) -> None:
         """
@@ -67,7 +67,7 @@ class DemoDataSeeder:
         Truncates all entity tables while preserving schema.
         """
         with self.db_manager.connection() as conn:
-            for entity in self.backend_spec.entities:
+            for entity in self.entities:
                 try:
                     conn.execute(f"DELETE FROM {entity.name}")
                 except Exception:
@@ -132,7 +132,7 @@ class DemoDataSeeder:
         counts: dict[str, int] = {}
 
         # Generate and seed entities in order (to handle references)
-        for entity in self.backend_spec.entities:
+        for entity in self.entities:
             entity_name = entity.name
             count = entity_counts.get(entity_name, default_count)
 
