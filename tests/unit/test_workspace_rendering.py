@@ -549,3 +549,136 @@ class TestQueueDisplayMode:
 
         assert DisplayMode("queue") == DisplayMode.QUEUE
         assert DisplayMode("queue").value == "queue"
+
+
+# ===========================================================================
+# TestBuildSurfaceColumns (#357)
+# ===========================================================================
+
+
+def _make_surface_section(field_names: list[str]) -> SimpleNamespace:
+    """Create a minimal SurfaceSection-like object with elements."""
+    elements = [SimpleNamespace(field_name=fn) for fn in field_names]
+    return SimpleNamespace(elements=elements)
+
+
+def _make_surface(
+    entity_ref: str,
+    mode: str = "list",
+    field_names: list[str] | None = None,
+) -> SimpleNamespace:
+    """Create a minimal SurfaceSpec-like object."""
+    sections = [_make_surface_section(field_names)] if field_names else []
+    return SimpleNamespace(
+        entity_ref=entity_ref,
+        mode=mode,
+        sections=sections,
+    )
+
+
+class TestBuildSurfaceColumns:
+    """_build_surface_columns() should use surface field projection (#357)."""
+
+    def test_uses_surface_field_projection(self) -> None:
+        """Only surface-declared fields appear as columns."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("description", FieldTypeKind.TEXT),
+                _make_field("status", FieldTypeKind.ENUM, enum_values=["open", "done"]),
+                _make_field("priority", FieldTypeKind.STR),
+                _make_field("created_at", FieldTypeKind.DATETIME),
+            ],
+        )
+        surface = _make_surface("Task", field_names=["title", "status"])
+        columns = _build_surface_columns(entity, surface)
+
+        keys = [c["key"] for c in columns]
+        assert keys == ["title", "status"]
+
+    def test_preserves_field_order(self) -> None:
+        """Columns should appear in surface section order, not entity order."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Notification",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("severity", FieldTypeKind.STR),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("category", FieldTypeKind.STR),
+                _make_field("message", FieldTypeKind.TEXT),
+                _make_field("created_at", FieldTypeKind.DATETIME),
+            ],
+        )
+        surface = _make_surface(
+            "Notification", field_names=["category", "severity", "title", "message", "created_at"]
+        )
+        columns = _build_surface_columns(entity, surface)
+
+        keys = [c["key"] for c in columns]
+        assert keys == ["category", "severity", "title", "message", "created_at"]
+
+    def test_falls_back_to_all_fields_when_surface_empty(self) -> None:
+        """Empty surface sections should fall back to all entity fields."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("status", FieldTypeKind.ENUM, enum_values=["open"]),
+            ],
+        )
+        surface = _make_surface("Task", field_names=[])
+        columns = _build_surface_columns(entity, surface)
+
+        keys = [c["key"] for c in columns]
+        assert "title" in keys
+        assert "status" in keys
+
+    def test_skips_id_field_in_projection(self) -> None:
+        """'id' in surface fields should be ignored."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+            ],
+        )
+        surface = _make_surface("Task", field_names=["id", "title"])
+        columns = _build_surface_columns(entity, surface)
+
+        keys = [c["key"] for c in columns]
+        assert "id" not in keys
+        assert keys == ["title"]
+
+    def test_column_types_preserved(self) -> None:
+        """Surface-aware columns should have correct types (badge, date, etc.)."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = _make_entity(
+            "Task",
+            [
+                _make_field("id", FieldTypeKind.UUID),
+                _make_field("title", FieldTypeKind.STR),
+                _make_field("status", FieldTypeKind.ENUM, enum_values=["open", "done"]),
+                _make_field("created_at", FieldTypeKind.DATETIME),
+                _make_field("completed", FieldTypeKind.BOOL),
+            ],
+        )
+        surface = _make_surface("Task", field_names=["title", "status", "created_at", "completed"])
+        columns = _build_surface_columns(entity, surface)
+
+        col_map = {c["key"]: c for c in columns}
+        assert col_map["title"]["type"] == "text"
+        assert col_map["status"]["type"] == "badge"
+        assert col_map["created_at"]["type"] == "date"
+        assert col_map["completed"]["type"] == "bool"

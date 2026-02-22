@@ -46,6 +46,89 @@ def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     return "text"
 
 
+def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str, Any]]:
+    """Build column metadata from a list surface's field projection.
+
+    Uses the surface's section elements to determine which entity fields to
+    show and in what order, rather than dumping all entity fields.
+    """
+    from dazzle.core.strings import to_api_plural
+
+    if not entity_spec or not hasattr(entity_spec, "fields"):
+        return []
+
+    # Collect field names from surface sections (preserving order)
+    surface_fields: list[str] = []
+    for section in getattr(surface_spec, "sections", []):
+        for element in getattr(section, "elements", []):
+            fn = getattr(element, "field_name", None)
+            if fn and fn != "id" and fn not in surface_fields:
+                surface_fields.append(fn)
+
+    if not surface_fields:
+        return _build_entity_columns(entity_spec)
+
+    # Build a lookup from entity fields
+    field_map: dict[str, Any] = {f.name: f for f in entity_spec.fields}
+
+    columns: list[dict[str, Any]] = []
+    for fn in surface_fields:
+        f = field_map.get(fn)
+        if not f:
+            continue
+        ft = getattr(f, "type", None)
+        kind = getattr(ft, "kind", None)
+        kind_val: str = (
+            kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
+        )
+        # Ref fields
+        if kind_val == "ref":
+            rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+            ref_entity = getattr(ft, "ref_entity", None)
+            ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
+            columns.append(
+                {
+                    "key": rel_name,
+                    "label": getattr(f, "label", None) or rel_name.replace("_", " ").title(),
+                    "type": "ref",
+                    "sortable": False,
+                    "ref_route": ref_route,
+                }
+            )
+            continue
+        # Skip non-displayable types
+        if kind_val in ("uuid", "has_many", "has_one", "embeds", "belongs_to"):
+            continue
+        col_type = _field_kind_to_col_type(f, entity_spec)
+        col_key = f"{f.name}_minor" if kind_val == "money" else f.name
+        col: dict[str, Any] = {
+            "key": col_key,
+            "label": getattr(f, "label", None) or f.name.replace("_", " ").title(),
+            "type": col_type,
+            "sortable": True,
+        }
+        if kind_val == "money":
+            col["currency_code"] = getattr(getattr(f, "type", None), "currency_code", None) or "GBP"
+        if col_type == "badge":
+            if kind_val == "enum":
+                ev = getattr(ft, "enum_values", None)
+                if ev:
+                    col["filterable"] = True
+                    col["filter_options"] = list(ev)
+            else:
+                sm = getattr(entity_spec, "state_machine", None)
+                if sm:
+                    states = getattr(sm, "states", [])
+                    if states:
+                        col["filterable"] = True
+                        col["filter_options"] = list(states)
+        if col_type == "bool":
+            col["filterable"] = True
+            col["filter_options"] = ["true", "false"]
+        columns.append(col)
+    return columns
+
+
 def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
     """Pre-compute column metadata from an entity spec (constant-folded at startup).
 

@@ -35,6 +35,7 @@ from dazzle_back.runtime.workspace_rendering import (  # noqa: F401
     _AGGREGATE_RE,
     WorkspaceRegionContext,
     _build_entity_columns,
+    _build_surface_columns,
     _compute_aggregate_metrics,
     _fetch_count_metric,
     _fetch_region_json,
@@ -369,13 +370,26 @@ class WorkspaceRouteBuilder:
                             break
 
                     _attention_signals: list[Any] = []
+                    _list_surface: Any = None
                     if spec and hasattr(spec, "surfaces"):
                         for _surf in spec.surfaces:
                             if getattr(_surf, "entity_ref", None) == _source:
                                 ux = getattr(_surf, "ux", None)
                                 if ux and getattr(ux, "attention_signals", None):
                                     _attention_signals = list(ux.attention_signals)
-                                    break
+                                # Find the entity's list surface for column projection (#357)
+                                if (
+                                    getattr(_surf, "mode", None)
+                                    and str(getattr(_surf, "mode", "")).lower() == "list"
+                                    and _list_surface is None
+                                ):
+                                    _list_surface = _surf
+
+                    # Use surface field projection if available, else all entity fields
+                    if _list_surface and _entity_spec:
+                        _columns = _build_surface_columns(_entity_spec, _list_surface)
+                    else:
+                        _columns = _build_entity_columns(_entity_spec)
 
                     _region_ctx = WorkspaceRegionContext(
                         ctx_region=ctx_region,
@@ -387,7 +401,7 @@ class WorkspaceRouteBuilder:
                         repositories=repositories,
                         require_auth=require_auth,
                         auth_middleware=auth_middleware,
-                        precomputed_columns=_build_entity_columns(_entity_spec),
+                        precomputed_columns=_columns,
                     )
                     _ws_region_ctxs.append(_region_ctx)
 
