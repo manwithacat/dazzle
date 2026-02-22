@@ -33,6 +33,11 @@ on:
   schedule:
     - cron: '0 2 * * 0'  # Every Sunday at 2am
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   pra-quick:
     name: PRA Quick Test
