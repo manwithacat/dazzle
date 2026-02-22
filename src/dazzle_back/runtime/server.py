@@ -588,6 +588,8 @@ class ServerConfig:
 
     # View-based list projections (v0.26.0) — entity_name -> [field_names]
     entity_list_projections: dict[str, list[str]] = field(default_factory=dict)
+    # Surface search fields (v0.34.2) — entity_name -> [field_names]
+    entity_search_fields: dict[str, list[str]] = field(default_factory=dict)
     # Auto-eager-load ref relations (v0.26.0) — entity_name -> [relation_names]
     entity_auto_includes: dict[str, list[str]] = field(default_factory=dict)
 
@@ -735,6 +737,8 @@ class DazzleBackendApp:
         self._enable_console = config.enable_console
         # View-based list projections (v0.26.0)
         self._entity_list_projections: dict[str, list[str]] = config.entity_list_projections
+        # Surface search fields (v0.34.2)
+        self._entity_search_fields: dict[str, list[str]] = config.entity_search_fields
         # Auto-eager-load ref relations (v0.26.0)
         self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
         # AppSpec reference for integration mappings (#340)
@@ -1793,6 +1797,7 @@ class DazzleBackendApp:
             audit_logger=audit_logger,
             cedar_access_specs=cedar_access_specs,
             entity_list_projections=self._entity_list_projections,
+            entity_search_fields=self._entity_search_fields,
             entity_auto_includes=self._entity_auto_includes,
             entity_htmx_meta=entity_htmx_meta,
             entity_audit_configs=entity_audit_configs,
@@ -2213,6 +2218,7 @@ class DazzleBackendApp:
 
 from dazzle_back.runtime.app_factory import (  # noqa: E402, F401
     build_entity_list_projections,
+    build_entity_search_fields,
     create_app,
     create_app_factory,
     create_app_from_dict,
@@ -2233,4 +2239,5 @@ __all__ = [
     "create_app_from_json",
     "run_app",
     "build_entity_list_projections",
+    "build_entity_search_fields",
 ]

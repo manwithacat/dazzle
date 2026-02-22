@@ -367,21 +367,33 @@ class QueryBuilder:
 
     def build_where_clause(self) -> tuple[str, list[Any]]:
         """
-        Build the WHERE clause from conditions.
+        Build the WHERE clause from conditions and search query.
 
         Returns:
             Tuple of (where_clause, parameters)
         """
-        if not self.conditions:
-            return "", []
-
         fragments = []
-        params = []
+        params: list[Any] = []
 
         for condition in self.conditions:
             sql, condition_params = condition.to_sql(placeholder_style=self.placeholder_style)
             fragments.append(sql)
             params.extend(condition_params)
+
+        # Append LIKE-based search if search_query and search_fields are set
+        if self.search_query and self.search_fields:
+            ph = self.placeholder_style
+            like_parts = []
+            pattern = f"%{self.search_query}%"
+            for sf in self.search_fields:
+                col = quote_identifier(sf)
+                like_parts.append(f"CAST({col} AS TEXT) LIKE {ph}")
+                params.append(pattern)
+            if like_parts:
+                fragments.append(f"({' OR '.join(like_parts)})")
+
+        if not fragments:
+            return "", []
 
         where_clause = " AND ".join(fragments)
         return f"WHERE {where_clause}", params

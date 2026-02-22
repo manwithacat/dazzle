@@ -385,6 +385,7 @@ def create_list_handler(
     cedar_access_spec: Any | None = None,
     audit_logger: Any | None = None,
     entity_name: str = "Item",
+    search_fields: list[str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -403,6 +404,7 @@ def create_list_handler(
         htmx_empty_message: Message when no items found
         audit_logger: Optional AuditLogger for recording list access decisions
         entity_name: Entity name for audit logging
+        search_fields: Optional field names for LIKE-based search (#361)
     """
 
     def _inject_htmx_meta(request: Request) -> None:
@@ -455,6 +457,7 @@ def create_list_handler(
                 audit_logger=audit_logger,
                 entity_name=entity_name,
                 user=auth_context.user if auth_context and auth_context.is_authenticated else None,
+                search_fields=search_fields,
             )
 
         _auth_handler.__annotations__ = {
@@ -494,6 +497,7 @@ def create_list_handler(
             auto_include=auto_include,
             audit_logger=audit_logger,
             entity_name=entity_name,
+            search_fields=search_fields,
         )
 
     _noauth_handler.__annotations__ = {
@@ -527,6 +531,7 @@ async def _list_handler_body(
     audit_logger: Any | None = None,
     entity_name: str = "Item",
     user: Any | None = None,
+    search_fields: list[str] | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -567,6 +572,7 @@ async def _list_handler_body(
         search=search,
         select_fields=select_fields,
         include=auto_include,
+        search_fields=search_fields,
     )
 
     # Audit log the list access
@@ -1301,6 +1307,7 @@ class RouteGenerator:
         audit_logger: Any | None = None,
         cedar_access_specs: dict[str, Any] | None = None,
         entity_list_projections: dict[str, list[str]] | None = None,
+        entity_search_fields: dict[str, list[str]] | None = None,
         entity_auto_includes: dict[str, list[str]] | None = None,
         entity_htmx_meta: dict[str, dict[str, Any]] | None = None,
         entity_audit_configs: dict[str, Any] | None = None,
@@ -1338,6 +1345,7 @@ class RouteGenerator:
         self.audit_logger = audit_logger
         self.cedar_access_specs = cedar_access_specs or {}
         self.entity_list_projections = entity_list_projections or {}
+        self.entity_search_fields = entity_search_fields or {}
         self.entity_auto_includes = entity_auto_includes or {}
         self.entity_htmx_meta = entity_htmx_meta or {}
         self.entity_audit_configs = entity_audit_configs or {}
@@ -1458,6 +1466,8 @@ class RouteGenerator:
             access_spec = self.entity_access_specs.get(entity_name or "")
             # Get field projection for this entity (from view-backed list surfaces)
             projection = self.entity_list_projections.get(entity_name or "")
+            # Get search fields for this entity (from surface config)
+            _search_fields = self.entity_search_fields.get(entity_name or "")
             # Get auto-include refs for this entity (prevents N+1 queries)
             includes = self.entity_auto_includes.get(entity_name or "")
             # Get HTMX rendering metadata (columns, detail URL, etc.)
@@ -1478,6 +1488,7 @@ class RouteGenerator:
                 cedar_access_spec=_cedar_spec,
                 audit_logger=_audit_for("list"),
                 entity_name=entity_name or "Item",
+                search_fields=_search_fields,
             )
             self._add_route(endpoint, handler, response_model=None)
 

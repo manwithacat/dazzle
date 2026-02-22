@@ -435,6 +435,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         search: str | None = None,
         select_fields: list[str] | None = None,
         include: list[str] | None = None,
+        search_fields: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         List entities with pagination and filtering.
@@ -447,6 +448,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             search: Optional full-text search query
             select_fields: Optional field projection (SELECT only these columns)
             include: Optional list of relation names to eager-load
+            search_fields: Fields to search across (from surface config)
 
         Returns:
             Dictionary with items, total, page, and page_size
@@ -460,6 +462,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 search=search,
                 select_fields=select_fields,
                 include=include,
+                search_fields=search_fields,
             )
 
         # Fallback to in-memory

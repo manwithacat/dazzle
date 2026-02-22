@@ -422,6 +422,7 @@ class Repository(Generic[T]):
         include: list[str] | None = None,
         search: str | None = None,
         select_fields: list[str] | None = None,
+        search_fields: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         List entities with pagination, filtering, sorting, and relation loading.
@@ -438,7 +439,8 @@ class Repository(Generic[T]):
             sort: Sort field(s), prefix with - for descending
                   Examples: "created_at", "-priority", ["priority", "-created_at"]
             include: List of relation names to include (nested loading)
-            search: Full-text search query (if FTS is enabled)
+            search: Full-text search query
+            search_fields: Fields to search across (from surface config)
 
         Returns:
             Dictionary with items, total, page, and page_size
@@ -458,7 +460,7 @@ class Repository(Generic[T]):
             builder.add_sorts(sort)
 
         if search:
-            builder.set_search(search)
+            builder.set_search(search, fields=search_fields)
 
         # Get total count
         count_sql, count_params = builder.build_count()

@@ -262,6 +262,28 @@ def build_entity_list_projections(
     return projections
 
 
+def build_entity_search_fields(
+    surfaces: list[SurfaceSpec],
+) -> dict[str, list[str]]:
+    """Pre-plan search fields for each entity from surface declarations.
+
+    Extracts ``search_fields`` from list-mode surfaces. When a surface
+    declares explicit search fields, those are used for LIKE-based search
+    on the entity's list endpoint.
+
+    Returns a mapping of ``{entity_name: [field_names]}``.
+    """
+    result: dict[str, list[str]] = {}
+    for surface in surfaces:
+        entity_ref = surface.entity_ref
+        if not entity_ref or entity_ref in result:
+            continue
+        sf = surface.search_fields
+        if sf:
+            result[entity_ref] = list(sf)
+    return result
+
+
 # =============================================================================
 # Production Factory (Heroku, etc.)
 # =============================================================================
@@ -420,6 +442,9 @@ def create_app_factory(
         views=appspec.views,
     )
 
+    # Extract search fields from surface declarations (#361)
+    entity_search_fields = build_entity_search_fields(surfaces=appspec.surfaces)
+
     # Auto-detect ref fields for eager loading (prevents N+1 queries)
     entity_auto_includes: dict[str, list[str]] = {}
     for entity in backend_spec.entities:
@@ -468,6 +493,7 @@ def create_app_factory(
         process_adapter_class=resolved_adapter_class,
         enable_console=enable_dev_mode,
         entity_list_projections=entity_list_projections,
+        entity_search_fields=entity_search_fields,
         entity_auto_includes=entity_auto_includes,
         process_specs=all_processes,
         schedule_specs=list(appspec.schedules),
