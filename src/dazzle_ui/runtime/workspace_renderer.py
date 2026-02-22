@@ -127,21 +127,21 @@ def build_workspace_context(
     Returns:
         WorkspaceContext ready for Jinja2 template rendering.
     """
-    stage = (getattr(workspace, "stage", "") or "").lower()
+    stage = (workspace.stage or "").lower()
     grid_class = STAGE_GRID_MAP.get(stage, STAGE_GRID_MAP["focus_metric"])
 
     # Build entity name → display title lookup from app spec (#358)
     _entity_titles: dict[str, str] = {}
     if app_spec:
         _domain = getattr(app_spec, "domain", None)
-        for _e in getattr(_domain, "entities", []) if _domain else []:
+        for _e in _domain.entities if _domain else []:
             _entity_titles[_e.name] = getattr(_e, "title", "") or _e.name
 
     regions: list[RegionContext] = []
-    ws_regions = getattr(workspace, "regions", [])
+    ws_regions = workspace.regions
 
     for idx, region in enumerate(ws_regions):
-        display_mode = getattr(region, "display", "LIST")
+        display_mode = region.display
         if hasattr(display_mode, "value"):
             display_mode = display_mode.value
         display_mode = str(display_mode).upper()
@@ -160,32 +160,32 @@ def build_workspace_context(
 
         # Serialise sort specs
         sort_specs = []
-        for s in getattr(region, "sort", []):
+        for s in region.sort:
             sort_specs.append(
                 {
-                    "field": getattr(s, "field", ""),
-                    "direction": getattr(s, "direction", "asc"),
+                    "field": s.field,
+                    "direction": s.direction,
                 }
             )
 
-        source_name = getattr(region, "source", "") or ""
-        region_sources = list(getattr(region, "sources", []) or [])
+        source_name = region.source or ""
+        region_sources = list(region.sources or [])
         endpoint = f"/api/workspaces/{workspace.name}/regions/{region.name}" if source_name else ""
 
         # Serialize IR filter to JSON for the data endpoint
         filter_expr = ""
-        region_filter = getattr(region, "filter", None)
+        region_filter = region.filter
         if region_filter is not None:
             filter_expr = _serialize_filter_to_params(region_filter)
 
         # Resolve action surface → URL pattern
-        action_name = getattr(region, "action", None) or ""
+        action_name = region.action or ""
         action_url = ""
         if action_name and app_spec:
-            surfaces = getattr(app_spec, "surfaces", [])
+            surfaces = app_spec.surfaces
             for s in surfaces:
                 if s.name == action_name:
-                    entity_ref = getattr(s, "entity_ref", "") or ""
+                    entity_ref = s.entity_ref or ""
                     if entity_ref:
                         if entity_ref == source_name:
                             # Same entity — use row id
@@ -203,7 +203,7 @@ def build_workspace_context(
         # Build multi-source tabs
         source_tabs: list[SourceTabContext] = []
         if region_sources:
-            source_filters_ir = dict(getattr(region, "source_filters", {}) or {})
+            source_filters_ir = dict(region.source_filters or {})
             for src in region_sources:
                 tab_endpoint = f"/api/workspaces/{workspace.name}/regions/{region.name}/{src}"
                 tab_filter = ""
@@ -232,10 +232,10 @@ def build_workspace_context(
                 endpoint=endpoint,
                 filter_expr=filter_expr,
                 sort=sort_specs,
-                limit=getattr(region, "limit", None),
-                empty_message=getattr(region, "empty_message", None) or "No data available.",
-                group_by=getattr(region, "group_by", "") or "",
-                aggregates=dict(getattr(region, "aggregates", {}) or {}),
+                limit=region.limit,
+                empty_message=region.empty_message or "No data available.",
+                group_by=region.group_by or "",
+                aggregates=dict(region.aggregates or {}),
                 action=action_name,
                 action_url=action_url,
                 sources=region_sources,
@@ -247,8 +247,8 @@ def build_workspace_context(
 
     return WorkspaceContext(
         name=workspace.name,
-        title=getattr(workspace, "title", "") or workspace.name.replace("_", " ").title(),
-        purpose=getattr(workspace, "purpose", "") or "",
+        title=workspace.title or workspace.name.replace("_", " ").title(),
+        purpose=workspace.purpose or "",
         stage=stage,
         grid_class=grid_class,
         regions=regions,
@@ -269,13 +269,11 @@ def _resolve_fk_field(
     domain = getattr(app_spec, "domain", None)
     if not domain:
         return None
-    entities = getattr(domain, "entities", [])
-    for ent in entities:
+    for ent in domain.entities:
         if ent.name != source_entity:
             continue
-        for f in getattr(ent, "fields", []):
-            ft = getattr(f, "type", None)
-            kind = getattr(ft, "kind", None)
+        for f in ent.fields:
+            kind = f.type.kind
             kind_val: str = (
                 kind.value
                 if kind is not None and hasattr(kind, "value")
@@ -284,7 +282,7 @@ def _resolve_fk_field(
                 else ""
             )
             if kind_val == "ref":
-                ref_target = getattr(ft, "entity_ref", None) or getattr(ft, "ref_entity", None)
+                ref_target = getattr(f.type, "ref_entity", None)
                 if ref_target == target_entity:
                     field_name: str = f.name
                     return field_name

@@ -27,8 +27,7 @@ def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
         entity: Optional EntitySpec — when provided, checks if this field
                 is the state-machine status field and returns ``"badge"``.
     """
-    ft = getattr(field, "type", None)
-    kind = getattr(ft, "kind", None)
+    kind = field.type.kind
     kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
     if kind_val == "enum":
         return "badge"
@@ -40,8 +39,8 @@ def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
         return "currency"
     # State-machine status field renders as badge
     if entity is not None:
-        sm = getattr(entity, "state_machine", None)
-        if sm and getattr(sm, "status_field", None) == getattr(field, "name", None):
+        sm = entity.state_machine
+        if sm and sm.status_field == field.name:
             return "badge"
     return "text"
 
@@ -59,9 +58,9 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
 
     # Collect field names from surface sections (preserving order)
     surface_fields: list[str] = []
-    for section in getattr(surface_spec, "sections", []):
-        for element in getattr(section, "elements", []):
-            fn = getattr(element, "field_name", None)
+    for section in surface_spec.sections:
+        for element in section.elements:
+            fn = element.field_name
             if fn and fn != "id" and fn not in surface_fields:
                 surface_fields.append(fn)
 
@@ -76,8 +75,8 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
         f = field_map.get(fn)
         if not f:
             continue
-        ft = getattr(f, "type", None)
-        kind = getattr(ft, "kind", None)
+        ft = f.type
+        kind = ft.kind
         kind_val: str = (
             kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
         )
@@ -89,7 +88,7 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
             columns.append(
                 {
                     "key": rel_name,
-                    "label": getattr(f, "label", None) or rel_name.replace("_", " ").title(),
+                    "label": rel_name.replace("_", " ").title(),
                     "type": "ref",
                     "sortable": False,
                     "ref_route": ref_route,
@@ -103,12 +102,12 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
         col_key = f"{f.name}_minor" if kind_val == "money" else f.name
         col: dict[str, Any] = {
             "key": col_key,
-            "label": getattr(f, "label", None) or f.name.replace("_", " ").title(),
+            "label": f.name.replace("_", " ").title(),
             "type": col_type,
             "sortable": True,
         }
         if kind_val == "money":
-            col["currency_code"] = getattr(getattr(f, "type", None), "currency_code", None) or "GBP"
+            col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":
             if kind_val == "enum":
                 ev = getattr(ft, "enum_values", None)
@@ -116,9 +115,9 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
                     col["filterable"] = True
                     col["filter_options"] = list(ev)
             else:
-                sm = getattr(entity_spec, "state_machine", None)
+                sm = entity_spec.state_machine
                 if sm:
-                    states = getattr(sm, "states", [])
+                    states = sm.states
                     if states:
                         col["filterable"] = True
                         col["filter_options"] = list(states)
@@ -145,8 +144,8 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
     for f in entity_spec.fields:
         if f.name == "id":
             continue
-        ft = getattr(f, "type", None)
-        kind = getattr(ft, "kind", None)
+        ft = f.type
+        kind = ft.kind
         kind_val: str = (
             kind.value if hasattr(kind, "value") else str(kind) if kind else ""  # type: ignore[union-attr]
         )
@@ -159,7 +158,7 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
             columns.append(
                 {
                     "key": rel_name,
-                    "label": getattr(f, "label", None) or rel_name.replace("_", " ").title(),
+                    "label": rel_name.replace("_", " ").title(),
                     "type": "ref",
                     "sortable": False,
                     "ref_route": ref_route,
@@ -176,13 +175,12 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
             col_key = f"{f.name}_minor"
         col: dict[str, Any] = {
             "key": col_key,
-            "label": getattr(f, "label", None) or f.name.replace("_", " ").title(),
+            "label": f.name.replace("_", " ").title(),
             "type": col_type,
             "sortable": True,
         }
         if kind_val == "money":
-            ft_obj = getattr(f, "type", None)
-            col["currency_code"] = getattr(ft_obj, "currency_code", None) or "GBP"
+            col["currency_code"] = getattr(ft, "currency_code", None) or "GBP"
         if col_type == "badge":
             if kind_val == "enum":
                 ev = getattr(ft, "enum_values", None)
@@ -190,9 +188,9 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
                     col["filterable"] = True
                     col["filter_options"] = list(ev)
             else:
-                sm = getattr(entity_spec, "state_machine", None)
+                sm = entity_spec.state_machine
                 if sm:
-                    states = getattr(sm, "states", [])
+                    states = sm.states
                     if states:
                         col["filterable"] = True
                         col["filter_options"] = list(states)
@@ -285,9 +283,7 @@ async def _workspace_region_handler(
             # Build filters from IR ConditionExpr
             # Multi-source regions store per-source filter on _source_filter
             filters: dict[str, Any] | None = None
-            ir_filter = getattr(ctx, "_source_filter", None) or getattr(
-                ctx.ir_region, "filter", None
-            )
+            ir_filter = getattr(ctx, "_source_filter", None) or ctx.ir_region.filter
             if ir_filter is not None:
                 try:
                     from dazzle_back.runtime.condition_evaluator import (
@@ -306,15 +302,14 @@ async def _workspace_region_handler(
             if sort:
                 sort_list = [f"-{sort}" if dir == "desc" else sort]
             else:
-                ir_sort = getattr(ctx.ir_region, "sort", [])
+                ir_sort = ctx.ir_region.sort
                 if ir_sort:
                     sort_list = [
-                        f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
-                        for s in ir_sort
+                        f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort
                     ]
                 elif ctx.surface_default_sort:
                     sort_list = [
-                        f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
+                        f"-{s.field}" if s.direction == "desc" else s.field
                         for s in ctx.surface_default_sort
                     ]
 
@@ -330,9 +325,10 @@ async def _workspace_region_handler(
             include_rels: list[str] = []
             if ctx.entity_spec and hasattr(ctx.entity_spec, "fields"):
                 for f in ctx.entity_spec.fields:
-                    ft = getattr(f, "type", None)
-                    kind = getattr(ft, "kind", None)
-                    kind_val_str: str = getattr(kind, "value", str(kind)) if kind else ""
+                    kind = f.type.kind
+                    kind_val_str: str = (
+                        kind.value if hasattr(kind, "value") else str(kind) if kind else ""
+                    )
                     if kind_val_str == "ref":
                         # Relation name is the field name without _id suffix
                         rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
@@ -434,31 +430,27 @@ async def _workspace_region_handler(
     _grouped_modes = {"KANBAN", "BAR_CHART", "FUNNEL_CHART"}
     if group_by and ctx.ctx_region.display in _grouped_modes and ctx.entity_spec:
         # Try enum values first, then state machine states
-        for f in getattr(ctx.entity_spec, "fields", []):
+        for f in ctx.entity_spec.fields:
             if f.name == group_by:
-                ft = getattr(f, "type", None)
-                ev = getattr(ft, "enum_values", None)
+                ev = getattr(f.type, "enum_values", None)
                 if ev:
                     kanban_columns = list(ev)
                 break
         if not kanban_columns:
-            sm = getattr(ctx.entity_spec, "state_machine", None)
-            if sm and getattr(sm, "status_field", "") == group_by:
-                states = getattr(sm, "states", [])
-                kanban_columns = [
-                    s if isinstance(s, str) else getattr(s, "name", str(s)) for s in states
-                ]
+            sm = ctx.entity_spec.state_machine
+            if sm and sm.status_field == group_by:
+                kanban_columns = [s if isinstance(s, str) else str(s) for s in sm.states]
 
     # Queue display: extract state machine transitions for inline action buttons
     queue_transitions: list[dict[str, str]] = []
     queue_status_field = ""
     queue_api_endpoint = ""
     if ctx.ctx_region.display == "QUEUE" and ctx.entity_spec:
-        sm = getattr(ctx.entity_spec, "state_machine", None)
+        sm = ctx.entity_spec.state_machine
         if sm:
-            queue_status_field = getattr(sm, "status_field", "status")
+            queue_status_field = sm.status_field
             seen: set[str] = set()
-            for t in getattr(sm, "transitions", []):
+            for t in sm.transitions:
                 to_state = t.to_state if isinstance(t.to_state, str) else str(t.to_state)
                 if to_state not in seen:
                     seen.add(to_state)
@@ -474,7 +466,7 @@ async def _workspace_region_handler(
         queue_api_endpoint = f"/{to_api_plural(ctx.source)}"
 
     # Multi-source tabbed regions pass source_tabs to the template
-    source_tabs = getattr(ctx.ctx_region, "source_tabs", []) or []
+    source_tabs = ctx.ctx_region.source_tabs or []
 
     html = render_fragment(
         ctx.ctx_region.template,
@@ -518,7 +510,7 @@ async def _fetch_region_json(
     if repo:
         try:
             filters: dict[str, Any] | None = None
-            ir_filter = getattr(ctx.ir_region, "filter", None)
+            ir_filter = ctx.ir_region.filter
             if ir_filter is not None:
                 try:
                     from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
@@ -530,12 +522,9 @@ async def _fetch_region_json(
                     logger.warning("Failed to evaluate condition filter for region", exc_info=True)
 
             sort_list: list[str] | None = None
-            ir_sort = getattr(ctx.ir_region, "sort", [])
+            ir_sort = ctx.ir_region.sort
             if ir_sort:
-                sort_list = [
-                    f"-{s.field}" if getattr(s, "direction", "asc") == "desc" else s.field
-                    for s in ir_sort
-                ]
+                sort_list = [f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort]
 
             limit = ctx.ctx_region.limit or page_size
             result = await repo.list(page=page, page_size=limit, filters=filters, sort=sort_list)

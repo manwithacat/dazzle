@@ -24,7 +24,7 @@ logger = logging.getLogger("dazzle.agent.missions")
 
 def get_surface_entity(surface: Any) -> str | None:
     """Get the entity reference from a surface, handling both IR and test mocks."""
-    return getattr(surface, "entity_ref", None) or getattr(surface, "entity", None)
+    return surface.entity_ref or getattr(surface, "entity", None)
 
 
 def is_step_kind(step: Any, kind_name: str) -> bool:
@@ -103,10 +103,10 @@ def build_dsl_summary(appspec: Any) -> str:
     lines.append("### Entities")
     entities = appspec.domain.entities if hasattr(appspec.domain, "entities") else []
     for entity in entities:
-        field_names = [f.name for f in getattr(entity, "fields", [])][:8]
+        field_names = [f.name for f in entity.fields][:8]
         lines.append(f"- **{entity.name}** ({entity.title}): {', '.join(field_names)}")
-        sm = getattr(entity, "state_machine", None)
-        if sm and getattr(sm, "states", None):
+        sm = entity.state_machine
+        if sm and sm.states:
             state_names = [s if isinstance(s, str) else s.name for s in sm.states][:6]
             lines.append(f"  States: {' → '.join(state_names)}")
 
@@ -116,38 +116,37 @@ def build_dsl_summary(appspec: Any) -> str:
         entity_ref = get_surface_entity(surface) or ""
         if entity_ref:
             entity_ref = f" → {entity_ref}"
-        mode = getattr(surface, "mode", "unknown")
-        lines.append(f"- **{surface.name}** ({mode}{entity_ref}): {surface.title or surface.name}")
+        lines.append(
+            f"- **{surface.name}** ({surface.mode}{entity_ref}): {surface.title or surface.name}"
+        )
 
     # Workspaces
     if appspec.workspaces:
         lines.append("\n### Workspaces")
         for ws in appspec.workspaces[:15]:
-            regions = getattr(ws, "regions", [])
-            region_names = [r.name for r in regions][:5]
+            region_names = [r.name for r in ws.regions][:5]
             lines.append(f"- **{ws.name}**: regions=[{', '.join(region_names)}]")
 
     # Personas
     if appspec.personas:
         lines.append("\n### Personas")
         for p in appspec.personas[:10]:
-            p_name = getattr(p, "name", None) or getattr(p, "id", "unknown")
-            desc = getattr(p, "description", "")[:60]
+            p_name = getattr(p, "name", None) or p.id
+            desc = (p.description or "")[:60]
             lines.append(f"- **{p_name}**: {desc}")
 
     # Processes
-    processes = getattr(appspec, "processes", [])
-    if processes:
+    if appspec.processes:
         lines.append("\n### Processes")
-        for proc in processes[:10]:
-            step_count = len(getattr(proc, "steps", []))
+        for proc in appspec.processes[:10]:
+            step_count = len(proc.steps)
             lines.append(f"- **{proc.name}**: {step_count} steps")
 
     # Experiences
     if appspec.experiences:
         lines.append("\n### Experiences")
         for exp in appspec.experiences[:10]:
-            step_count = len(getattr(exp, "steps", []))
+            step_count = len(exp.steps)
             lines.append(f"- **{exp.name}** ({exp.title or exp.name}): {step_count} steps")
 
     return "\n".join(lines)
@@ -280,17 +279,17 @@ def make_query_dsl_tool(appspec: Any) -> AgentTool:
                         "title": entity.title,
                         "fields": [],
                     }
-                    for f in getattr(entity, "fields", []):
+                    for f in entity.fields:
                         field_info: dict[str, str] = {"name": f.name, "type": str(f.type)}
                         if hasattr(f, "constraints"):
                             field_info["constraints"] = str(f.constraints)
                         result["fields"].append(field_info)
-                    sm = getattr(entity, "state_machine", None)
-                    if sm and getattr(sm, "states", None):
+                    sm = entity.state_machine
+                    if sm and sm.states:
                         result["states"] = [s if isinstance(s, str) else s.name for s in sm.states]
                         result["transitions"] = [
                             {"from": t.from_state, "to": t.to_state, "event": t.event}
-                            for t in getattr(sm, "transitions", [])
+                            for t in sm.transitions
                         ]
                     return result
             return {"error": f"Entity '{entity_name}' not found"}
@@ -301,10 +300,10 @@ def make_query_dsl_tool(appspec: Any) -> AgentTool:
                     result = {
                         "name": surface.name,
                         "title": surface.title,
-                        "mode": getattr(surface, "mode", "unknown"),
+                        "mode": surface.mode,
                         "entity": get_surface_entity(surface),
                     }
-                    sections = getattr(surface, "sections", [])
+                    sections = surface.sections
                     if sections:
                         result["sections"] = []
                         for sec in sections:

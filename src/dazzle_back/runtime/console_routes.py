@@ -481,12 +481,16 @@ def _get_app_summary(appspec: Any) -> dict[str, Any]:
             "integrations": 0,
         }
 
-    entities = getattr(appspec, "entities", [])
+    # AppSpec stores entities under .domain.entities; BackendSpec has .entities directly
+    entities = getattr(appspec, "entities", None)
+    if not entities:
+        domain = getattr(appspec, "domain", None)
+        entities = domain.entities if domain else []
     surfaces = getattr(appspec, "surfaces", [])
     integrations = getattr(appspec, "integrations", [])
     services = getattr(appspec, "services", [])
-    name = getattr(appspec, "name", "Unknown")
-    version = getattr(appspec, "version", "0.0.0")
+    name = appspec.name
+    version = appspec.version
 
     return {
         "name": name,
@@ -534,26 +538,30 @@ def _get_entities(appspec: Any) -> list[dict[str, Any]]:
     """Extract entity data from AppSpec."""
     if not appspec:
         return []
-    entities = getattr(appspec, "entities", [])
+    # AppSpec stores entities under .domain.entities; BackendSpec has .entities directly
+    entities = getattr(appspec, "entities", None)
+    if not entities:
+        domain = getattr(appspec, "domain", None)
+        entities = domain.entities if domain else []
     result = []
     for entity in entities:
         fields = []
-        for f in getattr(entity, "fields", []):
+        for f in entity.fields:
             fields.append(
                 {
-                    "name": getattr(f, "name", ""),
-                    "type": str(getattr(f, "type", getattr(f, "field_type", ""))),
-                    "required": getattr(f, "required", False),
-                    "primary_key": getattr(f, "primary_key", False),
+                    "name": f.name,
+                    "type": str(f.type),
+                    "required": f.is_required,
+                    "primary_key": f.is_primary_key,
                 }
             )
         result.append(
             {
-                "name": getattr(entity, "name", ""),
-                "label": getattr(entity, "label", getattr(entity, "name", "")),
+                "name": entity.name,
+                "label": entity.title or entity.name,
                 "fields": fields,
                 "field_count": len(fields),
-                "has_state_machine": bool(getattr(entity, "state_machine", None)),
+                "has_state_machine": bool(entity.state_machine),
             }
         )
     return result
@@ -566,16 +574,14 @@ def _get_surfaces(appspec: Any) -> list[dict[str, Any]]:
     surfaces = getattr(appspec, "surfaces", [])
     result = []
     for surface in surfaces:
-        sections = getattr(surface, "sections", [])
-        field_count = sum(len(getattr(s, "fields", [])) for s in sections)
-        entity_name = getattr(surface, "entity", None)
-        if entity_name and hasattr(entity_name, "name"):
-            entity_name = entity_name.name
+        sections = surface.sections
+        field_count = sum(len(s.elements) for s in sections)
+        entity_name = surface.entity_ref
         result.append(
             {
-                "name": getattr(surface, "name", ""),
-                "label": getattr(surface, "label", getattr(surface, "name", "")),
-                "mode": getattr(surface, "mode", "unknown"),
+                "name": surface.name,
+                "label": surface.title or surface.name,
+                "mode": surface.mode,
                 "entity": entity_name or "",
                 "field_count": field_count,
                 "section_count": len(sections),
@@ -592,27 +598,27 @@ def _get_integrations(appspec: Any) -> list[dict[str, Any]]:
     for item in getattr(appspec, "integrations", []):
         result.append(
             {
-                "name": getattr(item, "name", ""),
-                "label": getattr(item, "label", getattr(item, "name", "")),
+                "name": item.name,
+                "label": item.title or item.name,
                 "kind": "integration",
-                "provider": getattr(item, "provider", ""),
+                "provider": "",
             }
         )
     for item in getattr(appspec, "services", []):
         result.append(
             {
-                "name": getattr(item, "name", ""),
-                "label": getattr(item, "label", getattr(item, "name", "")),
+                "name": item.name,
+                "label": item.title or item.name,
                 "kind": "service",
             }
         )
     for item in getattr(appspec, "foreign_models", []):
         result.append(
             {
-                "name": getattr(item, "name", ""),
-                "label": getattr(item, "label", getattr(item, "name", "")),
+                "name": item.name,
+                "label": item.title or item.name,
                 "kind": "foreign_model",
-                "source": getattr(item, "source", ""),
+                "source": item.api_ref or "",
             }
         )
     return result

@@ -126,9 +126,9 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
     """
     report = EntityCompletenessReport()
 
-    entities = getattr(getattr(appspec, "domain", None), "entities", []) or []
-    surfaces = getattr(appspec, "surfaces", []) or []
-    processes = getattr(appspec, "processes", []) or []
+    entities = appspec.domain.entities
+    surfaces = appspec.surfaces
+    processes = appspec.processes
 
     # Build entity -> surface coverage map
     entity_surface_map: dict[str, dict[str, list[str]]] = {}
@@ -139,17 +139,17 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
         entity_ref = get_surface_entity(surface)
         if not entity_ref or entity_ref not in entity_surface_map:
             continue
-        mode = str(getattr(surface, "mode", "unknown"))
+        mode = str(surface.mode)
         entity_surface_map[entity_ref].setdefault(mode, []).append(surface.name)
 
     # Track entities referenced by process human_task steps
     process_referenced_entities: dict[str, list[str]] = {}  # entity -> [process_names]
     for proc in processes:
-        for step in getattr(proc, "steps", []):
+        for step in proc.steps:
             if is_step_kind(step, "human_task"):
-                human_task = getattr(step, "human_task", None)
+                human_task = step.human_task
                 if human_task:
-                    surface_name = getattr(human_task, "surface", None)
+                    surface_name = human_task.surface
                     # Find entity for this surface
                     for s in surfaces:
                         if s.name == surface_name:
@@ -234,13 +234,13 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
             )
 
         # Check state machine UI
-        sm = getattr(entity, "state_machine", None)
-        if sm and getattr(sm, "transitions", None):
+        sm = entity.state_machine
+        if sm and sm.transitions:
             # Check if any surface for this entity has actions (transition UI)
             has_transition_ui = False
             for surface in surfaces:
                 if get_surface_entity(surface) == entity.name:
-                    actions = getattr(surface, "actions", [])
+                    actions = surface.actions
                     if actions:
                         has_transition_ui = True
                         break
@@ -278,7 +278,7 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
 
 def _make_check_crud_coverage_tool(appspec: Any) -> AgentTool:
     """Tool: check_crud_coverage — returns CRUD coverage for an entity."""
-    surfaces = getattr(appspec, "surfaces", []) or []
+    surfaces = appspec.surfaces
 
     def check_crud_coverage(entity_name: str = "") -> dict[str, Any]:
         if not entity_name:
@@ -287,7 +287,7 @@ def _make_check_crud_coverage_tool(appspec: Any) -> AgentTool:
         coverage: dict[str, list[str]] = {}
         for surface in surfaces:
             if get_surface_entity(surface) == entity_name:
-                mode = str(getattr(surface, "mode", "unknown"))
+                mode = str(surface.mode)
                 coverage.setdefault(mode, []).append(surface.name)
 
         return {
@@ -321,8 +321,8 @@ def _make_check_crud_coverage_tool(appspec: Any) -> AgentTool:
 
 def _make_check_state_transitions_tool(appspec: Any) -> AgentTool:
     """Tool: check_state_transitions — returns state transitions with UI status."""
-    entities = getattr(getattr(appspec, "domain", None), "entities", []) or []
-    surfaces = getattr(appspec, "surfaces", []) or []
+    entities = appspec.domain.entities
+    surfaces = appspec.surfaces
 
     def check_state_transitions(entity_name: str = "") -> dict[str, Any]:
         if not entity_name:
@@ -337,7 +337,7 @@ def _make_check_state_transitions_tool(appspec: Any) -> AgentTool:
         if entity is None:
             return {"error": f"Entity '{entity_name}' not found"}
 
-        sm = getattr(entity, "state_machine", None)
+        sm = entity.state_machine
         if not sm:
             return {"entity": entity_name, "has_state_machine": False, "transitions": []}
 
@@ -345,15 +345,14 @@ def _make_check_state_transitions_tool(appspec: Any) -> AgentTool:
         entity_surface_actions: set[str] = set()
         for surface in surfaces:
             if get_surface_entity(surface) == entity_name:
-                for action in getattr(surface, "actions", []):
-                    action_name = getattr(action, "name", "")
-                    if action_name:
-                        entity_surface_actions.add(action_name)
+                for action in surface.actions:
+                    if action.name:
+                        entity_surface_actions.add(action.name)
 
         transitions = []
-        for t in getattr(sm, "transitions", []):
-            from_state = getattr(t, "from_state", "?")
-            to_state = getattr(t, "to_state", "?")
+        for t in sm.transitions:
+            from_state = t.from_state
+            to_state = t.to_state
             transitions.append(
                 {
                     "from": from_state,
@@ -362,7 +361,7 @@ def _make_check_state_transitions_tool(appspec: Any) -> AgentTool:
                 }
             )
 
-        states = [s if isinstance(s, str) else s.name for s in getattr(sm, "states", [])]
+        states = [s if isinstance(s, str) else s.name for s in sm.states]
 
         return {
             "entity": entity_name,
@@ -480,7 +479,7 @@ def build_entity_completeness_mission(
         start_url=base_url,
         context={
             "mode": "entity_completeness",
-            "app_name": getattr(appspec, "name", "unknown"),
+            "app_name": appspec.name,
             "static_analysis": {
                 "gaps_found": report.gap_count,
                 "entities_analyzed": len(report.entity_coverage),

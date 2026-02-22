@@ -208,17 +208,16 @@ def _compute_accessible_surfaces(persona_id: str, appspec: Any) -> set[str]:
     - allow_personas contains persona_id → accessible
     - Otherwise → inaccessible
     """
-    surfaces = getattr(appspec, "surfaces", []) or []
     accessible: set[str] = set()
 
-    for surface in surfaces:
-        access = getattr(surface, "access", None)
+    for surface in appspec.surfaces:
+        access = surface.access
         if access is None:
             accessible.add(surface.name)
             continue
 
-        allow = getattr(access, "allow_personas", None) or []
-        deny = getattr(access, "deny_personas", None) or []
+        allow = access.allow_personas
+        deny = access.deny_personas
 
         if persona_id in deny:
             continue
@@ -231,13 +230,12 @@ def _compute_accessible_surfaces(persona_id: str, appspec: Any) -> set[str]:
 
 def _get_persona_stories(persona_id: str, appspec: Any) -> list[Any]:
     """Get stories where this persona is the actor."""
-    stories = getattr(appspec, "stories", []) or []
-    return [s for s in stories if getattr(s, "actor", None) == persona_id]
+    return [s for s in appspec.stories if s.actor == persona_id]
 
 
 def _get_story_entities(story: Any) -> list[str]:
     """Extract entity names from a story's scope."""
-    scope = getattr(story, "scope", None)
+    scope = story.scope
     if not scope:
         return []
     if isinstance(scope, list):
@@ -249,8 +247,7 @@ def _get_story_entities(story: Any) -> list[str]:
 
 def _get_surfaces_for_entity(entity_name: str, appspec: Any) -> list[Any]:
     """Get all surfaces that reference a given entity."""
-    surfaces = getattr(appspec, "surfaces", []) or []
-    return [s for s in surfaces if get_surface_entity(s) == entity_name]
+    return [s for s in appspec.surfaces if get_surface_entity(s) == entity_name]
 
 
 # =============================================================================
@@ -265,10 +262,9 @@ def _analyze_workspace_reachability(
 ) -> list[PersonaJourneyGap]:
     """Check that persona has a valid, accessible workspace with regions."""
     gaps: list[PersonaJourneyGap] = []
-    workspaces = getattr(appspec, "workspaces", []) or []
-    workspace_map = {ws.name: ws for ws in workspaces}
+    workspace_map = {ws.name: ws for ws in appspec.workspaces}
 
-    default_ws = getattr(persona, "default_workspace", None)
+    default_ws = persona.default_workspace
     if not default_ws:
         gaps.append(
             PersonaJourneyGap(
@@ -294,10 +290,10 @@ def _analyze_workspace_reachability(
         return gaps
 
     # Check workspace access control
-    ws_access = getattr(ws, "access", None)
+    ws_access = ws.access
     if ws_access:
-        allow = getattr(ws_access, "allow_personas", None) or []
-        deny = getattr(ws_access, "deny_personas", None) or []
+        allow = ws_access.allow_personas
+        deny = ws_access.deny_personas
         if persona_id in deny or (allow and persona_id not in allow):
             gaps.append(
                 PersonaJourneyGap(
@@ -310,8 +306,7 @@ def _analyze_workspace_reachability(
             )
 
     # Check workspace has regions
-    regions = getattr(ws, "regions", []) or []
-    if not regions:
+    if not ws.regions:
         gaps.append(
             PersonaJourneyGap(
                 persona_id=persona_id,
@@ -392,8 +387,8 @@ def _analyze_story_surface_coverage(
             filter(
                 None,
                 [
-                    getattr(story, "title", ""),
-                    getattr(story, "description", ""),
+                    story.title,
+                    story.description or "",
                     " ".join(getattr(story, "conditions", []) or []),
                 ],
             )
@@ -418,10 +413,7 @@ def _analyze_story_surface_coverage(
                 }
                 expected_mode = action_to_mode.get(implied_action)
                 if expected_mode:
-                    has_mode = any(
-                        str(getattr(s, "mode", "")) == expected_mode
-                        for s in accessible_entity_surfaces
-                    )
+                    has_mode = any(str(s.mode) == expected_mode for s in accessible_entity_surfaces)
                     if not has_mode:
                         gaps.append(
                             PersonaJourneyGap(
@@ -471,9 +463,7 @@ def _analyze_process_surface_wiring(
 ) -> list[PersonaJourneyGap]:
     """Check that process human_task steps reference existing, accessible surfaces."""
     gaps: list[PersonaJourneyGap] = []
-    processes = getattr(appspec, "processes", []) or []
-    surfaces = getattr(appspec, "surfaces", []) or []
-    surface_names = {s.name for s in surfaces}
+    surface_names = {s.name for s in appspec.surfaces}
 
     # Get persona's story IDs
     persona_story_ids: set[str] = set()
@@ -482,18 +472,17 @@ def _analyze_process_surface_wiring(
         if sid:
             persona_story_ids.add(sid)
 
-    for proc in processes:
-        implements = set(getattr(proc, "implements", []) or [])
-        if not implements.intersection(persona_story_ids):
+    for proc in appspec.processes:
+        if not set(proc.implements).intersection(persona_story_ids):
             continue
 
-        for step in getattr(proc, "steps", []):
+        for step in proc.steps:
             if not is_step_kind(step, "human_task"):
                 continue
-            human_task = getattr(step, "human_task", None)
+            human_task = step.human_task
             if not human_task:
                 continue
-            surface_ref = getattr(human_task, "surface", None)
+            surface_ref = human_task.surface
             if not surface_ref:
                 continue
 
@@ -544,8 +533,7 @@ def _analyze_experience_completeness(
 ) -> list[PersonaJourneyGap]:
     """Check experience steps and transitions for validity and accessibility."""
     gaps: list[PersonaJourneyGap] = []
-    experiences = getattr(appspec, "experiences", []) or []
-    surfaces = getattr(appspec, "surfaces", []) or []
+    surfaces = appspec.surfaces
     surface_names = {s.name for s in surfaces}
 
     # Get entities from persona's stories
@@ -553,14 +541,14 @@ def _analyze_experience_completeness(
     for story in _get_persona_stories(persona_id, appspec):
         story_entity_names.update(_get_story_entities(story))
 
-    for exp in experiences:
+    for exp in appspec.experiences:
         # Check if this experience references surfaces for persona's entities
-        exp_steps = getattr(exp, "steps", []) or []
+        exp_steps = exp.steps
         exp_surfaces: set[str] = set()
         for step in exp_steps:
-            step_kind = str(getattr(step, "kind", ""))
+            step_kind = str(step.kind)
             if step_kind == "surface" or step_kind == "StepKind.SURFACE":
-                surface_ref = getattr(step, "surface", None)
+                surface_ref = step.surface
                 if surface_ref:
                     exp_surfaces.add(surface_ref)
 
@@ -578,10 +566,10 @@ def _analyze_experience_completeness(
             continue
 
         # Build step name set for transition validation
-        step_names = {getattr(s, "name", "") for s in exp_steps}
+        step_names = {s.name for s in exp_steps}
 
         # Check start_step
-        start_step = getattr(exp, "start_step", None)
+        start_step = exp.start_step
         if start_step and start_step not in step_names:
             gaps.append(
                 PersonaJourneyGap(
@@ -599,10 +587,10 @@ def _analyze_experience_completeness(
 
         # Check each step
         for step in exp_steps:
-            step_kind = str(getattr(step, "kind", ""))
+            step_kind = str(step.kind)
             if step_kind == "surface" or step_kind == "StepKind.SURFACE":
-                surface_ref = getattr(step, "surface", None)
-                step_name = getattr(step, "name", "unknown")
+                surface_ref = step.surface
+                step_name = step.name
                 if surface_ref and surface_ref not in surface_names:
                     gaps.append(
                         PersonaJourneyGap(
@@ -635,9 +623,8 @@ def _analyze_experience_completeness(
                     )
 
             # Check transitions
-            transitions = getattr(step, "transitions", []) or []
-            for transition in transitions:
-                next_step = getattr(transition, "next_step", None)
+            for transition in step.transitions:
+                next_step = transition.next_step
                 if next_step and next_step not in step_names:
                     gaps.append(
                         PersonaJourneyGap(
@@ -645,7 +632,7 @@ def _analyze_experience_completeness(
                             gap_type="experience_dangling_transition",
                             severity="medium",
                             description=(
-                                f"Experience '{exp.name}' step '{getattr(step, 'name', '?')}' "
+                                f"Experience '{exp.name}' step '{step.name}' "
                                 f"transitions to '{next_step}' which does not exist"
                             ),
                             experience_name=exp.name,
@@ -657,7 +644,7 @@ def _analyze_experience_completeness(
         if start_step and start_step in step_names:
             reachable = _find_reachable_steps(start_step, exp_steps)
             for step in exp_steps:
-                sn = getattr(step, "name", "")
+                sn = step.name
                 if sn and sn not in reachable:
                     gaps.append(
                         PersonaJourneyGap(
@@ -680,7 +667,7 @@ def _find_reachable_steps(start: str, steps: list[Any]) -> set[str]:
     """BFS from start step, following transitions."""
     step_map: dict[str, Any] = {}
     for s in steps:
-        sn = getattr(s, "name", "")
+        sn = s.name
         if sn:
             step_map[sn] = s
 
@@ -694,8 +681,8 @@ def _find_reachable_steps(start: str, steps: list[Any]) -> set[str]:
         step = step_map.get(current)
         if not step:
             continue
-        for t in getattr(step, "transitions", []) or []:
-            ns = getattr(t, "next_step", None)
+        for t in step.transitions:
+            ns = t.next_step
             if ns and ns not in visited:
                 queue.append(ns)
 
@@ -720,9 +707,9 @@ def _analyze_experience_reachability(
     Emits one HIGH gap per unreachable experience.
     """
     gaps: list[PersonaJourneyGap] = []
-    experiences = getattr(appspec, "experiences", []) or []
-    surfaces = getattr(appspec, "surfaces", []) or []
-    workspaces = getattr(appspec, "workspaces", []) or []
+    experiences = appspec.experiences
+    surfaces = appspec.surfaces
+    workspaces = appspec.workspaces
 
     if not experiences:
         return gaps
@@ -733,28 +720,28 @@ def _analyze_experience_reachability(
         story_entity_names.update(_get_story_entities(story))
 
     # Build set of surfaces reachable from persona's workspace regions
-    default_ws = getattr(persona, "default_workspace", None)
+    default_ws = persona.default_workspace
     workspace_surfaces: set[str] = set()
     for ws in workspaces:
         # Only consider persona's own workspace
         if default_ws and ws.name != default_ws:
             continue
-        for region in getattr(ws, "regions", []) or []:
-            source = getattr(region, "source", None)
+        for region in ws.regions:
+            source = region.source
             if source:
                 for s in surfaces:
                     if get_surface_entity(s) == source:
                         workspace_surfaces.add(s.name)
 
     for exp in experiences:
-        exp_steps = getattr(exp, "steps", []) or []
+        exp_steps = exp.steps
 
         # Collect surfaces referenced by this experience
         exp_surfaces: set[str] = set()
         for step in exp_steps:
-            step_kind = str(getattr(step, "kind", ""))
+            step_kind = str(step.kind)
             if step_kind in ("surface", "StepKind.SURFACE"):
-                surface_ref = getattr(step, "surface", None)
+                surface_ref = step.surface
                 if surface_ref:
                     exp_surfaces.add(surface_ref)
 
@@ -780,12 +767,12 @@ def _analyze_experience_reachability(
             continue
 
         # Find start surface for the description
-        start_step = getattr(exp, "start_step", None)
+        start_step = exp.start_step
         start_surface = None
         if start_step:
             for step in exp_steps:
-                if getattr(step, "name", "") == start_step:
-                    start_surface = getattr(step, "surface", None)
+                if step.name == start_step:
+                    start_surface = step.surface
                     break
 
         ws_name = default_ws or "none"
@@ -832,18 +819,18 @@ def _analyze_orphan_surfaces(
 
     Emits a single aggregated gap rather than per-surface gaps.
     """
-    surfaces = getattr(appspec, "surfaces", []) or []
-    workspaces = getattr(appspec, "workspaces", []) or []
-    experiences = getattr(appspec, "experiences", []) or []
-    processes = getattr(appspec, "processes", []) or []
+    surfaces = appspec.surfaces
+    workspaces = appspec.workspaces
+    experiences = appspec.experiences
+    processes = appspec.processes
 
     # Build "referenced surfaces" set from three sources
     referenced: set[str] = set()
 
     # 1. Workspace regions: region.source is an entity name → surfaces with that entity_ref
     for ws in workspaces:
-        for region in getattr(ws, "regions", []) or []:
-            source = getattr(region, "source", None)
+        for region in ws.regions:
+            source = region.source
             if source:
                 for s in surfaces:
                     if get_surface_entity(s) == source:
@@ -851,20 +838,20 @@ def _analyze_orphan_surfaces(
 
     # 2. Experience steps with kind=surface
     for exp in experiences:
-        for step in getattr(exp, "steps", []) or []:
-            step_kind = str(getattr(step, "kind", ""))
+        for step in exp.steps:
+            step_kind = str(step.kind)
             if step_kind in ("surface", "StepKind.SURFACE"):
-                surface_ref = getattr(step, "surface", None)
+                surface_ref = step.surface
                 if surface_ref:
                     referenced.add(surface_ref)
 
     # 3. Process human_task steps
     for proc in processes:
-        for step in getattr(proc, "steps", []) or []:
+        for step in proc.steps:
             if is_step_kind(step, "human_task"):
-                human_task = getattr(step, "human_task", None)
+                human_task = step.human_task
                 if human_task:
-                    surface_ref = getattr(human_task, "surface", None)
+                    surface_ref = human_task.surface
                     if surface_ref:
                         referenced.add(surface_ref)
 
@@ -873,8 +860,7 @@ def _analyze_orphan_surfaces(
     # (view/edit/create) are implicitly reachable: nav → list → detail/edit/create.
     entities_with_list_surface: set[str] = set()
     for surface in surfaces:
-        mode = str(getattr(surface, "mode", ""))
-        if mode == "list":
+        if str(surface.mode) == "list":
             entity = get_surface_entity(surface)
             if entity:
                 entities_with_list_surface.add(entity)
@@ -887,7 +873,7 @@ def _analyze_orphan_surfaces(
         if surface.name in referenced:
             continue
         # List surfaces are self-standing index pages — not orphaned
-        mode = str(getattr(surface, "mode", ""))
+        mode = str(surface.mode)
         if mode == "list":
             continue
         # CRUD siblings (view/edit/create) are implicitly reachable when their
@@ -933,27 +919,24 @@ def _analyze_cross_entity_gaps(
     """Check that multi-entity stories have connected navigation paths."""
     gaps: list[PersonaJourneyGap] = []
     stories = _get_persona_stories(persona_id, appspec)
-    workspaces = getattr(appspec, "workspaces", []) or []
 
     # Build entity → workspace map using region.source (entity name)
     entity_workspaces: dict[str, set[str]] = {}
-    for ws in workspaces:
-        for region in getattr(ws, "regions", []) or []:
-            source = getattr(region, "source", None)
+    for ws in appspec.workspaces:
+        for region in ws.regions:
+            source = region.source
             if source:
                 entity_workspaces.setdefault(source, set()).add(ws.name)
 
     # Build FK adjacency set — if entity A has a ref field pointing to entity B,
     # the framework auto-links them in list/detail rendering (clickable FK links).
     fk_pairs: set[tuple[str, str]] = set()
-    domain = getattr(appspec, "domain", None)
-    if domain:
-        for entity in getattr(domain, "entities", []) or []:
-            for field in getattr(entity, "fields", []) or []:
-                ref_target = getattr(field, "ref_target", None)
-                if ref_target:
-                    fk_pairs.add((entity.name, ref_target))
-                    fk_pairs.add((ref_target, entity.name))  # bidirectional
+    for entity in appspec.domain.entities:
+        for fld in entity.fields:
+            ref_entity = fld.type.ref_entity
+            if ref_entity:
+                fk_pairs.add((entity.name, ref_entity))
+                fk_pairs.add((ref_entity, entity.name))  # bidirectional
 
     for story in stories:
         entity_names = _get_story_entities(story)
@@ -1013,17 +996,14 @@ def _condition_matches_role(condition: Any, role_name: str) -> bool:
     if condition is None:
         return False
     # Direct role_check match
-    role_check = getattr(condition, "role_check", None)
+    role_check = condition.role_check
     if role_check:
-        rn = getattr(role_check, "role_name", None)
-        if rn and rn == role_name:
+        if role_check.role_name == role_name:
             return True
     # Recurse into OR/AND branches
-    left = getattr(condition, "left", None)
-    right = getattr(condition, "right", None)
-    if left and _condition_matches_role(left, role_name):
+    if condition.left and _condition_matches_role(condition.left, role_name):
         return True
-    if right and _condition_matches_role(right, role_name):
+    if condition.right and _condition_matches_role(condition.right, role_name):
         return True
     return False
 
@@ -1048,10 +1028,9 @@ def _analyze_navigation_scope(
       from the persona's workspace.
     """
     gaps: list[PersonaJourneyGap] = []
-    domain = getattr(appspec, "domain", None)
-    entities = getattr(domain, "entities", []) or [] if domain else []
-    surfaces = getattr(appspec, "surfaces", []) or []
-    workspaces = getattr(appspec, "workspaces", []) or []
+    entities = appspec.domain.entities
+    surfaces = appspec.surfaces
+    workspaces = appspec.workspaces
 
     if not entities:
         return gaps
@@ -1060,33 +1039,32 @@ def _analyze_navigation_scope(
 
     # ── Source 1: Workspace regions ──────────────────────────────────
     workspace_entities: set[str] = set()
-    default_ws = getattr(persona, "default_workspace", None)
+    default_ws = persona.default_workspace
     for ws in workspaces:
         if default_ws and ws.name != default_ws:
             continue
         # Also include workspaces the persona is allowed into
-        ws_access = getattr(ws, "access", None)
+        ws_access = ws.access
         if ws_access:
-            allow = getattr(ws_access, "allow_personas", None) or []
-            deny = getattr(ws_access, "deny_personas", None) or []
+            allow = ws_access.allow_personas
+            deny = ws_access.deny_personas
             if persona_id in deny:
                 continue
             if allow and persona_id not in allow:
                 continue
-        for region in getattr(ws, "regions", []) or []:
-            source = getattr(region, "source", None)
+        for region in ws.regions:
+            source = region.source
             if source and source in all_entity_names:
                 workspace_entities.add(source)
 
     # ── Source 2: Surface persona_variants ───────────────────────────
     variant_entities: set[str] = set()
     for surface in surfaces:
-        ux = getattr(surface, "ux", None)
+        ux = surface.ux
         if not ux:
             continue
-        variants = getattr(ux, "persona_variants", []) or []
-        for variant in variants:
-            if getattr(variant, "persona", None) == persona_id:
+        for variant in ux.persona_variants:
+            if variant.persona == persona_id:
                 entity = get_surface_entity(surface)
                 if entity and entity in all_entity_names:
                     variant_entities.add(entity)
@@ -1097,25 +1075,22 @@ def _analyze_navigation_scope(
     # `role(name)` conditions where role names map 1:1 to persona IDs.
     policy_entities: set[str] = set()
     for entity in entities:
-        access = getattr(entity, "access", None)
+        access = entity.access
         if not access:
             continue
-        permissions = getattr(access, "permissions", []) or []
-        for perm in permissions:
-            effect = str(getattr(perm, "effect", ""))
-            if "PERMIT" not in effect.upper():
+        for perm in access.permissions:
+            if "PERMIT" not in str(perm.effect).upper():
                 continue
             # Check persona-explicit rules
-            personas = getattr(perm, "personas", []) or []
-            if persona_id in personas:
+            if persona_id in perm.personas:
                 policy_entities.add(entity.name)
                 break
             # Check role-based condition (role names often match persona IDs)
-            op_kind = str(getattr(perm, "operation", ""))
+            op_kind = str(perm.operation)
             if "list" in op_kind.lower() or "read" in op_kind.lower():
-                condition = getattr(perm, "condition", None)
+                condition = perm.condition
                 # `authenticated` permissions (no condition) are accessible to all personas
-                if condition is None and getattr(perm, "require_auth", False):
+                if condition is None and perm.require_auth:
                     policy_entities.add(entity.name)
                     break
                 if _condition_matches_role(condition, persona_id):
@@ -1159,7 +1134,7 @@ def _analyze_navigation_scope(
     # workspace region.
     entities_with_list = set()
     for surface in surfaces:
-        if str(getattr(surface, "mode", "")) == "list":
+        if str(surface.mode) == "list":
             ent = get_surface_entity(surface)
             if ent:
                 entities_with_list.add(ent)
@@ -1221,14 +1196,14 @@ def run_headless_discovery(
     """
     report = HeadlessDiscoveryReport()
 
-    personas = getattr(appspec, "personas", []) or []
+    personas = appspec.personas
     if persona_ids:
         id_set = set(persona_ids)
         personas = [p for p in personas if _persona_id(p) in id_set]
 
     for persona in personas:
         pid = _persona_id(persona)
-        default_ws = getattr(persona, "default_workspace", None)
+        default_ws = persona.default_workspace
         has_stories = bool(_get_persona_stories(pid, appspec))
 
         # Skip personas with no stories AND no default_workspace — they produce only noise
@@ -1242,7 +1217,7 @@ def run_headless_discovery(
         pr = PersonaJourneyReport(persona_id=pid, default_workspace=default_ws)
 
         # Record surface coverage
-        for surface in getattr(appspec, "surfaces", []) or []:
+        for surface in appspec.surfaces:
             pr.surface_coverage[surface.name] = surface.name in accessible
 
         # Record story coverage

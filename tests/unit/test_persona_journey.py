@@ -54,6 +54,7 @@ def _make_surface(
         sections=[],
         actions=actions or [],
         access=access,
+        ux=None,
     )
 
 
@@ -145,6 +146,7 @@ def _make_entity(name: str, title: str = "") -> SimpleNamespace:
         title=title or name,
         fields=[],
         state_machine=None,
+        access=None,
     )
 
 

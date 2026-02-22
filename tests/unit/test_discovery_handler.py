@@ -40,7 +40,7 @@ def mock_appspec() -> MagicMock:
         name="task_list",
         title="Task List",
         mode="list",
-        entity="Task",
+        entity_ref="Task",
         sections=[],
     )
     persona = SimpleNamespace(name="admin", description="Administrator")

@@ -83,10 +83,10 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
     """
     report = WorkflowCoherenceReport()
 
-    surfaces = getattr(appspec, "surfaces", []) or []
-    processes = getattr(appspec, "processes", []) or []
-    stories = getattr(appspec, "stories", []) or []
-    entities = getattr(getattr(appspec, "domain", None), "entities", []) or []
+    surfaces = appspec.surfaces
+    processes = appspec.processes
+    stories = appspec.stories
+    entities = appspec.domain.entities
 
     # Build lookup sets
     surface_names = {s.name for s in surfaces}
@@ -96,17 +96,17 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
     # Build set of story IDs that have implementing processes
     implemented_story_ids: set[str] = set()
     for proc in processes:
-        for story_id in getattr(proc, "implements", []):
+        for story_id in proc.implements:
             implemented_story_ids.add(story_id)
 
     # Check each process
     for proc in processes:
-        for step in getattr(proc, "steps", []):
+        for step in proc.steps:
             # Check human_task steps reference existing surfaces
             if is_step_kind(step, "human_task"):
-                human_task = getattr(step, "human_task", None)
+                human_task = step.human_task
                 if human_task:
-                    surface_ref = getattr(human_task, "surface", None)
+                    surface_ref = human_task.surface
                     if surface_ref and surface_ref not in surface_names:
                         report.gaps.append(
                             WorkflowGap(
@@ -120,7 +120,7 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
 
             # Check subprocess steps reference existing processes
             if is_step_kind(step, "subprocess"):
-                subprocess_ref = getattr(step, "subprocess", None)
+                subprocess_ref = step.subprocess
                 if subprocess_ref and subprocess_ref not in process_names:
                     report.gaps.append(
                         WorkflowGap(
@@ -132,9 +132,9 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
                     )
 
         # Check entity_status_transition triggers reference entities with state machines
-        trigger = getattr(proc, "trigger", None)
+        trigger = proc.trigger
         if trigger and is_trigger_kind(trigger, "entity_status_transition"):
-            entity_name = getattr(trigger, "entity_name", None)
+            entity_name = trigger.entity_name
             if entity_name:
                 entity = entity_map.get(entity_name)
                 if not entity:
@@ -147,7 +147,7 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
                             entity_name=entity_name,
                         )
                     )
-                elif not getattr(entity, "state_machine", None):
+                elif not entity.state_machine:
                     report.gaps.append(
                         WorkflowGap(
                             gap_type="trigger_no_state_machine",
@@ -160,13 +160,13 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
 
     # Check stories have implementing processes
     for story in stories:
-        story_id = getattr(story, "story_id", None)
-        if story_id and story_id not in implemented_story_ids:
+        story_id = story.story_id
+        if story_id not in implemented_story_ids:
             report.gaps.append(
                 WorkflowGap(
                     gap_type="story_no_process",
                     severity="medium",
-                    description=f"Story '{story_id}' ({getattr(story, 'title', '')}) has no implementing process",
+                    description=f"Story '{story_id}' ({story.title}) has no implementing process",
                     story_id=story_id,
                 )
             )
@@ -181,8 +181,8 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
 
 def _make_check_process_coverage_tool(appspec: Any) -> AgentTool:
     """Tool: check_process_coverage — returns step-by-step coverage for a process."""
-    processes = getattr(appspec, "processes", []) or []
-    surfaces = getattr(appspec, "surfaces", []) or []
+    processes = appspec.processes
+    surfaces = appspec.surfaces
     surface_names = {s.name for s in surfaces}
     process_names = {p.name for p in processes}
 
@@ -200,24 +200,24 @@ def _make_check_process_coverage_tool(appspec: Any) -> AgentTool:
             return {"error": f"Process '{process_name}' not found"}
 
         steps_coverage = []
-        for step in getattr(proc, "steps", []):
-            kind_str = str(getattr(step, "kind", ""))
+        for step in proc.steps:
+            kind_str = str(step.kind)
             step_info: dict[str, Any] = {
                 "name": step.name,
                 "kind": kind_str,
             }
 
             if is_step_kind(step, "human_task"):
-                human_task = getattr(step, "human_task", None)
+                human_task = step.human_task
                 if human_task:
-                    surface_ref = getattr(human_task, "surface", None)
+                    surface_ref = human_task.surface
                     step_info["surface"] = surface_ref
                     step_info["surface_exists"] = (
                         surface_ref in surface_names if surface_ref else False
                     )
 
             if is_step_kind(step, "subprocess"):
-                subprocess_ref = getattr(step, "subprocess", None)
+                subprocess_ref = step.subprocess
                 step_info["subprocess"] = subprocess_ref
                 step_info["subprocess_exists"] = (
                     subprocess_ref in process_names if subprocess_ref else False
@@ -227,8 +227,8 @@ def _make_check_process_coverage_tool(appspec: Any) -> AgentTool:
 
         return {
             "process": process_name,
-            "title": getattr(proc, "title", None),
-            "implements": getattr(proc, "implements", []),
+            "title": proc.title,
+            "implements": proc.implements,
             "step_count": len(steps_coverage),
             "steps": steps_coverage,
         }
@@ -396,7 +396,7 @@ def build_workflow_coherence_mission(
         start_url=base_url,
         context={
             "mode": "workflow_coherence",
-            "app_name": getattr(appspec, "name", "unknown"),
+            "app_name": appspec.name,
             "static_analysis": {
                 "gaps_found": report.gap_count,
             },

@@ -47,7 +47,7 @@ def _make_surface(
     mode: str = "list",
     entity: str | None = None,
 ) -> SimpleNamespace:
-    return SimpleNamespace(name=name, title=title, mode=mode, entity=entity, sections=[])
+    return SimpleNamespace(name=name, title=title, mode=mode, entity_ref=entity, sections=[])
 
 
 def _make_appspec(
