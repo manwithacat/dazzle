@@ -130,6 +130,13 @@ def build_workspace_context(
     stage = (getattr(workspace, "stage", "") or "").lower()
     grid_class = STAGE_GRID_MAP.get(stage, STAGE_GRID_MAP["focus_metric"])
 
+    # Build entity name → display title lookup from app spec (#358)
+    _entity_titles: dict[str, str] = {}
+    if app_spec:
+        _domain = getattr(app_spec, "domain", None)
+        for _e in getattr(_domain, "entities", []) if _domain else []:
+            _entity_titles[_e.name] = getattr(_e, "title", "") or _e.name
+
     regions: list[RegionContext] = []
     ws_regions = getattr(workspace, "regions", [])
 
@@ -204,10 +211,12 @@ def build_workspace_context(
                     tab_filter = _serialize_filter_to_params(source_filters_ir[src])
                 # Per-source action URL: link to the entity's detail page
                 tab_action_url = f"/{to_api_plural(src)}/{{id}}"
+                # Use entity display title if available, else humanise the name (#358)
+                tab_label = _entity_titles.get(src) or src.replace("_", " ").title()
                 source_tabs.append(
                     SourceTabContext(
                         entity_name=src,
-                        label=src.replace("_", " ").title(),
+                        label=tab_label,
                         endpoint=tab_endpoint,
                         filter_expr=tab_filter,
                         action_url=tab_action_url,

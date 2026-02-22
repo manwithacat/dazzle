@@ -283,6 +283,52 @@ class TestBuildWorkspaceContext:
         assert tabs[0].label == "Task"
         assert tabs[1].label == "Bug"
 
+    def test_tab_labels_use_entity_display_name(self) -> None:
+        """Tab labels should use entity title (display name), not internal name (#358)."""
+        ws = WorkspaceSpec(
+            name="dashboard",
+            regions=[
+                WorkspaceRegion(
+                    name="businesses",
+                    sources=["SoleTrader", "PartnershipMember", "CompanyContact"],
+                    display=DisplayMode.TABBED_LIST,
+                )
+            ],
+        )
+        appspec = AppSpec(
+            name="test_app",
+            domain=DomainSpec(
+                entities=[
+                    EntitySpec(
+                        name="SoleTrader",
+                        title="Sole Trader",
+                        fields=[
+                            FieldSpec(name="id", type=FieldType(kind="uuid"), is_primary_key=True),
+                        ],
+                    ),
+                    EntitySpec(
+                        name="PartnershipMember",
+                        title="Partnership Member",
+                        fields=[
+                            FieldSpec(name="id", type=FieldType(kind="uuid"), is_primary_key=True),
+                        ],
+                    ),
+                    EntitySpec(
+                        name="CompanyContact",
+                        title="Company Contact",
+                        fields=[
+                            FieldSpec(name="id", type=FieldType(kind="uuid"), is_primary_key=True),
+                        ],
+                    ),
+                ]
+            ),
+        )
+        ctx = build_workspace_context(ws, appspec)
+        tabs = ctx.regions[0].source_tabs
+        assert tabs[0].label == "Sole Trader"
+        assert tabs[1].label == "Partnership Member"
+        assert tabs[2].label == "Company Contact"
+
     def test_tab_endpoints(self) -> None:
         ws = WorkspaceSpec(
             name="dashboard",
