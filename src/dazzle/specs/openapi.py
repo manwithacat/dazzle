@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec, EntitySpec, FieldSpec
+    from dazzle.core.ir.surfaces import SurfaceSpec
 
 
 def generate_openapi(spec: AppSpec) -> dict[str, Any]:
@@ -45,9 +46,12 @@ def generate_openapi(spec: AppSpec) -> dict[str, Any]:
         "tags": [],
     }
 
+    # Build surface list projections: entity_name → [field_names]
+    list_projections = _build_list_projections(getattr(spec, "surfaces", []))
+
     # Generate schemas for all entities
     for entity in spec.domain.entities:
-        _add_entity_schemas(openapi, entity)
+        _add_entity_schemas(openapi, entity, list_projections.get(entity.name))
         _add_entity_paths(openapi, entity)
         openapi["tags"].append(
             {
@@ -59,8 +63,40 @@ def generate_openapi(spec: AppSpec) -> dict[str, Any]:
     return openapi
 
 
-def _add_entity_schemas(openapi: dict[str, Any], entity: EntitySpec) -> None:
-    """Add schemas for an entity (Base, Create, Update, Read)."""
+def _build_list_projections(
+    surfaces: list[SurfaceSpec],
+) -> dict[str, list[str]]:
+    """Extract projected field names from list-mode surfaces.
+
+    Returns a mapping of ``{entity_name: [field_names]}`` for entities
+    that have a list surface with explicit field declarations.
+    """
+    projections: dict[str, list[str]] = {}
+    for surface in surfaces:
+        entity_ref = getattr(surface, "entity_ref", None)
+        if not entity_ref or entity_ref in projections:
+            continue
+        if surface.mode != "list" or not surface.sections:
+            continue
+        field_names: list[str] = []
+        for section in surface.sections:
+            for element in section.elements:
+                if element.field_name not in field_names:
+                    field_names.append(element.field_name)
+        if field_names:
+            # Always include id for list items
+            if "id" not in field_names:
+                field_names.insert(0, "id")
+            projections[entity_ref] = field_names
+    return projections
+
+
+def _add_entity_schemas(
+    openapi: dict[str, Any],
+    entity: EntitySpec,
+    list_projection: list[str] | None = None,
+) -> None:
+    """Add schemas for an entity (Base, Create, Update, Read, ListItem)."""
     schemas = openapi["components"]["schemas"]
     entity_name = entity.name
 
@@ -80,10 +116,20 @@ def _add_entity_schemas(openapi: dict[str, Any], entity: EntitySpec) -> None:
     read_schema = _entity_to_schema(entity, include_id=True)
     schemas[f"{entity_name}Read"] = read_schema
 
+    # List item schema — projected subset when surface defines projections
+    if list_projection:
+        list_item_schema = _entity_to_schema(
+            entity, include_id=True, only_fields=set(list_projection)
+        )
+        schemas[f"{entity_name}ListItem"] = list_item_schema
+        list_item_ref = f"#/components/schemas/{entity_name}ListItem"
+    else:
+        list_item_ref = f"#/components/schemas/{entity_name}Read"
+
     # List response schema
     schemas[f"{entity_name}List"] = {
         "type": "array",
-        "items": {"$ref": f"#/components/schemas/{entity_name}Read"},
+        "items": {"$ref": list_item_ref},
     }
 
     # Add enum schemas for enum fields
@@ -101,6 +147,7 @@ def _entity_to_schema(
     include_id: bool = True,
     for_create: bool = False,
     all_optional: bool = False,
+    only_fields: set[str] | None = None,
 ) -> dict[str, Any]:
     """Convert entity to JSON Schema."""
     from dazzle.core.ir import FieldModifier
@@ -115,6 +162,10 @@ def _entity_to_schema(
 
         # Skip read-only fields for create
         if for_create and field.name in ("created_at", "updated_at"):
+            continue
+
+        # Skip fields not in the projection set
+        if only_fields is not None and field.name not in only_fields:
             continue
 
         prop_schema = _field_to_schema(field, entity.name)

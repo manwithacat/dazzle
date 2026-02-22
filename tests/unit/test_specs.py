@@ -235,3 +235,88 @@ class TestOpenAPIGeneration:
         assert props["bank_account"].get("x-sensitive") is True
         # name should NOT have x-sensitive
         assert "x-sensitive" not in props["name"]
+
+    def test_openapi_list_projection_from_surface(self, simple_entity: EntitySpec) -> None:
+        """List schema should use projected fields when a list surface is defined."""
+        from dazzle.core.ir.surfaces import SurfaceElement, SurfaceSection, SurfaceSpec
+        from dazzle.specs.openapi import generate_openapi
+
+        surface = SurfaceSpec(
+            name="task_list",
+            entity_ref="Task",
+            mode="list",
+            sections=[
+                SurfaceSection(
+                    name="main",
+                    elements=[
+                        SurfaceElement(field_name="title", label="Title"),
+                        SurfaceElement(field_name="completed", label="Done"),
+                    ],
+                )
+            ],
+        )
+        spec = AppSpec(
+            name="Test",
+            domain=DomainSpec(entities=[simple_entity]),
+            surfaces=[surface],
+        )
+        openapi = generate_openapi(spec)
+        schemas = openapi["components"]["schemas"]
+
+        # ListItem schema should exist with only projected fields + id
+        assert "TaskListItem" in schemas
+        list_item = schemas["TaskListItem"]
+        assert set(list_item["properties"].keys()) == {"id", "title", "completed"}
+
+        # List schema should reference ListItem, not Read
+        assert schemas["TaskList"]["items"]["$ref"] == "#/components/schemas/TaskListItem"
+
+    def test_openapi_no_surface_uses_read_for_list(self, simple_appspec: AppSpec) -> None:
+        """Without surfaces, list schema should reference Read (full entity)."""
+        from dazzle.specs.openapi import generate_openapi
+
+        openapi = generate_openapi(simple_appspec)
+        schemas = openapi["components"]["schemas"]
+
+        assert "TaskListItem" not in schemas
+        assert schemas["TaskList"]["items"]["$ref"] == "#/components/schemas/TaskRead"
+
+    def test_openapi_list_projection_always_includes_id(self) -> None:
+        """ListItem schema should always include 'id' even if not in surface."""
+        from dazzle.core.ir.surfaces import SurfaceElement, SurfaceSection, SurfaceSpec
+        from dazzle.specs.openapi import generate_openapi
+
+        entity = EntitySpec(
+            name="Note",
+            fields=[
+                FieldSpec(
+                    name="id",
+                    type=FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                FieldSpec(
+                    name="body",
+                    type=FieldType(kind=FieldTypeKind.TEXT),
+                ),
+            ],
+        )
+        surface = SurfaceSpec(
+            name="note_list",
+            entity_ref="Note",
+            mode="list",
+            sections=[
+                SurfaceSection(
+                    name="main",
+                    elements=[SurfaceElement(field_name="body", label="Body")],
+                )
+            ],
+        )
+        spec = AppSpec(
+            name="Test",
+            domain=DomainSpec(entities=[entity]),
+            surfaces=[surface],
+        )
+        openapi = generate_openapi(spec)
+        list_item = openapi["components"]["schemas"]["NoteListItem"]
+        assert "id" in list_item["properties"]
+        assert "body" in list_item["properties"]
