@@ -398,21 +398,22 @@ def _build_form_fields(
     """Build form field definitions from surface sections or entity fields."""
     fields: list[FieldContext] = []
 
-    fields_to_process: list[tuple[str, str | None, ir.FieldSpec | None, dict[str, Any]]] = []
+    fields_to_process: list[tuple[str, str | None, ir.FieldSpec | None, dict[str, Any], str]] = []
 
     if surface.sections:
         for section in surface.sections:
             for element in section.elements:
                 field_spec = _get_field_spec(entity, element.field_name)
+                when_str = str(element.when_expr) if element.when_expr else ""
                 fields_to_process.append(
-                    (element.field_name, element.label, field_spec, element.options)
+                    (element.field_name, element.label, field_spec, element.options, when_str)
                 )
     elif entity and entity.fields:
         for field in entity.fields:
             if not field.is_primary_key:
-                fields_to_process.append((field.name, None, field, {}))
+                fields_to_process.append((field.name, None, field, {}, ""))
 
-    for field_name, label, field_spec, element_options in fields_to_process:
+    for field_name, label, field_spec, element_options, when_expr_str in fields_to_process:
         # Money fields: single widget with major-unit display + hidden minor-unit value
         if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
             fields.append(_build_money_field(field_name, label, field_spec))
@@ -458,6 +459,7 @@ def _build_form_fields(
                 options=options,
                 source=source_ctx,
                 extra=extra,
+                when_expr=when_expr_str,
             )
         )
 

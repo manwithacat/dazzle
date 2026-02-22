@@ -1,7 +1,7 @@
-"""Shared expression evaluation utilities for experience flows.
+"""Shared expression evaluation utilities.
 
-Provides dotted-path resolution and simple condition evaluation used by
-both the experience compiler and the experience routes module.
+Provides dotted-path resolution, simple condition evaluation for experience
+flows, and typed expression evaluation for surface ``when:`` conditions.
 """
 
 from __future__ import annotations
@@ -100,3 +100,33 @@ def evaluate_simple_condition(when_expr: str, data: dict[str, Any]) -> bool:
         break
 
     return True
+
+
+def evaluate_when_expr(when_expr_str: str, data: dict[str, Any]) -> bool:
+    """Evaluate a serialized ``when:`` expression against record data.
+
+    Uses the typed expression parser and evaluator from the core expression
+    language, so it handles all operator types, ``in``/``not in``, ``and``/``or``,
+    function calls, etc.
+
+    Args:
+        when_expr_str: Serialized expression string (from ``str(Expr)``).
+        data: Record dict (flat field→value mapping).
+
+    Returns:
+        ``True`` if the expression evaluates to a truthy value, or if the
+        expression is empty or cannot be parsed/evaluated (fail-open: show
+        the field rather than hide it).
+    """
+    if not when_expr_str:
+        return True
+    try:
+        from dazzle.core.expression_lang.evaluator import evaluate
+        from dazzle.core.expression_lang.parser import parse_expr
+
+        expr = parse_expr(when_expr_str)
+        result = evaluate(expr, data)
+        return bool(result)
+    except Exception:
+        # Fail open — show the field if evaluation fails
+        return True

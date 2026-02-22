@@ -72,6 +72,8 @@ class FieldContext(BaseModel):
     default: Any = None
     source: FieldSourceContext | None = None  # Dynamic data source (e.g. search_select)
     extra: dict[str, Any] = Field(default_factory=dict)  # Extra metadata (e.g. money field config)
+    when_expr: str = ""  # Serialized when: condition from surface element
+    visible: bool = True  # Evaluated at render time against record data
 
 
 class TableContext(BaseModel):

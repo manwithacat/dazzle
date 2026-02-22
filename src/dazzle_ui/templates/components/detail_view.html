@@ -69,6 +69,7 @@
     <div class="card-body">
       <dl class="divide-y divide-base-200">
         {% for field in detail.fields %}
+        {% if field.visible | default(true) %}
         {% set value = detail.item.get(field.name, "") %}
         <div class="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
           <dt class="text-sm font-medium text-base-content/70">{{ field.label }}</dt>
@@ -97,6 +98,7 @@
             {% endif %}
           </dd>
         </div>
+        {% endif %}
         {% endfor %}
       </dl>
     </div>

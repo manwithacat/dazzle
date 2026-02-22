@@ -272,6 +272,14 @@ def create_page_routes(
                         req_detail.item.get("error"),
                     )
 
+                # Evaluate when_expr for conditional field visibility (#363)
+                if req_detail.item and "error" not in req_detail.item:
+                    from dazzle_ui.utils.expression_eval import evaluate_when_expr
+
+                    for _field in req_detail.fields:
+                        if _field.when_expr:
+                            _field.visible = evaluate_when_expr(_field.when_expr, req_detail.item)
+
                 # Substitute {id} in the per-request copy only
                 if req_detail.edit_url:
                     req_detail.edit_url = req_detail.edit_url.replace("{id}", str(path_id))
@@ -340,6 +348,14 @@ def create_page_routes(
                         ctx.review.entity_name,
                         path_id,
                     )
+
+                # Evaluate when_expr for conditional field visibility (#363)
+                if req_review.item and "error" not in req_review.item:
+                    from dazzle_ui.utils.expression_eval import evaluate_when_expr
+
+                    for _field in req_review.fields:
+                        if _field.when_expr:
+                            _field.visible = evaluate_when_expr(_field.when_expr, req_review.item)
 
                 # Substitute {id} in action transition URLs
                 for action in req_review.actions:
