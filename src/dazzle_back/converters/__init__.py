@@ -53,6 +53,7 @@ def convert_appspec_to_backend(appspec: ir.AppSpec) -> BackendSpec:
         endpoints=endpoints,
         channels=channels,
         workspaces=appspec.workspaces,
+        surfaces=appspec.surfaces,
         personas=appspec.personas,
         audit_trail=appspec.audit_trail,
     )

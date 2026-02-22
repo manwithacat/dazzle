@@ -274,6 +274,21 @@ class WorkspaceRouteBuilder:
 
             require_auth = self._enable_auth and not self._enable_test_mode
 
+            # Build entity → list surface lookup for column projection (#357, #359)
+            _entity_list_surfaces: dict[str, Any] = {}
+            for _surf in getattr(spec, "surfaces", []):
+                _eref = getattr(_surf, "entity_ref", None)
+                _mode = str(getattr(_surf, "mode", "")).lower()
+                if _eref and _mode == "list" and _eref not in _entity_list_surfaces:
+                    _entity_list_surfaces[_eref] = _surf
+
+            def _columns_for_entity(entity_spec: Any, entity_name: str) -> list[dict[str, Any]]:
+                """Build columns using list surface projection if available."""
+                _ls = _entity_list_surfaces.get(entity_name)
+                if _ls and entity_spec:
+                    return _build_surface_columns(entity_spec, _ls)
+                return _build_entity_columns(entity_spec)
+
             for workspace in workspaces:
                 ws_ctx = build_workspace_context(workspace, spec)
                 ws_name = workspace.name
@@ -321,7 +336,9 @@ class WorkspaceRouteBuilder:
                                 repositories=repositories,
                                 require_auth=require_auth,
                                 auth_middleware=auth_middleware,
-                                precomputed_columns=_build_entity_columns(_src_entity_spec),
+                                precomputed_columns=_columns_for_entity(
+                                    _src_entity_spec, _src_name
+                                ),
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -370,26 +387,13 @@ class WorkspaceRouteBuilder:
                             break
 
                     _attention_signals: list[Any] = []
-                    _list_surface: Any = None
-                    if spec and hasattr(spec, "surfaces"):
-                        for _surf in spec.surfaces:
-                            if getattr(_surf, "entity_ref", None) == _source:
-                                ux = getattr(_surf, "ux", None)
-                                if ux and getattr(ux, "attention_signals", None):
-                                    _attention_signals = list(ux.attention_signals)
-                                # Find the entity's list surface for column projection (#357)
-                                if (
-                                    getattr(_surf, "mode", None)
-                                    and str(getattr(_surf, "mode", "")).lower() == "list"
-                                    and _list_surface is None
-                                ):
-                                    _list_surface = _surf
+                    for _surf in getattr(spec, "surfaces", []):
+                        if getattr(_surf, "entity_ref", None) == _source:
+                            ux = getattr(_surf, "ux", None)
+                            if ux and getattr(ux, "attention_signals", None):
+                                _attention_signals = list(ux.attention_signals)
 
-                    # Use surface field projection if available, else all entity fields
-                    if _list_surface and _entity_spec:
-                        _columns = _build_surface_columns(_entity_spec, _list_surface)
-                    else:
-                        _columns = _build_entity_columns(_entity_spec)
+                    _columns = _columns_for_entity(_entity_spec, _source)
 
                     _region_ctx = WorkspaceRegionContext(
                         ctx_region=ctx_region,
