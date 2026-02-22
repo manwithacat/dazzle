@@ -589,6 +589,16 @@ async def _list_handler_body(
         result["items"] = filtered_items
         result["total"] = len(filtered_items)
 
+    # Browser navigation: redirect to UI list page (#356)
+    if _wants_html(request) and not _is_htmx_request(request):
+        from starlette.responses import RedirectResponse
+
+        _slug = entity_name.lower().replace("_", "-")
+        redirect_url = f"/app/{_slug}"
+        if request.query_params:
+            redirect_url += f"?{request.url.query}"
+        return RedirectResponse(url=redirect_url, status_code=302)
+
     # HTMX content negotiation: return HTML fragment for HX-Request
     if _is_htmx_request(request):
         try:
