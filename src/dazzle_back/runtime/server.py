@@ -1264,15 +1264,15 @@ class DazzleBackendApp:
             from dazzle_back.runtime.task_routes import set_process_manager
 
             # Create the ProcessAdapter - use custom class if configured
-            # Auto-detect Celery when REDIS_URL is set and no explicit class
+            # Auto-detect EventBus when REDIS_URL is set and no explicit class
             adapter_cls: type | None = self._process_adapter_class
             if adapter_cls is None:
                 redis_url = os.environ.get("REDIS_URL")
                 if redis_url:
                     try:
-                        from dazzle.core.process import CeleryProcessAdapter
+                        from dazzle.core.process import EventBusProcessAdapter
 
-                        self._process_adapter = CeleryProcessAdapter(redis_url=redis_url)
+                        self._process_adapter = EventBusProcessAdapter(redis_url=redis_url)
                     except ImportError:
                         self._process_adapter = LiteProcessAdapter(database_url=self._database_url)
                 else:

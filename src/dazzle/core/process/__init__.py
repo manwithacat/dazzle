@@ -6,7 +6,8 @@ ProcessSpec and ScheduleSpec definitions from the DSL.
 
 Runtime Modes:
 - LiteProcessAdapter: In-process execution using SQLite/asyncio (default)
-- CeleryProcessAdapter: Production execution using Celery/Redis (Heroku)
+- EventBusProcessAdapter: Production execution using native event bus + Redis
+- CeleryProcessAdapter: Legacy execution using Celery/Redis (deprecated)
 - TemporalAdapter: Production execution using Temporal
 
 Factory:
@@ -62,6 +63,14 @@ __all__ = [
     "DrainWatcherConfig",
     "generate_version_id",
 ]
+
+# EventBus adapter (requires: redis)
+try:
+    from .eventbus_adapter import EventBusProcessAdapter
+
+    __all__.append("EventBusProcessAdapter")
+except ImportError:
+    pass  # Redis not installed
 
 # Optional Celery adapter (requires: pip install dazzle[celery] or celery + redis)
 try:

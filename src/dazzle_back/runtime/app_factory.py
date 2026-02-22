@@ -301,10 +301,10 @@ def create_app_factory(
 
     Args:
         process_adapter_class: Custom ProcessAdapter class (default: LiteProcessAdapter).
-            Use CeleryProcessAdapter for Heroku/Redis deployments.
             Can also be set via DAZZLE_PROCESS_ADAPTER env var:
             - "lite" or "sqlite" -> LiteProcessAdapter (default)
-            - "celery" or "redis" -> CeleryProcessAdapter
+            - "eventbus" -> EventBusProcessAdapter (recommended with REDIS_URL)
+            - "celery" or "redis" -> CeleryProcessAdapter (legacy)
 
     Environment Variables:
         DAZZLE_PROJECT_ROOT: Project root directory (default: current directory)
@@ -415,7 +415,15 @@ def create_app_factory(
     resolved_adapter_class = process_adapter_class
     if resolved_adapter_class is None:
         adapter_env = os.environ.get("DAZZLE_PROCESS_ADAPTER", "").lower()
-        if adapter_env in ("celery", "redis"):
+        if adapter_env == "eventbus":
+            try:
+                from dazzle.core.process import EventBusProcessAdapter
+
+                resolved_adapter_class = EventBusProcessAdapter
+                logger.info("Using EventBusProcessAdapter (DAZZLE_PROCESS_ADAPTER=eventbus)")
+            except ImportError:
+                logger.warning("EventBusProcessAdapter requested but not available (install redis)")
+        elif adapter_env in ("celery", "redis"):
             try:
                 from dazzle.core.process import CeleryProcessAdapter
 
@@ -433,7 +441,7 @@ def create_app_factory(
                 logger.info("Using TemporalAdapter (DAZZLE_PROCESS_ADAPTER=temporal)")
             except ImportError:
                 logger.warning("TemporalAdapter requested but not available (install temporalio)")
-        # Default: None means LiteProcessAdapter will be used
+        # Default: None means auto-detect (EventBus if REDIS_URL, else Lite)
 
     # Compute view-based list projections from DSL surfaces
     entity_list_projections = build_entity_list_projections(
@@ -504,17 +512,13 @@ def create_app_factory(
     builder = DazzleBackendApp(backend_spec, config=config, appspec=appspec)
     app = builder.build()
 
-    # Sync DSL schedules to Celery Beat if using CeleryProcessAdapter
-    if builder._process_adapter is not None:
-        try:
-            from dazzle.core.process.celery_adapter import CeleryProcessAdapter as _CPA
-
-            if isinstance(builder._process_adapter, _CPA) and appspec.schedules:
-                count = builder._process_adapter.sync_schedules_from_appspec(appspec)
-                if count:
-                    logger.info(f"Synced {count} DSL schedules to Celery Beat")
-        except ImportError:
-            pass
+    # Sync DSL schedules to process adapter (EventBus scheduler or Celery Beat)
+    if builder._process_adapter is not None and appspec.schedules:
+        if hasattr(builder._process_adapter, "sync_schedules_from_appspec"):
+            count = builder._process_adapter.sync_schedules_from_appspec(appspec)
+            if count:
+                adapter_name = type(builder._process_adapter).__name__
+                logger.info(f"Synced {count} DSL schedule(s) to {adapter_name}")
 
     # Add site page routes if sitespec exists (landing pages, /site.js)
     if sitespec_data:

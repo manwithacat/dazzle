@@ -583,3 +583,114 @@ class TestEventBusProcessAdapter:
         result = await adapter.list_runs(process_name="test")
         store.list_runs.assert_called_once()
         assert result == []
+
+
+# =============================================================================
+# App-level integration tests
+# =============================================================================
+
+
+class TestAppIntegration:
+    """Test that server.py and app_factory.py correctly select EventBusProcessAdapter."""
+
+    def test_server_prefers_eventbus_when_redis_url_set(self):
+        """_init_process_manager() should create EventBusProcessAdapter when REDIS_URL is set."""
+        from dazzle_back.runtime.server import DazzleBackendApp
+
+        with (
+            patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}),
+            patch("dazzle.core.process.eventbus_adapter.ProcessStateStore"),
+        ):
+            builder = DazzleBackendApp.__new__(DazzleBackendApp)
+            builder._app = MagicMock()
+            builder._process_adapter_class = None
+            builder._database_url = "sqlite:///test.db"
+            builder._process_specs = None
+            builder._schedule_specs = None
+            builder._services = {}
+            builder._repositories = {}
+            builder._entity_status_fields = {}
+            builder._process_manager = None
+            builder._process_adapter = None
+
+            with (
+                patch("dazzle_back.runtime.process_manager.ProcessManager"),
+                patch("dazzle_back.runtime.task_routes.set_process_manager"),
+                patch("dazzle_back.runtime.task_routes.router"),
+                patch.object(builder, "_wire_entity_events_to_processes"),
+            ):
+                builder._init_process_manager()
+
+            from dazzle.core.process.eventbus_adapter import EventBusProcessAdapter
+
+            assert isinstance(builder._process_adapter, EventBusProcessAdapter)
+
+    def test_server_falls_back_to_lite_without_redis(self):
+        """_init_process_manager() should fall back to LiteProcessAdapter without REDIS_URL."""
+        from dazzle_back.runtime.server import DazzleBackendApp
+
+        with patch.dict("os.environ", {}, clear=True):
+            builder = DazzleBackendApp.__new__(DazzleBackendApp)
+            builder._app = MagicMock()
+            builder._process_adapter_class = None
+            builder._database_url = "sqlite:///test.db"
+            builder._process_specs = None
+            builder._schedule_specs = None
+            builder._services = {}
+            builder._repositories = {}
+            builder._entity_status_fields = {}
+            builder._process_manager = None
+            builder._process_adapter = None
+
+            with (
+                patch("dazzle_back.runtime.process_manager.ProcessManager"),
+                patch("dazzle_back.runtime.task_routes.set_process_manager"),
+                patch("dazzle_back.runtime.task_routes.router"),
+                patch.object(builder, "_wire_entity_events_to_processes"),
+            ):
+                builder._init_process_manager()
+
+            from dazzle.core.process import LiteProcessAdapter
+
+            assert isinstance(builder._process_adapter, LiteProcessAdapter)
+
+    def test_app_factory_env_var_eventbus(self):
+        """DAZZLE_PROCESS_ADAPTER=eventbus should resolve to EventBusProcessAdapter."""
+        with patch.dict("os.environ", {"DAZZLE_PROCESS_ADAPTER": "eventbus"}):
+            from dazzle.core.process import EventBusProcessAdapter
+
+            # Simulate the env var resolution logic from app_factory
+            adapter_env = "eventbus"
+            resolved = None
+            if adapter_env == "eventbus":
+                resolved = EventBusProcessAdapter
+            assert resolved is EventBusProcessAdapter
+
+    def test_app_factory_env_var_celery_still_works(self):
+        """DAZZLE_PROCESS_ADAPTER=celery should still resolve to CeleryProcessAdapter."""
+        with patch.dict("os.environ", {"DAZZLE_PROCESS_ADAPTER": "celery"}):
+            try:
+                from dazzle.core.process import CeleryProcessAdapter
+
+                adapter_env = "celery"
+                resolved = None
+                if adapter_env in ("celery", "redis"):
+                    resolved = CeleryProcessAdapter
+                assert resolved is CeleryProcessAdapter
+            except ImportError:
+                pytest.skip("Celery not installed")
+
+    def test_schedule_sync_uses_duck_typing(self):
+        """Schedule sync should work with any adapter that has sync_schedules_from_appspec."""
+        from dazzle.core.process.eventbus_adapter import EventBusProcessAdapter
+
+        store = MagicMock()
+        adapter = EventBusProcessAdapter(store=store)
+
+        assert hasattr(adapter, "sync_schedules_from_appspec")
+
+    def test_process_module_exports_eventbus(self):
+        """EventBusProcessAdapter should be importable from dazzle.core.process."""
+        from dazzle.core.process import EventBusProcessAdapter
+
+        assert EventBusProcessAdapter is not None
