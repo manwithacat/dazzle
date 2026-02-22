@@ -361,12 +361,11 @@ class TestUIConversion:
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 @pytest.mark.skipif(not os.environ.get("DATABASE_URL"), reason="DATABASE_URL not set")
 class TestFastAPIRuntime:
-    """Test BackendSpec to FastAPI runtime generation."""
+    """Test AppSpec to FastAPI runtime generation."""
 
     def test_create_app(self, simple_appspec: ir.AppSpec) -> None:
-        """Test creating FastAPI app from BackendSpec."""
-        backend = convert_appspec_to_backend(simple_appspec)
-        app = create_app(backend, database_url=os.environ["DATABASE_URL"])
+        """Test creating FastAPI app from AppSpec."""
+        app = create_app(simple_appspec, database_url=os.environ["DATABASE_URL"])
 
         from fastapi import FastAPI
 
@@ -375,8 +374,7 @@ class TestFastAPIRuntime:
 
     def test_app_routes(self, simple_appspec: ir.AppSpec) -> None:
         """Test that routes are registered."""
-        backend = convert_appspec_to_backend(simple_appspec)
-        app = create_app(backend, database_url=os.environ["DATABASE_URL"])
+        app = create_app(simple_appspec, database_url=os.environ["DATABASE_URL"])
 
         routes = [r.path for r in app.routes if hasattr(r, "path")]
         assert len(routes) > 0
