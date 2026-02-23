@@ -438,19 +438,30 @@ def create_page_routes(
                         api_params[key] = val
                 api_params.setdefault("page", "1")
 
-                query_string = urllib.parse.urlencode(api_params)
-                fetch_url = f"{effective_backend_url}{ctx.table.api_endpoint}?{query_string}"
+                # search_first: skip initial fetch until user provides search/filter
+                _has_search = bool(api_params.get("search"))
+                _has_filter = any(k.startswith("filter[") for k in api_params)
+                _skip_fetch = ctx.table.search_first and not _has_search and not _has_filter
 
-                try:
-                    data = await _fetch_url(fetch_url, _cookies)
-                    items = data.get("items", [])
-                    if items and isinstance(items[0], dict):
-                        ctx.table.rows = items
-                    ctx.table.total = data.get("total", len(items))
-                except Exception:
-                    logger.warning("Failed to fetch list data from %s", fetch_url, exc_info=True)
+                if _skip_fetch:
                     ctx.table.rows = []
                     ctx.table.total = 0
+                else:
+                    query_string = urllib.parse.urlencode(api_params)
+                    fetch_url = f"{effective_backend_url}{ctx.table.api_endpoint}?{query_string}"
+
+                    try:
+                        data = await _fetch_url(fetch_url, _cookies)
+                        items = data.get("items", [])
+                        if items and isinstance(items[0], dict):
+                            ctx.table.rows = items
+                        ctx.table.total = data.get("total", len(items))
+                    except Exception:
+                        logger.warning(
+                            "Failed to fetch list data from %s", fetch_url, exc_info=True
+                        )
+                        ctx.table.rows = []
+                        ctx.table.total = 0
 
                 # Update table context with current sort/filter state from request
                 ctx.table.sort_field = request.query_params.get(

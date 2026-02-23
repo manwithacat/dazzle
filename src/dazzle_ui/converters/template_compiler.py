@@ -560,7 +560,12 @@ def _compile_list_surface(
     default_sort_field = ux.sort[0].field if ux and ux.sort else ""
     default_sort_dir = ux.sort[0].direction if ux and ux.sort else "asc"
     search_fields = list(ux.search) if ux and ux.search else []
-    empty_message = ux.empty_message if ux and ux.empty_message else "No items found."
+    search_first = bool(ux and ux.search_first)
+    empty_message = (
+        ux.empty_message
+        if ux and ux.empty_message
+        else ("Use search or filters to find results." if search_first else "No items found.")
+    )
     table_id = f"dt-{surface.name}"
     return PageContext(
         page_title=surface.title or f"{entity_name} List",
@@ -579,6 +584,7 @@ def _compile_list_surface(
             sort_dir=default_sort_dir,
             search_fields=search_fields,
             empty_message=empty_message,
+            search_first=search_first,
             table_id=table_id,
         ),
     )

@@ -134,6 +134,7 @@ class UXSpec(BaseModel):
     filter: list[str] = Field(default_factory=list)
     search: list[str] = Field(default_factory=list)
     empty_message: str | None = None
+    search_first: bool = False
     attention_signals: list[AttentionSignal] = Field(default_factory=list)
     persona_variants: list[PersonaVariant] = Field(default_factory=list)
 

@@ -99,6 +99,7 @@ class TableContext(BaseModel):
     default_sort_dir: str = "asc"
     search_fields: list[str] = Field(default_factory=list)
     empty_message: str = "No items found."
+    search_first: bool = False
     filter_values: dict[str, str] = Field(default_factory=dict)
     table_id: str = ""
     pagination_mode: str = "pages"  # "pages" (default) or "infinite"

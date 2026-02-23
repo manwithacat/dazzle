@@ -120,7 +120,7 @@
       </thead>
       <tbody id="{{ table.table_id or 'dt-table' }}-body"
              hx-get="{{ table.api_endpoint }}{% if table.sort_field %}?sort={{ table.sort_field }}&dir={{ table.sort_dir }}{% endif %}"
-             hx-trigger="load"
+             {% if not table.search_first %}hx-trigger="load"{% endif %}
              hx-swap="morph:innerHTML"
              hx-headers='{"Accept": "text/html"}'
              hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">

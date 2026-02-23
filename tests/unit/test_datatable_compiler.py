@@ -239,6 +239,49 @@ class TestTableContextFromUX:
         assert ctx.table is not None
         assert ctx.table.table_id == "dt-task_list"
 
+    def test_search_first_sets_flag(self) -> None:
+        ux = ir.UXSpec(search_first=True, search=["title"])
+        surface = _list_surface(ux=ux)
+        entity = _task_entity()
+
+        ctx = compile_surface_to_context(surface, entity)
+
+        assert ctx.table is not None
+        assert ctx.table.search_first is True
+
+    def test_search_first_default_empty_message(self) -> None:
+        ux = ir.UXSpec(search_first=True, search=["title"])
+        surface = _list_surface(ux=ux)
+        entity = _task_entity()
+
+        ctx = compile_surface_to_context(surface, entity)
+
+        assert ctx.table is not None
+        assert (
+            "search" in ctx.table.empty_message.lower()
+            or "filter" in ctx.table.empty_message.lower()
+        )
+
+    def test_search_first_custom_empty_message(self) -> None:
+        ux = ir.UXSpec(search_first=True, search=["title"], empty_message="Search for employees.")
+        surface = _list_surface(ux=ux)
+        entity = _task_entity()
+
+        ctx = compile_surface_to_context(surface, entity)
+
+        assert ctx.table is not None
+        assert ctx.table.empty_message == "Search for employees."
+
+    def test_search_first_false_by_default(self) -> None:
+        ux = ir.UXSpec(search=["title"])
+        surface = _list_surface(ux=ux)
+        entity = _task_entity()
+
+        ctx = compile_surface_to_context(surface, entity)
+
+        assert ctx.table is not None
+        assert ctx.table.search_first is False
+
 
 # ---------------------------------------------------------------------------
 # Tests — backward compatibility
@@ -351,3 +394,97 @@ class TestSensitiveColumn:
         cols_by_key = {c.key: c for c in ctx.table.columns}
         assert cols_by_key["name"].filterable is True
         assert cols_by_key["bank_account"].filterable is False
+
+
+# ---------------------------------------------------------------------------
+# Tests — DSL parse round-trip for search_first
+# ---------------------------------------------------------------------------
+
+
+class TestSearchFirstParse:
+    """Verify search_first: true/false is parsed from DSL."""
+
+    def test_parse_search_first_true(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Employee "Employee":
+  id: uuid pk
+  name: str(200)
+  job_title: str(200)
+
+surface employee_list "Employees":
+  uses entity Employee
+  mode: list
+  section main:
+    field name "Name"
+    field job_title "Title"
+  ux:
+    search_first: true
+    search: name, job_title
+    empty: "Search for employees."
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.ux is not None
+        assert surface.ux.search_first is True
+        assert surface.ux.search == ["name", "job_title"]
+        assert surface.ux.empty_message == "Search for employees."
+
+    def test_parse_search_first_false(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+  ux:
+    search_first: false
+    search: title
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.ux is not None
+        assert surface.ux.search_first is False
+
+    def test_parse_no_search_first_defaults_false(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+
+        dsl = """\
+module test_app
+app test "Test"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200)
+
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+  ux:
+    search: title
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.ux is not None
+        assert surface.ux.search_first is False

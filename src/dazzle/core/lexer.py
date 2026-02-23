@@ -127,6 +127,7 @@ class TokenType(Enum):
     SHOW_AGGREGATE = "show_aggregate"
     ACTION_PRIMARY = "action_primary"
     READ_ONLY = "read_only"
+    SEARCH_FIRST = "search_first"
     ALL = "all"
     WORKSPACE = "workspace"
     SOURCE = "source"

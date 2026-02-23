@@ -60,6 +60,7 @@ class UXParserMixin:
         filter_fields: list[str] = []
         search_fields: list[str] = []
         empty_message = None
+        search_first = False
         attention_signals: list[ir.AttentionSignal] = []
         persona_variants: list[ir.PersonaVariant] = []
 
@@ -110,6 +111,26 @@ class UXParserMixin:
                 empty_message = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # search_first: true|false
+            elif self.match(TokenType.SEARCH_FIRST):
+                self.advance()
+                self.expect(TokenType.COLON)
+                if self.match(TokenType.TRUE):
+                    self.advance()
+                    search_first = True
+                elif self.match(TokenType.FALSE):
+                    self.advance()
+                    search_first = False
+                else:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"Expected true or false, got {token.type.value}",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.skip_newlines()
+
             # attention critical/warning/notice/info:
             elif self.match(TokenType.ATTENTION):
                 signal = self.parse_attention_signal()
@@ -132,6 +153,7 @@ class UXParserMixin:
             filter=filter_fields,
             search=search_fields,
             empty_message=empty_message,
+            search_first=search_first,
             attention_signals=attention_signals,
             persona_variants=persona_variants,
         )
