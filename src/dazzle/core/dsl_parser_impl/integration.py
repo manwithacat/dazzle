@@ -3,6 +3,7 @@ Integration parsing for DAZZLE DSL.
 
 Handles integration declarations including actions, syncs, and mappings.
 v0.30.0: Added declarative mapping blocks with triggers, HTTP requests, and error strategies.
+v0.33.1: Added transform blocks, function-call expressions, source/target directives.
 """
 
 from typing import TYPE_CHECKING, Any
@@ -218,33 +219,43 @@ class IntegrationParserMixin:
     def _parse_mapping_block(self) -> ir.IntegrationMapping:
         """Parse a mapping block.
 
-        Syntax:
+        Syntax (original — with ``on Entity``):
             mapping fetch_company on Company:
               trigger: on_create when company_number != null
-              trigger: manual "Look up company"
               request: GET "/company/{self.company_number}"
-              cache: "24h"
-              map_request:
-                field <- source
               map_response:
                 field <- source
               on_error: ignore
+
+        Syntax (v0.33.1 — with source/target/transform):
+            mapping financial_snapshot:
+              source: Reports.ProfitAndLoss
+              target: XeroIntegration
+              transform:
+                last_revenue: money(source.base_currency, source.Revenue)
+              on_conflict: xero_invoice_id
         """
         self.expect(TokenType.MAPPING)
-        mapping_name = self.expect(TokenType.IDENTIFIER).value
+        mapping_name = self.expect_identifier_or_keyword().value
 
-        self.expect(TokenType.ON)
-        entity_ref = self.expect(TokenType.IDENTIFIER).value
+        # Optional ``on Entity`` — if absent, entity_ref set via ``target:``
+        entity_ref = ""
+        if self.match(TokenType.ON):
+            self.advance()
+            entity_ref = self.expect_identifier_or_keyword().value
 
         self.expect(TokenType.COLON)
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
+        source_ref = ""
         triggers: list[ir.MappingTriggerSpec] = []
         request: ir.HttpRequestSpec | None = None
         request_mapping: list[ir.MappingRule] = []
         response_mapping: list[ir.MappingRule] = []
+        transform: list[ir.MappingRule] = []
         on_error: ir.ErrorStrategy | None = None
+        on_conflict = ""
         cache_ttl: int | None = None
 
         while not self.match(TokenType.DEDENT):
@@ -260,6 +271,20 @@ class IntegrationParserMixin:
                 self.expect(TokenType.COLON)
                 trigger = self._parse_mapping_trigger()
                 triggers.append(trigger)
+                self.skip_newlines()
+
+            # source: DottedName (v0.33.1)
+            elif self.match(TokenType.SOURCE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                source_ref = self._parse_dotted_name()
+                self.skip_newlines()
+
+            # target: EntityName (v0.33.1)
+            elif tok.type == TokenType.IDENTIFIER and tok.value == "target":
+                self.advance()
+                self.expect(TokenType.COLON)
+                entity_ref = self.expect(TokenType.IDENTIFIER).value
                 self.skip_newlines()
 
             # request: GET "/path/{self.field}"
@@ -297,6 +322,22 @@ class IntegrationParserMixin:
                 response_mapping = self._parse_larrow_mapping_rules()
                 self.expect(TokenType.DEDENT)
 
+            # transform: (indented block of field: expr — v0.33.1)
+            elif tok.type == TokenType.IDENTIFIER and tok.value == "transform":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                transform = self._parse_colon_mapping_rules()
+                self.expect(TokenType.DEDENT)
+
+            # on_conflict: field_name (v0.33.1)
+            elif tok.type == TokenType.IDENTIFIER and tok.value == "on_conflict":
+                self.advance()
+                self.expect(TokenType.COLON)
+                on_conflict = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             # on_error: ignore | set field = "value", log_warning
             elif tok.type == TokenType.IDENTIFIER and tok.value == "on_error":
                 self.advance()
@@ -312,11 +353,14 @@ class IntegrationParserMixin:
         return ir.IntegrationMapping(
             name=mapping_name,
             entity_ref=entity_ref,
+            source_ref=source_ref,
             triggers=triggers,
             request=request,
             request_mapping=request_mapping,
             response_mapping=response_mapping,
+            transform=transform,
             on_error=on_error,
+            on_conflict=on_conflict,
             cache_ttl=cache_ttl,
         )
 
@@ -450,6 +494,38 @@ class IntegrationParserMixin:
             self.skip_newlines()
 
         return rules
+
+    def _parse_colon_mapping_rules(self) -> list[ir.MappingRule]:
+        """Parse mapping rules with colon syntax (v0.33.1 transform blocks).
+
+        Syntax:
+            target_field: source.path
+            target_field: money(source.currency, source.amount)
+            target_field: "literal"
+        """
+        rules: list[ir.MappingRule] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            target = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COLON)
+            source = self._parse_expression()
+
+            rules.append(ir.MappingRule(target_field=target, source=source))
+            self.skip_newlines()
+
+        return rules
+
+    def _parse_dotted_name(self) -> str:
+        """Parse a dotted identifier path (e.g., Reports.ProfitAndLoss)."""
+        parts = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.DOT):
+            self.advance()
+            parts.append(self.expect_identifier_or_keyword().value)
+        return ".".join(parts)
 
     def _parse_error_strategy(self) -> ir.ErrorStrategy:
         """Parse error strategy.
@@ -716,42 +792,71 @@ class IntegrationParserMixin:
         return rules
 
     def _parse_expression(self) -> ir.Expression:
-        """Parse an expression (path or literal)."""
+        """Parse an expression (path, literal, or function call).
+
+        Function call syntax (v0.33.1):
+            money(source.CurrencyCode, source.Amount)
+            concat(source.first_name, " ", source.last_name)
+        """
         token = self.current_token()
-        if token.type == TokenType.IDENTIFIER or token.value in [
-            "entity",
-            "form",
-            "foreign",
-            "service",
-            "response",
-            "self",
-        ]:
-            parts = [self.advance().value]
 
-            while self.match(TokenType.DOT):
-                self.advance()
-                parts.append(self.expect_identifier_or_keyword().value)
-
-            return ir.Expression(path=".".join(parts))
-
-        elif self.match(TokenType.STRING):
+        # Literals first — check before identifiers since true/false are
+        # in KEYWORD_AS_IDENTIFIER_TYPES but should be parsed as literals here
+        if self.match(TokenType.STRING):
             return ir.Expression(literal=self.advance().value)
 
-        elif self.match(TokenType.NUMBER):
+        if self.match(TokenType.NUMBER):
             value = self.advance().value
             try:
                 return ir.Expression(literal=int(value))
             except ValueError:
                 return ir.Expression(literal=float(value))
 
-        elif self.match(TokenType.TRUE) or self.match(TokenType.FALSE):
+        if self.match(TokenType.TRUE) or self.match(TokenType.FALSE):
             return ir.Expression(literal=self.advance().value == "true")
 
-        else:
-            token = self.current_token()
-            raise make_parse_error(
-                f"Expected expression, got {token.type.value}",
-                self.file,
-                token.line,
-                token.column,
-            )
+        # Identifiers and keyword tokens that serve as path roots or function
+        # names in mapping expressions.  Rather than maintaining an exhaustive
+        # allow-list, we accept any token that is NOT a structural delimiter.
+        _structural = {
+            TokenType.COLON,
+            TokenType.COMMA,
+            TokenType.LPAREN,
+            TokenType.RPAREN,
+            TokenType.LARROW,
+            TokenType.ARROW,
+            TokenType.NEWLINE,
+            TokenType.INDENT,
+            TokenType.DEDENT,
+            TokenType.EOF,
+            TokenType.EQUALS,
+        }
+        if token.type not in _structural:
+            first = self.advance().value
+
+            # Function call: identifier followed by (
+            if self.match(TokenType.LPAREN):
+                self.advance()  # consume (
+                args: list[ir.Expression] = []
+                while not self.match(TokenType.RPAREN):
+                    if args:
+                        self.expect(TokenType.COMMA)
+                    args.append(self._parse_expression())
+                self.advance()  # consume )
+                return ir.Expression(func_name=first, func_args=args)
+
+            # Dotted path
+            parts = [first]
+            while self.match(TokenType.DOT):
+                self.advance()
+                parts.append(self.expect_identifier_or_keyword().value)
+
+            return ir.Expression(path=".".join(parts))
+
+        token = self.current_token()
+        raise make_parse_error(
+            f"Expected expression, got {token.type.value}",
+            self.file,
+            token.line,
+            token.column,
+        )

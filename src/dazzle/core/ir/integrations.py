@@ -25,15 +25,19 @@ class Expression(BaseModel):
     """
     Simple expression for mappings.
 
-    Supports paths (form.vrn, entity.id) and literals.
+    Supports paths (form.vrn, entity.id), literals, and function calls.
 
     Attributes:
         path: Dotted path (e.g., "form.vrn", "entity.client_id")
         literal: Literal value (string, number, boolean)
+        func_name: Function name for transform calls (e.g., "money")
+        func_args: Arguments to the function call
     """
 
     path: str | None = None
     literal: str | int | float | bool | None = None
+    func_name: str | None = None
+    func_args: list[Expression] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -42,8 +46,8 @@ class Expression(BaseModel):
     def validate_one_set(
         cls, v: str | int | float | bool | None, info: Any
     ) -> str | int | float | bool | None:
-        """Ensure exactly one of path or literal is set."""
-        # This is simplified; full validation would check both fields
+        """Ensure exactly one of path, literal, or func_name is set."""
+        # This is simplified; full validation would check all three fields
         return v
 
 
@@ -247,24 +251,33 @@ class IntegrationMapping(BaseModel):
     """Declarative mapping within an integration (v0.30.0).
 
     Maps entity lifecycle events to HTTP requests and response field mappings.
+    v0.33.1: Added source_ref, on_conflict, and transform for data
+    transformation pipelines (e.g., Xero sync with currency tagging).
 
     Attributes:
         name: Mapping identifier
-        entity_ref: Entity this mapping operates on
+        entity_ref: Entity this mapping operates on (set via ``on Entity``
+            header or ``target:`` directive)
+        source_ref: External data source (API resource / foreign model path)
         triggers: List of triggers that activate this mapping
         request: HTTP request specification
         request_mapping: Fields mapped into the request body (for POST/PUT)
         response_mapping: Fields mapped from the response to the entity
+        transform: Transform rules with function-call expressions (v0.33.1)
         on_error: Error handling strategy
+        on_conflict: Field name for upsert/dedup matching (v0.33.1)
     """
 
     name: str
-    entity_ref: str
+    entity_ref: str = ""
+    source_ref: str = ""
     triggers: list[MappingTriggerSpec] = Field(default_factory=list)
     request: HttpRequestSpec | None = None
     request_mapping: list[MappingRule] = Field(default_factory=list)
     response_mapping: list[MappingRule] = Field(default_factory=list)
+    transform: list[MappingRule] = Field(default_factory=list)
     on_error: ErrorStrategy | None = None
+    on_conflict: str = ""
     cache_ttl: int | None = None  # seconds; None = use executor default
 
     model_config = ConfigDict(frozen=True)
@@ -275,6 +288,8 @@ def _rebuild_integration_types() -> None:
     from .expressions import Expr
 
     MappingTriggerSpec.model_rebuild(_types_namespace={"Expr": Expr})
+    # Expression self-references via func_args
+    Expression.model_rebuild()
 
 
 _rebuild_integration_types()

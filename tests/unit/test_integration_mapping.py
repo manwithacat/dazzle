@@ -734,3 +734,283 @@ integration hmrc_mtd:
         assert len(mapping.response_mapping) == 1
         assert mapping.on_error is not None
         assert ErrorAction.REVERT_TRANSITION in mapping.on_error.actions
+
+
+class TestTransformBlock:
+    """Tests for transform block parsing (v0.33.1 — #383)."""
+
+    def test_simple_transform_with_paths(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Invoice "Invoice":
+  id: uuid pk
+  invoice_number: str(50) required
+  amount_due: decimal(10,2)
+
+integration xero:
+  mapping invoices:
+    source: Invoices
+    target: Invoice
+    transform:
+      invoice_number: source.InvoiceNumber
+      amount_due: source.AmountDue
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.name == "invoices"
+        assert mapping.entity_ref == "Invoice"
+        assert mapping.source_ref == "Invoices"
+        assert len(mapping.transform) == 2
+        assert mapping.transform[0].target_field == "invoice_number"
+        assert mapping.transform[0].source.path == "source.InvoiceNumber"
+        assert mapping.transform[1].target_field == "amount_due"
+        assert mapping.transform[1].source.path == "source.AmountDue"
+
+    def test_transform_with_function_calls(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity XeroIntegration "Xero Integration":
+  id: uuid pk
+  last_revenue: decimal(10,2)
+  last_expenses: decimal(10,2)
+
+integration xero:
+  mapping financial_snapshot:
+    source: Reports.ProfitAndLoss
+    target: XeroIntegration
+    transform:
+      last_revenue: money(source.organisation.base_currency, source.Revenue)
+      last_expenses: money(source.organisation.base_currency, source.Expenses)
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.source_ref == "Reports.ProfitAndLoss"
+        assert mapping.entity_ref == "XeroIntegration"
+        assert len(mapping.transform) == 2
+
+        # First transform rule: money(source.organisation.base_currency, source.Revenue)
+        rule = mapping.transform[0]
+        assert rule.target_field == "last_revenue"
+        assert rule.source.func_name == "money"
+        assert len(rule.source.func_args) == 2
+        assert rule.source.func_args[0].path == "source.organisation.base_currency"
+        assert rule.source.func_args[1].path == "source.Revenue"
+
+    def test_transform_with_literal_args(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  full_name: str(200)
+
+integration api:
+  mapping import_users:
+    source: Users
+    target: Record
+    transform:
+      full_name: concat(source.first_name, " ", source.last_name)
+"""
+        fragment = _parse(dsl)
+        rule = fragment.integrations[0].mappings[0].transform[0]
+        assert rule.source.func_name == "concat"
+        assert len(rule.source.func_args) == 3
+        assert rule.source.func_args[0].path == "source.first_name"
+        assert rule.source.func_args[1].literal == " "
+        assert rule.source.func_args[2].path == "source.last_name"
+
+    def test_on_conflict_field(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Invoice "Invoice":
+  id: uuid pk
+  xero_invoice_id: str(100) required
+  amount_due: decimal(10,2)
+
+integration xero:
+  mapping invoices:
+    source: Invoices
+    target: Invoice
+    transform:
+      amount_due: source.AmountDue
+    on_conflict: xero_invoice_id
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.on_conflict == "xero_invoice_id"
+
+    def test_transform_with_on_entity_syntax(self) -> None:
+        """Transform blocks also work with the ``mapping name on Entity:`` syntax."""
+        dsl = """
+module test
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+  revenue: decimal(10,2)
+
+integration api:
+  mapping sync_data on Company:
+    trigger: on_create
+    transform:
+      revenue: money("GBP", source.raw_revenue)
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        assert mapping.entity_ref == "Company"
+        assert len(mapping.triggers) == 1
+        assert len(mapping.transform) == 1
+        rule = mapping.transform[0]
+        assert rule.source.func_name == "money"
+        assert rule.source.func_args[0].literal == "GBP"
+        assert rule.source.func_args[1].path == "source.raw_revenue"
+
+    def test_function_call_in_larrow_mapping(self) -> None:
+        """Function calls also work in <- mapping rules."""
+        dsl = """
+module test
+app test "Test"
+
+entity Company "Company":
+  id: uuid pk
+  name: str(200) required
+  revenue: decimal(10,2)
+
+integration api:
+  mapping sync_data on Company:
+    request: GET "/companies"
+    map_response:
+      revenue <- money("GBP", response.revenue_amount)
+"""
+        fragment = _parse(dsl)
+        mapping = fragment.integrations[0].mappings[0]
+        rule = mapping.response_mapping[0]
+        assert rule.source.func_name == "money"
+        assert rule.source.func_args[0].literal == "GBP"
+        assert rule.source.func_args[1].path == "response.revenue_amount"
+
+    def test_full_xero_integration(self) -> None:
+        """Full Xero integration as described in issue #383."""
+        dsl = """
+module test
+app test "Test"
+
+entity XeroIntegration "Xero Integration":
+  id: uuid pk
+  last_revenue: decimal(10,2)
+  last_expenses: decimal(10,2)
+  last_bank_balance: decimal(10,2)
+
+entity SubscriptionInvoice "Subscription Invoice":
+  id: uuid pk
+  xero_invoice_id: str(100) required
+  amount_due: decimal(10,2)
+  amount_paid: decimal(10,2)
+  xero_invoice_number: str(50)
+
+integration xero:
+  base_url: "https://api.xero.com/api.xro/2.0"
+  auth: oauth2 from env("XERO_CLIENT_ID"), env("XERO_CLIENT_SECRET")
+
+  mapping financial_snapshot:
+    source: Reports.ProfitAndLoss
+    target: XeroIntegration
+    transform:
+      last_revenue: money(source.organisation.base_currency, source.Revenue)
+      last_expenses: money(source.organisation.base_currency, source.Expenses)
+      last_bank_balance: money(source.organisation.base_currency, source.BankBalance)
+
+  mapping invoices:
+    source: Invoices
+    target: SubscriptionInvoice
+    transform:
+      amount_due: money(source.CurrencyCode, source.AmountDue)
+      amount_paid: money(source.CurrencyCode, source.AmountPaid)
+      xero_invoice_number: source.InvoiceNumber
+    on_conflict: xero_invoice_id
+"""
+        fragment = _parse(dsl)
+        integration = fragment.integrations[0]
+        assert integration.name == "xero"
+        assert integration.base_url == "https://api.xero.com/api.xro/2.0"
+        assert integration.auth.auth_type == AuthType.OAUTH2
+        assert len(integration.mappings) == 2
+
+        # financial_snapshot
+        m1 = integration.mappings[0]
+        assert m1.name == "financial_snapshot"
+        assert m1.source_ref == "Reports.ProfitAndLoss"
+        assert m1.entity_ref == "XeroIntegration"
+        assert len(m1.transform) == 3
+        assert m1.transform[0].source.func_name == "money"
+        assert m1.on_conflict == ""
+
+        # invoices
+        m2 = integration.mappings[1]
+        assert m2.name == "invoices"
+        assert m2.source_ref == "Invoices"
+        assert m2.entity_ref == "SubscriptionInvoice"
+        assert len(m2.transform) == 3
+        assert m2.transform[2].target_field == "xero_invoice_number"
+        assert m2.transform[2].source.path == "source.InvoiceNumber"
+        assert m2.on_conflict == "xero_invoice_id"
+
+
+class TestFunctionCallExpression:
+    """Tests for function call expressions in mapping rules."""
+
+    def test_nested_function_call(self) -> None:
+        """Function args can themselves be function calls."""
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  value: decimal(10,2)
+
+integration api:
+  mapping sync_data on Record:
+    request: GET "/records"
+    map_response:
+      value <- round(convert(response.raw, "GBP"), 2)
+"""
+        fragment = _parse(dsl)
+        rule = fragment.integrations[0].mappings[0].response_mapping[0]
+        assert rule.source.func_name == "round"
+        assert len(rule.source.func_args) == 2
+        # First arg is itself a function call
+        inner = rule.source.func_args[0]
+        assert inner.func_name == "convert"
+        assert inner.func_args[0].path == "response.raw"
+        assert inner.func_args[1].literal == "GBP"
+        # Second arg is a literal
+        assert rule.source.func_args[1].literal == 2
+
+    def test_zero_arg_function(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Record "Record":
+  id: uuid pk
+  synced_at: datetime
+
+integration api:
+  mapping sync_data on Record:
+    request: GET "/records"
+    map_response:
+      synced_at <- now()
+"""
+        fragment = _parse(dsl)
+        rule = fragment.integrations[0].mappings[0].response_mapping[0]
+        assert rule.source.func_name == "now"
+        assert rule.source.func_args == []
