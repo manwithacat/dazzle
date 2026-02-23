@@ -129,9 +129,12 @@ class MetricsStore:
                 data = {"sum": value, "count": 1, "value": value, "ts": bucket_ts}
                 pipe.zadd(key, {json.dumps(data): bucket_ts})
 
-            # Expire old data
+            # Expire old data within the sorted set
             cutoff = ts - resolution.retention_seconds
             pipe.zremrangebyscore(key, "-inf", cutoff)
+
+            # Set key TTL as safety net (2x retention so active keys survive)
+            pipe.expire(key, resolution.retention_seconds * 2)
 
         pipe.execute()
 

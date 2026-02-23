@@ -55,6 +55,10 @@ DLQ_PREFIX = "dazzle:dlq:"
 OFFSET_PREFIX = "dazzle:offset:"
 METADATA_PREFIX = "dazzle:meta:"
 
+# DLQ retains up to 10,000 entries; offset hashes expire after 7 days of inactivity
+_DLQ_MAXLEN = 10000
+_OFFSET_TTL_SECONDS = 7 * 86400
+
 
 @dataclass
 class RedisConfig:
@@ -270,8 +274,9 @@ class RedisBus(BaseEventBus):
             await redis.xack(stream_key, group_id, msg_id)
             await redis.hdel(offset_key, f"msg:{event_id}")
 
-            # Update last processed timestamp
+            # Update last processed timestamp and refresh TTL
             await redis.hset(offset_key, "last_processed_at", datetime.now(UTC).isoformat())
+            await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
 
     async def nack(
         self,
@@ -311,7 +316,7 @@ class RedisBus(BaseEventBus):
                 dlq_fields[b"group_id"] = group_id.encode()
                 dlq_fields[b"dlq_at"] = datetime.now(UTC).isoformat().encode()
 
-                await redis.xadd(dlq_key, dlq_fields)
+                await redis.xadd(dlq_key, dlq_fields, maxlen=_DLQ_MAXLEN, approximate=True)
 
             # Acknowledge to remove from pending
             await redis.xack(stream_key, group_id, msg_id)
@@ -319,6 +324,9 @@ class RedisBus(BaseEventBus):
         else:
             # Increment retry count - message will be redelivered
             await redis.hset(offset_key, retry_key, str(retry_count + 1))
+
+        # Refresh TTL on offset hash
+        await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
 
     async def replay(
         self,
@@ -607,6 +615,7 @@ class RedisBus(BaseEventBus):
 
                         # Store message ID mapping for ack/nack
                         await redis.hset(offset_key, f"msg:{envelope.event_id}", msg_id)
+                        await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
 
                         try:
                             await handler(envelope)

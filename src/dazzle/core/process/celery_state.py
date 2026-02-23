@@ -8,6 +8,7 @@ Key Features:
 - Supports horizontal scaling (multiple workers)
 - Survives dyno restarts
 - Uses Redis key patterns for efficient querying
+- All keys have TTLs to prevent unbounded memory growth
 """
 
 from __future__ import annotations
@@ -32,6 +33,15 @@ from dazzle.core.process.adapter import (
 )
 
 logger = logging.getLogger(__name__)
+
+# TTL constants (seconds)
+_TTL_SPEC = 30 * 86400  # 30 days — process/schedule specs (re-registered on startup)
+_TTL_ACTIVE_RUN = 30 * 86400  # 30 days — running/pending/waiting/suspended runs
+_TTL_COMPLETED_RUN = 7 * 86400  # 7 days — completed/failed/cancelled runs
+_TTL_ACTIVE_TASK = 30 * 86400  # 30 days — pending/in-progress tasks
+_TTL_COMPLETED_TASK = 7 * 86400  # 7 days — completed/cancelled tasks
+_TTL_INDEX = 30 * 86400  # 30 days — index sets (refreshed on write)
+_TTL_ENTITY_META = 30 * 86400  # 30 days — entity metadata
 
 
 class _ProcessEncoder(json.JSONEncoder):
@@ -98,7 +108,7 @@ class ProcessStateStore:
             "version": getattr(spec, "version", "1.0"),
             "steps": [self._serialize_step(s) for s in spec.steps],
         }
-        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder), ex=_TTL_SPEC)
         logger.debug(f"Registered process spec: {spec.name}")
 
     def get_process_spec(self, name: str) -> dict[str, Any] | None:
@@ -145,7 +155,7 @@ class ProcessStateStore:
             "cron": getattr(spec, "cron", None),
             "interval_seconds": getattr(spec, "interval_seconds", None),
         }
-        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder), ex=_TTL_SPEC)
         logger.debug(f"Registered schedule spec: {spec.name}")
 
     def get_schedule_spec(self, name: str) -> dict[str, Any] | None:
@@ -171,7 +181,7 @@ class ProcessStateStore:
     def set_schedule_last_run(self, name: str, timestamp: datetime) -> None:
         """Record the last run time for a schedule."""
         key = f"schedule:lastrun:{name}"
-        self._redis.set(key, timestamp.isoformat())
+        self._redis.set(key, timestamp.isoformat(), ex=_TTL_SPEC)
 
     # Process Runs
 
@@ -194,11 +204,21 @@ class ProcessStateStore:
             "updated_at": run.updated_at.isoformat(),
             "completed_at": run.completed_at.isoformat() if run.completed_at else None,
         }
-        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
+        terminal = run.status in (
+            ProcessStatus.COMPLETED,
+            ProcessStatus.FAILED,
+            ProcessStatus.CANCELLED,
+        )
+        ttl = _TTL_COMPLETED_RUN if terminal else _TTL_ACTIVE_RUN
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder), ex=ttl)
 
-        # Update indexes
-        self._redis.sadd(f"run:idx:process:{run.process_name}", run.run_id)
-        self._redis.sadd(f"run:idx:status:{run.status.value}", run.run_id)
+        # Update indexes (refresh TTL on each write)
+        idx_process = f"run:idx:process:{run.process_name}"
+        idx_status = f"run:idx:status:{run.status.value}"
+        self._redis.sadd(idx_process, run.run_id)
+        self._redis.expire(idx_process, _TTL_INDEX)
+        self._redis.sadd(idx_status, run.run_id)
+        self._redis.expire(idx_status, _TTL_INDEX)
 
         logger.debug(f"Saved run {run.run_id} with status {run.status}")
 
@@ -310,12 +330,18 @@ class ProcessStateStore:
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
             "escalated_at": task.escalated_at.isoformat() if task.escalated_at else None,
         }
-        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder))
+        terminal = task.status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED)
+        ttl = _TTL_COMPLETED_TASK if terminal else _TTL_ACTIVE_TASK
+        self._redis.set(key, json.dumps(data, cls=_ProcessEncoder), ex=ttl)
 
-        # Update indexes
-        self._redis.sadd(f"task:idx:run:{task.run_id}", task.task_id)
+        # Update indexes (refresh TTL on each write)
+        idx_run = f"task:idx:run:{task.run_id}"
+        self._redis.sadd(idx_run, task.task_id)
+        self._redis.expire(idx_run, _TTL_INDEX)
         if task.assignee_id:
-            self._redis.sadd(f"task:idx:assignee:{task.assignee_id}", task.task_id)
+            idx_assignee = f"task:idx:assignee:{task.assignee_id}"
+            self._redis.sadd(idx_assignee, task.task_id)
+            self._redis.expire(idx_assignee, _TTL_INDEX)
 
     def get_task(self, task_id: str) -> ProcessTask | None:
         """Get a human task by ID."""
@@ -385,7 +411,7 @@ class ProcessStateStore:
     def save_entity_meta(self, entity_name: str, meta: dict[str, Any]) -> None:
         """Store entity metadata for use by built-in service step operations."""
         key = f"entity:meta:{entity_name}"
-        self._redis.set(key, json.dumps(meta, cls=_ProcessEncoder))
+        self._redis.set(key, json.dumps(meta, cls=_ProcessEncoder), ex=_TTL_ENTITY_META)
 
     def get_entity_meta(self, entity_name: str) -> dict[str, Any] | None:
         """Get entity metadata by name."""

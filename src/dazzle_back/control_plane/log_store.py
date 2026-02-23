@@ -61,6 +61,7 @@ class LogStore:
     """
 
     PREFIX = "dazzle:logs"
+    _TTL_LOGS = 7 * 86400  # 7 days — safety net for orphaned log lists
 
     def __init__(
         self,
@@ -83,18 +84,24 @@ class LogStore:
         data = json.dumps(entry.to_dict())
 
         pipe = self._redis.pipeline()
-        pipe.lpush(self._log_key("all"), data)
-        pipe.ltrim(self._log_key("all"), 0, self._max_entries - 1)
+        all_key = self._log_key("all")
+        pipe.lpush(all_key, data)
+        pipe.ltrim(all_key, 0, self._max_entries - 1)
+        pipe.expire(all_key, self._TTL_LOGS)
 
         # Also append to source-specific list for filtering
         if entry.source:
-            pipe.lpush(self._log_key(entry.source), data)
-            pipe.ltrim(self._log_key(entry.source), 0, self._max_entries - 1)
+            src_key = self._log_key(entry.source)
+            pipe.lpush(src_key, data)
+            pipe.ltrim(src_key, 0, self._max_entries - 1)
+            pipe.expire(src_key, self._TTL_LOGS)
 
         # Track by level for quick error access
         if entry.level in ("ERROR", "WARNING"):
-            pipe.lpush(self._log_key(entry.level.lower()), data)
-            pipe.ltrim(self._log_key(entry.level.lower()), 0, 1000)
+            lvl_key = self._log_key(entry.level.lower())
+            pipe.lpush(lvl_key, data)
+            pipe.ltrim(lvl_key, 0, 1000)
+            pipe.expire(lvl_key, self._TTL_LOGS)
 
         pipe.execute()
 
@@ -115,10 +122,14 @@ class LogStore:
             if entry.level in ("ERROR", "WARNING"):
                 pipe.lpush(self._log_key(entry.level.lower()), data)
 
-        # Trim all lists
-        pipe.ltrim(self._log_key("all"), 0, self._max_entries - 1)
-        for key in ["app", "worker", "celery", "error", "warning"]:
-            pipe.ltrim(self._log_key(key), 0, self._max_entries - 1)
+        # Trim all lists and set TTL as safety net
+        all_key = self._log_key("all")
+        pipe.ltrim(all_key, 0, self._max_entries - 1)
+        pipe.expire(all_key, self._TTL_LOGS)
+        for suffix in ["app", "worker", "celery", "error", "warning"]:
+            k = self._log_key(suffix)
+            pipe.ltrim(k, 0, self._max_entries - 1)
+            pipe.expire(k, self._TTL_LOGS)
 
         pipe.execute()
 
