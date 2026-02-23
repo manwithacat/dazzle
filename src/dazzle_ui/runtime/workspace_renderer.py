@@ -79,6 +79,7 @@ class WorkspaceContext(BaseModel):
     regions: list[RegionContext] = Field(default_factory=list)
     endpoint: str = ""  # Base API endpoint for workspace data
     sse_url: str = ""  # SSE stream URL (empty = no live updates)
+    fold_count: int = 3  # Regions above the fold (eager load); rest use intersect
 
 
 # =============================================================================
@@ -105,6 +106,15 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "FUNNEL_CHART": "workspace/regions/funnel_chart.html",
     "QUEUE": "workspace/regions/queue.html",
     "TABBED_LIST": "workspace/regions/tabbed_list.html",
+}
+
+# Stage → fold count: how many regions to load eagerly above the fold (#378)
+STAGE_FOLD_COUNTS: dict[str, int] = {
+    "focus_metric": 3,
+    "dual_pane_flow": 4,
+    "scanner_table": 2,
+    "monitor_wall": 6,
+    "command_center": 6,
 }
 
 # Region span classes for command_center stage
@@ -138,6 +148,7 @@ def build_workspace_context(
     """
     stage = (workspace.stage or "").lower()
     grid_class = STAGE_GRID_MAP.get(stage, STAGE_GRID_MAP["focus_metric"])
+    fold_count = getattr(workspace, "fold_count", None) or STAGE_FOLD_COUNTS.get(stage, 3)
 
     # Build entity name → display title lookup from app spec (#358)
     _entity_titles: dict[str, str] = {}
@@ -262,6 +273,7 @@ def build_workspace_context(
         grid_class=grid_class,
         regions=regions,
         endpoint=f"/api/workspaces/{workspace.name}",
+        fold_count=fold_count,
     )
 
 

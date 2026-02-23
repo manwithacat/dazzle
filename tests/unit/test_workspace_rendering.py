@@ -784,3 +784,68 @@ class TestWorkspaceRegionContextUXMetadata:
         )
         assert ctx.surface_default_sort == []
         assert ctx.surface_empty_message == ""
+
+
+# ===========================================================================
+# TestViewportLazyLoading (#378)
+# ===========================================================================
+
+
+class TestViewportLazyLoading:
+    """Regions below the fold use intersect-based lazy loading (#378)."""
+
+    def test_fold_count_default(self) -> None:
+        """Default fold_count is 3 (no stage)."""
+        from dazzle.core.ir.workspaces import WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(name="dashboard", regions=[])
+        ctx = build_workspace_context(ws)
+        assert ctx.fold_count == 3
+
+    def test_fold_count_command_center(self) -> None:
+        """command_center stage gets fold_count=6."""
+        from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(
+            name="dashboard",
+            stage="command_center",
+            regions=[WorkspaceRegion(name=f"r{i}", source="Task") for i in range(10)],
+        )
+        ctx = build_workspace_context(ws)
+        assert ctx.fold_count == 6
+
+    def test_fold_count_monitor_wall(self) -> None:
+        """monitor_wall stage gets fold_count=6."""
+        from dazzle.core.ir.workspaces import WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(name="dashboard", stage="monitor_wall", regions=[])
+        ctx = build_workspace_context(ws)
+        assert ctx.fold_count == 6
+
+    def test_fold_count_scanner_table(self) -> None:
+        """scanner_table stage gets fold_count=2."""
+        from dazzle.core.ir.workspaces import WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(name="dashboard", stage="scanner_table", regions=[])
+        ctx = build_workspace_context(ws)
+        assert ctx.fold_count == 2
+
+    def test_fold_count_dual_pane(self) -> None:
+        """dual_pane_flow stage gets fold_count=4."""
+        from dazzle.core.ir.workspaces import WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = WorkspaceSpec(name="dashboard", stage="dual_pane_flow", regions=[])
+        ctx = build_workspace_context(ws)
+        assert ctx.fold_count == 4
+
+    def test_stage_fold_count_map_keys(self) -> None:
+        """All stages in STAGE_GRID_MAP have a corresponding fold count."""
+        from dazzle_ui.runtime.workspace_renderer import STAGE_FOLD_COUNTS, STAGE_GRID_MAP
+
+        for stage in STAGE_GRID_MAP:
+            assert stage in STAGE_FOLD_COUNTS, f"Missing fold count for stage: {stage}"

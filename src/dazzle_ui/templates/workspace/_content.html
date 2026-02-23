@@ -17,7 +17,7 @@
          id="region-{{ region.name }}"
          {% if region.endpoint %}
          hx-get="{{ region.endpoint }}"
-         hx-trigger="load{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
+         hx-trigger="{% if loop.index <= workspace.fold_count %}load{% else %}intersect once{% endif %}{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
          hx-swap="innerHTML"
          {% endif %}>
       {# Skeleton placeholder while loading #}
