@@ -206,6 +206,8 @@ class LLMParserMixin:
         self.expect(TokenType.INDENT)
 
         default_model: str | None = None
+        default_provider: ir.LLMProvider | None = None
+        budget_alert_usd: Decimal | None = None
         artifact_store: ir.ArtifactStore = ir.ArtifactStore.LOCAL
         logging: ir.LoggingPolicySpec = ir.LoggingPolicySpec()
         rate_limits: dict[str, int] | None = None
@@ -220,6 +222,31 @@ class LLMParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 default_model = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # default_provider: anthropic | openai | google | local
+            elif self.match(TokenType.DEFAULT_PROVIDER):
+                self.advance()
+                self.expect(TokenType.COLON)
+                provider_str = self.expect_identifier_or_keyword().value
+                try:
+                    default_provider = ir.LLMProvider(provider_str)
+                except ValueError:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"Invalid LLM provider: {provider_str}. "
+                        "Must be: anthropic, openai, google, or local",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.skip_newlines()
+
+            # budget_alert_usd: 50.00
+            elif self.match(TokenType.BUDGET_ALERT_USD):
+                self.advance()
+                self.expect(TokenType.COLON)
+                budget_alert_usd = Decimal(self.expect(TokenType.NUMBER).value)
                 self.skip_newlines()
 
             # artifact_store: local | s3 | gcs
@@ -262,6 +289,8 @@ class LLMParserMixin:
 
         return ir.LLMConfigSpec(
             default_model=default_model,
+            default_provider=default_provider,
+            budget_alert_usd=budget_alert_usd,
             artifact_store=artifact_store,
             logging=logging,
             rate_limits=rate_limits,
@@ -364,9 +393,11 @@ class LLMParserMixin:
         self.expect(TokenType.INDENT)
 
         model_ref: str | None = None
-        prompt_template: str | None = None
+        prompt_template: str = ""
+        description: str | None = None
         output_schema: str | None = None
         timeout_seconds: int = 30
+        vision: bool = False
         retry: ir.RetryPolicySpec | None = None
         pii: ir.PIIPolicySpec | None = None
 
@@ -389,6 +420,13 @@ class LLMParserMixin:
                 prompt_template = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # description: "text"
+            elif self.match(TokenType.DESCRIPTION):
+                self.advance()
+                self.expect(TokenType.COLON)
+                description = self.expect(TokenType.STRING).value
+                self.skip_newlines()
+
             # output_schema: EntityName
             elif self.match(TokenType.OUTPUT_SCHEMA):
                 self.advance()
@@ -401,6 +439,22 @@ class LLMParserMixin:
                 self.advance()
                 self.expect(TokenType.COLON)
                 timeout_seconds = int(self.expect(TokenType.NUMBER).value)
+                self.skip_newlines()
+
+            # max_tokens: 4096
+            elif self.match(TokenType.MAX_TOKENS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                # max_tokens on intent is informational — stored on the
+                # referenced model, but we accept it here for convenience
+                int(self.expect(TokenType.NUMBER).value)
+                self.skip_newlines()
+
+            # vision: true|false
+            elif self.match(TokenType.VISION):
+                self.advance()
+                self.expect(TokenType.COLON)
+                vision = self._parse_boolean()
                 self.skip_newlines()
 
             # retry: (nested block)
@@ -424,22 +478,15 @@ class LLMParserMixin:
 
         self.expect(TokenType.DEDENT)
 
-        # Validate required fields
-        if prompt_template is None:
-            raise make_parse_error(
-                "llm_intent requires 'prompt' field",
-                self.file,
-                self.current_token().line,
-                self.current_token().column,
-            )
-
         return ir.LLMIntentSpec(
             name=name,
             title=title,
+            description=description,
             model_ref=model_ref,
             prompt_template=prompt_template,
             output_schema=output_schema,
             timeout_seconds=timeout_seconds,
+            vision=vision,
             retry=retry,
             pii=pii,
         )

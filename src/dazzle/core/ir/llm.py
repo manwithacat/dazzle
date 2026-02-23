@@ -168,12 +168,16 @@ class LLMConfigSpec(BaseModel):
 
     Attributes:
         default_model: Default model to use when not specified
+        default_provider: Default LLM provider when not specified per-model
+        budget_alert_usd: USD threshold for budget alert notifications
         artifact_store: Storage backend for prompts/completions
         logging: Logging policy configuration
         rate_limits: Rate limits per model (requests per minute)
     """
 
     default_model: str | None = None
+    default_provider: LLMProvider | None = None
+    budget_alert_usd: Decimal | None = Field(default=None, ge=Decimal("0"))
     artifact_store: ArtifactStore = ArtifactStore.LOCAL
     logging: LoggingPolicySpec = Field(default_factory=LoggingPolicySpec)
     rate_limits: dict[str, int] | None = None
@@ -195,32 +199,28 @@ class LLMIntentSpec(BaseModel):
     Attributes:
         name: Unique identifier for this intent
         title: Human-readable title
+        description: Longer description of what this intent does
         model_ref: Reference to llm_model (or uses default)
-        prompt_template: Jinja2 template for the prompt
+        prompt_template: Jinja2 template for the prompt (optional for routing-only intents)
         output_schema: Entity name for structured output (optional)
         timeout_seconds: Maximum time for job completion
+        vision: Whether this intent uses vision/image input
         retry: Retry policy for failures
         pii: PII handling policy
     """
 
     name: str
     title: str | None = None
+    description: str | None = None
     model_ref: str | None = None
-    prompt_template: str
+    prompt_template: str = ""
     output_schema: str | None = None
     timeout_seconds: int = Field(default=30, ge=1, le=300)
+    vision: bool = False
     retry: RetryPolicySpec | None = None
     pii: PIIPolicySpec | None = None
 
     model_config = ConfigDict(frozen=True)
-
-    @field_validator("prompt_template")
-    @classmethod
-    def validate_prompt_template(cls, v: str) -> str:
-        """Ensure prompt_template is non-empty."""
-        if not v.strip():
-            raise ValueError("prompt_template cannot be empty")
-        return v
 
 
 # =============================================================================
@@ -259,3 +259,27 @@ class ArtifactRefSpec(BaseModel):
     byte_size: int = Field(ge=0)
 
     model_config = ConfigDict(frozen=True)
+
+
+# =============================================================================
+# AIJob System Entity Builder
+# =============================================================================
+
+# Field definitions for the auto-generated AIJob entity.
+# Each tuple: (name, type_kind, modifiers, default)
+AI_JOB_FIELDS: list[tuple[str, str, list[str], str | None]] = [
+    ("id", "uuid", ["pk"], None),
+    ("intent", "str(200)", ["required"], None),
+    ("model", "str(200)", ["required"], None),
+    ("provider", "str(100)", ["required"], None),
+    ("tokens_in", "int", [], "0"),
+    ("tokens_out", "int", [], "0"),
+    ("cost_usd", "decimal(12,6)", [], None),
+    ("duration_ms", "int", [], None),
+    ("status", "enum[pending,running,completed,failed]", ["required"], "pending"),
+    ("entity_type", "str(200)", [], None),
+    ("entity_id", "str(200)", [], None),
+    ("user_id", "str(200)", [], None),
+    ("error_message", "text", [], None),
+    ("created_at", "datetime", ["required"], "now"),
+]

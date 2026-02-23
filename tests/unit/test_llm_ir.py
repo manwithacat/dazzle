@@ -251,6 +251,8 @@ class TestLLMConfigSpec:
         config = LLMConfigSpec()
 
         assert config.default_model is None
+        assert config.default_provider is None
+        assert config.budget_alert_usd is None
         assert config.artifact_store == ArtifactStore.LOCAL
         assert config.logging is not None
         assert config.logging.log_prompts is True
@@ -270,6 +272,21 @@ class TestLLMConfigSpec:
         assert config.logging.log_prompts is False
         assert config.rate_limits == {"claude_sonnet": 60, "gpt4o": 30}
 
+    def test_budget_alert_usd(self):
+        """Test budget_alert_usd field."""
+        config = LLMConfigSpec(budget_alert_usd=Decimal("50.00"))
+        assert config.budget_alert_usd == Decimal("50.00")
+
+    def test_budget_alert_usd_rejects_negative(self):
+        """Test budget_alert_usd rejects negative values."""
+        with pytest.raises(ValidationError):
+            LLMConfigSpec(budget_alert_usd=Decimal("-1"))
+
+    def test_default_provider(self):
+        """Test default_provider field."""
+        config = LLMConfigSpec(default_provider=LLMProvider.ANTHROPIC)
+        assert config.default_provider == LLMProvider.ANTHROPIC
+
 
 # =============================================================================
 # LLMIntentSpec Tests
@@ -288,49 +305,55 @@ class TestLLMIntentSpec:
 
         assert intent.name == "summarize"
         assert intent.title is None
+        assert intent.description is None
         assert intent.model_ref is None
         assert intent.prompt_template == "Summarize: {{ input.text }}"
         assert intent.output_schema is None
         assert intent.timeout_seconds == 30
+        assert intent.vision is False
         assert intent.retry is None
         assert intent.pii is None
+
+    def test_routing_only_intent(self):
+        """Test intent without prompt_template (routing-only)."""
+        intent = LLMIntentSpec(
+            name="classify_document",
+            description="Classify uploaded document type",
+            model_ref="claude_haiku",
+            vision=True,
+        )
+
+        assert intent.name == "classify_document"
+        assert intent.prompt_template == ""
+        assert intent.description == "Classify uploaded document type"
+        assert intent.vision is True
 
     def test_full_intent(self):
         """Test full intent definition."""
         intent = LLMIntentSpec(
             name="extract_entities",
             title="Extract Named Entities",
+            description="Extract named entities from text input",
             model_ref="claude_sonnet",
             prompt_template="Extract entities from: {{ input.text }}",
             output_schema="EntityList",
             timeout_seconds=60,
+            vision=False,
             retry=RetryPolicySpec(max_attempts=5),
             pii=PIIPolicySpec(scan=True, action=PIIAction.REDACT),
         )
 
         assert intent.name == "extract_entities"
         assert intent.title == "Extract Named Entities"
+        assert intent.description == "Extract named entities from text input"
         assert intent.model_ref == "claude_sonnet"
         assert intent.output_schema == "EntityList"
         assert intent.timeout_seconds == 60
+        assert intent.vision is False
         assert intent.retry is not None
         assert intent.retry.max_attempts == 5
         assert intent.pii is not None
         assert intent.pii.scan is True
-
-    def test_empty_prompt_validation(self):
-        """Test prompt_template cannot be empty."""
-        with pytest.raises(ValueError):
-            LLMIntentSpec(
-                name="test",
-                prompt_template="",
-            )
-
-        with pytest.raises(ValueError):
-            LLMIntentSpec(
-                name="test",
-                prompt_template="   ",
-            )
 
     def test_timeout_validation(self):
         """Test timeout_seconds bounds."""

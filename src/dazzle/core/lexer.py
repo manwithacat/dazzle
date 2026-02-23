@@ -384,6 +384,9 @@ class TokenType(Enum):
     INITIAL_DELAY_MS = "initial_delay_ms"
     MAX_DELAY_MS = "max_delay_ms"
     SCAN = "scan"
+    DEFAULT_PROVIDER = "default_provider"
+    BUDGET_ALERT_USD = "budget_alert_usd"
+    VISION = "vision"
     # Note: 'model' is NOT a keyword - it's a common field name.
     # Within llm_intent blocks, 'model:' is parsed as an identifier.
     # Note: PIIAction values (warn, redact, reject) and RetryBackoff values

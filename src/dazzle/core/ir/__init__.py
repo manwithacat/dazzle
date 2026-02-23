@@ -334,6 +334,7 @@ from .ledgers import (
 
 # LLM - Large Language Model (v0.21.0 - Issue #33)
 from .llm import (
+    AI_JOB_FIELDS,
     ArtifactKind,
     ArtifactRefSpec,
     ArtifactStore,
@@ -959,6 +960,7 @@ __all__ = [
     "validate_stream",
     "validate_streams_with_cross_references",
     # LLM - Large Language Model (v0.21.0 - Issue #33)
+    "AI_JOB_FIELDS",
     "ArtifactKind",
     "ArtifactRefSpec",
     "ArtifactStore",

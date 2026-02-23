@@ -1,6 +1,8 @@
 from . import ir
 from .archetype_expander import expand_archetypes, generate_archetype_surfaces
 from .errors import LinkError
+from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from .ir.llm import AI_JOB_FIELDS
 from .ir.security import SecurityConfig, SecurityProfile
 from .linker_impl import (
     build_symbol_table,
@@ -105,12 +107,17 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     # 8. Merge fragments into unified structure
     merged_fragment = merge_fragments(sorted_modules, symbols)
 
-    # 9. Build final AppSpec
+    # 9. Auto-generate AIJob entity when LLM config is present (#376)
+    entities = merged_fragment.entities
+    if merged_fragment.llm_config is not None and not any(e.name == "AIJob" for e in entities):
+        entities = [*entities, _build_ai_job_entity()]
+
+    # 10. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
         title=app_title,
         version="0.1.0",
-        domain=ir.DomainSpec(entities=merged_fragment.entities),
+        domain=ir.DomainSpec(entities=entities),
         surfaces=merged_fragment.surfaces,
         workspaces=merged_fragment.workspaces,
         experiences=merged_fragment.experiences,
@@ -169,4 +176,61 @@ def _build_security_config(app_config: ir.AppConfigSpec | None) -> SecurityConfi
     return SecurityConfig.from_profile(
         profile,
         multi_tenant=app_config.multi_tenant,
+    )
+
+
+def _parse_field_type(type_str: str) -> FieldType:
+    """Parse a compact field type string into a FieldType.
+
+    Supports: uuid, str(N), int, text, decimal(P,S), bool,
+    datetime, enum[a,b,c].
+    """
+    if type_str == "uuid":
+        return FieldType(kind=FieldTypeKind.UUID)
+    if type_str == "int":
+        return FieldType(kind=FieldTypeKind.INT)
+    if type_str == "text":
+        return FieldType(kind=FieldTypeKind.TEXT)
+    if type_str == "bool":
+        return FieldType(kind=FieldTypeKind.BOOL)
+    if type_str == "datetime":
+        return FieldType(kind=FieldTypeKind.DATETIME)
+    if type_str.startswith("str(") and type_str.endswith(")"):
+        max_len = int(type_str[4:-1])
+        return FieldType(kind=FieldTypeKind.STR, max_length=max_len)
+    if type_str.startswith("decimal(") and type_str.endswith(")"):
+        parts = type_str[8:-1].split(",")
+        return FieldType(
+            kind=FieldTypeKind.DECIMAL,
+            precision=int(parts[0]),
+            scale=int(parts[1]),
+        )
+    if type_str.startswith("enum[") and type_str.endswith("]"):
+        values = [v.strip() for v in type_str[5:-1].split(",")]
+        return FieldType(kind=FieldTypeKind.ENUM, enum_values=values)
+    raise ValueError(f"Unknown field type: {type_str}")
+
+
+_MODIFIER_MAP = {
+    "pk": FieldModifier.PK,
+    "required": FieldModifier.REQUIRED,
+    "unique": FieldModifier.UNIQUE,
+}
+
+
+def _build_ai_job_entity() -> ir.EntitySpec:
+    """Build the auto-generated AIJob system entity for AI cost tracking."""
+    fields: list[FieldSpec] = []
+    for name, type_str, modifiers, default in AI_JOB_FIELDS:
+        field_type = _parse_field_type(type_str)
+        mods = [_MODIFIER_MAP[m] for m in modifiers]
+        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+
+    return ir.EntitySpec(
+        name="AIJob",
+        title="AI Job",
+        intent="Tracks every AI gateway call with token counts, cost, and audit trail",
+        domain="platform",
+        patterns=["system", "audit"],
+        fields=fields,
     )
