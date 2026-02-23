@@ -27,7 +27,7 @@ from dazzle.core.ir.domain import EntitySpec as IREntitySpec
 from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
 from dazzle.core.ir.fields import FieldType as IRFieldType
-from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+from dazzle.core.ir.surfaces import SurfaceElement, SurfaceMode, SurfaceSection, SurfaceSpec
 from dazzle_back.runtime.server import create_app
 
 # =============================================================================
@@ -75,6 +75,54 @@ def task_spec() -> AppSpec:
                 title="Task List",
                 entity_ref="Task",
                 mode=SurfaceMode.LIST,
+                sections=[
+                    SurfaceSection(
+                        name="main",
+                        title="Tasks",
+                        elements=[
+                            SurfaceElement(field_name="title", label="Title"),
+                            SurfaceElement(field_name="status", label="Status"),
+                        ],
+                    )
+                ],
+            ),
+            SurfaceSpec(
+                name="task_create",
+                title="Create Task",
+                entity_ref="Task",
+                mode=SurfaceMode.CREATE,
+                sections=[
+                    SurfaceSection(
+                        name="main",
+                        title="New Task",
+                        elements=[
+                            SurfaceElement(field_name="title", label="Title"),
+                            SurfaceElement(field_name="status", label="Status"),
+                        ],
+                    )
+                ],
+            ),
+            SurfaceSpec(
+                name="task_detail",
+                title="Task Detail",
+                entity_ref="Task",
+                mode=SurfaceMode.VIEW,
+            ),
+            SurfaceSpec(
+                name="task_edit",
+                title="Edit Task",
+                entity_ref="Task",
+                mode=SurfaceMode.EDIT,
+                sections=[
+                    SurfaceSection(
+                        name="main",
+                        title="Edit Task",
+                        elements=[
+                            SurfaceElement(field_name="title", label="Title"),
+                            SurfaceElement(field_name="status", label="Status"),
+                        ],
+                    )
+                ],
             ),
         ],
     )
