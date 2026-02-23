@@ -325,6 +325,281 @@ def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     )
 
 
+@wrap_handler_errors
+def wfs_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Workflow Friction Score — per-persona dashboard-to-workflow friction.
+
+    Quantifies how many clicks/navigations a persona needs to go from their
+    workspace dashboard to completing a core workflow.  Computed purely from
+    the DSL IR — no running app required.
+
+    WFS formula per story:
+        WFS = C + (V × 0.5) + (D × 1.5) + (A × 0.75)
+
+    Factors:
+        C (Clicks)      — navigation hops from workspace to workflow entity
+        V (Visibility)   — 0=on dashboard, 1=sidebar only, 2=not linked
+        D (Discovery)    — 0=action link present, 1=no action link, 2=no region
+        A (Ambiguity)    — 0=filtered region, 1=unfiltered list
+
+    Rating: 0-2 excellent, 3-4 acceptable, 5+ needs work
+
+    Optional args:
+        persona  — score a single persona (default: all personas)
+    """
+    t0 = time.monotonic()
+
+    from .common import load_project_appspec
+
+    appspec = load_project_appspec(project_path)
+    if appspec is None:
+        return json.dumps(
+            {"status": "error", "error": "Could not load AppSpec from project"},
+        )
+
+    persona_filter = args.get("persona")
+    results = compute_wfs(appspec, persona_filter=persona_filter)
+
+    # Render markdown
+    md_lines = _render_wfs_markdown(results)
+
+    duration_ms = (time.monotonic() - t0) * 1000
+
+    return json.dumps(
+        {
+            "status": "complete",
+            "personas": results["personas"],
+            "overall_avg": results["overall_avg"],
+            "rating": results["rating"],
+            "markdown": "\n".join(md_lines),
+            "duration_ms": round(duration_ms, 1),
+        },
+        indent=2,
+    )
+
+
+# ---------------------------------------------------------------------------
+# WFS computation engine
+# ---------------------------------------------------------------------------
+
+
+def compute_wfs(
+    appspec: Any,
+    *,
+    persona_filter: str | None = None,
+) -> dict[str, Any]:
+    """Compute Workflow Friction Scores from an AppSpec.
+
+    Returns a dict with per-persona breakdowns and an overall average.
+    """
+    # Build lookup indexes
+    workspace_map: dict[str, Any] = {ws.name: ws for ws in appspec.workspaces}
+    surface_map: dict[str, Any] = {s.name: s for s in appspec.surfaces}
+    # Entity names that appear in each workspace's regions
+    workspace_entities: dict[str, set[str]] = {}
+    for ws in appspec.workspaces:
+        entities: set[str] = set()
+        for region in ws.regions:
+            if region.source:
+                entities.add(region.source)
+            for src in region.sources or []:
+                entities.add(src)
+        workspace_entities[ws.name] = entities
+
+    personas = appspec.personas
+    stories = appspec.stories
+
+    persona_results: list[dict[str, Any]] = []
+    all_scores: list[float] = []
+
+    for persona in personas:
+        pid = persona.id
+        if persona_filter and pid.lower() != persona_filter.lower():
+            # Also try partial match
+            plabel = getattr(persona, "label", "") or ""
+            if (
+                persona_filter.lower() not in pid.lower()
+                and persona_filter.lower() not in plabel.lower()
+            ):
+                continue
+
+        # Get persona's workspace
+        ws_name = persona.default_workspace or ""
+        workspace = workspace_map.get(ws_name)
+
+        # Get stories for this persona
+        persona_stories = [s for s in stories if s.actor.lower() == pid.lower()]
+        if not persona_stories:
+            # Try label match
+            plabel = getattr(persona, "label", "") or pid
+            persona_stories = [s for s in stories if s.actor.lower() == plabel.lower()]
+
+        story_scores: list[dict[str, Any]] = []
+        for story in persona_stories:
+            score = _score_story_friction(
+                story,
+                workspace,
+                workspace_entities,
+                surface_map,
+            )
+            story_scores.append(score)
+            all_scores.append(score["wfs"])
+
+        avg_wfs = (
+            round(sum(s["wfs"] for s in story_scores) / len(story_scores), 2)
+            if story_scores
+            else 0.0
+        )
+
+        persona_results.append(
+            {
+                "persona": pid,
+                "label": getattr(persona, "label", "") or pid,
+                "workspace": ws_name,
+                "avg_wfs": avg_wfs,
+                "rating": _wfs_rating(avg_wfs),
+                "stories": story_scores,
+            }
+        )
+
+    overall_avg = round(sum(all_scores) / len(all_scores), 2) if all_scores else 0.0
+
+    return {
+        "personas": persona_results,
+        "overall_avg": overall_avg,
+        "rating": _wfs_rating(overall_avg),
+    }
+
+
+def _score_story_friction(
+    story: Any,
+    workspace: Any | None,
+    workspace_entities: dict[str, set[str]],
+    surface_map: dict[str, Any],
+) -> dict[str, Any]:
+    """Score a single story's friction from the persona's workspace.
+
+    Returns dict with wfs score, factor breakdown, and explanation.
+    """
+    scope_entities = set(story.scope or [])
+
+    # --- Visibility (V): Is the story's entity on the dashboard? ---
+    visibility = 2  # default: not linked anywhere
+    discovery = 2  # default: no region at all
+    ambiguity = 1  # default: unfiltered
+    clicks = 2  # default: requires navigation
+
+    if workspace is None:
+        # No workspace assigned — maximum friction
+        wfs = clicks + (visibility * 0.5) + (discovery * 1.5) + (ambiguity * 0.75)
+        return {
+            "story_id": story.story_id,
+            "title": story.title,
+            "wfs": round(wfs, 2),
+            "rating": _wfs_rating(wfs),
+            "factors": {"C": clicks, "V": visibility, "D": discovery, "A": ambiguity},
+            "note": "No workspace assigned to persona",
+        }
+
+    ws_entities = workspace_entities.get(workspace.name, set())
+
+    # Check if any scope entity appears in workspace regions
+    matching_regions: list[Any] = []
+    for region in workspace.regions:
+        region_entities: set[str] = set()
+        if region.source:
+            region_entities.add(region.source)
+        for src in region.sources or []:
+            region_entities.add(src)
+
+        if region_entities & scope_entities:
+            matching_regions.append(region)
+
+    if matching_regions:
+        visibility = 0  # Entity is on the dashboard
+        discovery = 1  # Region exists but need to check action links
+
+        # Check if any matching region has an action link
+        for region in matching_regions:
+            if region.action:
+                # Action points to a surface — check it exists
+                action_surface = surface_map.get(region.action)
+                if action_surface:
+                    discovery = 0  # Clear action link present
+                    clicks = 1  # One click from dashboard
+                    break
+            # Multi-source regions with sources also count
+            if region.sources:
+                discovery = 0
+                clicks = 1
+                break
+
+        if discovery == 1:
+            clicks = 2  # Must navigate away from dashboard
+
+        # Check filter (ambiguity)
+        for region in matching_regions:
+            if region.filter is not None:
+                ambiguity = 0  # Filtered — actionable items are isolated
+                break
+            # group_by or sort also reduce ambiguity
+            if region.group_by or region.sort:
+                ambiguity = 0
+                break
+    elif scope_entities & ws_entities:
+        # Entity is on workspace but not in a matching region context
+        visibility = 1
+    # else: visibility stays 2 (not on dashboard)
+
+    wfs = clicks + (visibility * 0.5) + (discovery * 1.5) + (ambiguity * 0.75)
+
+    return {
+        "story_id": story.story_id,
+        "title": story.title,
+        "wfs": round(wfs, 2),
+        "rating": _wfs_rating(wfs),
+        "factors": {"C": clicks, "V": visibility, "D": discovery, "A": ambiguity},
+    }
+
+
+def _wfs_rating(score: float) -> str:
+    """Classify a WFS score into a human-readable rating."""
+    if score <= 2:
+        return "excellent"
+    if score <= 4:
+        return "acceptable"
+    return "needs_work"
+
+
+def _render_wfs_markdown(results: dict[str, Any]) -> list[str]:
+    """Render WFS results as markdown lines."""
+    md: list[str] = ["Workflow Friction Score", ""]
+    md.append(f"Overall: {results['overall_avg']} ({results['rating']})")
+    md.append("")
+
+    for p in results["personas"]:
+        md.append(f"  {p['label']} (workspace: {p['workspace'] or 'none'})")
+        md.append(f"    Average WFS: {p['avg_wfs']} ({p['rating']})")
+        for s in p["stories"]:
+            factors = s["factors"]
+            badge = (
+                "ok"
+                if s["rating"] == "excellent"
+                else ".."
+                if s["rating"] == "acceptable"
+                else "!!"
+            )
+            md.append(
+                f"    [{badge}] {s['title']}  "
+                f"WFS={s['wfs']}  C={factors['C']} V={factors['V']} D={factors['D']} A={factors['A']}"
+            )
+            if s.get("note"):
+                md.append(f"         {s['note']}")
+        md.append("")
+
+    return md
+
+
 # ---------------------------------------------------------------------------
 # Data collectors — each calls one handler and returns a parsed dict.
 # ---------------------------------------------------------------------------

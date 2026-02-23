@@ -1623,6 +1623,7 @@ handle_pulse: Callable[[dict[str, Any]], str] = _make_project_handler(
         "persona": f"{_MOD_PULSE}:persona_pulse_handler",
         "timeline": f"{_MOD_PULSE}:timeline_pulse_handler",
         "decisions": f"{_MOD_PULSE}:decisions_pulse_handler",
+        "wfs": f"{_MOD_PULSE}:wfs_pulse_handler",
     },
 )
 

@@ -1564,7 +1564,8 @@ def get_consolidated_tools() -> list[Tool]:
                 "Founder-ready project health report. "
                 "Operations: run (full report with narrative), "
                 "radar (compact 6-axis readiness chart), "
-                "persona (view app through a specific persona's eyes). "
+                "persona (view app through a specific persona's eyes), "
+                "wfs (workflow friction score per persona). "
                 "Returns a Launch Readiness score, 6-axis radar, "
                 "decisions needing founder input, recent wins, and blockers. "
                 "Output: structured JSON with a 'markdown' field containing "
@@ -1575,7 +1576,7 @@ def get_consolidated_tools() -> list[Tool]:
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["run", "radar", "persona", "timeline", "decisions"],
+                        "enum": ["run", "radar", "persona", "timeline", "decisions", "wfs"],
                         "description": "Operation to perform",
                     },
                     "persona": {
