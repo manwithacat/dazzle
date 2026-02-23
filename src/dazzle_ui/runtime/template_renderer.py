@@ -237,6 +237,12 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
         lstrip_blocks=True,
     )
 
+    # Dazzle version + CDN toggle
+    from dazzle import __version__ as _dz_version
+
+    env.globals["_dazzle_version"] = _dz_version
+    env.globals["_use_cdn"] = True  # default; overridden from [ui] cdn in dazzle.toml
+
     # Global: detect if compiled Tailwind CSS bundle exists
     static_dir = Path(__file__).parent / "static"
     bundled = (static_dir / "css" / "dazzle-bundle.css").exists()

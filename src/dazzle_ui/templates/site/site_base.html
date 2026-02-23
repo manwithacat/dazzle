@@ -16,14 +16,23 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   {% endif %}
+  {% set _cdn_base = "https://cdn.jsdelivr.net/gh/manwithacat/dazzle@v" ~ _dazzle_version ~ "/dist" %}
   {# DAZZLE design system layer #}
+  {% if _use_cdn | default(true) %}
+  <link rel="stylesheet" href="{{ _cdn_base }}/dazzle.min.css">
+  {% else %}
   <link rel="stylesheet" href="/styles/dazzle.css">
+  {% endif %}
   {% if custom_css %}
   {# Project custom CSS #}
   <link rel="stylesheet" href="/static/css/custom.css">
   {% endif %}
-  {# Lucide icons (vendored) #}
+  {# Lucide icons #}
+  {% if _use_cdn | default(true) %}
+  <script src="{{ _cdn_base }}/dazzle-icons.min.js"></script>
+  {% else %}
   <script src="/static/vendor/lucide.min.js"></script>
+  {% endif %}
   {% block og_meta %}{% endblock %}
   {% block head_extra %}{% endblock %}
 </head>

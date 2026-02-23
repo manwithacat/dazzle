@@ -1,0 +1,33 @@
+name: Update Vendor Dependencies
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  update-vendors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check for vendor updates
+        run: python scripts/update_vendors.py --check
+      - name: Update vendors
+        run: python scripts/update_vendors.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rebuild dist bundles
+        run: python scripts/build_dist.py
+      - name: Create PR if changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          title: 'Update vendor JS dependencies'
+          branch: update-vendors
+          commit-message: 'Update vendor JS dependencies'
+          body: |
+            Automated vendor dependency update.
+
+            Run `python scripts/build_dist.py` to verify bundles.

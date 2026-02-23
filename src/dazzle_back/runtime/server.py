@@ -2124,12 +2124,21 @@ class DazzleBackendApp:
             from dazzle_ui.runtime.template_renderer import (
                 TEMPLATES_DIR,
                 configure_project_templates,
+                get_jinja_env,
             )
 
             if self._project_root:
                 project_templates = self._project_root / "templates"
                 if project_templates.is_dir():
                     configure_project_templates(project_templates)
+
+                # CDN toggle from [ui] cdn in dazzle.toml
+                manifest_path = self._project_root / "dazzle.toml"
+                if manifest_path.exists():
+                    from dazzle.core.manifest import load_manifest
+
+                    mf = load_manifest(manifest_path)
+                    get_jinja_env().globals["_use_cdn"] = mf.cdn
 
                     # Build override registry if project has declaration headers
                     try:

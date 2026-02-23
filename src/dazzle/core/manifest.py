@@ -321,6 +321,7 @@ class ProjectManifest:
     auth: AuthConfig = field(default_factory=AuthConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     dev: DevConfig = field(default_factory=DevConfig)
+    cdn: bool = True  # Serve assets from jsDelivr CDN; set [ui] cdn = false for air-gapped
 
 
 def load_manifest(path: Path) -> ProjectManifest:
@@ -479,6 +480,10 @@ def load_manifest(path: Path) -> ProjectManifest:
         test_endpoints=dev_data.get("test_endpoints"),  # None if not set
     )
 
+    # Parse [ui] config
+    ui_data = data.get("ui", {})
+    cdn_enabled = ui_data.get("cdn", True)
+
     return ProjectManifest(
         name=project.get("name", "unnamed"),
         version=project.get("version", "0.0.0"),
@@ -492,6 +497,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         auth=auth_config,
         database=database_config,
         dev=dev_config,
+        cdn=cdn_enabled,
     )
 
 
