@@ -18,7 +18,16 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from dazzle.core.strings import to_api_plural
+
+def _entity_to_app_url(entity_name: str) -> str:
+    """Build the /app/ detail URL pattern for an entity.
+
+    Matches the convention in server.py: ``/app/{slug}/{id}``
+    where slug = entity_name.lower().replace("_", "-").
+    """
+    slug = entity_name.lower().replace("_", "-")
+    return f"/app/{slug}/{{id}}"
+
 
 # =============================================================================
 # Context Models
@@ -177,7 +186,7 @@ def build_workspace_context(
         if region_filter is not None:
             filter_expr = _serialize_filter_to_params(region_filter)
 
-        # Resolve action surface → URL pattern
+        # Resolve action surface → URL pattern (must use /app/ prefix for app shell)
         action_name = region.action or ""
         action_url = ""
         if action_name and app_spec:
@@ -188,15 +197,16 @@ def build_workspace_context(
                     if entity_ref:
                         if entity_ref == source_name:
                             # Same entity — use row id
-                            action_url = f"/{to_api_plural(entity_ref)}/{{id}}"
+                            action_url = _entity_to_app_url(entity_ref)
                         else:
                             # Cross-entity — find FK field in source entity
                             fk_field = _resolve_fk_field(source_name, entity_ref, app_spec)
                             if fk_field:
-                                action_url = f"/{to_api_plural(entity_ref)}/{{{fk_field}}}"
+                                slug = entity_ref.lower().replace("_", "-")
+                                action_url = f"/app/{slug}/{{{fk_field}}}"
                             else:
                                 # Fallback: use row id
-                                action_url = f"/{to_api_plural(entity_ref)}/{{id}}"
+                                action_url = _entity_to_app_url(entity_ref)
                     break
 
         # Build multi-source tabs
@@ -209,7 +219,7 @@ def build_workspace_context(
                 if src in source_filters_ir:
                     tab_filter = _serialize_filter_to_params(source_filters_ir[src])
                 # Per-source action URL: link to the entity's detail page
-                tab_action_url = f"/{to_api_plural(src)}/{{id}}"
+                tab_action_url = _entity_to_app_url(src)
                 # Use entity display title if available, else humanise the name (#358)
                 tab_label = _entity_titles.get(src) or src.replace("_", " ").title()
                 source_tabs.append(

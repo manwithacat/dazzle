@@ -358,8 +358,8 @@ class TestBuildWorkspaceContext:
         )
         ctx = build_workspace_context(ws, self._make_appspec())
         tabs = ctx.regions[0].source_tabs
-        assert tabs[0].action_url == "/tasks/{id}"
-        assert tabs[1].action_url == "/bugs/{id}"
+        assert tabs[0].action_url == "/app/task/{id}"
+        assert tabs[1].action_url == "/app/bug/{id}"
 
     def test_tabbed_list_template(self) -> None:
         ws = WorkspaceSpec(
@@ -464,12 +464,12 @@ class TestSourceTabContext:
             entity_name="Task",
             label="Tasks",
             endpoint="/api/workspaces/dash/regions/queue/Task",
-            action_url="/tasks/{id}",
+            action_url="/app/task/{id}",
         )
         assert tab.entity_name == "Task"
         assert tab.label == "Tasks"
         assert tab.endpoint == "/api/workspaces/dash/regions/queue/Task"
-        assert tab.action_url == "/tasks/{id}"
+        assert tab.action_url == "/app/task/{id}"
 
     def test_default_filter_empty(self) -> None:
         tab = SourceTabContext(entity_name="Task")

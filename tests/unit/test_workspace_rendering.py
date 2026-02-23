@@ -415,7 +415,7 @@ class TestCrossEntityAction:
         app_spec = self._make_app_spec("task_edit", "Task")
 
         ctx = build_workspace_context(ws, app_spec)
-        assert ctx.regions[0].action_url == "/tasks/{id}"
+        assert ctx.regions[0].action_url == "/app/task/{id}"
 
     def test_cross_entity_resolves_fk_field(self) -> None:
         from dazzle.core.ir.workspaces import WorkspaceRegion, WorkspaceSpec
@@ -436,7 +436,7 @@ class TestCrossEntityAction:
         )
 
         ctx = build_workspace_context(ws, app_spec)
-        assert ctx.regions[0].action_url == "/customers/{customer}"
+        assert ctx.regions[0].action_url == "/app/customer/{customer}"
 
     def test_cross_entity_fallback_to_id(self) -> None:
         """When no FK field links source to target, fall back to {id}."""
@@ -454,7 +454,7 @@ class TestCrossEntityAction:
         )
 
         ctx = build_workspace_context(ws, app_spec)
-        assert ctx.regions[0].action_url == "/customers/{id}"
+        assert ctx.regions[0].action_url == "/app/customer/{id}"
 
 
 # ===========================================================================
