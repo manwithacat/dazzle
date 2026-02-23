@@ -134,7 +134,7 @@ def build() -> None:
             print(f"WARNING: missing {src}", file=sys.stderr)
             continue
         js_parts.append(process_js(src))
-    js_combined = hdr + "\n".join(js_parts)
+    js_combined = hdr + ";\n".join(js_parts)
     js_out = DIST_DIR / "dazzle.min.js"
     js_out.write_text(js_combined)
     raw = len(js_combined.encode())
