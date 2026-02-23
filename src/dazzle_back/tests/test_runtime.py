@@ -473,7 +473,22 @@ class TestServerWithDatabase:
                 ),
             ],
         )
-        return AppSpec(name="test_app", version="1.0.0", domain=DomainSpec(entities=[task_entity]))
+
+        from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+
+        task_list_surface = SurfaceSpec(
+            name="task_list",
+            title="Tasks",
+            entity_ref="Task",
+            mode=SurfaceMode.LIST,
+        )
+
+        return AppSpec(
+            name="test_app",
+            version="1.0.0",
+            domain=DomainSpec(entities=[task_entity]),
+            surfaces=[task_list_surface],
+        )
 
     def test_server_creates_database(self, simple_appspec: Any) -> None:
         """Test that server creates database manager with PostgreSQL."""
@@ -520,8 +535,8 @@ class TestServerWithDatabase:
         )
         app_builder.build()
 
-        # Get the task service
-        task_service = app_builder.get_service("task_service")
+        # Get the task list service (named by surface converter convention)
+        task_service = app_builder.get_service("list_tasks")
         assert task_service is not None
         assert isinstance(task_service, CRUDService)
 
@@ -542,7 +557,7 @@ class TestServerWithDatabase:
         )
         app_builder.build()
 
-        task_service = app_builder.get_service("task_service")
+        task_service = app_builder.get_service("list_tasks")
         assert isinstance(task_service, CRUDService)
 
         # Create schema for test
@@ -569,7 +584,7 @@ class TestServerWithDatabase:
         )
         app_builder2.build()
 
-        task_service2 = app_builder2.get_service("task_service")
+        task_service2 = app_builder2.get_service("list_tasks")
         assert task_service2 is not None
 
         # Should still be able to read the task
