@@ -239,7 +239,12 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
 
     # Global: detect if compiled Tailwind CSS bundle exists
     static_dir = Path(__file__).parent / "static"
-    env.globals["_tailwind_bundled"] = (static_dir / "css" / "dazzle-bundle.css").exists()
+    bundled = (static_dir / "css" / "dazzle-bundle.css").exists()
+    # Also check project static dir (sibling of project templates dir)
+    if not bundled and project_templates_dir:
+        project_static = project_templates_dir.parent / "static"
+        bundled = (project_static / "css" / "dazzle-bundle.css").exists()
+    env.globals["_tailwind_bundled"] = bundled
 
     # Custom filters
     env.filters["currency"] = _currency_filter
