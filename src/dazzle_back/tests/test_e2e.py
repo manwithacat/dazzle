@@ -27,6 +27,7 @@ from dazzle.core.ir.domain import EntitySpec as IREntitySpec
 from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
 from dazzle.core.ir.fields import FieldType as IRFieldType
+from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle_back.runtime.server import create_app
 
 # =============================================================================
@@ -68,6 +69,14 @@ def task_spec() -> AppSpec:
                 ),
             ]
         ),
+        surfaces=[
+            SurfaceSpec(
+                name="task_list",
+                title="Task List",
+                entity_ref="Task",
+                mode=SurfaceMode.LIST,
+            ),
+        ],
     )
 
 
