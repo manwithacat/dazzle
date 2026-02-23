@@ -28,28 +28,17 @@ def _base_template(title: str, content: str, user: str = "") -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
 
-    <!-- DaisyUI + Tailwind (matching Dazzle) -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- DaisyUI + Tailwind — use bundled CSS (#377) -->
+    <link rel="stylesheet" href="/static/css/dazzle-bundle.css" />
 
-    <!-- HTMX (matching Dazzle) -->
-    <script src="https://unpkg.com/htmx.org@2.0.8"></script>
-    <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
+    <!-- HTMX (vendored) -->
+    <script src="/static/vendor/htmx.min.js"></script>
+    <script src="/static/vendor/htmx-ext-json-enc.js"></script>
 
     <!-- Chart.js for metrics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <script>
-        tailwind.config = {{
-            darkMode: 'class',
-            theme: {{
-                extend: {{
-                    colors: {{
-                        primary: '#4f46e5',
-                    }}
-                }}
-            }}
-        }}
 
         // Dark mode — replaces Alpine x-data/x-init/$watch
         ;(function() {{
@@ -376,9 +365,8 @@ def _login_page() -> str:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Dazzle Control Plane</title>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@2.0.8"></script>
+    <link rel="stylesheet" href="/static/css/dazzle-bundle.css" />
+    <script src="/static/vendor/htmx.min.js"></script>
 </head>
 <body class="min-h-screen bg-base-200 flex items-center justify-center">
     <div class="card w-96 bg-base-100 shadow-xl">

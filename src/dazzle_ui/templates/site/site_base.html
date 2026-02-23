@@ -9,13 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  {# DaisyUI 5 #}
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
-
-  {# Tailwind CSS — compiled bundle if available, browser fallback for dev #}
+  {# Tailwind CSS + DaisyUI — compiled bundle replaces both CDNs (#377) #}
   {% if _tailwind_bundled | default(false) %}
   <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
   {% else %}
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
   {% endif %}
   {# DAZZLE design system layer #}

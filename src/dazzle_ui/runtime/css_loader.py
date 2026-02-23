@@ -15,8 +15,8 @@ from pathlib import Path
 _STATIC_CSS_DIR = Path(__file__).parent / "static" / "css"
 
 # CSS source files to concatenate for the bundled stylesheet.
-# With DaisyUI loaded via CDN, we only need the DAZZLE semantic layer
-# plus the design system overrides.
+# These are the DAZZLE semantic layer + design system overrides.
+# Tailwind utilities + DaisyUI are included via the build_css step.
 CSS_SOURCE_FILES = [
     "dazzle-layer.css",  # Semantic aliases on top of DaisyUI + Tailwind
     "site-sections.css",  # Site section components (v0.16.0)
@@ -36,8 +36,8 @@ def get_bundled_css(theme_css: str | None = None) -> str:
     """
     Load and concatenate CSS files from static/css/.
 
-    With DaisyUI loaded via CDN, this only includes the thin DAZZLE
-    semantic layer that provides app structure and semantic aliases.
+    Returns the DAZZLE semantic layer (structure and aliases).
+    Tailwind + DaisyUI are built separately by build_css().
 
     Args:
         theme_css: Optional generated theme CSS to prepend (from ThemeSpec)

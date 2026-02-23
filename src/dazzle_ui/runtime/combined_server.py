@@ -274,12 +274,28 @@ def run_unified_server(
                 except Exception:
                     logger.debug("Failed to load bundled CSS", exc_info=True)
 
+            # Build Tailwind+DaisyUI CSS via standalone CLI (#377)
+            tailwind_css = ""
+            try:
+                from dazzle_ui.build_css import build_css
+
+                tw_output = build_css(project_root=project_root)
+                if tw_output and tw_output.exists():
+                    tailwind_css = tw_output.read_text(encoding="utf-8")
+                    print(f"[Dazzle] CSS bundle built: {tw_output.stat().st_size / 1024:.0f} KB")
+            except Exception:
+                logger.debug("Tailwind CSS build skipped (CLI not available)", exc_info=True)
+
             # Serve bundled CSS as a cacheable external file instead of
             # inlining 58KB on every page (#318).
-            if theme_css:
+            # When Tailwind CSS is built, the bundle includes everything
+            # (Tailwind utilities + DaisyUI + theme + semantic layers).
+            _bundle_parts = [p for p in [tailwind_css, theme_css] if p]
+            if _bundle_parts:
                 from starlette.responses import Response as StarletteResponse
 
-                _bundle_css = theme_css  # capture for closure
+                _bundle_css = "\n".join(_bundle_parts)
+                _tailwind_included = bool(tailwind_css)
 
                 @app.get("/static/css/dazzle-bundle.css", include_in_schema=False)
                 async def serve_bundled_css() -> StarletteResponse:

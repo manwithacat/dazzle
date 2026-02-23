@@ -43,6 +43,7 @@ Thumbs.db
 # Build output
 build/
 *.pyc
+src/dazzle_ui/runtime/static/css/dazzle-bundle.css
 
 # Test coverage
 .coverage
