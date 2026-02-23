@@ -893,13 +893,7 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
   to { transform: rotate(360deg); }
 }
 
-/* HTMX indicator pattern */
-.htmx-indicator {
-  display: none;
-}
-.htmx-request .htmx-indicator {
-  display: inline-block;
-}
+/* HTMX indicator visibility — moved to dz.css (loaded on all pages) */
 .htmx-request .htmx-hide-on-request {
   display: none;
 }

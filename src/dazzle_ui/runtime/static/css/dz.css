@@ -125,6 +125,21 @@ tr.htmx-settling {
   opacity: 0.7;
 }
 
+/* ── HTMX indicator visibility ─────────────────────────────────────── */
+/* Override htmx built-in opacity with display:none so hidden indicators
+   don't occupy layout space (opacity:0 still reserves vertical space). */
+.htmx-indicator {
+  display: none;
+}
+/* Descendant case: indicator is a child of the requesting element */
+.htmx-request .htmx-indicator {
+  display: inline-block;
+}
+/* Same-element case: hx-indicator="#id" adds htmx-request to the indicator itself */
+.htmx-request.htmx-indicator {
+  display: inline-block;
+}
+
 /* ── Skeleton loading placeholders ──────────────────────────────────── */
 
 .dz-skeleton {
