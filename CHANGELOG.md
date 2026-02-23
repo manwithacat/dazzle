@@ -10,6 +10,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- jsDelivr CDN distribution — framework CSS/JS served from `cdn.jsdelivr.net` for faster loading and cache sharing across Dazzle-powered sites
+- `dist/dazzle.min.css` (43 KB) — micro-runtime + design system + site sections CSS bundle
+- `dist/dazzle.min.js` (131 KB) — HTMX + extensions + micro-runtime JS bundle
+- `dist/dazzle-icons.min.js` (350 KB) — Lucide icons bundle (site pages only)
+- `scripts/build_dist.py` — concatenates and minifies framework assets into `dist/`
+- `scripts/update_vendors.py` — checks/downloads latest vendor JS versions (htmx, idiomorph, lucide)
+- `.github/workflows/update-vendors.yml` — weekly automated vendor update PR
+- `[ui] cdn = false` in `dazzle.toml` — disables CDN for air-gapped deployments
+- `_dazzle_version` and `_use_cdn` Jinja2 globals in template renderer
+
+### Changed
+- `base.html` and `site_base.html` now load framework assets from jsDelivr CDN by default, with local vendored fallback when CDN is disabled
+
+## [0.34.0] - 2026-02-23
+
+### Added
 - `ApiResponseCache` — async Redis cache for external API responses with scoped keys, dedup locking, and lazy connection (`dazzle_back.runtime.api_cache`)
 - `cache:` keyword in integration mapping blocks — per-mapping TTL (e.g. `cache: "24h"`) parsed via `parse_duration()`
 - Fragment route caching — search (5 min TTL) and select (1 hour TTL) endpoints use shared `ApiResponseCache`
@@ -22,11 +38,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Entity metadata (fields, status_field) stored in Redis at startup by `ProcessManager` for Celery worker access
 - `query` step kind — queries entities matching Django-style filters (e.g. `{"due_date__lt": "today", "status__not_in": ["completed"]}`) with date literal resolution (#346)
 - `foreach` step kind — iterates over query results and executes sub-steps for each item, enabling batch operations like escalation workflows (#346)
+- AI cost tracking gateway — `budget_alert_usd`, `default_provider` on `llm_config`; `vision`, `description` on `llm_intent`; auto-generated `AIJob` entity for cost/token audit trail (#376)
+- Integration data transformation — `transform:` block on integration mappings with `jmespath`, `template`, and `rename` expressions (#383)
+- Workflow Field Specification (WFS) — `wfs_fields:` block on process steps for field-level read/write/required declarations with runtime enforcement (#375)
 
 ### Changed
 - `MappingExecutor` now accepts `cache: ApiResponseCache | None` instead of auto-creating sync Redis. All cache operations are async
 - Cache keys scoped to `api_cache:{scope}:{url_hash}` preventing collisions across integrations
 - Cache TTL priority chain: DSL `cache:` directive > pack TOML `cache_ttl` > default 86400
+- Replaced `getattr()` string literals with typed attribute access across agent missions, persona journey, workspace/UI files (#367)
+- Eliminated `BackendSpec` from main code path — runtime uses `AppSpec` directly (#369)
+- Wired `EventBusProcessAdapter` into app startup, simplified Procfile (#368)
+- Eliminated Celery dependency for event bus — native async process adapter (#368)
+- Fixed silent exception handlers in event delivery path (#365)
 
 ### Improved
 - Eliminated 8 swallowed exceptions (`except Exception: pass`) — all now log at appropriate levels (debug/info/warning)
@@ -43,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `force_refresh=True` blocked by dedup lock — lock check skipped when force-refreshing
 - Blocking `redis.ping()` in constructor — connection is now lazy (first `get()`/`put()`)
 - Hardcoded `ssl.CERT_NONE` — removed, uses redis-py defaults (validates certs)
+- CI test `test_crud_service_with_repository` — fixture missing surface, service name convention mismatch
 
 ### Removed
 - `IntegrationCache` class from `mapping_executor.py` — replaced by `ApiResponseCache`
