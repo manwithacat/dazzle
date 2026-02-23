@@ -173,3 +173,84 @@ class TestNormalisePostgresScheme:
 
     def test_leaves_other_schemes(self) -> None:
         assert _normalise_postgres_scheme("sqlite:///foo.db") == "sqlite:///foo.db"
+
+
+# ---------------------------------------------------------------------------
+# [infra] and [stack] config parsing
+# ---------------------------------------------------------------------------
+
+
+class TestLoadManifestInfra:
+    def test_infra_section_parsed(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [infra]
+                backends = ["docker"]
+
+                [infra.docker]
+                variant = "compose"
+                image_name = "myapp"
+                port = 3000
+
+                [infra.terraform]
+                cloud_provider = "gcp"
+                region = "us-east1"
+            """),
+        )
+        mf = load_manifest(toml_path)
+        assert mf.infra is not None
+        assert mf.infra.docker.image_name == "myapp"
+        assert mf.infra.docker.port == 3000
+        assert mf.infra.terraform.cloud_provider == "gcp"
+        assert mf.infra.terraform.region == "us-east1"
+        assert mf.infra.backends == ["docker"]
+
+    def test_no_infra_section(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(tmp_path)
+        mf = load_manifest(toml_path)
+        assert mf.infra is None
+
+
+class TestLoadManifestStack:
+    def test_stack_section_parsed(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [stack]
+                name = "my-stack"
+                backends = ["fastapi", "postgres"]
+                description = "Main stack"
+            """),
+        )
+        mf = load_manifest(toml_path)
+        assert mf.stack is not None
+        assert mf.stack.name == "my-stack"
+        assert mf.stack.backends == ["fastapi", "postgres"]
+        assert mf.stack.description == "Main stack"
+
+    def test_no_stack_section(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(tmp_path)
+        mf = load_manifest(toml_path)
+        assert mf.stack is None
+
+
+class TestLoadManifestCdn:
+    def test_cdn_defaults_true(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(tmp_path)
+        mf = load_manifest(toml_path)
+        assert mf.cdn is True
+
+    def test_cdn_disabled(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [ui]
+                cdn = false
+            """),
+        )
+        mf = load_manifest(toml_path)
+        assert mf.cdn is False

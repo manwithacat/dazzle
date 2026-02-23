@@ -7,7 +7,7 @@ custom filters, design token CSS, and mock data generation — no server needed.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import pytest
 
@@ -505,6 +505,14 @@ class TestRendering:
         assert "<form" in html
         assert "<input" in html or "title" in html.lower()
 
+    def test_render_page_partial(self) -> None:
+        """partial=True omits the HTML/HEAD wrapper."""
+        html = render_page(self._make_list_page_context(), partial=True)
+        assert "<!DOCTYPE" not in html
+        assert "<html" not in html
+        # But content is still rendered
+        assert "<table" in html or "hx-get" in html
+
     def test_render_detail_page(self) -> None:
         ctx = PageContext(
             page_title="Task Details",
@@ -625,6 +633,172 @@ class TestJinjaFilters:
         tmpl = env.from_string("{{ val|truncate_text }}")
         result = tmpl.render(val={})
         assert result == ""
+
+    # --- currency filter edge cases ---
+
+    def test_currency_filter_non_numeric(self, env) -> None:
+        """Non-numeric value returns str()."""
+        tmpl = env.from_string("{{ val|currency }}")
+        assert tmpl.render(val="not-a-number") == "not-a-number"
+
+    # --- dateformat filter edge cases ---
+
+    def test_dateformat_filter_none(self, env) -> None:
+        tmpl = env.from_string("{{ val|dateformat }}")
+        assert tmpl.render(val=None) == ""
+
+    def test_dateformat_filter_invalid_string(self, env) -> None:
+        """Unparseable ISO string returns the raw string."""
+        tmpl = env.from_string("{{ val|dateformat }}")
+        assert tmpl.render(val="not-a-date") == "not-a-date"
+
+    def test_dateformat_filter_non_date_type(self, env) -> None:
+        """Non-date types fall through to str()."""
+        tmpl = env.from_string("{{ val|dateformat }}")
+        assert tmpl.render(val=42) == "42"
+
+    def test_dateformat_filter_datetime(self, env) -> None:
+        tmpl = env.from_string("{{ val|dateformat }}")
+        dt = datetime(2025, 12, 25, 10, 30, 0)
+        result = tmpl.render(val=dt)
+        assert "25" in result
+        assert "Dec" in result
+
+    # --- badge filter edge cases ---
+
+    def test_badge_class_none(self, env) -> None:
+        tmpl = env.from_string("{{ val|badge_class }}")
+        assert tmpl.render(val=None) == ""
+
+    # --- timeago filter ---
+
+    def test_timeago_none(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        assert tmpl.render(val=None) == ""
+
+    def test_timeago_datetime(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(seconds=30))
+        assert "second" in result
+
+    def test_timeago_date_object(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=date.today() - timedelta(days=3))
+        assert "day" in result
+
+    def test_timeago_iso_string(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        past = datetime.now() - timedelta(hours=2)
+        result = tmpl.render(val=past.isoformat())
+        assert "hour" in result
+
+    def test_timeago_invalid_string(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val="not-a-date")
+        assert result == "not-a-date"
+
+    def test_timeago_non_datetime_type(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=12345)
+        assert result == "12345"
+
+    def test_timeago_future(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() + timedelta(hours=1))
+        assert result == "just now"
+
+    def test_timeago_minutes(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(minutes=5))
+        assert "minute" in result
+
+    def test_timeago_hours(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(hours=3))
+        assert "hour" in result
+
+    def test_timeago_days(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(days=15))
+        assert "day" in result
+
+    def test_timeago_months(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(days=60))
+        assert "month" in result
+
+    def test_timeago_years(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(days=400))
+        assert "year" in result
+
+    def test_timeago_singular_second(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(seconds=1))
+        assert result == "1 second ago"
+
+    def test_timeago_singular_minute(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(minutes=1))
+        assert result == "1 minute ago"
+
+    def test_timeago_singular_hour(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(hours=1))
+        assert result == "1 hour ago"
+
+    def test_timeago_singular_day(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(days=1))
+        assert result == "1 day ago"
+
+    def test_timeago_singular_month(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(days=30))
+        assert result == "1 month ago"
+
+    def test_timeago_singular_year(self, env) -> None:
+        tmpl = env.from_string("{{ val|timeago }}")
+        result = tmpl.render(val=datetime.now() - timedelta(days=365))
+        assert result == "1 year ago"
+
+    # --- slugify filter ---
+
+    def test_slugify(self, env) -> None:
+        tmpl = env.from_string("{{ val|slugify }}")
+        assert tmpl.render(val="Hello World!") == "hello-world"
+
+    def test_slugify_none(self, env) -> None:
+        tmpl = env.from_string("{{ val|slugify }}")
+        assert tmpl.render(val=None) == ""
+
+    # --- basename_or_url filter ---
+
+    def test_basename_or_url_with_path(self, env) -> None:
+        tmpl = env.from_string("{{ val|basename_or_url }}")
+        assert tmpl.render(val="/uploads/docs/report.pdf") == "report.pdf"
+
+    def test_basename_or_url_with_url(self, env) -> None:
+        tmpl = env.from_string("{{ val|basename_or_url }}")
+        assert tmpl.render(val="https://example.com/file.txt?v=2") == "file.txt"
+
+    def test_basename_or_url_plain_name(self, env) -> None:
+        tmpl = env.from_string("{{ val|basename_or_url }}")
+        assert tmpl.render(val="readme.txt") == "readme.txt"
+
+    def test_basename_or_url_none(self, env) -> None:
+        tmpl = env.from_string("{{ val|basename_or_url }}")
+        assert tmpl.render(val=None) == ""
+
+    # --- Jinja globals ---
+
+    def test_dazzle_version_global(self, env) -> None:
+        assert "_dazzle_version" in env.globals
+        assert env.globals["_dazzle_version"]  # non-empty
+
+    def test_use_cdn_global(self, env) -> None:
+        assert "_use_cdn" in env.globals
+        assert env.globals["_use_cdn"] is True
 
 
 # ===================================================================
