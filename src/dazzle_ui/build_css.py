@@ -27,18 +27,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# Tailwind CSS standalone CLI v4.0.6
-_TAILWIND_VERSION = "4.0.6"
-_TAILWIND_BASE_URL = (
-    f"https://github.com/nicolo-ribaudo/tailwind-cli-extra/releases/download/v{_TAILWIND_VERSION}"
-)
+# Tailwind CSS standalone CLI with DaisyUI (via dobicinaitis/tailwind-cli-extra)
+_TAILWIND_EXTRA_VERSION = "2.8.1"
+_TAILWIND_BASE_URL = f"https://github.com/dobicinaitis/tailwind-cli-extra/releases/download/v{_TAILWIND_EXTRA_VERSION}"
 
-# Binary names by platform (Tailwind standalone CLI v4 with DaisyUI support)
+# Binary names by platform (no version suffix in filenames)
 _PLATFORM_BINARIES: dict[tuple[str, str], str] = {
-    ("darwin", "arm64"): f"tailwindcss-extra-macos-arm64-v{_TAILWIND_VERSION}",
-    ("darwin", "x86_64"): f"tailwindcss-extra-macos-x64-v{_TAILWIND_VERSION}",
-    ("linux", "x86_64"): f"tailwindcss-extra-linux-x64-v{_TAILWIND_VERSION}",
-    ("linux", "aarch64"): f"tailwindcss-extra-linux-arm64-v{_TAILWIND_VERSION}",
+    ("darwin", "arm64"): "tailwindcss-extra-macos-arm64",
+    ("darwin", "x86_64"): "tailwindcss-extra-macos-x64",
+    ("linux", "x86_64"): "tailwindcss-extra-linux-x64",
+    ("linux", "aarch64"): "tailwindcss-extra-linux-arm64",
 }
 
 
@@ -89,12 +87,12 @@ def get_tailwind_binary() -> Path | None:
     # Check if cached version matches
     if cached.exists() and version_file.exists():
         cached_version = version_file.read_text().strip()
-        if cached_version == _TAILWIND_VERSION:
+        if cached_version == _TAILWIND_EXTRA_VERSION:
             return cached
 
     # Download
     url = f"{_TAILWIND_BASE_URL}/{binary_name}"
-    logger.info("Downloading Tailwind CSS CLI v%s for %s/%s...", _TAILWIND_VERSION, *key)
+    logger.info("Downloading Tailwind CSS CLI v%s for %s/%s...", _TAILWIND_EXTRA_VERSION, *key)
 
     try:
         import urllib.request
@@ -104,7 +102,7 @@ def get_tailwind_binary() -> Path | None:
 
         cached.write_bytes(data)
         cached.chmod(cached.stat().st_mode | stat.S_IEXEC)
-        version_file.write_text(_TAILWIND_VERSION)
+        version_file.write_text(_TAILWIND_EXTRA_VERSION)
         logger.info("Tailwind CSS CLI cached at %s", cached)
         return cached
 

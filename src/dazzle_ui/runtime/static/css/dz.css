@@ -65,12 +65,13 @@
   transition: opacity 200ms ease-out, transform 200ms ease-out;
 }
 
-/* ── Desktop sidebar (replaces lg:drawer-open, unavailable in DaisyUI CDN) ── */
+/* ── Desktop sidebar (DaisyUI provides drawer base via @plugin;
+     this adds data-dz-sidebar toggling for the Dazzle micro-runtime) ── */
 
 @media (min-width: 1024px) {
   /* Two-column grid when sidebar is open */
   .drawer[data-dz-sidebar="open"] {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: max-content 1fr;
   }
 
   /* Show sidebar in-place (not overlay) */
@@ -81,6 +82,10 @@
     overflow-y: auto;
     visibility: visible;
     pointer-events: auto;
+    opacity: 1;
+    display: block;
+    width: auto;
+    overscroll-behavior: auto;
   }
 
   /* No overlay needed on desktop */
@@ -90,6 +95,7 @@
 
   /* Slide content into view */
   .drawer[data-dz-sidebar="open"] > .drawer-side > *:not(.drawer-overlay) {
+    translate: 0%;
     transform: translateX(0);
   }
 
