@@ -48,9 +48,11 @@
     });
   }
 
-  document.addEventListener("DOMContentLoaded", function () { mountIslands(document); });
-  document.body.addEventListener("htmx:afterSettle", function (e) { mountIslands(e.target); });
-  document.body.addEventListener("htmx:beforeSwap", function (e) {
-    if (e.detail && e.detail.target) unmountIslands([e.detail.target]);
+  document.addEventListener("DOMContentLoaded", function () {
+    mountIslands(document);
+    document.body.addEventListener("htmx:afterSettle", function (e) { mountIslands(e.target); });
+    document.body.addEventListener("htmx:beforeSwap", function (e) {
+      if (e.detail && e.detail.target) unmountIslands([e.detail.target]);
+    });
   });
 })();
