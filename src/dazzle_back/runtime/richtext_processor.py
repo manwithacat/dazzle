@@ -186,35 +186,63 @@ class MarkdownProcessor:
         """
         Basic HTML sanitization without bleach.
 
-        Uses html.parser to properly strip all tags and extract text only.
+        Uses html.parser to strip dangerous elements (script, style, event
+        handlers, javascript: URLs) while preserving safe markup.
         This is a fallback when bleach is not installed.
         """
+        import html as html_mod
         from html.parser import HTMLParser
 
-        class _TextExtractor(HTMLParser):
+        _DANGEROUS_TAGS = frozenset({"script", "style", "iframe", "object", "embed"})
+        _DANGEROUS_ATTR_PREFIXES = ("on",)  # onclick, onerror, etc.
+
+        class _Sanitizer(HTMLParser):
             def __init__(self) -> None:
                 super().__init__()
                 self._pieces: list[str] = []
-                self._skip = False
+                self._skip_depth = 0
 
             def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-                if tag.lower() in ("script", "style"):
-                    self._skip = True
+                tag_l = tag.lower()
+                if tag_l in _DANGEROUS_TAGS:
+                    self._skip_depth += 1
+                    return
+                if self._skip_depth:
+                    return
+                # Filter attributes: drop event handlers and javascript: URLs
+                safe_attrs: list[str] = []
+                for name, val in attrs:
+                    name_l = name.lower()
+                    if any(name_l.startswith(p) for p in _DANGEROUS_ATTR_PREFIXES):
+                        continue
+                    if val and "javascript:" in val.lower():
+                        continue
+                    if val is not None:
+                        safe_attrs.append(f'{name}="{html_mod.escape(val)}"')
+                    else:
+                        safe_attrs.append(name)
+                attr_str = (" " + " ".join(safe_attrs)) if safe_attrs else ""
+                self._pieces.append(f"<{tag}{attr_str}>")
 
             def handle_endtag(self, tag: str) -> None:
-                if tag.lower() in ("script", "style"):
-                    self._skip = False
+                tag_l = tag.lower()
+                if tag_l in _DANGEROUS_TAGS:
+                    self._skip_depth = max(0, self._skip_depth - 1)
+                    return
+                if self._skip_depth:
+                    return
+                self._pieces.append(f"</{tag}>")
 
             def handle_data(self, data: str) -> None:
-                if not self._skip:
+                if not self._skip_depth:
                     self._pieces.append(data)
 
-            def get_text(self) -> str:
-                return " ".join(self._pieces)
+            def get_html(self) -> str:
+                return "".join(self._pieces)
 
-        extractor = _TextExtractor()
-        extractor.feed(raw_html)
-        return extractor.get_text()
+        sanitizer = _Sanitizer()
+        sanitizer.feed(raw_html)
+        return sanitizer.get_html()
 
     async def process_inline_images(
         self,
