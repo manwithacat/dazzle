@@ -1,3 +1,3 @@
 """
-Tests for dazzle-app-back
+Tests for dazzle_back
 """

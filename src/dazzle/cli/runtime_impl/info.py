@@ -67,11 +67,8 @@ def info_command() -> None:
 
     if not (dnr_back_available and dnr_ui_available):
         typer.echo("\nTo install runtime packages:")
-        if not dnr_back_available:
-            typer.echo("  pip install dazzle-app-back")
-        if not dnr_ui_available:
-            typer.echo("  pip install dazzle-app-ui")
+        typer.echo("  pip install dazzle-dsl[serve]")
         if not fastapi_available:
-            typer.echo("  pip install fastapi")
+            typer.echo("  (missing: fastapi)")
         if not uvicorn_available:
-            typer.echo("  pip install uvicorn")
+            typer.echo("  (missing: uvicorn)")

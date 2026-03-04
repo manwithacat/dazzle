@@ -151,7 +151,7 @@ def run_unified_server(
         from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
     except ImportError as e:
         print(f"[Dazzle] Error: Required dependencies not available: {e}")
-        print("[Dazzle] Install with: pip install fastapi uvicorn dazzle-app-back")
+        print("[Dazzle] Install with: pip install dazzle-dsl[serve]")
         return
 
     project_root = project_root or Path.cwd()
@@ -435,7 +435,7 @@ def run_backend_only(
         from dazzle_back.runtime.server import DazzleBackendApp
     except ImportError as e:
         print(f"[Dazzle] Error: Required dependencies not available: {e}")
-        print("[Dazzle] Install with: pip install fastapi uvicorn dazzle-app-back")
+        print("[Dazzle] Install with: pip install dazzle-dsl[serve]")
         return
 
     print("\n" + "=" * 60)

@@ -327,7 +327,7 @@ def serve_command(
         from dazzle_ui.runtime import run_unified_server
     except ImportError as e:
         typer.echo(f"Dazzle runtime not available: {e}", err=True)
-        typer.echo("Install with: pip install dazzle-app-back dazzle-app-ui", err=True)
+        typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
         raise typer.Exit(code=1)
 
     if not FASTAPI_AVAILABLE and not ui_only:

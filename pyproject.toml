@@ -77,6 +77,12 @@ dev = [
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
 ]
+# Runtime server dependencies for `dazzle serve --local` (v0.34.3 — Issue #388)
+serve = [
+    "fastapi>=0.100.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.24.0",
+]
 # PostgreSQL deps moved to core dependencies (v0.28.0 — PG is the sole backend)
 postgres = []
 # Process execution backends (v0.24.0 - Issue #45)

@@ -51,7 +51,7 @@ def build_ui_command(
         from dazzle_ui.runtime.static_preview import generate_preview_files as _check  # noqa: F401
     except ImportError as e:
         typer.echo(f"Dazzle UI not available: {e}", err=True)
-        typer.echo("Install with: pip install dazzle-app-ui", err=True)
+        typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
         raise typer.Exit(code=1)
 
     manifest_path = Path(manifest).resolve()
@@ -226,7 +226,7 @@ def migrate_command(
         from dazzle_back.runtime.migrations import MigrationAction
     except ImportError as e:
         typer.echo(f"Dazzle packages not available: {e}", err=True)
-        typer.echo("Install with: pip install dazzle-app-back", err=True)
+        typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
         raise typer.Exit(code=1)
 
     # Load and build AppSpec
@@ -400,7 +400,7 @@ def build_command(
         from dazzle_ui.runtime.static_preview import generate_preview_files as _check  # noqa: F401
     except ImportError as e:
         typer.echo(f"Dazzle UI not available: {e}", err=True)
-        typer.echo("Install with: pip install dazzle-app-ui", err=True)
+        typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
         raise typer.Exit(code=1)
 
     manifest_path = Path(manifest).resolve()
