@@ -456,7 +456,7 @@ my-app/
 \u251c\u2500\u2500 dsl/
 \u2502   \u2514\u2500\u2500 app.dsl    # Your DSL definitions
 \u2514\u2500\u2500 .dazzle/       # Runtime data (created on first run)
-    \u2514\u2500\u2500 data.db    # SQLite database""",
+    \u2514\u2500\u2500 logs/      # Server logs""",
                 },
                 {
                     "step": 3,

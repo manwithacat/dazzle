@@ -27,7 +27,6 @@ class UnifiedServerConfig:
     appspec: AppSpec
     ui_spec: Any = None
     port: int = 3000
-    db_path: str | Path | None = None
     enable_test_mode: bool = False
     enable_dev_mode: bool = True
     enable_auth: bool = True
@@ -97,7 +96,6 @@ def run_unified_server(
     appspec: AppSpec | None = None,
     ui_spec: Any = None,
     port: int = 3000,
-    db_path: str | Path | None = None,
     enable_test_mode: bool = False,
     enable_dev_mode: bool = True,
     enable_auth: bool = True,
@@ -130,7 +128,6 @@ def run_unified_server(
         appspec = config.appspec
         ui_spec = config.ui_spec  # noqa: F841 — reserved for future use
         port = config.port
-        db_path = config.db_path
         enable_test_mode = config.enable_test_mode
         enable_dev_mode = config.enable_dev_mode
         enable_auth = config.enable_auth
@@ -155,13 +152,12 @@ def run_unified_server(
         return
 
     project_root = project_root or Path.cwd()
-    db_file = Path(db_path) if db_path else Path(".dazzle/data.db")
 
     # Initialize logging
     try:
         from dazzle_back.runtime.logging import setup_logging
 
-        log_dir = db_file.parent / "logs"
+        log_dir = Path(".dazzle") / "logs"
         setup_logging(log_dir=log_dir)
     except ImportError:
         pass
@@ -370,7 +366,9 @@ def run_unified_server(
     print(f"[Dazzle] Server:   {_clickable_url(base_url)}")
     print(f"[Dazzle] App:      {_clickable_url(base_url + '/app')}")
     print(f"[Dazzle] API Docs: {_clickable_url(docs_url)}")
-    print(f"[Dazzle] Database: {db_file}")
+    print(
+        f"[Dazzle] Database: PostgreSQL ({database_url[:40] + '...' if len(database_url) > 40 else database_url or 'not configured'})"
+    )
     if enable_test_mode:
         print("[Dazzle] Test endpoints: /__test__/* (enabled)")
     if enable_auth:
@@ -407,7 +405,6 @@ def run_backend_only(
     appspec: AppSpec,
     host: str = "127.0.0.1",
     port: int = 8000,
-    db_path: str | Path | None = None,
     enable_test_mode: bool = False,
     enable_dev_mode: bool = True,
     enable_graphql: bool = False,
@@ -422,7 +419,6 @@ def run_backend_only(
         appspec: Dazzle AppSpec (parsed IR)
         host: Host to bind to
         port: Port to bind to
-        db_path: Path to SQLite database
         enable_test_mode: Enable test endpoints (/__test__/*)
         enable_dev_mode: Enable dev control plane
         enable_graphql: Enable GraphQL endpoint at /graphql
@@ -481,7 +477,9 @@ def run_backend_only(
     docs_url = f"{backend_url}/docs"
     print(f"[Dazzle] Backend:  {_clickable_url(backend_url)}")
     print(f"[Dazzle] API Docs: {_clickable_url(docs_url)}")
-    print(f"[Dazzle] Database: {db_path}")
+    print(
+        f"[Dazzle] Database: PostgreSQL ({database_url[:40] + '...' if len(database_url) > 40 else database_url or 'not configured'})"
+    )
     if enable_test_mode:
         print("[Dazzle] Test endpoints: /__test__/* (enabled)")
     print()

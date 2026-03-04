@@ -37,7 +37,6 @@ EXPOSE {api_port}
 ENV PYTHONUNBUFFERED=1
 ENV DAZZLE_HOST=0.0.0.0
 ENV DAZZLE_API_PORT={api_port}
-ENV DAZZLE_DB_PATH=/app/.dazzle/data.db
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \\
     CMD curl -f http://localhost:{api_port}/health || exit 1
