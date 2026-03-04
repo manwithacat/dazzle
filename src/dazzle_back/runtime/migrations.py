@@ -39,6 +39,7 @@ class MigrationAction(StrEnum):
     CREATE_TABLE = "create_table"
     ADD_COLUMN = "add_column"
     ADD_INDEX = "add_index"
+    ADD_CONSTRAINT = "add_constraint"
     DROP_NOT_NULL = "drop_not_null"
     # These are detected but not auto-applied (require manual intervention)
     DROP_COLUMN = "drop_column"
@@ -147,6 +148,10 @@ class MigrationPlanner:
         MetaData.sorted_tables so that CREATE TABLE statements for referenced
         tables come before their dependents.
 
+        Circular FK references (e.g. Department ↔ User) are handled by
+        creating tables without the circular FK constraints first, then
+        adding them via ALTER TABLE ADD CONSTRAINT in a second pass.
+
         Args:
             entities: List of entity specifications
 
@@ -154,11 +159,12 @@ class MigrationPlanner:
             Migration plan with steps and warnings
         """
         from dazzle_back.runtime.relation_loader import RelationRegistry
-        from dazzle_back.runtime.sa_schema import build_metadata
+        from dazzle_back.runtime.sa_schema import build_metadata, get_circular_ref_edges
 
         steps: list[MigrationStep] = []
         warnings: list[str] = []
         registry = RelationRegistry.from_entities(entities)
+        circular_edges = get_circular_ref_edges(entities)
 
         # Build SA metadata for topological ordering
         metadata = build_metadata(entities)
@@ -177,9 +183,23 @@ class MigrationPlanner:
                 entity = entity_map.get(name)
                 if entity is None:
                     continue
-                entity_steps, entity_warnings = self._plan_entity_migration(conn, entity, registry)
+                entity_steps, entity_warnings = self._plan_entity_migration(
+                    conn,
+                    entity,
+                    registry,
+                    circular_edges,
+                )
                 steps.extend(entity_steps)
                 warnings.extend(entity_warnings)
+
+        # Add deferred FK constraints for circular references (second pass)
+        if circular_edges:
+            deferred_steps = self._plan_deferred_fk_constraints(
+                entities,
+                circular_edges,
+                entity_map,
+            )
+            steps.extend(deferred_steps)
 
         has_destructive = any(s.is_destructive for s in steps)
 
@@ -194,6 +214,7 @@ class MigrationPlanner:
         conn: Any,
         entity: EntitySpec,
         registry: Any = None,
+        circular_edges: set[tuple[str, str]] | None = None,
     ) -> tuple[list[MigrationStep], list[str]]:
         """Plan migration for a single entity."""
         steps: list[MigrationStep] = []
@@ -208,8 +229,12 @@ class MigrationPlanner:
         table_exists = cursor.fetchone() is not None
 
         if not table_exists:
-            # New table - create it
-            sql = self._generate_create_table_sql(entity, registry=registry)
+            # New table - create it (circular FKs excluded, added later via ALTER TABLE)
+            sql = self._generate_create_table_sql(
+                entity,
+                registry=registry,
+                circular_edges=circular_edges,
+            )
             steps.append(
                 MigrationStep(
                     action=MigrationAction.CREATE_TABLE,
@@ -325,8 +350,17 @@ class MigrationPlanner:
 
         return steps, warnings
 
-    def _generate_create_table_sql(self, entity: EntitySpec, registry: Any = None) -> str:
-        """Generate CREATE TABLE SQL."""
+    def _generate_create_table_sql(
+        self,
+        entity: EntitySpec,
+        registry: Any = None,
+        circular_edges: set[tuple[str, str]] | None = None,
+    ) -> str:
+        """Generate CREATE TABLE SQL.
+
+        FK constraints involved in circular references are excluded — they
+        are added later via ALTER TABLE ADD CONSTRAINT.
+        """
         columns = []
 
         # Check if entity has an id field
@@ -338,15 +372,61 @@ class MigrationPlanner:
             col_def = self._generate_column_def(field)
             columns.append(col_def)
 
-        # Append FK constraints from the relation registry
+        # Append FK constraints from the relation registry (skip circular ones)
         if registry is not None:
             from dazzle_back.runtime.relation_loader import get_foreign_key_constraints
 
-            fk_clauses = get_foreign_key_constraints(entity, registry)
+            fk_clauses = get_foreign_key_constraints(
+                entity,
+                registry,
+                exclude_edges=circular_edges,
+            )
             columns.extend(fk_clauses)
 
         table = quote_identifier(entity.name)
         return f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(columns)})"
+
+    def _plan_deferred_fk_constraints(
+        self,
+        entities: list[EntitySpec],
+        circular_edges: set[tuple[str, str]],
+        entity_map: dict[str, EntitySpec],
+    ) -> list[MigrationStep]:
+        """Generate ALTER TABLE ADD CONSTRAINT steps for circular FK refs.
+
+        These are emitted after all CREATE TABLE steps so that both sides of
+        a circular reference exist before the FK constraint is applied.
+        """
+        steps: list[MigrationStep] = []
+        for entity in entities:
+            for field in entity.fields:
+                if field.type.kind != "ref" or not field.type.ref_entity:
+                    continue
+                ref_entity = field.type.ref_entity
+                if (entity.name, ref_entity) not in circular_edges:
+                    continue
+
+                constraint_name = f"fk_{entity.name}_{field.name}_{ref_entity}"
+                table = quote_identifier(entity.name)
+                col = quote_identifier(field.name)
+                ref_table = quote_identifier(ref_entity)
+                ref_col = quote_identifier("id")
+                # Use DO block for idempotency (PG has no ADD CONSTRAINT IF NOT EXISTS)
+                sql = (
+                    f"DO $$ BEGIN "
+                    f"ALTER TABLE {table} ADD CONSTRAINT {quote_identifier(constraint_name)} "
+                    f"FOREIGN KEY ({col}) REFERENCES {ref_table}({ref_col}); "
+                    f"EXCEPTION WHEN duplicate_object THEN NULL; END $$"
+                )
+                steps.append(
+                    MigrationStep(
+                        action=MigrationAction.ADD_CONSTRAINT,
+                        table=entity.name,
+                        column=field.name,
+                        sql=sql,
+                    )
+                )
+        return steps
 
     def _get_column_type(self, field: FieldSpec) -> str:
         """Get the appropriate PostgreSQL column type."""

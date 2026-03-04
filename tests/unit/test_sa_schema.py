@@ -10,8 +10,11 @@ from sqlalchemy import Boolean, Float, Integer, Text
 
 from dazzle_back.runtime.sa_schema import (
     _field_type_to_sa,
+    _find_circular_refs,
     _scalar_type_to_sa,
     build_metadata,
+    get_circular_ref_edges,
+    get_sorted_table_names,
 )
 from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
@@ -352,3 +355,250 @@ class TestEnumFields:
         metadata = build_metadata(entities)
         table = metadata.tables["Task"]
         assert isinstance(table.c.status.type, Text)
+
+
+# =============================================================================
+# Circular FK Reference Tests
+# =============================================================================
+
+
+class TestCircularFKDetection:
+    """Test detection of circular FK references between entities."""
+
+    def test_no_circular_refs(self):
+        """Linear chain A->B->C has no cycles."""
+        entities = [
+            _entity("A", [_field("id", scalar_type=ScalarType.UUID)]),
+            _entity(
+                "B",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("a_ref", kind="ref", ref_entity="A"),
+                ],
+            ),
+            _entity(
+                "C",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("b_ref", kind="ref", ref_entity="B"),
+                ],
+            ),
+        ]
+        assert _find_circular_refs(entities) == set()
+
+    def test_two_entity_cycle(self):
+        """Department ↔ User circular reference is detected."""
+        entities = [
+            _entity(
+                "Department",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("head", kind="ref", ref_entity="User"),
+                ],
+            ),
+            _entity(
+                "User",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("department", kind="ref", ref_entity="Department"),
+                ],
+            ),
+        ]
+        edges = _find_circular_refs(entities)
+        assert ("Department", "User") in edges
+        assert ("User", "Department") in edges
+
+    def test_three_entity_cycle(self):
+        """A->B->C->A cycle detected."""
+        entities = [
+            _entity(
+                "A",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("b_ref", kind="ref", ref_entity="B"),
+                ],
+            ),
+            _entity(
+                "B",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("c_ref", kind="ref", ref_entity="C"),
+                ],
+            ),
+            _entity(
+                "C",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("a_ref", kind="ref", ref_entity="A"),
+                ],
+            ),
+        ]
+        edges = _find_circular_refs(entities)
+        assert ("A", "B") in edges
+        assert ("B", "C") in edges
+        assert ("C", "A") in edges
+
+    def test_self_reference_not_counted(self):
+        """Self-references are handled separately and excluded from cycle detection."""
+        entities = [
+            _entity(
+                "Category",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("parent", kind="ref", ref_entity="Category"),
+                ],
+            ),
+        ]
+        assert _find_circular_refs(entities) == set()
+
+    def test_ref_to_unknown_entity_ignored(self):
+        """References to entities not in the list are ignored."""
+        entities = [
+            _entity(
+                "Invoice",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("client", kind="ref", ref_entity="ExternalEntity"),
+                ],
+            ),
+        ]
+        assert _find_circular_refs(entities) == set()
+
+    def test_public_api_matches_internal(self):
+        """get_circular_ref_edges() returns same result as _find_circular_refs()."""
+        entities = [
+            _entity(
+                "Department",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("head", kind="ref", ref_entity="User"),
+                ],
+            ),
+            _entity(
+                "User",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("department", kind="ref", ref_entity="Department"),
+                ],
+            ),
+        ]
+        assert get_circular_ref_edges(entities) == _find_circular_refs(entities)
+
+
+class TestCircularFKMetadata:
+    """Test that circular FKs produce correct SQLAlchemy metadata."""
+
+    def test_circular_refs_use_alter(self):
+        """Circular FK columns should have use_alter=True."""
+        entities = [
+            _entity(
+                "Department",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("head", kind="ref", ref_entity="User"),
+                ],
+            ),
+            _entity(
+                "User",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("department", kind="ref", ref_entity="Department"),
+                ],
+            ),
+        ]
+        metadata = build_metadata(entities)
+
+        # Both tables should exist
+        assert "Department" in metadata.tables
+        assert "User" in metadata.tables
+
+        # Both FK constraints should have use_alter=True
+        dept_fks = list(metadata.tables["Department"].foreign_keys)
+        assert len(dept_fks) == 1
+        assert dept_fks[0].use_alter is True
+
+        user_fks = list(metadata.tables["User"].foreign_keys)
+        assert len(user_fks) == 1
+        assert user_fks[0].use_alter is True
+
+    def test_non_circular_ref_no_use_alter(self):
+        """Normal (non-circular) FK should NOT have use_alter."""
+        entities = [
+            _entity("Client", [_field("id", scalar_type=ScalarType.UUID)]),
+            _entity(
+                "Invoice",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("client", kind="ref", ref_entity="Client"),
+                ],
+            ),
+        ]
+        metadata = build_metadata(entities)
+        fks = list(metadata.tables["Invoice"].foreign_keys)
+        assert len(fks) == 1
+        assert fks[0].use_alter is False
+
+    def test_circular_refs_do_not_break_sorted_tables(self):
+        """Circular refs with use_alter should still allow topological sort."""
+        entities = [
+            _entity(
+                "Department",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("head", kind="ref", ref_entity="User"),
+                ],
+            ),
+            _entity(
+                "User",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("department", kind="ref", ref_entity="Department"),
+                ],
+            ),
+        ]
+        # Should not raise — use_alter breaks the cycle for sorting
+        names = get_sorted_table_names(entities)
+        assert set(names) == {"Department", "User"}
+
+    def test_mixed_circular_and_linear_refs(self):
+        """Mix of circular (Dept↔User) and linear (Invoice->User) refs."""
+        entities = [
+            _entity(
+                "Department",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("head", kind="ref", ref_entity="User"),
+                ],
+            ),
+            _entity(
+                "User",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("department", kind="ref", ref_entity="Department"),
+                ],
+            ),
+            _entity(
+                "Invoice",
+                [
+                    _field("id", scalar_type=ScalarType.UUID),
+                    _field("user", kind="ref", ref_entity="User"),
+                ],
+            ),
+        ]
+        metadata = build_metadata(entities)
+
+        # Circular FKs get use_alter
+        dept_fks = list(metadata.tables["Department"].foreign_keys)
+        assert all(fk.use_alter is True for fk in dept_fks)
+
+        user_dept_fks = [
+            fk
+            for fk in metadata.tables["User"].foreign_keys
+            if fk.target_fullname == "Department.id"
+        ]
+        assert all(fk.use_alter is True for fk in user_dept_fks)
+
+        # Linear FK does NOT get use_alter
+        invoice_fks = list(metadata.tables["Invoice"].foreign_keys)
+        assert len(invoice_fks) == 1
+        assert invoice_fks[0].use_alter is False

@@ -427,6 +427,7 @@ def build_foreign_key_constraint(
 def get_foreign_key_constraints(
     entity: EntitySpec,
     registry: RelationRegistry,
+    exclude_edges: set[tuple[str, str]] | None = None,
 ) -> list[str]:
     """
     Get all FK constraints for an entity.
@@ -434,6 +435,8 @@ def get_foreign_key_constraints(
     Args:
         entity: Entity spec
         registry: Relation registry
+        exclude_edges: Optional set of (entity, ref_entity) edges to skip
+            (used to defer circular FK constraints to ALTER TABLE).
 
     Returns:
         List of FK constraint SQL strings
@@ -442,6 +445,9 @@ def get_foreign_key_constraints(
 
     for relation in registry.get_relations(entity.name):
         if relation.is_to_one:
+            # Skip circular FK constraints — they'll be added via ALTER TABLE
+            if exclude_edges and (entity.name, relation.to_entity) in exclude_edges:
+                continue
             constraint = build_foreign_key_constraint(relation, entity.name)
             constraints.append(constraint)
 
