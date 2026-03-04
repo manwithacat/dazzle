@@ -128,9 +128,12 @@ def create_deploy_routes(
                 "can_proceed": False,
             }
         except Exception as e:
+            logger.error("Preflight check failed: %s", e)
             result = {
                 "status": "error",
-                "checks": [{"name": "Preflight", "severity": "high", "message": str(e)}],
+                "checks": [
+                    {"name": "Preflight", "severity": "high", "message": "Preflight check failed"}
+                ],
                 "can_proceed": False,
             }
 
@@ -162,7 +165,8 @@ def create_deploy_routes(
         except ImportError:
             return {"status": "error", "message": "Deploy module not available"}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            logger.error("Stack generation failed: %s", e)
+            return {"status": "error", "message": "Stack generation failed"}
 
     @router.post("/api/deploy")
     async def run_deploy(
@@ -197,7 +201,8 @@ def create_deploy_routes(
 
             return {"status": "ok", "result": result}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            logger.error("Deployment failed: %s", e)
+            return {"status": "error", "message": "Deployment failed"}
 
     @router.post("/api/rollback/{version_id}")
     async def rollback_to_version(
@@ -212,7 +217,8 @@ def create_deploy_routes(
             result = rollback_manager.rollback_to(version_id)
             return {"status": "ok", "result": result}
         except Exception as e:
-            return {"status": "error", "message": str(e)}
+            logger.error("Rollback failed: %s", e)
+            return {"status": "error", "message": "Rollback failed"}
 
     @router.get("/partials/preflight-results", response_class=HTMLResponse)
     async def preflight_results_partial() -> HTMLResponse:

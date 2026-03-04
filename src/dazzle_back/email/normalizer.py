@@ -227,23 +227,40 @@ class EmailNormalizer:
 
         return text_body, has_html
 
-    def _strip_html(self, html: str) -> str:
-        """Strip HTML tags for plain text extraction."""
-        # Remove script and style elements
-        html = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
-        html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
-        # Remove tags
-        html = re.sub(r"<[^>]+>", " ", html)
-        # Decode HTML entities
-        html = (
-            html.replace("&nbsp;", " ")
-            .replace("&amp;", "&")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-        )
+    def _strip_html(self, raw_html: str) -> str:
+        """Strip HTML tags for plain text extraction using a proper parser."""
+        import html as html_module
+        from html.parser import HTMLParser
+
+        class _TextExtractor(HTMLParser):
+            def __init__(self) -> None:
+                super().__init__()
+                self._pieces: list[str] = []
+                self._skip = False
+
+            def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+                if tag.lower() in ("script", "style"):
+                    self._skip = True
+
+            def handle_endtag(self, tag: str) -> None:
+                if tag.lower() in ("script", "style"):
+                    self._skip = False
+
+            def handle_data(self, data: str) -> None:
+                if not self._skip:
+                    self._pieces.append(data)
+
+            def get_text(self) -> str:
+                return " ".join(self._pieces)
+
+        extractor = _TextExtractor()
+        extractor.feed(raw_html)
+        text = extractor.get_text()
+        # Decode any remaining HTML entities
+        text = html_module.unescape(text)
         # Normalize whitespace
-        html = re.sub(r"\s+", " ", html).strip()
-        return html
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
 
     def _create_excerpt(self, text: str) -> str:
         """Create a safe excerpt from body text."""

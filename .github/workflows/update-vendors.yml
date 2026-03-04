@@ -5,12 +5,16 @@ on:
     - cron: '0 9 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   update-vendors:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Check for vendor updates
@@ -22,12 +26,31 @@ jobs:
       - name: Rebuild dist bundles
         run: python scripts/build_dist.py
       - name: Create PR if changed
-        uses: peter-evans/create-pull-request@v7
-        with:
-          title: 'Update vendor JS dependencies'
-          branch: update-vendors
-          commit-message: 'Update vendor JS dependencies'
-          body: |
-            Automated vendor dependency update.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git diff --quiet; then
+            echo "No changes detected"
+            exit 0
+          fi
 
-            Run `python scripts/build_dist.py` to verify bundles.
+          BRANCH="update-vendors"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git add -A
+          git commit -m "Update vendor JS dependencies"
+          git push -u origin "$BRANCH" --force
+
+          # Create or update PR
+          EXISTING=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            echo "PR #$EXISTING already exists"
+          else
+            gh pr create \
+              --title "Update vendor JS dependencies" \
+              --body "Automated vendor dependency update.
+
+          Run \`python scripts/build_dist.py\` to verify bundles." \
+              --head "$BRANCH"
+          fi

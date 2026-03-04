@@ -10,6 +10,7 @@ These endpoints are always available in development mode (localhost).
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
@@ -24,6 +25,8 @@ except ImportError:
     Query = None  # type: ignore[assignment]
 
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from dazzle_back.events.envelope import EventEnvelope
@@ -497,6 +500,7 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
             else:
                 return {"success": False, "error": f"Event {event_id} not found in DLQ"}
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            logger.warning("DLQ replay failed for event %s: %s", event_id, e)
+            return {"success": False, "error": "Replay failed"}
 
     return router

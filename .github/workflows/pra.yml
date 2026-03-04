@@ -62,6 +62,7 @@ jobs:
       run: |
         python -c "
         import asyncio
+        import sys
         from dazzle_back.pra import run_quick_test, StressHarness, ScenarioType
         from dazzle_back.metrics.reporter import ReportFormat
 
@@ -72,7 +73,7 @@ jobs:
             return result.criteria_passed
 
         success = asyncio.run(main())
-        exit(0 if success else 1)
+        sys.exit(0 if success else 1)
         "
 
   pra-scenario:
@@ -96,12 +97,16 @@ jobs:
 
     - name: Download baseline (if exists)
       id: baseline
-      uses: dawidd6/action-download-artifact@v14
-      with:
-        name: pra-baseline-${{ github.event.inputs.scenario }}
-        path: ./baseline
-        if_no_artifact_found: warn
       continue-on-error: true
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SCENARIO: ${{ github.event.inputs.scenario }}
+      run: |
+        mkdir -p ./baseline
+        # Find the most recent run that uploaded this baseline artifact
+        gh run download --name "pra-baseline-${SCENARIO}" --dir ./baseline 2>/dev/null \
+          && echo "outcome=success" >> "$GITHUB_OUTPUT" \
+          || echo "outcome=warning" >> "$GITHUB_OUTPUT"
 
     - name: Run PRA test
       id: test
@@ -111,6 +116,7 @@ jobs:
         python -c "
         import asyncio
         import json
+        import sys
         from pathlib import Path
         from dazzle_back.pra import StressHarness, ScenarioType
         from dazzle_back.metrics.reporter import ReportFormat
@@ -132,11 +138,11 @@ jobs:
             return result.criteria_passed
 
         success = asyncio.run(main())
-        exit(0 if success else 1)
+        sys.exit(0 if success else 1)
         "
 
     - name: Compare with baseline
-      if: steps.baseline.outcome == 'success'
+      if: steps.baseline.outputs.outcome == 'success'
       run: |
         if [ -f baseline/results.json ]; then
           python -c "
@@ -233,6 +239,7 @@ jobs:
         python -c "
         import asyncio
         import json
+        import sys
         from pathlib import Path
         from dazzle_back.pra import StressHarness, ScenarioType, list_scenarios
         from dazzle_back.metrics.reporter import ReportFormat
@@ -259,7 +266,7 @@ jobs:
             return all_passed
 
         success = asyncio.run(main())
-        exit(0 if success else 1)
+        sys.exit(0 if success else 1)
         "
 
     - name: Upload weekly results

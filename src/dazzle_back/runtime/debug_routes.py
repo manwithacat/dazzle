@@ -132,7 +132,8 @@ def create_debug_routes(
             with db_manager.connection() as conn:
                 conn.execute("SELECT 1")
         except Exception as e:
-            db_status = f"error: {e}"
+            logger.warning("Health check database error: %s", e)
+            db_status = "error: database unreachable"
 
         return SystemHealth(
             status="ok" if db_status == "ok" else "degraded",
@@ -163,10 +164,11 @@ def create_debug_routes(
                 conn.execute("SELECT 1")
             return ReadinessResponse(ready=True, database="ok")
         except Exception as e:
+            logger.warning("Readiness probe database error: %s", e)
             return ReadinessResponse(
                 ready=False,
                 database="error",
-                reason=str(e),
+                reason="database unreachable",
             )
 
     @router.get("/stats", response_model=RuntimeStats)

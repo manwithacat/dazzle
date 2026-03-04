@@ -7,6 +7,7 @@ API sources and return rendered HTML fragments.
 from __future__ import annotations
 
 import logging
+from html import escape as html_escape
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Query, Request
@@ -70,7 +71,7 @@ def create_fragment_router(
         source_config = sources.get(source)
         if not source_config:
             return HTMLResponse(
-                f'<div class="p-3 text-sm text-error">Unknown source: {source}</div>'
+                f'<div class="p-3 text-sm text-error">Unknown source: {html_escape(source)}</div>'
             )
 
         try:
@@ -129,7 +130,7 @@ def create_fragment_router(
 
         except Exception as e:
             logger.warning(f"Fragment search error for source={source}: {e}")
-            return HTMLResponse(f'<div class="p-3 text-sm text-error">Search failed: {e}</div>')
+            return HTMLResponse('<div class="p-3 text-sm text-error">Search failed</div>')
 
     @router.get("/select", response_class=HTMLResponse)
     async def fragment_select(
@@ -141,7 +142,7 @@ def create_fragment_router(
         source_config = sources.get(source)
         if not source_config:
             return HTMLResponse(
-                f'<div class="p-3 text-sm text-error">Unknown source: {source}</div>'
+                f'<div class="p-3 text-sm text-error">Unknown source: {html_escape(source)}</div>'
             )
 
         try:
@@ -170,19 +171,20 @@ def create_fragment_router(
             autofill = source_config.get("autofill", {})
             display_key = source_config.get("display_key", "name")
             value_key = source_config.get("value_key", "id")
-            field_name = request.query_params.get("field_name", source)
+            field_name = html_escape(request.query_params.get("field_name", source))
 
             oob_parts = []
 
             # Update the hidden value input
+            safe_value = html_escape(str(record.get(value_key, id)))
             oob_parts.append(
                 f'<input type="hidden" name="{field_name}" id="field-{field_name}" '
-                f'data-dazzle-field="{field_name}" value="{record.get(value_key, id)}" '
+                f'data-dazzle-field="{field_name}" value="{safe_value}" '
                 f'hx-swap-oob="true" />'
             )
 
             # Update the visible search input with the display value
-            display_val = record.get(display_key, str(id))
+            display_val = html_escape(str(record.get(display_key, str(id))))
             oob_parts.append(
                 f'<input type="text" id="search-input-{field_name}" '
                 f'class="input input-bordered w-full" value="{display_val}" '
@@ -191,21 +193,22 @@ def create_fragment_router(
 
             # Autofill mapped fields
             for result_field, form_field in autofill.items():
-                val = record.get(result_field, "")
+                safe_form = html_escape(form_field)
+                safe_val = html_escape(str(record.get(result_field, "")))
                 oob_parts.append(
-                    f'<input id="field-{form_field}" name="{form_field}" '
-                    f'data-dazzle-field="{form_field}" value="{val}" '
+                    f'<input id="field-{safe_form}" name="{safe_form}" '
+                    f'data-dazzle-field="{safe_form}" value="{safe_val}" '
                     f'hx-swap-oob="true" />'
                 )
 
             # Close the dropdown
-            html = f'<div class="p-3 text-sm text-success">Selected: {display_val}</div>'
-            html += "\n".join(oob_parts)
+            resp_html = f'<div class="p-3 text-sm text-success">Selected: {display_val}</div>'
+            resp_html += "\n".join(oob_parts)
 
-            return HTMLResponse(html)
+            return HTMLResponse(resp_html)
 
         except Exception as e:
             logger.warning(f"Fragment select error for source={source}, id={id}: {e}")
-            return HTMLResponse(f'<div class="p-3 text-sm text-error">Selection failed: {e}</div>')
+            return HTMLResponse('<div class="p-3 text-sm text-error">Selection failed</div>')
 
     return router

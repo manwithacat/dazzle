@@ -359,10 +359,9 @@ class OpsDatabase:
             if not row:
                 return False
 
-            import hashlib
+            from dazzle_back.runtime.auth.crypto import verify_password
 
-            expected = hashlib.sha256(password.encode()).hexdigest()
-            if row["password_hash"] == expected:
+            if verify_password(password, row["password_hash"]):
                 # Update last login
                 cursor.execute(
                     "UPDATE ops_credentials SET last_login = %s WHERE username = %s",

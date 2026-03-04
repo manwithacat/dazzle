@@ -182,45 +182,39 @@ class MarkdownProcessor:
 
         return sanitized
 
-    def _basic_sanitize(self, html: str) -> str:
+    def _basic_sanitize(self, raw_html: str) -> str:
         """
         Basic HTML sanitization without bleach.
 
-        This is a fallback that removes script tags and event handlers.
+        Uses html.parser to properly strip all tags and extract text only.
+        This is a fallback when bleach is not installed.
         """
-        # Remove script tags
-        html = re.sub(
-            r"<script[^>]*>.*?</script>",
-            "",
-            html,
-            flags=re.IGNORECASE | re.DOTALL,
-        )
+        from html.parser import HTMLParser
 
-        # Remove style tags
-        html = re.sub(
-            r"<style[^>]*>.*?</style>",
-            "",
-            html,
-            flags=re.IGNORECASE | re.DOTALL,
-        )
+        class _TextExtractor(HTMLParser):
+            def __init__(self) -> None:
+                super().__init__()
+                self._pieces: list[str] = []
+                self._skip = False
 
-        # Remove event handlers
-        html = re.sub(
-            r'\s+on\w+\s*=\s*["\'][^"\']*["\']',
-            "",
-            html,
-            flags=re.IGNORECASE,
-        )
+            def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+                if tag.lower() in ("script", "style"):
+                    self._skip = True
 
-        # Remove javascript: URLs
-        html = re.sub(
-            r'href\s*=\s*["\']javascript:[^"\']*["\']',
-            'href="#"',
-            html,
-            flags=re.IGNORECASE,
-        )
+            def handle_endtag(self, tag: str) -> None:
+                if tag.lower() in ("script", "style"):
+                    self._skip = False
 
-        return html
+            def handle_data(self, data: str) -> None:
+                if not self._skip:
+                    self._pieces.append(data)
+
+            def get_text(self) -> str:
+                return " ".join(self._pieces)
+
+        extractor = _TextExtractor()
+        extractor.feed(raw_html)
+        return extractor.get_text()
 
     async def process_inline_images(
         self,
