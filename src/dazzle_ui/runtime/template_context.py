@@ -382,6 +382,7 @@ class SitePageContext(BaseModel):
 
     product_name: str = "My App"
     page_title: str = ""
+    page_type: str = "landing"
     current_route: str = "/"
     nav_items: list[SiteNavItem] = Field(default_factory=list)
     nav_cta: SiteCTAContext | None = None

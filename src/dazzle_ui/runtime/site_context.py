@@ -117,11 +117,13 @@ def build_site_page_context(
     copyright_text = _build_copyright_text(footer, brand)
 
     page_title = product_name
+    page_type = "landing"
     page_description = ""
     sections: list[dict[str, Any]] = []
 
     if page_data:
         page_title = page_data.get("title") or product_name
+        page_type = page_data.get("type", "landing")
         sections = page_data.get("sections", [])
         # Normalize feature_grid → features for template dispatch
         for sec in sections:
@@ -138,6 +140,7 @@ def build_site_page_context(
     return SitePageContext(
         product_name=product_name,
         page_title=page_title,
+        page_type=page_type,
         current_route=path,
         nav_items=nav_items,
         nav_cta=nav_cta,
