@@ -52,7 +52,8 @@ class TestGetTailwindBinary:
             assert result is None
 
     def test_returns_cached_binary(self, tmp_path: Path) -> None:
-        from dazzle_ui.build_css import _TAILWIND_VERSION, get_tailwind_binary
+        from dazzle_ui.build_css import _TAILWIND_EXTRA_VERSION as _TAILWIND_VERSION
+        from dazzle_ui.build_css import get_tailwind_binary
 
         cached = tmp_path / "tailwindcss"
         cached.write_bytes(b"fake-binary")
