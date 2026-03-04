@@ -511,16 +511,16 @@ def serve_command(
     if watch:
         typer.echo("  • Hot reload: ENABLED (watching DSL files)")
 
-    # Print infrastructure banner if Redis is available
+    # Print infrastructure banner
     if redis_url:
         event_tier = "Redis Streams"
         process_backend = "Celery + Beat"
     elif database_url:
         event_tier = "PostgreSQL"
-        process_backend = "Lite (in-process)"
+        process_backend = "EventBus (PostgreSQL)"
     else:
         event_tier = "Memory"
-        process_backend = "Lite (in-process)"
+        process_backend = "None (set REDIS_URL or DATABASE_URL)"
     _print_infra_banner(database_url, redis_url, event_tier, process_backend)
 
     # Build theme overrides from manifest (v0.16.0)
