@@ -928,6 +928,14 @@
   padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
 }
 
+.dz-section-markdown .prose hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--dz-border-subtle), transparent);
+  margin: 3rem auto;
+  max-width: 200px;
+}
+
 .dz-subhead {
   font-size: 1.25rem;
   line-height: 1.6;
