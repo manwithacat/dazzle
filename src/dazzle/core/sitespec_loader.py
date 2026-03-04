@@ -666,7 +666,12 @@ def validate_sitespec(
 
         # Validate sections
         for i, section in enumerate(page.sections):
-            _validate_section(section, f"Page '{page.route}' section {i + 1}", result)
+            _validate_section(
+                section,
+                f"Page '{page.route}' section {i + 1}",
+                result,
+                project_root=project_root if check_content_files else None,
+            )
 
     # Validate legal pages
     if sitespec.legal.terms:
@@ -723,6 +728,8 @@ def _validate_section(
     section: SectionSpec,
     context: str,
     result: SiteSpecValidationResult,
+    *,
+    project_root: Path | None = None,
 ) -> None:
     """Validate a section."""
     # Check CTAs
@@ -730,6 +737,10 @@ def _validate_section(
         _validate_cta(section.primary_cta, f"{context} primary_cta", result)
     if section.secondary_cta:
         _validate_cta(section.secondary_cta, f"{context} secondary_cta", result)
+
+    # Validate media.src paths
+    if section.media and section.media.src:
+        _validate_media_src(section.media.src, context, result, project_root=project_root)
 
     # Section-specific validation
     if section.type == SectionKind.HERO:
@@ -754,6 +765,36 @@ def _validate_section(
     elif section.type == SectionKind.TESTIMONIALS:
         if not section.items:
             result.add_warning(f"{context}: Testimonials section has no items")
+
+
+def _validate_media_src(
+    src: str,
+    context: str,
+    result: SiteSpecValidationResult,
+    *,
+    project_root: Path | None = None,
+) -> None:
+    """Validate a media.src path."""
+    # External URLs are fine
+    if src.startswith(("http://", "https://", "data:")):
+        return
+
+    # Must be an absolute path starting with /static/
+    if not src.startswith("/static/"):
+        result.add_warning(
+            f"{context}: media.src '{src}' should start with /static/ "
+            f"(e.g. /static/images/{src.split('/')[-1]}). "
+            f"Place image files in the static/ directory."
+        )
+        return
+
+    # Check file existence if project_root is available
+    if project_root:
+        # /static/images/foo.webp → static/images/foo.webp
+        relative_path = src.lstrip("/")
+        file_path = project_root / relative_path
+        if not file_path.exists():
+            result.add_warning(f"{context}: media file not found: {file_path}")
 
 
 def _derive_dsl_routes(appspec: AppSpec, sitespec: SiteSpec) -> list[str]:

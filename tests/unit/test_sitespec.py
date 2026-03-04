@@ -19,6 +19,8 @@ from dazzle.core.ir.sitespec import (
     LayoutSpec,
     LogoMode,
     LogoSpec,
+    MediaKind,
+    MediaSpec,
     NavItemSpec,
     NavSpec,
     PageKind,
@@ -422,6 +424,144 @@ class TestSiteSpecValidation:
             # Should be valid but have warnings
             assert result.is_valid
             assert any("Content file not found" in w for w in result.warnings)
+
+
+class TestMediaSrcValidation:
+    """Tests for media.src path validation (#391)."""
+
+    def test_valid_static_path(self) -> None:
+        """Test that /static/ paths pass validation."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            pages=[
+                PageSpec(
+                    route="/",
+                    type=PageKind.LANDING,
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.HERO,
+                            headline="Hello",
+                            media=MediaSpec(
+                                kind=MediaKind.IMAGE,
+                                src="/static/images/hero.webp",
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        )
+        result = validate_sitespec(spec, check_content_files=False)
+        assert not any("media.src" in w for w in result.warnings)
+
+    def test_relative_path_warns(self) -> None:
+        """Test that relative paths trigger a warning."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            pages=[
+                PageSpec(
+                    route="/",
+                    type=PageKind.LANDING,
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.HERO,
+                            headline="Hello",
+                            media=MediaSpec(
+                                kind=MediaKind.IMAGE,
+                                src="images/hero.webp",
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        )
+        result = validate_sitespec(spec, check_content_files=False)
+        assert any("should start with /static/" in w for w in result.warnings)
+
+    def test_external_url_ok(self) -> None:
+        """Test that external URLs pass without warning."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            pages=[
+                PageSpec(
+                    route="/",
+                    type=PageKind.LANDING,
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.HERO,
+                            headline="Hello",
+                            media=MediaSpec(
+                                kind=MediaKind.IMAGE,
+                                src="https://example.com/hero.webp",
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        )
+        result = validate_sitespec(spec, check_content_files=False)
+        assert not any("media.src" in w for w in result.warnings)
+
+    def test_missing_file_warns(self) -> None:
+        """Test that missing static files trigger a warning."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            spec = SiteSpec(
+                brand=BrandSpec(product_name="Test"),
+                pages=[
+                    PageSpec(
+                        route="/",
+                        type=PageKind.LANDING,
+                        title="Home",
+                        sections=[
+                            SectionSpec(
+                                type=SectionKind.HERO,
+                                headline="Hello",
+                                media=MediaSpec(
+                                    kind=MediaKind.IMAGE,
+                                    src="/static/images/missing.webp",
+                                ),
+                            ),
+                        ],
+                    ),
+                ],
+            )
+            result = validate_sitespec(spec, project_root, check_content_files=True)
+            assert any("media file not found" in w for w in result.warnings)
+
+    def test_existing_file_no_warning(self) -> None:
+        """Test that existing static files don't trigger a warning."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            # Create the file
+            img_dir = project_root / "static" / "images"
+            img_dir.mkdir(parents=True)
+            (img_dir / "hero.webp").write_bytes(b"fake")
+
+            spec = SiteSpec(
+                brand=BrandSpec(product_name="Test"),
+                pages=[
+                    PageSpec(
+                        route="/",
+                        type=PageKind.LANDING,
+                        title="Home",
+                        sections=[
+                            SectionSpec(
+                                type=SectionKind.HERO,
+                                headline="Hello",
+                                media=MediaSpec(
+                                    kind=MediaKind.IMAGE,
+                                    src="/static/images/hero.webp",
+                                ),
+                            ),
+                        ],
+                    ),
+                ],
+            )
+            result = validate_sitespec(spec, project_root, check_content_files=True)
+            assert not any("media file not found" in w for w in result.warnings)
 
 
 class TestScaffolding:

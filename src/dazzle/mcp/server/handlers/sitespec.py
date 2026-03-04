@@ -888,9 +888,13 @@ def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -
         return json.dumps(
             {
                 "prompt_count": len(prompts),
+                "save_to": "static/images/",
+                "usage": "Reference in sitespec.yaml as /static/images/<filename>",
                 "prompts": [
                     {
                         "section": p.section,
+                        "suggested_filename": f"{p.section}.webp",
+                        "sitespec_src": f"/static/images/{p.section}.webp",
                         "prompt": p.prompt,
                         "negative_prompt": p.negative_prompt,
                         "aspect_ratio": p.aspect_ratio,
