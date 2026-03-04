@@ -73,11 +73,11 @@ class MetricsCollector:
                 id="0",
                 mkstream=True,
             )
-            logger.info(f"Created consumer group: {self._config.consumer_group}")
+            logger.info("Created consumer group: %s", self._config.consumer_group)
         except Exception as e:
             if "BUSYGROUP" not in str(e):
                 raise
-            logger.debug(f"Consumer group already exists: {self._config.consumer_group}")
+            logger.debug("Consumer group already exists: %s", self._config.consumer_group)
 
     @classmethod
     def from_env(cls) -> MetricsCollector:
@@ -97,7 +97,7 @@ class MetricsCollector:
             try:
                 await self._collect_batch()
             except Exception as e:
-                logger.error(f"Error collecting metrics: {e}")
+                logger.error("Error collecting metrics: %s", e)
                 await asyncio.sleep(1)
 
         logger.info("Metrics collector stopped")
@@ -128,7 +128,7 @@ class MetricsCollector:
                         metrics_batch.append(metric)
                     processed_ids.append(msg_id)
                 except Exception as e:
-                    logger.warning(f"Failed to parse metric {msg_id}: {e}")
+                    logger.warning("Failed to parse metric %s: %s", msg_id, e)
                     processed_ids.append(msg_id)
 
         # Store metrics
@@ -138,7 +138,7 @@ class MetricsCollector:
                 self._store.record_batch,
                 metrics_batch,
             )
-            logger.debug(f"Stored {len(metrics_batch)} metrics")
+            logger.debug("Stored %s metrics", len(metrics_batch))
 
         # Acknowledge processed messages
         if processed_ids:
@@ -186,7 +186,7 @@ class MetricsCollector:
                 "tags": self._parse_tags(fields.get("tags")),
             }
         except (ValueError, TypeError) as e:
-            logger.warning(f"Invalid metric value: {e}")
+            logger.warning("Invalid metric value: %s", e)
             return None
 
     def _parse_tags(self, tags_str: str | None) -> dict[str, str] | None:

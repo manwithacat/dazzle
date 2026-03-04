@@ -162,7 +162,7 @@ class LoadGenerator:
         if self._running:
             return
 
-        logger.info(f"Starting load generator with profile: {self.profile.name}")
+        logger.info("Starting load generator with profile: %s", self.profile.name)
         self._running = True
         self._start_time = time.monotonic()
         self._stats = GeneratorStats()
@@ -225,7 +225,7 @@ class LoadGenerator:
             try:
                 await self._generate_event(state)
             except Exception as e:
-                logger.error(f"Error generating event: {e}")
+                logger.error("Error generating event: %s", e)
                 self._stats.errors += 1
 
     async def _generate_event(self, state: LoadState) -> None:

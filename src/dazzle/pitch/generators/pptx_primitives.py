@@ -405,7 +405,7 @@ def _add_bullet_list(
     for item in items:
         if y + spacing > CONTENT_BOTTOM:
             truncated = len(items) - rendered
-            logger.warning(f"Bullet list overflow: truncated {truncated} items")
+            logger.warning("Bullet list overflow: truncated %s items", truncated)
             return LayoutResult(
                 final_y=y, items_rendered=rendered, items_truncated=truncated, overflow=True
             )
@@ -455,7 +455,7 @@ def _add_table(
     actual_rows = rows[:max_rows_fit]
     truncated = len(rows) - len(actual_rows)
     if truncated > 0:
-        logger.warning(f"Table overflow: truncated {truncated} rows")
+        logger.warning("Table overflow: truncated %s rows", truncated)
 
     row_count = len(actual_rows) + 1  # +1 for header
 

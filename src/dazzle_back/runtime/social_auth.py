@@ -6,12 +6,15 @@ Supports Google, Apple, and GitHub authentication via ID tokens or OAuth codes.
 
 from __future__ import annotations
 
+import logging
 import secrets
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 # FastAPI imports - needed at module level for proper dependency injection
 try:
@@ -659,7 +662,8 @@ def create_social_auth_routes(
             )
             return result
         except SocialAuthError as e:
-            raise HTTPException(status_code=401, detail=str(e))
+            logger.error("Social auth failed for provider %s: %s", provider, e)
+            raise HTTPException(status_code=401, detail="Authentication failed")
 
     return router
 

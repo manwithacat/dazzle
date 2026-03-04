@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import timedelta
 from typing import Any
 
@@ -14,6 +15,8 @@ from .models import (
     ResetPasswordRequest,
 )
 from .store import AuthStore
+
+logger = logging.getLogger(__name__)
 
 # FastAPI is optional - import for type hints and runtime
 try:
@@ -209,7 +212,8 @@ def create_auth_routes(
                 roles=list(default_signup_roles) if default_signup_roles else None,
             )
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            logger.error("User registration failed: %s", e)
+            raise HTTPException(status_code=400, detail="Registration failed")
 
         # Auto-login after registration
         session = auth_store.create_session(

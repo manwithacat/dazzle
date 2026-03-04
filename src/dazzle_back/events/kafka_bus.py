@@ -223,7 +223,7 @@ class KafkaBus(BaseEventBus):
         await self._admin.start()
 
         self._started = True
-        logger.info(f"KafkaBus started, connected to {self._config.bootstrap_servers}")
+        logger.info("KafkaBus started, connected to %s", self._config.bootstrap_servers)
 
     async def close(self) -> None:
         """Close the Kafka bus (disconnect all clients)."""
@@ -265,11 +265,11 @@ class KafkaBus(BaseEventBus):
                 replication_factor=self._config.default_replication_factor,
             )
             await self._admin.create_topics([new_topic])
-            logger.info(f"Created topic: {topic}")
+            logger.info("Created topic: %s", topic)
         except TopicAlreadyExistsError:
             pass  # Topic already exists
         except Exception as e:
-            logger.warning(f"Could not create topic {topic}: {e}")
+            logger.warning("Could not create topic %s: %s", topic, e)
 
     def _dlq_topic(self, topic: str) -> str:
         """Get the DLQ topic name for a topic."""
@@ -319,7 +319,7 @@ class KafkaBus(BaseEventBus):
                 value=message,
             )
 
-            logger.debug(f"Published event {envelope.event_id} to {topic}")
+            logger.debug("Published event %s to %s", envelope.event_id, topic)
 
         except KafkaError as e:
             raise PublishError(topic, str(e)) from e
@@ -371,7 +371,7 @@ class KafkaBus(BaseEventBus):
             self._subscriptions[key] = sub
             self._pending_offsets[key] = {}
 
-            logger.info(f"Subscribed to {topic} as group {group_id}")
+            logger.info("Subscribed to %s as group %s", topic, group_id)
 
             return SubscriptionInfo(
                 topic=topic,
@@ -413,7 +413,9 @@ class KafkaBus(BaseEventBus):
                     await self.ack(sub.topic, sub.group_id, envelope.event_id)
 
                 except Exception as e:
-                    logger.error(f"Error processing message in {sub.topic}/{sub.group_id}: {e}")
+                    logger.error(
+                        "Error processing message in %s/%s: %s", sub.topic, sub.group_id, e
+                    )
                     # Nack with retryable error
                     try:
                         envelope_id = UUID(msg.value.get("event_id", ""))
@@ -427,9 +429,9 @@ class KafkaBus(BaseEventBus):
                         pass  # Best effort nack
 
         except asyncio.CancelledError:
-            logger.info(f"Consumer loop cancelled for {sub.topic}/{sub.group_id}")
+            logger.info("Consumer loop cancelled for %s/%s", sub.topic, sub.group_id)
         except Exception as e:
-            logger.error(f"Consumer loop error for {sub.topic}/{sub.group_id}: {e}")
+            logger.error("Consumer loop error for %s/%s: %s", sub.topic, sub.group_id, e)
 
     async def unsubscribe(
         self,
@@ -461,7 +463,7 @@ class KafkaBus(BaseEventBus):
             if key in self._pending_offsets:
                 del self._pending_offsets[key]
 
-            logger.info(f"Unsubscribed {group_id} from {topic}")
+            logger.info("Unsubscribed %s from %s", group_id, topic)
 
     async def ack(
         self,
@@ -522,13 +524,13 @@ class KafkaBus(BaseEventBus):
                     value=dlq_message,
                 )
 
-                logger.warning(f"Moved event {event_id} to DLQ: {reason.message}")
+                logger.warning("Moved event %s to DLQ: %s", event_id, reason.message)
 
             # Still commit offset to avoid reprocessing
             await self.ack(topic, group_id, event_id)
         else:
             # For retryable errors, don't commit - will be redelivered
-            logger.warning(f"Event {event_id} will be retried: {reason.message}")
+            logger.warning("Event %s will be retried: %s", event_id, reason.message)
 
     async def replay(
         self,

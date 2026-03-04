@@ -260,7 +260,7 @@ def _load_env_file(project_path: Path) -> None:
 
     for env_path in search_paths:
         if env_path.exists():
-            logger.debug(f"Loading environment from {env_path}")
+            logger.debug("Loading environment from %s", env_path)
             with open(env_path) as f:
                 for line in f:
                     line = line.strip()
@@ -344,7 +344,7 @@ async def run_agent_tests(
 
             async with E2EAgent(model=model, observer_mode=observer_mode) as agent:
                 for test in agent_tests:
-                    logger.info(f"Running: {test.get('test_id')}")
+                    logger.info("Running: %s", test.get("test_id"))
                     result = await agent.run_test(page, test, base_url)
                     results.append(result)
 

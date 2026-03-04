@@ -165,12 +165,14 @@ class ChannelManager:
                 )
 
                 logger.info(
-                    f"Channel '{spec.name}' resolved: {resolution.provider.provider_name} "
-                    f"via {resolution.provider.detection_method}"
+                    "Channel '%s' resolved: %s via %s",
+                    spec.name,
+                    resolution.provider.provider_name,
+                    resolution.provider.detection_method,
                 )
 
             except Exception as e:
-                logger.error(f"Failed to resolve channel '{spec.name}': {e}")
+                logger.error("Failed to resolve channel '%s': %s", spec.name, e)
                 self._statuses[spec.name] = ChannelStatus(
                     name=spec.name,
                     kind=spec.kind.value,
@@ -184,7 +186,7 @@ class ChannelManager:
                 )
 
         self._initialized = True
-        logger.info(f"Channel manager initialized with {len(self._adapters)} adapters")
+        logger.info("Channel manager initialized with %s adapters", len(self._adapters))
 
     def _create_adapter(self, resolution: ChannelResolution) -> BaseChannelAdapter | None:
         """Create an adapter for a channel resolution."""
@@ -205,7 +207,7 @@ class ChannelManager:
         if adapter_class:
             return adapter_class(resolution.provider)
 
-        logger.warning(f"No adapter available for provider '{resolution.provider.provider_name}'")
+        logger.warning("No adapter available for provider '%s'", resolution.provider.provider_name)
         return None
 
     async def shutdown(self) -> None:
@@ -221,7 +223,7 @@ class ChannelManager:
             try:
                 await adapter.shutdown()
             except Exception as e:
-                logger.error(f"Error shutting down adapter: {e}")
+                logger.error("Error shutting down adapter: %s", e)
 
         self._initialized = False
         logger.info("Channel manager shut down")
@@ -296,7 +298,7 @@ class ChannelManager:
         )
 
         self._outbox.create(msg)
-        logger.info(f"Message queued in outbox: {msg.id} for {channel}:{operation}")
+        logger.info("Message queued in outbox: %s for %s:%s", msg.id, channel, operation)
         return msg
 
     async def process_outbox(self, batch_size: int = 10) -> int:
@@ -335,7 +337,7 @@ class ChannelManager:
                     self._outbox.mark_failed(msg.id, result.error or "Unknown error")
 
             except Exception as e:
-                logger.error(f"Error processing message {msg.id}: {e}")
+                logger.error("Error processing message %s: %s", msg.id, e)
                 self._outbox.mark_failed(msg.id, str(e))
 
         return processed
@@ -355,16 +357,16 @@ class ChannelManager:
                 try:
                     processed = await self.process_outbox()
                     if processed > 0:
-                        logger.debug(f"Processed {processed} outbox messages")
+                        logger.debug("Processed %s outbox messages", processed)
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
-                    logger.error(f"Outbox processor error: {e}")
+                    logger.error("Outbox processor error: %s", e)
 
                 await asyncio.sleep(interval)
 
         self._processor_task = asyncio.create_task(processor_loop())
-        logger.info(f"Outbox processor started (interval: {interval}s)")
+        logger.info("Outbox processor started (interval: %ss)", interval)
 
     def get_channel_status(self, channel: str) -> ChannelStatus | None:
         """Get status of a specific channel."""
@@ -406,7 +408,7 @@ class ChannelManager:
                     self._statuses[name].last_health_check = datetime.now(UTC)
 
             except Exception as e:
-                logger.error(f"Health check failed for {name}: {e}")
+                logger.error("Health check failed for %s: %s", name, e)
                 results[name] = False
 
         return results

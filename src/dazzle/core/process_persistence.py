@@ -63,7 +63,7 @@ def load_processes(project_root: Path) -> list[ProcessSpec]:
         container = ProcessesContainer.model_validate(data)
         return list(container.processes)
     except (json.JSONDecodeError, ValueError) as e:
-        logger.warning(f"Failed to load processes from {processes_file}: {e}")
+        logger.warning("Failed to load processes from %s: %s", processes_file, e)
         return []
 
 
@@ -86,7 +86,7 @@ def load_process_index(project_root: Path) -> list[dict[str, Any]]:
             for p in data.get("processes", [])
         ]
     except (json.JSONDecodeError, ValueError) as e:
-        logger.warning(f"Failed to load process index from {processes_file}: {e}")
+        logger.warning("Failed to load process index from %s: %s", processes_file, e)
         return []
 
 

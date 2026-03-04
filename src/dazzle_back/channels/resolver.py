@@ -276,7 +276,7 @@ class ChannelResolver:
             method: Resolution method used
         """
         logger.info(
-            f"Channel '{channel_name}' resolved to {result.provider_name} via {method}",
+            "Channel '%s' resolved to %s via %s",
             extra={
                 "component": "Channels",
                 "context": {

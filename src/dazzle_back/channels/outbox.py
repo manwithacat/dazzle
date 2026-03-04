@@ -203,7 +203,10 @@ class OutboxRepository:
                 c.execute(sql, list(data.values()))
 
         logger.debug(
-            f"Created outbox message {message.id} for {message.channel_name}:{message.operation_name}"
+            "Created outbox message %s for %s:%s",
+            message.id,
+            message.channel_name,
+            message.operation_name,
         )
         return message
 
@@ -281,7 +284,7 @@ class OutboxRepository:
         with self.db.connection() as conn:
             conn.execute(sql, (datetime.now(UTC).isoformat(), message_id))
 
-        logger.info(f"Outbox message {message_id} sent successfully")
+        logger.info("Outbox message %s sent successfully", message_id)
 
     def mark_failed(self, message_id: str, error: str) -> None:
         """Mark a message as failed with retry logic.
@@ -296,12 +299,18 @@ class OutboxRepository:
         if new_attempts >= message.max_attempts:
             new_status = OutboxStatus.DEAD_LETTER.value
             logger.error(
-                f"Outbox message {message_id} moved to dead letter after {new_attempts} attempts"
+                "Outbox message %s moved to dead letter after %s attempts",
+                message_id,
+                new_attempts,
             )
         else:
             new_status = OutboxStatus.PENDING.value
             logger.warning(
-                f"Outbox message {message_id} failed (attempt {new_attempts}/{message.max_attempts}): {error}"
+                "Outbox message %s failed (attempt %s/%s): %s",
+                message_id,
+                new_attempts,
+                message.max_attempts,
+                error,
             )
 
         ph = self.db.placeholder
@@ -396,7 +405,7 @@ class OutboxRepository:
             count = cursor.rowcount or 0
 
         if count > 0:
-            logger.info(f"Cleaned up {count} sent messages older than {older_than_days} days")
+            logger.info("Cleaned up %s sent messages older than %s days", count, older_than_days)
 
         return count
 

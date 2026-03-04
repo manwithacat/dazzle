@@ -430,7 +430,7 @@ def load_sitespec(project_root: Path, *, use_defaults: bool = True) -> SiteSpec:
 
         if not data:
             if use_defaults:
-                logger.warning(f"Empty sitespec.yaml at {sitespec_path}, using defaults")
+                logger.warning("Empty sitespec.yaml at %s, using defaults", sitespec_path)
                 return create_default_sitespec()
             raise SiteSpecError(f"Empty or invalid YAML in {sitespec_path}")
 
@@ -468,7 +468,7 @@ def save_sitespec(project_root: Path, sitespec: SiteSpec) -> Path:
         encoding="utf-8",
     )
 
-    logger.info(f"Saved SiteSpec to {sitespec_path}")
+    logger.info("Saved SiteSpec to %s", sitespec_path)
     return sitespec_path
 
 
@@ -1022,7 +1022,7 @@ def scaffold_site_content(
         file_path = content_dir / relative_path
 
         if file_path.exists() and not overwrite:
-            logger.debug(f"Skipping existing file: {file_path}")
+            logger.debug("Skipping existing file: %s", file_path)
             continue
 
         # Ensure parent directory exists
@@ -1034,7 +1034,7 @@ def scaffold_site_content(
         # Write file
         file_path.write_text(content, encoding="utf-8")
         created_files.append(file_path)
-        logger.info(f"Created content file: {file_path}")
+        logger.info("Created content file: %s", file_path)
 
     # Create copy.md for marketing content
     if include_copy:
@@ -1046,7 +1046,7 @@ def scaffold_site_content(
             content = generate_copy_template(sitespec.brand.product_name)
             copy_path.write_text(content, encoding="utf-8")
             created_files.append(copy_path)
-            logger.info(f"Created copy file: {copy_path}")
+            logger.info("Created copy file: %s", copy_path)
 
     return created_files
 
@@ -1070,7 +1070,7 @@ def scaffold_sitespec(
     sitespec_path = get_sitespec_path(project_root)
 
     if sitespec_path.exists() and not overwrite:
-        logger.debug(f"Skipping existing sitespec: {sitespec_path}")
+        logger.debug("Skipping existing sitespec: %s", sitespec_path)
         return None
 
     # Create a minimal sitespec with sensible defaults
@@ -1375,7 +1375,7 @@ def _copy_section_to_spec(section_type: str, data: dict[str, Any]) -> SectionSpe
             tier_price = sub.get("price")
             if tier_price is None:
                 logger.debug(
-                    f"Skipping pricing tier '{sub.get('name')}' - price not parsed. "
+                    "Skipping pricing tier '%s' - price not parsed. "
                     "Define structured pricing in sitespec.yaml instead."
                 )
                 continue
@@ -1473,7 +1473,7 @@ def scaffold_copy_file(
     copy_path = get_copy_file_path(project_root)
 
     if copy_path.exists() and not overwrite:
-        logger.debug(f"Skipping existing copy file: {copy_path}")
+        logger.debug("Skipping existing copy file: %s", copy_path)
         return None
 
     # Ensure parent directory exists
@@ -1482,6 +1482,6 @@ def scaffold_copy_file(
     # Generate and write template
     content = generate_copy_template(product_name)
     copy_path.write_text(content, encoding="utf-8")
-    logger.info(f"Created copy file: {copy_path}")
+    logger.info("Created copy file: %s", copy_path)
 
     return copy_path

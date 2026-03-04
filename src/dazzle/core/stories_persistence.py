@@ -115,7 +115,10 @@ def load_story_index(project_root: Path) -> list[dict[str, Any]]:
             for s in raw_stories
         ]
     except (json.JSONDecodeError, ValueError) as e:
-        logging.getLogger(__name__).warning(f"Failed to load story index from {stories_file}: {e}")
+        logging.getLogger(__name__).warning(
+            "Failed to load story index from %s: %s", stories_file, e
+        )
+
         return []
 
 
@@ -145,7 +148,8 @@ def load_stories(project_root: Path) -> list[StorySpec]:
         # Log error but return empty list to avoid breaking workflows
         import logging
 
-        logging.getLogger(__name__).warning(f"Failed to load stories from {stories_file}: {e}")
+        logging.getLogger(__name__).warning("Failed to load stories from %s: %s", stories_file, e)
+
         return []
 
 

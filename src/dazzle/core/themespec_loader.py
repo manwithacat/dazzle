@@ -170,7 +170,7 @@ def load_themespec(project_root: Path, *, use_defaults: bool = True) -> ThemeSpe
 
         if not data:
             if use_defaults:
-                logger.warning(f"Empty themespec.yaml at {themespec_path}, using defaults")
+                logger.warning("Empty themespec.yaml at %s, using defaults", themespec_path)
                 return create_default_themespec()
             raise ThemeSpecError(f"Empty or invalid YAML in {themespec_path}")
 
@@ -206,7 +206,7 @@ def save_themespec(project_root: Path, themespec: ThemeSpecYAML) -> Path:
         encoding="utf-8",
     )
 
-    logger.info(f"Saved ThemeSpec to {themespec_path}")
+    logger.info("Saved ThemeSpec to %s", themespec_path)
     return themespec_path
 
 
@@ -404,7 +404,7 @@ def scaffold_themespec(
     themespec_path = get_themespec_path(project_root)
 
     if themespec_path.exists() and not overwrite:
-        logger.debug(f"Skipping existing themespec: {themespec_path}")
+        logger.debug("Skipping existing themespec: %s", themespec_path)
         return None
 
     from datetime import UTC, datetime

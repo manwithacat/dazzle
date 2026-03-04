@@ -183,7 +183,7 @@ class MailpitDetector(ProviderDetector):
                         result.metadata["messages"] = str(data.get("Messages", 0))
                         result.metadata["database_size"] = data.get("DatabaseSize", "unknown")
         except Exception as e:
-            logger.debug(f"Failed to enrich Mailpit metadata: {e}")
+            logger.debug("Failed to enrich Mailpit metadata: %s", e)
 
     async def health_check(self, result: DetectionResult) -> bool:
         """Verify Mailpit is working by checking API."""
@@ -275,7 +275,7 @@ class SendGridDetector(ProviderDetector):
                 ) as resp:
                     return bool(resp.status == 200)
         except Exception as e:
-            logger.debug(f"SendGrid health check failed: {e}")
+            logger.debug("SendGrid health check failed: %s", e)
             return False
 
 
@@ -376,7 +376,7 @@ class SESDetector(ProviderDetector):
             logger.debug("aioboto3 not installed, skipping SES health check")
             return True  # Assume available if deps not installed yet
         except Exception as e:
-            logger.debug(f"SES health check failed: {e}")
+            logger.debug("SES health check failed: %s", e)
             return False
 
 

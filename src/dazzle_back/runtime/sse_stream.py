@@ -158,7 +158,7 @@ class SSEStreamManager:
         try:
             await self.event_bus.subscribe(topic, consumer_group, self._handle_envelope)
         except Exception as e:
-            logger.error(f"Failed to subscribe to topic {topic}: {e}")
+            logger.error("Failed to subscribe to topic %s: %s", topic, e)
             return
 
         # Poll loop - poll_and_process may not exist on all EventBus implementations
@@ -168,7 +168,7 @@ class SSEStreamManager:
                 if hasattr(self.event_bus, "poll_and_process"):
                     await self.event_bus.poll_and_process(topic, consumer_group)
             except Exception as e:
-                logger.error(f"Error polling topic {topic}: {e}")
+                logger.error("Error polling topic %s: %s", topic, e)
 
             await asyncio.sleep(0.1)  # Small delay between polls
 

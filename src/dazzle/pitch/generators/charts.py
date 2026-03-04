@@ -94,11 +94,11 @@ def generate_revenue_chart(
         fig.savefig(output_path, dpi=150, bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-        logger.info(f"Generated revenue chart: {output_path}")
+        logger.info("Generated revenue chart: %s", output_path)
         return output_path
 
     except Exception as e:
-        logger.warning(f"Failed to generate revenue chart: {e}")
+        logger.warning("Failed to generate revenue chart: %s", e)
         return None
 
 
@@ -156,11 +156,11 @@ def generate_market_chart(
         fig.savefig(output_path, dpi=150, bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-        logger.info(f"Generated market chart: {output_path}")
+        logger.info("Generated market chart: %s", output_path)
         return output_path
 
     except Exception as e:
-        logger.warning(f"Failed to generate market chart: {e}")
+        logger.warning("Failed to generate market chart: %s", e)
         return None
 
 
@@ -213,9 +213,9 @@ def generate_funds_chart(
         fig.savefig(output_path, dpi=150, bbox_inches="tight", transparent=False)
         plt.close(fig)
 
-        logger.info(f"Generated funds chart: {output_path}")
+        logger.info("Generated funds chart: %s", output_path)
         return output_path
 
     except Exception as e:
-        logger.warning(f"Failed to generate funds chart: {e}")
+        logger.warning("Failed to generate funds chart: %s", e)
         return None

@@ -105,7 +105,7 @@ def load_appspec_for_project(project_path: Path) -> bool:
         # Load manifest first
         manifest_path = project_path / "dazzle.toml"
         if not manifest_path.exists():
-            logger.warning(f"No dazzle.toml found in {project_path}")
+            logger.warning("No dazzle.toml found in %s", project_path)
             return False
 
         manifest = load_manifest(manifest_path)
@@ -113,32 +113,34 @@ def load_appspec_for_project(project_path: Path) -> bool:
         # Discover and parse DSL files
         dsl_files = discover_dsl_files(project_path, manifest)
         if not dsl_files:
-            logger.warning(f"No DSL files found in {project_path}")
+            logger.warning("No DSL files found in %s", project_path)
             return False
 
         # Parse modules
         modules = parse_modules(dsl_files)
         if not modules:
-            logger.warning(f"No modules parsed from {project_path}")
+            logger.warning("No modules parsed from %s", project_path)
             return False
 
         # Build AppSpec
         appspec = build_appspec(modules, manifest.project_root)
         if not appspec.domain.entities:
-            logger.warning(f"No entities found in {project_path}")
+            logger.warning("No entities found in %s", project_path)
             return False
 
         # Store AppSpec data for DNR tools
         set_appspec_data(appspec.model_dump())
 
         logger.info(
-            f"Loaded AppSpec for {project_path.name}: "
-            f"{len(appspec.domain.entities)} entities, {len(appspec.surfaces)} surfaces"
+            "Loaded AppSpec for %s: %s entities, %s surfaces",
+            project_path.name,
+            len(appspec.domain.entities),
+            len(appspec.surfaces),
         )
         return True
 
     except Exception as e:
-        logger.warning(f"Failed to load AppSpec for {project_path}: {e}")
+        logger.warning("Failed to load AppSpec for %s: %s", project_path, e)
         return False
 
 

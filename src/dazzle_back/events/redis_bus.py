@@ -631,7 +631,7 @@ class RedisBus(BaseEventBus):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Consumer loop error for {topic}/{group_id}: {e}")
+                logger.error("Consumer loop error for %s/%s: %s", topic, group_id, e)
                 await asyncio.sleep(1)
 
     async def _recover_pending(
@@ -676,10 +676,10 @@ class RedisBus(BaseEventBus):
                         message_ids=[msg_id],
                     )
                     if claimed:
-                        logger.info(f"Claimed pending message {msg_id} for {topic}")
+                        logger.info("Claimed pending message %s for %s", msg_id, topic)
 
         except Exception as e:
-            logger.debug(f"Error recovering pending messages: {e}")
+            logger.debug("Error recovering pending messages: %s", e)
 
     # DLQ methods
 

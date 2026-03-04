@@ -112,7 +112,10 @@ def load_test_designs(project_root: Path) -> list[TestDesignSpec]:
     except (json.JSONDecodeError, ValueError) as e:
         import logging
 
-        logging.getLogger(__name__).warning(f"Failed to load test designs from {designs_file}: {e}")
+        logging.getLogger(__name__).warning(
+            "Failed to load test designs from %s: %s", designs_file, e
+        )
+
         return []
 
 

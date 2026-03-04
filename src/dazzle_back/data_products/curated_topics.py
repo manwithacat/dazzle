@@ -155,7 +155,7 @@ class CuratedTopicGenerator:
         for entity_name in product.source_entities:
             entity = self._find_entity(entity_name)
             if not entity:
-                logger.warning(f"Entity not found: {entity_name}")
+                logger.warning("Entity not found: %s", entity_name)
                 continue
 
             # Check each field against allow/deny classifications

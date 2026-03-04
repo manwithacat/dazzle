@@ -1255,7 +1255,7 @@ def run_headless_discovery(
 
             report.entity_report = _static_entity_analysis(appspec)
         except Exception as e:
-            logger.warning(f"Entity analysis failed: {e}")
+            logger.warning("Entity analysis failed: %s", e)
 
     if include_workflow_analysis:
         try:
@@ -1263,7 +1263,7 @@ def run_headless_discovery(
 
             report.workflow_report = _static_workflow_analysis(appspec)
         except Exception as e:
-            logger.warning(f"Workflow analysis failed: {e}")
+            logger.warning("Workflow analysis failed: %s", e)
 
     return report
 

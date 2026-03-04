@@ -109,7 +109,7 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
 
     if backend == "auto":
         backend = _detect_backend(config)
-        logger.info(f"Auto-detected process backend: {backend}")
+        logger.info("Auto-detected process backend: %s", backend)
 
     if backend == "temporal":
         return _create_temporal_adapter(config)
@@ -139,7 +139,9 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
         logger.debug("Temporal SDK is installed")
         if _temporal_available(config.temporal):
             logger.debug(
-                f"Temporal server reachable at {config.temporal.host}:{config.temporal.port}"
+                "Temporal server reachable at %s:%s",
+                config.temporal.host,
+                config.temporal.port,
             )
             return "temporal"
         else:
@@ -184,7 +186,7 @@ def _temporal_available(config: TemporalConfig) -> bool:
         sock.close()
         return True
     except OSError as e:
-        logger.debug(f"Temporal connection failed: {e}")
+        logger.debug("Temporal connection failed: %s", e)
         return False
 
 

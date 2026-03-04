@@ -143,7 +143,7 @@ class LocalBlobStore(BlobStore):
         (self._base_path / "attachments").mkdir(exist_ok=True)
         (self._base_path / "metadata").mkdir(exist_ok=True)
         self._initialized = True
-        logger.info(f"LocalBlobStore initialized at {self._base_path}")
+        logger.info("LocalBlobStore initialized at %s", self._base_path)
 
     def _ensure_initialized(self) -> None:
         """Ensure store is initialized."""
@@ -212,7 +212,7 @@ class LocalBlobStore(BlobStore):
             )
         )
 
-        logger.debug(f"Stored blob: {pointer} ({blob_meta.size_bytes} bytes)")
+        logger.debug("Stored blob: %s (%s bytes)", pointer, blob_meta.size_bytes)
         return blob_meta
 
     async def retrieve(self, pointer: str) -> bytes | None:
@@ -258,7 +258,7 @@ class LocalBlobStore(BlobStore):
                 metadata=data.get("metadata", {}),
             )
         except (json.JSONDecodeError, KeyError) as e:
-            logger.warning(f"Failed to read metadata for {pointer}: {e}")
+            logger.warning("Failed to read metadata for %s: %s", pointer, e)
             return None
 
     async def exists(self, pointer: str) -> bool:
@@ -297,7 +297,7 @@ class S3BlobStore(BlobStore):
             import boto3
 
             self._client = boto3.client("s3", region_name=self._region)
-            logger.info(f"S3BlobStore initialized: s3://{self._bucket}/{self._prefix}")
+            logger.info("S3BlobStore initialized: s3://%s/%s", self._bucket, self._prefix)
         except ImportError:
             raise ImportError("boto3 is required for S3BlobStore. Install with: pip install boto3")
 

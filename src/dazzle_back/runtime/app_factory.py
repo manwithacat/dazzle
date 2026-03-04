@@ -311,14 +311,14 @@ def create_app_factory(
         )
 
     # Load manifest
-    logger.info(f"Loading Dazzle project from {project_root}")
+    logger.info("Loading Dazzle project from %s", project_root)
     manifest = load_manifest(manifest_path)
 
     # Resolve DATABASE_URL: env → dazzle.toml [database] → default
     from dazzle.core.manifest import resolve_database_url
 
     database_url = resolve_database_url(manifest)
-    logger.info(f"Database URL resolved ({len(database_url)} chars)")
+    logger.info("Database URL resolved (%s chars)", len(database_url))
 
     # Parse REDIS_URL (Heroku format: redis://h:password@host:port)
     redis_url = os.environ.get("REDIS_URL", "")
@@ -347,9 +347,9 @@ def create_app_factory(
         try:
             sitespec = load_sitespec_with_copy(project_root)
             sitespec_data = sitespec.model_dump()
-            logger.info(f"Loaded SiteSpec with {len(sitespec.pages)} pages")
+            logger.info("Loaded SiteSpec with %s pages", len(sitespec.pages))
         except Exception as e:
-            logger.warning(f"Failed to load sitespec.yaml: {e}")
+            logger.warning("Failed to load sitespec.yaml: %s", e)
 
     # Extract personas with default routes for auth redirect (#255)
     from dazzle_ui.converters.workspace_converter import compute_persona_default_routes
@@ -473,7 +473,7 @@ def create_app_factory(
             count = builder._process_adapter.sync_schedules_from_appspec(appspec)
             if count:
                 adapter_name = type(builder._process_adapter).__name__
-                logger.info(f"Synced {count} DSL schedule(s) to {adapter_name}")
+                logger.info("Synced %s DSL schedule(s) to %s", count, adapter_name)
 
     # Add site page routes if sitespec exists (landing pages, /site.js)
     if sitespec_data:
@@ -521,7 +521,7 @@ def create_app_factory(
             app_prefix="/app",
         )
         app.include_router(page_router, prefix="/app")
-        logger.info(f"  App pages: {len(appspec.workspaces)} workspaces mounted at /app")
+        logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
 
         # Experience flow routes (/app/experiences/*)
         if appspec.experiences:
@@ -538,12 +538,13 @@ def create_app_factory(
                 )
                 app.include_router(experience_router, prefix="/app")
                 logger.info(
-                    f"  Experiences: {len(appspec.experiences)} mounted at /app/experiences"
+                    "  Experiences: %s mounted at /app/experiences",
+                    len(appspec.experiences),
                 )
             except ImportError as e:
-                logger.warning(f"Experience routes not available: {e}")
+                logger.warning("Experience routes not available: %s", e)
     except ImportError as e:
-        logger.warning(f"Page routes not available: {e}")
+        logger.warning("Page routes not available: %s", e)
 
     # Add island API routes (/api/islands)
     if getattr(appspec, "islands", None):
@@ -568,15 +569,15 @@ def create_app_factory(
                 optional_auth_dep=_island_opt_dep,
             )
             app.include_router(island_router)
-            logger.info(f"  Islands: {len(appspec.islands)} mounted at /api/islands")
+            logger.info("  Islands: %s mounted at /api/islands", len(appspec.islands))
         except ImportError as e:
-            logger.warning(f"Island routes not available: {e}")
+            logger.warning("Island routes not available: %s", e)
 
     # Log startup info
-    logger.info(f"Dazzle app '{appspec.name}' ready")
-    logger.info(f"  Entities: {len(appspec.domain.entities)}")
-    logger.info(f"  Surfaces: {len(appspec.surfaces)}")
-    logger.info(f"  Environment: {dazzle_env}")
+    logger.info("Dazzle app '%s' ready", appspec.name)
+    logger.info("  Entities: %s", len(appspec.domain.entities))
+    logger.info("  Surfaces: %s", len(appspec.surfaces))
+    logger.info("  Environment: %s", dazzle_env)
     logger.info("  Database: PostgreSQL")
     if enable_dev_mode:
         logger.info("  Dev mode: enabled")

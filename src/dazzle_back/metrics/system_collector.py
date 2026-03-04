@@ -593,7 +593,7 @@ class SystemMetricsCollector:
                 self.set_component_status(ComponentType.EVENT_BUS, "healthy")
 
             except Exception as e:
-                logger.warning(f"Error collecting event bus metrics: {e}")
+                logger.warning("Error collecting event bus metrics: %s", e)
                 self.set_component_status(ComponentType.EVENT_BUS, "degraded")
 
             await asyncio.sleep(interval)

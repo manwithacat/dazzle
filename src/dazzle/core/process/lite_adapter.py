@@ -199,7 +199,7 @@ class LiteProcessAdapter(ProcessAdapter):
         # Resume suspended processes
         await self._resume_suspended_processes()
 
-        logger.info(f"LiteProcessAdapter initialized with db: {self._db_path}")
+        logger.info("LiteProcessAdapter initialized with db: %s", self._db_path)
 
     async def shutdown(self) -> None:
         """Graceful shutdown."""
@@ -232,7 +232,7 @@ class LiteProcessAdapter(ProcessAdapter):
     async def register_process(self, spec: ProcessSpec) -> None:
         """Register a process definition."""
         self._process_registry[spec.name] = spec
-        logger.debug(f"Registered process: {spec.name}")
+        logger.debug("Registered process: %s", spec.name)
 
     async def register_schedule(self, spec: ScheduleSpec) -> None:
         """Register a scheduled job."""
@@ -249,7 +249,7 @@ class LiteProcessAdapter(ProcessAdapter):
             )
             await self._db.commit()
 
-        logger.debug(f"Registered schedule: {spec.name}")
+        logger.debug("Registered schedule: %s", spec.name)
 
     # Process Lifecycle
     async def start_process(
@@ -268,7 +268,7 @@ class LiteProcessAdapter(ProcessAdapter):
         if idempotency_key:
             existing = await self._get_run_by_idempotency_key(idempotency_key)
             if existing:
-                logger.debug(f"Returning existing run for idempotency key: {idempotency_key}")
+                logger.debug("Returning existing run for idempotency key: %s", idempotency_key)
                 return existing.run_id
 
         # Check overlap policy
@@ -280,7 +280,7 @@ class LiteProcessAdapter(ProcessAdapter):
             )
             if running:
                 if spec.overlap_policy == OverlapPolicy.SKIP:
-                    logger.debug(f"Skipping process {process_name}: already running")
+                    logger.debug("Skipping process %s: already running", process_name)
                     return running[0].run_id
                 elif spec.overlap_policy == OverlapPolicy.CANCEL_PREVIOUS:
                     await self.cancel_process(running[0].run_id, "New instance started")
@@ -302,7 +302,7 @@ class LiteProcessAdapter(ProcessAdapter):
         task = asyncio.create_task(self._execute_process(run_id, spec, inputs))
         self._running[run_id] = task
 
-        logger.info(f"Started process {process_name} with run_id: {run_id}")
+        logger.info("Started process %s with run_id: %s", process_name, run_id)
         return run_id
 
     async def get_run(self, run_id: str) -> ProcessRun | None:
@@ -361,7 +361,7 @@ class LiteProcessAdapter(ProcessAdapter):
         await self._update_run_status(run_id, ProcessStatus.CANCELLED, error=reason)
         await self._emit_event("ProcessCancelled", run_id, reason=reason)
 
-        logger.info(f"Cancelled process {run_id}: {reason}")
+        logger.info("Cancelled process %s: %s", run_id, reason)
 
     async def suspend_process(self, run_id: str) -> None:
         """Suspend a running process."""
@@ -380,7 +380,7 @@ class LiteProcessAdapter(ProcessAdapter):
 
         spec = self._process_registry.get(run.process_name)
         if not spec:
-            logger.error(f"Cannot resume {run_id}: process {run.process_name} not registered")
+            logger.error("Cannot resume %s: process %s not registered", run_id, run.process_name)
             return
 
         # Restart from current step
@@ -410,7 +410,7 @@ class LiteProcessAdapter(ProcessAdapter):
         )
         await self._db.commit()
 
-        logger.debug(f"Signal {signal_name} sent to process {run_id}")
+        logger.debug("Signal %s sent to process %s", signal_name, run_id)
 
     # Human Tasks
     async def get_task(self, task_id: str) -> ProcessTask | None:
@@ -488,7 +488,7 @@ class LiteProcessAdapter(ProcessAdapter):
         )
         await self._db.commit()
 
-        logger.info(f"Task {task_id} completed with outcome: {outcome}")
+        logger.info("Task %s completed with outcome: %s", task_id, outcome)
 
     async def reassign_task(
         self,
@@ -510,7 +510,7 @@ class LiteProcessAdapter(ProcessAdapter):
         )
         await self._db.commit()
 
-        logger.info(f"Task {task_id} reassigned to {new_assignee_id}")
+        logger.info("Task %s reassigned to %s", task_id, new_assignee_id)
 
     # Version Management
     async def list_runs_by_version(
@@ -672,7 +672,7 @@ class LiteProcessAdapter(ProcessAdapter):
                 outputs=outputs,
             )
 
-            logger.info(f"Process {run_id} completed successfully")
+            logger.info("Process %s completed successfully", run_id)
 
         except ProcessCancelled:
             # Already handled
@@ -684,7 +684,7 @@ class LiteProcessAdapter(ProcessAdapter):
 
         except Exception as e:
             error_msg = str(e)
-            logger.error(f"Process {run_id} failed: {error_msg}")
+            logger.error("Process %s failed: %s", run_id, error_msg)
 
             # Run compensations
             await self._compensation_runner.run_compensations(
@@ -923,11 +923,13 @@ class LiteProcessAdapter(ProcessAdapter):
             try:
                 await self._escalate_task(task["task_id"])
                 logger.info(
-                    f"Escalated task {task['task_id']} "
-                    f"(run={task['run_id']}, step={task['step_name']})"
+                    "Escalated task %s (run=%s, step=%s)",
+                    task["task_id"],
+                    task["run_id"],
+                    task["step_name"],
                 )
             except Exception as e:
-                logger.error(f"Failed to escalate task {task['task_id']}: {e}")
+                logger.error("Failed to escalate task %s: %s", task["task_id"], e)
 
     async def _check_signal(self, run_id: str, signal_name: str) -> dict[str, Any] | None:
         """Check for an unprocessed signal."""
@@ -1055,7 +1057,7 @@ class LiteProcessAdapter(ProcessAdapter):
             try:
                 await self._event_handler(schema_name, event_data)
             except Exception as e:
-                logger.error(f"Event handler error: {e}")
+                logger.error("Event handler error: %s", e)
 
     # Helpers
     def _row_to_run(self, row: aiosqlite.Row) -> ProcessRun:

@@ -61,7 +61,7 @@ class RedisStreamAdapter(StreamAdapter):
             # Test connection
             await self._client.ping()
             await super().initialize()
-            logger.info(f"Redis stream adapter initialized ({self._url})")
+            logger.info("Redis stream adapter initialized (%s)", self._url)
 
         except ImportError:
             raise ImportError(
@@ -69,7 +69,7 @@ class RedisStreamAdapter(StreamAdapter):
                 "Install it with: pip install 'dazzle[redis]'"
             )
         except Exception as e:
-            logger.error(f"Failed to connect to Redis: {e}")
+            logger.error("Failed to connect to Redis: %s", e)
             raise
 
     async def shutdown(self) -> None:
@@ -87,7 +87,7 @@ class RedisStreamAdapter(StreamAdapter):
             try:
                 await self._client.close()
             except Exception as e:
-                logger.warning(f"Error closing Redis connection: {e}")
+                logger.warning("Error closing Redis connection: %s", e)
         self._client = None
         await super().shutdown()
         logger.info("Redis stream adapter shut down")
@@ -130,7 +130,7 @@ class RedisStreamAdapter(StreamAdapter):
 
             latency = (time.monotonic() - start) * 1000
 
-            logger.info(f"Message sent to Redis stream '{message.channel_name}': {stream_id}")
+            logger.info("Message sent to Redis stream '%s': %s", message.channel_name, stream_id)
 
             return SendResult(
                 status=SendStatus.SUCCESS,
@@ -143,7 +143,7 @@ class RedisStreamAdapter(StreamAdapter):
             )
 
         except Exception as e:
-            logger.error(f"Redis stream send error: {e}")
+            logger.error("Redis stream send error: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),
@@ -230,12 +230,12 @@ class RedisStreamAdapter(StreamAdapter):
                 except asyncio.CancelledError:
                     break
                 except Exception as e:
-                    logger.error(f"Redis stream read error: {e}")
+                    logger.error("Redis stream read error: %s", e)
                     await asyncio.sleep(1)
 
         task = asyncio.create_task(read_loop())
         self._subscriptions[f"{stream_name}:{group}:{consumer}"] = task
-        logger.info(f"Subscribed to Redis stream '{stream_name}' as {group}/{consumer}")
+        logger.info("Subscribed to Redis stream '%s' as %s/%s", stream_name, group, consumer)
 
     async def unsubscribe(self) -> None:
         """Unsubscribe from all streams."""
@@ -290,7 +290,7 @@ class KafkaAdapter(StreamAdapter):
             )
             await self._producer.start()
             await super().initialize()
-            logger.info(f"Kafka adapter initialized ({self._bootstrap_servers})")
+            logger.info("Kafka adapter initialized (%s)", self._bootstrap_servers)
 
         except ImportError:
             raise ImportError(
@@ -298,7 +298,7 @@ class KafkaAdapter(StreamAdapter):
                 "Install it with: pip install 'dazzle[kafka]'"
             )
         except Exception as e:
-            logger.error(f"Failed to connect to Kafka: {e}")
+            logger.error("Failed to connect to Kafka: %s", e)
             raise
 
     async def shutdown(self) -> None:
@@ -316,7 +316,7 @@ class KafkaAdapter(StreamAdapter):
             try:
                 await consumer.stop()
             except Exception as e:
-                logger.warning(f"Error stopping Kafka consumer: {e}")
+                logger.warning("Error stopping Kafka consumer: %s", e)
         self._consumers.clear()
 
         # Stop producer
@@ -324,7 +324,7 @@ class KafkaAdapter(StreamAdapter):
             try:
                 await self._producer.stop()
             except Exception as e:
-                logger.warning(f"Error stopping Kafka producer: {e}")
+                logger.warning("Error stopping Kafka producer: %s", e)
         self._producer = None
 
         await super().shutdown()
@@ -369,8 +369,10 @@ class KafkaAdapter(StreamAdapter):
             latency = (time.monotonic() - start) * 1000
 
             logger.info(
-                f"Message sent to Kafka topic '{message.channel_name}': "
-                f"partition={result.partition}, offset={result.offset}"
+                "Message sent to Kafka topic '%s': partition=%s, offset=%s",
+                message.channel_name,
+                result.partition,
+                result.offset,
             )
 
             return SendResult(
@@ -385,7 +387,7 @@ class KafkaAdapter(StreamAdapter):
             )
 
         except Exception as e:
-            logger.error(f"Kafka send error: {e}")
+            logger.error("Kafka send error: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),
@@ -433,13 +435,13 @@ class KafkaAdapter(StreamAdapter):
                             }
                             await callback(data)
                         except Exception as e:
-                            logger.error(f"Error processing Kafka message: {e}")
+                            logger.error("Error processing Kafka message: %s", e)
                 except asyncio.CancelledError:
                     pass  # Expected during shutdown — task was intentionally cancelled
 
             task = asyncio.create_task(consume_loop())
             self._consumer_tasks[f"{topic}:{group}"] = task
-            logger.info(f"Subscribed to Kafka topic '{topic}' as group '{group}'")
+            logger.info("Subscribed to Kafka topic '%s' as group '%s'", topic, group)
 
         except ImportError:
             raise ImportError(
@@ -460,7 +462,7 @@ class KafkaAdapter(StreamAdapter):
             try:
                 await consumer.stop()
             except Exception as e:
-                logger.warning(f"Error stopping consumer: {e}")
+                logger.warning("Error stopping consumer: %s", e)
 
         self._consumer_tasks.clear()
         self._consumers.clear()
@@ -574,11 +576,15 @@ class InMemoryStreamAdapter(StreamAdapter):
                         try:
                             await callback(msg_data.copy())
                         except Exception as e:
-                            logger.error(f"Subscriber callback error: {e}")
+                            logger.error("Subscriber callback error: %s", e)
 
             latency = (time.monotonic() - start) * 1000
 
-            logger.info(f"Message sent to in-memory stream '{message.channel_name}': {stream_id}")
+            logger.info(
+                "Message sent to in-memory stream '%s': %s",
+                message.channel_name,
+                stream_id,
+            )
 
             return SendResult(
                 status=SendStatus.SUCCESS,
@@ -592,7 +598,7 @@ class InMemoryStreamAdapter(StreamAdapter):
             )
 
         except Exception as e:
-            logger.error(f"In-memory stream send error: {e}")
+            logger.error("In-memory stream send error: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),
@@ -618,7 +624,7 @@ class InMemoryStreamAdapter(StreamAdapter):
                 self._subscribers[stream_name] = []
             self._subscribers[stream_name].append(callback)
 
-        logger.info(f"Subscribed to in-memory stream '{stream_name}'")
+        logger.info("Subscribed to in-memory stream '%s'", stream_name)
 
     async def unsubscribe(self) -> None:
         """Unsubscribe from all streams."""

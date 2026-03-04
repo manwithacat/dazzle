@@ -125,7 +125,10 @@ class TemporalAdapter(ProcessAdapter):
 
         self._initialized = True
         logger.info(
-            f"Connected to Temporal at {self._host}:{self._port}, namespace={self._namespace}"
+            "Connected to Temporal at %s:%s, namespace=%s",
+            self._host,
+            self._port,
+            self._namespace,
         )
 
     async def start_worker(self) -> None:
@@ -148,8 +151,10 @@ class TemporalAdapter(ProcessAdapter):
         )
 
         logger.info(
-            f"Starting Temporal worker on queue '{self._task_queue}' "
-            f"with {len(self._workflows)} workflows and {len(all_activities)} activities"
+            "Starting Temporal worker on queue '%s' with %s workflows and %s activities",
+            self._task_queue,
+            len(self._workflows),
+            len(all_activities),
         )
 
         # Run in background task
@@ -187,7 +192,7 @@ class TemporalAdapter(ProcessAdapter):
                 activity_fn = self._generate_service_activity(spec.name, step)
                 self._activities.append(activity_fn)
 
-        logger.info(f"Registered process '{spec.name}' with {len(spec.steps)} steps")
+        logger.info("Registered process '%s' with %s steps", spec.name, len(spec.steps))
 
     async def register_schedule(self, spec: ScheduleSpec) -> None:
         """Register a scheduled workflow.
@@ -199,8 +204,8 @@ class TemporalAdapter(ProcessAdapter):
 
         if not self._client:
             logger.warning(
-                f"Schedule '{spec.name}' registered but client not connected. "
-                "Call initialize() to activate schedules."
+                "Schedule '%s' registered but client not connected. Call initialize() to activate schedules.",
+                spec.name,
             )
             return
 
@@ -237,7 +242,7 @@ class TemporalAdapter(ProcessAdapter):
             Schedule(action=action, spec=schedule_spec),
         )
 
-        logger.info(f"Registered schedule '{spec.name}'")
+        logger.info("Registered schedule '%s'", spec.name)
 
     def _generate_workflow(self, spec: ProcessSpec) -> type:
         """
@@ -508,7 +513,9 @@ class TemporalAdapter(ProcessAdapter):
             """Execute service for step."""
             # TODO: Integrate with service registry
             activity.logger.info(
-                f"Executing service '{service_name}' with inputs: {list(inputs.keys())}"
+                "Executing service '%s' with inputs: %s",
+                service_name,
+                list(inputs.keys()),
             )
 
             # Placeholder - actual implementation would call the service
@@ -564,10 +571,7 @@ class TemporalAdapter(ProcessAdapter):
             search_attributes=search_attributes if search_attributes else None,
         )
 
-        logger.info(
-            f"Started workflow '{process_name}' with ID: {workflow_id}"
-            + (f" (version: {dsl_version})" if dsl_version else "")
-        )
+        logger.info("Started workflow '%s' with ID: %s", process_name, workflow_id)
 
         return workflow_id
 
@@ -592,7 +596,7 @@ class TemporalAdapter(ProcessAdapter):
                 completed_at=desc.close_time,
             )
         except Exception as e:
-            logger.debug(f"Failed to get workflow {run_id}: {e}")
+            logger.debug("Failed to get workflow %s: %s", run_id, e)
             return None
 
     async def list_runs(
@@ -645,7 +649,7 @@ class TemporalAdapter(ProcessAdapter):
 
         handle = self._client.get_workflow_handle(run_id)
         await handle.cancel()
-        logger.info(f"Cancelled workflow {run_id}: {reason}")
+        logger.info("Cancelled workflow %s: %s", run_id, reason)
 
     async def suspend_process(self, run_id: str) -> None:
         """Suspend is not directly supported in Temporal - use cancel."""
@@ -673,7 +677,7 @@ class TemporalAdapter(ProcessAdapter):
 
         handle = self._client.get_workflow_handle(run_id)
         await handle.signal(signal_name, payload or {})
-        logger.info(f"Sent signal '{signal_name}' to workflow {run_id}")
+        logger.info("Sent signal '%s' to workflow %s", signal_name, run_id)
 
     # Human Tasks
     async def get_task(self, task_id: str) -> ProcessTask | None:
@@ -728,7 +732,7 @@ class TemporalAdapter(ProcessAdapter):
                 outcome_data or {},
             )
 
-        logger.info(f"Completed task {task_id} with outcome '{outcome}'")
+        logger.info("Completed task %s with outcome '%s'", task_id, outcome)
 
     async def reassign_task(
         self,
@@ -740,7 +744,7 @@ class TemporalAdapter(ProcessAdapter):
         from .activities import reassign_task_in_db
 
         await reassign_task_in_db(task_id, new_assignee_id, reason)
-        logger.info(f"Reassigned task {task_id} to {new_assignee_id}")
+        logger.info("Reassigned task %s to %s", task_id, new_assignee_id)
 
     # Status Mapping
     def _map_status(self, temporal_status: Any) -> ProcessStatus:

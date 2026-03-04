@@ -87,11 +87,11 @@ class ServiceLoader:
             ServiceLoadError: If a service file cannot be loaded
         """
         if not self.services_dir.exists():
-            logger.debug(f"Services directory not found: {self.services_dir}")
+            logger.debug("Services directory not found: %s", self.services_dir)
             return self.services
 
         if not self.services_dir.is_dir():
-            logger.warning(f"Services path is not a directory: {self.services_dir}")
+            logger.warning("Services path is not a directory: %s", self.services_dir)
             return self.services
 
         # Find all Python files
@@ -105,9 +105,9 @@ class ServiceLoader:
                 loaded = self._load_stub_file(stub_file)
                 if loaded:
                     self.services[loaded.service_id] = loaded
-                    logger.info(f"Loaded service stub: {loaded.service_id}")
+                    logger.info("Loaded service stub: %s", loaded.service_id)
             except Exception as e:
-                logger.error(f"Failed to load service stub {stub_file}: {e}")
+                logger.error("Failed to load service stub %s: %s", stub_file, e)
                 raise ServiceLoadError(f"Failed to load {stub_file}: {e}") from e
 
         self._loaded = True
@@ -152,13 +152,13 @@ class ServiceLoader:
 
         # Find the main function (same name as file)
         if not hasattr(module, service_id):
-            logger.warning(f"Stub file {stub_file} has no function named {service_id}")
+            logger.warning("Stub file %s has no function named %s", stub_file, service_id)
             del sys.modules[module_name]
             return None
 
         function = getattr(module, service_id)
         if not callable(function):
-            logger.warning(f"{service_id} in {stub_file} is not callable")
+            logger.warning("%s in %s is not callable", service_id, stub_file)
             del sys.modules[module_name]
             return None
 
@@ -253,7 +253,7 @@ class ServiceLoader:
         loaded = self._load_stub_file(stub_file)
         if loaded:
             self.services[loaded.service_id] = loaded
-            logger.info(f"Reloaded service stub: {service_id}")
+            logger.info("Reloaded service stub: %s", service_id)
         return loaded
 
     def unload_all(self) -> None:

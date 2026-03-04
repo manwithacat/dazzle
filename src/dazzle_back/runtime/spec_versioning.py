@@ -158,7 +158,7 @@ class SpecVersionStore:
                 ),
             )
 
-        logger.info(f"Saved spec version {version_id} (label={version_label})")
+        logger.info("Saved spec version %s (label=%s)", version_id, version_label)
         return sv
 
     def list_versions(self, page: int = 1, per_page: int = 10) -> list[dict[str, Any]]:

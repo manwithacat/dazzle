@@ -76,13 +76,13 @@ def initialize(ls: DazzleLanguageServer, params: InitializeParams) -> Any:
     """Initialize the language server."""
     if params.root_uri:
         ls.workspace_root = Path(params.root_uri.replace("file://", ""))
-        logger.info(f"Workspace root: {ls.workspace_root}")
+        logger.info("Workspace root: %s", ls.workspace_root)
 
         # Try to load the DAZZLE project
         try:
             _load_project(ls)
         except Exception as e:
-            logger.error(f"Failed to load project: {e}")
+            logger.error("Failed to load project: %s", e)
 
 
 def _find_project_root(start_path: Path) -> Path | None:
@@ -182,7 +182,7 @@ def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> No
 
     if not project_root:
         if ls.workspace_root:
-            logger.warning(f"No dazzle.toml found in {ls.workspace_root} or parent directories")
+            logger.warning("No dazzle.toml found in %s or parent directories", ls.workspace_root)
         return
 
     manifest_path = project_root / "dazzle.toml"
@@ -197,7 +197,9 @@ def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> No
         modules = parse_modules(dsl_files)
         ls.appspec = build_appspec(modules, mf.project_root)
         logger.info(
-            f"Loaded project from {project_root} with {len(ls.appspec.domain.entities)} entities"
+            "Loaded project from %s with %s entities",
+            project_root,
+            len(ls.appspec.domain.entities),
         )
 
         # Publish link warnings if any
@@ -216,7 +218,7 @@ def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> No
         _publish_file_diagnostics(ls, file_diagnostics, all_uris)
 
     except (ParseError, LinkError, ValidationError) as e:
-        logger.error(f"Project error: {e}")
+        logger.error("Project error: %s", e)
         ls.appspec = None
 
         # Publish diagnostics for the error
@@ -232,14 +234,14 @@ def _load_project(ls: DazzleLanguageServer, file_path: Path | None = None) -> No
             _publish_diagnostics(ls, uri, diags)
 
     except Exception as e:
-        logger.error(f"Error loading project: {e}")
+        logger.error("Error loading project: %s", e)
         ls.appspec = None
 
 
 @server.feature(TEXT_DOCUMENT_DID_OPEN)
 def did_open(ls: DazzleLanguageServer, params: DidOpenTextDocumentParams) -> None:
     """Handle document open."""
-    logger.info(f"Opened: {params.text_document.uri}")
+    logger.info("Opened: %s", params.text_document.uri)
 
     # If we don't have an appspec yet, try to load from this file's location
     if not ls.appspec:
@@ -255,25 +257,25 @@ def did_change(ls: DazzleLanguageServer, params: DidChangeTextDocumentParams) ->
         file_path = Path(params.text_document.uri.replace("file://", ""))
         _load_project(ls, file_path)
     except Exception as e:
-        logger.error(f"Error reloading project: {e}")
+        logger.error("Error reloading project: %s", e)
 
 
 @server.feature(TEXT_DOCUMENT_DID_SAVE)
 def did_save(ls: DazzleLanguageServer, params: DidSaveTextDocumentParams) -> None:
     """Handle document save."""
-    logger.info(f"Saved: {params.text_document.uri}")
+    logger.info("Saved: %s", params.text_document.uri)
     # Reload project on save
     try:
         file_path = Path(params.text_document.uri.replace("file://", ""))
         _load_project(ls, file_path)
     except Exception as e:
-        logger.error(f"Error reloading project: {e}")
+        logger.error("Error reloading project: %s", e)
 
 
 @server.feature(TEXT_DOCUMENT_DID_CLOSE)
 def did_close(ls: DazzleLanguageServer, params: DidCloseTextDocumentParams) -> None:
     """Handle document close."""
-    logger.info(f"Closed: {params.text_document.uri}")
+    logger.info("Closed: %s", params.text_document.uri)
     # Clear diagnostics for the closed file
     _publish_diagnostics(ls, params.text_document.uri, [])
 
@@ -551,7 +553,7 @@ def definition(ls: DazzleLanguageServer, params: DefinitionParams) -> Location |
             if location:
                 return location
     except Exception as e:
-        logger.error(f"Error finding definition: {e}")
+        logger.error("Error finding definition: %s", e)
 
     return None
 
@@ -1584,7 +1586,7 @@ def _find_definition_in_file(file_path: Path, word: str) -> Location | None:
                 )
                 return Location(uri=uri, range=range_)
     except Exception as e:
-        logger.error(f"Error searching file {file_path}: {e}")
+        logger.error("Error searching file %s: %s", file_path, e)
 
     return None
 

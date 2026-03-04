@@ -109,7 +109,7 @@ class ProcessStateStore:
             "steps": [self._serialize_step(s) for s in spec.steps],
         }
         self._redis.set(key, json.dumps(data, cls=_ProcessEncoder), ex=_TTL_SPEC)
-        logger.debug(f"Registered process spec: {spec.name}")
+        logger.debug("Registered process spec: %s", spec.name)
 
     def get_process_spec(self, name: str) -> dict[str, Any] | None:
         """Get a process specification by name."""
@@ -156,7 +156,7 @@ class ProcessStateStore:
             "interval_seconds": getattr(spec, "interval_seconds", None),
         }
         self._redis.set(key, json.dumps(data, cls=_ProcessEncoder), ex=_TTL_SPEC)
-        logger.debug(f"Registered schedule spec: {spec.name}")
+        logger.debug("Registered schedule spec: %s", spec.name)
 
     def get_schedule_spec(self, name: str) -> dict[str, Any] | None:
         """Get a schedule specification by name."""
@@ -220,7 +220,7 @@ class ProcessStateStore:
         self._redis.sadd(idx_status, run.run_id)
         self._redis.expire(idx_status, _TTL_INDEX)
 
-        logger.debug(f"Saved run {run.run_id} with status {run.status}")
+        logger.debug("Saved run %s with status %s", run.run_id, run.status)
 
     def get_run(self, run_id: str) -> ProcessRun | None:
         """Get a process run by ID."""

@@ -59,7 +59,7 @@ class MailpitAdapter(EmailAdapter):
     async def initialize(self) -> None:
         """Initialize the Mailpit adapter."""
         await super().initialize()
-        logger.info(f"Mailpit adapter initialized (smtp://{self._smtp_host}:{self._smtp_port})")
+        logger.info("Mailpit adapter initialized (smtp://%s:%s)", self._smtp_host, self._smtp_port)
 
     async def send(self, message: OutboxMessage) -> SendResult:
         """Send email via Mailpit SMTP.
@@ -106,7 +106,7 @@ class MailpitAdapter(EmailAdapter):
 
             latency = (time.monotonic() - start) * 1000
 
-            logger.info(f"Email sent via Mailpit: {email_data['to']} - {email_data['subject']}")
+            logger.info("Email sent via Mailpit: %s - %s", email_data["to"], email_data["subject"])
 
             return SendResult(
                 status=SendStatus.SUCCESS,
@@ -116,19 +116,19 @@ class MailpitAdapter(EmailAdapter):
             )
 
         except smtplib.SMTPException as e:
-            logger.error(f"Mailpit SMTP error: {e}")
+            logger.error("Mailpit SMTP error: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),
             )
         except ConnectionRefusedError:
-            logger.error(f"Cannot connect to Mailpit at {self._smtp_host}:{self._smtp_port}")
+            logger.error("Cannot connect to Mailpit at %s:%s", self._smtp_host, self._smtp_port)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=f"Connection refused to {self._smtp_host}:{self._smtp_port}",
             )
         except Exception as e:
-            logger.error(f"Unexpected error sending via Mailpit: {e}")
+            logger.error("Unexpected error sending via Mailpit: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),
@@ -166,7 +166,9 @@ class SESAdapter(EmailAdapter):
         """Initialize the SES adapter."""
         await super().initialize()
         logger.info(
-            f"SES adapter initialized (region={self._ses_region}, from={self._from_address})"
+            "SES adapter initialized (region=%s, from=%s)",
+            self._ses_region,
+            self._from_address,
         )
 
     def _get_ses_client_kwargs(self) -> dict[str, Any]:
@@ -242,7 +244,7 @@ class SESAdapter(EmailAdapter):
             latency = (time.monotonic() - start) * 1000
             ses_message_id = response.get("MessageId", "")
 
-            logger.info(f"Email sent via SES: {email_data['to']} - {email_data['subject']}")
+            logger.info("Email sent via SES: %s - %s", email_data["to"], email_data["subject"])
 
             return SendResult(
                 status=SendStatus.SUCCESS,
@@ -252,7 +254,7 @@ class SESAdapter(EmailAdapter):
             )
 
         except Exception as e:
-            logger.error(f"SES send error: {e}")
+            logger.error("SES send error: %s", e)
             error_str = str(e)
 
             # Check for throttling
@@ -342,7 +344,7 @@ class FileEmailAdapter(EmailAdapter):
         await super().initialize()
         self._mail_dir.mkdir(parents=True, exist_ok=True)
         (self._mail_dir / "messages").mkdir(exist_ok=True)
-        logger.info(f"File email adapter initialized (directory: {self._mail_dir})")
+        logger.info("File email adapter initialized (directory: %s)", self._mail_dir)
 
     async def send(self, message: OutboxMessage) -> SendResult:
         """Save email to file.
@@ -389,7 +391,7 @@ class FileEmailAdapter(EmailAdapter):
 
             latency = (time.monotonic() - start) * 1000
 
-            logger.info(f"Email saved to file: {filepath}")
+            logger.info("Email saved to file: %s", filepath)
 
             return SendResult(
                 status=SendStatus.SUCCESS,
@@ -399,7 +401,7 @@ class FileEmailAdapter(EmailAdapter):
             )
 
         except Exception as e:
-            logger.error(f"Error saving email to file: {e}")
+            logger.error("Error saving email to file: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),

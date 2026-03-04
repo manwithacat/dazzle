@@ -239,7 +239,7 @@ async def resolve_project_path_from_roots(
         path = _path_from_file_uri(str(root.uri))
         if path and path.is_dir() and project_manifest(path).exists():
             _state.roots_cache_set(root_uris, path)
-            logger.info(f"Resolved project from MCP root: {path}")
+            logger.info("Resolved project from MCP root: %s", path)
             return path
 
     # No root had dazzle.toml — fall back
@@ -313,8 +313,8 @@ def init_dev_mode(root: Path) -> None:
         # Auto-select first project if available
         if _state.available_projects:
             _state.active_project = sorted(_state.available_projects.keys())[0]
-            logger.info(f"Dev mode: auto-selected project '{_state.active_project}'")
-        logger.info(f"Dev mode enabled with {len(_state.available_projects)} example projects")
+            logger.info("Dev mode: auto-selected project '%s'", _state.active_project)
+        logger.info("Dev mode enabled with %s example projects", len(_state.available_projects))
     else:
         _state.available_projects = {}
         _state.active_project = None
@@ -346,7 +346,7 @@ def init_knowledge_graph(root: Path) -> None:
 
     # Initialize the graph
     _state.knowledge_graph = KnowledgeGraph(_state.graph_db_path)
-    logger.info(f"Knowledge graph initialized at: {_state.graph_db_path}")
+    logger.info("Knowledge graph initialized at: %s", _state.graph_db_path)
 
     # Seed framework knowledge (concepts, patterns, inference triggers)
     from dazzle.mcp.knowledge_graph.seed import ensure_seeded
@@ -386,14 +386,14 @@ def _auto_populate_graph(root: Path) -> None:
                 root_path=str(src_path),
                 max_files=1000,
             )
-            logger.info(f"Auto-populated graph from {src_path}: {result}")
+            logger.info("Auto-populated graph from %s: %s", src_path, result)
     else:
         # Normal mode: populate from project directory
         result = handlers.handle_auto_populate(
             root_path=str(root),
             max_files=500,
         )
-        logger.info(f"Auto-populated graph from {root}: {result}")
+        logger.info("Auto-populated graph from %s: %s", root, result)
 
 
 def get_knowledge_graph() -> KnowledgeGraph | None:
@@ -424,7 +424,7 @@ def reinit_knowledge_graph(project_root: Path) -> None:
     _state.graph_db_path.parent.mkdir(parents=True, exist_ok=True)
 
     _state.knowledge_graph = KnowledgeGraph(_state.graph_db_path)
-    logger.info(f"Knowledge graph re-initialized at: {_state.graph_db_path}")
+    logger.info("Knowledge graph re-initialized at: %s", _state.graph_db_path)
 
     # Seed framework data (fast if already seeded — version check)
     ensure_seeded(_state.knowledge_graph)
@@ -434,7 +434,7 @@ def reinit_knowledge_graph(project_root: Path) -> None:
 
     handlers = KnowledgeGraphHandlers(_state.knowledge_graph)
     result = handlers.handle_populate_from_appspec(project_path=str(project_root))
-    logger.info(f"Populated KG from DSL for {project_root.name}: {result}")
+    logger.info("Populated KG from DSL for %s: %s", project_root.name, result)
 
 
 # ============================================================================

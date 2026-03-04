@@ -242,7 +242,7 @@ class MailpitInboundAdapter(InboundMailAdapter):
                 )
 
                 if response.status_code != 200:
-                    logger.warning(f"Mailpit API error: {response.status_code}")
+                    logger.warning("Mailpit API error: %s", response.status_code)
                     return []
 
                 data = response.json()
@@ -260,7 +260,7 @@ class MailpitInboundAdapter(InboundMailAdapter):
                     )
 
                     if raw_response.status_code != 200:
-                        logger.warning(f"Failed to fetch raw message {msg_id}")
+                        logger.warning("Failed to fetch raw message %s", msg_id)
                         continue
 
                     raw_content = raw_response.content
@@ -273,13 +273,15 @@ class MailpitInboundAdapter(InboundMailAdapter):
                     artifacts.append(artifact)
 
                     logger.info(
-                        f"Fetched mail from Mailpit: {artifact.from_address} -> {artifact.to_addresses}"
+                        "Fetched mail from Mailpit: %s -> %s",
+                        artifact.from_address,
+                        artifact.to_addresses,
                     )
 
                 self._last_poll = datetime.now(UTC)
 
         except Exception as e:
-            logger.error(f"Error polling Mailpit: {e}")
+            logger.error("Error polling Mailpit: %s", e)
 
         return artifacts
 

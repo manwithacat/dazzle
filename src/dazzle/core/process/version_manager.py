@@ -461,7 +461,7 @@ class VersionManager:
             await conn.close()
 
         self._current_version = version_id
-        logger.info(f"Deployed version: {version_id}")
+        logger.info("Deployed version: %s", version_id)
 
     async def start_migration(
         self,
@@ -538,8 +538,10 @@ class VersionManager:
             await conn.close()
 
         logger.info(
-            f"Started migration: {from_version} -> {to_version}, "
-            f"{runs_remaining} processes to drain"
+            "Started migration: %s -> %s, %s processes to drain",
+            from_version,
+            to_version,
+            runs_remaining,
         )
         return runs_remaining
 
@@ -696,7 +698,7 @@ class VersionManager:
                     migration = await cursor.fetchone()
 
             if not migration:
-                logger.warning(f"Migration {migration_id} not found")
+                logger.warning("Migration %s not found", migration_id)
                 return
 
             if self._use_postgres:
@@ -732,7 +734,7 @@ class VersionManager:
         finally:
             await conn.close()
 
-        logger.info(f"Completed migration {migration_id}")
+        logger.info("Completed migration %s", migration_id)
 
     async def rollback_migration(self, migration_id: int) -> None:
         """
@@ -760,7 +762,7 @@ class VersionManager:
                     migration = await cursor.fetchone()
 
             if not migration:
-                logger.warning(f"Migration {migration_id} not found")
+                logger.warning("Migration %s not found", migration_id)
                 return
 
             if self._use_postgres:
@@ -805,8 +807,10 @@ class VersionManager:
             await conn.close()
 
         logger.info(
-            f"Rolled back migration {migration_id}: "
-            f"{migration['to_version']} -> {migration['from_version']}"
+            "Rolled back migration %s: %s -> %s",
+            migration_id,
+            migration["to_version"],
+            migration["from_version"],
         )
 
     async def suspend_remaining_processes(self, version_id: str) -> int:
@@ -840,7 +844,7 @@ class VersionManager:
                 await self._adapter.suspend_process(run.run_id)
                 suspended += 1
 
-        logger.info(f"Suspended {suspended} processes for version {version_id}")
+        logger.info("Suspended %s processes for version %s", suspended, version_id)
         return suspended
 
 
@@ -921,8 +925,10 @@ class DrainWatcher:
                     if status.runs_remaining == 0 and self._config.auto_complete:
                         await self._version_manager.complete_migration(migration.id)
                         logger.info(
-                            f"Migration {migration.id} auto-completed: "
-                            f"{migration.from_version} -> {migration.to_version}"
+                            "Migration %s auto-completed: %s -> %s",
+                            migration.id,
+                            migration.from_version,
+                            migration.to_version,
                         )
 
                 await asyncio.sleep(self._config.check_interval_seconds)
@@ -930,7 +936,7 @@ class DrainWatcher:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"DrainWatcher error: {e}")
+                logger.error("DrainWatcher error: %s", e)
                 await asyncio.sleep(self._config.check_interval_seconds * 2)
 
 

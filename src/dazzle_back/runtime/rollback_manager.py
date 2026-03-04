@@ -65,7 +65,7 @@ class RollbackManager:
         (snapshot_dir / "manifest.json").write_text(
             json.dumps({"files": manifest, "version_id": version_id})
         )
-        logger.info(f"Saved DSL snapshot for version {version_id}: {len(manifest)} files")
+        logger.info("Saved DSL snapshot for version %s: %s files", version_id, len(manifest))
 
     def rollback_to(self, version_id: str) -> dict[str, Any]:
         """
@@ -122,7 +122,7 @@ class RollbackManager:
                 DeployStatus.ROLLED_BACK,
             )
 
-        logger.info(f"Rolled back to version {version_id}: restored {len(restored)} files")
+        logger.info("Rolled back to version %s: restored %s files", version_id, len(restored))
         return {
             "status": "ok",
             "version_id": version_id,

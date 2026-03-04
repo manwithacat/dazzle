@@ -73,7 +73,7 @@ def load_spec(
         return _load_from_file(spec_file, project_root, include_sources)
 
     # No spec found
-    logger.debug(f"No specification found in {project_root}")
+    logger.debug("No specification found in %s", project_root)
     return SpecContent(content="", source_files=[], source_type="none")
 
 
@@ -87,10 +87,10 @@ def _load_from_directory(
     md_files = sorted(spec_dir.rglob("*.md"))
 
     if not md_files:
-        logger.warning(f"spec/ directory exists but contains no .md files: {spec_dir}")
+        logger.warning("spec/ directory exists but contains no .md files: %s", spec_dir)
         return SpecContent(content="", source_files=[], source_type="directory")
 
-    logger.info(f"Loading {len(md_files)} spec files from {spec_dir}")
+    logger.info("Loading %s spec files from %s", len(md_files), spec_dir)
 
     parts: list[str] = []
     for md_file in md_files:
@@ -120,7 +120,7 @@ def _load_from_file(
     include_sources: bool,
 ) -> SpecContent:
     """Load single SPEC.md file."""
-    logger.info(f"Loading spec from {spec_file}")
+    logger.info("Loading spec from %s", spec_file)
 
     content = spec_file.read_text().strip()
 

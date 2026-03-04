@@ -362,7 +362,7 @@ async def complete_task(
         outcome_data=body.outcome_data,
     )
 
-    logger.info(f"Task {task_id} completed with outcome: {body.outcome}")
+    logger.info("Task %s completed with outcome: %s", task_id, body.outcome)
 
     return CompleteTaskResponse(
         success=True,
@@ -395,7 +395,7 @@ async def reassign_task(
         reason=body.reason,
     )
 
-    logger.info(f"Task {task_id} reassigned to {body.new_assignee_id}")
+    logger.info("Task %s reassigned to %s", task_id, body.new_assignee_id)
 
     return CompleteTaskResponse(
         success=True,

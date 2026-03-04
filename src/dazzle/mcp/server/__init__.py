@@ -514,19 +514,19 @@ async def run_server(project_root: Path | None = None) -> None:
     """Run the DAZZLE MCP server."""
     if project_root:
         set_project_root(project_root)
-        logger.info(f"Project root set to: {project_root}")
+        logger.info("Project root set to: %s", project_root)
     else:
-        logger.info(f"Using default project root: {get_project_root()}")
+        logger.info("Using default project root: %s", get_project_root())
 
     # Initialize dev mode detection
     init_dev_mode(get_project_root())
 
     if is_dev_mode():
-        logger.info(f"Running in DEV MODE with {len(get_available_projects())} example projects")
-        logger.info(f"Available projects: {list(get_available_projects().keys())}")
+        logger.info("Running in DEV MODE with %s example projects", len(get_available_projects()))
+        logger.info("Available projects: %s", list(get_available_projects().keys()))
         from .state import get_active_project
 
-        logger.info(f"Active project: {get_active_project()}")
+        logger.info("Active project: %s", get_active_project())
     else:
         logger.info("Running in NORMAL MODE")
 
@@ -548,7 +548,7 @@ async def run_server(project_root: Path | None = None) -> None:
             logger.info("stdio transport established, running server...")
             await server.run(read_stream, write_stream, server.create_initialization_options())
     except Exception as e:
-        logger.exception(f"Server error: {e}")
+        logger.exception("Server error: %s", e)
         raise
 
 

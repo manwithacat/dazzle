@@ -129,7 +129,7 @@ class RedisDetector(ProviderDetector):
             except (ValueError, IndexError):
                 pass
         except Exception as e:
-            logger.debug(f"Redis health check failed: {e}")
+            logger.debug("Redis health check failed: %s", e)
 
         return False
 

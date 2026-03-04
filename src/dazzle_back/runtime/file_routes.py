@@ -133,9 +133,11 @@ def create_file_routes(
             }
 
         except FileValidationError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            logger.error("File validation failed: %s", e)
+            raise HTTPException(status_code=400, detail="File validation failed")
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
+            logger.error("File upload failed: %s", e)
+            raise HTTPException(status_code=500, detail="Upload failed")
 
     @app.get(f"{prefix}/{{file_id}}")
     async def get_file_info(file_id: str) -> dict[str, Any]:
@@ -256,9 +258,10 @@ def create_file_routes(
         try:
             thumbnail = thumbnail_service.generate(content, width, height)
         except Exception as e:
+            logger.error("Thumbnail generation failed: %s", e)
             raise HTTPException(
                 status_code=500,
-                detail=f"Thumbnail generation failed: {e}",
+                detail="Thumbnail generation failed",
             )
 
         return Response(

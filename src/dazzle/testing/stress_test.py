@@ -342,7 +342,7 @@ class StressTestRunner:
 
                     if not found_related and view_name not in surface_names:
                         # This is just a warning, not necessarily a bug
-                        logger.debug(f"View '{view_name}' may not have a matching surface")
+                        logger.debug("View '%s' may not have a matching surface", view_name)
 
     def _validate_navigation_targets(self) -> None:
         """Validate navigation targets."""

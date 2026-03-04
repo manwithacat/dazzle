@@ -119,7 +119,7 @@ class TestConsumer(ABC):
 
         except Exception as e:
             processing_ms = (time.monotonic() - start_time) * 1000
-            logger.error(f"Consumer {self.name} error processing event: {e}")
+            logger.error("Consumer %s error processing event: %s", self.name, e)
             self._stats.events_failed += 1
 
             if self.metrics:

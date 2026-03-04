@@ -122,7 +122,7 @@ def detect_tier() -> EventTier:
             "kafka": EventTier.KAFKA,
         }
         if explicit in tier_map:
-            logger.info(f"Using explicit tier: {explicit} (EVENT_BACKEND={explicit})")
+            logger.info("Using explicit tier: %s (EVENT_BACKEND=%s)", explicit, explicit)
             return tier_map[explicit]
 
     # Check for Kafka
@@ -223,7 +223,7 @@ def _create_sqlite_bus(config: TierConfig) -> DevBrokerSQLite:
         data_dir.mkdir(exist_ok=True)
         db_path = str(data_dir / "events.db")
 
-    logger.debug(f"Creating SQLite event bus (Tier 0.5) at {db_path}")
+    logger.debug("Creating SQLite event bus (Tier 0.5) at %s", db_path)
     return DevBrokerSQLite(db_path)
 
 

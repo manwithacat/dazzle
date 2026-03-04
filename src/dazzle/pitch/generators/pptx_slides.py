@@ -193,7 +193,7 @@ def _build_solution_slide(prs: Presentation, ctx: PitchContext, colors: dict[str
             est_h = max(0.6, _estimate_text_height(step_text, 5.0, 18))
             if not left_region.fits(est_h):
                 remaining = len(solution.how_it_works) - i + 1
-                logger.warning(f"Solution slide: truncated {remaining} how_it_works steps")
+                logger.warning("Solution slide: truncated %s how_it_works steps", remaining)
                 break
             _add_text_box(
                 slide,
@@ -481,7 +481,7 @@ def _build_market_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, 
                 str(market_chart), Inches(7), Inches(4.5), Inches(5), Inches(2.5)
             )
         except Exception as e:
-            logger.debug(f"Failed to embed market chart: {e}")
+            logger.debug("Failed to embed market chart: %s", e)
 
     notes = market.speaker_notes
     _add_speaker_notes(slide, notes or "Market sizing: TAM/SAM/SOM breakdown.")
@@ -698,7 +698,7 @@ def _build_financials_slide(prs: Presentation, ctx: PitchContext, colors: dict[s
                 str(revenue_chart), Inches(0.8), Inches(4.5), Inches(5), Inches(2.0)
             )
         except Exception as e:
-            logger.debug(f"Failed to embed revenue chart: {e}")
+            logger.debug("Failed to embed revenue chart: %s", e)
 
     notes = fin.speaker_notes
     _add_speaker_notes(slide, notes or "Financial projections and use of funds breakdown.")
@@ -1141,7 +1141,7 @@ def _build_ask_slide(prs: Presentation, ctx: PitchContext, colors: dict[str, Any
                 str(funds_chart), Inches(8), Inches(4.5), Inches(4), Inches(2.5)
             )
         except Exception as e:
-            logger.debug(f"Failed to embed funds chart: {e}")
+            logger.debug("Failed to embed funds chart: %s", e)
 
     _add_speaker_notes(slide, f"Raising {ask_str} at {stage} stage.")
 
@@ -1234,7 +1234,8 @@ def _build_extra_slide(
             box_w = 11.0 / max_items
             if box_w < 2.0 and max_items > 4:
                 logger.warning(
-                    f"Stats layout: capping from {max_items} to 4 items (boxes too narrow)"
+                    "Stats layout: capping from %s to 4 items (boxes too narrow)",
+                    max_items,
                 )
                 max_items = 4
         parsed = parsed[:max_items]
@@ -1263,7 +1264,7 @@ def _build_extra_slide(
             cy = y + row_idx * (card_h + row_gap)
             if cy + card_h > CONTENT_BOTTOM:
                 remaining = len(items) - idx
-                logger.warning(f"Cards layout: truncated {remaining} cards due to overflow")
+                logger.warning("Cards layout: truncated %s cards due to overflow", remaining)
                 break
             _add_card(
                 slide,
@@ -1378,7 +1379,7 @@ def _build_extra_slide(
                 plt.close(fig)
                 slide.shapes.add_picture(tmp.name, Inches(1.5), Inches(y), Inches(10), Inches(4.5))
         except Exception as e:
-            logger.warning(f"Chart layout: matplotlib failed ({e}), falling back to stats")
+            logger.warning("Chart layout: matplotlib failed (%s), falling back to stats", e)
             parsed_stats: list[tuple[str, str]] = []
             for val, lbl in zip(values, labels, strict=False):
                 parsed_stats.append((str(val), str(lbl)))
@@ -1410,7 +1411,7 @@ def _build_extra_slide(
                     Inches(img_h),
                 )
             except Exception as e:
-                logger.warning(f"Failed to embed image {extra.image_path}: {e}")
+                logger.warning("Failed to embed image %s: %s", extra.image_path, e)
 
     notes = extra.speaker_notes
     _add_speaker_notes(slide, notes or f"Extra slide: {extra.title}")

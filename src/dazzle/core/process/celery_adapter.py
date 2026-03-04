@@ -124,7 +124,7 @@ class CeleryProcessAdapter(ProcessAdapter):
                                 "args": [name],
                             }
                     except Exception as e:
-                        logger.warning(f"Failed to parse cron for {name}: {e}")
+                        logger.warning("Failed to parse cron for %s: %s", name, e)
 
                 elif interval:
                     self._beat_schedule[f"schedule_{name}"] = {
@@ -134,7 +134,7 @@ class CeleryProcessAdapter(ProcessAdapter):
                     }
 
             celery_app.conf.beat_schedule = self._beat_schedule
-            logger.info(f"Updated beat schedule with {len(self._beat_schedule)} entries")
+            logger.info("Updated beat schedule with %s entries", len(self._beat_schedule))
 
         except ImportError:
             logger.warning("Celery not available - beat schedules will not be configured")
@@ -144,12 +144,12 @@ class CeleryProcessAdapter(ProcessAdapter):
     async def register_process(self, spec: ProcessSpec) -> None:
         """Register a process definition."""
         self._store.register_process(spec)
-        logger.debug(f"Registered process: {spec.name}")
+        logger.debug("Registered process: %s", spec.name)
 
     async def register_schedule(self, spec: ScheduleSpec) -> None:
         """Register a scheduled job."""
         self._store.register_schedule(spec)
-        logger.debug(f"Registered schedule: {spec.name}")
+        logger.debug("Registered schedule: %s", spec.name)
 
         if self._initialized:
             self._update_beat_schedule()
@@ -157,7 +157,7 @@ class CeleryProcessAdapter(ProcessAdapter):
     async def register_entity_meta(self, entity_name: str, meta: dict[str, Any]) -> None:
         """Store entity metadata in Redis for built-in service step operations."""
         self._store.save_entity_meta(entity_name, meta)
-        logger.debug(f"Registered entity metadata: {entity_name}")
+        logger.debug("Registered entity metadata: %s", entity_name)
 
     # Process Lifecycle
 
@@ -176,7 +176,7 @@ class CeleryProcessAdapter(ProcessAdapter):
         if idempotency_key:
             existing = self._find_run_by_idempotency_key(idempotency_key)
             if existing:
-                logger.info(f"Returning existing run {existing.run_id} for idempotency key")
+                logger.info("Returning existing run %s for idempotency key", existing.run_id)
                 return existing.run_id
 
         # Create run
@@ -192,7 +192,7 @@ class CeleryProcessAdapter(ProcessAdapter):
         )
         self._store.save_run(run)
 
-        logger.info(f"Starting process {process_name} run {run_id}")
+        logger.info("Starting process %s run %s", process_name, run_id)
 
         # Queue to Celery
         try:
@@ -243,7 +243,7 @@ class CeleryProcessAdapter(ProcessAdapter):
             run.completed_at = datetime.now(UTC)
             run.updated_at = datetime.now(UTC)
             self._store.save_run(run)
-            logger.info(f"Cancelled process run {run_id}: {reason}")
+            logger.info("Cancelled process run %s: %s", run_id, reason)
 
     async def suspend_process(self, run_id: str) -> None:
         """Suspend a running process."""
@@ -252,7 +252,7 @@ class CeleryProcessAdapter(ProcessAdapter):
             run.status = ProcessStatus.SUSPENDED
             run.updated_at = datetime.now(UTC)
             self._store.save_run(run)
-            logger.info(f"Suspended process run {run_id}")
+            logger.info("Suspended process run %s", run_id)
 
     async def resume_process(self, run_id: str) -> None:
         """Resume a suspended process."""
@@ -268,7 +268,7 @@ class CeleryProcessAdapter(ProcessAdapter):
                 execute_process.delay(run_id)
             except ImportError:
                 pass
-            logger.info(f"Resumed process run {run_id}")
+            logger.info("Resumed process run %s", run_id)
 
     # Signals
 
@@ -281,7 +281,7 @@ class CeleryProcessAdapter(ProcessAdapter):
         """Send a signal to a running process."""
         run = self._store.get_run(run_id)
         if not run:
-            logger.warning(f"Signal {signal_name} sent to unknown run {run_id}")
+            logger.warning("Signal %s sent to unknown run %s", signal_name, run_id)
             return
 
         run.context[f"signal_{signal_name}"] = payload or {}
@@ -298,7 +298,7 @@ class CeleryProcessAdapter(ProcessAdapter):
             except ImportError:
                 pass
 
-        logger.info(f"Signal {signal_name} sent to run {run_id}")
+        logger.info("Signal %s sent to run %s", signal_name, run_id)
 
     # Human Tasks
 
@@ -331,11 +331,11 @@ class CeleryProcessAdapter(ProcessAdapter):
         """Complete a human task with the selected outcome."""
         task = self._store.get_task(task_id)
         if not task:
-            logger.warning(f"Task {task_id} not found")
+            logger.warning("Task %s not found", task_id)
             return
 
         if task.status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED, TaskStatus.EXPIRED):
-            logger.warning(f"Task {task_id} already in terminal state: {task.status}")
+            logger.warning("Task %s already in terminal state: %s", task_id, task.status)
             return
 
         task.status = TaskStatus.COMPLETED
@@ -346,7 +346,7 @@ class CeleryProcessAdapter(ProcessAdapter):
             task.assignee_id = completed_by
         self._store.save_task(task)
 
-        logger.info(f"Task {task_id} completed with outcome: {outcome}")
+        logger.info("Task %s completed with outcome: %s", task_id, outcome)
 
         try:
             from dazzle.core.process.celery_tasks import resume_process_after_task
@@ -365,7 +365,7 @@ class CeleryProcessAdapter(ProcessAdapter):
         del reason  # Not used currently
         task = self._store.get_task(task_id)
         if not task:
-            logger.warning(f"Task {task_id} not found")
+            logger.warning("Task %s not found", task_id)
             return
 
         old_assignee = task.assignee_id
@@ -373,7 +373,7 @@ class CeleryProcessAdapter(ProcessAdapter):
         task.status = TaskStatus.ASSIGNED
         self._store.save_task(task)
 
-        logger.info(f"Task {task_id} reassigned from {old_assignee} to {new_assignee_id}")
+        logger.info("Task %s reassigned from %s to %s", task_id, old_assignee, new_assignee_id)
 
     # Version Management
 
@@ -409,7 +409,7 @@ class CeleryProcessAdapter(ProcessAdapter):
         count = 0
         for schedule in appspec.schedules:
             self._store.register_schedule(schedule)
-            logger.info(f"Registered schedule '{schedule.name}' for Celery Beat")
+            logger.info("Registered schedule '%s' for Celery Beat", schedule.name)
             count += 1
 
         if count and self._initialized:

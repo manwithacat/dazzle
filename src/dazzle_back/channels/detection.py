@@ -216,7 +216,7 @@ async def check_docker_container(image_pattern: str) -> dict[str, Any] | None:
     except TimeoutError:
         logger.debug("Docker check timed out")
     except Exception as e:
-        logger.debug(f"Docker check failed: {e}")
+        logger.debug("Docker check failed: %s", e)
 
     return None
 

@@ -88,12 +88,12 @@ def execute_process(self: Any, run_id: str) -> dict[str, Any]:
     run = store.get_run(run_id)
 
     if not run:
-        logger.error(f"Process run {run_id} not found")
+        logger.error("Process run %s not found", run_id)
         return {"error": f"Run {run_id} not found"}
 
     spec = store.get_process_spec(run.process_name)
     if not spec:
-        logger.error(f"Process spec {run.process_name} not found")
+        logger.error("Process spec %s not found", run.process_name)
         _fail_run(store, run, f"Process spec {run.process_name} not found")
         return {"error": f"Spec {run.process_name} not found"}
 
@@ -102,7 +102,7 @@ def execute_process(self: Any, run_id: str) -> dict[str, Any]:
     run.updated_at = datetime.now(UTC)
     store.save_run(run)
 
-    logger.info(f"Starting process {run.process_name} run {run_id}")
+    logger.info("Starting process %s run %s", run.process_name, run_id)
 
     # Execute steps sequentially
     completed_steps: list[str] = []
@@ -115,7 +115,7 @@ def execute_process(self: Any, run_id: str) -> dict[str, Any]:
             run.updated_at = datetime.now(UTC)
             store.save_run(run)
 
-            logger.info(f"Executing step {step_name} in run {run_id}")
+            logger.info("Executing step %s in run %s", step_name, run_id)
             step_result = _execute_step(store, run, spec, step)
 
             if step_result.get("wait"):
@@ -140,11 +140,11 @@ def execute_process(self: Any, run_id: str) -> dict[str, Any]:
         run.updated_at = datetime.now(UTC)
         store.save_run(run)
 
-        logger.info(f"Process {run.process_name} run {run_id} completed")
+        logger.info("Process %s run %s completed", run.process_name, run_id)
         return {"status": "completed", "outputs": run.outputs}
 
     except Exception as e:
-        logger.exception(f"Process {run_id} failed at step {run.current_step}: {e}")
+        logger.exception("Process %s failed at step %s: %s", run_id, run.current_step, e)
         _run_compensation(store, run, spec, completed_steps, str(e))
 
         try:
@@ -176,7 +176,7 @@ def _execute_step(
     elif kind == StepKind.FOREACH.value or kind == "foreach":
         return _execute_foreach_step(store, run, spec, step)
     else:
-        logger.warning(f"Unknown step kind: {kind}")
+        logger.warning("Unknown step kind: %s", kind)
         return {}
 
 
@@ -194,11 +194,11 @@ def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, An
     if not service_name:
         return {}
 
-    logger.info(f"Executing service {service_name}")
+    logger.info("Executing service %s", service_name)
 
     parts = service_name.split(".")
     if len(parts) != 2:
-        logger.warning(f"Invalid service name format: {service_name}")
+        logger.warning("Invalid service name format: %s", service_name)
         return {}
 
     entity_name, method_name = parts[0], parts[1]
@@ -218,13 +218,13 @@ def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, An
             result = method(**run.inputs, **run.context)
             return {"output": result}
         else:
-            logger.warning(f"Service method {service_name} not found")
+            logger.warning("Service method %s not found", service_name)
             return {}
     except ImportError as e:
-        logger.warning(f"Service module not found: {e}")
+        logger.warning("Service module not found: %s", e)
         return {}
     except Exception as e:
-        logger.exception(f"Service {service_name} failed: {e}")
+        logger.exception("Service %s failed: %s", service_name, e)
         raise
 
 
@@ -255,7 +255,7 @@ def _execute_builtin_entity_op(
     store = _get_store()
     meta = store.get_entity_meta(entity_name)
     if not meta:
-        logger.error(f"No entity metadata for {entity_name} — cannot execute {operation}")
+        logger.error("No entity metadata for %s — cannot execute %s", entity_name, operation)
         return {}
 
     table_name = meta["table_name"]
@@ -268,7 +268,7 @@ def _execute_builtin_entity_op(
     try:
         conn = _get_db_connection()
     except Exception as e:
-        logger.error(f"DB connection failed for {entity_name}.{operation}: {e}")
+        logger.error("DB connection failed for %s.%s: %s", entity_name, operation, e)
         return {}
 
     try:
@@ -285,7 +285,7 @@ def _execute_builtin_entity_op(
         else:
             return {}
     except Exception as e:
-        logger.exception(f"Built-in {entity_name}.{operation} failed: {e}")
+        logger.exception("Built-in %s.%s failed: %s", entity_name, operation, e)
         raise
     finally:
         conn.close()
@@ -310,7 +310,7 @@ def _builtin_create(
     values = [data[c] for c in columns]
 
     sql = f'INSERT INTO "{table_name}" ({col_list}) VALUES ({placeholders}) RETURNING id'  # noqa: S608
-    logger.info(f"Built-in create: INSERT INTO {table_name} ({col_list})")
+    logger.info("Built-in create: INSERT INTO %s (%s)", table_name, col_list)
 
     with conn.cursor() as cur:
         cur.execute(sql, values)
@@ -328,7 +328,7 @@ def _builtin_read(
     """SELECT an entity row by ID."""
     entity_id = merged.get("entity_id") or merged.get("id")
     if not entity_id:
-        logger.error(f"Built-in read: no entity_id in inputs for {table_name}")
+        logger.error("Built-in read: no entity_id in inputs for %s", table_name)
         return {}
 
     sql = f'SELECT * FROM "{table_name}" WHERE id = %s'  # noqa: S608
@@ -353,7 +353,7 @@ def _builtin_update(
     """UPDATE entity fields by ID."""
     entity_id = merged.get("entity_id") or merged.get("id")
     if not entity_id:
-        logger.error(f"Built-in update: no entity_id in inputs for {table_name}")
+        logger.error("Built-in update: no entity_id in inputs for %s", table_name)
         return {}
 
     data = {
@@ -362,14 +362,14 @@ def _builtin_update(
         if k in valid_fields and k not in internal_keys and k != "id"
     }
     if not data:
-        logger.warning(f"Built-in update: no valid fields to update for {table_name}")
+        logger.warning("Built-in update: no valid fields to update for %s", table_name)
         return {"output": {"id": str(entity_id), "updated": False}}
 
     set_clause = ", ".join(f"{col} = %s" for col in data)
     values = list(data.values()) + [entity_id]
 
     sql = f'UPDATE "{table_name}" SET {set_clause} WHERE id = %s'  # noqa: S608
-    logger.info(f"Built-in update: UPDATE {table_name} SET {set_clause}")
+    logger.info("Built-in update: UPDATE %s SET %s", table_name, set_clause)
 
     with conn.cursor() as cur:
         cur.execute(sql, values)
@@ -386,7 +386,7 @@ def _builtin_delete(
     """DELETE an entity row by ID."""
     entity_id = merged.get("entity_id") or merged.get("id")
     if not entity_id:
-        logger.error(f"Built-in delete: no entity_id in inputs for {table_name}")
+        logger.error("Built-in delete: no entity_id in inputs for %s", table_name)
         return {}
 
     sql = f'DELETE FROM "{table_name}" WHERE id = %s'  # noqa: S608
@@ -406,21 +406,21 @@ def _builtin_transition(
     """Update the entity's status field (state machine transition)."""
     entity_id = merged.get("entity_id") or merged.get("id")
     if not entity_id:
-        logger.error(f"Built-in transition: no entity_id in inputs for {table_name}")
+        logger.error("Built-in transition: no entity_id in inputs for %s", table_name)
         return {}
 
     status_field = meta.get("status_field")
     if not status_field:
-        logger.error(f"Built-in transition: no status_field in metadata for {table_name}")
+        logger.error("Built-in transition: no status_field in metadata for %s", table_name)
         return {}
 
     new_status = merged.get("new_status") or merged.get(status_field)
     if not new_status:
-        logger.error(f"Built-in transition: no new_status in inputs for {table_name}")
+        logger.error("Built-in transition: no new_status in inputs for %s", table_name)
         return {}
 
     sql = f'UPDATE "{table_name}" SET {status_field} = %s WHERE id = %s'  # noqa: S608
-    logger.info(f"Built-in transition: {table_name}.{status_field} -> {new_status}")
+    logger.info("Built-in transition: %s.%s -> %s", table_name, status_field, new_status)
 
     with conn.cursor() as cur:
         cur.execute(sql, [new_status, entity_id])
@@ -455,7 +455,7 @@ def _execute_human_task_step(
     )
 
     store.save_task(task)
-    logger.info(f"Created human task {task_id}")
+    logger.info("Created human task %s", task_id)
 
     check_human_task_timeout.apply_async(args=[task_id], countdown=timeout_seconds)
 
@@ -464,14 +464,14 @@ def _execute_human_task_step(
 
 def _execute_wait_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     """Execute a wait step."""
-    logger.info(f"Process {run.run_id} waiting at step {step.get('name')}")
+    logger.info("Process %s waiting at step %s", run.run_id, step.get("name"))
     return {"wait": True}
 
 
 def _execute_send_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     """Execute a send step."""
     channel = step.get("channel")
-    logger.info(f"Send step {step.get('name')} via channel {channel}")
+    logger.info("Send step %s via channel %s", step.get("name"), channel)
     return {"output": {"sent": True, "channel": channel}}
 
 
@@ -500,7 +500,7 @@ def _execute_query_step(
 
     meta = store.get_entity_meta(entity_name)
     if not meta:
-        logger.error(f"No entity metadata for {entity_name} — cannot execute query")
+        logger.error("No entity metadata for %s — cannot execute query", entity_name)
         return {}
 
     table_name = meta["table_name"]
@@ -515,7 +515,9 @@ def _execute_query_step(
         base_field = key.split("__")[0]
         if base_field not in valid_fields:
             logger.warning(
-                f"Query filter field '{base_field}' not in {entity_name} metadata — skipping"
+                "Query filter field '%s' not in %s metadata — skipping",
+                base_field,
+                entity_name,
             )
             continue
         # Resolve date literals
@@ -548,12 +550,12 @@ def _execute_query_step(
         sql += f" WHERE {where_clause}"
     sql += f" LIMIT {limit}"
 
-    logger.info(f"Query step: {sql} (params={params})")
+    logger.info("Query step: %s (params=%s)", sql, params)
 
     try:
         conn = _get_db_connection()
     except Exception as e:
-        logger.error(f"DB connection failed for query on {entity_name}: {e}")
+        logger.error("DB connection failed for query on %s: %s", entity_name, e)
         return {}
 
     try:
@@ -568,10 +570,10 @@ def _execute_query_step(
                 record = dict(zip(columns, row, strict=False))
                 # Convert UUIDs to strings for JSON compatibility
                 results.append({k: str(v) if hasattr(v, "hex") else v for k, v in record.items()})
-        logger.info(f"Query step returned {len(results)} rows from {entity_name}")
+        logger.info("Query step returned %s rows from %s", len(results), entity_name)
         return {"output": results}
     except Exception as e:
-        logger.exception(f"Query step on {entity_name} failed: {e}")
+        logger.exception("Query step on %s failed: %s", entity_name, e)
         raise
     finally:
         conn.close()
@@ -599,7 +601,9 @@ def _execute_foreach_step(
 
     items = run.context.get(source_key)
     if not isinstance(items, list):
-        logger.warning(f"Foreach source '{source_key}' is not a list (got {type(items).__name__})")
+        logger.warning(
+            "Foreach source '%s' is not a list (got %s)", source_key, type(items).__name__
+        )
         return {"output": {"processed": 0}}
 
     sub_steps = step.get("foreach_steps", [])
@@ -625,7 +629,7 @@ def _execute_foreach_step(
                     item_results[sub_name] = result["output"]
                     run.context[sub_name] = result["output"]
             except Exception as e:
-                logger.error(f"Foreach item {i} sub-step {sub_name} failed: {e}")
+                logger.error("Foreach item %s sub-step %s failed: %s", i, sub_name, e)
                 errors += 1
 
         processed += 1
@@ -635,7 +639,7 @@ def _execute_foreach_step(
     run.context.pop("item", None)
     run.context.pop("item_index", None)
 
-    logger.info(f"Foreach step processed {processed} items ({errors} errors)")
+    logger.info("Foreach step processed %s items (%s errors)", processed, errors)
     return {"output": {"processed": processed, "errors": errors, "results": results}}
 
 
@@ -651,17 +655,17 @@ def _run_compensation(
     run.updated_at = datetime.now(UTC)
     store.save_run(run)
 
-    logger.info(f"Running compensation for {run.run_id}, steps: {completed_steps}")
+    logger.info("Running compensation for %s, steps: %s", run.run_id, completed_steps)
 
     steps = spec.get("steps", [])
     for step_name in reversed(completed_steps):
         step = next((s for s in steps if s.get("name") == step_name), None)
         if step and step.get("on_failure"):
             try:
-                logger.info(f"Running compensation for step {step_name}")
+                logger.info("Running compensation for step %s", step_name)
                 _execute_step(store, run, spec, step["on_failure"])
             except Exception as e:
-                logger.exception(f"Compensation for {step_name} failed: {e}")
+                logger.exception("Compensation for %s failed: %s", step_name, e)
 
 
 def _fail_run(store: ProcessStateStore, run: ProcessRun, error: str) -> None:
@@ -690,7 +694,7 @@ def check_human_task_timeout(task_id: str) -> dict[str, Any]:
             task.status = TaskStatus.EXPIRED
             task.completed_at = datetime.now(UTC)
             store.save_task(task)
-            logger.warning(f"Human task {task_id} expired")
+            logger.warning("Human task %s expired", task_id)
 
             run = store.get_run(task.run_id)
             if run:
@@ -701,7 +705,7 @@ def check_human_task_timeout(task_id: str) -> dict[str, Any]:
             task.status = TaskStatus.ESCALATED
             task.escalated_at = datetime.now(UTC)
             store.save_task(task)
-            logger.warning(f"Human task {task_id} escalated")
+            logger.warning("Human task %s escalated", task_id)
 
             check_human_task_timeout.apply_async(args=[task_id], countdown=86400)
             return {"status": "escalated"}
@@ -761,5 +765,5 @@ def trigger_scheduled_process(schedule_name: str) -> dict[str, Any]:
 
     execute_process.delay(run_id)
 
-    logger.info(f"Triggered scheduled process {process_name} run {run_id}")
+    logger.info("Triggered scheduled process %s run %s", process_name, run_id)
     return {"status": "triggered", "run_id": run_id}

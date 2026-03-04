@@ -260,7 +260,7 @@ class AdapterResult(Generic[T]):
         if result.is_success:
             obligations = result.data
         else:
-            logger.error(f"Failed: {result.error}")
+            logger.error("Failed: %s", result.error)
     """
 
     status: AdapterResultStatus
@@ -540,8 +540,12 @@ class BaseExternalAdapter(ABC, Generic[ConfigT]):
 
                 # Log successful request
                 logger.debug(
-                    f"[{self.service_name}] {method} {path} -> {response.status_code} "
-                    f"({latency_ms:.1f}ms)"
+                    "[%s] %s %s -> %s (%.1fms)",
+                    self.service_name,
+                    method,
+                    path,
+                    response.status_code,
+                    latency_ms,
                 )
 
                 return AdapterResult.success(
@@ -573,12 +577,17 @@ class BaseExternalAdapter(ABC, Generic[ConfigT]):
                         delay = max(delay, e.retry_after)
 
                     logger.warning(
-                        f"[{self.service_name}] {method} {path} failed "
-                        f"(attempt {attempt + 1}), retrying in {delay:.1f}s: {e}"
+                        "[%s] %s %s failed (attempt %s), retrying in %.1fs: %s",
+                        self.service_name,
+                        method,
+                        path,
+                        attempt + 1,
+                        delay,
+                        e,
                     )
                     await asyncio.sleep(delay)
                 else:
-                    logger.error(f"[{self.service_name}] {method} {path} failed: {e}")
+                    logger.error("[%s] %s %s failed: %s", self.service_name, method, path, e)
                     return AdapterResult.failure(e)
 
         # All retries exhausted

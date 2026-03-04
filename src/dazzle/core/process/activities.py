@@ -93,7 +93,7 @@ if _TEMPORAL_AVAILABLE:
         # Store task (in production, this would be database insert)
         _task_store[task_id] = task
 
-        activity.logger.info(f"Created human task {task_id} for step '{params['step_name']}'")
+        activity.logger.info("Created human task %s for step '%s'", task_id, params["step_name"])
 
         return task_id
 
@@ -115,9 +115,10 @@ if _TEMPORAL_AVAILABLE:
             task.status = TaskStatus.ESCALATED
             task.escalated_at = datetime.now(UTC)
 
-            activity.logger.warning(f"Escalated human task {task_id} (step: {step_name})")
+            activity.logger.warning("Escalated human task %s (step: %s)", task_id, step_name)
+
         else:
-            activity.logger.error(f"Task {task_id} not found for escalation")
+            activity.logger.error("Task %s not found for escalation", task_id)
 
     @activity.defn(name="emit_hless_event")  # type: ignore  # Temporal decorator
     async def emit_hless_event(event: dict[str, Any]) -> None:
@@ -132,7 +133,7 @@ if _TEMPORAL_AVAILABLE:
         event_type = event.get("event_type", "process.event.v1")
 
         payload_keys = list(event.get("payload", {}).keys())
-        activity.logger.info(f"Emitting HLESS event: {event_type}, payload keys: {payload_keys}")
+        activity.logger.info("Emitting HLESS event: %s, payload keys: %s", event_type, payload_keys)
 
         # TODO: Integrate with event bus / message queue
         # await event_bus.publish(event_type, event["payload"])
@@ -156,7 +157,10 @@ if _TEMPORAL_AVAILABLE:
         inputs = params.get("inputs", {})
 
         activity.logger.info(
-            f"Executing service '{service_name}.{method}' with inputs: {list(inputs.keys())}"
+            "Executing service '%s.%s' with inputs: %s",
+            service_name,
+            method,
+            list(inputs.keys()),
         )
 
         return {
@@ -225,7 +229,7 @@ async def complete_task_in_db(
         task.outcome_data = outcome_data
         task.completed_at = datetime.now(UTC)
 
-        logger.info(f"Task {task_id} completed with outcome '{outcome}'")
+        logger.info("Task %s completed with outcome '%s'", task_id, outcome)
 
 
 async def reassign_task_in_db(

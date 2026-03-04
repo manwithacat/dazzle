@@ -83,7 +83,7 @@ class MetricsEmitter:
         # Track dyno/instance for tagging
         self._instance = os.environ.get("DYNO", os.environ.get("HOSTNAME", "local"))
 
-        logger.info(f"MetricsEmitter initialized (instance={self._instance})")
+        logger.info("MetricsEmitter initialized (instance=%s)", self._instance)
 
     def _get_redis(self) -> Any:
         """Lazy initialize Redis connection."""
@@ -102,7 +102,7 @@ class MetricsEmitter:
                 self._redis.ping()
                 logger.info("MetricsEmitter connected to Redis")
             except Exception as e:
-                logger.warning(f"MetricsEmitter failed to connect to Redis: {e}")
+                logger.warning("MetricsEmitter failed to connect to Redis: %s", e)
                 self._redis = None
         return self._redis
 
@@ -133,10 +133,10 @@ class MetricsEmitter:
             self._queue.put_nowait(event)
         except queue.Full:
             # Buffer full, drop metric
-            logger.debug(f"Metrics buffer full, dropping: {name}")
+            logger.debug("Metrics buffer full, dropping: %s", name)
         except Exception as e:
             # Never fail the caller
-            logger.debug(f"Failed to buffer metric: {e}")
+            logger.debug("Failed to buffer metric: %s", e)
 
     def increment(self, name: str, tags: dict[str, str] | None = None) -> None:
         """Increment a counter by 1."""
@@ -175,7 +175,7 @@ class MetricsEmitter:
                     last_flush = time.time()
 
             except Exception as e:
-                logger.warning(f"Error in metrics flush loop: {e}")
+                logger.warning("Error in metrics flush loop: %s", e)
                 time.sleep(1)
 
         # Final flush on shutdown
@@ -203,9 +203,9 @@ class MetricsEmitter:
                     maxlen=self._max_stream_len,
                 )
             pipe.execute()
-            logger.debug(f"Flushed {len(events)} metrics to Redis")
+            logger.debug("Flushed %s metrics to Redis", len(events))
         except Exception as e:
-            logger.warning(f"Failed to flush metrics to Redis: {e}")
+            logger.warning("Failed to flush metrics to Redis: %s", e)
             # Reset connection on error
             self._redis = None
 

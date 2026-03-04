@@ -228,8 +228,8 @@ class LLMAPIClient:
             logger.info("Successfully parsed LLM analysis")
             return analysis  # type: ignore[no-any-return]  # LLM returns unstructured JSON dict
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM output as JSON: {e}")
-            logger.debug(f"Raw output: {response_text[:500]}...")
+            logger.error("Failed to parse LLM output as JSON: %s", e)
+            logger.debug("Raw output: %s...", response_text[:500])
             raise ValueError(f"LLM returned invalid JSON: {e}\n\nOutput: {response_text[:200]}...")
 
     def _build_system_prompt(self) -> str:
@@ -362,7 +362,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
 
     def _call_anthropic(self, system_prompt: str, user_prompt: str) -> str:
         """Call Anthropic Claude API."""
-        logger.debug(f"Calling Anthropic API with model {self.model}")
+        logger.debug("Calling Anthropic API with model %s", self.model)
         assert self.client is not None, "Client not initialized"
         client = cast("Anthropic", self.client)
 
@@ -382,12 +382,12 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             raise ValueError(f"Unexpected response block type: {type(text_block)}")
 
         except Exception as e:
-            logger.error(f"Anthropic API call failed: {e}")
+            logger.error("Anthropic API call failed: %s", e)
             raise
 
     def _call_openai(self, system_prompt: str, user_prompt: str) -> str:
         """Call OpenAI GPT API."""
-        logger.debug(f"Calling OpenAI API with model {self.model}")
+        logger.debug("Calling OpenAI API with model %s", self.model)
         assert self.client is not None, "Client not initialized"
         client = cast("OpenAI", self.client)
 
@@ -409,7 +409,7 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
             return result
 
         except Exception as e:
-            logger.error(f"OpenAI API call failed: {e}")
+            logger.error("OpenAI API call failed: %s", e)
             raise
 
     def estimate_cost(self, spec_size_kb: float) -> float:
@@ -454,7 +454,9 @@ Return ONLY the JSON object. Do not include any explanatory text before or after
 
         if not model_pricing:
             logger.warning(
-                f"No pricing info for {self.provider}/{self.model}, using default estimates"
+                "No pricing info for %s/%s, using default estimates",
+                self.provider,
+                self.model,
             )
             # Default to Claude Sonnet pricing
             model_pricing = pricing[LLMProvider.ANTHROPIC]["claude-3-5-sonnet-20241022"]

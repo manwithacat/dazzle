@@ -176,7 +176,7 @@ class DazzleAgent:
             try:
                 state = await self._observer.observe()
             except Exception as e:
-                logger.warning(f"Observer error at step {step_num + 1}: {e}")
+                logger.warning("Observer error at step %s: %s", step_num + 1, e)
                 transcript.outcome = "error"
                 transcript.error = f"Observer error: {e}"
                 break
@@ -188,7 +188,7 @@ class DazzleAgent:
                 )
                 self._tokens_used += step_tokens
             except Exception as e:
-                logger.warning(f"LLM error at step {step_num + 1}: {e}")
+                logger.warning("LLM error at step %s: %s", step_num + 1, e)
                 transcript.outcome = "error"
                 transcript.error = f"LLM error at step {step_num + 1}: {e}"
                 break
@@ -456,7 +456,7 @@ Do NOT use markdown code blocks. Your entire response must be parseable as JSON.
                 success=data.get("success", True),
             )
         except (json.JSONDecodeError, ValueError) as e:
-            logger.warning(f"Failed to parse action: {e}, response: {response[:200]}")
+            logger.warning("Failed to parse action: %s, response: %s", e, response[:200])
             return AgentAction(
                 type=ActionType.DONE,
                 success=False,

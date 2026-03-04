@@ -78,7 +78,7 @@ def make_stagnation_completion(
             recent = history[-window:]
             tool_calls = sum(1 for s in recent if s.action.type == ActionType.TOOL)
             if tool_calls == 0:
-                logger.info(f"{label} stagnation: no tool calls in last {window} steps")
+                logger.info("%s stagnation: no tool calls in last %s steps", label, window)
                 return True
         return False
 

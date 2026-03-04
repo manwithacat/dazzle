@@ -696,7 +696,7 @@ class PostgresBus(BaseEventBus):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Consumer loop error for {topic}/{group_id}: {e}")
+                logger.error("Consumer loop error for %s/%s: %s", topic, group_id, e)
                 await asyncio.sleep(poll_interval)
 
     async def poll_and_process(

@@ -68,8 +68,8 @@ class SpecAnalyzer:
         if spec_path is None:
             spec_path = "SPEC.md"
 
-        logger.info(f"Analyzing specification: {spec_path}")
-        logger.debug(f"Spec size: {len(spec_content)} characters")
+        logger.info("Analyzing specification: %s", spec_path)
+        logger.debug("Spec size: %s characters", len(spec_content))
 
         # Call LLM API
         raw_analysis = self.client.analyze_spec(spec_content, spec_path)
@@ -77,10 +77,10 @@ class SpecAnalyzer:
         # Parse and validate
         try:
             analysis = self._parse_analysis(raw_analysis)
-            logger.info(f"Analysis complete: {self._get_analysis_summary(analysis)}")
+            logger.info("Analysis complete: %s", self._get_analysis_summary(analysis))
             return analysis
         except Exception as e:
-            logger.error(f"Failed to parse analysis: {e}")
+            logger.error("Failed to parse analysis: %s", e)
             raise ValueError(f"Failed to parse LLM analysis: {e}")
 
     def _parse_analysis(self, raw_data: dict[str, Any]) -> SpecAnalysis:
@@ -129,8 +129,8 @@ class SpecAnalyzer:
             return analysis
 
         except Exception as e:
-            logger.error(f"Failed to parse analysis data: {e}")
-            logger.debug(f"Raw data keys: {raw_data.keys()}")
+            logger.error("Failed to parse analysis data: %s", e)
+            logger.debug("Raw data keys: %s", raw_data.keys())
             raise
 
     def _get_analysis_summary(self, analysis: SpecAnalysis) -> str:

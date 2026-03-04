@@ -168,7 +168,9 @@ class TigerBeetleClient:
         replica_addresses = ",".join(self._config.addresses)
 
         logger.info(
-            f"Connecting to TigerBeetle cluster {self._config.cluster_id} at {replica_addresses}"
+            "Connecting to TigerBeetle cluster %s at %s",
+            self._config.cluster_id,
+            replica_addresses,
         )
 
         try:
@@ -179,7 +181,7 @@ class TigerBeetleClient:
             self._connected = True
             logger.info("TigerBeetle connection established")
         except Exception as e:
-            logger.error(f"Failed to connect to TigerBeetle: {e}")
+            logger.error("Failed to connect to TigerBeetle: %s", e)
             raise
 
     async def _disconnect(self) -> None:
@@ -277,8 +279,9 @@ class TigerBeetleClient:
 
             if failed_ids:
                 logger.warning(
-                    f"Failed to create {len(failed_ids)} accounts: "
-                    f"{[results[i].result for i in range(len(results))]}"
+                    "Failed to create %s accounts: %s",
+                    len(failed_ids),
+                    [results[i].result for i in range(len(results))],
                 )
 
             return succeeded
@@ -287,7 +290,7 @@ class TigerBeetleClient:
             latency_ms = (time.perf_counter() - start) * 1000
             self._record_latency("create_accounts", latency_ms, failed=len(account_ids))
             self._stats.accounts_failed += len(account_ids)
-            logger.error(f"Error creating accounts: {e}")
+            logger.error("Error creating accounts: %s", e)
             raise
 
     async def create_transfer(
@@ -337,7 +340,7 @@ class TigerBeetleClient:
             if results:
                 self._record_latency("create_transfer", latency_ms, count=0, failed=1)
                 self._stats.transfers_failed += 1
-                logger.warning(f"Transfer failed: {results[0].result}")
+                logger.warning("Transfer failed: %s", results[0].result)
                 return False
 
             self._record_latency("create_transfer", latency_ms, count=1)
@@ -348,7 +351,7 @@ class TigerBeetleClient:
             latency_ms = (time.perf_counter() - start) * 1000
             self._record_latency("create_transfer", latency_ms, failed=1)
             self._stats.transfers_failed += 1
-            logger.error(f"Error creating transfer: {e}")
+            logger.error("Error creating transfer: %s", e)
             raise
 
     async def create_linked_transfers(
@@ -405,7 +408,7 @@ class TigerBeetleClient:
                     "create_linked_transfers", latency_ms, count=0, failed=len(transfers)
                 )
                 self._stats.transfers_failed += len(transfers)
-                logger.warning(f"Linked transfers failed: {[r.result for r in results]}")
+                logger.warning("Linked transfers failed: %s", [r.result for r in results])
                 return False
 
             self._record_latency("create_linked_transfers", latency_ms, count=len(transfers))
@@ -416,7 +419,7 @@ class TigerBeetleClient:
             latency_ms = (time.perf_counter() - start) * 1000
             self._record_latency("create_linked_transfers", latency_ms, failed=len(transfers))
             self._stats.transfers_failed += len(transfers)
-            logger.error(f"Error creating linked transfers: {e}")
+            logger.error("Error creating linked transfers: %s", e)
             raise
 
     async def lookup_accounts(self, account_ids: list[int]) -> list[dict[str, Any]]:
@@ -456,7 +459,7 @@ class TigerBeetleClient:
         except Exception as e:
             latency_ms = (time.perf_counter() - start) * 1000
             self._record_latency("lookup_accounts", latency_ms, failed=len(account_ids))
-            logger.error(f"Error looking up accounts: {e}")
+            logger.error("Error looking up accounts: %s", e)
             raise
 
     async def health_check(self) -> bool:
@@ -474,7 +477,7 @@ class TigerBeetleClient:
             await self._client.lookup_accounts([0])
             return True
         except Exception as e:
-            logger.error(f"TigerBeetle health check failed: {e}")
+            logger.error("TigerBeetle health check failed: %s", e)
             return False
 
 
@@ -510,5 +513,5 @@ async def check_tigerbeetle_available(
         logger.warning("TigerBeetle connection timed out")
         return False
     except Exception as e:
-        logger.warning(f"TigerBeetle not available: {e}")
+        logger.warning("TigerBeetle not available: %s", e)
         return False

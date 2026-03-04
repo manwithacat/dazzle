@@ -477,4 +477,4 @@ def generate_dsl_from_analysis(
     dsl_code = generator.generate(module_name, app_name)
 
     output_path.write_text(dsl_code)
-    logger.info(f"Generated DSL written to {output_path}")
+    logger.info("Generated DSL written to %s", output_path)

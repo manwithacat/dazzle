@@ -205,7 +205,7 @@ class TigerBeetleHarness:
         started_at = datetime.now(UTC)
         start_time = time.monotonic()
 
-        logger.info(f"Starting TigerBeetle test {test_id}: {scenario.name}")
+        logger.info("Starting TigerBeetle test %s: %s", test_id, scenario.name)
 
         result = TBRunResult(
             test_id=test_id,
@@ -282,12 +282,13 @@ class TigerBeetleHarness:
             result.duration_seconds = time.monotonic() - start_time
 
             logger.info(
-                f"TigerBeetle test {test_id} completed: "
-                f"{'PASSED' if result.criteria_passed else 'FAILED'}"
+                "TigerBeetle test %s completed: %s",
+                test_id,
+                "PASSED" if result.criteria_passed else "FAILED",
             )
 
         except Exception as e:
-            logger.error(f"TigerBeetle test {test_id} failed: {e}")
+            logger.error("TigerBeetle test %s failed: %s", test_id, e)
             result.status = TBRunStatus.FAILED
             result.error_message = str(e)
             result.completed_at = datetime.now(UTC)

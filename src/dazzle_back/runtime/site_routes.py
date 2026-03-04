@@ -251,13 +251,13 @@ def _load_content_file(project_root: Path, content_path: str) -> str | None:
 
     full_path = project_root / "site" / "content" / content_path
     if not full_path.exists():
-        logger.warning(f"Content file not found: {full_path}")
+        logger.warning("Content file not found: %s", full_path)
         return None
 
     try:
         return full_path.read_text(encoding="utf-8")
     except Exception as e:
-        logger.error(f"Error reading content file {full_path}: {e}")
+        logger.error("Error reading content file %s: %s", full_path, e)
         return None
 
 

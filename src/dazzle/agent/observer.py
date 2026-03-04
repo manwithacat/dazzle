@@ -292,7 +292,7 @@ class PlaywrightObserver:
             )
             return [Element(**el) for el in elements]
         except Exception as e:
-            logger.warning(f"Error getting clickable elements: {e}")
+            logger.warning("Error getting clickable elements: %s", e)
             return []
 
     async def _get_input_fields(self) -> list[Element]:
@@ -341,7 +341,7 @@ class PlaywrightObserver:
             )
             return [Element(**el) for el in elements]
         except Exception as e:
-            logger.warning(f"Error getting input fields: {e}")
+            logger.warning("Error getting input fields: %s", e)
             return []
 
     async def _get_visible_text(self) -> str:
@@ -355,7 +355,7 @@ class PlaywrightObserver:
             )
             return str(text).strip()
         except Exception as e:
-            logger.warning(f"Error getting visible text: {e}")
+            logger.warning("Error getting visible text: %s", e)
             return ""
 
     async def _get_dazzle_attributes(self) -> dict[str, list[str]]:
@@ -382,7 +382,7 @@ class PlaywrightObserver:
             result: dict[str, list[str]] = attrs
             return result
         except Exception as e:
-            logger.warning(f"Error getting dazzle attributes: {e}")
+            logger.warning("Error getting dazzle attributes: %s", e)
             return {}
 
     async def _take_screenshot(self) -> str | None:
@@ -390,7 +390,7 @@ class PlaywrightObserver:
             screenshot_bytes = await self._page.screenshot(type="png", full_page=False)
             return base64.b64encode(screenshot_bytes).decode("utf-8")
         except Exception as e:
-            logger.warning(f"Error taking screenshot: {e}")
+            logger.warning("Error taking screenshot: %s", e)
             return None
 
 

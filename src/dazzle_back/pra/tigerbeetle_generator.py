@@ -258,7 +258,7 @@ class TigerBeetleLoadGenerator:
         self._stats.phase = TBLoadPhase.ACCOUNT_CREATION
         self._phase_start = time.monotonic()
 
-        logger.info(f"Creating {self._config.num_accounts} accounts...")
+        logger.info("Creating %s accounts...", self._config.num_accounts)
 
         template = AccountTemplate(
             ledger=self._config.ledger_id,
@@ -286,8 +286,10 @@ class TigerBeetleLoadGenerator:
             self._cold_accounts = []
 
         logger.info(
-            f"Created {self._stats.accounts_created} accounts "
-            f"({len(self._hot_accounts)} hot, {len(self._cold_accounts)} cold)"
+            "Created %s accounts (%s hot, %s cold)",
+            self._stats.accounts_created,
+            len(self._hot_accounts),
+            len(self._cold_accounts),
         )
 
     async def _run_transfer_phase(
@@ -302,7 +304,7 @@ class TigerBeetleLoadGenerator:
         self._phase_start = time.monotonic()
         target_rate = self._config.transfers_per_second * rate_multiplier
 
-        logger.info(f"Starting {phase.value} phase ({duration_seconds}s, {target_rate:.0f}/s)")
+        logger.info("Starting %s phase (%ss, %.0f/s)", phase.value, duration_seconds, target_rate)
 
         transfers_completed = 0
         phase_start = time.monotonic()

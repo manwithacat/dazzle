@@ -210,8 +210,10 @@ class IntegrationExecutor:
 
             if not success:
                 logger.warning(
-                    f"Integration action '{action.name}' returned {resp.status_code}: "
-                    f"{resp.text[:200]}"
+                    "Integration action '%s' returned %s: %s",
+                    action.name,
+                    resp.status_code,
+                    resp.text[:200],
                 )
 
             return ActionResult(
@@ -222,7 +224,7 @@ class IntegrationExecutor:
             )
 
         except Exception as e:
-            logger.error(f"Integration action '{action.name}' failed: {e}")
+            logger.error("Integration action '%s' failed: %s", action.name, e)
             return ActionResult(success=False, error=str(e))
 
 

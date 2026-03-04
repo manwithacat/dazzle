@@ -164,9 +164,10 @@ def create_test_routes(
                 entity = await repo.create(data)
                 created[fixture.id] = entity.model_dump() if hasattr(entity, "model_dump") else data
             except Exception as e:
+                logger.error("Failed to create %s: %s", entity_name, e)
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Failed to create {entity_name}: {str(e)}",
+                    detail=f"Failed to create {entity_name}",
                 )
 
         return SeedResponse(created=created)

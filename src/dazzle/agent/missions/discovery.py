@@ -268,7 +268,7 @@ def build_discovery_mission(
         try:
             capability_map = kg_store.persona_capability_map(persona_name)
         except Exception as e:
-            logger.warning(f"Could not get capability map for {persona_name}: {e}")
+            logger.warning("Could not get capability map for %s: %s", persona_name, e)
 
     persona_context = _build_persona_context(persona_name, capability_map)
     dsl_summary = build_dsl_summary(appspec)

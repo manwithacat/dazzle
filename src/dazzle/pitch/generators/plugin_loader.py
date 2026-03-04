@@ -25,7 +25,7 @@ class PluginRegistry:
     def register(self, name: str, builder: Callable[..., None]) -> None:
         """Register a builder function by name."""
         self._builders[name] = builder
-        logger.debug(f"Registered slide builder: {name}")
+        logger.debug("Registered slide builder: %s", name)
 
     def get(self, name: str) -> Callable[..., None] | None:
         """Get a builder function by name."""
@@ -78,7 +78,7 @@ def discover_plugins(project_root: Path) -> PluginRegistry:
                 registry.register(builder_name, fn)
 
         except Exception as e:
-            logger.warning(f"Failed to load plugin {py_file.name}: {e}")
+            logger.warning("Failed to load plugin %s: %s", py_file.name, e)
 
     return registry
 

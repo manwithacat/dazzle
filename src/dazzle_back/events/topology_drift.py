@@ -399,7 +399,7 @@ class TopologyDriftDetector:
                             )
                         )
                 except Exception as e:
-                    logger.warning(f"Could not get info for topic {topic.name}: {e}")
+                    logger.warning("Could not get info for topic %s: %s", topic.name, e)
 
         return issues
 
@@ -435,7 +435,7 @@ class TopologyDriftDetector:
                         )
 
             except Exception as e:
-                logger.warning(f"Could not check consumers for {topic.name}: {e}")
+                logger.warning("Could not check consumers for %s: %s", topic.name, e)
 
         return issues
 

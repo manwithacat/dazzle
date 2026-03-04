@@ -129,7 +129,7 @@ def create_fragment_router(
             return HTMLResponse(html)
 
         except Exception as e:
-            logger.warning(f"Fragment search error for source={source}: {e}")
+            logger.warning("Fragment search error for source=%s: %s", source, e)
             return HTMLResponse('<div class="p-3 text-sm text-error">Search failed</div>')
 
     @router.get("/select", response_class=HTMLResponse)
@@ -208,7 +208,7 @@ def create_fragment_router(
             return HTMLResponse(resp_html)
 
         except Exception as e:
-            logger.warning(f"Fragment select error for source={source}, id={id}: {e}")
+            logger.warning("Fragment select error for source=%s, id=%s: %s", source, id, e)
             return HTMLResponse('<div class="p-3 text-sm text-error">Selection failed</div>')
 
     return router

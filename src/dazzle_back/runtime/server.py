@@ -174,7 +174,7 @@ class IntegrationManager:
         except Exception as e:
             import logging
 
-            logging.getLogger("dazzle.server").warning(f"Failed to init channels: {e}")
+            logging.getLogger("dazzle.server").warning("Failed to init channels: %s", e)
 
     def _add_channel_routes(self) -> None:
         """Add channel management routes to the FastAPI app."""
@@ -231,7 +231,8 @@ class IntegrationManager:
                     }
                 return {"status": "queued"}
             except Exception as e:
-                return {"error": str(e)}
+                logger.error("Channel test message failed: %s", e)
+                return {"error": "Failed to send test message"}
 
         @self._app.post("/_dazzle/channels/health", tags=["Channels"])
         async def check_channel_health() -> dict[str, Any]:
@@ -286,11 +287,12 @@ class IntegrationManager:
         except ImportError as e:
             import logging
 
-            logging.getLogger("dazzle.server").debug(f"Integration executor not available: {e}")
+            logging.getLogger("dazzle.server").debug("Integration executor not available: %s", e)
+
         except Exception as e:
             import logging
 
-            logging.getLogger("dazzle.server").warning(f"Failed to init integration executor: {e}")
+            logging.getLogger("dazzle.server").warning("Failed to init integration executor: %s", e)
 
 
 class WorkspaceRouteBuilder:
@@ -534,19 +536,21 @@ class WorkspaceRouteBuilder:
             import logging
 
             logging.getLogger("dazzle.server").info(
-                f"Workspace routes initialized for {len(workspaces)} workspace(s)"
+                "Workspace routes initialized for %s workspace(s)",
+                len(workspaces),
             )
 
         except ImportError as e:
             import logging
 
-            logging.getLogger("dazzle.server").debug(f"Workspace renderer not available: {e}")
-        except Exception as e:
+            logging.getLogger("dazzle.server").debug("Workspace renderer not available: %s", e)
+
+        except Exception:
             import logging
-            import traceback
 
             logging.getLogger("dazzle.server").error(
-                f"Failed to init workspace routes: {e}\n{traceback.format_exc()}"
+                "Failed to init workspace routes",
+                exc_info=True,
             )
 
     def _init_workspace_entity_routes(self, workspaces: list[Any], app: Any) -> None:
@@ -853,7 +857,7 @@ class DazzleBackendApp:
             )
             from dazzle_back.runtime.token_store import TokenStore
         except ImportError as e:
-            logger.warning(f"Social auth dependencies not available: {e}")
+            logger.warning("Social auth dependencies not available: %s", e)
             return
 
         # Get JWT config from auth_config
@@ -914,7 +918,7 @@ class DazzleBackendApp:
             enabled.append("apple")
 
         if enabled:
-            logger.info(f"Social auth enabled: {', '.join(enabled)}")
+            logger.info("Social auth enabled: %s", ", ".join(enabled))
 
     def _build_social_auth_config(self, oauth_providers: list[Any]) -> Any | None:
         """
@@ -940,7 +944,7 @@ class DazzleBackendApp:
                     config.google_client_id = client_id
                     any_configured = True
                 else:
-                    logger.warning(f"Google OAuth: {provider_cfg.client_id_env} not set")
+                    logger.warning("Google OAuth: %s not set", provider_cfg.client_id_env)
 
             elif provider == "github":
                 client_id = os.getenv(provider_cfg.client_id_env)
@@ -955,7 +959,7 @@ class DazzleBackendApp:
                         missing.append(provider_cfg.client_id_env)
                     if not client_secret:
                         missing.append(provider_cfg.client_secret_env)
-                    logger.warning(f"GitHub OAuth: {', '.join(missing)} not set")
+                    logger.warning("GitHub OAuth: %s not set", ", ".join(missing))
 
             elif provider == "apple":
                 # Apple requires team_id, key_id, private_key, bundle_id
@@ -966,7 +970,7 @@ class DazzleBackendApp:
                 )
 
             else:
-                logger.warning(f"Unknown OAuth provider: {provider}")
+                logger.warning("Unknown OAuth provider: %s", provider)
 
         return config if any_configured else None
 
@@ -1006,7 +1010,7 @@ class DazzleBackendApp:
             # Log but don't fail startup
             import logging
 
-            logging.getLogger("dazzle.server").warning(f"Failed to init event framework: {e}")
+            logging.getLogger("dazzle.server").warning("Failed to init event framework: %s", e)
 
     def _init_console(self) -> None:
         """Initialize the Founder Console (v0.26.0)."""
@@ -1065,11 +1069,12 @@ class DazzleBackendApp:
         except ImportError as e:
             import logging
 
-            logging.getLogger("dazzle.server").debug(f"Console not available: {e}")
+            logging.getLogger("dazzle.server").debug("Console not available: %s", e)
+
         except Exception as e:
             import logging
 
-            logging.getLogger("dazzle.server").warning(f"Failed to init console: {e}")
+            logging.getLogger("dazzle.server").warning("Failed to init console: %s", e)
 
     def _init_fragment_routes(self) -> None:
         """Initialize fragment routes for composable HTMX fragments (v0.25.0)."""
@@ -1100,7 +1105,7 @@ class DazzleBackendApp:
         except Exception as e:
             import logging
 
-            logging.getLogger("dazzle.server").debug(f"Fragment routes not available: {e}")
+            logging.getLogger("dazzle.server").debug("Fragment routes not available: %s", e)
 
     def _init_integration_executor(self) -> None:
         """Initialize integration action executor (delegates to IntegrationManager)."""
@@ -1163,7 +1168,7 @@ class DazzleBackendApp:
         except Exception as e:
             import logging
 
-            logging.getLogger("dazzle.server").warning(f"Failed to init mapping executor: {e}")
+            logging.getLogger("dazzle.server").warning("Failed to init mapping executor: %s", e)
 
     def _register_manual_trigger_routes(self, executor: Any) -> None:
         """Register POST endpoints for manual integration triggers."""
@@ -1398,12 +1403,13 @@ class DazzleBackendApp:
             # Process module not available - skip
             import logging
 
-            logging.getLogger("dazzle.server").debug(f"Process module not available: {e}")
+            logging.getLogger("dazzle.server").debug("Process module not available: %s", e)
+
         except Exception as e:
             # Log but don't fail startup
             import logging
 
-            logging.getLogger("dazzle.server").warning(f"Failed to init process manager: {e}")
+            logging.getLogger("dazzle.server").warning("Failed to init process manager: %s", e)
 
     def _wire_entity_events_to_processes(self) -> None:
         """Wire entity lifecycle events from CRUD services to ProcessManager.
@@ -1458,7 +1464,8 @@ class DazzleBackendApp:
         import logging
 
         logging.getLogger("dazzle.server").debug(
-            f"Wired entity events to ProcessManager for {wired_count} services"
+            "Wired entity events to ProcessManager for %s services",
+            wired_count,
         )
 
     def _wire_send_handler_to_channels(self) -> None:
@@ -2076,7 +2083,8 @@ class DazzleBackendApp:
                     result = service_loader.invoke(service_id, **(payload or {}))
                     return {"result": result}
                 except Exception as e:
-                    return {"error": str(e)}
+                    logger.error("Service invocation failed for %s: %s", service_id, e)
+                    return {"error": "Service invocation failed"}
 
         @self._app.get("/health", tags=["System"])
         async def health_check() -> dict[str, str]:

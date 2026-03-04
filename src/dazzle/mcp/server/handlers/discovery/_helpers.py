@@ -30,7 +30,7 @@ def _populate_kg_for_discovery(
         handlers.handle_populate_from_appspec(str(project_path))
         return kg
     except Exception as e:
-        logger.warning(f"Could not populate knowledge graph: {e}")
+        logger.warning("Could not populate knowledge graph: %s", e)
         return None
 
 

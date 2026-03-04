@@ -280,7 +280,7 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
                 if path:
                     ctx.chart_paths[name] = path
         except Exception as e:
-            logger.debug(f"Chart generation skipped: {e}")
+            logger.debug("Chart generation skipped: %s", e)
 
         # Capture warnings from slide builders
         pitch_logger = logging.getLogger("dazzle.pitch")
@@ -331,7 +331,7 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
                 if condition(ctx):
                     builder(prs, ctx, colors)
                     slide_count += 1
-                    logger.debug(f"Built slide: {slide_name}")
+                    logger.debug("Built slide: %s", slide_name)
             elif slide_name in extra_map:
                 extra = extra_map[slide_name]
                 if extra.layout == ExtraSlideLayout.CUSTOM and extra.builder:
@@ -340,15 +340,15 @@ def generate_pptx(ctx: PitchContext, output_path: Path) -> GeneratorResult:
                         try:
                             custom_builder(prs, ctx, colors, extra)
                             slide_count += 1
-                            logger.debug(f"Built custom slide: {slide_name}")
+                            logger.debug("Built custom slide: %s", slide_name)
                         except Exception as e:
-                            logger.warning(f"Plugin builder '{extra.builder}' failed: {e}")
+                            logger.warning("Plugin builder '%s' failed: %s", extra.builder, e)
                     else:
-                        logger.warning(f"No plugin builder found: {extra.builder}")
+                        logger.warning("No plugin builder found: %s", extra.builder)
                 else:
                     _build_extra_slide(prs, ctx, colors, extra)
                     slide_count += 1
-                    logger.debug(f"Built extra slide: {slide_name}")
+                    logger.debug("Built extra slide: %s", slide_name)
 
         # Remove warning capture handler
         pitch_logger.removeHandler(warning_handler)

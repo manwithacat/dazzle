@@ -86,12 +86,12 @@ class ProcessManager:
         for proc in self._process_specs:
             await self._adapter.register_process(proc)
             self._register_trigger(proc)
-            logger.debug(f"Registered process: {proc.name}")
+            logger.debug("Registered process: %s", proc.name)
 
         # Register schedules
         for sched in self._schedule_specs:
             await self._adapter.register_schedule(sched)
-            logger.debug(f"Registered schedule: {sched.name}")
+            logger.debug("Registered schedule: %s", sched.name)
 
         # Store entity metadata for built-in CRUD operations in service steps
         if self._app_spec:
@@ -110,8 +110,9 @@ class ProcessManager:
                     await self._adapter.register_entity_meta(entity.name, meta)
 
         logger.info(
-            f"ProcessManager initialized with {len(self._process_specs)} processes "
-            f"and {len(self._schedule_specs)} schedules"
+            "ProcessManager initialized with %s processes and %s schedules",
+            len(self._process_specs),
+            len(self._schedule_specs),
         )
 
     async def shutdown(self) -> None:
@@ -129,24 +130,24 @@ class ProcessManager:
             if trigger.entity_name and trigger.event_type:
                 key = f"{trigger.entity_name}:{trigger.event_type}"
                 self._entity_event_triggers.setdefault(key, []).append(proc)
-                logger.debug(f"Registered entity event trigger: {key} -> {proc.name}")
+                logger.debug("Registered entity event trigger: %s -> %s", key, proc.name)
             elif trigger.entity_name:
                 # Wildcard: any event type for this entity
                 key = f"{trigger.entity_name}:*"
                 self._entity_event_triggers.setdefault(key, []).append(proc)
-                logger.debug(f"Registered wildcard entity event trigger: {key} -> {proc.name}")
+                logger.debug("Registered wildcard entity event trigger: %s -> %s", key, proc.name)
 
         elif trigger.kind == ProcessTriggerKind.ENTITY_STATUS_TRANSITION:
             # Status transition events
             if trigger.entity_name and trigger.from_status and trigger.to_status:
                 key = f"{trigger.entity_name}:{trigger.from_status}:{trigger.to_status}"
                 self._status_transition_triggers.setdefault(key, []).append(proc)
-                logger.debug(f"Registered status transition trigger: {key} -> {proc.name}")
+                logger.debug("Registered status transition trigger: %s -> %s", key, proc.name)
             elif trigger.entity_name and trigger.to_status:
                 # Wildcard from_status: any status -> to_status
                 key = f"{trigger.entity_name}:*:{trigger.to_status}"
                 self._status_transition_triggers.setdefault(key, []).append(proc)
-                logger.debug(f"Registered wildcard status trigger: {key} -> {proc.name}")
+                logger.debug("Registered wildcard status trigger: %s -> %s", key, proc.name)
 
     # Entity Event Handling
     async def on_entity_created(
@@ -233,9 +234,9 @@ class ProcessManager:
                     },
                 )
                 run_ids.append(run_id)
-                logger.info(f"Started process {proc.name} for {key}: {run_id}")
+                logger.info("Started process %s for %s: %s", proc.name, key, run_id)
             except Exception as e:
-                logger.error(f"Failed to start process {proc.name} for {key}: {e}")
+                logger.error("Failed to start process %s for %s: %s", proc.name, key, e)
 
         return run_ids
 
@@ -269,9 +270,9 @@ class ProcessManager:
                     },
                 )
                 run_ids.append(run_id)
-                logger.info(f"Started process {proc.name} for transition {key}: {run_id}")
+                logger.info("Started process %s for transition %s: %s", proc.name, key, run_id)
             except Exception as e:
-                logger.error(f"Failed to start process {proc.name} for transition {key}: {e}")
+                logger.error("Failed to start process %s for transition %s: %s", proc.name, key, e)
 
         return run_ids
 

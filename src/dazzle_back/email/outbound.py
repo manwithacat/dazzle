@@ -262,7 +262,7 @@ class EmailSender:
                 )
 
         except Exception as e:
-            logger.error(f"Error sending email: {e}")
+            logger.error("Error sending email: %s", e)
 
             failed_event = EmailFailedEvent(
                 request_id=request_id,
@@ -305,7 +305,7 @@ class EmailSender:
             else:
                 logger.warning("Event emitter has no publish method")
         except Exception as e:
-            logger.error(f"Failed to emit event to {topic}: {e}")
+            logger.error("Failed to emit event to %s: %s", topic, e)
 
 
 class EmailEventConsumer:
@@ -343,7 +343,7 @@ class EmailEventConsumer:
         # 2. Fetch body from pointer if body_pointer is set
         # 3. Call sender.send() with resolved content
 
-        logger.info(f"Processing send request: {event.request_id} -> {event.to_address}")
+        logger.info("Processing send request: %s -> %s", event.request_id, event.to_address)
 
         # This would be called from the outbox processor
         raise NotImplementedError("Outbox processing integration pending")

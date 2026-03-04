@@ -39,10 +39,10 @@ async def main() -> None:
     project_root = Path(os.environ.get("DAZZLE_PROJECT_ROOT", "."))
 
     logger.info("DAZZLE Temporal Worker")
-    logger.info(f"  Temporal: {temporal_address}")
-    logger.info(f"  Namespace: {namespace}")
-    logger.info(f"  Task Queue: {task_queue}")
-    logger.info(f"  Project Root: {project_root.absolute()}")
+    logger.info("  Temporal: %s", temporal_address)
+    logger.info("  Namespace: %s", namespace)
+    logger.info("  Task Queue: %s", task_queue)
+    logger.info("  Project Root: %s", project_root.absolute())
 
     # Check Temporal SDK availability
     try:
@@ -59,18 +59,18 @@ async def main() -> None:
         from dazzle.core.linker import build_appspec
         from dazzle.core.manifest import load_manifest
     except ImportError as e:
-        logger.error(f"Failed to import DAZZLE core modules: {e}")
+        logger.error("Failed to import DAZZLE core modules: %s", e)
         sys.exit(1)
 
     # Load project manifest
     manifest_path = project_root / "dazzle.toml"
     if not manifest_path.exists():
-        logger.error(f"Project manifest not found: {manifest_path}")
+        logger.error("Project manifest not found: %s", manifest_path)
         logger.info("Run 'dazzle init' to create a new project")
         sys.exit(1)
 
     manifest = load_manifest(manifest_path)
-    logger.info(f"Loaded project: {manifest.name}")
+    logger.info("Loaded project: %s", manifest.name)
 
     # Parse DSL files
     dsl_files = discover_dsl_files(project_root, manifest)
@@ -78,7 +78,7 @@ async def main() -> None:
         logger.error("No DSL files found in project")
         sys.exit(1)
 
-    logger.info(f"Found {len(dsl_files)} DSL files")
+    logger.info("Found %s DSL files", len(dsl_files))
 
     modules = parse_modules(dsl_files)
     app_spec = build_appspec(modules, str(project_root))
@@ -89,15 +89,15 @@ async def main() -> None:
         logger.warning("No process specs found in DSL")
         logger.info("Define processes in your DSL to use the workflow engine")
 
-    logger.info(f"Found {len(processes)} process definitions")
+    logger.info("Found %s process definitions", len(processes))
 
     # Connect to Temporal
-    logger.info(f"Connecting to Temporal at {temporal_address}...")
+    logger.info("Connecting to Temporal at %s...", temporal_address)
     try:
         client = await Client.connect(temporal_address, namespace=namespace)
         logger.info("Connected to Temporal")
     except Exception as e:
-        logger.error(f"Failed to connect to Temporal: {e}")
+        logger.error("Failed to connect to Temporal: %s", e)
         sys.exit(1)
 
     # Create adapter and register processes
@@ -123,7 +123,7 @@ async def main() -> None:
     # Register all processes
     for process in processes:
         await adapter.register_process(process)
-        logger.info(f"Registered process: {process.name}")
+        logger.info("Registered process: %s", process.name)
 
     # Collect workflows and activities
     workflows = list(adapter._workflows.values())
@@ -141,8 +141,10 @@ async def main() -> None:
     )
 
     logger.info(
-        f"Starting worker on queue '{task_queue}' "
-        f"with {len(workflows)} workflows and {len(activities)} activities"
+        "Starting worker on queue '%s' with %s workflows and %s activities",
+        task_queue,
+        len(workflows),
+        len(activities),
     )
     logger.info("Press Ctrl+C to stop")
 

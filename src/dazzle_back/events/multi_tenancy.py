@@ -466,7 +466,7 @@ class TenantEventConsumer:
         # Wrap handler with tenant validation
         async def validated_handler(envelope: EventEnvelope) -> None:
             if not self.strategy.validate_access(envelope, self.tenant):
-                logger.warning(f"Rejected event {envelope.event_id} - tenant mismatch")
+                logger.warning("Rejected event %s - tenant mismatch", envelope.event_id)
                 return
             await handler(envelope)
 

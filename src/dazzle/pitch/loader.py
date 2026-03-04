@@ -206,7 +206,7 @@ def save_pitchspec(project_root: Path, spec: PitchSpec) -> Path:
         encoding="utf-8",
     )
 
-    logger.info(f"Saved PitchSpec to {pitchspec_path}")
+    logger.info("Saved PitchSpec to %s", pitchspec_path)
     return pitchspec_path
 
 
@@ -454,12 +454,12 @@ def scaffold_pitchspec(
     pitchspec_path = get_pitchspec_path(project_root)
 
     if pitchspec_path.exists() and not overwrite:
-        logger.debug(f"Skipping existing pitchspec: {pitchspec_path}")
+        logger.debug("Skipping existing pitchspec: %s", pitchspec_path)
         return None
 
     template = _get_scaffold_template()
     pitchspec_path.write_text(template, encoding="utf-8")
-    logger.info(f"Created pitchspec at {pitchspec_path}")
+    logger.info("Created pitchspec at %s", pitchspec_path)
     return pitchspec_path
 
 

@@ -146,7 +146,9 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 if asyncio.iscoroutine(result):
                     await result
             except Exception as e:
-                logger.warning(f"Entity {event_label} callback failed for {self.entity_name}: {e}")
+                logger.warning(
+                    "Entity %s callback failed for %s: %s", event_label, self.entity_name, e
+                )
 
     async def _notify_created(self, entity_id: str, entity_data: dict[str, Any]) -> None:
         """Notify all on_created callbacks."""

@@ -108,7 +108,7 @@ class EventBusProcessAdapter(ProcessAdapter):
 
     async def register_process(self, spec: ProcessSpec) -> None:
         self._store.register_process(spec)
-        logger.debug(f"Registered process: {spec.name}")
+        logger.debug("Registered process: %s", spec.name)
 
     async def register_schedule(self, spec: ScheduleSpec) -> None:
         self._store.register_schedule(spec)
@@ -118,11 +118,11 @@ class EventBusProcessAdapter(ProcessAdapter):
             "cron": getattr(spec, "cron", None),
             "interval_seconds": getattr(spec, "interval_seconds", None),
         }
-        logger.debug(f"Registered schedule: {spec.name}")
+        logger.debug("Registered schedule: %s", spec.name)
 
     async def register_entity_meta(self, entity_name: str, meta: dict[str, Any]) -> None:
         self._store.save_entity_meta(entity_name, meta)
-        logger.debug(f"Registered entity metadata: {entity_name}")
+        logger.debug("Registered entity metadata: %s", entity_name)
 
     # -----------------------------------------------------------------------
     # Process Lifecycle
@@ -138,7 +138,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         if idempotency_key:
             existing = self._find_run_by_idempotency_key(idempotency_key)
             if existing:
-                logger.info(f"Returning existing run {existing.run_id} for idempotency key")
+                logger.info("Returning existing run %s for idempotency key", existing.run_id)
                 return existing.run_id
 
         run_id = str(uuid.uuid4())
@@ -153,7 +153,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         )
         self._store.save_run(run)
 
-        logger.info(f"Starting process {process_name} run {run_id}")
+        logger.info("Starting process %s run %s", process_name, run_id)
         await self._publish_event(PROCESS_EXECUTE, run_id, {"run_id": run_id})
         return run_id
 
@@ -189,7 +189,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             run.completed_at = datetime.now(UTC)
             run.updated_at = datetime.now(UTC)
             self._store.save_run(run)
-            logger.info(f"Cancelled process run {run_id}: {reason}")
+            logger.info("Cancelled process run %s: %s", run_id, reason)
 
     async def suspend_process(self, run_id: str) -> None:
         run = self._store.get_run(run_id)
@@ -197,7 +197,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             run.status = ProcessStatus.SUSPENDED
             run.updated_at = datetime.now(UTC)
             self._store.save_run(run)
-            logger.info(f"Suspended process run {run_id}")
+            logger.info("Suspended process run %s", run_id)
 
     async def resume_process(self, run_id: str) -> None:
         run = self._store.get_run(run_id)
@@ -206,7 +206,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             run.updated_at = datetime.now(UTC)
             self._store.save_run(run)
             await self._publish_event(PROCESS_EXECUTE, run_id, {"run_id": run_id})
-            logger.info(f"Resumed process run {run_id}")
+            logger.info("Resumed process run %s", run_id)
 
     # -----------------------------------------------------------------------
     # Signals
@@ -220,7 +220,7 @@ class EventBusProcessAdapter(ProcessAdapter):
     ) -> None:
         run = self._store.get_run(run_id)
         if not run:
-            logger.warning(f"Signal {signal_name} sent to unknown run {run_id}")
+            logger.warning("Signal %s sent to unknown run %s", signal_name, run_id)
             return
 
         run.context[f"signal_{signal_name}"] = payload or {}
@@ -232,7 +232,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             self._store.save_run(run)
             await self._publish_event(PROCESS_EXECUTE, run_id, {"run_id": run_id})
 
-        logger.info(f"Signal {signal_name} sent to run {run_id}")
+        logger.info("Signal %s sent to run %s", signal_name, run_id)
 
     # -----------------------------------------------------------------------
     # Human Tasks
@@ -261,11 +261,11 @@ class EventBusProcessAdapter(ProcessAdapter):
     ) -> None:
         task = self._store.get_task(task_id)
         if not task:
-            logger.warning(f"Task {task_id} not found")
+            logger.warning("Task %s not found", task_id)
             return
 
         if task.status in (TaskStatus.COMPLETED, TaskStatus.CANCELLED, TaskStatus.EXPIRED):
-            logger.warning(f"Task {task_id} already in terminal state: {task.status}")
+            logger.warning("Task %s already in terminal state: %s", task_id, task.status)
             return
 
         task.status = TaskStatus.COMPLETED
@@ -276,7 +276,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             task.assignee_id = completed_by
         self._store.save_task(task)
 
-        logger.info(f"Task {task_id} completed with outcome: {outcome}")
+        logger.info("Task %s completed with outcome: %s", task_id, outcome)
 
         # Publish event to resume the parent process
         await self._publish_event(
@@ -294,14 +294,14 @@ class EventBusProcessAdapter(ProcessAdapter):
         del reason
         task = self._store.get_task(task_id)
         if not task:
-            logger.warning(f"Task {task_id} not found")
+            logger.warning("Task %s not found", task_id)
             return
 
         old_assignee = task.assignee_id
         task.assignee_id = new_assignee_id
         task.status = TaskStatus.ASSIGNED
         self._store.save_task(task)
-        logger.info(f"Task {task_id} reassigned from {old_assignee} to {new_assignee_id}")
+        logger.info("Task %s reassigned from %s to %s", task_id, old_assignee, new_assignee_id)
 
     # -----------------------------------------------------------------------
     # Version Management
@@ -332,7 +332,7 @@ class EventBusProcessAdapter(ProcessAdapter):
                 "cron": getattr(schedule, "cron", None),
                 "interval_seconds": getattr(schedule, "interval_seconds", None),
             }
-            logger.info(f"Registered schedule '{schedule.name}'")
+            logger.info("Registered schedule '%s'", schedule.name)
             count += 1
         return count
 
@@ -377,10 +377,10 @@ class EventBusProcessAdapter(ProcessAdapter):
             framework = get_framework()
             if framework and framework._bus:
                 await framework._bus.publish(envelope.topic, envelope)
-                logger.debug(f"Published {event_type} for key={key}")
+                logger.debug("Published %s for key=%s", event_type, key)
                 return
         except Exception as e:
-            logger.warning(f"Event bus not available, falling back to direct execution: {e}")
+            logger.warning("Event bus not available, falling back to direct execution: %s", e)
 
         # Fallback: handle directly in the current async context
         await self._handle_event_directly(event_type, payload)
@@ -429,7 +429,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.warning(f"Consumer loop error: {e}")
+                logger.warning("Consumer loop error: %s", e)
                 await asyncio.sleep(5.0)
 
         logger.info("Process consumer loop stopped")
@@ -443,7 +443,7 @@ class EventBusProcessAdapter(ProcessAdapter):
                     None, self._execute_process_sync, run.run_id
                 )
             except Exception as e:
-                logger.error(f"Failed to execute process {run.run_id}: {e}")
+                logger.error("Failed to execute process %s: %s", run.run_id, e)
 
     async def _poll_delayed_events(self) -> None:
         """Check for delayed task timeout events that are now due."""
@@ -466,7 +466,7 @@ class EventBusProcessAdapter(ProcessAdapter):
                             None, self._handle_task_timeout_sync, task_id
                         )
         except Exception as e:
-            logger.debug(f"Delayed event poll error: {e}")
+            logger.debug("Delayed event poll error: %s", e)
 
     # -----------------------------------------------------------------------
     # Scheduler loop
@@ -500,7 +500,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.warning(f"Scheduler loop error: {e}")
+                logger.warning("Scheduler loop error: %s", e)
                 await asyncio.sleep(60.0)
 
         logger.info("Process scheduler loop stopped")
@@ -510,7 +510,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         process_name = schedule.get("process_name", name)
         spec = self._store.get_process_spec(process_name)
         if not spec:
-            logger.warning(f"Schedule {name}: process {process_name} not found")
+            logger.warning("Schedule %s: process %s not found", name, process_name)
             return
 
         run_id = str(uuid.uuid4())
@@ -524,7 +524,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         self._store.set_schedule_last_run(name, datetime.now(UTC))
 
         await self._publish_event(PROCESS_EXECUTE, run_id, {"run_id": run_id})
-        logger.info(f"Triggered scheduled process {process_name} run {run_id}")
+        logger.info("Triggered scheduled process %s run %s", process_name, run_id)
 
     @staticmethod
     def _cron_matches(cron: str, now: datetime) -> bool:
@@ -563,7 +563,7 @@ class EventBusProcessAdapter(ProcessAdapter):
 
         run = self._store.get_run(run_id)
         if not run:
-            logger.error(f"Process run {run_id} not found")
+            logger.error("Process run %s not found", run_id)
             return
 
         if run.status not in (ProcessStatus.PENDING, ProcessStatus.WAITING):
@@ -574,8 +574,8 @@ class EventBusProcessAdapter(ProcessAdapter):
             # We can't publish async from sync context, so store the timeout
             # info and let the consumer loop handle it via polling.
             logger.info(
-                f"Human task {task_id} created, timeout in {timeout_seconds}s "
-                "(handled by consumer poll)"
+                "Human task %s created, timeout in %ss "
+                "(handled by consumer poll, task_id, timeout_seconds)"
             )
 
         try:
@@ -585,7 +585,7 @@ class EventBusProcessAdapter(ProcessAdapter):
                 on_task_created=on_task_created,
             )
         except Exception as e:
-            logger.exception(f"Process {run_id} execution failed: {e}")
+            logger.exception("Process %s execution failed: %s", run_id, e)
             run = self._store.get_run(run_id)
             if run and run.status not in (ProcessStatus.FAILED, ProcessStatus.COMPLETED):
                 fail_run(self._store, run, str(e))
@@ -596,12 +596,12 @@ class EventBusProcessAdapter(ProcessAdapter):
         """Resume a process after task completion."""
         task = self._store.get_task(task_id)
         if not task:
-            logger.warning(f"Task {task_id} not found for resume")
+            logger.warning("Task %s not found for resume", task_id)
             return
 
         run = self._store.get_run(task.run_id)
         if not run:
-            logger.warning(f"Run {task.run_id} not found for task {task_id}")
+            logger.warning("Run %s not found for task %s", task.run_id, task_id)
             return
 
         # Store outcome in context
@@ -622,5 +622,7 @@ class EventBusProcessAdapter(ProcessAdapter):
         result = check_task_timeout(self._store, task_id)
         if result.get("needs_followup"):
             logger.info(
-                f"Task {task_id} escalated, will check again in {result['followup_seconds']}s"
+                "Task %s escalated, will check again in %ss",
+                task_id,
+                result["followup_seconds"],
             )

@@ -116,7 +116,9 @@ class StepExecutor:
             # Retry if not last attempt
             if attempt < retry.max_attempts - 1:
                 delay = self._calculate_backoff(retry, attempt)
-                logger.debug(f"Step {step.name} attempt {attempt + 1} failed, retrying in {delay}s")
+                logger.debug(
+                    "Step %s attempt %s failed, retrying in %ss", step.name, attempt + 1, delay
+                )
                 await asyncio.sleep(delay)
 
         raise ProcessStepFailed(step.name, last_error or "Unknown error")
@@ -205,7 +207,7 @@ class StepExecutor:
 
         handler = self._adapter._service_handlers.get(service_name)
         if not handler:
-            logger.warning(f"No handler for service {service_name}, using no-op")
+            logger.warning("No handler for service %s, using no-op", service_name)
             return {}
 
         return await handler(inputs)
@@ -496,7 +498,7 @@ class CompensationRunner:
                     try:
                         await self._run_compensation(compensation, context)
                     except Exception as e:
-                        logger.error(f"Compensation {compensation.name} failed: {e}")
+                        logger.error("Compensation %s failed: %s", compensation.name, e)
 
     async def _run_compensation(
         self,
@@ -557,7 +559,7 @@ class SchedulePoller:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Scheduler error: {e}")
+                logger.error("Scheduler error: %s", e)
 
     async def _should_run_schedule(self, spec: ScheduleSpec, now: datetime) -> bool:
         """Check if a schedule should run now."""

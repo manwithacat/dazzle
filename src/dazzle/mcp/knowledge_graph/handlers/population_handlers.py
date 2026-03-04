@@ -97,7 +97,7 @@ class PopulationHandlers:
             except Exception as e:
                 errors_list: list[str] = stats["errors"]
                 errors_list.append(f"{file_path}: {e}")
-                logger.warning(f"Error processing {file_path}: {e}")
+                logger.warning("Error processing %s: %s", file_path, e)
 
         return stats
 
@@ -179,11 +179,11 @@ class PopulationHandlers:
         except ParseError as e:
             errors_list: list[str] = stats["errors"]
             errors_list.append(f"Parse error: {e}")
-            logger.warning(f"Parse error indexing {project_path}: {e}")
+            logger.warning("Parse error indexing %s: %s", project_path, e)
         except Exception as e:
             errors_list = stats["errors"]
             errors_list.append(f"Error: {e}")
-            logger.warning(f"Error indexing {project_path}: {e}")
+            logger.warning("Error indexing %s: %s", project_path, e)
 
         return stats
 
@@ -307,7 +307,7 @@ class PopulationHandlers:
                 self._index_test_file(test_file, tests_root, source_path, stats)
             except Exception as e:
                 stats["errors"].append(f"{test_file}: {e}")
-                logger.warning(f"Error indexing test file {test_file}: {e}")
+                logger.warning("Error indexing test file %s: %s", test_file, e)
 
         return stats
 

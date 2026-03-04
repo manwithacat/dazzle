@@ -50,7 +50,7 @@ class RabbitMQAdapter(QueueAdapter):
             self._connection = await aio_pika.connect_robust(self._url)
             self._channel = await self._connection.channel()
             await super().initialize()
-            logger.info(f"RabbitMQ adapter initialized ({self._url})")
+            logger.info("RabbitMQ adapter initialized (%s)", self._url)
 
         except ImportError:
             raise ImportError(
@@ -58,7 +58,7 @@ class RabbitMQAdapter(QueueAdapter):
                 "Install it with: pip install 'dazzle[rabbitmq]'"
             )
         except Exception as e:
-            logger.error(f"Failed to connect to RabbitMQ: {e}")
+            logger.error("Failed to connect to RabbitMQ: %s", e)
             raise
 
     async def shutdown(self) -> None:
@@ -67,7 +67,7 @@ class RabbitMQAdapter(QueueAdapter):
             try:
                 await self._connection.close()
             except Exception as e:
-                logger.warning(f"Error closing RabbitMQ connection: {e}")
+                logger.warning("Error closing RabbitMQ connection: %s", e)
         self._connection = None
         self._channel = None
         self._declared_queues.clear()
@@ -132,7 +132,7 @@ class RabbitMQAdapter(QueueAdapter):
 
             latency = (time.monotonic() - start) * 1000
 
-            logger.info(f"Message sent to RabbitMQ queue '{message.channel_name}': {message.id}")
+            logger.info("Message sent to RabbitMQ queue '%s': %s", message.channel_name, message.id)
 
             return SendResult(
                 status=SendStatus.SUCCESS,
@@ -145,7 +145,7 @@ class RabbitMQAdapter(QueueAdapter):
             )
 
         except Exception as e:
-            logger.error(f"RabbitMQ send error: {e}")
+            logger.error("RabbitMQ send error: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),
@@ -175,7 +175,7 @@ class RabbitMQAdapter(QueueAdapter):
                     try:
                         body = json.loads(incoming.body.decode())
                     except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                        logger.warning(f"Skipping malformed message: {e}")
+                        logger.warning("Skipping malformed message: %s", e)
                         continue
                     body["_delivery_tag"] = incoming.delivery_tag
                     messages.append(body)
@@ -187,7 +187,7 @@ class RabbitMQAdapter(QueueAdapter):
         except TimeoutError:
             pass
         except Exception as e:
-            logger.error(f"RabbitMQ receive error: {e}")
+            logger.error("RabbitMQ receive error: %s", e)
 
         return messages
 
@@ -200,7 +200,7 @@ class RabbitMQAdapter(QueueAdapter):
         if message_id in self._pending_acks:
             msg = self._pending_acks.pop(message_id)
             await msg.ack()
-            logger.debug(f"Message acknowledged: {message_id}")
+            logger.debug("Message acknowledged: %s", message_id)
 
     async def nack(self, message_id: str, requeue: bool = True) -> None:
         """Negative acknowledge a message.
@@ -212,7 +212,7 @@ class RabbitMQAdapter(QueueAdapter):
         if message_id in self._pending_acks:
             msg = self._pending_acks.pop(message_id)
             await msg.nack(requeue=requeue)
-            logger.debug(f"Message nacked (requeue={requeue}): {message_id}")
+            logger.debug("Message nacked (requeue=%s): %s", requeue, message_id)
 
     async def health_check(self) -> bool:
         """Check if RabbitMQ is accessible."""
@@ -296,7 +296,9 @@ class InMemoryQueueAdapter(QueueAdapter):
 
             latency = (time.monotonic() - start) * 1000
 
-            logger.info(f"Message sent to in-memory queue '{message.channel_name}': {message.id}")
+            logger.info(
+                "Message sent to in-memory queue '%s': %s", message.channel_name, message.id
+            )
 
             return SendResult(
                 status=SendStatus.SUCCESS,
@@ -309,7 +311,7 @@ class InMemoryQueueAdapter(QueueAdapter):
             )
 
         except Exception as e:
-            logger.error(f"In-memory queue send error: {e}")
+            logger.error("In-memory queue send error: %s", e)
             return SendResult(
                 status=SendStatus.FAILED,
                 error=str(e),
@@ -341,7 +343,7 @@ class InMemoryQueueAdapter(QueueAdapter):
         except TimeoutError:
             pass
         except Exception as e:
-            logger.error(f"In-memory queue receive error: {e}")
+            logger.error("In-memory queue receive error: %s", e)
 
         return messages
 
@@ -354,7 +356,7 @@ class InMemoryQueueAdapter(QueueAdapter):
         async with self._get_lock():
             if message_id in self._pending:
                 del self._pending[message_id]
-                logger.debug(f"Message acknowledged: {message_id}")
+                logger.debug("Message acknowledged: %s", message_id)
 
     async def nack(self, message_id: str, requeue: bool = True) -> None:
         """Negative acknowledge a message.
@@ -370,7 +372,7 @@ class InMemoryQueueAdapter(QueueAdapter):
                     queue_name = msg.get("channel_name", "default")
                     queue = self._get_queue(queue_name)
                     await queue.put(msg)
-                logger.debug(f"Message nacked (requeue={requeue}): {message_id}")
+                logger.debug("Message nacked (requeue=%s): %s", requeue, message_id)
 
     async def health_check(self) -> bool:
         """In-memory queue is always healthy."""

@@ -168,11 +168,13 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
             logger.debug("Failed to analyze infra requirements", exc_info=True)
 
         logger.info(
-            f"Extracted DSL context: {len(ctx.entities)} entities, "
-            f"{len(ctx.surfaces)} surfaces, {len(ctx.personas)} personas"
+            "Extracted DSL context: %s entities, %s surfaces, %s personas",
+            len(ctx.entities),
+            len(ctx.surfaces),
+            len(ctx.personas),
         )
 
     except Exception as e:
-        logger.warning(f"Could not extract DSL data: {e}")
+        logger.warning("Could not extract DSL data: %s", e)
 
     return ctx
