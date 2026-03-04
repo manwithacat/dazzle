@@ -742,6 +742,20 @@ def _validate_section(
     if section.media and section.media.src:
         _validate_media_src(section.media.src, context, result, project_root=project_root)
 
+    # Warn if media is set on a section type that doesn't render it
+    _MEDIA_RENDERING_SECTIONS = {
+        SectionKind.HERO,
+        SectionKind.SPLIT_CONTENT,
+        SectionKind.FEATURES,
+        SectionKind.FEATURE_GRID,
+        SectionKind.CARD_GRID,
+    }
+    if section.media and section.type not in _MEDIA_RENDERING_SECTIONS:
+        result.add_warning(
+            f"{context}: media is set but '{section.type}' sections do not render media. "
+            f"Use hero, split_content, features, or card_grid for media support."
+        )
+
     # Section-specific validation
     if section.type == SectionKind.HERO:
         if not section.headline:

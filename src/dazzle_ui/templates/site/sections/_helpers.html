@@ -8,3 +8,9 @@
 </div>
 {% endif %}
 {% endmacro %}
+
+{% macro section_media(section) %}
+{% if section.media and section.media.kind == "image" and section.media.src %}
+<div class="dz-section-media"><img src="{{ section.media.src }}" alt="{{ section.media.alt | default('') }}" loading="lazy"></div>
+{% endif %}
+{% endmacro %}

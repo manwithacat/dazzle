@@ -869,6 +869,18 @@
   margin: 0 auto 3rem;
 }
 
+.dz-section-media {
+  text-align: center;
+  margin: 0 auto 2rem;
+  max-width: 48rem;
+}
+
+.dz-section-media img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
 /* --- Generic section typography --- */
 .dz-section h1 {
   font-size: var(--dz-font-size-hero-headline, 3.5rem);

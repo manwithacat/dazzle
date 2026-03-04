@@ -563,6 +563,58 @@ class TestMediaSrcValidation:
             result = validate_sitespec(spec, project_root, check_content_files=True)
             assert not any("media file not found" in w for w in result.warnings)
 
+    def test_media_on_unsupported_section_warns(self) -> None:
+        """Test that media on a section type that doesn't render it triggers a warning."""
+        spec = SiteSpec(
+            brand=BrandSpec(product_name="Test"),
+            pages=[
+                PageSpec(
+                    route="/",
+                    type=PageKind.LANDING,
+                    title="Home",
+                    sections=[
+                        SectionSpec(
+                            type=SectionKind.STATS,
+                            headline="Numbers",
+                            media=MediaSpec(
+                                kind=MediaKind.IMAGE,
+                                src="/static/images/bg.webp",
+                            ),
+                        ),
+                    ],
+                ),
+            ],
+        )
+        result = validate_sitespec(spec, check_content_files=False)
+        assert any("do not render media" in w for w in result.warnings)
+
+    def test_media_on_supported_section_no_warn(self) -> None:
+        """Test that media on card_grid/features does NOT trigger the unsupported warning."""
+        for section_kind in (SectionKind.CARD_GRID, SectionKind.FEATURES):
+            spec = SiteSpec(
+                brand=BrandSpec(product_name="Test"),
+                pages=[
+                    PageSpec(
+                        route="/",
+                        type=PageKind.LANDING,
+                        title="Home",
+                        sections=[
+                            SectionSpec(
+                                type=section_kind,
+                                headline="Items",
+                                media=MediaSpec(
+                                    kind=MediaKind.IMAGE,
+                                    src="/static/images/hero.webp",
+                                ),
+                                items=[],
+                            ),
+                        ],
+                    ),
+                ],
+            )
+            result = validate_sitespec(spec, check_content_files=False)
+            assert not any("do not render media" in w for w in result.warnings)
+
 
 class TestScaffolding:
     """Tests for site scaffolding."""

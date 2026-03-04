@@ -1,7 +1,8 @@
-{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+{% from "site/sections/_helpers.html" import section_id_attr, section_header, section_media %}
 <section{{ section_id_attr(section) }} class="dz-section dz-section-card-grid">
   <div class="dz-section-content">
     {{ section_header(section) }}
+    {{ section_media(section) }}
     <div class="dz-card-grid">
       {% for item in section["items"] | default([]) %}
       <div class="dz-card-item">
