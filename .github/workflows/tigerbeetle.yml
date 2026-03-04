@@ -18,6 +18,9 @@ on:
   # Allow manual trigger
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   tigerbeetle-unit:
     name: TigerBeetle Unit Tests

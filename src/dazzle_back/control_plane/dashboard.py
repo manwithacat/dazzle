@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import html
 import json
+import logging
 import time
 from datetime import datetime
 
@@ -15,6 +16,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .auth import AuthContext, get_auth_context
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Dashboard"])
 
@@ -668,9 +671,10 @@ async def logs_list(request: Request, level: str = "info") -> str:
         """
 
     except Exception as e:
-        return f"""
+        logger.error("Error loading logs: %s", e)
+        return """
         <div class="alert alert-error">
-            <span>Error loading logs: {html.escape(str(e))}</span>
+            <span>Error loading logs</span>
         </div>
         """
 
@@ -814,9 +818,10 @@ async def processes_list(request: Request) -> str:
         return stats_html + runs_html + tasks_html
 
     except Exception as e:
-        return f"""
+        logger.error("Error loading processes: %s", e)
+        return """
         <div class="alert alert-error">
-            <span>Error loading processes: {html.escape(str(e))}</span>
+            <span>Error loading processes</span>
         </div>
         """
 
@@ -874,9 +879,10 @@ async def metrics_list(request: Request) -> str:
         """
 
     except Exception as e:
-        return f"""
+        logger.error("Error loading metrics: %s", e)
+        return """
         <div class="alert alert-error">
-            <span>Error: {html.escape(str(e))}</span>
+            <span>Error loading metrics</span>
         </div>
         """
 
@@ -962,7 +968,8 @@ async def detail_health(request: Request) -> str:
         }
         """
     except Exception as e:
-        return f'<div class="alert alert-error">Error: {html.escape(str(e))}</div>'
+        logger.error("Error loading health details: %s", e)
+        return '<div class="alert alert-error">Error loading health details</div>'
 
 
 @router.get("/dashboard/detail/errors", response_class=HTMLResponse)
@@ -1003,7 +1010,8 @@ async def detail_errors(request: Request) -> str:
         <div class="text-xs opacity-50 mt-4">Showing {len(errors)} most recent errors</div>
         """
     except Exception as e:
-        return f'<div class="alert alert-error">Error: {html.escape(str(e))}</div>'
+        logger.error("Error loading error details: %s", e)
+        return '<div class="alert alert-error">Error loading error details</div>'
 
 
 @router.get("/dashboard/detail/requests", response_class=HTMLResponse)
@@ -1072,7 +1080,8 @@ async def detail_requests(request: Request) -> str:
         </script>
         """
     except Exception as e:
-        return f'<div class="alert alert-error">Error: {html.escape(str(e))}</div>'
+        logger.error("Error loading request details: %s", e)
+        return '<div class="alert alert-error">Error loading request details</div>'
 
 
 @router.get("/dashboard/detail/latency", response_class=HTMLResponse)
@@ -1138,7 +1147,8 @@ async def detail_latency(request: Request) -> str:
         </script>
         """
     except Exception as e:
-        return f'<div class="alert alert-error">Error: {html.escape(str(e))}</div>'
+        logger.error("Error loading latency details: %s", e)
+        return '<div class="alert alert-error">Error loading latency details</div>'
 
 
 @router.get("/dashboard/detail/metric/{metric_name:path}", response_class=HTMLResponse)
@@ -1206,4 +1216,5 @@ async def detail_metric(request: Request, metric_name: str) -> str:
         </script>
         """
     except Exception as e:
-        return f'<div class="alert alert-error">Error: {html.escape(str(e))}</div>'
+        logger.error("Error loading metric details: %s", e)
+        return '<div class="alert alert-error">Error loading metric details</div>'

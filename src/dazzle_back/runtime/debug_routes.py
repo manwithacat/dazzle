@@ -240,8 +240,8 @@ def create_debug_routes(
         # Validate entity name before any database operations
         try:
             validate_sql_identifier(entity_name, "entity name")
-        except ValueError as e:
-            return {"error": str(e)}
+        except ValueError:
+            return {"error": "Invalid entity name"}
 
         entity = next((e for e in entities if e.name == entity_name), None)
         if not entity:

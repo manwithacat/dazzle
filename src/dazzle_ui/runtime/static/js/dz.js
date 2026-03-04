@@ -196,7 +196,8 @@ const dz = (() => {
         const msgEl = dialog.querySelector("[data-dz-dialog-message]");
         if (msgEl) msgEl.textContent = message;
       }
-      dialog.dataset.action = action || "";
+      // Only allow relative URLs as actions (prevent javascript:, data:, etc.)
+      dialog.dataset.action = action && action.startsWith("/") ? action : "";
       dialog.dataset.method = method;
       dialog.dataset.target = target;
       dialog.dataset.swap = swap;
@@ -216,7 +217,8 @@ const dz = (() => {
       if (!dialog) return;
       const action = dialog.dataset.action;
       const method = (dialog.dataset.method || "delete").toUpperCase();
-      if (!action) return;
+      // Validate action is a safe relative URL (not javascript:, data:, etc.)
+      if (!action || !action.startsWith("/")) return;
 
       btn.classList.add("loading");
       btn.setAttribute("disabled", "");
