@@ -96,8 +96,9 @@ class ProcessAdapter(ABC):
     Abstract interface for process execution backends.
 
     Implementations:
-    - LiteProcessAdapter: In-process with SQLite (dev/simple deployments)
-    - TemporalAdapter: Production-grade with Temporal (Phase 5)
+    - EventBusProcessAdapter: Event-driven process execution
+    - CeleryProcessAdapter: Celery-based process execution
+    - TemporalAdapter: Production-grade with Temporal
 
     All methods are async to support both in-process and remote backends.
     """

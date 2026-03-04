@@ -652,7 +652,7 @@ class ServerConfig:
 
     # Process/workflow support (v0.24.0)
     enable_processes: bool = True  # Enable process workflow execution
-    process_adapter_class: type | None = None  # Custom ProcessAdapter (default: LiteProcessAdapter)
+    process_adapter_class: type | None = None  # Custom ProcessAdapter class
     process_specs: list[Any] = field(default_factory=list)  # ProcessSpec list from AppSpec
     schedule_specs: list[Any] = field(default_factory=list)  # ScheduleSpec list from AppSpec
     entity_status_fields: dict[str, str] = field(default_factory=dict)  # entity_name → status field
@@ -1330,7 +1330,6 @@ class DazzleBackendApp:
         try:
             import os
 
-            from dazzle.core.process import LiteProcessAdapter
             from dazzle_back.runtime.process_manager import ProcessManager
             from dazzle_back.runtime.task_routes import router as task_router
             from dazzle_back.runtime.task_routes import set_process_manager
@@ -1341,14 +1340,14 @@ class DazzleBackendApp:
             if adapter_cls is None:
                 redis_url = os.environ.get("REDIS_URL")
                 if redis_url:
-                    try:
-                        from dazzle.core.process import EventBusProcessAdapter
+                    from dazzle.core.process import EventBusProcessAdapter
 
-                        self._process_adapter = EventBusProcessAdapter(redis_url=redis_url)
-                    except ImportError:
-                        self._process_adapter = LiteProcessAdapter(database_url=self._database_url)
+                    self._process_adapter = EventBusProcessAdapter(redis_url=redis_url)
                 else:
-                    self._process_adapter = LiteProcessAdapter(database_url=self._database_url)
+                    logging.getLogger("dazzle.server").warning(
+                        "Process manager requires REDIS_URL. Skipping process manager init."
+                    )
+                    return
             else:
                 self._process_adapter = adapter_cls(database_url=self._database_url)
 
@@ -1479,7 +1478,7 @@ class DazzleBackendApp:
         if not channel_mgr or not self._process_adapter:
             return
 
-        # Only LiteProcessAdapter exposes set_send_handler
+        # Only some adapters expose set_send_handler
         if not hasattr(self._process_adapter, "set_send_handler"):
             return
 

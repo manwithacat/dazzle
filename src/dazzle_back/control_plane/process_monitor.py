@@ -1,7 +1,7 @@
 """
 Process Monitor - queries process state from Redis.
 
-Reads the same Redis keys used by the CeleryProcessAdapter/LiteProcessAdapter
+Reads the same Redis keys used by the CeleryProcessAdapter
 to provide visibility into running processes, completed tasks, and execution history.
 """
 

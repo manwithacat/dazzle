@@ -10,8 +10,7 @@ must follow. The interface is Kafka-shaped, supporting:
 
 Implementations:
 - DevBusMemory: In-memory bus for unit tests
-- DevBrokerSQLite: SQLite-backed broker for development
-- (Future) KafkaBus: Production Kafka implementation
+- KafkaBus: Production Kafka implementation
 """
 
 from __future__ import annotations

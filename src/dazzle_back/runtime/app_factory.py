@@ -259,9 +259,8 @@ def create_app_factory(
     with Uvicorn's --factory flag.
 
     Args:
-        process_adapter_class: Custom ProcessAdapter class (default: LiteProcessAdapter).
+        process_adapter_class: Custom ProcessAdapter class.
             Can also be set via DAZZLE_PROCESS_ADAPTER env var:
-            - "lite" or "sqlite" -> LiteProcessAdapter (default)
             - "eventbus" -> EventBusProcessAdapter (recommended with REDIS_URL)
             - "celery" or "redis" -> CeleryProcessAdapter (legacy)
 
@@ -273,7 +272,7 @@ def create_app_factory(
         DAZZLE_ENV: Environment name (development/staging/production)
         DAZZLE_SECRET_KEY: Secret key for sessions/tokens
         DAZZLE_ENABLE_PROCESSES: Enable/disable process workflows (default: "true")
-        DAZZLE_PROCESS_ADAPTER: Process adapter type ("lite", "celery", "temporal")
+        DAZZLE_PROCESS_ADAPTER: Process adapter type ("eventbus", "celery", "temporal")
 
     Usage:
         uvicorn dazzle_back.runtime.app_factory:create_app_factory --factory --host 0.0.0.0 --port $PORT
@@ -396,7 +395,7 @@ def create_app_factory(
                 logger.info("Using TemporalAdapter (DAZZLE_PROCESS_ADAPTER=temporal)")
             except ImportError:
                 logger.warning("TemporalAdapter requested but not available (install temporalio)")
-        # Default: None means auto-detect (EventBus if REDIS_URL, else Lite)
+        # Default: None means auto-detect (requires REDIS_URL for EventBus)
 
     # Compute view-based list projections from DSL surfaces
     entity_list_projections = build_entity_list_projections(

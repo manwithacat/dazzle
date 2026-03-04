@@ -56,7 +56,7 @@ class TestTriggerEntityPopulation:
 
         context = ProcessContext(inputs=inputs)
 
-        # Simulate what lite_adapter._execute_process now does
+        # Simulate what the process adapter does during execution
         if "entity_name" in inputs and "entity_id" in inputs:
             trigger_data = {
                 k: v

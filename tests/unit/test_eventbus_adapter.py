@@ -625,15 +625,15 @@ class TestAppIntegration:
 
             assert isinstance(builder._process_adapter, EventBusProcessAdapter)
 
-    def test_server_falls_back_to_lite_without_redis(self):
-        """_init_process_manager() should fall back to LiteProcessAdapter without REDIS_URL."""
+    def test_server_skips_process_manager_without_redis(self):
+        """_init_process_manager() should skip init without REDIS_URL."""
         from dazzle_back.runtime.server import DazzleBackendApp
 
         with patch.dict("os.environ", {}, clear=True):
             builder = DazzleBackendApp.__new__(DazzleBackendApp)
             builder._app = MagicMock()
             builder._process_adapter_class = None
-            builder._database_url = "sqlite:///test.db"
+            builder._database_url = "postgresql://localhost/test"
             builder._process_specs = None
             builder._schedule_specs = None
             builder._services = {}
@@ -642,17 +642,11 @@ class TestAppIntegration:
             builder._process_manager = None
             builder._process_adapter = None
 
-            with (
-                patch("dazzle_back.runtime.process_manager.ProcessManager"),
-                patch("dazzle_back.runtime.task_routes.set_process_manager"),
-                patch("dazzle_back.runtime.task_routes.router"),
-                patch.object(builder, "_wire_entity_events_to_processes"),
-            ):
-                builder._init_process_manager()
+            builder._init_process_manager()
 
-            from dazzle.core.process import LiteProcessAdapter
-
-            assert isinstance(builder._process_adapter, LiteProcessAdapter)
+            # No adapter or manager should be set without REDIS_URL
+            assert builder._process_adapter is None
+            assert builder._process_manager is None
 
     def test_app_factory_env_var_eventbus(self):
         """DAZZLE_PROCESS_ADAPTER=eventbus should resolve to EventBusProcessAdapter."""

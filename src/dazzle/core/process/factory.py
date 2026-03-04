@@ -2,8 +2,8 @@
 Process adapter factory for backend selection.
 
 This module provides automatic backend selection based on configuration
-and availability, allowing seamless switching between development
-(LiteProcessAdapter) and production (TemporalAdapter) backends.
+and availability, allowing seamless switching between EventBus (Redis)
+and Temporal backends.
 """
 
 from __future__ import annotations
@@ -20,16 +20,7 @@ from .adapter import ProcessAdapter
 logger = logging.getLogger(__name__)
 
 
-BackendType = Literal["auto", "lite", "celery", "eventbus", "temporal"]
-
-
-@dataclass
-class LiteConfig:
-    """Configuration for LiteProcessAdapter."""
-
-    db_path: str = ".dazzle/processes.db"
-    poll_interval_seconds: float = 1.0
-    scheduler_interval_seconds: float = 60.0
+BackendType = Literal["auto", "celery", "eventbus", "temporal"]
 
 
 @dataclass
@@ -63,7 +54,7 @@ class ProcessConfig:
     Configuration for process execution backend.
 
     Examples:
-        # Development mode (automatic)
+        # Auto-detect mode
         config = ProcessConfig(backend="auto")
         adapter = create_adapter(config)
 
@@ -76,7 +67,6 @@ class ProcessConfig:
     """
 
     backend: BackendType = "auto"
-    lite: LiteConfig = field(default_factory=LiteConfig)
     eventbus: EventBusConfig = field(default_factory=EventBusConfig)
     celery: CeleryConfig = field(default_factory=CeleryConfig)
     temporal: TemporalConfig = field(default_factory=TemporalConfig)
@@ -90,11 +80,11 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
     Create the appropriate ProcessAdapter based on configuration.
 
     Selection logic:
-    1. If backend is "lite" or "temporal", use that directly
+    1. If backend is "temporal" or "eventbus", use that directly
     2. If backend is "auto":
-       a. Check if Temporal SDK is installed
-       b. Check if Temporal server is reachable
-       c. Fall back to LiteProcessAdapter if not
+       a. Check if Temporal SDK is installed and server is reachable
+       b. Check if REDIS_URL is set -> EventBus
+       c. Raise ValueError if no backend available
 
     Args:
         config: Process configuration
@@ -117,8 +107,6 @@ def create_adapter(config: ProcessConfig) -> ProcessAdapter:
         return _create_eventbus_adapter(config)
     elif backend == "celery":
         return _create_celery_adapter(config)
-    elif backend == "lite":
-        return _create_lite_adapter(config)
     else:
         raise ValueError(f"Unknown process backend: {backend}")
 
@@ -129,8 +117,8 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
 
     Detection order:
     1. Temporal SDK installed + server reachable -> "temporal"
-    2. REDIS_URL in environment -> "celery"
-    3. Fallback -> "lite" (with deprecation warning)
+    2. REDIS_URL in environment -> "eventbus"
+    3. No backend available -> raise ValueError
     """
     # Check if Temporal SDK is installed and server reachable
     try:
@@ -155,17 +143,10 @@ def _detect_backend(config: ProcessConfig) -> BackendType:
         logger.debug("REDIS_URL set, using EventBus backend (native event-driven)")
         return "eventbus"
 
-    # Fallback to lite with deprecation warning
-    import warnings
-
-    warnings.warn(
-        "LiteProcessAdapter is deprecated for production use. "
-        "Set REDIS_URL to enable EventBusProcessAdapter.",
-        DeprecationWarning,
-        stacklevel=3,
+    raise ValueError(
+        "No process backend available. Set REDIS_URL for EventBus "
+        "or install temporalio for Temporal."
     )
-    logger.debug("No Temporal or Redis available, using lite backend")
-    return "lite"
 
 
 def _temporal_available(config: TemporalConfig) -> bool:
@@ -235,22 +216,6 @@ def _create_celery_adapter(config: ProcessConfig) -> ProcessAdapter:
     return CeleryProcessAdapter(redis_url=redis_url)
 
 
-def _create_lite_adapter(config: ProcessConfig) -> ProcessAdapter:
-    """Create LiteProcessAdapter with configuration."""
-    from .lite_adapter import LiteProcessAdapter
-
-    # Resolve database path relative to project root
-    db_path = config.lite.db_path
-    if config.project_root and not Path(db_path).is_absolute():
-        db_path = str(config.project_root / db_path)
-
-    return LiteProcessAdapter(
-        db_path=db_path,
-        poll_interval=config.lite.poll_interval_seconds,
-        scheduler_interval=config.lite.scheduler_interval_seconds,
-    )
-
-
 def get_backend_info(config: ProcessConfig) -> dict[str, str | bool]:
     """
     Get information about available backends.
@@ -260,7 +225,6 @@ def get_backend_info(config: ProcessConfig) -> dict[str, str | bool]:
     """
     info: dict[str, str | bool] = {
         "configured_backend": config.backend,
-        "lite_available": True,  # Always available
         "eventbus_available": bool(os.environ.get("REDIS_URL")),
         "celery_available": False,
         "redis_url_set": bool(os.environ.get("REDIS_URL")),

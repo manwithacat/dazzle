@@ -17,17 +17,14 @@ works correctly before deploying to production Kafka.
 from __future__ import annotations
 
 import os
-import tempfile
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from pathlib import Path
 from uuid import uuid4
 
 import pytest
 
 from dazzle_back.events.bus import EventBus, NackReason
 from dazzle_back.events.dev_memory import DevBusMemory
-from dazzle_back.events.dev_sqlite import DevBrokerSQLite
 from dazzle_back.events.envelope import EventEnvelope
 
 # Check if Kafka is available for testing
@@ -53,19 +50,9 @@ async def memory_bus() -> AsyncGenerator[DevBusMemory, None]:
     yield bus
 
 
-@pytest.fixture
-async def sqlite_bus() -> AsyncGenerator[DevBrokerSQLite, None]:
-    """Create a DevBrokerSQLite instance."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "hless_test.db"
-        async with DevBrokerSQLite(db_path) as bus:
-            yield bus
-
-
 # Dynamic params - only include available implementations (no skip noise)
 _BUS_PARAMS = [
     pytest.param("memory", id="memory"),
-    pytest.param("sqlite", id="sqlite"),
 ]
 if KAFKA_TEST_ENABLED:
     _BUS_PARAMS.append(pytest.param("kafka", id="kafka"))
@@ -75,13 +62,10 @@ if KAFKA_TEST_ENABLED:
 async def any_bus(
     request: pytest.FixtureRequest,
     memory_bus: DevBusMemory,
-    sqlite_bus: DevBrokerSQLite,
 ) -> AsyncGenerator[EventBus, None]:
     """Parametrized fixture for all available bus implementations."""
     if request.param == "memory":
         yield memory_bus
-    elif request.param == "sqlite":
-        yield sqlite_bus
     elif request.param == "kafka":
         config = KafkaConfig.from_env()  # type: ignore
         async with KafkaBus(config) as bus:  # type: ignore
@@ -92,8 +76,6 @@ async def dispatch_events(bus: EventBus, topic: str, group_id: str) -> None:
     """Dispatch pending events to subscribers."""
     if isinstance(bus, DevBusMemory):
         await bus.process_pending(topic, group_id)
-    elif isinstance(bus, DevBrokerSQLite):
-        await bus.poll_and_process(topic, group_id)
 
 
 # =============================================================================
@@ -416,7 +398,7 @@ class TestIdempotencyStrategies:
     """Tests for HLESS idempotency strategies by RecordKind."""
 
     @pytest.mark.asyncio
-    async def test_intent_deterministic_id(self, sqlite_bus: DevBrokerSQLite) -> None:
+    async def test_intent_deterministic_id(self, memory_bus: DevBusMemory) -> None:
         """
         Test INTENT idempotency: deterministic ID from request_id.
 
@@ -428,7 +410,7 @@ class TestIdempotencyStrategies:
         async def handler(event: EventEnvelope) -> None:
             received.append(event)
 
-        await sqlite_bus.subscribe("orders.intent", "order-service", handler)
+        await memory_bus.subscribe("orders.intent", "order-service", handler)
 
         # Same request_id should be deduplicated at consumer level
         request_id = str(uuid4())
@@ -439,11 +421,11 @@ class TestIdempotencyStrategies:
                 key="order-idem-001",
                 payload={"order_id": "order-idem-001", "request_id": request_id},
             )
-            await sqlite_bus.publish("orders.intent", intent)
+            await memory_bus.publish("orders.intent", intent)
 
         # All 3 delivered (dedup is consumer's job)
         for _ in range(3):
-            await sqlite_bus.poll_and_process("orders.intent", "order-service")
+            await memory_bus.process_pending("orders.intent", "order-service")
 
         # Bus delivers all, consumer should dedupe
         assert len(received) == 3
@@ -584,7 +566,7 @@ class TestReplayAndRecovery:
         assert sequences == list(range(10))
 
     @pytest.mark.asyncio
-    async def test_replay_from_offset(self, sqlite_bus: DevBrokerSQLite) -> None:
+    async def test_replay_from_offset(self, memory_bus: DevBusMemory) -> None:
         """Test replaying events from a specific offset."""
         # Publish events
         for i in range(10):
@@ -593,11 +575,11 @@ class TestReplayAndRecovery:
                 key=f"order-offset-{i}",
                 payload={"sequence": i},
             )
-            await sqlite_bus.publish("orders.fact", event)
+            await memory_bus.publish("orders.fact", event)
 
         # Replay from offset 6 (1-indexed, so 6th event onwards = sequences 5-9)
         replayed: list[EventEnvelope] = []
-        async for event in sqlite_bus.replay("orders.fact", from_offset=6):
+        async for event in memory_bus.replay("orders.fact", from_offset=6):
             replayed.append(event)
 
         # Should get events 6-10 (1-indexed), which are sequences 5-9
@@ -615,7 +597,7 @@ class TestErrorHandling:
     """Tests for error handling and DLQ routing."""
 
     @pytest.mark.asyncio
-    async def test_transient_error_redelivery(self, sqlite_bus: DevBrokerSQLite) -> None:
+    async def test_transient_error_redelivery(self, memory_bus: DevBusMemory) -> None:
         """
         Test that transient errors cause redelivery.
 
@@ -631,25 +613,25 @@ class TestErrorHandling:
                 raise ConnectionError("Database timeout")
             processed.append(event)
 
-        await sqlite_bus.subscribe("orders.fact", "flaky-consumer", flaky_handler)
+        await memory_bus.subscribe("orders.fact", "flaky-consumer", flaky_handler)
 
         event = EventEnvelope.create(
             event_type="orders.fact.OrderPlaced",
             key="order-flaky-001",
             payload={"order_id": "order-flaky-001"},
         )
-        await sqlite_bus.publish("orders.fact", event)
+        await memory_bus.publish("orders.fact", event)
 
         # First attempt fails
-        await sqlite_bus.poll_and_process("orders.fact", "flaky-consumer")
+        await memory_bus.process_pending("orders.fact", "flaky-consumer")
 
         # Second attempt succeeds
-        await sqlite_bus.poll_and_process("orders.fact", "flaky-consumer")
+        await memory_bus.process_pending("orders.fact", "flaky-consumer")
 
         assert len(processed) >= 1
 
     @pytest.mark.asyncio
-    async def test_permanent_error_to_dlq(self, sqlite_bus: DevBrokerSQLite) -> None:
+    async def test_permanent_error_to_dlq(self, memory_bus: DevBusMemory) -> None:
         """
         Test that permanent errors route to DLQ.
 
@@ -661,7 +643,7 @@ class TestErrorHandling:
             # Check for required field
             if "required_field" not in event.payload:
                 # Nack as permanent (non-retryable)
-                await sqlite_bus.nack(
+                await memory_bus.nack(
                     "orders.fact",
                     "validating-consumer",
                     event.event_id,
@@ -670,7 +652,7 @@ class TestErrorHandling:
                 return
             processed.append(event)
 
-        await sqlite_bus.subscribe("orders.fact", "validating-consumer", validating_handler)
+        await memory_bus.subscribe("orders.fact", "validating-consumer", validating_handler)
 
         # Publish invalid event (missing required_field)
         invalid_event = EventEnvelope.create(
@@ -678,16 +660,16 @@ class TestErrorHandling:
             key="order-invalid-001",
             payload={"order_id": "order-invalid-001"},  # Missing required_field
         )
-        await sqlite_bus.publish("orders.fact", invalid_event)
+        await memory_bus.publish("orders.fact", invalid_event)
 
-        await sqlite_bus.poll_and_process("orders.fact", "validating-consumer")
+        await memory_bus.process_pending("orders.fact", "validating-consumer")
 
         # Should not be in processed
         assert len(processed) == 0
 
         # Should be in DLQ
-        if hasattr(sqlite_bus, "get_dlq_count"):
-            dlq_count = await sqlite_bus.get_dlq_count("orders.fact")
+        if hasattr(memory_bus, "get_dlq_count"):
+            dlq_count = await memory_bus.get_dlq_count("orders.fact")
             assert dlq_count >= 1
 
 

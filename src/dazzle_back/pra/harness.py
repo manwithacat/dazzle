@@ -17,7 +17,7 @@ from typing import Any
 from uuid import uuid4
 
 from dazzle_back.events.bus import EventBus
-from dazzle_back.events.dev_sqlite import DevBrokerSQLite
+from dazzle_back.events.dev_memory import DevBusMemory
 from dazzle_back.events.envelope import EventEnvelope
 from dazzle_back.metrics import MetricsCollector
 from dazzle_back.metrics.reporter import ReportFormat
@@ -135,17 +135,14 @@ class StressHarness:
     def __init__(
         self,
         event_bus: EventBus | None = None,
-        db_path: str = ":memory:",
     ) -> None:
         """
         Initialize the test harness.
 
         Args:
-            event_bus: Optional event bus (creates DevBrokerSQLite if not provided)
-            db_path: Path for SQLite database if creating event bus
+            event_bus: Optional event bus (creates DevBusMemory if not provided)
         """
         self._event_bus = event_bus
-        self._db_path = db_path
         self._owns_event_bus = event_bus is None
 
         # Will be initialized per test
@@ -160,8 +157,7 @@ class StressHarness:
     async def _ensure_event_bus(self) -> EventBus:
         """Ensure event bus is initialized."""
         if self._event_bus is None:
-            self._event_bus = DevBrokerSQLite(self._db_path)
-            await self._event_bus.connect()
+            self._event_bus = DevBusMemory()
         return self._event_bus
 
     async def run_scenario(
@@ -304,8 +300,7 @@ class StressHarness:
             if self._generator and self._generator.is_running:
                 await self._generator.stop()
 
-            # Note: DevBrokerSQLite doesn't require explicit disconnect
-            # Just clear the reference if we own it
+            # Clear the reference if we own it
             if self._owns_event_bus:
                 self._event_bus = None
 

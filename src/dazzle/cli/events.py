@@ -17,8 +17,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import datetime
-from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -35,17 +33,16 @@ def tail_events(
     topic: Annotated[str, typer.Argument(help="Topic to tail events from")],
     follow: Annotated[bool, typer.Option("--follow", "-f", help="Follow new events")] = False,
     limit: Annotated[int, typer.Option("--limit", "-n", help="Number of events to show")] = 10,
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """Tail events from a topic."""
-    asyncio.run(_tail_events(topic, follow, limit, db))
+    asyncio.run(_tail_events(topic, follow, limit))
 
 
-async def _tail_events(topic: str, follow: bool, limit: int, db_path: str) -> None:
+async def _tail_events(topic: str, follow: bool, limit: int) -> None:
     """Async implementation of tail command."""
     from dazzle.cli.services.event_service import EventService
 
-    svc = EventService(db_path)
+    svc = EventService()
     count = 0
     async for event in svc.replay(topic):
         if count >= limit and not follow:
@@ -57,26 +54,19 @@ async def _tail_events(topic: str, follow: bool, limit: int, db_path: str) -> No
 
     if follow:
         typer.echo("(Following new events, Ctrl+C to stop)")
-        # In a real implementation, would poll for new events
 
 
 @events_app.command("status")
-def event_status(
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
-) -> None:
+def event_status() -> None:
     """Show event system status."""
-    asyncio.run(_event_status(db))
+    asyncio.run(_event_status())
 
 
-async def _event_status(db_path: str) -> None:
+async def _event_status() -> None:
     """Async implementation of status command."""
     from dazzle.cli.services.event_service import EventService
 
-    if not Path(db_path).exists():
-        typer.echo(f"Database not found: {db_path}")
-        return
-
-    svc = EventService(db_path)
+    svc = EventService()
     topics = await svc.list_topics()
 
     typer.echo("Event System Status")
@@ -104,10 +94,9 @@ def replay_events(
     dry_run: Annotated[
         bool, typer.Option("--dry-run", help="Show events without processing")
     ] = False,
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """Replay events from a topic."""
-    asyncio.run(_replay_events(topic, from_time, to_time, key, dry_run, db))
+    asyncio.run(_replay_events(topic, from_time, to_time, key, dry_run))
 
 
 async def _replay_events(
@@ -116,15 +105,16 @@ async def _replay_events(
     to_time: str | None,
     key: str | None,
     dry_run: bool,
-    db_path: str,
 ) -> None:
     """Async implementation of replay command."""
+    from datetime import datetime
+
     from dazzle.cli.services.event_service import EventService
 
     from_ts = datetime.fromisoformat(from_time) if from_time else None
     to_ts = datetime.fromisoformat(to_time) if to_time else None
 
-    svc = EventService(db_path)
+    svc = EventService()
     count = 0
     async for event in svc.replay(
         topic,
@@ -152,17 +142,16 @@ dlq_app = typer.Typer(help="Dead letter queue commands.")
 def dlq_list(
     topic: Annotated[str | None, typer.Option("--topic", help="Filter by topic")] = None,
     limit: Annotated[int, typer.Option("--limit", "-n", help="Number of events to show")] = 20,
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """List dead letter queue events."""
-    asyncio.run(_dlq_list(topic, limit, db))
+    asyncio.run(_dlq_list(topic, limit))
 
 
-async def _dlq_list(topic: str | None, limit: int, db_path: str) -> None:
+async def _dlq_list(topic: str | None, limit: int) -> None:
     """Async implementation of dlq list command."""
     from dazzle.cli.services.event_service import EventService
 
-    svc = EventService(db_path)
+    svc = EventService()
     events = await svc.get_dlq_events(topic=topic, limit=limit)
 
     if not events:
@@ -186,17 +175,16 @@ async def _dlq_list(topic: str | None, limit: int, db_path: str) -> None:
 def dlq_replay(
     event_id: Annotated[str, typer.Argument(help="Event ID to replay")],
     group: Annotated[str, typer.Option("--group", help="Consumer group ID")],
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """Replay a single event from the DLQ."""
-    asyncio.run(_dlq_replay(event_id, group, db))
+    asyncio.run(_dlq_replay(event_id, group))
 
 
-async def _dlq_replay(event_id: str, group: str, db_path: str) -> None:
+async def _dlq_replay(event_id: str, group: str) -> None:
     """Async implementation of dlq replay command."""
     from dazzle.cli.services.event_service import EventService
 
-    svc = EventService(db_path)
+    svc = EventService()
     try:
         success = await svc.replay_dlq_event(event_id, group)
         if success:
@@ -213,21 +201,20 @@ def dlq_clear(
         str | None, typer.Option("--topic", help="Clear only events for this topic")
     ] = None,
     confirm: Annotated[bool, typer.Option("--confirm", help="Confirm deletion")] = False,
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """Clear events from the dead letter queue."""
     if not confirm:
         typer.echo("Use --confirm to actually delete events")
         return
 
-    asyncio.run(_dlq_clear(topic, db))
+    asyncio.run(_dlq_clear(topic))
 
 
-async def _dlq_clear(topic: str | None, db_path: str) -> None:
+async def _dlq_clear(topic: str | None) -> None:
     """Async implementation of dlq clear command."""
     from dazzle.cli.services.event_service import EventService
 
-    svc = EventService(db_path)
+    svc = EventService()
     count = await svc.clear_dlq(topic=topic)
     typer.echo(f"Cleared {count} events from DLQ")
 
@@ -240,18 +227,16 @@ outbox_app = typer.Typer(help="Event outbox commands.")
 
 
 @outbox_app.command("status")
-def outbox_status(
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
-) -> None:
+def outbox_status() -> None:
     """Show outbox status."""
-    asyncio.run(_outbox_status(db))
+    asyncio.run(_outbox_status())
 
 
-async def _outbox_status(db_path: str) -> None:
+async def _outbox_status() -> None:
     """Async implementation of outbox status command."""
     from dazzle.cli.services.event_service import EventService
 
-    svc = EventService(db_path)
+    svc = EventService()
     stats = await svc.outbox_status()
 
     typer.echo("Outbox Status")
@@ -268,17 +253,16 @@ async def _outbox_status(db_path: str) -> None:
 @outbox_app.command("drain")
 def outbox_drain(
     timeout: Annotated[int, typer.Option("--timeout", help="Timeout in seconds")] = 30,
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """Drain pending events from the outbox."""
-    asyncio.run(_outbox_drain(timeout, db))
+    asyncio.run(_outbox_drain(timeout))
 
 
-async def _outbox_drain(timeout: int, db_path: str) -> None:
+async def _outbox_drain(timeout: int) -> None:
     """Async implementation of outbox drain command."""
     from dazzle.cli.services.event_service import EventService
 
-    svc = EventService(db_path)
+    svc = EventService()
     count = await svc.outbox_drain(timeout=float(timeout))
     typer.echo(f"Drained {count} events from outbox")
 
@@ -286,17 +270,16 @@ async def _outbox_drain(timeout: int, db_path: str) -> None:
 @outbox_app.command("failed")
 def outbox_failed(
     limit: Annotated[int, typer.Option("--limit", "-n", help="Number of entries to show")] = 20,
-    db: Annotated[str, typer.Option("--db", help="Database path")] = "app.db",
 ) -> None:
     """List failed outbox entries."""
-    asyncio.run(_outbox_failed(limit, db))
+    asyncio.run(_outbox_failed(limit))
 
 
-async def _outbox_failed(limit: int, db_path: str) -> None:
+async def _outbox_failed(limit: int) -> None:
     """Async implementation of outbox failed command."""
     from dazzle.cli.services.event_service import EventService
 
-    svc = EventService(db_path)
+    svc = EventService()
     entries = await svc.outbox_failed_entries(limit=limit)
 
     if not entries:

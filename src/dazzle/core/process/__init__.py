@@ -5,7 +5,6 @@ This module provides the runtime infrastructure for executing
 ProcessSpec and ScheduleSpec definitions from the DSL.
 
 Runtime Modes:
-- LiteProcessAdapter: In-process execution using SQLite/asyncio (default)
 - EventBusProcessAdapter: Production execution using native event bus + Redis
 - CeleryProcessAdapter: Legacy execution using Celery/Redis (deprecated)
 - TemporalAdapter: Production execution using Temporal
@@ -28,7 +27,6 @@ from .adapter import (
 )
 from .context import ProcessContext
 from .factory import ProcessConfig, create_adapter, get_backend_info
-from .lite_adapter import LiteProcessAdapter
 from .version_manager import (
     DrainWatcher,
     DrainWatcherConfig,
@@ -52,8 +50,6 @@ __all__ = [
     "ProcessConfig",
     "create_adapter",
     "get_backend_info",
-    # Implementations
-    "LiteProcessAdapter",
     # Version Management
     "VersionManager",
     "VersionInfo",

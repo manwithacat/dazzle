@@ -8,7 +8,6 @@ Usage:
 """
 
 from dazzle.core.process import (
-    LiteProcessAdapter,
     ProcessAdapter,
     ProcessRun,
     ProcessStatus,
@@ -32,6 +31,4 @@ __all__ = [
     "ProcessConfig",
     "create_adapter",
     "get_backend_info",
-    # Implementations
-    "LiteProcessAdapter",
 ]

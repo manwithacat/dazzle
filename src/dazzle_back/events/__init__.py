@@ -5,7 +5,6 @@ This package provides the core event infrastructure for Dazzle applications:
 - EventEnvelope: Canonical event schema (Kafka-shaped)
 - EventBus: Abstract interface for event publish/subscribe
 - DevBusMemory: In-memory bus for tests
-- DevBrokerSQLite: Zero-Docker SQLite-backed broker for development
 - KafkaBus: Production Kafka adapter (v0.18.0 Phase I)
 - Outbox/Inbox: Transactional guarantees for at-least-once delivery
 - Multi-tenancy strategies (v0.18.0 Phase I)
@@ -34,7 +33,6 @@ from dazzle_back.events.consumer import (
     idempotent,
 )
 from dazzle_back.events.dev_memory import DevBusMemory
-from dazzle_back.events.dev_sqlite import DevBrokerSQLite
 from dazzle_back.events.envelope import EventEnvelope
 from dazzle_back.events.framework import (
     EventFramework,
@@ -133,7 +131,6 @@ __all__ = [
     # Bus implementations
     "BaseEventBus",
     "DevBusMemory",
-    "DevBrokerSQLite",
     # Outbox (transactional publishing)
     "EventOutbox",
     "OutboxEntry",

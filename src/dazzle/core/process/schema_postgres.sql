@@ -1,4 +1,4 @@
--- PostgreSQL schema for LiteProcessAdapter process persistence
+-- PostgreSQL schema for process persistence
 -- This schema supports workflow state, human tasks, and schedules
 -- Translated from schema.sql (SQLite) to PostgreSQL-compatible syntax
 

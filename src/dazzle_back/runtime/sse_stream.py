@@ -3,7 +3,7 @@ Server-Sent Events (SSE) streaming infrastructure.
 
 Provides SSE endpoints that subscribe to the EventBus and stream
 events to clients in real-time. This leverages the existing Kafka-shaped
-EventBus abstraction (DevBusMemory, DevBrokerSQLite) for event delivery.
+EventBus abstraction (DevBusMemory, KafkaBus) for event delivery.
 
 Key features:
 - Multiple named streams (health, events, analytics, api_calls)
@@ -162,7 +162,7 @@ class SSEStreamManager:
             return
 
         # Poll loop - poll_and_process may not exist on all EventBus implementations
-        # but is available on DevBrokerSQLite and KafkaBus
+        # but is available on KafkaBus
         while self._running:
             try:
                 if hasattr(self.event_bus, "poll_and_process"):

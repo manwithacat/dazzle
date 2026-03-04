@@ -4,7 +4,7 @@ Event Framework for Dazzle Runtime.
 The EventFramework is the central orchestration point for all event-related
 functionality in a Dazzle application. It coordinates:
 
-- Event bus (DevBrokerSQLite for development)
+- Event bus (via tier system)
 - Outbox publisher (for transactional event delivery)
 - Consumer management (for event handlers)
 - Lifecycle management (startup/shutdown)
@@ -37,7 +37,6 @@ if TYPE_CHECKING:
 
 from dazzle_back.events.bus import EventBus, EventHandler
 from dazzle_back.events.consumer import ConsumerConfig, IdempotentConsumer
-from dazzle_back.events.dev_sqlite import DevBrokerSQLite
 from dazzle_back.events.envelope import EventEnvelope
 from dazzle_back.events.inbox import EventInbox
 from dazzle_back.events.outbox import EventOutbox
@@ -132,7 +131,7 @@ class EventFramework:
         self._use_postgres = bool(self._config.database_url)
 
         # Components (initialized on start)
-        self._bus: DevBrokerSQLite | EventBus | None = None
+        self._bus: EventBus | None = None
         self._outbox: EventOutbox | None = None
         self._inbox: EventInbox | None = None
         self._publisher: OutboxPublisher | None = None
@@ -244,7 +243,6 @@ class EventFramework:
             tier=explicit_tier,
             redis_url=self._config.redis_url,
             postgres_url=self._config.database_url,
-            sqlite_db_path=self._config.db_path,
         )
         self._bus = create_bus(tier_config)
         if hasattr(self._bus, "connect"):

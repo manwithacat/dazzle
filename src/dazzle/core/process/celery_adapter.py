@@ -3,9 +3,9 @@
 This adapter provides production-ready process execution for cloud platforms
 like Heroku using Celery for task execution and Redis for state storage.
 
-Key differences from LiteProcessAdapter:
-- Uses Celery worker pool instead of in-process asyncio
-- Stores state in Redis instead of SQLite
+Uses Celery for task execution and Redis for state storage:
+- Celery worker pool for async task execution
+- Stores state in Redis
 - Supports horizontal scaling (multiple workers)
 - Survives dyno restarts (state in Redis, tasks in queue)
 
@@ -59,14 +59,14 @@ class CeleryProcessAdapter(ProcessAdapter):
     def __init__(
         self,
         redis_url: str | None = None,
-        db_path: str | None = None,  # Ignored - for LiteProcessAdapter compatibility
+        db_path: str | None = None,  # Ignored - legacy parameter
         store: ProcessStateStore | None = None,
     ):
         """Initialize the adapter.
 
         Args:
             redis_url: Redis connection URL. If not provided, uses REDIS_URL env var.
-            db_path: Ignored - for compatibility with LiteProcessAdapter signature.
+            db_path: Ignored - legacy parameter.
             store: Optional pre-configured ProcessStateStore for testing.
         """
         del db_path  # Not used - we use Redis

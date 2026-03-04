@@ -7,7 +7,6 @@ configuration.
 
 Tiers:
 - Tier 0: In-memory (testing)
-- Tier 0.5: SQLite (local development)
 - Tier 1: PostgreSQL (Heroku pilots)
 - Tier 2: Redis Streams (Heroku growth)
 - Tier 3: EventBridge (AWS serverless) - future
@@ -20,12 +19,10 @@ import logging
 import os
 from dataclasses import dataclass, field
 from enum import StrEnum
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle_back.events.bus import EventBus
 from dazzle_back.events.dev_memory import DevBusMemory
-from dazzle_back.events.dev_sqlite import DevBrokerSQLite
 
 if TYPE_CHECKING:
     from dazzle_back.events.kafka_bus import KafkaBus
@@ -40,9 +37,6 @@ class EventTier(StrEnum):
 
     MEMORY = "memory"
     """Tier 0: In-memory, no durability. For testing only."""
-
-    SQLITE = "sqlite"
-    """Tier 0.5: SQLite-backed, durable. For local development."""
 
     POSTGRES = "postgres"
     """Tier 1: PostgreSQL-backed. For Heroku pilots with existing Postgres."""
@@ -66,10 +60,6 @@ class TierConfig:
 
     tier: EventTier = EventTier.AUTO
     """Which tier to use. AUTO detects from environment."""
-
-    # SQLite config
-    sqlite_db_path: str | None = None
-    """Path to SQLite database. Defaults to 'data/events.db'."""
 
     # PostgreSQL config
     postgres_url: str | None = None
@@ -116,7 +106,6 @@ def detect_tier() -> EventTier:
     if explicit:
         tier_map = {
             "memory": EventTier.MEMORY,
-            "sqlite": EventTier.SQLITE,
             "postgres": EventTier.POSTGRES,
             "redis": EventTier.REDIS,
             "kafka": EventTier.KAFKA,
@@ -180,9 +169,6 @@ def create_bus(config: TierConfig | None = None) -> EventBus:
     if tier == EventTier.MEMORY:
         return _create_memory_bus()
 
-    if tier == EventTier.SQLITE:
-        return _create_sqlite_bus(config)
-
     if tier == EventTier.POSTGRES:
         return _create_postgres_bus(config)
 
@@ -205,26 +191,6 @@ def _create_memory_bus() -> DevBusMemory:
     """Create in-memory bus for testing."""
     logger.debug("Creating in-memory event bus (Tier 0)")
     return DevBusMemory()
-
-
-def _create_sqlite_bus(config: TierConfig) -> DevBrokerSQLite:
-    """Create SQLite-backed bus for local development."""
-    import warnings
-
-    warnings.warn(
-        "SQLite event bus is deprecated. Use PostgreSQL or Redis.",
-        DeprecationWarning,
-        stacklevel=3,
-    )
-    db_path = config.sqlite_db_path
-    if not db_path:
-        # Default to data/events.db relative to working directory
-        data_dir = Path("data")
-        data_dir.mkdir(exist_ok=True)
-        db_path = str(data_dir / "events.db")
-
-    logger.debug("Creating SQLite event bus (Tier 0.5) at %s", db_path)
-    return DevBrokerSQLite(db_path)
 
 
 def _create_postgres_bus(config: TierConfig) -> PostgresBus:
@@ -332,7 +298,6 @@ def get_tier_info() -> dict[str, Any]:
         "detected_tier": detected.value,
         "available_tiers": {
             "memory": {"available": True, "description": "In-memory (testing)"},
-            "sqlite": {"available": True, "description": "SQLite (local dev)"},
             "postgres": {
                 "available": ASYNCPG_AVAILABLE,
                 "description": "PostgreSQL (Heroku pilots)",

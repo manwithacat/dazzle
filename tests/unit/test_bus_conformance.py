@@ -3,7 +3,6 @@ Bus Conformance Test Suite for Event-First Architecture.
 
 Tests that all EventBus implementations conform to the expected behavior.
 Runs the same test cases against:
-- DevBrokerSQLite (development)
 - DevBusMemory (testing)
 - KafkaBus (production, optional)
 
@@ -14,10 +13,8 @@ from __future__ import annotations
 
 import asyncio
 import os
-import tempfile
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
-from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -31,7 +28,6 @@ from dazzle_back.events.bus import (
     SubscriptionInfo,
 )
 from dazzle_back.events.dev_memory import DevBusMemory
-from dazzle_back.events.dev_sqlite import DevBrokerSQLite
 from dazzle_back.events.envelope import EventEnvelope
 
 # Check if Kafka is available for testing
@@ -49,13 +45,11 @@ async def dispatch_events(bus: EventBus, topic: str, group_id: str) -> None:
     """
     Dispatch pending events to subscribers.
 
-    In-memory and SQLite implementations need explicit dispatch calls.
+    In-memory implementations need explicit dispatch calls.
     This helper handles the differences between implementations.
     """
     if isinstance(bus, DevBusMemory):
         await bus.process_pending(topic, group_id)
-    elif isinstance(bus, DevBrokerSQLite):
-        await bus.poll_and_process(topic, group_id)
     # KafkaBus has its own consumer loop and doesn't need manual dispatch
 
 
@@ -91,15 +85,6 @@ async def memory_bus() -> AsyncGenerator[DevBusMemory, None]:
 
 
 @pytest.fixture
-async def sqlite_bus() -> AsyncGenerator[DevBrokerSQLite, None]:
-    """Create a DevBrokerSQLite instance for testing."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        db_path = Path(tmpdir) / "test_events.db"
-        async with DevBrokerSQLite(db_path) as bus:
-            yield bus
-
-
-@pytest.fixture
 async def kafka_bus() -> AsyncGenerator[Any, None]:
     """Create a KafkaBus instance for testing (if available)."""
     if not KAFKA_TEST_ENABLED:
@@ -115,7 +100,6 @@ async def kafka_bus() -> AsyncGenerator[Any, None]:
 # This eliminates skip noise from test runs
 _BUS_PARAMS = [
     pytest.param("memory", id="memory"),
-    pytest.param("sqlite", id="sqlite"),
 ]
 if KAFKA_TEST_ENABLED:
     _BUS_PARAMS.append(pytest.param("kafka", id="kafka"))
@@ -126,13 +110,10 @@ if KAFKA_TEST_ENABLED:
 async def any_bus(
     request: pytest.FixtureRequest,
     memory_bus: DevBusMemory,
-    sqlite_bus: DevBrokerSQLite,
 ) -> AsyncGenerator[EventBus, None]:
     """Parametrized fixture that yields each available bus implementation."""
     if request.param == "memory":
         yield memory_bus
-    elif request.param == "sqlite":
-        yield sqlite_bus
     elif request.param == "kafka":
         config = KafkaConfig.from_env()  # type: ignore
         async with KafkaBus(config) as bus:  # type: ignore
@@ -301,61 +282,30 @@ class TestAckNack:
         # Ack should not raise
         await any_bus.ack("test.ack", "ack-group", received[0].event_id)
 
-    async def test_nack_retryable_redelivers(self, sqlite_bus: DevBrokerSQLite) -> None:
-        """Test that nack with retryable=True causes redelivery."""
-        # This test is specific to implementations that support redelivery
-        received: list[EventEnvelope] = []
-        call_count = 0
-
-        async def handler(event: EventEnvelope) -> None:
-            nonlocal call_count
-            call_count += 1
-            received.append(event)
-            if call_count == 1:
-                # Simulate failure on first attempt
-                raise Exception("Transient error")
-
-        await sqlite_bus.subscribe("test.nack", "nack-group", handler)
-
-        envelope = create_test_envelope(topic="test.nack")
-        await sqlite_bus.publish("test.nack", envelope)
-
-        # Dispatch events - poll twice to handle retry
-        await sqlite_bus.poll_and_process("test.nack", "nack-group")
-        await sqlite_bus.poll_and_process("test.nack", "nack-group")
-
-        # Should have received at least once
-        assert len(received) >= 1
-
-    async def test_nack_permanent_to_dlq(self, sqlite_bus: DevBrokerSQLite) -> None:
+    async def test_nack_permanent_to_dlq(self, memory_bus: DevBusMemory) -> None:
         """Test that nack with retryable=False moves to DLQ."""
         received: list[EventEnvelope] = []
 
         async def handler(event: EventEnvelope) -> None:
             received.append(event)
             # Immediately nack as permanent
-            await sqlite_bus.nack(
+            await memory_bus.nack(
                 "test.dlq",
                 "dlq-group",
                 event.event_id,
                 NackReason.permanent_error("Test permanent error"),
             )
 
-        await sqlite_bus.subscribe("test.dlq", "dlq-group", handler)
+        await memory_bus.subscribe("test.dlq", "dlq-group", handler)
 
         envelope = create_test_envelope(topic="test.dlq")
-        await sqlite_bus.publish("test.dlq", envelope)
+        await memory_bus.publish("test.dlq", envelope)
 
         # Dispatch events
-        await sqlite_bus.poll_and_process("test.dlq", "dlq-group")
+        await memory_bus.process_pending("test.dlq", "dlq-group")
 
         # Event should have been processed
         assert len(received) >= 1
-
-        # Check DLQ (implementation-specific)
-        if hasattr(sqlite_bus, "get_dlq_count"):
-            dlq_count = await sqlite_bus.get_dlq_count("test.dlq")
-            assert dlq_count >= 1
 
 
 class TestReplay:
@@ -381,16 +331,16 @@ class TestReplay:
         # Should have all events
         assert len(replayed) >= len(envelopes)
 
-    async def test_replay_with_key_filter(self, sqlite_bus: EventBus) -> None:
+    async def test_replay_with_key_filter(self, memory_bus: EventBus) -> None:
         """Test that replay can filter by key."""
         # Publish events with different keys
         for key in ["key-a", "key-b", "key-a"]:
             envelope = create_test_envelope(topic="test.filter", key=key)
-            await sqlite_bus.publish("test.filter", envelope)
+            await memory_bus.publish("test.filter", envelope)
 
         # Replay with filter (no dispatch needed - replay reads directly from storage)
         replayed: list[EventEnvelope] = []
-        async for event in sqlite_bus.replay("test.filter", key_filter="key-a"):
+        async for event in memory_bus.replay("test.filter", key_filter="key-a"):
             replayed.append(event)
 
         # Should only have key-a events

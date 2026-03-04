@@ -114,8 +114,8 @@ class TestEventFrameworkPgMode:
                 sys.modules["psycopg.rows"] = saved_rows
 
     @pytest.mark.asyncio
-    async def test_start_sqlite_uses_dev_broker(self) -> None:
-        """Test that start without database_url uses DevBrokerSQLite."""
+    async def test_start_without_database_url_uses_memory(self) -> None:
+        """Test that start without database_url uses in-memory bus."""
         import tempfile
         from pathlib import Path
 
@@ -132,7 +132,6 @@ class TestEventFrameworkPgMode:
             await framework.start()
 
             assert not framework._use_postgres
-            # Without DATABASE_URL/REDIS_URL env, bus defaults to DevBusMemory
             from dazzle_back.events.bus import EventBus
 
             assert isinstance(framework._bus, EventBus)

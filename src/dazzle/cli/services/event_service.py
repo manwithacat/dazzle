@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -9,21 +10,25 @@ from typing import Any
 
 
 class EventService:
-    """Thin wrapper around DevBrokerSQLite + EventOutbox for CLI usage.
+    """Event service for CLI usage, using the tier system.
 
     Provides a clean async interface for event system CLI commands.
+    Creates an event bus via the tier factory and connects to the
+    appropriate database for outbox operations.
     """
-
-    def __init__(self, db_path: str) -> None:
-        self._db_path = db_path
 
     @asynccontextmanager
     async def _broker(self) -> AsyncIterator[Any]:
-        """Get a DevBrokerSQLite context manager."""
-        from dazzle_back.events import DevBrokerSQLite
+        """Get an event bus via the tier system."""
+        from dazzle_back.events.tier import create_bus
 
-        async with DevBrokerSQLite(self._db_path) as bus:
+        bus = create_bus()
+        if hasattr(bus, "connect"):
+            await bus.connect()
+        try:
             yield bus
+        finally:
+            await bus.close()
 
     # ----- Event tailing / replay -----
 
@@ -82,32 +87,59 @@ class EventService:
 
     # ----- Outbox -----
 
+    async def _get_outbox_connection(self) -> Any:
+        """Get a database connection for outbox operations."""
+        db_url = os.environ.get("DATABASE_URL")
+        if db_url:
+            import psycopg
+            from psycopg.rows import dict_row
+
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql://", 1)
+            return await psycopg.AsyncConnection.connect(db_url, row_factory=dict_row)
+        raise RuntimeError("DATABASE_URL not set. Outbox operations require a database connection.")
+
     async def outbox_status(self) -> dict[str, Any]:
         """Get outbox stats (pending, publishing, published, failed, oldest_pending)."""
-        import aiosqlite
-
         from dazzle_back.events import EventOutbox
 
-        outbox = EventOutbox()
-        async with aiosqlite.connect(self._db_path) as conn:
+        conn = await self._get_outbox_connection()
+        try:
+            outbox = EventOutbox(use_postgres=True)
             await outbox.create_table(conn)
             return await outbox.get_stats(conn)
+        finally:
+            await conn.close()
 
     async def outbox_failed_entries(self, limit: int = 20) -> list[Any]:
         """List failed outbox entries."""
-        import aiosqlite
-
         from dazzle_back.events import EventOutbox
 
-        outbox = EventOutbox()
-        async with aiosqlite.connect(self._db_path) as conn:
+        conn = await self._get_outbox_connection()
+        try:
+            outbox = EventOutbox(use_postgres=True)
             return await outbox.get_failed_entries(conn, limit=limit)
+        finally:
+            await conn.close()
 
     async def outbox_drain(self, timeout: float = 30.0) -> int:
         """Drain pending events from the outbox. Returns count drained."""
         from dazzle_back.events import EventOutbox, OutboxPublisher
 
-        outbox = EventOutbox()
+        db_url = os.environ.get("DATABASE_URL")
+        if not db_url:
+            raise RuntimeError("DATABASE_URL not set. Cannot drain outbox.")
+
+        outbox = EventOutbox(use_postgres=True)
         async with self._broker() as bus:
-            publisher = OutboxPublisher(self._db_path, bus, outbox)
+            import psycopg
+            from psycopg.rows import dict_row
+
+            if db_url.startswith("postgres://"):
+                db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+            async def connect() -> psycopg.AsyncConnection[dict[str, Any]]:
+                return await psycopg.AsyncConnection.connect(db_url, row_factory=dict_row)
+
+            publisher = OutboxPublisher(bus=bus, outbox=outbox, connect=connect)
             return await publisher.drain(timeout=timeout)

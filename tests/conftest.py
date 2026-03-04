@@ -24,15 +24,7 @@ def _skip_infra_check() -> None:
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "filterwarnings",
-        "ignore:DevBrokerSQLite is deprecated:DeprecationWarning",
-    )
-    config.addinivalue_line(
-        "filterwarnings",
-        "ignore:LiteProcessAdapter is deprecated:DeprecationWarning",
-    )
-    config.addinivalue_line(
-        "filterwarnings",
-        "ignore:SQLite event bus is deprecated:DeprecationWarning",
+        "ignore:OutboxPublisher.*db_path.*is deprecated:DeprecationWarning",
     )
 
 

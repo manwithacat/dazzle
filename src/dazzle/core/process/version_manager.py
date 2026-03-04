@@ -213,7 +213,6 @@ class VersionManager:
                     );
 
                     -- Process runs table for migration queries
-                    -- (May already exist from LiteProcessAdapter)
                     CREATE TABLE IF NOT EXISTS process_runs (
                         run_id TEXT PRIMARY KEY,
                         process_name TEXT NOT NULL,

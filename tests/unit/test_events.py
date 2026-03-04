@@ -4,7 +4,6 @@ Unit tests for Dazzle Event-First Architecture.
 Tests the core event infrastructure:
 - EventEnvelope: Event schema and serialization
 - DevBusMemory: In-memory bus for tests
-- DevBrokerSQLite: SQLite-backed broker
 - EventOutbox: Transactional event publishing
 - EventInbox: Idempotent consumer deduplication
 - OutboxPublisher: Background publishing
@@ -23,7 +22,6 @@ import pytest
 
 from dazzle_back.events import (
     ConsumerConfig,
-    DevBrokerSQLite,
     DevBusMemory,
     EventEnvelope,
     EventFramework,
@@ -396,129 +394,6 @@ class TestDevBusMemory:
         # Can't process pending for unsubscribed consumer
         # Just verify no events were received
         assert len(received) == 0
-
-
-# =============================================================================
-# DevBrokerSQLite Tests
-# =============================================================================
-
-
-class TestDevBrokerSQLite:
-    """Tests for SQLite-backed event broker."""
-
-    @pytest.fixture
-    def db_path(self, tmp_path: Path) -> str:
-        """Create a temporary database path."""
-        return str(tmp_path / "test_events.db")
-
-    @pytest.mark.asyncio
-    async def test_connect_creates_tables(self, db_path: str) -> None:
-        """Test that connecting creates necessary tables."""
-        async with DevBrokerSQLite(db_path):
-            # Tables should be created
-            async with aiosqlite.connect(db_path) as conn:
-                cursor = await conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
-                tables = {row[0] for row in await cursor.fetchall()}
-
-        assert "_dazzle_events" in tables
-        assert "_dazzle_consumer_offsets" in tables
-
-    @pytest.mark.asyncio
-    async def test_publish_persists_events(self, db_path: str) -> None:
-        """Test that published events are persisted."""
-        async with DevBrokerSQLite(db_path) as bus:
-            envelope = EventEnvelope.create(
-                event_type="app.Order.created",
-                key="order-123",
-                payload={"amount": 100},
-            )
-            await bus.publish("app.Order", envelope)
-
-        # Verify persisted
-        async with aiosqlite.connect(db_path) as conn:
-            cursor = await conn.execute("SELECT COUNT(*) FROM _dazzle_events")
-            row = await cursor.fetchone()
-            assert row is not None
-            assert row[0] == 1
-
-    @pytest.mark.asyncio
-    async def test_replay_persisted_events(self, db_path: str) -> None:
-        """Test replaying events after reconnection."""
-        # Publish events
-        async with DevBrokerSQLite(db_path) as bus:
-            for i in range(3):
-                envelope = EventEnvelope.create(
-                    event_type="app.Order.created",
-                    key=f"order-{i}",
-                    payload={"sequence": i},
-                )
-                await bus.publish("app.Order", envelope)
-
-        # Reconnect and replay
-        async with DevBrokerSQLite(db_path) as bus:
-            replayed: list[EventEnvelope] = []
-            async for event in bus.replay("app.Order"):
-                replayed.append(event)
-
-        assert len(replayed) == 3
-
-    @pytest.mark.asyncio
-    async def test_consumer_offset_tracking(self, db_path: str) -> None:
-        """Test that consumer offsets are tracked."""
-        received: list[EventEnvelope] = []
-
-        async def handler(event: EventEnvelope) -> None:
-            received.append(event)
-
-        async with DevBrokerSQLite(db_path) as bus:
-            # Subscribe first so consumer is ready
-            await bus.subscribe("app.Order", "test_consumer", handler)
-
-            # Publish event
-            envelope = EventEnvelope.create(
-                event_type="app.Order.created",
-                key="order-123",
-                payload={},
-            )
-            await bus.publish("app.Order", envelope)
-
-            # Process
-            await bus.poll_and_process("app.Order", "test_consumer")
-
-            # ACK the event
-            await bus.ack("app.Order", "test_consumer", envelope.event_id)
-
-        # Check offset is stored
-        async with aiosqlite.connect(db_path) as conn:
-            cursor = await conn.execute(
-                "SELECT last_sequence FROM _dazzle_consumer_offsets "
-                "WHERE topic = ? AND group_id = ?",
-                ("app.Order", "test_consumer"),
-            )
-            row = await cursor.fetchone()
-            assert row is not None
-            assert row[0] >= 0
-
-    @pytest.mark.asyncio
-    async def test_topic_info(self, db_path: str) -> None:
-        """Test getting topic information."""
-        async with DevBrokerSQLite(db_path) as bus:
-            # Publish events
-            for i in range(5):
-                envelope = EventEnvelope.create(
-                    event_type="app.Order.created",
-                    key=f"order-{i}",
-                    payload={},
-                )
-                await bus.publish("app.Order", envelope)
-
-            # Subscribe a consumer
-            await bus.subscribe("app.Order", "consumer1", lambda e: None)
-
-            info = await bus.get_topic_info("app.Order")
-
-        assert info["event_count"] == 5
-        assert "consumer1" in info["consumer_groups"]
 
 
 # =============================================================================
@@ -1018,7 +893,7 @@ class TestConnectFnInjection:
             health = await framework.health_check()
 
             assert health["tier"] in ("sqlite", "memory", "postgres")
-            assert health["bus_type"] in ("DevBrokerSQLite", "DevBusMemory", "PostgresBus")
+            assert health["bus_type"] in ("DevBusMemory", "PostgresBus")
             assert health["publisher_running"] is False
             assert health["consumer_count"] == 0
             assert "outbox_depth" in health

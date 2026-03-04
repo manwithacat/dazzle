@@ -192,26 +192,20 @@ class TestProcessFactory:
         assert info["temporal_sdk_installed"] is True
         assert "temporal_sdk_version" in info
 
-    def test_create_lite_adapter(self) -> None:
-        """Test creating LiteProcessAdapter via factory."""
-        config = ProcessConfig(backend="lite")
-        adapter = create_adapter(config)
+    def test_create_adapter_auto_without_server_raises(self) -> None:
+        """Test auto selection raises ValueError when no backend available."""
+        import os
+        from unittest.mock import patch
 
-        from dazzle.core.process import LiteProcessAdapter
-
-        assert isinstance(adapter, LiteProcessAdapter)
-
-    def test_create_adapter_auto_without_server(self) -> None:
-        """Test auto selection falls back to lite when Temporal unavailable."""
-        config = ProcessConfig(
-            backend="auto",
-            temporal=TemporalConfig(host="nonexistent.local", port=7233),
-        )
-        adapter = create_adapter(config)
-
-        from dazzle.core.process import LiteProcessAdapter
-
-        assert isinstance(adapter, LiteProcessAdapter)
+        # Clear REDIS_URL so no backend is available
+        env = {k: v for k, v in os.environ.items() if k != "REDIS_URL"}
+        with patch.dict("os.environ", env, clear=True):
+            config = ProcessConfig(
+                backend="auto",
+                temporal=TemporalConfig(host="nonexistent.local", port=7233),
+            )
+            with pytest.raises(ValueError, match="No process backend available"):
+                create_adapter(config)
 
 
 class TestTemporalAdapterUnit:
@@ -505,7 +499,6 @@ class TestWorkerModule:
     def test_process_module_exports(self) -> None:
         """Test process module exports factory functions."""
         from dazzle.process import (
-            LiteProcessAdapter,
             ProcessConfig,
             create_adapter,
             get_backend_info,
@@ -514,4 +507,3 @@ class TestWorkerModule:
         assert ProcessConfig is not None
         assert create_adapter is not None
         assert get_backend_info is not None
-        assert LiteProcessAdapter is not None
