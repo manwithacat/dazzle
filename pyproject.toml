@@ -82,6 +82,7 @@ serve = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
+    "python-multipart>=0.0.6",
 ]
 # PostgreSQL deps moved to core dependencies (v0.28.0 — PG is the sole backend)
 postgres = []
