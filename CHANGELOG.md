@@ -9,7 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-03-06
+
 ### Added
+- **Team section type** (`type: team`) — dedicated cards for team/people pages with circular avatar (image or auto-generated initials), name, role, bio, and social links (linkedin, email, twitter, github) (#394)
+- **Section backgrounds** — `background: alt | primary | dark` on any section for visual rhythm; `layout.section_backgrounds: auto-alternate` for automatic alternating backgrounds (#395)
+- **Media rendering** in `card_grid` and `features` sections — `section_media()` macro in `_helpers.html` for reusable section-level images (#396)
+- **Validation warning** when `media` is set on section types that don't render it (#396)
+- **`sitespec advise` MCP operation** — proactive layout suggestions: missing hero sections, background variation, team section recommendations, long markdown splitting (#397)
+- **Media.src path validation** — `sitespec validate` warns on non-`/static/` paths and missing files; imagery prompts include `save_to` and `sitespec_src` fields (#391)
 - jsDelivr CDN distribution — framework CSS/JS served from `cdn.jsdelivr.net` for faster loading and cache sharing across Dazzle-powered sites
 - `dist/dazzle.min.css` (43 KB) — micro-runtime + design system + site sections CSS bundle
 - `dist/dazzle.min.js` (131 KB) — HTMX + extensions + micro-runtime JS bundle
@@ -22,6 +30,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - `base.html` and `site_base.html` now load framework assets from jsDelivr CDN by default, with local vendored fallback when CDN is disabled
+
+### Fixed
+- **Legal page CSS** — constrained width (45rem) and left-aligned headings for terms/privacy pages (#393)
+- **Markdown `<hr>` styling** — horizontal rules render as subtle centered gradient lines instead of crude browser default (#398)
+- **Infrastructure banner** no longer shows stale `.dazzle/data.db` or "Lite (in-process)" when PostgreSQL is configured (#390)
+- **Circular FK migration** — `Department ↔ User` foreign keys no longer fail migration (#389)
+- **Heroku deployment** — `[serve]` extra installs runtime dependencies (`uvicorn`, `gunicorn`, etc.) (#388)
+
+### Removed
+- `LiteProcessAdapter` and `DevBrokerSQLite` — deprecated SQLite-based process/event backends fully removed; PostgreSQL is now required for event bus
+- `SQLITE` tier from `EventBusTier` enum
 
 ## [0.34.0] - 2026-02-23
 
