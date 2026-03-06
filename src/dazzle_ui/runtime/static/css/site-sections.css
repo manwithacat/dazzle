@@ -416,6 +416,39 @@
 [data-theme="dark"] .dz-theme-toggle__sun { display: block; }
 [data-theme="dark"] .dz-theme-toggle__moon { display: none; }
 
+/* =============================================================================
+   Section Background Utilities
+   Applied via sitespec background: alt | primary | dark
+   ============================================================================= */
+
+.dz-bg-alt {
+  background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+
+.dz-bg-primary {
+  background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+  color: white;
+}
+
+.dz-bg-primary .dz-section-header h2,
+.dz-bg-primary .dz-section-header p {
+  color: white;
+}
+
+.dz-bg-dark {
+  background: oklch(0.15 0.01 260);
+  color: oklch(0.9 0 0);
+}
+
+.dz-bg-dark .dz-section-header h2,
+.dz-bg-dark .dz-section-header p {
+  color: oklch(0.9 0 0);
+}
+
+[data-theme="dark"] .dz-bg-alt {
+  background: oklch(0.12 0.01 260);
+}
+
 /* Section backgrounds */
 [data-theme="dark"] .dz-section-features,
 [data-theme="dark"] .dz-section-faq,

@@ -135,6 +135,13 @@ def build_site_page_context(
                 page_description = sec.get("subhead", "")
                 break
 
+    # Auto-alternate section backgrounds when configured
+    section_bg_mode = layout.get("section_backgrounds", "")
+    if section_bg_mode == "auto-alternate":
+        for i, sec in enumerate(sections):
+            if not sec.get("background"):
+                sec["background"] = "alt" if i % 2 == 1 else "default"
+
     og_meta = _build_og_meta(product_name, page_title, page_description)
 
     return SitePageContext(

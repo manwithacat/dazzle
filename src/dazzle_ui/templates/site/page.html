@@ -10,7 +10,13 @@
 <main id="dz-site-main" class="{{ 'dz-page-legal' if page_type == 'legal' else '' }}" data-route="{{ current_route }}">
   {% if sections %}
   {% for section in sections %}
+  {% if section.background and section.background != "default" %}
+  <div class="dz-bg-{{ section.background }}">
   {% include ["site/sections/" + section.type + ".html", "site/sections/generic.html"] %}
+  </div>
+  {% else %}
+  {% include ["site/sections/" + section.type + ".html", "site/sections/generic.html"] %}
+  {% endif %}
   {% endfor %}
   {% else %}
   <div class="dz-loading">Loading...</div>

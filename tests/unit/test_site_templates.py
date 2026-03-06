@@ -132,6 +132,59 @@ class TestBuildSitePageContext:
         ctx = build_site_page_context(sitespec, "/", custom_css=True)
         assert ctx.custom_css is True
 
+    def test_auto_alternate_backgrounds(self) -> None:
+        from dazzle_ui.runtime.site_context import build_site_page_context
+
+        sitespec: dict[str, Any] = {
+            "brand": {},
+            "layout": {"section_backgrounds": "auto-alternate"},
+        }
+        page_data = {
+            "title": "Home",
+            "sections": [
+                {"type": "hero", "headline": "Hello"},
+                {"type": "features", "items": []},
+                {"type": "cta", "headline": "Go"},
+            ],
+        }
+        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
+        assert ctx.sections[0]["background"] == "default"
+        assert ctx.sections[1]["background"] == "alt"
+        assert ctx.sections[2]["background"] == "default"
+
+    def test_explicit_background_preserved(self) -> None:
+        from dazzle_ui.runtime.site_context import build_site_page_context
+
+        sitespec: dict[str, Any] = {
+            "brand": {},
+            "layout": {"section_backgrounds": "auto-alternate"},
+        }
+        page_data = {
+            "title": "Home",
+            "sections": [
+                {"type": "hero", "headline": "Hello"},
+                {"type": "features", "background": "primary", "items": []},
+                {"type": "cta", "headline": "Go"},
+            ],
+        }
+        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
+        # Explicit background should be preserved, not overwritten
+        assert ctx.sections[1]["background"] == "primary"
+
+    def test_background_class_in_rendered_html(self) -> None:
+        from dazzle_ui.runtime.site_context import build_site_page_context
+
+        sitespec: dict[str, Any] = {"brand": {}, "layout": {}}
+        page_data = {
+            "title": "Home",
+            "sections": [
+                {"type": "hero", "headline": "Hello", "background": "alt"},
+            ],
+        }
+        ctx = build_site_page_context(sitespec, "/", page_data=page_data)
+        html = _render("site/page.html", ctx)
+        assert "dz-bg-alt" in html
+
 
 class TestBuildSiteAuthContext:
     """Tests for build_site_auth_context()."""

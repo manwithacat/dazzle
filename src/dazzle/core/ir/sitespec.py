@@ -170,6 +170,7 @@ class LayoutSpec(BaseModel):
     auth: AuthEntrySpec = Field(default_factory=AuthEntrySpec)
     nav: NavSpec = Field(default_factory=NavSpec)
     footer: FooterSpec = Field(default_factory=FooterSpec)
+    section_backgrounds: str = ""  # "" (manual), "auto-alternate"
 
     model_config = ConfigDict(frozen=True)
 
@@ -377,6 +378,7 @@ class SectionSpec(BaseModel):
 
     type: SectionKind
     id: str | None = None  # Explicit anchor ID (auto-generated from headline if not set)
+    background: str | None = None  # default, alt, primary, dark
     headline: str | None = None
     subhead: str | None = None
     body: str | None = None
