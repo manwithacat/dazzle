@@ -421,3 +421,92 @@ class TestAuthDependencyRoleCheck:
 
         result = await dep(mock_request)
         assert result.is_authenticated is True
+
+
+# =============================================================================
+# Role name normalization
+# =============================================================================
+
+
+class TestNormalizeRole:
+    """Tests that _normalize_role strips the role_ prefix from database roles."""
+
+    def test_strips_role_prefix(self) -> None:
+        from dazzle_back.runtime.route_generator import _normalize_role
+
+        assert _normalize_role("role_school_admin") == "school_admin"
+
+    def test_leaves_bare_name_unchanged(self) -> None:
+        from dazzle_back.runtime.route_generator import _normalize_role
+
+        assert _normalize_role("admin") == "admin"
+
+    def test_leaves_non_role_prefix_unchanged(self) -> None:
+        from dazzle_back.runtime.route_generator import _normalize_role
+
+        assert _normalize_role("user_admin") == "user_admin"
+
+    def test_empty_string(self) -> None:
+        from dazzle_back.runtime.route_generator import _normalize_role
+
+        assert _normalize_role("") == ""
+
+    def test_just_role_prefix(self) -> None:
+        from dazzle_back.runtime.route_generator import _normalize_role
+
+        assert _normalize_role("role_") == ""
+
+
+class TestBuildAccessContext:
+    """Tests that _build_access_context normalizes roles from auth context."""
+
+    @pytest.fixture()
+    def _skip_if_no_fastapi(self) -> None:
+        pytest.importorskip("fastapi")
+
+    @pytest.mark.usefixtures("_skip_if_no_fastapi")
+    def test_normalizes_prefixed_roles(self) -> None:
+        """Database roles with role_ prefix are normalized for Cedar evaluation."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _build_access_context
+
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = True
+        auth_ctx.user.id = "u1"
+        auth_ctx.user.roles = ["role_school_admin", "role_teacher"]
+        auth_ctx.user.is_superuser = False
+
+        _user, runtime_ctx = _build_access_context(auth_ctx)
+        assert set(runtime_ctx.roles) == {"school_admin", "teacher"}
+
+    @pytest.mark.usefixtures("_skip_if_no_fastapi")
+    def test_bare_roles_pass_through(self) -> None:
+        """Roles without role_ prefix pass through unchanged."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _build_access_context
+
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = True
+        auth_ctx.user.id = "u2"
+        auth_ctx.user.roles = ["admin", "editor"]
+        auth_ctx.user.is_superuser = False
+
+        _user, runtime_ctx = _build_access_context(auth_ctx)
+        assert set(runtime_ctx.roles) == {"admin", "editor"}
+
+    @pytest.mark.usefixtures("_skip_if_no_fastapi")
+    def test_unauthenticated_gives_empty_roles(self) -> None:
+        """Unauthenticated context produces empty roles."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _build_access_context
+
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = False
+        auth_ctx.user = None
+
+        _user, runtime_ctx = _build_access_context(auth_ctx)
+        assert len(runtime_ctx.roles) == 0
+        assert runtime_ctx.user_id is None

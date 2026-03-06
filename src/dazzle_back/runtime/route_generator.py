@@ -164,13 +164,14 @@ def _extract_cedar_row_filters(
     if not permissions:
         return {}
 
-    # Collect roles from auth_context
+    # Collect roles from auth_context, normalizing role_ prefix
     user_roles: set[str] = set()
     if auth_context is not None:
         _user_obj = getattr(auth_context, "user", None)
         if _user_obj:
             for r in getattr(_user_obj, "roles", []):
-                user_roles.add(r if isinstance(r, str) else getattr(r, "name", str(r)))
+                name = r if isinstance(r, str) else getattr(r, "name", str(r))
+                user_roles.add(_normalize_role(name))
 
     filters: dict[str, Any] = {}
     has_unrestricted_permit = False
@@ -273,6 +274,15 @@ def _extract_condition_filters(
 # =============================================================================
 
 
+def _normalize_role(role: str) -> str:
+    """Normalize a database role name to match DSL role references.
+
+    Database roles may have a ``role_`` prefix (e.g. ``role_school_admin``)
+    while DSL access rules use bare names (e.g. ``role(school_admin)``).
+    """
+    return role.removeprefix("role_")
+
+
 def _build_access_context(auth_context: Any) -> tuple[Any, Any]:
     """Build (user, AccessRuntimeContext) from an AuthContext.
 
@@ -281,9 +291,10 @@ def _build_access_context(auth_context: Any) -> tuple[Any, Any]:
     from dazzle_back.runtime.access_evaluator import AccessRuntimeContext
 
     user = auth_context.user if auth_context.is_authenticated else None
+    raw_roles = list(getattr(user, "roles", [])) if user else []
     ctx = AccessRuntimeContext(
         user_id=str(user.id) if user else None,
-        roles=list(getattr(user, "roles", [])) if user else [],
+        roles=[_normalize_role(r) for r in raw_roles],
         is_superuser=getattr(user, "is_superuser", False) if user else False,
     )
     return user, ctx
