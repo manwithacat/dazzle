@@ -533,6 +533,7 @@ def review_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
             "value_highlight",
             "logo_cloud",
             "comparison",
+            "team",
         }
 
         # Required content fields per section type
@@ -907,4 +908,141 @@ def generate_imagery_prompts_handler(project_root: Path, args: dict[str, Any]) -
         )
 
     except ThemeSpecError as e:
+        return error_response(str(e))
+
+
+@wrap_handler_errors
+def advise_sitespec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyse sitespec pages and suggest layout improvements.
+
+    Examines each page for:
+    - Long unbroken markdown that could be split into sections
+    - Missing section backgrounds for visual rhythm
+    - Pages that could benefit from hero, stats, or team sections
+    - Content patterns that map to specific section types
+    """
+    from dazzle.core.sitespec_loader import SiteSpecError, load_sitespec
+
+    progress = extract_progress(args)
+
+    try:
+        progress.log_sync("Analysing sitespec for layout improvements...")
+        sitespec = load_sitespec(project_root, use_defaults=True)
+        sitespec_data = sitespec.model_dump()
+
+        pages = sitespec_data.get("pages", [])
+        layout = sitespec_data.get("layout", {})
+        suggestions: list[dict[str, Any]] = []
+
+        has_auto_bg = layout.get("section_backgrounds") == "auto-alternate"
+
+        for page in pages:
+            route = page.get("route", "/")
+            sections = page.get("sections", [])
+            page_type = page.get("type", "landing")
+            page_suggestions: list[str] = []
+
+            # Check: pure markdown pages with many sections could be restructured
+            if page_type == "markdown":
+                page_suggestions.append(
+                    "This page uses type: markdown. Consider type: landing "
+                    "with structured sections (hero, stats, card_grid) for "
+                    "better visual presentation."
+                )
+
+            # Check: no hero section on landing pages
+            section_types = [s.get("type") for s in sections]
+            if page_type == "landing" and "hero" not in section_types and sections:
+                page_suggestions.append(
+                    "Landing page has no hero section. Consider adding a hero "
+                    "with headline and CTA for a strong first impression."
+                )
+
+            # Check: many sections without background variation
+            if len(sections) >= 4 and not has_auto_bg:
+                has_any_bg = any(s.get("background") for s in sections)
+                if not has_any_bg:
+                    page_suggestions.append(
+                        f"Page has {len(sections)} sections with no background "
+                        f"variation. Add background: alt to alternating sections, "
+                        f"or set layout.section_backgrounds: auto-alternate."
+                    )
+
+            # Check: markdown section with lots of content could use splitting
+            for i, sec in enumerate(sections):
+                sec_type = sec.get("type", "")
+                content = sec.get("content", "")
+
+                if sec_type == "markdown" and len(content) > 3000:
+                    word_count = len(content.split())
+                    page_suggestions.append(
+                        f"Section {i + 1} (markdown) has ~{word_count} words. "
+                        f"Consider splitting into multiple sections or adding "
+                        f"a stats section to surface key numbers."
+                    )
+
+                # Check: card_grid being used for team content
+                if sec_type == "card_grid":
+                    items = sec.get("items", [])
+                    has_role_in_body = any(
+                        "founder" in (it.get("body", "") or "").lower()
+                        or "ceo" in (it.get("body", "") or "").lower()
+                        or "cto" in (it.get("body", "") or "").lower()
+                        or "engineer" in (it.get("body", "") or "").lower()
+                        for it in items
+                    )
+                    if has_role_in_body:
+                        page_suggestions.append(
+                            f"Section {i + 1} (card_grid) appears to contain "
+                            f"team/people data. Consider using type: team "
+                            f"which supports name, role, bio, image, and links."
+                        )
+
+            if page_suggestions:
+                suggestions.append(
+                    {
+                        "route": route,
+                        "suggestions": page_suggestions,
+                    }
+                )
+
+        # Global suggestions
+        global_suggestions: list[str] = []
+        all_routes = {p.get("route") for p in pages}
+
+        if "/about" not in all_routes:
+            global_suggestions.append(
+                "No /about page found. Consider adding one with a team section and company story."
+            )
+
+        if not has_auto_bg and len(pages) > 0:
+            total_sections = sum(len(p.get("sections", [])) for p in pages)
+            if total_sections >= 10:
+                global_suggestions.append(
+                    "Site has many sections but no auto-alternate backgrounds. "
+                    "Add layout.section_backgrounds: auto-alternate for "
+                    "automatic visual rhythm."
+                )
+
+        result: dict[str, Any] = {
+            "page_count": len(pages),
+            "total_suggestions": sum(len(s["suggestions"]) for s in suggestions)
+            + len(global_suggestions),
+        }
+
+        if suggestions:
+            result["pages"] = suggestions
+        if global_suggestions:
+            result["global"] = global_suggestions
+
+        if result["total_suggestions"] == 0:
+            result["summary"] = "No layout improvements suggested — site looks well-structured."
+        else:
+            result["summary"] = (
+                f"Found {result['total_suggestions']} suggestions across {len(suggestions)} pages."
+            )
+
+        return json.dumps(result, indent=2)
+
+    except SiteSpecError as e:
         return error_response(str(e))

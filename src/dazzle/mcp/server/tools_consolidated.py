@@ -501,7 +501,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="sitespec",
-            description="SiteSpec operations: get, validate, scaffold, coherence, review. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Use 'review' for page-by-page comparison of spec vs rendering status. Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
+            description="SiteSpec operations: get, validate, scaffold, coherence, review, advise. Copy operations: get_copy, scaffold_copy, review_copy. Use 'coherence' to check if the site feels like a real website (navigation, CTAs, content completeness). Use 'review' for page-by-page comparison of spec vs rendering status. Use 'advise' to get proactive layout improvement suggestions. Theme operations: get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -521,6 +521,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "validate_theme",
                             "generate_tokens",
                             "generate_imagery_prompts",
+                            "advise",
                         ],
                         "description": "Operation to perform",
                     },

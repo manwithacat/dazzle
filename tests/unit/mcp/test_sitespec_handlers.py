@@ -173,6 +173,7 @@ get_copy_handler = _ss.get_copy_handler
 scaffold_copy_handler = _ss.scaffold_copy_handler
 review_copy_handler = _ss.review_copy_handler
 coherence_handler = _ss.coherence_handler
+advise_sitespec_handler = _ss.advise_sitespec_handler
 
 
 # =============================================================================
@@ -410,3 +411,16 @@ class TestCoherenceHandler:
 
         # Should return results (mock doesn't use context)
         assert "score" in data or "error" in data
+
+
+class TestAdviseSitespecHandler:
+    """Tests for advise_sitespec_handler."""
+
+    def test_returns_summary(self, temp_project) -> None:
+        """Test that advise returns structured suggestions."""
+        result = advise_sitespec_handler(temp_project, {})
+        data = json.loads(result)
+
+        assert "page_count" in data
+        assert "total_suggestions" in data
+        assert "summary" in data

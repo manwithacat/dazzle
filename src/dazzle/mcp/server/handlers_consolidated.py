@@ -392,6 +392,7 @@ handle_sitespec: Callable[[dict[str, Any]], str] = _make_project_handler(
         "generate_tokens": f"{_MOD_SITE}:generate_tokens_handler",
         "generate_imagery_prompts": f"{_MOD_SITE}:generate_imagery_prompts_handler",
         "review": f"{_MOD_SITE}:review_sitespec_handler",
+        "advise": f"{_MOD_SITE}:advise_sitespec_handler",
     },
 )
 
