@@ -1,0 +1,31 @@
+{% from "site/sections/_helpers.html" import section_id_attr, section_header %}
+<section{{ section_id_attr(section) }} class="dz-section dz-section-team">
+  <div class="dz-section-content">
+    {{ section_header(section) }}
+    <div class="dz-team-grid">
+      {% for member in section["items"] | default([]) %}
+      <div class="dz-team-card">
+        <div class="dz-team-avatar">
+          {% if member.image %}
+          <img src="{{ member.image }}" alt="{{ member.name | default('') }}" loading="lazy">
+          {% else %}
+          <span class="dz-team-initials">{% for word in (member.name | default('?')).split()[:2] %}{{ word[0] | upper }}{% endfor %}</span>
+          {% endif %}
+        </div>
+        <h3 class="dz-team-name">{{ member.name | default("") }}</h3>
+        {% if member.role %}<p class="dz-team-role">{{ member.role }}</p>{% endif %}
+        {% if member.bio %}<p class="dz-team-bio">{{ member.bio }}</p>{% endif %}
+        {% if member.links %}
+        <div class="dz-team-links">
+          {% for link in member.links %}
+          <a href="{{ link.href }}" class="dz-team-link" aria-label="{{ link.type }}" target="_blank" rel="noopener">
+            <i data-lucide="{{ 'linkedin' if link.type == 'linkedin' else 'mail' if link.type == 'email' else 'twitter' if link.type == 'twitter' else 'github' if link.type == 'github' else 'globe' }}"></i>
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>

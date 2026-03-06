@@ -586,6 +586,42 @@ class TestSitePageTemplate:
 
         assert "/static/css/custom.css" not in html
 
+    def test_renders_team_section(self) -> None:
+        from dazzle_ui.runtime.site_context import build_site_page_context
+
+        sitespec: dict[str, Any] = {"brand": {"product_name": "App"}, "layout": {}}
+        page_data = {
+            "title": "About",
+            "sections": [
+                {
+                    "type": "team",
+                    "headline": "The Team",
+                    "items": [
+                        {
+                            "name": "Jane Doe",
+                            "role": "CEO",
+                            "bio": "Leads the company.",
+                            "links": [{"type": "linkedin", "href": "https://linkedin.com/in/jane"}],
+                        },
+                        {"name": "Bob Smith", "role": "CTO"},
+                    ],
+                }
+            ],
+        }
+        ctx = build_site_page_context(sitespec, "/about", page_data=page_data)
+        html = _render("site/page.html", ctx)
+
+        assert "dz-section-team" in html
+        assert "The Team" in html
+        assert "Jane Doe" in html
+        assert "CEO" in html
+        assert "Leads the company." in html
+        assert "linkedin.com/in/jane" in html
+        assert "Bob Smith" in html
+        # Initials fallback for members without images
+        assert "JD" in html  # Jane Doe initials
+        assert "BS" in html  # Bob Smith initials
+
 
 # =========================================================================
 # 404 Template Tests

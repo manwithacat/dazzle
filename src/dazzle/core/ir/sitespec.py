@@ -239,6 +239,7 @@ class SectionKind(StrEnum):
     SPLIT_CONTENT = "split_content"
     CARD_GRID = "card_grid"
     TRUST_BAR = "trust_bar"
+    TEAM = "team"
 
 
 class FeatureItem(BaseModel):
@@ -353,6 +354,27 @@ class TrustBarItem(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class TeamMemberLink(BaseModel):
+    """A social/contact link for a team member."""
+
+    type: str  # linkedin, email, twitter, github, website
+    href: str
+
+    model_config = ConfigDict(frozen=True)
+
+
+class TeamMember(BaseModel):
+    """A team member in a team section."""
+
+    name: str
+    role: str = ""
+    bio: str = ""
+    image: str | None = None
+    links: list[TeamMemberLink] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SectionSpec(BaseModel):
     """
     A section within a landing page.
@@ -397,6 +419,7 @@ class SectionSpec(BaseModel):
         | list[ComparisonRow]
         | list[CardItem]
         | list[TrustBarItem]
+        | list[TeamMember]
     ) = Field(default_factory=list)
 
     # Pricing-specific
