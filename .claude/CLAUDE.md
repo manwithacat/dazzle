@@ -151,10 +151,14 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 
 ## MCP Server
 
-The DAZZLE MCP server (`dazzle mcp`) provides 26 consolidated tools:
+The DAZZLE MCP server (`dazzle mcp`) provides 32 tools:
 
 | Tool | Operations |
 |------|-----------|
+| `list_projects` | List available projects |
+| `select_project` | Set active project |
+| `get_active_project` | Show current project |
+| `validate_all_projects` | Validate all projects |
 | `dsl` | validate, inspect_entity, inspect_surface, lint, analyze, fidelity, export_frontend_spec |
 | `story` | propose, save, get, generate_tests, coverage |
 | `process` | propose, save, list, inspect, diagram, coverage |
@@ -169,7 +173,7 @@ The DAZZLE MCP server (`dazzle mcp`) provides 26 consolidated tools:
 | `graph` | query, dependencies, neighbourhood, concept, inference, export, import |
 | `status` | mcp, logs, telemetry, activity |
 | `knowledge` | concept, examples, workflow, inference |
-| `sitespec` | get, validate, scaffold, coherence, review, themes |
+| `sitespec` | get, validate, scaffold, coherence, review, advise, get_copy, scaffold_copy, review_copy, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts |
 | `semantics` | extract, validate_events, tenancy, compliance, analytics |
 | `composition` | audit, capture, analyze, report, inspect_styles |
 | `policy` | analyze, conflicts, coverage, simulate |
@@ -182,6 +186,7 @@ The DAZZLE MCP server (`dazzle mcp`) provides 26 consolidated tools:
 | `mock` | status, scenarios, fire_webhook, request_log, inject_error, scaffold_scenario |
 | `contribution` | templates, create, validate, examples |
 | `user_management` | list, create, get, update, deactivate |
+| `user_profile` | observe, observe_message, get, reset |
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
 

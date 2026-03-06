@@ -4,23 +4,20 @@ This is a Dazzle project for generating full-stack applications from DSL specifi
 
 ## MCP Tools Available
 
-You have access to the DAZZLE MCP server with these tools (pre-approved in settings.json):
+You have access to the DAZZLE MCP server with consolidated tools:
 
-- `mcp__dazzle__validate_dsl` - Validate DSL files
-- `mcp__dazzle__list_modules` - List project modules
-- `mcp__dazzle__inspect_entity` - Inspect entity definitions
-- `mcp__dazzle__inspect_surface` - Inspect surface definitions
-- `mcp__dazzle__lookup_concept` - Look up DSL concepts and patterns
-- `mcp__dazzle__find_examples` - Find example code
-- `mcp__dazzle__get_workflow_guide` - Get step-by-step guides
+- `dsl` — validate, inspect_entity, inspect_surface, lint, analyze
+- `knowledge` — concept, examples, workflow, inference
+- `story` — propose, save, get, generate_tests, coverage
+- `bootstrap` — entry point for "build me an app" requests
 
 Use MCP tools for quick lookups. They're faster than running CLI commands.
 
 ## Your Primary Tasks
 
 1. **Help write DSL specifications** in the `dsl/` directory
-2. **Validate DSL** using `dazzle check` or MCP tools
-3. **Run the application** using `dazzle dev`
+2. **Validate DSL** using `dazzle validate` or MCP tools
+3. **Run the application** using `dazzle serve`
 4. **Fix validation errors** by editing `.dsl` files
 5. **Answer questions** about Dazzle DSL syntax and capabilities
 
@@ -42,30 +39,26 @@ If the user has requirements in SPEC.md or describes them to you:
 1. Help them write DSL directly
 2. Create entities, surfaces, and other constructs in `.dsl` files
 3. Validate with `dazzle validate`
-4. Run with `dazzle dnr serve`
+4. Run with `dazzle serve`
 
 ### Working with Existing DSL
 1. Read existing `.dsl` files in the `dsl/` directory
 2. Make modifications as requested
 3. Always validate after changes
-4. Run with `dazzle dnr serve` to test
+4. Run with `dazzle serve` to test
 
 ### Running the Application
 ```bash
-dazzle dev --docker           # Run in Docker (recommended, no setup needed)
-dazzle dev                    # Run locally (requires Python environment)
+dazzle serve              # Run with Docker (default)
+dazzle serve --local      # Run without Docker
 ```
 - UI: http://localhost:3000
 - API: http://localhost:8000/docs
 
 ### Environment Setup (for local mode)
-If running without Docker, install Python dependencies first:
+If running without Docker, install Dazzle first:
 ```bash
-# Using uv (recommended)
-uv venv && source .venv/bin/activate && uv pip install -r requirements.txt
-
-# Or using pip
-python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+pip install dazzle-dsl
 ```
 
 ## DSL Quick Reference
@@ -186,7 +179,7 @@ Some words are reserved and cannot be used as enum values:
 - Use `mail` instead of `email` for channel enums
 - Use `sent` instead of `submitted`
 
-Use MCP tool: `mcp__dazzle__lookup_concept` with term "reserved_keywords" for the full list.
+Use MCP tool: `knowledge` with `operation=concept` and `term=reserved_keywords` for the full list.
 
 ## Important Reminders
 
@@ -198,7 +191,7 @@ Use MCP tool: `mcp__dazzle__lookup_concept` with term "reserved_keywords" for th
 
 You can:
 - ✅ Write and modify DSL files
-- ✅ Run dazzle commands (validate, dnr serve, lint, etc.)
+- ✅ Run dazzle commands (validate, serve, lint, etc.)
 - ✅ Debug validation errors
 - ✅ Suggest DSL patterns and best practices
 

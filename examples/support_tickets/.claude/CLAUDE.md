@@ -2,51 +2,20 @@
 
 This is a Dazzle project for generating full-stack applications from DSL specifications.
 
-## MCP Server Integration
+## MCP Tools Available
 
-This project includes DAZZLE MCP server integration for enhanced tooling.
+You have access to the DAZZLE MCP server with consolidated tools:
 
-### Automatic Setup
-If DAZZLE was installed via Homebrew or pip, the MCP server should be automatically available.
-
-### Manual Setup
-If the MCP tools are not available, you can register the server:
-
-```bash
-dazzle mcp-setup
-```
-
-Or add this configuration manually to your Claude Code config (`~/.claude/mcp_servers.json`):
-
-```json
-{
-  "mcpServers": {
-    "dazzle": {
-      "command": "dazzle",
-      "args": ["mcp", "--working-dir", "${projectDir}"]
-    }
-  }
-}
-```
-
-### Available MCP Tools
-You should have access to:
-- `validate_dsl` - Validate all DSL files
-- `inspect_entity <name>` - Inspect entity definitions
-- `inspect_surface <name>` - Inspect surface definitions
-- `analyze_patterns` - Detect CRUD and integration patterns
-- `lint_project` - Run extended validation
-- `list_modules` - List all modules
-- `lookup_concept <term>` - Look up DSL concepts (try: enum, ref, archetype, reserved_keywords)
-- `find_examples` - Find example projects
-
-Try asking: "What DAZZLE tools do you have access to?"
+- `dsl` — validate, inspect_entity, inspect_surface, lint, analyze
+- `knowledge` — concept, examples, workflow, inference
+- `story` — propose, save, get, generate_tests, coverage
+- `bootstrap` — entry point for "build me an app" requests
 
 ## Your Primary Tasks
 
 1. **Help write DSL specifications** in the `dsl/` directory
 2. **Validate DSL** using `dazzle validate`
-3. **Run the application** using `dazzle dnr serve`
+3. **Run the application** using `dazzle serve`
 4. **Fix validation errors** by editing `.dsl` files
 5. **Answer questions** about Dazzle DSL syntax and capabilities
 
@@ -68,18 +37,18 @@ If the user has requirements in SPEC.md or describes them to you:
 1. Help them write DSL directly
 2. Create entities, surfaces, and other constructs in `.dsl` files
 3. Validate with `dazzle validate`
-4. Run with `dazzle dnr serve`
+4. Run with `dazzle serve`
 
 ### Working with Existing DSL
 1. Read existing `.dsl` files in the `dsl/` directory
 2. Make modifications as requested
 3. Always validate after changes
-4. Run with `dazzle dnr serve` to test
+4. Run with `dazzle serve` to test
 
 ### Running the Application
 ```bash
-dazzle dnr serve              # Run with Docker (default)
-dazzle dnr serve --local      # Run without Docker
+dazzle serve              # Run with Docker (default)
+dazzle serve --local      # Run without Docker
 ```
 - UI: http://localhost:3000
 - API: http://localhost:8000/docs
@@ -155,7 +124,7 @@ Some words are reserved and cannot be used as enum values:
 - Use `mail` instead of `email` for channel enums
 - Use `sent` instead of `submitted`
 
-Use `lookup_concept reserved_keywords` for the full list.
+Use MCP tool: `knowledge` with `operation=concept` and `term=reserved_keywords` for the full list.
 
 ## Important Reminders
 
@@ -167,7 +136,7 @@ Use `lookup_concept reserved_keywords` for the full list.
 
 You can:
 - ✅ Write and modify DSL files
-- ✅ Run dazzle commands (validate, dnr serve, lint, etc.)
+- ✅ Run dazzle commands (validate, serve, lint, etc.)
 - ✅ Debug validation errors
 - ✅ Suggest DSL patterns and best practices
 
@@ -181,27 +150,7 @@ Remember: Your primary role is to help users create applications using Dazzle DS
 
 This project supports human-led UX testing workflows. You can monitor and triage feedback submitted by human testers.
 
-### Monitoring Feedback via Mailpit
-
-Use the `mailpit` MCP tool to monitor bug reports and feedback:
-
-```
-# List recent feedback messages
-mailpit operation=list_messages limit=10
-
-# Get full details of a specific message
-mailpit operation=get_message message_id=<id>
-
-# Search for bugs
-mailpit operation=search query="bug" category=bug
-
-# Check message stats
-mailpit operation=stats
-```
-
-### Available Personas
-
-This project defines three testing personas:
+### Personas
 
 | Persona | Role | Default Workspace |
 |---------|------|-------------------|
@@ -209,104 +158,29 @@ This project defines three testing personas:
 | `agent` | First-line support handling tickets | ticket_queue |
 | `manager` | Team lead monitoring performance | agent_dashboard |
 
-### Available Scenarios
+### Scenarios
 
-| Scenario | Description | Demo Data |
-|----------|-------------|-----------|
-| `happy_path` | Normal ticket flow - submit, assign, resolve | None |
-| `escalation` | Critical issue requiring manager attention | None |
-| `backlog` | High volume testing with many open tickets | fixtures/backlog.json |
+| Scenario | Description |
+|----------|-------------|
+| `happy_path` | Normal ticket flow — submit, assign, resolve |
+| `escalation` | Critical issue requiring manager attention |
+| `backlog` | High volume testing with many open tickets (fixtures/backlog.json) |
 
-### Developer Dashboard
+### Feedback Monitoring (Mailpit)
 
-Access the developer dashboard for system health and metrics:
-
-- **Health Panel**: Click the health indicator in the dev toolbar
-- **Full Dashboard**: Open http://localhost:8000/dazzle/dev/dashboard
-
-### Triage Workflow
-
-When monitoring human tester feedback:
-
-1. **Check for new feedback**: `mailpit operation=list_messages`
-2. **Review details**: `mailpit operation=get_message message_id=<id>`
-3. **Categorize**: Bug, feature request, UX issue, or question
-4. **Investigate**: Read relevant DSL files, check logs with `/dazzle/dev/logs`
-5. **Suggest fixes**: Propose DSL changes, UI improvements, or workflow adjustments
-6. **Delete processed**: `mailpit operation=delete message_id=<id>`
-
-### Async Feedback Monitoring
-
-For real-time feedback monitoring during testing sessions, use this approach:
-
-**Proactive Polling (Recommended)**:
-When a testing session is active, periodically check for new feedback:
+Use the `mailpit` MCP tool during active testing:
 ```
-# Check every few minutes during active testing
-mailpit operation=list_messages limit=5
+mailpit operation=list_messages limit=10    # List recent feedback
+mailpit operation=get_message message_id=X  # Get details
+mailpit operation=search query="bug"        # Search by keyword
 ```
 
-**Background Watch Script**:
-Start a background task to tail the feedback log:
-```bash
-# Run in background to watch for new feedback
-tail -f .dazzle/logs/feedback.md &
-```
+Triage: check messages → categorize (bug/feature/UX) → investigate DSL → suggest fix → delete when processed.
 
-**Direct API Monitoring**:
-Query the control plane for recent feedback:
-```bash
-# List all recent feedback
-curl -s http://localhost:8000/dazzle/dev/feedback | jq .
-
-# Filter by status (new, acknowledged, addressed, wont_fix)
-curl -s "http://localhost:8000/dazzle/dev/feedback?status=new" | jq .
-
-# Filter by category (bug, feature, ux, general)
-curl -s "http://localhost:8000/dazzle/dev/feedback?category=bug" | jq .
-
-# Get specific feedback entry
-curl -s http://localhost:8000/dazzle/dev/feedback/{feedback_id} | jq .
-```
-
-**When Feedback Arrives**:
-1. Read the feedback message content
-2. Check if it's a bug, feature request, or UX issue
-3. Investigate the relevant code/DSL
-4. Propose a fix or clarification
-5. Mark as processed when resolved
-
-**IMPORTANT**: When testing is active and the user mentions "monitoring feedback" or "watching for bugs", proactively check for new messages using the mailpit MCP tool.
-
-### Environment Configuration
-
-To enable feedback email sending to Mailpit, create a `.env.local` file in the project root:
+### Running
 
 ```bash
-# Create .env.local with feedback email config
-cat > .env.local << 'EOF'
-# Local development environment configuration
-DAZZLE_FEEDBACK_EMAIL=dev@dazzle.local
-DAZZLE_SMTP_HOST=localhost
-DAZZLE_SMTP_PORT=1025
-DAZZLE_SMTP_USE_TLS=false
-EOF
+dazzle serve --local    # UI: localhost:3000 | API: localhost:8000/docs | Mailpit: localhost:8025
 ```
 
-Or set the environment variable when starting the server:
-```bash
-DAZZLE_FEEDBACK_EMAIL=dev@dazzle.local dazzle dnr serve --local
-```
-
-### Testing Commands
-
-```bash
-# Start the app for testing
-dazzle dnr serve --local
-
-# URLs:
-# - UI: http://localhost:3000
-# - API: http://localhost:8000/docs
-# - Dashboard: http://localhost:8000/dazzle/dev/dashboard
-# - Mailpit: http://localhost:8025
-```
+Enable feedback emails by setting `DAZZLE_FEEDBACK_EMAIL=dev@dazzle.local` in `.env.local`.
