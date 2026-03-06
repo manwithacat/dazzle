@@ -73,7 +73,7 @@ def create_auth_routes(
 
     @router.post("/login")
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def login(credentials: LoginRequest, request: FastAPIRequest) -> JSONResponse:
+    async def login(credentials: LoginRequest, request: FastAPIRequest) -> Response:
         """
         Login with email and password.
 
@@ -195,7 +195,7 @@ def create_auth_routes(
 
     @router.post("/register", status_code=201)
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def register(data: RegisterRequest, request: FastAPIRequest) -> JSONResponse:
+    async def register(data: RegisterRequest, request: FastAPIRequest) -> Response:
         """
         Register a new user.
         """
@@ -293,7 +293,7 @@ def create_auth_routes(
     # =========================================================================
 
     @router.post("/change-password")
-    async def change_password(data: ChangePasswordRequest, request: FastAPIRequest) -> JSONResponse:
+    async def change_password(data: ChangePasswordRequest, request: FastAPIRequest) -> Response:
         """
         Change current user's password.
         """
@@ -348,7 +348,7 @@ def create_auth_routes(
 
     @router.post("/forgot-password")
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def forgot_password(data: ForgotPasswordRequest, request: FastAPIRequest) -> JSONResponse:
+    async def forgot_password(data: ForgotPasswordRequest, request: FastAPIRequest) -> Response:
         """
         Request a password reset.
 
@@ -387,7 +387,7 @@ def create_auth_routes(
 
     @router.post("/reset-password")
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def reset_password(data: ResetPasswordRequest, request: FastAPIRequest) -> JSONResponse:
+    async def reset_password(data: ResetPasswordRequest, request: FastAPIRequest) -> Response:
         """
         Reset password using a valid reset token.
 

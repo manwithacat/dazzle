@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.responses import Response
 
 # =============================================================================
 # Access Control Exceptions
@@ -265,7 +266,7 @@ def create_access_denied_handler() -> Callable[..., Any]:
     async def handle_access_denied(
         request: Request,
         exc: SurfaceAccessDenied,
-    ) -> JSONResponse | RedirectResponse:
+    ) -> Response:
         """Handle SurfaceAccessDenied exceptions."""
         # Check if this looks like an API request
         accept = request.headers.get("accept", "")

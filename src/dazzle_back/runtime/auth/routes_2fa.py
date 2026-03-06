@@ -14,12 +14,14 @@ try:
     from fastapi import APIRouter
     from fastapi import Request as FastAPIRequest
     from fastapi.responses import JSONResponse
+    from starlette.responses import Response
 
     FASTAPI_AVAILABLE = True
 except ImportError:
     APIRouter = None  # type: ignore[assignment,misc]
     FastAPIRequest = None  # type: ignore[assignment,misc]
     JSONResponse = None  # type: ignore[assignment,misc]
+    Response = None  # type: ignore[assignment,misc]
     FASTAPI_AVAILABLE = False
 
 
@@ -202,7 +204,7 @@ def create_2fa_routes(
 
     @router.post("/verify")
     @_rl.limiter.limit(_rl.twofa_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def verify_2fa(data: TwoFactorVerifyRequest, request: FastAPIRequest) -> JSONResponse:
+    async def verify_2fa(data: TwoFactorVerifyRequest, request: FastAPIRequest) -> Response:
         """Verify 2FA code and complete login.
 
         Accepts TOTP codes, email OTP codes, or recovery codes.
@@ -274,9 +276,7 @@ def create_2fa_routes(
     # =========================================================================
 
     @router.post("/recovery")
-    async def use_recovery_code(
-        data: TwoFactorVerifyRequest, request: FastAPIRequest
-    ) -> JSONResponse:
+    async def use_recovery_code(data: TwoFactorVerifyRequest, request: FastAPIRequest) -> Response:
         """Use a recovery code to complete 2FA login."""
         data.method = "recovery"
         return await verify_2fa(data, request)  # type: ignore[no-any-return,unused-ignore]
