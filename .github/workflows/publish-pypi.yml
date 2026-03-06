@@ -26,16 +26,16 @@ jobs:
         run: python -m pip install --upgrade pip build twine
 
       - name: Build package
-        run: python -m build
+        run: python -m build --outdir py_dist/
 
       - name: Check package
-        run: twine check dist/*
+        run: twine check py_dist/*
 
       - name: Upload dist artifacts
         uses: actions/upload-artifact@v6
         with:
           name: dist
-          path: dist/
+          path: py_dist/
 
   test-install:
     name: Smoke-test the built wheel
