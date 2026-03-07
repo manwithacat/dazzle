@@ -1821,6 +1821,39 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # LLM (intent/model inspection)
+        # =====================================================================
+        Tool(
+            name="llm",
+            description=(
+                "LLM operations: list_intents (declared intents), "
+                "list_models (declared models), "
+                "inspect_intent (detailed intent view with resolved model), "
+                "get_config (module-level LLM configuration)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": [
+                            "list_intents",
+                            "list_models",
+                            "inspect_intent",
+                            "get_config",
+                        ],
+                        "description": "Operation to perform",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Intent name (for inspect_intent)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

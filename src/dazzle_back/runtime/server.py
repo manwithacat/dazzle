@@ -1318,6 +1318,21 @@ class DazzleBackendApp:
                 "Wired entity events to EntityEventBus for %d services", wired
             )
 
+    def _init_llm_executor(self) -> None:
+        """Initialize LLM intent executor and routes (v0.38.0)."""
+        if not self._appspec or not self._appspec.llm_config:
+            return
+        if not self._appspec.llm_intents:
+            return
+
+        from dazzle_back.runtime.llm_executor import LLMIntentExecutor
+        from dazzle_back.runtime.llm_routes import create_llm_routes
+
+        ai_job_service = self._services.get("AIJob")
+        executor = LLMIntentExecutor(self._appspec, ai_job_service=ai_job_service)
+        router = create_llm_routes(executor)
+        self._app.include_router(router)
+
     def _init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""
         if self._workspace_builder:
@@ -2045,6 +2060,9 @@ class DazzleBackendApp:
 
         # Mapping executor (v0.30.0)
         self._init_mapping_executor()
+
+        # LLM intent executor (v0.38.0)
+        self._init_llm_executor()
 
         # Workspace routes (v0.20.0)
         self._init_workspace_routes()

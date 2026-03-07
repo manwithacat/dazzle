@@ -1685,6 +1685,23 @@ handle_sentinel: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# LLM Handler
+# =============================================================================
+
+_MOD_LLM = "dazzle.mcp.server.handlers.llm"
+
+handle_llm: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "llm",
+    {
+        "list_intents": f"{_MOD_LLM}:list_intents_handler",
+        "list_models": f"{_MOD_LLM}:list_models_handler",
+        "inspect_intent": f"{_MOD_LLM}:inspect_intent_handler",
+        "get_config": f"{_MOD_LLM}:get_config_handler",
+    },
+)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1718,6 +1735,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "composition": handle_composition,
     "sentinel": handle_sentinel,
     "test_intelligence": handle_test_intelligence,
+    "llm": handle_llm,
 }
 
 
