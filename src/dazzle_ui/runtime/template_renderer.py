@@ -185,19 +185,41 @@ def _basename_or_url_filter(value: Any) -> str:
     return text
 
 
+def _ref_display_name(value: Any, fallback: str = "") -> str:
+    """Extract a human-readable display name from a ref dict.
+
+    Checks: name, company_name, first_name+last_name, title, label, email, id.
+    This is the canonical ref display chain — used by the ref_display filter,
+    truncate_text filter, and table_rows.html template.
+    """
+    if not isinstance(value, dict):
+        return str(value) if value else fallback
+    return str(
+        value.get("name")
+        or value.get("company_name")
+        or (
+            ((value.get("first_name", "") or "") + " " + (value.get("last_name", "") or "")).strip()
+            or None
+        )
+        or value.get("title")
+        or value.get("label")
+        or value.get("email")
+        or value.get("id", fallback)
+    )
+
+
+def _ref_display_filter(value: Any) -> str:
+    """Jinja filter: extract display name from a ref value (dict or scalar)."""
+    return _ref_display_name(value)
+
+
 def _truncate_filter(value: Any, length: int = 50) -> str:
     """Truncate text to a given length."""
     if value is None:
         return ""
     # Ref fields may arrive as dicts — extract a display name instead of repr
     if isinstance(value, dict):
-        text = str(
-            value.get("name")
-            or value.get("title")
-            or value.get("label")
-            or value.get("email")
-            or value.get("id", "")
-        )
+        text = _ref_display_name(value)
     else:
         text = str(value)
     if len(text) <= length:
@@ -261,6 +283,7 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["timeago"] = _timeago_filter
     env.filters["slugify"] = _slugify_filter
     env.filters["basename_or_url"] = _basename_or_url_filter
+    env.filters["ref_display"] = _ref_display_filter
 
     return env
 
