@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- `dsl-run --cleanup` now cascade-deletes child records before parents, preventing orphaned rows from FK references (#407)
+
 ## [0.36.0] - 2026-03-07
 
 ### Added

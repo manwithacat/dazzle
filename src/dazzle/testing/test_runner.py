@@ -451,14 +451,78 @@ class DazzleClient:
         except Exception:
             return False
 
+    def _build_fk_reverse_map(self) -> dict[str, list[tuple[str, str]]]:
+        """Build a map of parent_entity → [(child_entity, fk_field), ...] from the app spec.
+
+        Used by cleanup to cascade-delete child records before parents.
+        """
+        result: dict[str, list[tuple[str, str]]] = {}
+        spec = self.get_spec()
+        if not spec:
+            return result
+        entities = spec.get("entities") or []
+        if not entities:
+            # Try domain.entities (full spec format)
+            domain = spec.get("domain") or {}
+            entities = domain.get("entities") or []
+        for entity in entities:
+            entity_name = entity.get("name", "")
+            for fld in entity.get("fields", []):
+                ftype = fld.get("type") or {}
+                if ftype.get("kind") == "ref" and ftype.get("ref_entity"):
+                    parent = ftype["ref_entity"]
+                    result.setdefault(parent, []).append((entity_name, fld["name"]))
+        return result
+
+    def _cascade_delete_children(
+        self,
+        entity_name: str,
+        entity_id: str,
+        fk_map: dict[str, list[tuple[str, str]]],
+    ) -> int:
+        """Delete child records that reference this entity via FK. Returns count deleted."""
+        children = fk_map.get(entity_name, [])
+        if not children:
+            return 0
+        deleted = 0
+        for child_entity, fk_field in children:
+            # Query child records matching this parent ID
+            try:
+                items = self.get_entities(child_entity)
+                for item in items:
+                    if str(item.get(fk_field)) == str(entity_id) or str(
+                        item.get(f"{fk_field}_id")
+                    ) == str(entity_id):
+                        child_id = item.get("id")
+                        if child_id:
+                            # Recursively cascade into grandchildren
+                            deleted += self._cascade_delete_children(
+                                child_entity, str(child_id), fk_map
+                            )
+                            if self.delete_entity(child_entity, str(child_id)):
+                                deleted += 1
+            except Exception:
+                logger.debug(
+                    "Failed to cascade-delete %s children of %s/%s",
+                    child_entity,
+                    entity_name,
+                    entity_id,
+                    exc_info=True,
+                )
+        return deleted
+
     def cleanup_created_entities(self) -> tuple[int, int]:
         """Delete all tracked entities in reverse creation order (LIFO).
 
-        Uses multi-pass to handle FK constraint ordering.
+        Cascade-deletes child records (via FK) before each parent to avoid
+        orphaned rows. Uses multi-pass for remaining FK constraint failures.
         Returns (deleted_count, failed_count).
         """
         if not self._created_entities:
             return (0, 0)
+
+        # Build FK graph once for cascade deletion
+        fk_map = self._build_fk_reverse_map()
 
         pending = list(reversed(self._created_entities))
         deleted = 0
@@ -467,6 +531,8 @@ class DazzleClient:
         for _pass_num in range(max_passes):
             still_pending: list[tuple[str, str]] = []
             for entity_name, entity_id in pending:
+                # Cascade-delete children first
+                deleted += self._cascade_delete_children(entity_name, entity_id, fk_map)
                 if self.delete_entity(entity_name, entity_id):
                     deleted += 1
                 else:
