@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - `dsl-run --cleanup` now cascade-deletes child records before parents, preventing orphaned rows from FK references (#407)
+- Sidebar nav links missing `/app` prefix in `dazzle serve` mode — `combined_server.py` now passes `app_prefix="/app"` to `create_page_routes` (#408)
 
 ## [0.36.0] - 2026-03-07
 

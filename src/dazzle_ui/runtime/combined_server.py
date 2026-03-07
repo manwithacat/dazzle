@@ -310,6 +310,7 @@ def run_unified_server(
                 backend_url=f"http://{host}:{port}",
                 theme_css=theme_css,
                 get_auth_context=get_auth_context,
+                app_prefix="/app",
             )
             app.include_router(page_router, prefix="/app")
             print("[Dazzle] App pages: mounted at /app")
