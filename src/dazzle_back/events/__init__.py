@@ -11,7 +11,7 @@ This package provides the core event infrastructure for Dazzle applications:
 - Topology drift detection (v0.18.0 Phase I)
 """
 
-from dazzle_back.events.base_event_bus import BaseEventBus
+# --- Zero-dep imports (always available) ---
 from dazzle_back.events.bus import (
     ConsumerNotFoundError,
     ConsumerStatus,
@@ -25,100 +25,106 @@ from dazzle_back.events.bus import (
     SubscriptionInfo,
     TopicNotFoundError,
 )
-from dazzle_back.events.consumer import (
-    ConsumerConfig,
-    ConsumerGroup,
-    ConsumerStats,
-    IdempotentConsumer,
-    idempotent,
-)
-from dazzle_back.events.dev_memory import DevBusMemory
 from dazzle_back.events.envelope import EventEnvelope
-from dazzle_back.events.framework import (
-    EventFramework,
-    EventFrameworkConfig,
-    FrameworkStats,
-    get_framework,
-    init_framework,
-    shutdown_framework,
-)
-from dazzle_back.events.inbox import EventInbox, InboxEntry, ProcessingResult
-
-# v0.18.0 Phase I additions
-from dazzle_back.events.kafka_bus import (
-    KAFKA_AVAILABLE,
-    KafkaConfig,
-)
-from dazzle_back.events.multi_tenancy import (
-    HybridTenancyStrategy,
-    NamespacePerTenantStrategy,
-    SharedTopicsStrategy,
-    TenancyMode,
-    TenancyStrategy,
-    TenantContext,
-    TenantEventConsumer,
-    TenantEventPublisher,
-    create_strategy,
-)
-from dazzle_back.events.outbox import EventOutbox, OutboxEntry, OutboxStatus
-
-# v0.22.0 - PostgreSQL event bus (Tier 1 - Heroku pilots)
-from dazzle_back.events.postgres_bus import (
-    ASYNCPG_AVAILABLE,
-    PostgresConfig,
-)
-from dazzle_back.events.publisher import OutboxPublisher, PublisherConfig, PublisherStats
-
-# v0.22.0 - Redis Streams event bus (Tier 2 - Heroku growth)
-from dazzle_back.events.redis_bus import (
-    REDIS_AVAILABLE,
-    RedisConfig,
-)
+from dazzle_back.events.null import EVENTS_AVAILABLE, NullBus, NullEventFramework
 from dazzle_back.events.service_mixin import (
     EventEmittingCRUDService,
     EventEmittingMixin,
 )
 
-# v0.22.0 - Tier configuration and factory
-from dazzle_back.events.tier import (
-    EventTier,
-    TierConfig,
-    create_bus,
-    detect_tier,
-    get_tier_info,
-)
-from dazzle_back.events.topology_drift import (
-    DriftIssue,
-    DriftReport,
-    DriftSeverity,
-    DriftType,
-    ExpectedConsumer,
-    ExpectedTopic,
-    ExpectedTopology,
-    TopologyDriftDetector,
-    TopologyExtractor,
-    TopologyFingerprint,
-    check_topology_drift,
-)
+# --- Heavy imports (require aiosqlite and other extras) ---
+if EVENTS_AVAILABLE:
+    from dazzle_back.events.base_event_bus import BaseEventBus
+    from dazzle_back.events.consumer import (
+        ConsumerConfig,
+        ConsumerGroup,
+        ConsumerStats,
+        IdempotentConsumer,
+        idempotent,
+    )
+    from dazzle_back.events.dev_memory import DevBusMemory
+    from dazzle_back.events.framework import (
+        EventFramework,
+        EventFrameworkConfig,
+        FrameworkStats,
+        get_framework,
+        init_framework,
+        shutdown_framework,
+    )
+    from dazzle_back.events.inbox import EventInbox, InboxEntry, ProcessingResult
 
-# Conditional import for KafkaBus
-if KAFKA_AVAILABLE:
-    from dazzle_back.events.kafka_bus import KafkaBus
-else:
-    KafkaBus = None  # type: ignore[misc,assignment]
+    # v0.18.0 Phase I additions
+    from dazzle_back.events.kafka_bus import (
+        KAFKA_AVAILABLE,
+        KafkaConfig,
+    )
+    from dazzle_back.events.multi_tenancy import (
+        HybridTenancyStrategy,
+        NamespacePerTenantStrategy,
+        SharedTopicsStrategy,
+        TenancyMode,
+        TenancyStrategy,
+        TenantContext,
+        TenantEventConsumer,
+        TenantEventPublisher,
+        create_strategy,
+    )
+    from dazzle_back.events.outbox import EventOutbox, OutboxEntry, OutboxStatus
 
-# Conditional import for PostgresBus
-if ASYNCPG_AVAILABLE:
-    from dazzle_back.events.postgres_bus import PostgresBus
-else:
-    PostgresBus = None  # type: ignore[misc,assignment]
+    # v0.22.0 - PostgreSQL event bus (Tier 1 - Heroku pilots)
+    from dazzle_back.events.postgres_bus import (
+        ASYNCPG_AVAILABLE,
+        PostgresConfig,
+    )
+    from dazzle_back.events.publisher import OutboxPublisher, PublisherConfig, PublisherStats
 
-# Conditional import for RedisBus
-if REDIS_AVAILABLE:
-    from dazzle_back.events.redis_bus import RedisBus
-else:
-    RedisBus = None  # type: ignore[misc,assignment]
+    # v0.22.0 - Redis Streams event bus (Tier 2 - Heroku growth)
+    from dazzle_back.events.redis_bus import (
+        REDIS_AVAILABLE,
+        RedisConfig,
+    )
 
+    # v0.22.0 - Tier configuration and factory
+    from dazzle_back.events.tier import (
+        EventTier,
+        TierConfig,
+        create_bus,
+        detect_tier,
+        get_tier_info,
+    )
+    from dazzle_back.events.topology_drift import (
+        DriftIssue,
+        DriftReport,
+        DriftSeverity,
+        DriftType,
+        ExpectedConsumer,
+        ExpectedTopic,
+        ExpectedTopology,
+        TopologyDriftDetector,
+        TopologyExtractor,
+        TopologyFingerprint,
+        check_topology_drift,
+    )
+
+    # Conditional import for KafkaBus
+    if KAFKA_AVAILABLE:
+        from dazzle_back.events.kafka_bus import KafkaBus
+    else:
+        KafkaBus = None  # type: ignore[misc,assignment]
+
+    # Conditional import for PostgresBus
+    if ASYNCPG_AVAILABLE:
+        from dazzle_back.events.postgres_bus import PostgresBus
+    else:
+        PostgresBus = None  # type: ignore[misc,assignment]
+
+    # Conditional import for RedisBus
+    if REDIS_AVAILABLE:
+        from dazzle_back.events.redis_bus import RedisBus
+    else:
+        RedisBus = None  # type: ignore[misc,assignment]
+
+# --- Build __all__ dynamically ---
 __all__ = [
     # Envelope
     "EventEnvelope",
@@ -128,34 +134,11 @@ __all__ = [
     "SubscriptionInfo",
     "ConsumerStatus",
     "NackReason",
-    # Bus implementations
-    "BaseEventBus",
-    "DevBusMemory",
-    # Outbox (transactional publishing)
-    "EventOutbox",
-    "OutboxEntry",
-    "OutboxStatus",
-    "OutboxPublisher",
-    "PublisherConfig",
-    "PublisherStats",
-    # Inbox (idempotent consumption)
-    "EventInbox",
-    "InboxEntry",
-    "ProcessingResult",
-    # Consumer wrapper
-    "IdempotentConsumer",
-    "ConsumerConfig",
-    "ConsumerStats",
-    "ConsumerGroup",
-    "idempotent",
-    # Framework
-    "EventFramework",
-    "EventFrameworkConfig",
-    "FrameworkStats",
-    "get_framework",
-    "init_framework",
-    "shutdown_framework",
-    # Service mixin
+    # Null implementations
+    "NullBus",
+    "NullEventFramework",
+    "EVENTS_AVAILABLE",
+    # Service mixin (zero-dep)
     "EventEmittingMixin",
     "EventEmittingCRUDService",
     # Exceptions
@@ -165,44 +148,75 @@ __all__ = [
     "EventNotFoundError",
     "PublishError",
     "SubscriptionError",
-    # v0.18.0 Phase I - Kafka adapter
-    "KAFKA_AVAILABLE",
-    "KafkaBus",
-    "KafkaConfig",
-    # v0.22.0 - PostgreSQL event bus (Tier 1)
-    "ASYNCPG_AVAILABLE",
-    "PostgresBus",
-    "PostgresConfig",
-    # v0.22.0 - Redis Streams event bus (Tier 2)
-    "REDIS_AVAILABLE",
-    "RedisBus",
-    "RedisConfig",
-    # v0.22.0 - Tier configuration and factory
-    "EventTier",
-    "TierConfig",
-    "create_bus",
-    "detect_tier",
-    "get_tier_info",
-    # v0.18.0 Phase I - Multi-tenancy
-    "TenancyMode",
-    "TenancyStrategy",
-    "TenantContext",
-    "SharedTopicsStrategy",
-    "NamespacePerTenantStrategy",
-    "HybridTenancyStrategy",
-    "TenantEventPublisher",
-    "TenantEventConsumer",
-    "create_strategy",
-    # v0.18.0 Phase I - Topology drift detection
-    "DriftType",
-    "DriftSeverity",
-    "DriftIssue",
-    "DriftReport",
-    "TopologyFingerprint",
-    "ExpectedTopic",
-    "ExpectedConsumer",
-    "ExpectedTopology",
-    "TopologyExtractor",
-    "TopologyDriftDetector",
-    "check_topology_drift",
 ]
+
+if EVENTS_AVAILABLE:
+    __all__ += [
+        # Bus implementations
+        "BaseEventBus",
+        "DevBusMemory",
+        # Outbox (transactional publishing)
+        "EventOutbox",
+        "OutboxEntry",
+        "OutboxStatus",
+        "OutboxPublisher",
+        "PublisherConfig",
+        "PublisherStats",
+        # Inbox (idempotent consumption)
+        "EventInbox",
+        "InboxEntry",
+        "ProcessingResult",
+        # Consumer wrapper
+        "IdempotentConsumer",
+        "ConsumerConfig",
+        "ConsumerStats",
+        "ConsumerGroup",
+        "idempotent",
+        # Framework
+        "EventFramework",
+        "EventFrameworkConfig",
+        "FrameworkStats",
+        "get_framework",
+        "init_framework",
+        "shutdown_framework",
+        # v0.18.0 Phase I - Kafka adapter
+        "KAFKA_AVAILABLE",
+        "KafkaBus",
+        "KafkaConfig",
+        # v0.22.0 - PostgreSQL event bus (Tier 1)
+        "ASYNCPG_AVAILABLE",
+        "PostgresBus",
+        "PostgresConfig",
+        # v0.22.0 - Redis Streams event bus (Tier 2)
+        "REDIS_AVAILABLE",
+        "RedisBus",
+        "RedisConfig",
+        # v0.22.0 - Tier configuration and factory
+        "EventTier",
+        "TierConfig",
+        "create_bus",
+        "detect_tier",
+        "get_tier_info",
+        # v0.18.0 Phase I - Multi-tenancy
+        "TenancyMode",
+        "TenancyStrategy",
+        "TenantContext",
+        "SharedTopicsStrategy",
+        "NamespacePerTenantStrategy",
+        "HybridTenancyStrategy",
+        "TenantEventPublisher",
+        "TenantEventConsumer",
+        "create_strategy",
+        # v0.18.0 Phase I - Topology drift detection
+        "DriftType",
+        "DriftSeverity",
+        "DriftIssue",
+        "DriftReport",
+        "TopologyFingerprint",
+        "ExpectedTopic",
+        "ExpectedConsumer",
+        "ExpectedTopology",
+        "TopologyExtractor",
+        "TopologyDriftDetector",
+        "check_topology_drift",
+    ]

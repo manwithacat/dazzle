@@ -17,8 +17,12 @@ from typing import Any
 from uuid import uuid4
 
 from dazzle_back.events.bus import EventBus
-from dazzle_back.events.dev_memory import DevBusMemory
 from dazzle_back.events.envelope import EventEnvelope
+
+try:
+    from dazzle_back.events.dev_memory import DevBusMemory
+except ImportError:
+    DevBusMemory = None  # type: ignore[misc,assignment]
 from dazzle_back.metrics import MetricsCollector
 from dazzle_back.metrics.reporter import ReportFormat
 
@@ -157,7 +161,12 @@ class StressHarness:
     async def _ensure_event_bus(self) -> EventBus:
         """Ensure event bus is initialized."""
         if self._event_bus is None:
-            self._event_bus = DevBusMemory()
+            if DevBusMemory is None:
+                from dazzle_back.events.null import NullBus
+
+                self._event_bus = NullBus()
+            else:
+                self._event_bus = DevBusMemory()
         return self._event_bus
 
     async def run_scenario(

@@ -979,38 +979,44 @@ class DazzleBackendApp:
         if not self._app:
             return
 
-        try:
-            from dazzle_back.events.framework import EventFramework, EventFrameworkConfig
+        from dazzle_back.events.null import EVENTS_AVAILABLE, NullEventFramework
 
-            # Create event framework with same database as app
-            config = EventFrameworkConfig(
-                auto_start_publisher=True,
-                auto_start_consumers=True,
-                database_url=self._database_url,
-            )
-            self._event_framework = EventFramework(config)
+        if EVENTS_AVAILABLE:
+            try:
+                from dazzle_back.events.framework import EventFramework, EventFrameworkConfig
 
-            # Capture for closures
-            event_framework = self._event_framework
+                # Create event framework with same database as app
+                config = EventFrameworkConfig(
+                    auto_start_publisher=True,
+                    auto_start_consumers=True,
+                    database_url=self._database_url,
+                )
+                self._event_framework = EventFramework(config)
+            except Exception as e:
+                import logging
 
-            @self._app.on_event("startup")
-            async def startup_events() -> None:
-                """Start event framework on app startup."""
-                await event_framework.start()
+                logging.getLogger("dazzle.server").warning("Failed to init event framework: %s", e)
+                self._event_framework = NullEventFramework()
+        else:
+            self._event_framework = NullEventFramework()
 
-            @self._app.on_event("shutdown")
-            async def shutdown_events() -> None:
-                """Stop event framework on app shutdown."""
-                await event_framework.stop()
+        # Capture for closures
+        event_framework = self._event_framework
 
-        except ImportError:
-            # Events module not available - skip
-            pass
-        except Exception as e:
-            # Log but don't fail startup
-            import logging
+        @self._app.on_event("startup")
+        async def startup_events() -> None:
+            """Start event framework on app startup."""
+            await event_framework.start()
 
-            logging.getLogger("dazzle.server").warning("Failed to init event framework: %s", e)
+        @self._app.on_event("shutdown")
+        async def shutdown_events() -> None:
+            """Stop event framework on app shutdown."""
+            await event_framework.stop()
+
+        # Wire EventEmittingMixin on services
+        for service in self._services.values():
+            if hasattr(service, "set_event_framework"):
+                service.set_event_framework(self._event_framework)
 
     def _init_console(self) -> None:
         """Initialize the Founder Console (v0.26.0)."""
