@@ -145,7 +145,11 @@ def run_unified_server(
     try:
         import uvicorn
 
-        from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
+        from dazzle_back.runtime.app_factory import (
+            assemble_post_build_routes,
+            build_server_config,
+        )
+        from dazzle_back.runtime.server import DazzleBackendApp
     except ImportError as e:
         print(f"[Dazzle] Error: Required dependencies not available: {e}")
         print("[Dazzle] Install with: pip install dazzle-dsl[serve]")
@@ -167,28 +171,6 @@ def run_unified_server(
     print("=" * 60)
     print()
 
-    # Build fragment sources from DSL source= annotations
-    frag_sources: dict[str, dict[str, Any]] = {}
-    if appspec:
-        try:
-            from dazzle.api_kb import load_pack
-
-            for surface in appspec.surfaces:
-                for section in getattr(surface, "sections", []):
-                    for element in getattr(section, "elements", []):
-                        src_ref = getattr(element, "options", {}).get("source")
-                        if src_ref and "." in src_ref:
-                            pname, opname = src_ref.rsplit(".", 1)
-                            if pname not in frag_sources:
-                                pack = load_pack(pname)
-                                if pack:
-                                    try:
-                                        frag_sources[pname] = pack.generate_fragment_source(opname)
-                                    except ValueError:
-                                        pass
-        except ImportError:
-            pass
-
     # Check for PostgreSQL DATABASE_URL
     database_url = os.environ.get("DATABASE_URL", "")
     if database_url.startswith("postgres://"):
@@ -202,7 +184,8 @@ def run_unified_server(
         print("[Dazzle] Error: appspec is required")
         return
 
-    server_config = ServerConfig(
+    server_config = build_server_config(
+        appspec,
         database_url=database_url or None,
         enable_test_mode=enable_test_mode,
         enable_auth=enable_auth,
@@ -212,154 +195,56 @@ def run_unified_server(
         scenarios=scenarios or [],
         sitespec_data=sitespec_data,
         project_root=project_root,
-        fragment_sources=frag_sources,
     )
     builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
 
-    # ---- Route mounting order (do not reorder) ----
-    # 1. Site page routes (/, /about, /pricing) — catch-all marketing pages
-    # 2. Auth page routes (/login, /signup) — must not be shadowed by site pages
-    # 3. App page routes (/app/*) — prefixed, no collision risk
-    # 4. Island API routes (/api/islands) — prefixed, no collision risk
-    # 5. 404 handler — must come after all page routes
-    # 6. validate_routes() — detect any conflicts from the above
-
-    # ---- 1. Mount site page routes (landing pages, /site.js, /styles/dazzle.css) ----
-    if sitespec_data:
-        try:
-            from dazzle_back.runtime.site_routes import (
-                create_auth_page_routes,
-                create_site_page_routes,
-            )
-
-            # ---- 1. Site page routes ----
-            site_page_router = create_site_page_routes(
-                sitespec_data=sitespec_data,
-                project_root=project_root,
-            )
-            app.include_router(site_page_router)
-
-            # ---- 2. Auth page routes ----
-            auth_page_router = create_auth_page_routes(sitespec_data)
-            app.include_router(auth_page_router)
-        except ImportError:
-            pass
-
-    # ---- 3. Mount app page routes (/app/*) ----
-    if appspec:
-        try:
-            from dazzle_ui.runtime.page_routes import create_page_routes
-
-            theme_css = ""
-            try:
-                from dazzle_ui.runtime.css_loader import get_bundled_css
-                from dazzle_ui.themes import generate_theme_css, resolve_theme
-
-                theme = resolve_theme(
-                    preset_name=theme_preset,
-                    manifest_overrides=theme_overrides or {},
-                )
-                theme_css = get_bundled_css(theme_css=generate_theme_css(theme))
-            except Exception:
-                logger.debug("Failed to load themed CSS, trying default", exc_info=True)
-                try:
-                    from dazzle_ui.runtime.css_loader import get_bundled_css
-
-                    theme_css = get_bundled_css()
-                except Exception:
-                    logger.debug("Failed to load bundled CSS", exc_info=True)
-
-            # Build Tailwind+DaisyUI CSS via standalone CLI (#377)
-            tailwind_css = ""
-            try:
-                from dazzle_ui.build_css import build_css
-
-                tw_output = build_css(project_root=project_root)
-                if tw_output and tw_output.exists():
-                    tailwind_css = tw_output.read_text(encoding="utf-8")
-                    print(f"[Dazzle] CSS bundle built: {tw_output.stat().st_size / 1024:.0f} KB")
-            except Exception:
-                logger.debug("Tailwind CSS build skipped (CLI not available)", exc_info=True)
-
-            # Serve bundled CSS as a cacheable external file instead of
-            # inlining 58KB on every page (#318).
-            # When Tailwind CSS is built, the bundle includes everything
-            # (Tailwind utilities + DaisyUI + theme + semantic layers).
-            _bundle_parts = [p for p in [tailwind_css, theme_css] if p]
-            if _bundle_parts:
-                from starlette.responses import Response as StarletteResponse
-
-                _bundle_css = "\n".join(_bundle_parts)
-                _tailwind_included = bool(tailwind_css)
-
-                @app.get("/static/css/dazzle-bundle.css", include_in_schema=False)
-                async def serve_bundled_css() -> StarletteResponse:
-                    return StarletteResponse(
-                        content=_bundle_css,
-                        media_type="text/css",
-                        headers={"Cache-Control": "public, max-age=3600"},
-                    )
-
-            get_auth_context = None
-            if builder.auth_middleware:
-                get_auth_context = builder.auth_middleware.get_auth_context
-
-            page_router = create_page_routes(
-                appspec,
-                backend_url=f"http://{host}:{port}",
-                theme_css=theme_css,
-                get_auth_context=get_auth_context,
-                app_prefix="/app",
-            )
-            app.include_router(page_router, prefix="/app")
-            print("[Dazzle] App pages: mounted at /app")
-        except ImportError as e:
-            print(f"[Dazzle] Warning: Page routes not available: {e}")
-
-    # ---- 4. Mount island API routes ----
-    if appspec and getattr(appspec, "islands", None):
-        try:
-            from dazzle_back.runtime.island_routes import create_island_routes
-
-            _island_auth_dep = None
-            _island_opt_auth_dep = None
-            if builder.auth_store:
-                from dazzle_back.runtime.auth import (
-                    create_auth_dependency,
-                    create_optional_auth_dependency,
-                )
-
-                _island_auth_dep = create_auth_dependency(builder.auth_store)
-                _island_opt_auth_dep = create_optional_auth_dependency(builder.auth_store)
-
-            island_router = create_island_routes(
-                islands=appspec.islands,
-                services=builder.services,
-                auth_dep=_island_auth_dep,
-                optional_auth_dep=_island_opt_auth_dep,
-            )
-            app.include_router(island_router)
-            print(f"[Dazzle] Islands:  {len(appspec.islands)} mounted at /api/islands")
-        except ImportError:
-            pass
-
-    # ---- 5. Register 404 handler ----
-    if sitespec_data:
-        try:
-            from dazzle_back.runtime.exception_handlers import register_site_404_handler
-
-            register_site_404_handler(app, sitespec_data, project_root=project_root)
-        except ImportError:
-            pass
-
-    # ---- 6. Validate routes for conflicts ----
+    # Build theme CSS (unique to unified server path)
+    theme_css = ""
     try:
-        from dazzle_back.runtime.route_validator import validate_routes
+        from dazzle_ui.runtime.css_loader import get_bundled_css
+        from dazzle_ui.themes import generate_theme_css, resolve_theme
 
-        validate_routes(app)
-    except ImportError:
-        pass
+        theme = resolve_theme(
+            preset_name=theme_preset,
+            manifest_overrides=theme_overrides or {},
+        )
+        theme_css = get_bundled_css(theme_css=generate_theme_css(theme))
+    except Exception:
+        logger.debug("Failed to load themed CSS, trying default", exc_info=True)
+        try:
+            from dazzle_ui.runtime.css_loader import get_bundled_css
+
+            theme_css = get_bundled_css()
+        except Exception:
+            logger.debug("Failed to load bundled CSS", exc_info=True)
+
+    # Build Tailwind+DaisyUI CSS via standalone CLI (#377)
+    tailwind_css = ""
+    try:
+        from dazzle_ui.build_css import build_css
+
+        tw_output = build_css(project_root=project_root)
+        if tw_output and tw_output.exists():
+            tailwind_css = tw_output.read_text(encoding="utf-8")
+            print(f"[Dazzle] CSS bundle built: {tw_output.stat().st_size / 1024:.0f} KB")
+    except Exception:
+        logger.debug("Tailwind CSS build skipped (CLI not available)", exc_info=True)
+
+    # Combine CSS parts into a single bundle string
+    _bundle_parts = [p for p in [tailwind_css, theme_css] if p]
+    bundled_css = "\n".join(_bundle_parts) if _bundle_parts else ""
+
+    assemble_post_build_routes(
+        app,
+        appspec,
+        builder,
+        project_root=project_root,
+        sitespec_data=sitespec_data,
+        theme_css=theme_css,
+        backend_url=f"http://{host}:{port}",
+        bundled_css=bundled_css,
+    )
 
     # ---- Print startup info ----
     base_url = f"http://{host}:{port}"
@@ -429,6 +314,7 @@ def run_backend_only(
     try:
         import uvicorn
 
+        from dazzle_back.runtime.app_factory import build_server_config
         from dazzle_back.runtime.server import DazzleBackendApp
     except ImportError as e:
         print(f"[Dazzle] Error: Required dependencies not available: {e}")
@@ -448,7 +334,7 @@ def run_backend_only(
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-    app_builder = DazzleBackendApp(
+    config = build_server_config(
         appspec,
         database_url=database_url or None,
         enable_test_mode=enable_test_mode,
@@ -456,6 +342,7 @@ def run_backend_only(
         sitespec_data=sitespec_data,
         project_root=project_root,
     )
+    app_builder = DazzleBackendApp(appspec, config=config)
     app = app_builder.build()
 
     # Mount GraphQL if enabled

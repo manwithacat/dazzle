@@ -258,12 +258,44 @@ class TestServerPathsPassAppPrefix:
     """Verify that every call site that creates page routes passes app_prefix.
 
     Issue #408: combined_server.py created page routes without app_prefix,
-    so nav items lacked the /app prefix and produced 404s.  This test reads
-    the source of each call site and asserts app_prefix is present.
+    so nav items lacked the /app prefix and produced 404s.
+
+    After unification (#408 follow-up), both entry points delegate to
+    ``assemble_post_build_routes()`` which is the single place that calls
+    ``create_page_routes()``.  These tests verify:
+    1. ``assemble_post_build_routes`` passes ``app_prefix`` to ``create_page_routes``
+    2. Both ``combined_server.py`` and ``app_factory.py`` call ``assemble_post_build_routes``
     """
 
-    def test_combined_server_passes_app_prefix(self) -> None:
-        """combined_server.py must pass app_prefix to create_page_routes."""
+    def test_assemble_post_build_routes_passes_app_prefix(self) -> None:
+        """assemble_post_build_routes must pass app_prefix to create_page_routes."""
+        import ast
+        import inspect
+
+        from dazzle_back.runtime.app_factory import assemble_post_build_routes
+
+        source = inspect.getsource(assemble_post_build_routes)
+        tree = ast.parse(source)
+        found = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                func = node.func
+                name = ""
+                if isinstance(func, ast.Name):
+                    name = func.id
+                elif isinstance(func, ast.Attribute):
+                    name = func.attr
+                if name == "create_page_routes":
+                    kw_names = [kw.arg for kw in node.keywords]
+                    assert "app_prefix" in kw_names, (
+                        "assemble_post_build_routes() calls create_page_routes() "
+                        "without app_prefix — nav items will lack /app prefix"
+                    )
+                    found = True
+        assert found, "create_page_routes call not found in assemble_post_build_routes"
+
+    def test_combined_server_calls_assemble_post_build_routes(self) -> None:
+        """combined_server.py must delegate to assemble_post_build_routes."""
         import ast
         import inspect
 
@@ -280,23 +312,19 @@ class TestServerPathsPassAppPrefix:
                     name = func.id
                 elif isinstance(func, ast.Attribute):
                     name = func.attr
-                if name == "create_page_routes":
-                    kw_names = [kw.arg for kw in node.keywords]
-                    assert "app_prefix" in kw_names, (
-                        "combined_server.py calls create_page_routes() "
-                        "without app_prefix — nav items will lack /app prefix"
-                    )
+                if name == "assemble_post_build_routes":
                     found = True
-        assert found, "create_page_routes call not found in combined_server.py"
+                    break
+        assert found, "assemble_post_build_routes call not found in combined_server.py"
 
-    def test_app_factory_passes_app_prefix(self) -> None:
-        """app_factory.py must pass app_prefix to create_page_routes."""
+    def test_app_factory_calls_assemble_post_build_routes(self) -> None:
+        """create_app_factory must delegate to assemble_post_build_routes."""
         import ast
         import inspect
 
-        from dazzle_back.runtime import app_factory
+        from dazzle_back.runtime.app_factory import create_app_factory
 
-        source = inspect.getsource(app_factory)
+        source = inspect.getsource(create_app_factory)
         tree = ast.parse(source)
         found = False
         for node in ast.walk(tree):
@@ -307,14 +335,10 @@ class TestServerPathsPassAppPrefix:
                     name = func.id
                 elif isinstance(func, ast.Attribute):
                     name = func.attr
-                if name == "create_page_routes":
-                    kw_names = [kw.arg for kw in node.keywords]
-                    assert "app_prefix" in kw_names, (
-                        "app_factory.py calls create_page_routes() "
-                        "without app_prefix — nav items will lack /app prefix"
-                    )
+                if name == "assemble_post_build_routes":
                     found = True
-        assert found, "create_page_routes call not found in app_factory.py"
+                    break
+        assert found, "assemble_post_build_routes call not found in create_app_factory"
 
 
 # ===================================================================

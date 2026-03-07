@@ -2325,8 +2325,10 @@ class DazzleBackendApp:
 # =============================================================================
 
 from dazzle_back.runtime.app_factory import (  # noqa: E402, F401
+    assemble_post_build_routes,
     build_entity_list_projections,
     build_entity_search_fields,
+    build_server_config,
     create_app,
     create_app_factory,
     run_app,
@@ -2335,9 +2337,11 @@ from dazzle_back.runtime.app_factory import (  # noqa: E402, F401
 __all__ = [
     "DazzleBackendApp",
     "ServerConfig",
+    "assemble_post_build_routes",
+    "build_entity_list_projections",
+    "build_entity_search_fields",
+    "build_server_config",
     "create_app",
     "create_app_factory",
     "run_app",
-    "build_entity_list_projections",
-    "build_entity_search_fields",
 ]

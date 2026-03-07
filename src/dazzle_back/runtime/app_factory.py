@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from fastapi import FastAPI
 
     from dazzle.core.ir import EntitySpec, SurfaceSpec, ViewSpec
+    from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +245,308 @@ def build_entity_search_fields(
 
 
 # =============================================================================
+# Shared startup helpers
+# =============================================================================
+
+
+def build_fragment_sources(appspec: AppSpec) -> dict[str, dict[str, Any]]:
+    """Extract fragment sources from DSL ``source=`` annotations on surface elements.
+
+    Scans all surfaces for elements with ``options.source`` references like
+    ``"pack_name.operation_name"`` and loads the corresponding API pack fragment.
+
+    Returns ``{pack_name: fragment_data}``.
+    """
+    frag_sources: dict[str, dict[str, Any]] = {}
+    try:
+        from dazzle.api_kb import load_pack
+
+        for surface in appspec.surfaces:
+            for section in getattr(surface, "sections", []):
+                for element in getattr(section, "elements", []):
+                    src_ref = getattr(element, "options", {}).get("source")
+                    if src_ref and "." in src_ref:
+                        pname, opname = src_ref.rsplit(".", 1)
+                        if pname not in frag_sources:
+                            pack = load_pack(pname)
+                            if pack:
+                                try:
+                                    frag_sources[pname] = pack.generate_fragment_source(opname)
+                                except ValueError:
+                                    pass
+    except ImportError:
+        pass
+    return frag_sources
+
+
+def build_server_config(
+    appspec: AppSpec,
+    *,
+    database_url: str | None = None,
+    enable_auth: bool = False,
+    auth_config: Any = None,
+    enable_files: bool = False,
+    files_path: Path | None = None,
+    enable_test_mode: bool = False,
+    enable_dev_mode: bool = False,
+    services_dir: Path | None = None,
+    enable_console: bool = False,
+    enable_processes: bool = True,
+    process_adapter_class: type | None = None,
+    personas: list[dict[str, Any]] | None = None,
+    scenarios: list[dict[str, Any]] | None = None,
+    sitespec_data: dict[str, Any] | None = None,
+    project_root: Path | None = None,
+    fragment_sources: dict[str, dict[str, Any]] | None = None,
+) -> ServerConfig:
+    """Build a fully-populated ``ServerConfig`` from an AppSpec.
+
+    Computes derived config (projections, search fields, auto-includes,
+    process specs, schedules, fragment sources) that both
+    ``create_app_factory()`` and ``run_unified_server()`` need.
+
+    Process adapter resolution is left to the caller (env-var-driven,
+    deployment-specific).
+    """
+    from dazzle_back.runtime.server import ServerConfig
+
+    # Compute view-based list projections from DSL surfaces
+    entity_list_projections = build_entity_list_projections(
+        entities=appspec.domain.entities,
+        surfaces=appspec.surfaces,
+        views=appspec.views,
+    )
+
+    # Extract search fields from surface declarations
+    entity_search_fields = build_entity_search_fields(surfaces=appspec.surfaces)
+
+    # Auto-detect ref fields for eager loading (prevents N+1 queries)
+    entity_auto_includes: dict[str, list[str]] = {}
+    for entity in appspec.domain.entities:
+        ref_names = [f.name for f in entity.fields if f.type.kind == "ref" and f.type.ref_entity]
+        if ref_names:
+            entity_auto_includes[entity.name] = ref_names
+
+    # Extract entity status fields for process trigger status transition detection
+    entity_status_fields: dict[str, str] = {}
+    if appspec.domain:
+        for ent in appspec.domain.entities:
+            sm = getattr(ent, "state_machine", None)
+            if sm:
+                entity_status_fields[ent.name] = getattr(sm, "status_field", "status")
+
+    # Merge DSL-parsed processes with persisted processes
+    all_processes = list(appspec.processes)
+    if project_root is not None:
+        try:
+            from dazzle.core.process_persistence import load_processes
+
+            persisted = load_processes(project_root)
+            dsl_names = {p.name for p in all_processes}
+            merged = all_processes + [p for p in persisted if p.name not in dsl_names]
+            if persisted:
+                logger.info(
+                    "Loaded %d persisted process(es), %d total (%d from DSL)",
+                    len(persisted),
+                    len(merged),
+                    len(all_processes),
+                )
+            all_processes = merged
+        except Exception:
+            logger.debug("Could not load persisted processes", exc_info=True)
+
+    # Build fragment sources if not provided by caller
+    if fragment_sources is None:
+        fragment_sources = build_fragment_sources(appspec)
+
+    return ServerConfig(
+        database_url=database_url,
+        enable_auth=enable_auth,
+        auth_config=auth_config,
+        enable_files=enable_files,
+        files_path=files_path or Path(".dazzle/uploads"),
+        enable_test_mode=enable_test_mode,
+        services_dir=services_dir or Path("services"),
+        enable_dev_mode=enable_dev_mode,
+        personas=personas or [],
+        scenarios=scenarios or [],
+        sitespec_data=sitespec_data,
+        project_root=project_root,
+        enable_processes=enable_processes,
+        process_adapter_class=process_adapter_class,
+        enable_console=enable_console,
+        entity_list_projections=entity_list_projections,
+        entity_search_fields=entity_search_fields,
+        entity_auto_includes=entity_auto_includes,
+        process_specs=all_processes,
+        schedule_specs=list(appspec.schedules),
+        entity_status_fields=entity_status_fields,
+        fragment_sources=fragment_sources,
+    )
+
+
+def assemble_post_build_routes(
+    app: FastAPI,
+    appspec: AppSpec,
+    builder: DazzleBackendApp,
+    *,
+    project_root: Path | None = None,
+    sitespec_data: dict[str, Any] | None = None,
+    theme_css: str = "",
+    backend_url: str = "http://127.0.0.1:8000",
+    bundled_css: str = "",
+) -> None:
+    """Mount all post-build routes on a FastAPI app in the correct order.
+
+    Called by both ``create_app_factory()`` and ``run_unified_server()``
+    to ensure identical route assembly.
+
+    Order:
+    1. Site page routes (if sitespec)
+    2. Auth page routes (if sitespec, always with ``project_root``)
+    3. App page routes (``/app/*``, always with ``app_prefix="/app"``)
+    4. Experience routes (``/app/experiences/*``, if experiences exist)
+    5. Bundled CSS route (``/static/css/dazzle-bundle.css``, if ``bundled_css``)
+    6. Island API routes (``/api/islands``, if islands exist)
+    7. Schedule sync to process adapter (if adapter + schedules)
+    8. 404 handler (if sitespec)
+    9. Route validation via ``validate_routes()``
+    """
+    # ---- 1. Site page routes ----
+    if sitespec_data:
+        try:
+            from dazzle_back.runtime.site_routes import (
+                create_auth_page_routes,
+                create_site_page_routes,
+            )
+
+            site_page_router = create_site_page_routes(
+                sitespec_data=sitespec_data,
+                project_root=project_root,
+            )
+            app.include_router(site_page_router)
+            logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
+
+            # ---- 2. Auth page routes ----
+            auth_page_router = create_auth_page_routes(sitespec_data, project_root=project_root)
+            app.include_router(auth_page_router)
+            logger.info("  Auth pages: /login, /signup")
+        except ImportError:
+            pass
+
+    # ---- 3. App page routes (/app/*) ----
+    try:
+        from dazzle_ui.runtime.page_routes import create_page_routes
+
+        get_auth_context = None
+        if builder.auth_middleware:
+            get_auth_context = builder.auth_middleware.get_auth_context
+
+        page_router = create_page_routes(
+            appspec,
+            backend_url=backend_url,
+            theme_css=theme_css,
+            get_auth_context=get_auth_context,
+            app_prefix="/app",
+        )
+        app.include_router(page_router, prefix="/app")
+        logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
+
+        # ---- 4. Experience routes (/app/experiences/*) ----
+        if appspec.experiences:
+            try:
+                from dazzle_ui.runtime.experience_routes import create_experience_routes
+
+                experience_router = create_experience_routes(
+                    appspec,
+                    backend_url=backend_url,
+                    theme_css=theme_css,
+                    get_auth_context=get_auth_context,
+                    app_prefix="/app",
+                    project_root=project_root,
+                )
+                app.include_router(experience_router, prefix="/app")
+                logger.info(
+                    "  Experiences: %s mounted at /app/experiences",
+                    len(appspec.experiences),
+                )
+            except ImportError as e:
+                logger.warning("Experience routes not available: %s", e)
+    except ImportError as e:
+        logger.warning("Page routes not available: %s", e)
+
+    # ---- 5. Bundled CSS route ----
+    if bundled_css:
+        try:
+            from starlette.responses import Response as StarletteResponse
+
+            _css_content = bundled_css
+
+            @app.get("/static/css/dazzle-bundle.css", include_in_schema=False)
+            async def serve_bundled_css() -> StarletteResponse:
+                return StarletteResponse(
+                    content=_css_content,
+                    media_type="text/css",
+                    headers={"Cache-Control": "public, max-age=3600"},
+                )
+
+        except ImportError:
+            pass
+
+    # ---- 6. Island API routes ----
+    if getattr(appspec, "islands", None):
+        try:
+            from dazzle_back.runtime.island_routes import create_island_routes
+
+            _island_auth_dep = None
+            _island_opt_dep = None
+            if builder.auth_store:
+                from dazzle_back.runtime.auth import (
+                    create_auth_dependency,
+                    create_optional_auth_dependency,
+                )
+
+                _island_auth_dep = create_auth_dependency(builder.auth_store)
+                _island_opt_dep = create_optional_auth_dependency(builder.auth_store)
+
+            island_router = create_island_routes(
+                islands=appspec.islands,
+                services=builder.services,
+                auth_dep=_island_auth_dep,
+                optional_auth_dep=_island_opt_dep,
+            )
+            app.include_router(island_router)
+            logger.info("  Islands: %s mounted at /api/islands", len(appspec.islands))
+        except ImportError as e:
+            logger.warning("Island routes not available: %s", e)
+
+    # ---- 7. Schedule sync to process adapter ----
+    if builder.process_adapter is not None and appspec.schedules:
+        if hasattr(builder.process_adapter, "sync_schedules_from_appspec"):
+            count = builder.process_adapter.sync_schedules_from_appspec(appspec)
+            if count:
+                adapter_name = type(builder.process_adapter).__name__
+                logger.info("Synced %s DSL schedule(s) to %s", count, adapter_name)
+
+    # ---- 8. 404 handler ----
+    if sitespec_data:
+        try:
+            from dazzle_back.runtime.exception_handlers import register_site_404_handler
+
+            register_site_404_handler(app, sitespec_data, project_root=project_root)
+        except ImportError:
+            pass
+
+    # ---- 9. Route validation ----
+    try:
+        from dazzle_back.runtime.route_validator import validate_routes
+
+        validate_routes(app)
+    except ImportError:
+        pass
+
+
+# =============================================================================
 # Production Factory (Heroku, etc.)
 # =============================================================================
 
@@ -283,7 +586,7 @@ def create_app_factory(
     Returns:
         FastAPI application configured for production
     """
-    from dazzle_back.runtime.server import DazzleBackendApp, ServerConfig
+    from dazzle_back.runtime.server import DazzleBackendApp
 
     # Determine project root
     project_root = Path(os.environ.get("DAZZLE_PROJECT_ROOT", ".")).resolve()
@@ -397,48 +700,9 @@ def create_app_factory(
                 logger.warning("TemporalAdapter requested but not available (install temporalio)")
         # Default: None means auto-detect (requires REDIS_URL for EventBus)
 
-    # Compute view-based list projections from DSL surfaces
-    entity_list_projections = build_entity_list_projections(
-        entities=appspec.domain.entities,
-        surfaces=appspec.surfaces,
-        views=appspec.views,
-    )
-
-    # Extract search fields from surface declarations (#361)
-    entity_search_fields = build_entity_search_fields(surfaces=appspec.surfaces)
-
-    # Auto-detect ref fields for eager loading (prevents N+1 queries)
-    entity_auto_includes: dict[str, list[str]] = {}
-    for entity in appspec.domain.entities:
-        ref_names = [f.name for f in entity.fields if f.type.kind == "ref" and f.type.ref_entity]
-        if ref_names:
-            entity_auto_includes[entity.name] = ref_names
-
-    # Extract entity status fields for process trigger status transition detection
-    entity_status_fields: dict[str, str] = {}
-    if appspec.domain:
-        for ent in appspec.domain.entities:
-            sm = getattr(ent, "state_machine", None)
-            if sm:
-                entity_status_fields[ent.name] = getattr(sm, "status_field", "status")
-
-    # Merge DSL-parsed processes with persisted processes (.dazzle/processes/processes.json)
-    from dazzle.core.process_persistence import load_processes
-
-    dsl_processes = list(appspec.processes)
-    persisted = load_processes(project_root)
-    dsl_names = {p.name for p in dsl_processes}
-    all_processes = dsl_processes + [p for p in persisted if p.name not in dsl_names]
-    if persisted:
-        logger.info(
-            "Loaded %d persisted process(es), %d total (%d from DSL)",
-            len(persisted),
-            len(all_processes),
-            len(dsl_processes),
-        )
-
-    # Build server config
-    config = ServerConfig(
+    # Build unified server config
+    config = build_server_config(
+        appspec,
         database_url=database_url if database_url else None,
         enable_auth=manifest.auth.enabled,
         auth_config=manifest.auth if manifest.auth.enabled else None,
@@ -447,130 +711,37 @@ def create_app_factory(
         enable_test_mode=enable_test_mode,
         services_dir=project_root / "services",
         enable_dev_mode=enable_dev_mode,
+        enable_console=enable_dev_mode,
+        enable_processes=enable_processes,
+        process_adapter_class=resolved_adapter_class,
         personas=personas,
         scenarios=[],
         sitespec_data=sitespec_data,
         project_root=project_root,
-        enable_processes=enable_processes,
-        process_adapter_class=resolved_adapter_class,
-        enable_console=enable_dev_mode,
-        entity_list_projections=entity_list_projections,
-        entity_search_fields=entity_search_fields,
-        entity_auto_includes=entity_auto_includes,
-        process_specs=all_processes,
-        schedule_specs=list(appspec.schedules),
-        entity_status_fields=entity_status_fields,
     )
 
     # Build and return the FastAPI app
     builder = DazzleBackendApp(appspec, config=config)
     app = builder.build()
 
-    # Sync DSL schedules to process adapter (EventBus scheduler or Celery Beat)
-    if builder._process_adapter is not None and appspec.schedules:
-        if hasattr(builder._process_adapter, "sync_schedules_from_appspec"):
-            count = builder._process_adapter.sync_schedules_from_appspec(appspec)
-            if count:
-                adapter_name = type(builder._process_adapter).__name__
-                logger.info("Synced %s DSL schedule(s) to %s", count, adapter_name)
-
-    # Add site page routes if sitespec exists (landing pages, /site.js)
-    if sitespec_data:
-        from dazzle_back.runtime.site_routes import (
-            create_auth_page_routes,
-            create_site_page_routes,
-        )
-
-        # Landing pages (/, /features, /pricing, etc.) and /site.js
-        site_page_router = create_site_page_routes(
-            sitespec_data=sitespec_data,
-            project_root=project_root,
-        )
-        app.include_router(site_page_router)
-        logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
-
-        # Auth pages (/login, /signup)
-        auth_page_router = create_auth_page_routes(sitespec_data, project_root=project_root)
-        app.include_router(auth_page_router)
-        logger.info("  Auth pages: /login, /signup")
-
-    # Add app page routes (/app/*)
+    # Get theme CSS for page routes
+    theme_css = ""
     try:
-        from dazzle_ui.runtime.page_routes import create_page_routes
+        from dazzle_ui.runtime.css_loader import get_bundled_css
 
-        # Get theme CSS if available
-        theme_css = ""
-        try:
-            from dazzle_ui.runtime.css_loader import get_bundled_css
+        theme_css = get_bundled_css()
+    except Exception:
+        logger.debug("Failed to load bundled theme CSS", exc_info=True)
 
-            theme_css = get_bundled_css()
-        except Exception:
-            logger.debug("Failed to load bundled theme CSS", exc_info=True)
-
-        # Get auth context getter from builder if auth is enabled
-        _page_get_auth_context = None
-        if builder.auth_middleware:
-            _page_get_auth_context = builder.auth_middleware.get_auth_context
-
-        page_router = create_page_routes(
-            appspec,
-            backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
-            theme_css=theme_css,
-            get_auth_context=_page_get_auth_context,
-            app_prefix="/app",
-        )
-        app.include_router(page_router, prefix="/app")
-        logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
-
-        # Experience flow routes (/app/experiences/*)
-        if appspec.experiences:
-            try:
-                from dazzle_ui.runtime.experience_routes import create_experience_routes
-
-                experience_router = create_experience_routes(
-                    appspec,
-                    backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
-                    theme_css=theme_css,
-                    get_auth_context=_page_get_auth_context,
-                    app_prefix="/app",
-                    project_root=project_root,
-                )
-                app.include_router(experience_router, prefix="/app")
-                logger.info(
-                    "  Experiences: %s mounted at /app/experiences",
-                    len(appspec.experiences),
-                )
-            except ImportError as e:
-                logger.warning("Experience routes not available: %s", e)
-    except ImportError as e:
-        logger.warning("Page routes not available: %s", e)
-
-    # Add island API routes (/api/islands)
-    if getattr(appspec, "islands", None):
-        try:
-            from dazzle_back.runtime.island_routes import create_island_routes
-
-            _island_auth_dep = None
-            _island_opt_dep = None
-            if builder._auth_store:
-                from dazzle_back.runtime.auth import (
-                    create_auth_dependency,
-                    create_optional_auth_dependency,
-                )
-
-                _island_auth_dep = create_auth_dependency(builder._auth_store)
-                _island_opt_dep = create_optional_auth_dependency(builder._auth_store)
-
-            island_router = create_island_routes(
-                islands=appspec.islands,
-                services=builder.services,
-                auth_dep=_island_auth_dep,
-                optional_auth_dep=_island_opt_dep,
-            )
-            app.include_router(island_router)
-            logger.info("  Islands: %s mounted at /api/islands", len(appspec.islands))
-        except ImportError as e:
-            logger.warning("Island routes not available: %s", e)
+    assemble_post_build_routes(
+        app,
+        appspec,
+        builder,
+        project_root=project_root,
+        sitespec_data=sitespec_data,
+        theme_css=theme_css,
+        backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
+    )
 
     # Log startup info
     logger.info("Dazzle app '%s' ready", appspec.name)
@@ -580,11 +751,5 @@ def create_app_factory(
     logger.info("  Database: PostgreSQL")
     if enable_dev_mode:
         logger.info("  Dev mode: enabled")
-
-    # Add custom 404 handler for site pages (v0.28.0 - extracted to exception_handlers.py)
-    if sitespec_data:
-        from dazzle_back.runtime.exception_handlers import register_site_404_handler
-
-        register_site_404_handler(app, sitespec_data, project_root=project_root)
 
     return app
