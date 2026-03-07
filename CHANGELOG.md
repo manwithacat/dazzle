@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-03-07
+
 ### Added
 - AST-level test verifying all server startup paths pass `app_prefix` to `create_page_routes` — prevents #408-style regressions
+- AST-level test ensuring auth routes returning `Response` use `include_in_schema=False` — prevents #411-style regressions
 
 ### Changed
 - Unified server startup paths: `run_unified_server()` and `create_app_factory()` now share `build_server_config()` and `assemble_post_build_routes()`
@@ -21,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - `dsl-run --cleanup` now cascade-deletes child records before parents, preventing orphaned rows from FK references (#407)
 - Sidebar nav links missing `/app` prefix in `dazzle serve` mode — `combined_server.py` now passes `app_prefix="/app"` to `create_page_routes` (#408)
+- `ref_display` chain now recognises `forename`/`surname` fields — FK columns for UK naming conventions show names instead of UUIDs (#409)
+- `dsl-run --cleanup` no longer queries API for child records — uses topological sort of tracked entities, avoiding RBAC 403 errors (#410)
+- `/openapi.json` no longer crashes with `PydanticUserError` — auth and email tracking routes returning `Response` excluded from schema (#411)
 
 ## [0.36.0] - 2026-03-07
 
