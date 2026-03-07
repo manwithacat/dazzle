@@ -71,7 +71,7 @@ def create_auth_routes(
     # which runs in _create_app() before routes are mounted.
     import dazzle_back.runtime.rate_limit as _rl
 
-    @router.post("/login")
+    @router.post("/login", include_in_schema=False)
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def login(credentials: LoginRequest, request: FastAPIRequest) -> Response:
         """
@@ -159,7 +159,7 @@ def create_auth_routes(
     # Logout
     # =========================================================================
 
-    @router.post("/logout")
+    @router.post("/logout", include_in_schema=False)
     async def logout(request: FastAPIRequest) -> Response:
         """
         Logout and delete session.
@@ -195,7 +195,7 @@ def create_auth_routes(
     # Register
     # =========================================================================
 
-    @router.post("/register", status_code=201)
+    @router.post("/register", status_code=201, include_in_schema=False)
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def register(data: RegisterRequest, request: FastAPIRequest) -> Response:
         """
@@ -295,7 +295,7 @@ def create_auth_routes(
     # Change Password
     # =========================================================================
 
-    @router.post("/change-password")
+    @router.post("/change-password", include_in_schema=False)
     async def change_password(data: ChangePasswordRequest, request: FastAPIRequest) -> Response:
         """
         Change current user's password.
@@ -349,7 +349,7 @@ def create_auth_routes(
     # Forgot Password (request reset)
     # =========================================================================
 
-    @router.post("/forgot-password")
+    @router.post("/forgot-password", include_in_schema=False)
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def forgot_password(data: ForgotPasswordRequest, request: FastAPIRequest) -> Response:
         """
@@ -388,7 +388,7 @@ def create_auth_routes(
     # Reset Password (consume token + set new password)
     # =========================================================================
 
-    @router.post("/reset-password")
+    @router.post("/reset-password", include_in_schema=False)
     @_rl.limiter.limit(_rl.auth_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def reset_password(data: ResetPasswordRequest, request: FastAPIRequest) -> Response:
         """

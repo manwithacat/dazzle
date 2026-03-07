@@ -666,7 +666,7 @@ def create_email_tracking_routes(template_engine: EmailTemplateEngine) -> Any:
         b"\x44\x01\x00\x3b"
     )
 
-    @router.get("/pixel/{email_id}.gif")
+    @router.get("/pixel/{email_id}.gif", include_in_schema=False)
     async def track_open(
         email_id: str,
         request: Request,
@@ -693,7 +693,7 @@ def create_email_tracking_routes(template_engine: EmailTemplateEngine) -> Any:
             },
         )
 
-    @router.get("/click/{email_id}")
+    @router.get("/click/{email_id}", include_in_schema=False)
     async def track_click(
         email_id: str,
         request: Request,
