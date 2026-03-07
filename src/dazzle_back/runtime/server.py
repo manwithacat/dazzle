@@ -1840,12 +1840,22 @@ class DazzleBackendApp:
 
         # Pre-compute HTMX metadata per entity so list API endpoints can
         # render table row fragments with correct column definitions.
+        # Use surface field projection when a list surface exists (#405).
+        _entity_list_surfaces: dict[str, Any] = {}
+        for _surf in self._appspec.surfaces:
+            _eref = _surf.entity_ref
+            _mode = str(_surf.mode or "").lower()
+            if _eref and _mode == "list" and _eref not in _entity_list_surfaces:
+                _entity_list_surfaces[_eref] = _surf
+
         entity_htmx_meta: dict[str, dict[str, Any]] = {}
         app_prefix = "/app"
         for entity in self._entities:
             entity_slug = entity.name.lower().replace("_", "-")
+            _ls = _entity_list_surfaces.get(entity.name)
+            cols = _build_surface_columns(entity, _ls) if _ls else _build_entity_columns(entity)
             entity_htmx_meta[entity.name] = {
-                "columns": _build_entity_columns(entity),
+                "columns": cols,
                 "detail_url": f"{app_prefix}/{entity_slug}/{{id}}",
                 "entity_name": entity.name,
             }

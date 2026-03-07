@@ -1429,6 +1429,119 @@ class TestBuildEntityColumns:
         assert cols[0]["key"] == "title"
 
 
+class TestBuildSurfaceColumns:
+    """_build_surface_columns uses surface field projection instead of all entity fields (#405)."""
+
+    @pytest.fixture(autouse=True)
+    def _skip_if_no_fastapi(self) -> None:
+        pytest.importorskip("fastapi")
+
+    def test_surface_limits_columns(self) -> None:
+        """Only fields declared in the surface should appear."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="title",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="str")),
+                ),
+                SimpleNamespace(
+                    name="description",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="text")),
+                ),
+                SimpleNamespace(
+                    name="status",
+                    label=None,
+                    type=SimpleNamespace(
+                        kind=SimpleNamespace(value="enum"),
+                        enum_values=["open", "closed"],
+                    ),
+                ),
+            ],
+            state_machine=None,
+        )
+        surface = SimpleNamespace(
+            sections=[
+                SimpleNamespace(
+                    elements=[
+                        SimpleNamespace(field_name="title"),
+                        SimpleNamespace(field_name="status"),
+                    ]
+                )
+            ]
+        )
+        cols = _build_surface_columns(entity, surface)
+        assert len(cols) == 2
+        assert cols[0]["key"] == "title"
+        assert cols[1]["key"] == "status"
+
+    def test_surface_preserves_order(self) -> None:
+        """Columns should follow the surface field order, not entity field order."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="alpha",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="str")),
+                ),
+                SimpleNamespace(
+                    name="beta",
+                    label=None,
+                    type=SimpleNamespace(kind=SimpleNamespace(value="str")),
+                ),
+            ],
+            state_machine=None,
+        )
+        surface = SimpleNamespace(
+            sections=[
+                SimpleNamespace(
+                    elements=[
+                        SimpleNamespace(field_name="beta"),
+                        SimpleNamespace(field_name="alpha"),
+                    ]
+                )
+            ]
+        )
+        cols = _build_surface_columns(entity, surface)
+        assert [c["key"] for c in cols] == ["beta", "alpha"]
+
+    def test_surface_ref_column(self) -> None:
+        """Ref fields in surface should render with type=ref."""
+        from dazzle_back.runtime.workspace_rendering import _build_surface_columns
+
+        entity = SimpleNamespace(
+            fields=[
+                SimpleNamespace(
+                    name="id", type=SimpleNamespace(kind=SimpleNamespace(value="uuid"))
+                ),
+                SimpleNamespace(
+                    name="company_id",
+                    label="Company",
+                    type=SimpleNamespace(kind=SimpleNamespace(value="ref"), ref_entity="Company"),
+                ),
+            ],
+            state_machine=None,
+        )
+        surface = SimpleNamespace(
+            sections=[SimpleNamespace(elements=[SimpleNamespace(field_name="company_id")])]
+        )
+        cols = _build_surface_columns(entity, surface)
+        assert len(cols) == 1
+        assert cols[0]["key"] == "company"
+        assert cols[0]["type"] == "ref"
+
+
 # ---------------------------------------------------------------------------
 # Step 12 — Aggregate metric batching (#283)
 # ---------------------------------------------------------------------------
