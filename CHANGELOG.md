@@ -9,12 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-03-07
+
 ### Added
 - `events` extras group (`pip install dazzle-dsl[events]`) for optional event system dependency (aiosqlite)
 - `NullBus` and `NullEventFramework` no-op implementations in `dazzle_back.events.null` — always importable regardless of extras
 - `dazzle_back.events.api` public API boundary module for alternative event bus implementations
 - Wire `EventEmittingMixin.set_event_framework()` at server startup (fixes dead code bug)
 - Event system imports gated behind `EVENTS_AVAILABLE` flag — apps without event extras stay lean
+
+### Fixed
+- Workspace redirect missing `/app` prefix — `_workspace_root_route()` now returns `/app/workspaces/{name}` (#406)
+- Login form ignoring persona-specific redirect URL — now uses `redirect_url` from server response (#406)
 
 ## [0.35.0] - 2026-03-06
 
