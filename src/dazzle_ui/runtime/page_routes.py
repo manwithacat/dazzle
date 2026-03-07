@@ -215,7 +215,8 @@ def create_page_routes(
                         ctx.user_roles = list(roles)
                         if ctx.nav_by_persona and roles:
                             for role in roles:
-                                persona_nav = ctx.nav_by_persona.get(role)
+                                # Roles use "role_" prefix; persona IDs don't
+                                persona_nav = ctx.nav_by_persona.get(role.removeprefix("role_"))
                                 if persona_nav is not None:
                                     ctx.nav_items = persona_nav
                                     break
@@ -614,12 +615,14 @@ def create_page_routes(
                                 user_email = auth_ctx.user.email if auth_ctx.user else ""
                                 user_name = auth_ctx.user.username if auth_ctx.user else ""
                                 user_roles = list(getattr(auth_ctx.user, "roles", None) or [])
-                                # Filter nav by persona access
+                                # Filter nav by persona access.
+                                # Roles use "role_" prefix; persona IDs don't.
+                                normalized_roles = [r.removeprefix("role_") for r in user_roles]
                                 visible_nav = [
                                     {"label": item["label"], "route": item["route"]}
                                     for item in ws_nav_items + ws_entity_items
                                     if not item["allow_personas"]
-                                    or any(r in item["allow_personas"] for r in user_roles)
+                                    or any(r in item["allow_personas"] for r in normalized_roles)
                                 ]
                         except Exception:
                             logger.debug("Failed to resolve auth for workspace nav", exc_info=True)
@@ -632,7 +635,8 @@ def create_page_routes(
                         and auth_ctx.user.is_superuser
                     )
                     if ws_allowed_personas and not is_superuser:
-                        if not user_roles or not any(r in ws_allowed_personas for r in user_roles):
+                        normalized = [r.removeprefix("role_") for r in user_roles]
+                        if not normalized or not any(r in ws_allowed_personas for r in normalized):
                             raise HTTPException(
                                 status_code=403,
                                 detail="You don't have permission to access this workspace.",

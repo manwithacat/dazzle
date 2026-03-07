@@ -61,9 +61,10 @@ def create_auth_dependency(
         if not auth_context.is_authenticated:
             raise HTTPException(status_code=401, detail="Session expired")
 
-        # Check roles if required
+        # Check roles if required.
+        # Database roles use "role_" prefix; persona IDs don't — normalize.
         if require_roles:
-            user_roles = set(auth_context.roles)
+            user_roles = {r.removeprefix("role_") for r in auth_context.roles}
             required = set(require_roles)
 
             if not required.intersection(user_roles):

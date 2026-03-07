@@ -119,11 +119,13 @@ def create_auth_routes(
             user_agent=request.headers.get("user-agent"),
         )
 
-        # Resolve persona landing page from user roles
+        # Resolve persona landing page from user roles.
+        # Database roles use a "role_" prefix (e.g. "role_school_admin") but
+        # persona IDs don't, so strip the prefix before lookup.
         redirect_url = "/app"
         if persona_routes and user.roles:
             for role in user.roles:
-                route = persona_routes.get(role)
+                route = persona_routes.get(role.removeprefix("role_"))
                 if route:
                     redirect_url = route
                     break
@@ -223,11 +225,12 @@ def create_auth_routes(
             user_agent=request.headers.get("user-agent"),
         )
 
-        # Resolve persona landing page from assigned roles
+        # Resolve persona landing page from assigned roles.
+        # Database roles use a "role_" prefix; persona IDs don't.
         redirect_url = "/app"
         if persona_routes and user.roles:
             for role in user.roles:
-                route = persona_routes.get(role)
+                route = persona_routes.get(role.removeprefix("role_"))
                 if route:
                     redirect_url = route
                     break

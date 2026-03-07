@@ -249,10 +249,14 @@ async def _workspace_region_handler(
         if not (auth_ctx and auth_ctx.is_authenticated):
             raise HTTPException(status_code=401, detail="Authentication required")
 
-        # RBAC: enforce workspace persona restrictions on region data
+        # RBAC: enforce workspace persona restrictions on region data.
+        # Roles use "role_" prefix; persona IDs don't.
         if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
             is_super = auth_ctx.user and auth_ctx.user.is_superuser
-            if not is_super and not any(r in ctx.ws_access.allow_personas for r in auth_ctx.roles):
+            normalized_roles = [r.removeprefix("role_") for r in auth_ctx.roles]
+            if not is_super and not any(
+                r in ctx.ws_access.allow_personas for r in normalized_roles
+            ):
                 raise HTTPException(status_code=403, detail="Workspace access denied")
 
     # Resolve current user ID for filter expressions (e.g. reviewer == current_user)
@@ -571,8 +575,9 @@ async def _workspace_batch_handler(
                 raise HTTPException(status_code=401, detail="Authentication required")
             if ctx.ws_access and ctx.ws_access.allow_personas and auth_ctx:
                 is_super = auth_ctx.user and auth_ctx.user.is_superuser
+                normalized_roles = [r.removeprefix("role_") for r in auth_ctx.roles]
                 if not is_super and not any(
-                    r in ctx.ws_access.allow_personas for r in auth_ctx.roles
+                    r in ctx.ws_access.allow_personas for r in normalized_roles
                 ):
                     raise HTTPException(status_code=403, detail="Workspace access denied")
             break  # All regions share the same workspace access

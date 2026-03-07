@@ -144,11 +144,12 @@ def register_auth_routes(
         }
         AUTH_SESSIONS[session_token] = session
 
-        # Resolve post-login landing page from persona routes
+        # Resolve post-login landing page from persona routes.
+        # Database roles use a "role_" prefix; persona IDs don't.
         redirect_url = "/app"
         if persona_routes:
             for role in user.get("roles", []):
-                route = persona_routes.get(role)
+                route = persona_routes.get(role.removeprefix("role_"))
                 if route:
                     redirect_url = route
                     break

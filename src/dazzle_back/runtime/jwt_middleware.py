@@ -218,7 +218,7 @@ def create_jwt_dependency(
             )
 
         if require_roles and context.is_authenticated:
-            user_roles = set(context.roles)
+            user_roles = {r.removeprefix("role_") for r in context.roles}
             required = set(require_roles)
             if not required.intersection(user_roles):
                 raise HTTPException(
@@ -367,7 +367,7 @@ def create_dual_auth_dependency(
             raise HTTPException(status_code=401, detail="Authentication required")
 
         if require_roles and context["is_authenticated"]:
-            user_roles = set(context["roles"])
+            user_roles = {r.removeprefix("role_") for r in context["roles"]}
             required = set(require_roles)
             if not required.intersection(user_roles):
                 raise HTTPException(

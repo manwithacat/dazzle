@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Workspace redirect missing `/app` prefix — `_workspace_root_route()` now returns `/app/workspaces/{name}` (#406)
 - Login form ignoring persona-specific redirect URL — now uses `redirect_url` from server response (#406)
+- Role prefix mismatch preventing persona-based routing — `role_` prefix now stripped when matching user roles against persona IDs in auth redirect, RBAC checks, nav filtering, and workspace access (#406)
 
 ## [0.35.0] - 2026-03-06
 
