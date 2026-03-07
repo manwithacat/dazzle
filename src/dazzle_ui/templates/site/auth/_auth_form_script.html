@@ -28,7 +28,7 @@
                 if (result.token) {
                     localStorage.setItem('auth_token', result.token);
                 }
-                window.location.href = '/app';
+                window.location.href = result.redirect_url || '/app';
             } else {
                 const error = await response.json();
                 errorDiv.textContent = error.detail || 'Authentication failed';

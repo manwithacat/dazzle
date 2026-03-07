@@ -506,29 +506,27 @@ def _resolve_persona_route(
 
     # 2. Default workspace
     if persona.default_workspace:
-        for i, ws in enumerate(workspaces):
+        for ws in workspaces:
             if ws.name == persona.default_workspace:
-                return _workspace_root_route(ws, is_primary=(i == 0))
+                return _workspace_root_route(ws)
 
     # 3. First workspace with explicit persona access
-    for i, ws in enumerate(workspaces):
+    for ws in workspaces:
         if ws.access and persona.id in ws.access.allow_personas:
-            return _workspace_root_route(ws, is_primary=(i == 0))
+            return _workspace_root_route(ws)
 
     # 4. First workspace with AUTHENTICATED access (any logged-in user)
-    for i, ws in enumerate(workspaces):
+    for ws in workspaces:
         if ws.access and ws.access.level == ir.WorkspaceAccessLevel.AUTHENTICATED:
-            return _workspace_root_route(ws, is_primary=(i == 0))
+            return _workspace_root_route(ws)
 
     # 5. Fallback to first workspace
     if workspaces:
-        return _workspace_root_route(workspaces[0], is_primary=True)
+        return _workspace_root_route(workspaces[0])
 
     return None
 
 
-def _workspace_root_route(workspace: ir.WorkspaceSpec, is_primary: bool) -> str:
-    """Get the root route for a workspace."""
-    if is_primary:
-        return "/"
-    return f"/{workspace.name.replace('_', '-')}"
+def _workspace_root_route(workspace: ir.WorkspaceSpec) -> str:
+    """Get the absolute root route for a workspace (used as post-login redirect)."""
+    return f"/app/workspaces/{workspace.name}"
