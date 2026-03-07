@@ -1,4 +1,4 @@
-"""Tests for cascade-delete during test cleanup (#407)."""
+"""Tests for dependency-safe cleanup during test runs (#407, #410)."""
 
 from __future__ import annotations
 
@@ -105,88 +105,73 @@ class TestBuildFkReverseMap:
         assert child_names == {"PropertyIncome", "TaxLoss", "DividendIncome"}
 
 
-# ── Cascade delete ──────────────────────────────────────────────────────
+# ── Topological sort for delete ─────────────────────────────────────────
 
 
-class TestCascadeDeleteChildren:
-    def test_no_children(self, client: DazzleClient) -> None:
-        """Entity with no FK references has nothing to cascade."""
-        deleted = client._cascade_delete_children("SoleTrader", "abc-123", {})
-        assert deleted == 0
+class TestTopoSortForDelete:
+    def test_no_fk_relations(self, client: DazzleClient) -> None:
+        """Without FK relations, returns reverse creation order (LIFO)."""
+        client._created_entities = [("A", "1"), ("B", "2"), ("C", "3")]
+        result = client._topo_sort_for_delete({})
+        assert result == [("C", "3"), ("B", "2"), ("A", "1")]
 
-    def test_deletes_matching_children(self, client: DazzleClient) -> None:
-        """Deletes child records whose FK matches the parent ID."""
+    def test_children_before_parents(self, client: DazzleClient) -> None:
+        """Child entity types are sorted before parent entity types."""
+        client._created_entities = [
+            ("SoleTrader", "st-1"),
+            ("PropertyIncome", "pi-1"),
+        ]
         fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
-        client.get_entities = MagicMock(
-            return_value=[  # type: ignore[method-assign]
-                {"id": "pi-1", "owner": "st-1", "amount": 1000},
-                {"id": "pi-2", "owner": "st-2", "amount": 2000},  # different parent
-            ]
-        )
-        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+        result = client._topo_sort_for_delete(fk_map)
+        names = [name for name, _id in result]
+        assert names.index("PropertyIncome") < names.index("SoleTrader")
 
-        deleted = client._cascade_delete_children("SoleTrader", "st-1", fk_map)
-        assert deleted == 1
-        client.delete_entity.assert_called_once_with("PropertyIncome", "pi-1")
-
-    def test_matches_fk_field_with_id_suffix(self, client: DazzleClient) -> None:
-        """Also matches field_id pattern (e.g. owner_id instead of owner)."""
-        fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
-        client.get_entities = MagicMock(
-            return_value=[  # type: ignore[method-assign]
-                {"id": "pi-1", "owner_id": "st-1", "amount": 1000},
-            ]
-        )
-        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
-
-        deleted = client._cascade_delete_children("SoleTrader", "st-1", fk_map)
-        assert deleted == 1
-
-    def test_recursive_grandchildren(self, client: DazzleClient) -> None:
-        """Cascades into grandchildren (child of child)."""
+    def test_grandchildren_before_children(self, client: DazzleClient) -> None:
+        """Three-level hierarchy: grandchild → child → parent."""
+        client._created_entities = [
+            ("Company", "co-1"),
+            ("Department", "dept-1"),
+            ("Employee", "emp-1"),
+        ]
         fk_map = {
             "Company": [("Department", "company")],
             "Department": [("Employee", "department")],
         }
+        result = client._topo_sort_for_delete(fk_map)
+        names = [name for name, _id in result]
+        assert names.index("Employee") < names.index("Department")
+        assert names.index("Department") < names.index("Company")
 
-        def mock_get_entities(entity_name: str) -> list[dict]:
-            if entity_name == "Department":
-                return [{"id": "dept-1", "company": "co-1"}]
-            if entity_name == "Employee":
-                return [{"id": "emp-1", "department": "dept-1"}]
-            return []
+    def test_unrelated_types_preserve_lifo(self, client: DazzleClient) -> None:
+        """Types not in the FK graph keep their LIFO order."""
+        client._created_entities = [
+            ("Alpha", "a-1"),
+            ("Beta", "b-1"),
+            ("Gamma", "g-1"),
+        ]
+        # No FK relations among these
+        result = client._topo_sort_for_delete({})
+        assert result == [("Gamma", "g-1"), ("Beta", "b-1"), ("Alpha", "a-1")]
 
-        client.get_entities = MagicMock(side_effect=mock_get_entities)  # type: ignore[method-assign]
-        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+    def test_only_sorts_tracked_types(self, client: DazzleClient) -> None:
+        """FK map entries for untracked types are ignored."""
+        client._created_entities = [("A", "1")]
+        # B references A but B is not tracked
+        fk_map = {"A": [("B", "a_ref")]}
+        result = client._topo_sort_for_delete(fk_map)
+        assert result == [("A", "1")]
 
-        deleted = client._cascade_delete_children("Company", "co-1", fk_map)
-        assert deleted == 2  # employee + department
-        # Employee deleted before Department (grandchild before child)
-        calls = client.delete_entity.call_args_list
-        assert calls[0].args == ("Employee", "emp-1")
-        assert calls[1].args == ("Department", "dept-1")
-
-    def test_handles_delete_failure_gracefully(self, client: DazzleClient) -> None:
-        """Failed child deletion doesn't crash — just skips."""
-        fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
-        client.get_entities = MagicMock(
-            return_value=[  # type: ignore[method-assign]
-                {"id": "pi-1", "owner": "st-1"},
-            ]
-        )
-        client.delete_entity = MagicMock(return_value=False)  # type: ignore[method-assign]
-
-        # Doesn't raise, returns 0 (delete_entity returned False)
-        deleted = client._cascade_delete_children("SoleTrader", "st-1", fk_map)
-        assert deleted == 0
-
-    def test_handles_get_entities_exception(self, client: DazzleClient) -> None:
-        """Exception during child query doesn't crash."""
-        fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
-        client.get_entities = MagicMock(side_effect=Exception("Network error"))  # type: ignore[method-assign]
-
-        deleted = client._cascade_delete_children("SoleTrader", "st-1", fk_map)
-        assert deleted == 0
+    def test_mixed_tracked_and_fk(self, client: DazzleClient) -> None:
+        """Only tracked child types are reordered."""
+        client._created_entities = [
+            ("Parent", "p-1"),
+            ("Child", "c-1"),
+            ("Unrelated", "u-1"),
+        ]
+        fk_map = {"Parent": [("Child", "parent_ref")]}
+        result = client._topo_sort_for_delete(fk_map)
+        names = [name for name, _id in result]
+        assert names.index("Child") < names.index("Parent")
 
 
 # ── Full cleanup integration ────────────────────────────────────────────
@@ -198,22 +183,19 @@ class TestCleanupCreatedEntities:
         assert deleted == 0
         assert failed == 0
 
-    def test_cascades_before_parent_delete(self, client: DazzleClient) -> None:
-        """Cleanup cascade-deletes children before attempting parent deletion."""
-        client._created_entities = [("SoleTrader", "st-1")]
-
+    def test_deletes_children_before_parents(self, client: DazzleClient) -> None:
+        """Cleanup deletes child entities before parents using topo sort."""
+        client._created_entities = [
+            ("SoleTrader", "st-1"),
+            ("PropertyIncome", "pi-1"),
+            ("PropertyIncome", "pi-2"),
+        ]
         fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
         client._build_fk_reverse_map = MagicMock(return_value=fk_map)  # type: ignore[method-assign]
-        client.get_entities = MagicMock(
-            return_value=[  # type: ignore[method-assign]
-                {"id": "pi-1", "owner": "st-1"},
-                {"id": "pi-2", "owner": "st-1"},
-            ]
-        )
         client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
 
         deleted, failed = client.cleanup_created_entities()
-        assert deleted == 3  # 2 children + 1 parent
+        assert deleted == 3
         assert failed == 0
 
         # Children deleted before parent
@@ -222,10 +204,21 @@ class TestCleanupCreatedEntities:
         st_calls = [c for c in calls if c[0] == "SoleTrader"]
         assert len(pi_calls) == 2
         assert len(st_calls) == 1
-        # All PropertyIncome calls come before the SoleTrader call
         pi_indices = [i for i, c in enumerate(calls) if c[0] == "PropertyIncome"]
         st_index = next(i for i, c in enumerate(calls) if c[0] == "SoleTrader")
         assert all(pi_idx < st_index for pi_idx in pi_indices)
+
+    def test_no_api_queries_for_children(self, client: DazzleClient) -> None:
+        """Cleanup does NOT call get_entities — only deletes tracked entities."""
+        client._created_entities = [("SoleTrader", "st-1"), ("PropertyIncome", "pi-1")]
+        fk_map = {"SoleTrader": [("PropertyIncome", "owner")]}
+        client._build_fk_reverse_map = MagicMock(return_value=fk_map)  # type: ignore[method-assign]
+        client.get_entities = MagicMock(return_value=[])  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+
+        client.cleanup_created_entities()
+        # get_entities should NOT be called during cleanup (was the #410 bug)
+        client.get_entities.assert_not_called()
 
     def test_builds_fk_map_once(self, client: DazzleClient) -> None:
         """FK map is fetched once, not per entity."""
@@ -247,3 +240,14 @@ class TestCleanupCreatedEntities:
         deleted, failed = client.cleanup_created_entities()
         assert deleted == 1
         assert failed == 0
+
+    def test_deduplicates_tracked_entities(self, client: DazzleClient) -> None:
+        """Same entity tracked twice is only deleted once."""
+        client._created_entities = [("A", "1"), ("A", "1")]
+        client._build_fk_reverse_map = MagicMock(return_value={})  # type: ignore[method-assign]
+        client.delete_entity = MagicMock(return_value=True)  # type: ignore[method-assign]
+
+        deleted, failed = client.cleanup_created_entities()
+        assert deleted == 1
+        assert failed == 0
+        client.delete_entity.assert_called_once_with("A", "1")

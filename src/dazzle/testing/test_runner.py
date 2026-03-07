@@ -474,65 +474,90 @@ class DazzleClient:
                     result.setdefault(parent, []).append((entity_name, fld["name"]))
         return result
 
-    def _cascade_delete_children(
+    def _topo_sort_for_delete(
         self,
-        entity_name: str,
-        entity_id: str,
         fk_map: dict[str, list[tuple[str, str]]],
-    ) -> int:
-        """Delete child records that reference this entity via FK. Returns count deleted."""
-        children = fk_map.get(entity_name, [])
-        if not children:
-            return 0
-        deleted = 0
-        for child_entity, fk_field in children:
-            # Query child records matching this parent ID
-            try:
-                items = self.get_entities(child_entity)
-                for item in items:
-                    if str(item.get(fk_field)) == str(entity_id) or str(
-                        item.get(f"{fk_field}_id")
-                    ) == str(entity_id):
-                        child_id = item.get("id")
-                        if child_id:
-                            # Recursively cascade into grandchildren
-                            deleted += self._cascade_delete_children(
-                                child_entity, str(child_id), fk_map
-                            )
-                            if self.delete_entity(child_entity, str(child_id)):
-                                deleted += 1
-            except Exception:
-                logger.debug(
-                    "Failed to cascade-delete %s children of %s/%s",
-                    child_entity,
-                    entity_name,
-                    entity_id,
-                    exc_info=True,
-                )
-        return deleted
+    ) -> list[tuple[str, str]]:
+        """Sort tracked entities so children come before parents.
+
+        Uses the FK reverse map to determine entity-type ordering:
+        if entity B has a FK to entity A, B must be deleted first.
+        Within each type-level, entities keep their LIFO order.
+        """
+        tracked_types: set[str] = {name for name, _id in self._created_entities}
+
+        # Build adjacency list: child → parent (child must be deleted first).
+        # Kahn's algorithm processes nodes with in_degree 0 first, so children
+        # (no incoming edges) get the lowest order indices.
+        successors: dict[str, set[str]] = {t: set() for t in tracked_types}
+        in_degree: dict[str, int] = dict.fromkeys(tracked_types, 0)
+        for parent_type, children in fk_map.items():
+            if parent_type not in tracked_types:
+                continue
+            for child_type, _fk_field in children:
+                if child_type in tracked_types and parent_type not in successors[child_type]:
+                    successors[child_type].add(parent_type)
+                    in_degree[parent_type] += 1
+
+        # Deterministic LIFO ordering for tie-breaking (preserves LIFO for
+        # unrelated types that all have in_degree 0).
+        lifo_types = list(dict.fromkeys(name for name, _id in reversed(self._created_entities)))
+        queue = [t for t in lifo_types if in_degree[t] == 0]
+
+        type_order: dict[str, int] = {}
+        order_idx = 0
+        while queue:
+            t = queue.pop(0)
+            type_order[t] = order_idx
+            order_idx += 1
+            for succ in successors.get(t, set()):
+                in_degree[succ] -= 1
+                if in_degree[succ] == 0:
+                    queue.append(succ)
+
+        # Types not in type_order (cycles) get highest index (delete last)
+        max_order = order_idx
+        for t in tracked_types:
+            if t not in type_order:
+                type_order[t] = max_order
+
+        # Stable sort: primary by type_order (children=low, parents=high),
+        # secondary preserves LIFO within same type-level.
+        reversed_entities = list(reversed(self._created_entities))
+        reversed_entities.sort(key=lambda pair: type_order.get(pair[0], max_order))
+        return reversed_entities
 
     def cleanup_created_entities(self) -> tuple[int, int]:
-        """Delete all tracked entities in reverse creation order (LIFO).
+        """Delete all tracked entities in dependency-safe order.
 
-        Cascade-deletes child records (via FK) before each parent to avoid
-        orphaned rows. Uses multi-pass for remaining FK constraint failures.
+        Uses the FK graph to topologically sort tracked entities so children
+        are deleted before parents. Only deletes entities that were created
+        during this test run — no API queries for untracked records.
+        Uses multi-pass for remaining FK constraint failures.
         Returns (deleted_count, failed_count).
         """
         if not self._created_entities:
             return (0, 0)
 
-        # Build FK graph once for cascade deletion
+        # Build FK graph and sort tracked entities
         fk_map = self._build_fk_reverse_map()
+        pending = self._topo_sort_for_delete(fk_map)
 
-        pending = list(reversed(self._created_entities))
+        # Deduplicate (same entity may be tracked multiple times)
+        seen: set[tuple[str, str]] = set()
+        unique_pending: list[tuple[str, str]] = []
+        for pair in pending:
+            if pair not in seen:
+                seen.add(pair)
+                unique_pending.append(pair)
+        pending = unique_pending
+
         deleted = 0
         max_passes = 3
 
         for _pass_num in range(max_passes):
             still_pending: list[tuple[str, str]] = []
             for entity_name, entity_id in pending:
-                # Cascade-delete children first
-                deleted += self._cascade_delete_children(entity_name, entity_id, fk_map)
                 if self.delete_entity(entity_name, entity_id):
                     deleted += 1
                 else:
