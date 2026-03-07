@@ -160,6 +160,9 @@ def create_page_routes(
         theme_css: Pre-compiled theme CSS to inject.
         get_auth_context: Optional callable(request) -> AuthContext for user info.
         app_prefix: URL prefix for page routes (e.g. "/app").
+            Callers mounting under a prefix MUST pass this explicitly
+            so that nav items, href attributes, and hx-get URLs are
+            generated with the correct prefix.
 
     Returns:
         FastAPI router with page routes.

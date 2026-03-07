@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- AST-level test verifying all server startup paths pass `app_prefix` to `create_page_routes` — prevents #408-style regressions
+
 ### Fixed
 - `dsl-run --cleanup` now cascade-deletes child records before parents, preventing orphaned rows from FK references (#407)
 - Sidebar nav links missing `/app` prefix in `dazzle serve` mode — `combined_server.py` now passes `app_prefix="/app"` to `create_page_routes` (#408)

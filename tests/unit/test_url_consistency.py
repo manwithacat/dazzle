@@ -250,6 +250,74 @@ class TestUrlPrefixConsistency:
 
 
 # ===================================================================
+# 1b. All server startup paths pass app_prefix  (#408)
+# ===================================================================
+
+
+class TestServerPathsPassAppPrefix:
+    """Verify that every call site that creates page routes passes app_prefix.
+
+    Issue #408: combined_server.py created page routes without app_prefix,
+    so nav items lacked the /app prefix and produced 404s.  This test reads
+    the source of each call site and asserts app_prefix is present.
+    """
+
+    def test_combined_server_passes_app_prefix(self) -> None:
+        """combined_server.py must pass app_prefix to create_page_routes."""
+        import ast
+        import inspect
+
+        from dazzle_ui.runtime import combined_server
+
+        source = inspect.getsource(combined_server)
+        tree = ast.parse(source)
+        found = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                func = node.func
+                name = ""
+                if isinstance(func, ast.Name):
+                    name = func.id
+                elif isinstance(func, ast.Attribute):
+                    name = func.attr
+                if name == "create_page_routes":
+                    kw_names = [kw.arg for kw in node.keywords]
+                    assert "app_prefix" in kw_names, (
+                        "combined_server.py calls create_page_routes() "
+                        "without app_prefix — nav items will lack /app prefix"
+                    )
+                    found = True
+        assert found, "create_page_routes call not found in combined_server.py"
+
+    def test_app_factory_passes_app_prefix(self) -> None:
+        """app_factory.py must pass app_prefix to create_page_routes."""
+        import ast
+        import inspect
+
+        from dazzle_back.runtime import app_factory
+
+        source = inspect.getsource(app_factory)
+        tree = ast.parse(source)
+        found = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                func = node.func
+                name = ""
+                if isinstance(func, ast.Name):
+                    name = func.id
+                elif isinstance(func, ast.Attribute):
+                    name = func.attr
+                if name == "create_page_routes":
+                    kw_names = [kw.arg for kw in node.keywords]
+                    assert "app_prefix" in kw_names, (
+                        "app_factory.py calls create_page_routes() "
+                        "without app_prefix — nav items will lack /app prefix"
+                    )
+                    found = True
+        assert found, "create_page_routes call not found in app_factory.py"
+
+
+# ===================================================================
 # 2. compile_surface_to_context with app_prefix
 # ===================================================================
 
