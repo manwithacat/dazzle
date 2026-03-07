@@ -515,7 +515,16 @@ def _build_cedar_handler(
             raise HTTPException(status_code=403, detail="Forbidden")
 
         current_user = str(user.id) if user else None
-        result = await core_fn(id, request, current_user=current_user, existing=existing)
+        raw_roles = list(getattr(user, "roles", [])) if user else []
+        _is_su = ctx.is_superuser
+        result = await core_fn(
+            id,
+            request,
+            current_user=current_user,
+            existing=existing,
+            user_roles=raw_roles,
+            is_superuser=_is_su,
+        )
 
         # Post-operation audit (create already logged above)
         if not is_create:
@@ -595,7 +604,16 @@ def _build_auth_handler(
         if needs_pre_read and include_field_changes and audit_logger and id is not None:
             existing = await core_fn.__self_service__.execute(operation="read", id=id)  # type: ignore[attr-defined]
 
-        result = await core_fn(id, request, current_user=current_user, existing=existing)
+        raw_roles = list(getattr(user, "roles", [])) if user else []
+        _is_su = getattr(user, "is_superuser", False) if user else False
+        result = await core_fn(
+            id,
+            request,
+            current_user=current_user,
+            existing=existing,
+            user_roles=raw_roles,
+            is_superuser=_is_su,
+        )
 
         _fc = None
         if existing is not None:
@@ -1048,7 +1066,12 @@ def create_read_handler(
     """Create a handler for read operations with optional Cedar-style access control."""
 
     async def _core(
-        id: UUID, request: Request, *, current_user: str | None = None, existing: Any = None
+        id: UUID,
+        request: Request,
+        *,
+        current_user: str | None = None,
+        existing: Any = None,
+        **_extra: Any,
     ) -> Any:
         result = await service.execute(operation="read", id=id, include=auto_include)
         if result is None:
@@ -1156,7 +1179,12 @@ def create_create_handler(
         return None
 
     async def _core(
-        _id: Any, request: Request, *, current_user: str | None = None, existing: Any = None
+        _id: Any,
+        request: Request,
+        *,
+        current_user: str | None = None,
+        existing: Any = None,
+        **_extra: Any,
     ) -> Any:
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
@@ -1193,13 +1221,22 @@ def create_update_handler(
     """Create a handler for update operations with optional Cedar-style access control."""
 
     async def _core(
-        id: UUID, request: Request, *, current_user: str | None = None, existing: Any = None
+        id: UUID,
+        request: Request,
+        *,
+        current_user: str | None = None,
+        existing: Any = None,
+        user_roles: list[str] | None = None,
+        is_superuser: bool = False,
     ) -> Any:
         body = await _parse_request_body(request)
         data = input_schema.model_validate(body)
         kwargs: dict[str, Any] = {"operation": "update", "id": id, "data": data}
         if current_user is not None:
             kwargs["current_user"] = current_user
+        if user_roles is not None:
+            kwargs["user_roles"] = user_roles
+        kwargs["is_superuser"] = is_superuser
         result = await service.execute(**kwargs)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")
@@ -1235,7 +1272,12 @@ def create_delete_handler(
     """Create a handler for delete operations with optional Cedar-style access control."""
 
     async def _core(
-        id: UUID, request: Request, *, current_user: str | None = None, existing: Any = None
+        id: UUID,
+        request: Request,
+        *,
+        current_user: str | None = None,
+        existing: Any = None,
+        **_extra: Any,
     ) -> Any:
         result = await service.execute(operation="delete", id=id)
         if not result:

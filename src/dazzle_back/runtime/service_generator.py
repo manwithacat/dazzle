@@ -280,6 +280,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         data: UpdateT,
         user_roles: list[str] | None = None,
         current_user: str | None = None,
+        is_superuser: bool = False,
     ) -> T | dict[str, Any] | None:
         """
         Update an existing entity.
@@ -350,6 +351,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 update_data,
                 user_roles,
                 current_user,
+                is_superuser=is_superuser,
             )
             if result is not None and not result.is_valid:
                 raise result.error  # type: ignore

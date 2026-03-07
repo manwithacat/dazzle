@@ -341,6 +341,7 @@ class TransitionValidator:
         entity_data: dict[str, Any],
         user_roles: list[str] | None = None,
         current_user: str | None = None,
+        is_superuser: bool = False,
     ) -> TransitionValidationResult:
         """
         Validate a state transition.
@@ -351,6 +352,7 @@ class TransitionValidator:
             entity_data: Current entity data (for checking field guards)
             user_roles: List of roles the current user has (for role guards)
             current_user: Current user identifier (for field != current_user guards)
+            is_superuser: Whether the user is a superuser (bypasses role guards)
 
         Returns:
             TransitionValidationResult with validation outcome
@@ -387,18 +389,19 @@ class TransitionValidator:
 
             # Check role guard
             if guard.requires_role:
-                user_roles = user_roles or []
-                if guard.requires_role not in user_roles:
-                    return TransitionValidationResult.failure(
-                        GuardNotSatisfiedError(
-                            from_state,
-                            to_state,
-                            "role",
-                            guard.requires_role,
-                            f"User must have role '{guard.requires_role}' "
-                            f"for transition '{from_state}' -> '{to_state}'",
+                if not is_superuser:
+                    normalized = {r.removeprefix("role_") for r in (user_roles or [])}
+                    if guard.requires_role not in normalized:
+                        return TransitionValidationResult.failure(
+                            GuardNotSatisfiedError(
+                                from_state,
+                                to_state,
+                                "role",
+                                guard.requires_role,
+                                f"User must have role '{guard.requires_role}' "
+                                f"for transition '{from_state}' -> '{to_state}'",
+                            )
                         )
-                    )
 
             # Check expression guard
             if guard.guard_expr:
@@ -480,6 +483,7 @@ def validate_status_update(
     update_data: dict[str, Any],
     user_roles: list[str] | None = None,
     current_user: str | None = None,
+    is_superuser: bool = False,
 ) -> TransitionValidationResult | None:
     """
     Validate a status field update against a state machine.
@@ -528,5 +532,10 @@ def validate_status_update(
 
     validator = TransitionValidator(state_machine)
     return validator.validate_transition(
-        current_status, new_status, merged_data, user_roles, current_user
+        current_status,
+        new_status,
+        merged_data,
+        user_roles,
+        current_user,
+        is_superuser=is_superuser,
     )
