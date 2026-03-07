@@ -55,5 +55,27 @@ class TestRefDisplayName:
         result = _ref_display_name({"company_name": "Acme", "title": "CEO"})
         assert result == "Acme"
 
+    def test_forename_surname(self) -> None:
+        """UK naming convention: forename + surname (#409)."""
+        result = _ref_display_name({"id": "abc", "forename": "James", "surname": "Barlow"})
+        assert result == "James Barlow"
+
+    def test_forename_only(self) -> None:
+        result = _ref_display_name({"id": "abc", "forename": "James"})
+        assert result == "James"
+
+    def test_first_name_takes_priority_over_forename(self) -> None:
+        """first_name/last_name is checked before forename/surname."""
+        result = _ref_display_name(
+            {
+                "id": "abc",
+                "first_name": "John",
+                "last_name": "Doe",
+                "forename": "James",
+                "surname": "Barlow",
+            }
+        )
+        assert result == "John Doe"
+
     def test_custom_fallback(self) -> None:
         assert _ref_display_name(None, fallback="N/A") == "N/A"

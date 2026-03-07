@@ -188,7 +188,7 @@ def _basename_or_url_filter(value: Any) -> str:
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict.
 
-    Checks: name, company_name, first_name+last_name, title, label, email, id.
+    Checks: name, company_name, first_name+last_name, forename+surname, title, label, email, id.
     This is the canonical ref display chain — used by the ref_display filter,
     truncate_text filter, and table_rows.html template.
     """
@@ -199,6 +199,10 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
         or value.get("company_name")
         or (
             ((value.get("first_name", "") or "") + " " + (value.get("last_name", "") or "")).strip()
+            or None
+        )
+        or (
+            ((value.get("forename", "") or "") + " " + (value.get("surname", "") or "")).strip()
             or None
         )
         or value.get("title")
