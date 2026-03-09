@@ -8,7 +8,7 @@
       <div class="card card-compact bg-base-200{% if attn %}{% if attn.level == 'critical' %} border-l-4 border-error{% elif attn.level == 'warning' %} border-l-4 border-warning{% elif attn.level == 'notice' %} border-l-4 border-info{% endif %}{% endif %}{% if action_url %} cursor-pointer hover:bg-base-300 transition-colors{% endif %}"
            {% if attn %}title="{{ attn.message }}"{% endif %}
            {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
-           hx-push-url="true" hx-target="body"{% endif %}>
+           hx-push-url="true" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
         <div class="card-body">
           <h4 class="card-title text-sm">{{ item[display_key] | default(item.get("name", "Item")) }}</h4>
           {% for col in columns %}

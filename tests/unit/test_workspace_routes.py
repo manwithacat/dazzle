@@ -146,7 +146,7 @@ class TestRegionContextWiring:
         assert ctx.regions[0].action == "task_edit"
         assert ctx.regions[0].action_url == "/app/task/{id}"
 
-    def test_action_url_empty_when_no_surface_match(self) -> None:
+    def test_action_url_defaults_to_entity_detail_when_no_surface_match(self) -> None:
         from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
         ws = self._make_workspace_ir(action="nonexistent_surface")
@@ -154,7 +154,17 @@ class TestRegionContextWiring:
         ctx = build_workspace_context(ws, app_spec)
 
         assert ctx.regions[0].action == "nonexistent_surface"
-        assert ctx.regions[0].action_url == ""
+        # Falls back to source entity detail URL
+        assert ctx.regions[0].action_url == "/app/task/{id}"
+
+    def test_action_url_defaults_to_entity_detail_when_no_action(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = self._make_workspace_ir()  # No action specified
+        ctx = build_workspace_context(ws)
+
+        # Default: rows link to source entity detail view
+        assert ctx.regions[0].action_url == "/app/task/{id}"
 
     def test_sort_specs_serialized(self) -> None:
         from dazzle.core.ir.ux import SortSpec

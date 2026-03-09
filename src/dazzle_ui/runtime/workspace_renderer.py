@@ -220,6 +220,10 @@ def build_workspace_context(
                                 action_url = _entity_to_app_url(entity_ref)
                     break
 
+        # Default: if no explicit action, link rows to the source entity detail view
+        if not action_url and source_name:
+            action_url = _entity_to_app_url(source_name)
+
         # Build multi-source tabs
         source_tabs: list[SourceTabContext] = []
         if region_sources:

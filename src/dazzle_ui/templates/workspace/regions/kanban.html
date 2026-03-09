@@ -14,7 +14,7 @@
           {% for item in col_items %}
           <div class="card card-compact bg-base-100 shadow-sm{% if action_url %} cursor-pointer hover:shadow-md transition-shadow{% endif %}"
                {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
-               hx-push-url="true" hx-target="body"{% endif %}>
+               hx-push-url="true" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
             <div class="card-body p-2">
               {% set _dk_val = item[display_key] if display_key else none %}
               {% if _dk_val is mapping %}

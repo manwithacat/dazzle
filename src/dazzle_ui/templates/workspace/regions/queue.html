@@ -46,7 +46,7 @@
         {# Main content — clickable to navigate to detail #}
         <div class="flex-1 min-w-0 {% if action_url %}cursor-pointer{% endif %}"
              {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
-             hx-push-url="true" hx-target="body" hx-swap="innerHTML"{% endif %}>
+             hx-push-url="true" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           <div class="flex items-center gap-2">
             <span class="font-medium truncate">{{ item[display_key] | default(item.id) }}</span>
             {% for col in columns %}
