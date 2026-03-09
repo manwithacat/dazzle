@@ -132,12 +132,18 @@ def create_experience_routes(
     nav_items: list[dict[str, Any]] = []
     nav_groups: list[dict[str, Any]] = []
 
-    # Collect which entities are claimed by nav_groups
-    grouped_workspaces: set[str] = set()
+    # Build list-surface lookup for better nav_group labels
+    _list_surfaces_by_entity: dict[str, Any] = {}
+    for surface in getattr(appspec, "surfaces", []) or []:
+        if surface.mode.value == "list" and surface.entity_ref:
+            _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
+
+    # Collect nav_groups; track workspaces that have groups
+    workspaces_with_groups: set[str] = set()
     for ws in appspec.workspaces:
+        if ws.nav_groups:
+            workspaces_with_groups.add(ws.name)
         for ng in ws.nav_groups:
-            for item in ng.items:
-                grouped_workspaces.add(item.entity)
             nav_groups.append(
                 {
                     "label": ng.label,
@@ -145,8 +151,13 @@ def create_experience_routes(
                     "collapsed": ng.collapsed,
                     "children": [
                         {
-                            "label": item.entity.replace("_", " ").title(),
-                            "route": f"{app_prefix}/workspaces/{item.entity}",
+                            "label": (
+                                _list_surfaces_by_entity[item.entity].title
+                                if item.entity in _list_surfaces_by_entity
+                                and _list_surfaces_by_entity[item.entity].title
+                                else item.entity.replace("_", " ").title()
+                            ),
+                            "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
                             "icon": item.icon,
                         }
                         for item in ng.items
@@ -156,7 +167,7 @@ def create_experience_routes(
 
     # Ungrouped workspaces become flat nav items
     for ws in appspec.workspaces:
-        if ws.name not in grouped_workspaces:
+        if ws.name not in workspaces_with_groups:
             nav_items.append(
                 {
                     "label": ws.title or ws.name.replace("_", " ").title(),

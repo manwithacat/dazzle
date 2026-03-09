@@ -2084,7 +2084,7 @@ class TestNavGroupWorkspaceScoping:
                         "children": [
                             {
                                 "label": item.entity.replace("_", " ").title(),
-                                "route": f"{app_prefix}/workspaces/{item.entity}",
+                                "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
                                 "icon": item.icon,
                             }
                             for item in ng.items
@@ -2133,3 +2133,190 @@ class TestNavGroupWorkspaceScoping:
 
         assert len(ws_nav_group_map["main"]) == 1
         assert len(ws_nav_group_map["empty"]) == 0
+
+
+class TestNavGroupRouteGeneration:
+    """nav_group children should use entity-slug routes, not /workspaces/{entity}."""
+
+    def test_nav_group_children_use_entity_slug_route(self) -> None:
+        """Children should route to /app/{entity_slug}, not /app/workspaces/{entity}."""
+        from dazzle.core.ir import NavGroupSpec, NavItemIR, WorkspaceSpec
+
+        ws = WorkspaceSpec(
+            name="ops",
+            title="Operations",
+            nav_groups=[
+                NavGroupSpec(
+                    label="Events",
+                    items=[
+                        NavItemIR(entity="AssessmentEvent"),
+                        NavItemIR(entity="session_attendance"),
+                    ],
+                ),
+            ],
+        )
+        app_prefix = "/app"
+
+        # Replicate the nav_group child route logic from page_routes
+        for ng in ws.nav_groups:
+            children = [
+                {
+                    "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
+                }
+                for item in ng.items
+            ]
+
+        assert children[0]["route"] == "/app/assessmentevent"
+        assert children[1]["route"] == "/app/session-attendance"
+
+    def test_nav_group_children_use_list_surface_title(self) -> None:
+        """When a list surface exists for the entity, use its title."""
+        from types import SimpleNamespace
+
+        from dazzle.core.ir import NavGroupSpec, NavItemIR, WorkspaceSpec
+
+        ws = WorkspaceSpec(
+            name="ops",
+            title="Operations",
+            nav_groups=[
+                NavGroupSpec(
+                    label="Events",
+                    items=[
+                        NavItemIR(entity="AttendanceSession"),
+                        NavItemIR(entity="orphan_entity"),
+                    ],
+                ),
+            ],
+        )
+        # Mock list surfaces
+        _list_surfaces_by_entity = {
+            "AttendanceSession": SimpleNamespace(title="Session Attendance"),
+        }
+
+        for ng in ws.nav_groups:
+            children = [
+                {
+                    "label": (
+                        _list_surfaces_by_entity[item.entity].title
+                        if item.entity in _list_surfaces_by_entity
+                        and _list_surfaces_by_entity[item.entity].title
+                        else item.entity.replace("_", " ").title()
+                    ),
+                }
+                for item in ng.items
+            ]
+
+        assert children[0]["label"] == "Session Attendance"
+        assert children[1]["label"] == "Orphan Entity"
+
+
+class TestNavGroupEntityExclusion:
+    """Entities in nav_groups should not appear as ungrouped flat entity items."""
+
+    def test_grouped_entities_excluded_from_ws_entity_nav(self) -> None:
+        """Entities claimed by a nav_group should not appear in ws_entity_nav."""
+        from types import SimpleNamespace
+
+        from dazzle.core.ir import (
+            NavGroupSpec,
+            NavItemIR,
+            WorkspaceSpec,
+        )
+        from dazzle.core.ir.workspaces import WorkspaceRegion
+
+        ws = WorkspaceSpec(
+            name="ops",
+            title="Operations",
+            regions=[
+                WorkspaceRegion(
+                    name="events",
+                    source="AssessmentEvent",
+                ),
+                WorkspaceRegion(
+                    name="people",
+                    source="Person",
+                ),
+            ],
+            nav_groups=[
+                NavGroupSpec(
+                    label="Events",
+                    items=[NavItemIR(entity="AssessmentEvent")],
+                ),
+            ],
+        )
+
+        # Mock surfaces for both entities
+        _list_surfaces_by_entity = {
+            "AssessmentEvent": SimpleNamespace(title="Assessment Events"),
+            "Person": SimpleNamespace(title="People"),
+        }
+
+        # Replicate the grouped-entity exclusion logic from page_routes
+        grouped: set[str] = set()
+        for ng in getattr(ws, "nav_groups", []) or []:
+            for item in ng.items:
+                grouped.add(item.entity)
+
+        entity_items: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        app_prefix = "/app"
+        for region in ws.regions:
+            region_sources: list[str] = []
+            if region.source:
+                region_sources.append(region.source)
+            for src in region_sources:
+                if src not in seen and src not in grouped:
+                    seen.add(src)
+                    ls = _list_surfaces_by_entity.get(src)
+                    if ls:
+                        entity_items.append(
+                            {
+                                "label": ls.title or src,
+                                "route": f"{app_prefix}/{src.lower().replace('_', '-')}",
+                            }
+                        )
+
+        # Only Person should appear — AssessmentEvent is in a nav_group
+        assert len(entity_items) == 1
+        assert entity_items[0]["label"] == "People"
+        assert entity_items[0]["route"] == "/app/person"
+
+    def test_no_nav_groups_all_entities_in_ws_entity_nav(self) -> None:
+        """Without nav_groups, all entities should appear as flat items."""
+        from types import SimpleNamespace
+
+        from dazzle.core.ir import WorkspaceSpec
+        from dazzle.core.ir.workspaces import WorkspaceRegion
+
+        ws = WorkspaceSpec(
+            name="ops",
+            title="Operations",
+            regions=[
+                WorkspaceRegion(name="a", source="Task"),
+                WorkspaceRegion(name="b", source="Project"),
+            ],
+            nav_groups=[],
+        )
+
+        _list_surfaces_by_entity = {
+            "Task": SimpleNamespace(title="Tasks"),
+            "Project": SimpleNamespace(title="Projects"),
+        }
+
+        grouped: set[str] = set()
+        for ng in getattr(ws, "nav_groups", []) or []:
+            for item in ng.items:
+                grouped.add(item.entity)
+
+        entity_items: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for region in ws.regions:
+            if region.source and region.source not in seen and region.source not in grouped:
+                seen.add(region.source)
+                ls = _list_surfaces_by_entity.get(region.source)
+                if ls:
+                    entity_items.append({"label": ls.title})
+
+        assert len(entity_items) == 2
+        labels = {i["label"] for i in entity_items}
+        assert labels == {"Tasks", "Projects"}

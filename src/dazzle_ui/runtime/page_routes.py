@@ -557,11 +557,21 @@ def create_page_routes(
             if surface.mode.value == "list" and surface.entity_ref:
                 _list_surfaces_by_entity.setdefault(surface.entity_ref, surface)
 
+        # Collect entities claimed by nav_groups per workspace (for #430 dedup)
+        ws_grouped_entities: dict[str, set[str]] = {}
+        for ws in workspaces:
+            grouped: set[str] = set()
+            for ng in getattr(ws, "nav_groups", []) or []:
+                for item in ng.items:
+                    grouped.add(item.entity)
+            ws_grouped_entities[ws.name] = grouped
+
         # Per-workspace nav: workspace links + entity surfaces from regions
         ws_entity_nav: dict[str, list[dict[str, Any]]] = {}
         for ws in workspaces:
             entity_items: list[dict[str, Any]] = []
             seen_entities: set[str] = set()
+            grouped = ws_grouped_entities.get(ws.name, set())
             for region in ws.regions:
                 # Collect all source entities (single + multi-source)
                 region_sources: list[str] = []
@@ -569,7 +579,7 @@ def create_page_routes(
                     region_sources.append(region.source)
                 region_sources.extend(getattr(region, "sources", []) or [])
                 for src in region_sources:
-                    if src not in seen_entities:
+                    if src not in seen_entities and src not in grouped:
                         seen_entities.add(src)
                         list_surface = _list_surfaces_by_entity.get(src)
                         if list_surface:
@@ -597,8 +607,13 @@ def create_page_routes(
                         "collapsed": ng.collapsed,
                         "children": [
                             {
-                                "label": item.entity.replace("_", " ").title(),
-                                "route": f"{app_prefix}/workspaces/{item.entity}",
+                                "label": (
+                                    _list_surfaces_by_entity[item.entity].title
+                                    if item.entity in _list_surfaces_by_entity
+                                    and _list_surfaces_by_entity[item.entity].title
+                                    else item.entity.replace("_", " ").title()
+                                ),
+                                "route": f"{app_prefix}/{item.entity.lower().replace('_', '-')}",
                                 "icon": item.icon,
                             }
                             for item in ng.items
