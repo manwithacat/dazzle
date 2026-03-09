@@ -63,7 +63,7 @@ class ProcessContext:
         parts = expr.split(".")
 
         if parts[0] == "trigger" and len(parts) >= 2:
-            obj = self.trigger_data
+            obj: Any = self.trigger_data
             for part in parts[1:]:
                 if isinstance(obj, dict):
                     obj = obj.get(part)
@@ -74,15 +74,15 @@ class ProcessContext:
         # Step output reference
         step_name = parts[0]
         if step_name in self.step_outputs:
-            obj = self.step_outputs[step_name]
+            obj2: Any = self.step_outputs[step_name]
             for part in parts[1:]:
                 if part == "output":
                     continue  # skip the "output" accessor
-                if isinstance(obj, dict):
-                    obj = obj.get(part)
+                if isinstance(obj2, dict):
+                    obj2 = obj2.get(part)
                 else:
                     return None
-            return obj
+            return obj2
 
         return expr  # literal
 
