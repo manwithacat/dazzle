@@ -164,7 +164,7 @@ jobs:
           EOF
 
       - name: Upload gap analysis
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: gap-analysis
           path: gap-reports/

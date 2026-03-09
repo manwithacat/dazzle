@@ -171,7 +171,7 @@ jobs:
         fi
 
     - name: Upload results
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: pra-results-${{ github.event.inputs.scenario }}-${{ github.run_number }}
         path: |
@@ -183,7 +183,7 @@ jobs:
 
     - name: Update baseline
       if: github.event.inputs.update_baseline == 'true' && steps.test.outcome == 'success'
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: pra-baseline-${{ github.event.inputs.scenario }}
         path: results.json
@@ -270,7 +270,7 @@ jobs:
         "
 
     - name: Upload weekly results
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: pra-weekly-${{ github.run_number }}
         path: weekly-results.json
