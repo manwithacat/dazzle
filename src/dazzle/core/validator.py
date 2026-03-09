@@ -666,7 +666,10 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
         # Validate attention signals
         for signal in ux.attention_signals:
             field_errors = _validate_condition_fields(
-                signal.condition, entity, f"Surface '{surface.name}' attention signal"
+                signal.condition,
+                entity,
+                f"Surface '{surface.name}' attention signal",
+                appspec=appspec,
             )
             errors.extend(field_errors)
 
@@ -685,6 +688,7 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                     variant.scope,
                     entity,
                     f"Surface '{surface.name}' persona '{variant.persona}' scope",
+                    appspec=appspec,
                 )
                 errors.extend(field_errors)
 
@@ -730,6 +734,7 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         region.filter,
                         entity,
                         ctx,
+                        appspec=appspec,
                     )
                     errors.extend(field_errors)
 
@@ -748,15 +753,24 @@ def validate_ux_specs(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
 
 
 def _validate_condition_fields(
-    condition: ir.ConditionExpr, entity: ir.EntitySpec | None, context: str
+    condition: ir.ConditionExpr,
+    entity: ir.EntitySpec | None,
+    context: str,
+    appspec: ir.AppSpec | None = None,
 ) -> list[str]:
     """
     Validate that condition expression references valid entity fields.
+
+    Supports FK traversal: ``assessment_event.department`` resolves
+    ``assessment_event`` as a ref field on *entity*, then checks
+    ``department`` exists on the referenced entity. Multi-hop paths
+    like ``mark_scheme.subject.department`` are also supported.
 
     Args:
         condition: The condition expression to validate
         entity: The entity to validate fields against (may be None)
         context: Context string for error messages
+        appspec: Full app spec, needed to resolve FK traversal paths
 
     Returns:
         List of error messages
@@ -767,14 +781,55 @@ def _validate_condition_fields(
         return errors
 
     entity_field_names = {f.name for f in entity.fields}
+    entity_fields_by_name = {f.name: f for f in entity.fields}
+
+    def _resolve_fk_path(field_path: str) -> str | None:
+        """Resolve a dotted FK path. Returns an error message or None if valid."""
+        parts = field_path.split(".")
+        current_entity = entity
+        current_fields = entity_fields_by_name
+
+        for i, part in enumerate(parts):
+            if part not in current_fields:
+                source = current_entity.name if current_entity else "?"
+                return (
+                    f"{context} references non-existent field '{field_path}' from entity '{source}'"
+                )
+
+            # If there are more segments, this part must be a ref field
+            if i < len(parts) - 1:
+                field_spec = current_fields[part]
+                if field_spec.type.kind != ir.FieldTypeKind.REF or not field_spec.type.ref_entity:
+                    return (
+                        f"{context} field '{'.'.join(parts[: i + 1])}' is not a "
+                        f"reference field on entity '{current_entity.name if current_entity else '?'}', "
+                        f"cannot traverse to '{'.'.join(parts[i + 1 :])}'"
+                    )
+                if not appspec:
+                    return None  # Can't resolve further without appspec; assume valid
+                ref_entity = appspec.get_entity(field_spec.type.ref_entity)
+                if not ref_entity:
+                    return (
+                        f"{context} field '{'.'.join(parts[: i + 1])}' references "
+                        f"entity '{field_spec.type.ref_entity}' which does not exist"
+                    )
+                current_entity = ref_entity
+                current_fields = {f.name: f for f in ref_entity.fields}
+
+        return None  # Valid
 
     def check_comparison(comparison: ir.Comparison) -> None:
         """Validate field references in a comparison expression."""
-        if comparison.field and comparison.field not in entity_field_names:
-            errors.append(
-                f"{context} references non-existent field '{comparison.field}' "
-                f"from entity '{entity.name}'"
-            )
+        if comparison.field:
+            if "." in comparison.field:
+                err = _resolve_fk_path(comparison.field)
+                if err:
+                    errors.append(err)
+            elif comparison.field not in entity_field_names:
+                errors.append(
+                    f"{context} references non-existent field '{comparison.field}' "
+                    f"from entity '{entity.name}'"
+                )
         if comparison.function and comparison.function.argument not in entity_field_names:
             errors.append(
                 f"{context} function '{comparison.function.name}' references "

@@ -18,6 +18,7 @@ from dazzle.core.validator import (
     validate_integrations,
     validate_services,
     validate_surfaces,
+    validate_ux_specs,
 )
 
 # =============================================================================
@@ -872,3 +873,183 @@ class TestDeadConstructDetection:
         )
         warnings = extended_lint(appspec)
         assert not any("Dead construct" in w for w in warnings)
+
+
+# =============================================================================
+# Workspace Region Filter FK Traversal Tests (#419)
+# =============================================================================
+
+
+class TestWorkspaceFilterFKTraversal:
+    """Test that workspace region filters support FK traversal on related entity fields."""
+
+    def test_single_hop_fk_traversal_valid(self) -> None:
+        """filter: assessment_event.department = ... should pass when assessment_event is a ref."""
+        department = make_entity(name="Department", fields=[make_id_field()])
+        event = make_entity(
+            name="AssessmentEvent",
+            fields=[
+                make_id_field(),
+                ir.FieldSpec(
+                    name="department",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Department"),
+                ),
+            ],
+        )
+        submission = make_entity(
+            name="AssessmentSubmission",
+            fields=[
+                make_id_field(),
+                ir.FieldSpec(
+                    name="assessment_event",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="AssessmentEvent"),
+                ),
+            ],
+        )
+        region = ir.WorkspaceRegion(
+            name="submissions",
+            source="AssessmentSubmission",
+            filter=ir.ConditionExpr(
+                comparison=ir.Comparison(
+                    field="assessment_event.department",
+                    operator=ir.ComparisonOperator.EQUALS,
+                    value=ir.ConditionValue(literal="some-dept-id"),
+                ),
+            ),
+        )
+        workspace = ir.WorkspaceSpec(name="hub", title="Hub", regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[department, event, submission]),
+            workspaces=[workspace],
+        )
+        errors, _ = validate_ux_specs(appspec)
+        assert not errors
+
+    def test_two_hop_fk_traversal_valid(self) -> None:
+        """filter: mark_scheme.subject.department = ... should pass with valid chain."""
+        department = make_entity(name="Department", fields=[make_id_field()])
+        subject = make_entity(
+            name="Subject",
+            fields=[
+                make_id_field(),
+                ir.FieldSpec(
+                    name="department",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Department"),
+                ),
+            ],
+        )
+        mark_scheme = make_entity(
+            name="MarkScheme",
+            fields=[
+                make_id_field(),
+                ir.FieldSpec(
+                    name="subject",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Subject"),
+                ),
+            ],
+        )
+        version = make_entity(
+            name="MarkSchemeVersion",
+            fields=[
+                make_id_field(),
+                ir.FieldSpec(
+                    name="mark_scheme",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="MarkScheme"),
+                ),
+            ],
+        )
+        region = ir.WorkspaceRegion(
+            name="versions",
+            source="MarkSchemeVersion",
+            filter=ir.ConditionExpr(
+                comparison=ir.Comparison(
+                    field="mark_scheme.subject.department",
+                    operator=ir.ComparisonOperator.EQUALS,
+                    value=ir.ConditionValue(literal="some-dept-id"),
+                ),
+            ),
+        )
+        workspace = ir.WorkspaceSpec(name="hub", title="Hub", regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[department, subject, mark_scheme, version]),
+            workspaces=[workspace],
+        )
+        errors, _ = validate_ux_specs(appspec)
+        assert not errors
+
+    def test_fk_traversal_invalid_first_segment(self) -> None:
+        """filter: nonexistent.department = ... should fail."""
+        entity = make_entity(name="Task", fields=[make_id_field()])
+        region = ir.WorkspaceRegion(
+            name="tasks",
+            source="Task",
+            filter=ir.ConditionExpr(
+                comparison=ir.Comparison(
+                    field="nonexistent.department",
+                    operator=ir.ComparisonOperator.EQUALS,
+                    value=ir.ConditionValue(literal="x"),
+                ),
+            ),
+        )
+        workspace = ir.WorkspaceSpec(name="hub", title="Hub", regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            workspaces=[workspace],
+        )
+        errors, _ = validate_ux_specs(appspec)
+        assert any("nonexistent.department" in e for e in errors)
+
+    def test_fk_traversal_non_ref_field(self) -> None:
+        """filter: title.something = ... should fail when title is not a ref."""
+        entity = make_entity(
+            name="Task",
+            fields=[
+                make_id_field(),
+                ir.FieldSpec(name="title", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
+            ],
+        )
+        region = ir.WorkspaceRegion(
+            name="tasks",
+            source="Task",
+            filter=ir.ConditionExpr(
+                comparison=ir.Comparison(
+                    field="title.something",
+                    operator=ir.ComparisonOperator.EQUALS,
+                    value=ir.ConditionValue(literal="x"),
+                ),
+            ),
+        )
+        workspace = ir.WorkspaceSpec(name="hub", title="Hub", regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            workspaces=[workspace],
+        )
+        errors, _ = validate_ux_specs(appspec)
+        assert any("not a reference field" in e for e in errors)
+
+    def test_direct_field_still_validated(self) -> None:
+        """Non-dotted field names should still be validated as before."""
+        entity = make_entity(name="Task", fields=[make_id_field()])
+        region = ir.WorkspaceRegion(
+            name="tasks",
+            source="Task",
+            filter=ir.ConditionExpr(
+                comparison=ir.Comparison(
+                    field="bogus_field",
+                    operator=ir.ComparisonOperator.EQUALS,
+                    value=ir.ConditionValue(literal="x"),
+                ),
+            ),
+        )
+        workspace = ir.WorkspaceSpec(name="hub", title="Hub", regions=[region])
+        appspec = ir.AppSpec(
+            name="Test",
+            domain=ir.DomainSpec(entities=[entity]),
+            workspaces=[workspace],
+        )
+        errors, _ = validate_ux_specs(appspec)
+        assert any("bogus_field" in e for e in errors)
