@@ -9,6 +9,70 @@ concept_count = 1
 category = "Expression System"
 doc_page = "entities"
 doc_order = 20
-definition = "Boolean expressions used in filters, attention signals, and persona scopes."
-related = ["attention_signals", "scope", "regions"]
+definition = """
+Boolean expressions used in filters, access rules, attention signals, persona scopes,
+workspace region filters, invariants, and approval thresholds. Conditions support
+field comparisons, function calls, role checks, date arithmetic, and logical operators.
+"""
+syntax = '''
+# Comparison operators:
+#   =, !=, >, <, >=, <=, in, not in, is, is not
+
+# Logical operators:
+#   and, or
+
+# Special values:
+#   current_user  - The logged-in user's ID
+#   null          - Null/missing value (use with is/is not)
+#   true, false   - Boolean literals
+
+# Role check:
+#   role(<name>)  - User has the specified role
+
+# Function calls:
+#   days_since(<field>)  - Days since a datetime field
+#   count(<relation>)    - Count of related records
+
+# Date arithmetic (v0.10.2):
+#   today, now           - Current date/datetime
+#   today + 7d           - Date plus duration
+#   now - 24h            - Datetime minus duration
+
+# List membership:
+#   field in [val1, val2, val3]
+#   field not in [val1, val2]
+
+# Compound conditions:
+#   condition1 and condition2
+#   condition1 or condition2
+'''
+example = '''
+# Workspace region filter
+overdue_tasks:
+  source: Task
+  filter: status = open and due_date < today
+
+# Access rule conditions
+access:
+  read: owner = current_user or is_public = true or role(admin)
+  write: owner = current_user and status != closed
+
+# Invariant conditions
+invariant: end_date > start_date
+invariant: priority != high or due_date != null
+
+# Attention signal condition
+attention:
+  overdue: due_date < today and status != closed
+
+# Approval threshold
+threshold: amount > 1000
+
+# Date arithmetic in filters
+recent:
+  source: AuditLog
+  filter: created_at > now - 24h
+'''
+related = ["attention_signals", "scope", "regions", "access_rules", "invariant"]
 v0_2_changes = "Enhanced with new functions in v0.2"
+v0_10_2_changes = "Added date arithmetic (today + 7d, now - 24h)"

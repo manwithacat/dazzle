@@ -33,6 +33,76 @@ v0_2_changes = "NEW in v0.2"
 category = "Workspace Component (v0.2)"
 doc_page = "workspaces"
 doc_order = 2
-definition = "Named sections within a workspace that pull data from entities or surfaces."
+definition = """
+Named sections within a workspace that pull data from entities or surfaces.
+Each region defines a data view with optional filtering, sorting, display mode,
+and aggregation. Three types of regions:
+- Data region: has source + optional filter/sort/limit (renders entity rows)
+- Aggregate-only region: has only aggregate: block (renders KPI metric cards)
+- Multi-source region: has sources: [Entity1, Entity2] (renders tabbed list)
+
+Regions support date-range filtering (v0.34.0) with date_field + date_range flag.
+"""
+syntax = '''
+<region_name>:
+  source: <EntityName>                       # Single source
+  source: [<Entity1>, <Entity2>]             # Multi-source (tabbed list)
+  [filter: <condition_expr>]                 # Row filter
+  [filter_map:]                              # Per-source filters (multi-source)
+    [<EntityName>: <condition>]
+  [sort: <field> [asc|desc], ...]            # Sort order
+  [limit: <1-1000>]                          # Max records
+  [display: <list|grid|timeline|map|detail|summary|metrics|kanban|bar_chart|funnel_chart|queue|tabbed_list>]
+  [action: <surface_name>]                   # Click-through surface
+  [empty: "<message>"]                       # Empty state message
+  [group_by: <field>]                        # Group data by field
+  [date_field: <field>]                      # Date-range filter field
+  [date_range]                               # Enable date picker
+  [aggregate:]                               # KPI metrics
+    [<metric_name>: <expression>]
+'''
+example = '''
+workspace ops_dashboard "Operations Dashboard":
+  purpose: "Monitor daily operations"
+
+  # Data region with filter and sort
+  open_tickets:
+    source: Ticket
+    filter: status = open
+    sort: priority desc, created_at asc
+    limit: 20
+    display: list
+    action: ticket_detail
+    empty: "No open tickets"
+
+  # Aggregate-only region (no source needed)
+  kpi_metrics:
+    aggregate:
+      total_tickets: count(Ticket)
+      open_count: count(Ticket where status = open)
+    display: metrics
+
+  # Detail region (single record view)
+  current_user_profile:
+    source: UserProfile
+    display: detail
+
+  # Multi-source tabbed region
+  activity:
+    source: [Ticket, Order, Invoice]
+    sort: created_at desc
+    limit: 10
+    display: tabbed_list
+
+  # Date-range filtered region
+  sales:
+    source: Order
+    date_field: created_at
+    date_range
+    sort: created_at desc
+    display: list
+'''
 related = ["workspace", "display_modes", "aggregates"]
 v0_2_changes = "NEW in v0.2"
+v0_33_0_changes = "Added multi-source regions (tabbed_list) and queue display mode"
+v0_34_0_changes = "Added date_field and date_range for date-range filtering"

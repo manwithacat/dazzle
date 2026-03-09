@@ -43,7 +43,73 @@ message = "Use notification or alert"
 category = "Type System"
 doc_page = "entities"
 doc_order = 3
-definition = "Data types available for entity fields: str(N), text, int, decimal(P,S), bool, date, datetime, uuid, email, json, money, enum[...], ref Entity, has_many/has_one/embeds/belongs_to, timezone."
+definition = "Data types available for entity fields: str(N), text, int, decimal(P,S), bool, date, datetime, uuid, email, json, money, file, url, timezone, enum[...], ref Entity, has_many/has_one/embeds/belongs_to."
+syntax = '''
+# Scalar types:
+#   str(N)          - String with max length N (e.g., str(200))
+#   text            - Unlimited-length text
+#   int             - Integer
+#   decimal(P,S)    - Decimal with precision P and scale S (e.g., decimal(10,2))
+#   bool            - Boolean (true/false)
+#   date            - Date (YYYY-MM-DD)
+#   datetime        - Date+time with timezone
+#   uuid            - UUID identifier
+#   email           - Email address with validation
+#   json            - Flexible JSON data (maps to JSONB)
+#   money           - Currency amount (integer minor units + ISO 4217 code)
+#   money(GBP)      - Money with explicit currency
+#   file            - File reference/upload path
+#   url             - URL/URI with validation
+#   timezone        - IANA timezone identifier (e.g., "Europe/London")
+
+# Enum type:
+#   enum[val1,val2,val3]         - Enumeration of fixed values
+#   enum[val1,val2]=default_val  - With default value
+
+# Reference types:
+#   ref <Entity>               - Foreign key reference
+#   has_many <Entity> [cascade|restrict|nullify|readonly]
+#   has_one <Entity> [cascade|restrict|nullify]
+#   embeds <Entity>            - Embedded value object
+#   belongs_to <Entity>        - Inverse of has_many/has_one
+
+# Modifiers (after type):
+#   required       - Field must have a value
+#   optional       - Field can be null (default for most types)
+#   pk             - Primary key
+#   unique         - Unique constraint
+#   unique?        - Unique but nullable
+#   auto_add       - Set automatically on creation (datetime)
+#   auto_update    - Set automatically on update (datetime)
+#   sensitive      - PII/credential masking in logs and exports
+#   searchable     - Include in full-text search index (v0.34.0)
+
+# Defaults:
+#   = <value>      - Scalar default (e.g., = false, = "draft")
+#   = today        - Date default
+#   = now          - Datetime default
+#   = today + 7d   - Date arithmetic default
+'''
+example = '''
+entity Order "Order":
+  id: uuid pk
+  title: str(200) required
+  description: text
+  quantity: int required
+  price: decimal(10,2) required
+  total: money required
+  is_urgent: bool = false
+  due_date: date = today + 7d
+  created_at: datetime auto_add
+  updated_at: datetime auto_update
+  status: enum[draft,confirmed,shipped,delivered]=draft
+  customer_email: email required sensitive
+  customer: ref Customer required
+  items: has_many OrderItem cascade
+  metadata: json
+  receipt_url: url
+  timezone: timezone = "UTC"
+'''
 related = ["entity", "json", "money", "timezone"]
 v0_2_changes = "No changes from v0.1"
 v0_9_4_changes = "Added json type for flexible JSON data storage"
