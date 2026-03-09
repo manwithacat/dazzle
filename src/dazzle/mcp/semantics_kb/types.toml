@@ -7,6 +7,8 @@ concept_count = 6
 
 [concepts.enum]
 category = "Type System"
+doc_page = "entities"
+doc_order = 2
 definition = "Enumeration type defining a fixed set of allowed values. Values are comma-separated inside square brackets with no spaces. Can specify a default value with =."
 syntax = '''
 <field_name>: enum[value1,value2,value3]
@@ -39,6 +41,8 @@ message = "Use notification or alert"
 
 [concepts.field_types]
 category = "Type System"
+doc_page = "entities"
+doc_order = 3
 definition = "Data types available for entity fields: str(N), text, int, decimal(P,S), bool, date, datetime, uuid, email, json, money, enum[...], ref Entity, has_many/has_one/embeds/belongs_to, timezone."
 related = ["entity", "json", "money", "timezone"]
 v0_2_changes = "No changes from v0.1"
@@ -47,6 +51,8 @@ v0_20_changes = "Added money type for canonical monetary value representation"
 
 [concepts.json]
 category = "Type System"
+doc_page = "entities"
+doc_order = 4
 definition = "Flexible JSON data type for storing structured but schema-less data. Maps to JSONB in PostgreSQL, JSON in MySQL/SQLite. Use for metadata, settings, external API payloads, or any data with variable structure."
 syntax = "<field_name>: json"
 example = '''
@@ -70,6 +76,8 @@ security_notes = ["JSON is deserialized safely by the runtime", "Avoid storing e
 
 [concepts.ref]
 category = "Type System"
+doc_page = "entities"
+doc_order = 5
 definition = "Reference (foreign key) to another entity. Creates a relationship between entities. The referenced entity must be defined in the same module or imported."
 syntax = "<field_name>: ref <EntityName> [required|optional]"
 example = '''
@@ -94,6 +102,8 @@ related = ["field_types", "relationships", "entity"]
 
 [concepts.relationships]
 category = "Type System"
+doc_page = "entities"
+doc_order = 5
 definition = "References and ownership relationships between entities. v0.7.1 adds semantic relationship types (has_many, has_one, embeds, belongs_to) with delete behaviors."
 syntax = '''
 # Simple reference (foreign key)
@@ -136,6 +146,8 @@ belongs_to = "Child side of has_many/has_one relationship"
 
 [concepts.money]
 category = "Type System"
+doc_page = "entities"
+doc_order = 4
 definition = "Canonical money representation for monetary values. Uses integer minor units (pence/cents) + ISO 4217 currency code for precision and JSON serialization safety. REQUIRED for monetary fields in FACT/INTENT streams."
 syntax = '''
 <field_name>: money [required|optional]
@@ -200,6 +212,8 @@ pattern_detection = "Fields named amount, price, cost, total, etc. are checked"
 
 [concepts.timezone]
 category = "Type System"
+doc_page = "entities"
+doc_order = 4
 definition = "IANA timezone identifier field type for storing timezone names like 'Europe/London', 'America/New_York', 'UTC'. Used for timezone configuration in settings entities."
 syntax = "<field_name>: timezone [= \"default_timezone\"]"
 example = '''

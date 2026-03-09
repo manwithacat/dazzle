@@ -7,6 +7,7 @@ pattern_count = 25
 
 [patterns.adapter_result]
 category = "Integration (v0.6)"
+doc_page = "patterns"
 definition = "Result type for adapter operations using success/failure pattern instead of exceptions for expected errors."
 syntax = '''
 AdapterResult[T] = Success with data or Failure with error
@@ -41,6 +42,7 @@ related = ["external_adapter", "error_normalization"]
 v0_6_changes = "NEW in v0.6"
 
 [patterns.audit_trail]
+doc_page = "patterns"
 name = "Audit Trail Pattern"
 description = "Track who changed what and when"
 example = '''
@@ -70,6 +72,7 @@ surface document_history "Document History":
 '''
 
 [patterns.business_logic_pattern]
+doc_page = "patterns"
 name = "Business Logic Pattern"
 description = "Complete entity with state machine, invariants, computed fields, and access rules"
 v0_7_feature = true
@@ -120,6 +123,7 @@ use_cases = ["Workflow systems (tickets, orders, approvals)", "Document lifecycl
 related = ["state_machine", "invariant", "computed_field", "access_rules"]
 
 [patterns.cedar_rbac]
+doc_page = "patterns"
 name = "Cedar-Style RBAC Pattern"
 description = "Role-based entity access using permit/forbid/audit blocks with NIST SP 800-162 alignment. Supports separation of duty, least privilege, default-deny, and audit trail requirements."
 v0_21_feature = true
@@ -162,6 +166,7 @@ use_cases = ["Healthcare (HIPAA, prescription workflows)", "Finance (SOX complia
 related = ["access_rules", "role_based_access", "business_logic_pattern", "rbac_validation"]
 
 [patterns.crud]
+doc_page = "patterns"
 name = "CRUD Pattern"
 description = "Complete create-read-update-delete interface for an entity"
 surfaces = ["{entity}_list (list mode)", "{entity}_detail (view mode)", "{entity}_create (create mode)", "{entity}_edit (edit mode)"]
@@ -211,6 +216,7 @@ surface task_edit "Edit Task":
 '''
 
 [patterns.dashboard]
+doc_page = "patterns"
 name = "Dashboard Pattern"
 description = "Workspace aggregating multiple data views with metrics"
 components = ["Metrics/KPIs", "Recent activity", "Alerts/attention items", "Quick actions"]
@@ -247,6 +253,7 @@ workspace team_dashboard "Team Dashboard":
 '''
 
 [patterns.domain_service_pattern]
+doc_page = "patterns"
 name = "Domain Service Pattern"
 description = "Custom business logic with DSL declaration and stub implementation"
 v0_5_feature = true
@@ -297,6 +304,7 @@ def calculate_vat(invoice_id: str, country_code: str | None = None) -> Calculate
 use_cases = ["Complex calculations (pricing, tax, discounts)", "External API integration (payment, email)", "Multi-step workflows (approval processes)", "Cross-entity validation rules"]
 
 [patterns.ejection_pattern]
+doc_page = "patterns"
 name = "Ejection Pattern"
 description = "Generate standalone application code from DAZZLE specification for custom deployment"
 v0_7_2_feature = true
@@ -379,6 +387,7 @@ related = ["ejection", "ejection_config", "ejection_adapter", "openapi_generatio
 
 [patterns.error_category]
 category = "Integration (v0.6)"
+doc_page = "patterns"
 definition = "High-level error categories for routing and handling decisions in the GraphQL layer."
 syntax = '''
 ErrorCategory.AUTHENTICATION  # Redirect to login
@@ -408,6 +417,7 @@ v0_6_changes = "NEW in v0.6"
 
 [patterns.error_normalization]
 category = "Integration (v0.6)"
+doc_page = "patterns"
 definition = "System for converting diverse external API errors into a consistent format for GraphQL responses."
 syntax = '''
 from dazzle_dnr_back.graphql.adapters import (
@@ -447,6 +457,7 @@ v0_6_changes = "NEW in v0.6"
 
 [patterns.error_severity]
 category = "Integration (v0.6)"
+doc_page = "patterns"
 definition = "Error severity levels for logging and alerting decisions."
 syntax = '''
 ErrorSeverity.INFO      # Expected errors (validation, not found)
@@ -475,6 +486,7 @@ v0_6_changes = "NEW in v0.6"
 
 [patterns.external_adapter]
 category = "Integration (v0.6)"
+doc_page = "patterns"
 definition = "Abstract base class for integrating with external APIs (HMRC, banks, payment providers, etc.) with built-in retry logic, rate limiting, and error normalization."
 syntax = '''
 from dazzle_dnr_back.graphql.adapters import (
@@ -522,6 +534,7 @@ related = ["error_normalization", "adapter_result", "graphql_bff_pattern"]
 v0_6_changes = "NEW in v0.6"
 
 [patterns.graphql_bff_pattern]
+doc_page = "patterns"
 name = "GraphQL BFF Pattern"
 description = "Backend-for-Frontend using GraphQL as the API layer between UI and backend services"
 v0_6_feature = true
@@ -558,6 +571,7 @@ use_cases = ["Mobile apps needing flexible data fetching", "Complex UIs with nes
 
 [patterns.graphql_schema_inspection]
 category = "CLI (v0.6)"
+doc_page = "patterns"
 definition = "CLI command to inspect the auto-generated GraphQL schema from entity specs."
 syntax = '''
 # Display GraphQL SDL
@@ -597,6 +611,7 @@ related = ["graphql_bff_pattern", "external_adapter"]
 v0_6_changes = "NEW in v0.6"
 
 [patterns.kanban_board]
+doc_page = "patterns"
 name = "Kanban Board Pattern"
 description = "Status-based workflow visualization"
 example = '''
@@ -639,6 +654,7 @@ workspace kanban "Task Board":
 '''
 
 [patterns.llm_cognition_pattern]
+doc_page = "patterns"
 name = "LLM Cognition Pattern"
 description = "Entity design optimized for LLM understanding with intent, semantic tags, archetypes, and example data"
 v0_7_1_feature = true
@@ -731,6 +747,7 @@ use_cases = ["LLM-assisted code generation from DSL", "Semantic understanding of
 related = ["intent", "archetype", "domain_patterns", "examples", "invariant_message", "relationships"]
 
 [patterns.master_detail]
+doc_page = "patterns"
 name = "Master-Detail Pattern"
 description = "Parent-child relationship with nested views"
 v0_2_feature = false
@@ -768,6 +785,7 @@ surface project_detail "Project":
 '''
 
 [patterns.notifications]
+doc_page = "patterns"
 name = "Notifications Pattern"
 description = "Alert users to important events"
 v0_2_feature = true
@@ -804,6 +822,7 @@ surface order_list "Orders":
 '''
 
 [patterns.role_based_access]
+doc_page = "patterns"
 name = "Role-Based Access Pattern"
 description = "Persona variants controlling scope and capabilities"
 personas = ["Admin: full access, all records", "Manager: department/team scope", "Member: own records only"]
@@ -841,6 +860,7 @@ surface ticket_list "Support Tickets":
 '''
 
 [patterns.search_filter]
+doc_page = "patterns"
 name = "Search & Filter Pattern"
 description = "Full-text search with faceted filtering"
 v0_2_feature = true
@@ -873,6 +893,7 @@ surface product_catalog "Products":
 '''
 
 [patterns.settings_archetype]
+doc_page = "patterns"
 name = "Settings Archetype Pattern"
 description = "System-wide configuration using the settings semantic archetype for admin-only singleton entities"
 v0_10_3_feature = true
@@ -904,6 +925,7 @@ use_cases = ["Application-wide configuration", "Feature flags", "System defaults
 related = ["tenant_archetype", "tenant_settings_archetype", "timezone_field"]
 
 [patterns.tenant_archetype]
+doc_page = "patterns"
 name = "Tenant Archetype Pattern"
 description = "Multi-tenant root entity that defines tenant boundaries and automatically injects tenant FK into other entities"
 v0_10_3_feature = true
@@ -944,6 +966,7 @@ use_cases = ["SaaS applications", "Multi-organization platforms", "White-label s
 related = ["settings_archetype", "tenant_settings_archetype"]
 
 [patterns.tenant_settings_archetype]
+doc_page = "patterns"
 name = "Tenant Settings Archetype Pattern"
 description = "Per-tenant configuration using tenant_settings archetype for tenant-scoped singleton entities"
 v0_10_3_feature = true
@@ -988,6 +1011,7 @@ use_cases = ["Per-tenant branding", "Tenant-specific defaults", "Customer custom
 related = ["settings_archetype", "tenant_archetype", "timezone_field"]
 
 [patterns.user_archetype]
+doc_page = "patterns"
 name = "User Archetype Pattern"
 description = "Core user entity with built-in authentication fields for local auth and OAuth/SSO support"
 v0_10_4_feature = true
@@ -1026,6 +1050,7 @@ use_cases = ["User authentication", "Account management", "OAuth/SSO integration
 related = ["user_membership_archetype", "tenant_archetype"]
 
 [patterns.user_membership_archetype]
+doc_page = "patterns"
 name = "User Membership Archetype Pattern"
 description = "User-tenant relationship with per-tenant personas (roles) for multi-tenant applications"
 v0_10_4_feature = true

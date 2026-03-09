@@ -7,6 +7,8 @@ concept_count = 1
 
 [concepts.conditions]
 category = "Expression System"
+doc_page = "entities"
+doc_order = 20
 definition = "Boolean expressions used in filters, attention signals, and persona scopes."
 related = ["attention_signals", "scope", "regions"]
 v0_2_changes = "Enhanced with new functions in v0.2"

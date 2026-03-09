@@ -7,6 +7,8 @@ version = "0.37.0"
 
 [concepts.entity]
 category = "Core Construct"
+doc_page = "entities"
+doc_order = 1
 definition = """
 A domain model representing a business concept (User, Task, Device, etc.).
 Similar to a database table but defined at the semantic level. Includes fields
@@ -98,6 +100,8 @@ v0_28_3_changes = "Added sensitive modifier for PII masking and audit compliance
 
 [concepts.surface]
 category = "Core Construct"
+doc_page = "surfaces"
+doc_order = 1
 definition = """
 A UI or API interface definition for interacting with entities.
 Defines WHAT data to show and HOW users interact with it.
@@ -149,6 +153,8 @@ v0_30_0_changes = "Added when: clause on surface fields for conditional visibili
 
 [concepts.workspace]
 category = "Core Construct (v0.2)"
+doc_page = "workspaces"
+doc_order = 1
 definition = """
 A composition of multiple data views into a cohesive dashboard or information hub.
 Workspaces aggregate related surfaces and data for specific user needs.
@@ -237,6 +243,8 @@ v0_2_changes = "NEW in v0.2"
 
 [concepts.stage]
 category = "Core Construct (v0.8)"
+doc_page = "experiences"
+doc_order = 2
 definition = """
 Layout stage that defines how a workspace's UI components are arranged.
 Stages are like theater stages - they provide a layout where your UI components perform.
@@ -317,6 +325,8 @@ tips = [
 
 [concepts.process]
 category = "Core Construct"
+doc_page = "processes"
+doc_order = 1
 definition = """
 A durable workflow process that orchestrates multi-step operations across entities
 and services. Processes handle lifecycle transitions, scheduled jobs, event-driven
@@ -384,6 +394,8 @@ related = ["entity", "service", "story", "state_machine", "compensation"]
 
 [concepts.experience]
 category = "Core Construct"
+doc_page = "experiences"
+doc_order = 1
 definition = """
 A multi-step user flow or wizard that guides users through a sequence of steps.
 Experiences define step-by-step interactions with navigation, branching, and

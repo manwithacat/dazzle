@@ -7,6 +7,8 @@ concept_count = 3
 
 [concepts.aggregates]
 category = "Workspace Component (v0.2)"
+doc_page = "workspaces"
+doc_order = 4
 definition = "Computed metrics and aggregate functions for workspace regions."
 syntax = '''
 aggregate:
@@ -20,6 +22,8 @@ v0_2_changes = "NEW in v0.2"
 
 [concepts.display_modes]
 category = "Workspace Component (v0.2)"
+doc_page = "workspaces"
+doc_order = 5
 definition = "Visualization modes for workspace regions."
 syntax = "display: <list|grid|timeline|map>"
 related = ["regions", "workspace"]
@@ -27,6 +31,8 @@ v0_2_changes = "NEW in v0.2"
 
 [concepts.regions]
 category = "Workspace Component (v0.2)"
+doc_page = "workspaces"
+doc_order = 2
 definition = "Named sections within a workspace that pull data from entities or surfaces."
 related = ["workspace", "display_modes", "aggregates"]
 v0_2_changes = "NEW in v0.2"

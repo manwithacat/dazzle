@@ -7,6 +7,8 @@ concept_count = 10
 
 [concepts.htmx]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 1
 definition = "Declarative HTTP interaction layer for Dazzle-generated frontends. All interactions expressed via HTML attributes (hx-get, hx-post, hx-target, hx-swap, hx-trigger). Server renders HTML fragments; HTMX swaps them into the DOM."
 syntax = '''
 <element
@@ -46,6 +48,8 @@ mcp_resource = "dazzle://docs/htmx-templates"
 
 [concepts.templates]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 2
 definition = "Three-layer Jinja2 template architecture: Components (full page content), Fragments (HTMX-swappable partials), Macros (pure rendering helpers). Each layer has distinct responsibilities."
 syntax = '''
 templates/
@@ -78,6 +82,8 @@ mcp_resource = "dazzle://docs/htmx-templates"
 
 [concepts.fragment_contract]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 3
 definition = "A fragment's formal interface specifying required/optional params, events it emits, events it listens to, and swap targets. Enables LLM agents to compose fragments without reading implementation."
 syntax = '''
 fragment: <name>
@@ -117,6 +123,8 @@ cognition_tips = [
 
 [concepts.oob_swap]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 4
 definition = "Out-of-band swap pattern (hx-swap-oob) for updating multiple DOM elements from a single server response. Used for autofill: selecting a search result populates multiple related form fields."
 syntax = '''
 <!-- Server response includes multiple elements -->
@@ -155,6 +163,8 @@ cognition_tips = [
 
 [concepts.sitespec]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 5
 definition = """Site configuration file (sitespec.yaml) defining brand, navigation, page structure, \
 legal pages, auth pages, and integrations. Structural configuration for the marketing/public site \
 shell. Pages use typed sections (hero, features, cta, markdown, comparison, card_grid, trust_bar, \
@@ -264,6 +274,8 @@ cognition_tips = [
 
 [concepts.copy_md]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 6
 definition = """Founder-friendly markdown file for PROSE marketing content. Best for: hero headlines, \
 feature descriptions, testimonials, FAQ text. NOT for structured data like pricing tiers — those \
 belong in sitespec.yaml. Supports :::type directive fences to create typed sections inline \
@@ -372,6 +384,8 @@ Keep structured data in YAML where it's explicit and reliable.
 
 [concepts.section_types]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 7
 definition = """All available section types for sitespec.yaml page sections. Each section has a \
 'type' field and type-specific fields on SectionSpec. Sections are rendered client-side by the \
 site_renderer.py JS engine. IR models are in dazzle.core.ir.sitespec."""
@@ -543,6 +557,8 @@ cognition_tips = [
 
 [concepts.directive_syntax]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 8
 definition = """Directive fence syntax for embedding typed sections inside markdown content files. \
 Use :::type to open a directive block and ::: to close it. Prose between fences becomes markdown \
 sections. Reuses copy_parser section parsers for typed blocks. Source: dazzle.core.directive_parser."""
@@ -613,6 +629,8 @@ cognition_tips = [
 
 [concepts.hybrid_pages]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 9
 definition = """Hybrid pages mix structured sections (hero, cta, comparison) with markdown content \
 blocks in a single page. Use type: markdown sections with a source.path to embed .md files \
 inline alongside structured sections. This enables rich content pages that combine the \
@@ -693,6 +711,8 @@ cognition_tips = [
 
 [concepts.static_assets]
 category = "Frontend"
+doc_page = "frontend"
+doc_order = 10
 definition = """Static asset serving convention for Dazzle projects. Project-level images and assets \
 are placed in {project_root}/static/ and served at /static/*. Framework assets (dz.js, dz.css, \
 favicon) are served automatically from the framework directory. Project files take priority over \

@@ -7,11 +7,15 @@ concept_count = 7
 
 [concepts.e2e_testing]
 category = "Testing"
+doc_page = "testing"
+doc_order = 1
 definition = "End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running DNR app."
 related = ["flowspec", "semantic_dom", "authentication"]
 
 [concepts.flowspec]
 category = "Testing"
+doc_page = "testing"
+doc_order = 2
 definition = "JSON/YAML specification defining E2E test flows. Auto-generated from DSL but can be customized."
 example = '''
 {
@@ -33,25 +37,35 @@ related = ["e2e_testing", "semantic_dom"]
 
 [concepts.semantic_dom]
 category = "Testing"
+doc_page = "testing"
+doc_order = 3
 definition = "Convention for data attributes in DNR UI that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements."
 related = ["e2e_testing", "flowspec"]
 
 [concepts.capability_discovery]
 category = "Testing"
+doc_page = "testing"
+doc_order = 4
 definition = "Agent-driven capability discovery system that explores a running Dazzle app and identifies gaps between the DSL specification and the actual implementation. Uses the generic agent framework with three modes: persona (open-ended exploration as a role), entity_completeness (static CRUD coverage analysis plus targeted verification), and workflow_coherence (static process/story integrity analysis plus targeted verification). Access via the 'discovery' MCP tool."
 related = ["e2e_testing", "entity_completeness", "workflow_coherence"]
 
 [concepts.entity_completeness]
 category = "Testing"
+doc_page = "testing"
+doc_order = 5
 definition = "Discovery mode that statically analyzes CRUD surface coverage for each entity and checks for state machine transition UI. Identifies missing list, create, edit, and view surfaces, then guides an agent to verify findings against the running app. Use: discovery(operation='run', mode='entity_completeness')."
 related = ["capability_discovery", "workflow_coherence"]
 
 [concepts.workflow_coherence]
 category = "Testing"
+doc_page = "testing"
+doc_order = 6
 definition = "Discovery mode that statically analyzes process and story integrity. Checks that process human_task steps reference existing surfaces, subprocess steps reference existing processes, triggers match entities with state machines, and stories have implementing processes. Use: discovery(operation='run', mode='workflow_coherence')."
 related = ["capability_discovery", "entity_completeness"]
 
 [concepts.rbac_validation]
 category = "Testing"
+doc_page = "testing"
+doc_order = 7
 definition = "NIST SP 800-162 compliance validation for Cedar-style permit/forbid/audit policies. Validates policy completeness, conflict detection, separation of duty, least privilege, default deny, and audit coverage. Uses the policy handler's analysis functions (_analyze, _find_conflicts, _coverage_matrix). Reference implementation: examples/rbac_validation/ and tests/unit/test_rbac_validation.py."
 related = ["capability_discovery", "e2e_testing", "access_rules"]

@@ -7,6 +7,8 @@ concept_count = 6
 
 [concepts.action_purity]
 category = "Extensibility (v0.5)"
+doc_page = "services"
+doc_order = 3
 definition = "Classification of actions as pure (no side effects) or impure (has side effects like fetch, navigate, etc.)."
 syntax = '''
 actions:
@@ -18,12 +20,16 @@ v0_5_changes = "NEW in v0.5"
 
 [concepts.component_role]
 category = "Extensibility (v0.5)"
+doc_page = "services"
+doc_order = 4
 definition = "Classification of components as presentational (no state/impure actions) or container (has state or impure actions)."
 related = ["action_purity"]
 v0_5_changes = "NEW in v0.5"
 
 [concepts.domain_service]
 category = "Extensibility (v0.5)"
+doc_page = "services"
+doc_order = 1
 definition = "Custom business logic declaration in DSL with implementation in Python/TypeScript stubs. Part of the Anti-Turing extensibility model."
 syntax = '''
 service <name> "<Title>":
@@ -57,6 +63,8 @@ v0_5_changes = "NEW in v0.5"
 
 [concepts.stub]
 category = "Extensibility (v0.5)"
+doc_page = "services"
+doc_order = 2
 definition = "Turing-complete implementation of a domain service. Stubs are auto-generated from DSL with typed function signatures."
 example = '''
 # stubs/calculate_vat.py (auto-generated header)
@@ -87,12 +95,16 @@ v0_5_changes = "NEW in v0.5"
 
 [concepts.three_layer_architecture]
 category = "Extensibility (v0.5)"
+doc_page = "services"
+doc_order = 5
 definition = "DAZZLE's separation of concerns: DSL (declarative) → Kernel (runtime) → Stubs (custom code). The DSL is Anti-Turing (no arbitrary computation) while stubs allow full programming."
 related = ["domain_service", "stub"]
 v0_5_changes = "NEW in v0.5"
 
 [concepts.semantic_archetype]
 category = "Extensibility (v0.10.3)"
+doc_page = "entities"
+doc_order = 17
 definition = "Built-in archetype kinds (settings, tenant, tenant_settings) that trigger automatic behavior like singleton enforcement, tenant FK injection, and admin surface generation. Different from custom archetypes which only provide field inheritance."
 syntax = '''
 # Semantic archetypes use archetype: declaration in entity body

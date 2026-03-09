@@ -7,6 +7,8 @@ concept_count = 5
 
 [concepts.archetype]
 category = "LLM Cognition (v0.7.1)"
+doc_page = "entities"
+doc_order = 15
 definition = "Reusable template defining common field patterns. Entities can extend archetypes to inherit fields, computed fields, and invariants. Promotes consistency and reduces repetition."
 syntax = '''
 archetype <ArchetypeName>:
@@ -52,6 +54,8 @@ best_practices = ["Use for cross-cutting concerns (audit, timestamps, soft delet
 
 [concepts.domain_patterns]
 category = "LLM Cognition (v0.7.1)"
+doc_page = "entities"
+doc_order = 16
 definition = "Semantic tags that classify entities by domain area and common patterns. Helps LLMs understand entity relationships and generate consistent code."
 syntax = '''
 # Single domain tag
@@ -78,6 +82,8 @@ v0_7_1_changes = "NEW in v0.7.1"
 
 [concepts.examples]
 category = "LLM Cognition (v0.7.1)"
+doc_page = "entities"
+doc_order = 14
 definition = "Inline example records that demonstrate valid data for an entity. Helps LLMs understand data formats, relationships, and realistic values."
 syntax = '''
 examples:
@@ -115,6 +121,8 @@ best_practices = ["Include 2-3 representative examples", "Show different states/
 
 [concepts.intent]
 category = "LLM Cognition (v0.7.1)"
+doc_page = "entities"
+doc_order = 13
 definition = "A single-line declaration explaining WHY an entity exists in the domain. Helps LLMs understand the semantic purpose of data structures."
 syntax = "intent: \"<explanation of entity purpose>\""
 example = '''
@@ -133,6 +141,8 @@ best_practices = ["Focus on WHY the entity exists, not WHAT it contains", "Descr
 
 [concepts.invariant_message]
 category = "LLM Cognition (v0.7.1)"
+doc_page = "entities"
+doc_order = 12
 definition = "Human-readable error message and machine-readable error code for invariant violations. Improves API responses and internationalization."
 syntax = '''
 invariant: <condition>

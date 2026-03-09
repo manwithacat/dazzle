@@ -7,6 +7,8 @@ concept_count = 4
 
 [concepts.access_rules]
 category = "Business Logic (v0.7)"
+doc_page = "access-control"
+doc_order = 1
 definition = "Inline access control rules on entities. Legacy syntax uses access: blocks with read/write permissions. Cedar-style syntax (v0.21+) uses permit:/forbid:/audit: blocks for fine-grained RBAC with NIST SP 800-162 alignment. Evaluation order: FORBID > PERMIT > default-deny."
 syntax = '''
 # Legacy access: block (read/write permissions)
@@ -70,6 +72,8 @@ best_practices = ["Use = for equality (not ==)", "Start with restrictive rules, 
 
 [concepts.computed_field]
 category = "Business Logic (v0.7)"
+doc_page = "entities"
+doc_order = 8
 definition = "Derived values calculated from other fields. Computed at query time, not stored. Part of the declarative business logic layer."
 syntax = '''
 <field_name>: computed <expression>
@@ -95,6 +99,8 @@ v0_7_changes = "NEW in v0.7"
 
 [concepts.invariant]
 category = "Business Logic (v0.7)"
+doc_page = "entities"
+doc_order = 9
 definition = "Cross-field validation rules that must always hold. Enforced on create and update. Part of the declarative business logic layer."
 syntax = '''
 invariant: <condition>
@@ -125,6 +131,8 @@ best_practices = ["Use = for equality (consistent with access rules)", "Express 
 
 [concepts.state_machine]
 category = "Business Logic (v0.7)"
+doc_page = "entities"
+doc_order = 10
 definition = "Define allowed status/state transitions with optional guards. Prevents invalid state changes and documents workflow rules declaratively."
 syntax = '''
 transitions:

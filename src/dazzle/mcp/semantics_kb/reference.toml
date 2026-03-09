@@ -7,6 +7,8 @@ concept_count = 1
 
 [concepts.reserved_keywords]
 category = "DSL Reference"
+doc_page = "entities"
+doc_order = 25
 definition = "Words reserved by the DAZZLE DSL that cannot be used as field names, enum values, or identifiers. Using these will cause parse errors with suggestions for alternatives."
 syntax = '''
 # If you see: "'schedule' is a reserved keyword and cannot be used as an identifier"
