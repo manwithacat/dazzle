@@ -3,7 +3,7 @@
 
 [meta]
 file = "logic"
-concept_count = 4
+concept_count = 7
 
 [concepts.access_rules]
 category = "Business Logic (v0.7)"
@@ -181,3 +181,133 @@ entity Ticket "Ticket":
 related = ["entity", "invariant", "access_rules"]
 v0_7_changes = "NEW in v0.7"
 best_practices = ["Use for status fields with defined workflows", "Document transition rules that match business processes", "Use role guards for administrative overrides", "Use requires guards for data integrity", "Transition conditions are simpler than invariants - use 'requires field' not 'field != null'", "For complex validations (field > value, field = specific_value), use invariants with status conditions instead"]
+
+[concepts.visibility_rules]
+category = "Business Logic (v0.7)"
+doc_page = "access-control"
+doc_order = 3
+definition = "Row-level visibility rules on entities. Controls which records are visible based on authentication state (anonymous or authenticated). Evaluated before permission rules to determine which records a user can see in list/query results. Uses ConditionExpr for the filter condition."
+syntax = '''
+visible:
+  when anonymous: <condition>
+  when authenticated: <condition>
+
+# Auth contexts:
+#   anonymous     - User is not logged in
+#   authenticated - Any logged-in user
+
+# Condition is a standard ConditionExpr:
+#   field = value, field != value, role(name), field = current_user
+#   Combine with: and, or
+'''
+example = '''
+entity Document "Document":
+  id: uuid pk
+  title: str(200) required
+  is_public: bool = false
+  created_by: ref User
+
+  visible:
+    when anonymous: is_public = true
+    when authenticated: is_public = true or created_by = current_user
+
+entity Post "Blog Post":
+  id: uuid pk
+  published: bool = false
+  author: ref User required
+
+  visible:
+    when anonymous: published = true
+    when authenticated: published = true or author = current_user
+'''
+related = ["access_rules", "entity", "persona", "surface_access"]
+best_practices = ["Use anonymous visibility for public-facing content", "Authenticated visibility should include the owner check (created_by = current_user)", "Combine with permission rules for full access control", "Visibility filters apply at query time - no data leaks in list views"]
+
+[concepts.surface_access]
+category = "Business Logic"
+doc_page = "access-control"
+doc_order = 5
+definition = "Access control on surfaces (UI screens). Controls who can view and interact with a surface. Three levels: public (no auth), authenticated (any logged-in user), or persona-restricted (named personas only). Used by E2E test generators to create protected-route tests."
+syntax = '''
+surface <name> "<Title>":
+  ...
+  access: public
+  access: authenticated
+  access: persona(<name1>, <name2>, ...)
+
+# access: public          → require_auth=false, anyone can access
+# access: authenticated   → require_auth=true, any logged-in user
+# access: persona(Admin, Manager) → require_auth=true, only listed personas
+'''
+example = '''
+# Public surface - no login required
+surface landing_page "Welcome":
+  uses entity Page
+  mode: view
+  access: public
+
+# Authenticated - any logged-in user
+surface my_tasks "My Tasks":
+  uses entity Task
+  mode: list
+  access: authenticated
+
+# Persona-restricted - only these roles
+surface admin_panel "Admin Panel":
+  uses entity User
+  mode: list
+  access: persona(Admin, SuperAdmin)
+'''
+related = ["access_rules", "surface", "persona", "workspace_access", "visibility_rules"]
+best_practices = ["Default to authenticated when auth is enabled globally", "Use persona() for admin-only or role-specific screens", "Public surfaces should only show non-sensitive data", "Pair with entity-level access rules for defense in depth"]
+
+[concepts.workspace_access]
+category = "Business Logic"
+doc_page = "access-control"
+doc_order = 6
+definition = "Access control on workspaces. Defines who can access a workspace dashboard. Three levels: public, authenticated, or persona-restricted. Default is authenticated when auth is enabled globally. Syntax is the same as surface access."
+syntax = '''
+workspace <name> "<Title>":
+  ...
+  access: public
+  access: authenticated
+  access: persona(<name1>, <name2>, ...)
+
+# access: public          → level=public, no login required
+# access: authenticated   → level=authenticated, any logged-in user (default)
+# access: persona(Admin)  → level=persona, only listed personas can access
+'''
+example = '''
+# Public dashboard - visible without login
+workspace public_metrics "Public Metrics":
+  purpose: "Public-facing KPI dashboard"
+  access: public
+
+  metrics:
+    aggregate:
+      total_users: count(User)
+    display: metrics
+
+# Admin-only workspace
+workspace admin_dashboard "Admin Dashboard":
+  purpose: "System administration"
+  access: persona(Admin, SuperAdmin)
+
+  users:
+    source: User
+    display: list
+    action: user_edit
+
+# Default: authenticated (explicit for clarity)
+workspace team_board "Team Board":
+  purpose: "Team task overview"
+  access: authenticated
+
+  tasks:
+    source: Task
+    filter: status != closed
+    sort: priority desc
+    display: list
+'''
+related = ["access_rules", "workspace", "persona", "surface_access"]
+best_practices = ["Use persona() for role-specific dashboards", "Public workspaces should aggregate non-sensitive data only", "Default is authenticated - omit access: if that is sufficient"]
