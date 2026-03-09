@@ -3,6 +3,52 @@
   <p class="text-sm opacity-60 mb-4">{{ workspace.purpose }}</p>
   {% endif %}
 
+  {% if workspace.context_options_url %}
+  <div class="mb-4 flex items-center gap-2">
+    <label class="text-sm font-medium" for="dz-context-selector">{{ workspace.context_selector_entity.replace('_', ' ') }}:</label>
+    <select id="dz-context-selector" class="select select-bordered select-sm">
+      <option value="">All</option>
+    </select>
+  </div>
+  <script>
+  (function() {
+    var sel = document.getElementById('dz-context-selector');
+    if (!sel) return;
+    var wsName = {{ workspace.name | tojson }};
+    var prefKey = 'workspace.' + wsName + '.context';
+    // Fetch options from JSON endpoint
+    fetch({{ workspace.context_options_url | tojson }})
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        (data.options || []).forEach(function(opt) {
+          var o = document.createElement('option');
+          o.value = opt.id;
+          o.textContent = opt.label;
+          sel.appendChild(o);
+        });
+        // Restore saved preference
+        var saved = window.dzPrefs ? window.dzPrefs.get(prefKey) : null;
+        if (saved) { sel.value = saved; sel.dispatchEvent(new Event('change')); }
+      });
+    sel.addEventListener('change', function() {
+      var val = sel.value;
+      if (window.dzPrefs) { if (val) window.dzPrefs.set(prefKey, val); else window.dzPrefs.del(prefKey); }
+      // Refresh all region endpoints with context_id param
+      document.querySelectorAll('[id^="region-"][hx-get]').forEach(function(el) {
+        var url = el.getAttribute('hx-get');
+        var base = url.split('?')[0];
+        var params = new URLSearchParams(url.split('?')[1] || '');
+        if (val) params.set('context_id', val); else params.delete('context_id');
+        var qs = params.toString();
+        el.setAttribute('hx-get', base + (qs ? '?' + qs : ''));
+        htmx.process(el);
+        htmx.trigger(el, 'load');
+      });
+    });
+  })();
+  </script>
+  {% endif %}
+
   <div class="{{ workspace.grid_class }}"
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>

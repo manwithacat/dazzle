@@ -536,6 +536,39 @@ class WorkspaceRouteBuilder:
                     tags=["Workspaces"],
                 )(_make_batch_route(_batch_ctxs))
 
+                # Context selector options endpoint (v0.38.0)
+                _ctx_sel = workspace.context_selector
+                if _ctx_sel and repositories.get(_ctx_sel.entity):
+                    _sel_repo = repositories[_ctx_sel.entity]
+                    _sel_display = _ctx_sel.display_field
+
+                    def _make_context_options_route(
+                        sel_repo: Any,
+                        display: str,
+                    ) -> Any:
+                        async def context_options(request: Request) -> Any:
+                            from fastapi.responses import JSONResponse
+
+                            result = await sel_repo.list(page=1, page_size=500)
+                            items = result.get("items", []) if isinstance(result, dict) else result
+                            options = []
+                            for row in items:
+                                r = row if isinstance(row, dict) else row.model_dump()
+                                options.append(
+                                    {
+                                        "id": str(r.get("id", "")),
+                                        "label": str(r.get(display, r.get("name", ""))),
+                                    }
+                                )
+                            return JSONResponse(content={"options": options})
+
+                        return context_options
+
+                    app.get(
+                        f"/api/workspaces/{ws_name}/context-options",
+                        tags=["Workspaces"],
+                    )(_make_context_options_route(_sel_repo, _sel_display))
+
                 self._init_workspace_entity_routes(workspaces, app)
 
             import logging

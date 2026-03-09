@@ -101,6 +101,8 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
             # Check if the literal is a special identifier
             if literal_val == "current_user":
                 return context.get("current_user_id")
+            if literal_val == "current_context":
+                return context.get("current_context")
             # Return the literal value as-is
             return literal_val
 
@@ -113,7 +115,8 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
             ident = value.get("value", "")
             if ident == "current_user":
                 return context.get("current_user_id")
-            # Could add more special identifiers here
+            if ident == "current_context":
+                return context.get("current_context")
             return None
 
         # Handle literal values (alternative format)

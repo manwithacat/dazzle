@@ -138,6 +138,28 @@ class NavGroupSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ContextSelectorSpec(BaseModel):
+    """Specifies a context selector dropdown for a workspace.
+
+    Allows trust-level users to pick a scope (e.g., school) that filters
+    all regions.  The selected value is available as ``current_context``
+    in filter expressions.
+
+    Attributes:
+        entity: Entity name to select from (e.g., "School")
+        display_field: Field to show in dropdown (default: "name")
+        scope_field: Optional FK field on the entity to restrict choices
+            to the current user's scope (e.g., "trust" to filter by
+            the user's trust).
+    """
+
+    entity: str
+    display_field: str = "name"
+    scope_field: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class WorkspaceSpec(BaseModel):
     """
     Composition of related information needs.
@@ -153,6 +175,7 @@ class WorkspaceSpec(BaseModel):
         regions: List of data regions in the workspace
         ux: Optional workspace-level UX customization
         access: Access control specification (v0.22.0)
+        context_selector: Optional context selector for multi-scope users (v0.38.0)
     """
 
     name: str
@@ -163,6 +186,7 @@ class WorkspaceSpec(BaseModel):
     nav_groups: list[NavGroupSpec] = Field(default_factory=list)  # v0.38.0: Collapsible nav groups
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
+    context_selector: ContextSelectorSpec | None = None  # v0.38.0
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
 

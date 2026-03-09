@@ -273,6 +273,10 @@ async def _workspace_region_handler(
     _filter_context: dict[str, Any] = {}
     if _current_user_id:
         _filter_context["current_user_id"] = _current_user_id
+    # Context selector value (v0.38.0): from query param or user preferences
+    _context_id = request.query_params.get("context_id")
+    if _context_id:
+        _filter_context["current_context"] = _context_id
 
     # Query the source entity
     items: list[dict[str, Any]] = []

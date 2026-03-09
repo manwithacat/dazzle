@@ -80,6 +80,8 @@ class WorkspaceContext(BaseModel):
     endpoint: str = ""  # Base API endpoint for workspace data
     sse_url: str = ""  # SSE stream URL (empty = no live updates)
     fold_count: int = 3  # Regions above the fold (eager load); rest use intersect
+    context_selector_entity: str = ""  # v0.38.0: entity for context selector
+    context_options_url: str = ""  # API URL to fetch context options
 
 
 # =============================================================================
@@ -269,6 +271,14 @@ def build_workspace_context(
             )
         )
 
+    # Context selector (v0.38.0)
+    ctx_entity = ""
+    ctx_options_url = ""
+    ctx_sel = getattr(workspace, "context_selector", None)
+    if ctx_sel:
+        ctx_entity = ctx_sel.entity
+        ctx_options_url = f"/api/workspaces/{workspace.name}/context-options"
+
     return WorkspaceContext(
         name=workspace.name,
         title=workspace.title or workspace.name.replace("_", " ").title(),
@@ -278,6 +288,8 @@ def build_workspace_context(
         regions=regions,
         endpoint=f"/api/workspaces/{workspace.name}",
         fold_count=fold_count,
+        context_selector_entity=ctx_entity,
+        context_options_url=ctx_options_url,
     )
 
 
