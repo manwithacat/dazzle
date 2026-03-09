@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - LLM intent execution: `/_dazzle/llm/execute/{intent_name}` triggers intents at runtime, records AIJob for cost tracking
 - MCP `llm` tool: `list_intents`, `list_models`, `inspect_intent`, `get_config` operations
+- Collapsible navigation groups with Lucide icon support in workspace DSL (`nav_group` keyword) and app shell sidebar (#418)
 
 ## [0.37.0] - 2026-03-07
 

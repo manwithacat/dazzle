@@ -128,15 +128,41 @@ def create_experience_routes(
         exp.name: exp for exp in appspec.experiences
     }
 
-    # Build nav items for sidebar context
-    nav_items: list[dict[str, str]] = []
+    # Build nav items and groups for sidebar context
+    nav_items: list[dict[str, Any]] = []
+    nav_groups: list[dict[str, Any]] = []
+
+    # Collect which entities are claimed by nav_groups
+    grouped_workspaces: set[str] = set()
     for ws in appspec.workspaces:
-        nav_items.append(
-            {
-                "label": ws.title or ws.name.replace("_", " ").title(),
-                "route": f"{app_prefix}/workspaces/{ws.name}",
-            }
-        )
+        for ng in ws.nav_groups:
+            for item in ng.items:
+                grouped_workspaces.add(item.entity)
+            nav_groups.append(
+                {
+                    "label": ng.label,
+                    "icon": ng.icon,
+                    "collapsed": ng.collapsed,
+                    "items": [
+                        {
+                            "label": item.entity.replace("_", " ").title(),
+                            "route": f"{app_prefix}/workspaces/{item.entity}",
+                            "icon": item.icon,
+                        }
+                        for item in ng.items
+                    ],
+                }
+            )
+
+    # Ungrouped workspaces become flat nav items
+    for ws in appspec.workspaces:
+        if ws.name not in grouped_workspaces:
+            nav_items.append(
+                {
+                    "label": ws.title or ws.name.replace("_", " ").title(),
+                    "route": f"{app_prefix}/workspaces/{ws.name}",
+                }
+            )
     app_name = appspec.title or appspec.name.replace("_", " ").title()
 
     def _inject_auth(request: Request) -> dict[str, Any]:
@@ -340,6 +366,7 @@ def create_experience_routes(
                 "experience/experience.html",
                 experience=exp_ctx,
                 nav_items=nav_items,
+                nav_groups=nav_groups,
                 app_name=app_name,
                 current_route=current_route,
                 theme_css=theme_css,

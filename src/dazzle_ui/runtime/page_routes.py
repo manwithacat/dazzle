@@ -585,6 +585,26 @@ def create_page_routes(
 
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
 
+        # Build nav groups from workspace nav_group declarations (v0.38.0)
+        ws_nav_groups: list[dict[str, Any]] = []
+        for ws in workspaces:
+            for ng in getattr(ws, "nav_groups", []) or []:
+                ws_nav_groups.append(
+                    {
+                        "label": ng.label,
+                        "icon": ng.icon,
+                        "collapsed": ng.collapsed,
+                        "items": [
+                            {
+                                "label": item.entity.replace("_", " ").title(),
+                                "route": f"{app_prefix}/workspaces/{item.entity}",
+                                "icon": item.icon,
+                            }
+                            for item in ng.items
+                        ],
+                    }
+                )
+
         for workspace in workspaces:
             ws_ctx = build_workspace_context(workspace, appspec)
             _ws_ctx = ws_ctx
@@ -672,6 +692,7 @@ def create_page_routes(
                         "workspace/workspace.html",
                         workspace=ws_context,
                         nav_items=visible_nav,
+                        nav_groups=ws_nav_groups,
                         app_name=ws_app_name,
                         current_route=effective_route,
                         is_authenticated=is_authenticated,

@@ -18,8 +18,17 @@ class NavItemSpec(BaseModel):
 
     label: str = Field(description="Display label")
     route: str = Field(description="Route path (e.g., '/' or '/settings')")
-    icon: str | None = Field(default=None, description="Optional icon name")
+    icon: str | None = Field(default=None, description="Optional Lucide icon name")
     workspace: str | None = Field(default=None, description="Workspace name this links to")
+
+
+class NavGroupUISpec(BaseModel):
+    """A collapsible navigation group containing nav items."""
+
+    label: str = Field(description="Group header label")
+    icon: str | None = Field(default=None, description="Optional Lucide icon for group header")
+    collapsed: bool = Field(default=False, description="Start collapsed")
+    items: list[NavItemSpec] = Field(default_factory=list, description="Items in this group")
 
 
 class NavSpec(BaseModel):
@@ -31,6 +40,10 @@ class NavSpec(BaseModel):
     items: list[NavItemSpec] = Field(
         default_factory=list,
         description="Navigation items (auto-generated from workspaces if empty)",
+    )
+    groups: list[NavGroupUISpec] = Field(
+        default_factory=list,
+        description="Collapsible navigation groups (v0.38.0)",
     )
     brand: str | None = Field(default=None, description="Brand text/name in nav")
     logo: str | None = Field(default=None, description="Logo URL")

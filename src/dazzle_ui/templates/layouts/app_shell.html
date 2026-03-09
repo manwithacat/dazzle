@@ -79,6 +79,37 @@
       {% block sidebar_nav %}
       <nav aria-label="Main navigation">
       <ul class="menu p-4 gap-1 flex-1">
+        {# Collapsible nav groups (v0.38.0) #}
+        {% for group in nav_groups | default([]) %}
+        <li>
+          <details{% if not group.collapsed %} open{% endif %}>
+            <summary class="font-medium">
+              {% if group.icon %}<i data-lucide="{{ group.icon }}" class="w-4 h-4"></i>{% endif %}
+              {{ group.label }}
+            </summary>
+            <ul>
+              {% for child in group.items %}
+              <li>
+                <a href="{{ child.route }}"
+                   hx-get="{{ child.route }}"
+                   hx-target="#main-content"
+                   hx-swap="morph:innerHTML transition:true"
+                   hx-push-url="true"
+                   preload="mousedown"
+                   class="{% if current_route == child.route %}active{% endif %}"
+                   {% if current_route == child.route %}aria-current="page"{% endif %}
+                   data-dazzle-nav="{{ child.route }}">
+                  {% if child.icon %}<i data-lucide="{{ child.icon }}" class="w-4 h-4"></i>{% endif %}
+                  {{ child.label }}
+                </a>
+              </li>
+              {% endfor %}
+            </ul>
+          </details>
+        </li>
+        {% endfor %}
+
+        {# Ungrouped nav items #}
         {% for nav_item in nav_items | default([]) %}
         <li>
           <a href="{{ nav_item.route }}"
@@ -90,12 +121,15 @@
              class="{% if current_route == nav_item.route %}active{% endif %}"
              {% if current_route == nav_item.route %}aria-current="page"{% endif %}
              data-dazzle-nav="{{ nav_item.route }}">
+            {% if nav_item.icon %}<i data-lucide="{{ nav_item.icon }}" class="w-4 h-4"></i>{% endif %}
             {{ nav_item.label }}
           </a>
         </li>
         {% endfor %}
       </ul>
       </nav>
+      {# Initialize Lucide icons in sidebar #}
+      <script>if(window.lucide)lucide.createIcons();</script>
       {% endblock sidebar_nav %}
 
       {# User section + dark mode toggle #}

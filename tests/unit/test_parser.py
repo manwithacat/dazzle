@@ -2318,5 +2318,116 @@ entity User "User":
         assert task.source.line != user.source.line
 
 
+class TestNavGroupParsing:
+    """Test nav_group parsing within workspaces (v0.38.0, #418)."""
+
+    def test_nav_group_basic(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+entity User "User":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  nav_group "Management" icon=settings:
+    Task
+    User
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert len(ws.nav_groups) == 1
+        group = ws.nav_groups[0]
+        assert group.label == "Management"
+        assert group.icon == "settings"
+        assert group.collapsed is False
+        assert len(group.items) == 2
+        assert group.items[0].entity == "Task"
+        assert group.items[1].entity == "User"
+
+    def test_nav_group_collapsed(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  nav_group "Hidden" collapsed:
+    Task
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        group = fragment.workspaces[0].nav_groups[0]
+        assert group.collapsed is True
+        assert group.icon is None
+
+    def test_nav_group_item_with_icon(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  nav_group "Work":
+    Task icon=check-circle
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        group = fragment.workspaces[0].nav_groups[0]
+        assert group.items[0].icon == "check-circle"
+
+    def test_nav_group_multiple_groups(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+entity User "User":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  nav_group "Tasks" icon=clipboard:
+    Task
+  nav_group "Admin" icon=shield:
+    User
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert len(ws.nav_groups) == 2
+        assert ws.nav_groups[0].label == "Tasks"
+        assert ws.nav_groups[1].label == "Admin"
+
+    def test_workspace_without_nav_groups(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert ws.nav_groups == []
+
+
 if __name__ == "__main__":
     main()

@@ -50,6 +50,14 @@
   });
   </script>
 
+  {# Lucide icons (v0.38.0: nav group icons) #}
+  {% if not _use_cdn | default(true) %}
+  <script defer src="/static/vendor/lucide.min.js"></script>
+  {% else %}
+  <script defer src="{{ _cdn_base }}/dazzle-icons.min.js"
+          onerror="this.onerror=null;this.src='/static/vendor/lucide.min.js'"></script>
+  {% endif %}
+
   {# Design token CSS custom properties #}
   <style>
     :root {

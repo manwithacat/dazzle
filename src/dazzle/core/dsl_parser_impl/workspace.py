@@ -68,6 +68,7 @@ class WorkspaceParserMixin:
         purpose = None
         stage = None
         regions: list[ir.WorkspaceRegion] = []
+        nav_groups: list[ir.NavGroupSpec] = []
         ux_spec = None
         access_spec = None
 
@@ -98,6 +99,10 @@ class WorkspaceParserMixin:
                 stage = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # nav_group "Label" [icon=name] [collapsed]:
+            elif self.match(TokenType.NAV_GROUP):
+                nav_groups.append(self._parse_nav_group())
+
             # ux: (optional workspace-level UX)
             elif self.match(TokenType.UX):
                 ux_spec = self.parse_ux_block()
@@ -118,6 +123,7 @@ class WorkspaceParserMixin:
             purpose=purpose,
             stage=stage,
             regions=regions,
+            nav_groups=nav_groups,
             ux=ux_spec,
             access=access_spec,
             source=loc,
@@ -163,6 +169,80 @@ class WorkspaceParserMixin:
             self.file,
             token.line,
             token.column,
+        )
+
+    def _parse_hyphenated_identifier(self) -> str:
+        """Parse an identifier that may contain hyphens (e.g. Lucide icon names like check-circle)."""
+        parts = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.MINUS):
+            self.advance()
+            if self.match(TokenType.NUMBER):
+                parts.append(self.current_token().value)
+                self.advance()
+            elif self.match(TokenType.IDENTIFIER):
+                parts.append(self.current_token().value)
+                self.advance()
+            else:
+                parts.append(self.expect_identifier_or_keyword().value)
+        return "-".join(parts)
+
+    def _parse_nav_group(self) -> ir.NavGroupSpec:
+        """
+        Parse a nav_group block within a workspace.
+
+        Syntax:
+            nav_group "Label" [icon=name] [collapsed]:
+              entity_name [icon=name]
+              ...
+        """
+        self.advance()  # consume nav_group
+
+        # Label (required string)
+        label = self.expect(TokenType.STRING).value
+
+        # Optional inline attributes: icon=name, collapsed
+        icon = None
+        collapsed = False
+        while not self.match(TokenType.COLON):
+            if self.match(TokenType.ICON):
+                self.advance()
+                self.expect(TokenType.EQUALS)
+                icon = self._parse_hyphenated_identifier()
+            elif self.match(TokenType.COLLAPSED):
+                self.advance()
+                collapsed = True
+            else:
+                break
+
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        items: list[ir.NavItemIR] = []
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            entity = self.expect_identifier_or_keyword().value
+            item_icon = None
+
+            # Optional icon=name on nav item
+            if self.match(TokenType.ICON):
+                self.advance()
+                self.expect(TokenType.EQUALS)
+                item_icon = self._parse_hyphenated_identifier()
+
+            items.append(ir.NavItemIR(entity=entity, icon=item_icon))
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.NavGroupSpec(
+            label=label,
+            icon=icon,
+            collapsed=collapsed,
+            items=items,
         )
 
     def parse_workspace_region(self) -> ir.WorkspaceRegion:

@@ -467,6 +467,11 @@ class TokenType(Enum):
     # PRIORITY, HIGH, MEDIUM, LOW are handled as identifiers
     TAGS = "tags"
 
+    # v0.38.0 Workspace Navigation Keywords
+    NAV_GROUP = "nav_group"
+    ICON = "icon"
+    COLLAPSED = "collapsed"
+
     # Comparison operators (for condition expressions)
     DOUBLE_EQUALS = "=="
     NOT_EQUALS = "!="

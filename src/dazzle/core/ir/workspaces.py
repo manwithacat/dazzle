@@ -106,6 +106,38 @@ class WorkspaceRegion(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class NavItemIR(BaseModel):
+    """A navigation item within a workspace or nav group.
+
+    Attributes:
+        entity: Entity or workspace name to link to
+        icon: Optional Lucide icon name (e.g., "file-text", "check-circle")
+    """
+
+    entity: str
+    icon: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+class NavGroupSpec(BaseModel):
+    """A collapsible navigation group within a workspace.
+
+    Attributes:
+        label: Display label for the group header
+        icon: Optional Lucide icon name for the group header
+        collapsed: Whether the group starts collapsed (default: False)
+        items: Navigation items within this group
+    """
+
+    label: str
+    icon: str | None = None
+    collapsed: bool = False
+    items: list[NavItemIR] = Field(default_factory=list)
+
+    model_config = ConfigDict(frozen=True)
+
+
 class WorkspaceSpec(BaseModel):
     """
     Composition of related information needs.
@@ -128,6 +160,7 @@ class WorkspaceSpec(BaseModel):
     purpose: str | None = None
     stage: str | None = None  # v0.8.0: Layout stage (formerly engine_hint)
     regions: list[WorkspaceRegion] = Field(default_factory=list)
+    nav_groups: list[NavGroupSpec] = Field(default_factory=list)  # v0.38.0: Collapsible nav groups
     ux: UXSpec | None = None  # Workspace-level UX (e.g., persona variants)
     access: WorkspaceAccessSpec | None = None  # v0.22.0: Access control
     # v0.31.0: Source location for error reporting
