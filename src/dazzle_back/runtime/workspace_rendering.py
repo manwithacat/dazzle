@@ -214,6 +214,8 @@ class WorkspaceRegionContext:
     auth_middleware: Any
     # Pre-computed at startup (constant-folded from IR)
     precomputed_columns: list[dict[str, Any]] = field(default_factory=list)
+    # Pre-computed ref relation names for eager-loading (from entity_auto_includes)
+    auto_include: list[str] = field(default_factory=list)
     # Surface UX metadata (#362)
     surface_default_sort: list[Any] = field(default_factory=list)
     surface_empty_message: str = ""
@@ -321,18 +323,8 @@ async def _workspace_region_handler(
                         filters = {}
                     filters[field_name] = param_val
 
-            # Build include list for eager-loading ref fields (#272)
-            include_rels: list[str] = []
-            if ctx.entity_spec and hasattr(ctx.entity_spec, "fields"):
-                for f in ctx.entity_spec.fields:
-                    kind = f.type.kind
-                    kind_val_str: str = (
-                        kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-                    )
-                    if kind_val_str == "ref":
-                        # Relation name is the field name without _id suffix
-                        rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
-                        include_rels.append(rel_name)
+            # Use pre-computed auto_include from entity_auto_includes (#272, #423)
+            include_rels = ctx.auto_include
 
             # Grouped views need enough items to distribute across columns
             if (
@@ -527,7 +519,10 @@ async def _fetch_region_json(
                 sort_list = [f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort]
 
             limit = ctx.ctx_region.limit or page_size
-            result = await repo.list(page=page, page_size=limit, filters=filters, sort=sort_list)
+            include_rels = ctx.auto_include or None
+            result = await repo.list(
+                page=page, page_size=limit, filters=filters, sort=sort_list, include=include_rels
+            )
             if isinstance(result, dict):
                 raw_items = result.get("items", [])
                 total = result.get("total", 0)

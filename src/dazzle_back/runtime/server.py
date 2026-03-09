@@ -308,6 +308,7 @@ class WorkspaceRouteBuilder:
         auth_middleware: AuthMiddleware | None,
         enable_auth: bool,
         enable_test_mode: bool,
+        entity_auto_includes: dict[str, list[str]] | None = None,
     ) -> None:
         self._app = app
         self._appspec = appspec
@@ -316,6 +317,7 @@ class WorkspaceRouteBuilder:
         self._auth_middleware = auth_middleware
         self._enable_auth = enable_auth
         self._enable_test_mode = enable_test_mode
+        self._entity_auto_includes = entity_auto_includes or {}
 
     def init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (v0.20.0)."""
@@ -339,6 +341,7 @@ class WorkspaceRouteBuilder:
             entities = self._entities
             repositories = self._repositories
             auth_middleware = self._auth_middleware
+            entity_auto_includes = self._entity_auto_includes
 
             require_auth = self._enable_auth and not self._enable_test_mode
 
@@ -406,6 +409,7 @@ class WorkspaceRouteBuilder:
                                 precomputed_columns=_columns_for_entity(
                                     _src_entity_spec, _src_name
                                 ),
+                                auto_include=entity_auto_includes.get(_src_name, []),
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -479,6 +483,7 @@ class WorkspaceRouteBuilder:
                         require_auth=require_auth,
                         auth_middleware=auth_middleware,
                         precomputed_columns=_columns,
+                        auto_include=entity_auto_includes.get(_source, []),
                         surface_default_sort=_surface_default_sort,
                         surface_empty_message=_surface_empty_message,
                     )
@@ -2034,6 +2039,7 @@ class DazzleBackendApp:
             auth_middleware=self._auth_middleware,
             enable_auth=self._enable_auth,
             enable_test_mode=self._enable_test_mode,
+            entity_auto_includes=self._entity_auto_includes,
         )
 
         # Event framework (v0.18.0)
