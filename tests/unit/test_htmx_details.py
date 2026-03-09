@@ -129,6 +129,26 @@ class TestWantsFragment:
         assert d.wants_fragment is False
 
 
+class TestWantsDrawer:
+    """Property logic for wants_drawer (workspace detail drawer targeting)."""
+
+    def test_targeting_drawer_content(self) -> None:
+        d = HtmxDetails(is_htmx=True, target="dz-detail-drawer-content")
+        assert d.wants_drawer is True
+
+    def test_targeting_body(self) -> None:
+        d = HtmxDetails(is_htmx=True, target="body")
+        assert d.wants_drawer is False
+
+    def test_non_htmx_with_drawer_target(self) -> None:
+        d = HtmxDetails(is_htmx=False, target="dz-detail-drawer-content")
+        assert d.wants_drawer is False
+
+    def test_no_target(self) -> None:
+        d = HtmxDetails(is_htmx=True, target="")
+        assert d.wants_drawer is False
+
+
 class TestPartialRendering:
     """Broader partial rendering logic used by page handlers.
 

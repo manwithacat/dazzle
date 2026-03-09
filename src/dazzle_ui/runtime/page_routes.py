@@ -503,6 +503,21 @@ def create_page_routes(
                 headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": render_ctx.page_title})}
                 return HTMLResponse(content=html, headers=headers)
 
+            # Drawer targeting: workspace action clicks load detail into
+            # a slide-over drawer — return content-only + open trigger.
+            if htmx.wants_drawer:
+                import json
+
+                html = render_page(render_ctx, content_only=True)
+                triggers = {
+                    "dz:drawerOpen": {"url": str(request.url)},
+                    "dz:titleUpdate": render_ctx.page_title,
+                }
+                return HTMLResponse(
+                    content=html,
+                    headers={"HX-Trigger-After-Swap": json.dumps(triggers)},
+                )
+
             # Any HTMX request can receive body-only HTML — the client
             # extracts <body> content anyway.  History-restore is the one
             # exception: the browser needs a full document for cache misses.

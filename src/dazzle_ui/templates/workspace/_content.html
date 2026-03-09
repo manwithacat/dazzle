@@ -41,3 +41,86 @@
     {% endfor %}
   </div>
 </div>
+
+{# Detail drawer: slide-over panel for workspace action/ref clicks #}
+<div id="dz-drawer-backdrop"
+     class="fixed inset-0 z-40 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300"
+     onclick="window.dzDrawer.close()"></div>
+<aside id="dz-detail-drawer"
+       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-base-100 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out"
+       data-return-url="">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-base-200 bg-base-100 shrink-0">
+    <button class="btn btn-ghost btn-sm gap-1" onclick="window.dzDrawer.close()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      Close
+    </button>
+    <a id="dz-drawer-expand" href="#" class="btn btn-ghost btn-sm gap-1">
+      Open full page
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+    </a>
+  </div>
+  <div id="dz-detail-drawer-content" class="flex-1 overflow-y-auto p-4"></div>
+</aside>
+<script>
+(function() {
+  var drawer = document.getElementById('dz-detail-drawer');
+  var backdrop = document.getElementById('dz-drawer-backdrop');
+  var content = document.getElementById('dz-detail-drawer-content');
+  var expand = document.getElementById('dz-drawer-expand');
+
+  window.dzDrawer = {
+    isOpen: false,
+    open: function(url) {
+      if (url && expand) expand.href = url;
+      drawer.dataset.returnUrl = location.pathname + location.search;
+      drawer.classList.remove('translate-x-full');
+      backdrop.classList.remove('opacity-0', 'pointer-events-none');
+      document.body.classList.add('overflow-hidden');
+      this.isOpen = true;
+    },
+    close: function() {
+      drawer.classList.add('translate-x-full');
+      backdrop.classList.add('opacity-0', 'pointer-events-none');
+      document.body.classList.remove('overflow-hidden');
+      if (this.isOpen && drawer.dataset.returnUrl) {
+        history.replaceState(null, '', drawer.dataset.returnUrl);
+      }
+      this.isOpen = false;
+    }
+  };
+
+  // Open drawer when detail content is swapped in (triggered by server)
+  document.body.addEventListener('dz:drawerOpen', function(e) {
+    var url = (e.detail && e.detail.url) || '';
+    window.dzDrawer.open(url);
+  });
+
+  // Intercept link clicks inside drawer
+  content.addEventListener('click', function(e) {
+    var link = e.target.closest('a[href]');
+    if (!link) return;
+    // Skip links that already have hx-get (HTMX handles those)
+    if (link.hasAttribute('hx-get')) return;
+    var href = link.getAttribute('href');
+    if (!href || href === '#') return;
+    // "Back" button: close drawer
+    if (link.textContent.trim().match(/back/i)) {
+      e.preventDefault();
+      window.dzDrawer.close();
+      return;
+    }
+    // Internal links: load in drawer
+    if (href.startsWith('/')) {
+      e.preventDefault();
+      htmx.ajax('GET', href, {target: '#dz-detail-drawer-content', swap: 'innerHTML'});
+    }
+  });
+
+  // Escape key closes drawer
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && window.dzDrawer.isOpen) {
+      window.dzDrawer.close();
+    }
+  });
+})();
+</script>

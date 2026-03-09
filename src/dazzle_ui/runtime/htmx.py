@@ -62,6 +62,11 @@ class HtmxDetails:
         """Navigation targeting #main-content -> content-only response."""
         return self.is_htmx and self.target == "main-content" and not self.is_history_restore
 
+    @property
+    def wants_drawer(self) -> bool:
+        """Navigation targeting detail drawer -> content-only response."""
+        return self.is_htmx and self.target == "dz-detail-drawer-content"
+
 
 def htmx_response(
     content: str,
