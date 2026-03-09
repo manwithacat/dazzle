@@ -353,23 +353,39 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="demo_data",
-            description="Demo data operations: propose, save, get, generate",
+            description="Demo data operations: propose, save, get, generate, load, validate_seeds",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["propose", "save", "get", "generate"],
+                        "enum": ["propose", "save", "get", "generate", "load", "validate_seeds"],
                         "description": "Operation to perform",
                     },
                     "domain_description": {
                         "type": "string",
                         "description": "Domain description (for propose)",
                     },
+                    "base_url": {
+                        "type": "string",
+                        "description": "Target instance URL (for load, default: http://localhost:8000)",
+                    },
+                    "email": {
+                        "type": "string",
+                        "description": "Admin email for authentication (for load)",
+                    },
+                    "password": {
+                        "type": "string",
+                        "description": "Admin password for authentication (for load)",
+                    },
+                    "data_dir": {
+                        "type": "string",
+                        "description": "Seed data directory (for load/validate_seeds, auto-detected if omitted)",
+                    },
                     "entities": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Specific entities (for propose, generate)",
+                        "description": "Specific entities (for propose, generate, load)",
                     },
                     "tenant_count": {
                         "type": "integer",

@@ -362,6 +362,8 @@ handle_demo_data: Callable[[dict[str, Any]], str] = _make_project_handler(
         "save": f"{_MOD_DEMO}:save_demo_blueprint_handler",
         "get": f"{_MOD_DEMO}:get_demo_blueprint_handler",
         "generate": f"{_MOD_DEMO}:generate_demo_data_handler",
+        "load": f"{_MOD_DEMO}:load_demo_data_handler",
+        "validate_seeds": f"{_MOD_DEMO}:validate_demo_data_handler",
     },
 )
 

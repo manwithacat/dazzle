@@ -569,3 +569,118 @@ def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
         response["diagnostics"] = diagnostics
 
     return json.dumps(response, indent=2)
+
+
+@wrap_handler_errors
+def load_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Load demo data seed files into a running instance via REST API."""
+    from dazzle.demo_data.loader import (
+        DemoDataLoader,
+        find_seed_files,
+        topological_sort_entities,
+    )
+
+    progress = extract_progress(args)
+
+    base_url = args.get("base_url", "http://localhost:8000")
+    email = args.get("email")
+    password = args.get("password")
+    data_dir_str = args.get("data_dir")
+    filter_entities = args.get("entities")
+
+    progress.log_sync("Loading demo data...")
+    app_spec = load_project_appspec(project_root)
+
+    # Find data directory
+    if data_dir_str:
+        data_dir = Path(data_dir_str)
+    else:
+        for candidate in [
+            project_root / "demo_data",
+            project_root / ".dazzle" / "demo_data",
+        ]:
+            if candidate.is_dir():
+                data_dir = candidate
+                break
+        else:
+            return json.dumps(
+                {
+                    "status": "no_data",
+                    "message": "No demo data directory found. Run generate first.",
+                }
+            )
+
+    seed_files = find_seed_files(data_dir)
+    if not seed_files:
+        return json.dumps(
+            {
+                "status": "no_data",
+                "message": f"No seed files found in {data_dir}",
+            }
+        )
+
+    # Topological sort
+    entity_order = topological_sort_entities(app_spec.domain.entities)
+
+    progress.log_sync(f"Loading {len(seed_files)} entities into {base_url}...")
+    with DemoDataLoader(base_url=base_url, email=email, password=password) as loader:
+        if email and password:
+            loader.authenticate()
+
+        report = loader.load_all(data_dir, entity_order, entities_filter=filter_entities)
+
+    return json.dumps(
+        {
+            "status": "loaded",
+            "base_url": base_url,
+            "data_dir": str(data_dir),
+            "report": report.to_dict(),
+            "summary": report.summary(),
+        },
+        indent=2,
+    )
+
+
+@wrap_handler_errors
+def validate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Validate seed files against DSL entity definitions."""
+    from dazzle.demo_data.loader import find_seed_files, validate_seed_data
+
+    progress = extract_progress(args)
+    data_dir_str = args.get("data_dir")
+
+    progress.log_sync("Validating demo data...")
+    app_spec = load_project_appspec(project_root)
+
+    # Find data directory
+    if data_dir_str:
+        data_dir = Path(data_dir_str)
+    else:
+        for candidate in [
+            project_root / "demo_data",
+            project_root / ".dazzle" / "demo_data",
+        ]:
+            if candidate.is_dir():
+                data_dir = candidate
+                break
+        else:
+            return json.dumps(
+                {
+                    "status": "no_data",
+                    "message": "No demo data directory found.",
+                }
+            )
+
+    seed_files = find_seed_files(data_dir)
+    errors = validate_seed_data(data_dir, app_spec.domain.entities)
+
+    return json.dumps(
+        {
+            "status": "valid" if not errors else "invalid",
+            "data_dir": str(data_dir),
+            "seed_files": list(seed_files.keys()),
+            "error_count": len(errors),
+            "errors": errors[:20],
+        },
+        indent=2,
+    )

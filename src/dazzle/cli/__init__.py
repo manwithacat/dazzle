@@ -158,6 +158,7 @@ app.command(name="check")(check_command)
 from dazzle.cli.auth import auth_app  # noqa: E402
 from dazzle.cli.composition import composition_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
+from dazzle.cli.demo import demo_app  # noqa: E402
 from dazzle.cli.deploy import deploy_app  # noqa: E402
 from dazzle.cli.discovery import discovery_app  # noqa: E402
 from dazzle.cli.docs import docs_app  # noqa: E402
@@ -182,6 +183,7 @@ from dazzle.cli.vocab import vocab_app  # noqa: E402
 app.add_typer(auth_app, name="auth")
 app.add_typer(composition_app, name="composition")
 app.add_typer(db_app, name="db")
+app.add_typer(demo_app, name="demo")
 app.add_typer(discovery_app, name="discovery")
 app.add_typer(docs_app, name="docs")
 app.add_typer(vocab_app, name="vocab")
