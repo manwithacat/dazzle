@@ -148,7 +148,7 @@ def check_docs_coverage() -> list[str]:
 
 - {each best practice}
 
-**Related:** [name](page.md#name), ...
+**Related:** {related concept links}
 
 ---
 ```

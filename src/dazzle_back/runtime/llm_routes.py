@@ -69,7 +69,7 @@ def create_llm_routes(
                 request.input_data,
                 user_id=request.user_id,
             )
-            return AsyncJobResponse(job_id=job_id)  # type: ignore[return-value]
+            return AsyncJobResponse(job_id=job_id)
 
         result: ExecutionResult = await executor.execute(
             intent_name, request.input_data, user_id=request.user_id
@@ -99,7 +99,8 @@ def create_llm_routes(
                 record_id=job_id,
             )
             if result:
-                return result
+                data: dict[str, Any] = dict(result) if not isinstance(result, dict) else result
+                return data
             return {"job_id": job_id, "status": "not_found"}
         except Exception:
             return {"job_id": job_id, "status": "not_found"}

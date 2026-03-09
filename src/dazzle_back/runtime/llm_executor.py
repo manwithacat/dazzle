@@ -100,7 +100,7 @@ class LLMIntentExecutor:
     @staticmethod
     def _render_prompt(template_str: str, input_data: dict[str, Any]) -> str:
         """Render a Jinja2 prompt template with ``input`` in the namespace."""
-        env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+        env = jinja2.Environment(undefined=jinja2.StrictUndefined)  # nosec B701 — prompt rendering, not HTML
         tpl = env.from_string(template_str)
         return tpl.render(input=input_data)
 

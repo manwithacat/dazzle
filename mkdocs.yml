@@ -49,19 +49,26 @@ nav:
       - MCP Server: architecture/mcp-server.md
   - DSL Reference:
       - Overview: reference/index.md
-      - Modules: reference/modules.md
       - Entities: reference/entities.md
+      - Access Control: reference/access-control.md
       - Surfaces: reference/surfaces.md
       - Workspaces: reference/workspaces.md
+      - UX Layer: reference/ux.md
+      - Experiences: reference/experiences.md
       - Services: reference/services.md
       - Integrations: reference/integrations.md
+      - Processes: reference/processes.md
+      - Stories: reference/stories.md
+      - Ledgers: reference/ledgers.md
+      - LLM Models & Intents: reference/llm.md
+      - Testing: reference/testing.md
+      - Frontend & Templates: reference/frontend.md
       - Messaging: reference/messaging.md
-      - UX Layer: reference/ux.md
+      - Governance: reference/governance.md
+      - Patterns: reference/patterns.md
       - Scenarios: reference/scenarios.md
-      - Experiences: reference/experiences.md
       - Runtime Capabilities: reference/runtime-capabilities.md
       - HTMX Templates: reference/htmx-templates.md
-      - Testing: reference/testing.md
       - Databases: reference/databases.md
       - Deployment: reference/deployment.md
       - Islands: reference/islands.md

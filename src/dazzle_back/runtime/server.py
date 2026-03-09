@@ -1351,14 +1351,17 @@ class DazzleBackendApp:
             self._entity_event_bus.add_handler(matcher.handle_event)
 
         router = create_llm_routes(executor, queue=queue, ai_job_service=ai_job_service)
+        assert self._app is not None  # guaranteed after _create_app()
         self._app.include_router(router)
 
         # Start/stop queue workers with the app lifecycle
-        @self._app.on_event("startup")
+        app = self._app
+
+        @app.on_event("startup")
         async def startup_llm_queue() -> None:
             await queue.start()
 
-        @self._app.on_event("shutdown")
+        @app.on_event("shutdown")
         async def shutdown_llm_queue() -> None:
             await queue.shutdown()
 
