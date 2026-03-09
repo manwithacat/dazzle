@@ -2,10 +2,11 @@
 
 {% block title %}Set Up Two-Factor Authentication - {{ product_name }}{% endblock %}
 
+{% block body_class %}dz-auth-page bg-base-200{% endblock %}
+
 {% block body %}
-<body class="dz-site dz-auth-page bg-base-200">
-  <div class="dz-auth-container">
-    <div class="card bg-base-100 shadow-xl dz-auth-card" style="max-width: 480px;">
+  <div class="dz-auth-container dz-auth-container--wide">
+    <div class="card bg-base-100 shadow-xl dz-auth-card">
       <div class="card-body">
         <a href="/" class="dz-auth-logo text-primary font-bold text-xl">{{ product_name }}</a>
         <h1 class="card-title text-2xl justify-center">Set Up 2FA</h1>
@@ -72,7 +73,6 @@
       </div>
     </div>
   </div>
-</body>
 {% endblock %}
 
 {% block scripts_extra %}

@@ -826,7 +826,11 @@
 
 .dz-auth-container {
   width: 100%;
-  max-width: 24rem;
+  max-width: 28rem;
+}
+
+.dz-auth-container--wide {
+  max-width: 30rem;
 }
 
 .dz-auth-card {
