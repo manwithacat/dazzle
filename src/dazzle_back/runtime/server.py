@@ -1319,19 +1319,48 @@ class DazzleBackendApp:
             )
 
     def _init_llm_executor(self) -> None:
-        """Initialize LLM intent executor and routes (v0.38.0)."""
+        """Initialize LLM intent executor, queue, triggers, and routes (v0.38.0)."""
         if not self._appspec or not self._appspec.llm_config:
             return
         if not self._appspec.llm_intents:
             return
 
         from dazzle_back.runtime.llm_executor import LLMIntentExecutor
+        from dazzle_back.runtime.llm_queue import LLMJobQueue
         from dazzle_back.runtime.llm_routes import create_llm_routes
+        from dazzle_back.runtime.llm_trigger import LLMTriggerMatcher
 
         ai_job_service = self._services.get("AIJob")
         executor = LLMIntentExecutor(self._appspec, ai_job_service=ai_job_service)
-        router = create_llm_routes(executor)
+
+        # Build job queue with rate limits and concurrency from config
+        llm_config = self._appspec.llm_config
+        queue = LLMJobQueue(
+            executor=executor,
+            ai_job_service=ai_job_service,
+            event_bus=getattr(self, "_entity_event_bus", None),
+            rate_limits=llm_config.rate_limits if llm_config else None,
+            concurrency=llm_config.concurrency if llm_config else None,
+        )
+        self._llm_queue = queue
+
+        # Register entity event trigger matcher
+        has_triggers = any(i.triggers for i in self._appspec.llm_intents)
+        if has_triggers and hasattr(self, "_entity_event_bus"):
+            matcher = LLMTriggerMatcher(self._appspec, queue, services=self._services)
+            self._entity_event_bus.add_handler(matcher.handle_event)
+
+        router = create_llm_routes(executor, queue=queue, ai_job_service=ai_job_service)
         self._app.include_router(router)
+
+        # Start/stop queue workers with the app lifecycle
+        @self._app.on_event("startup")
+        async def startup_llm_queue() -> None:
+            await queue.start()
+
+        @self._app.on_event("shutdown")
+        async def shutdown_llm_queue() -> None:
+            await queue.shutdown()
 
     def _init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""

@@ -1294,7 +1294,8 @@ def get_consolidated_tools() -> list[Tool]:
                 "inference (find inference patterns matching a query), "
                 "related (get related concepts for an entity), "
                 "export (export project KG data to JSON), "
-                "import (import KG data from JSON)"
+                "import (import KG data from JSON), "
+                "triggers (show what fires when an entity event occurs)"
             ),
             inputSchema={
                 "type": "object",
@@ -1314,6 +1315,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "related",
                             "export",
                             "import",
+                            "triggers",
                         ],
                         "description": "Operation to perform",
                     },
@@ -1361,7 +1363,16 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "name": {
                         "type": "string",
-                        "description": "Entity or concept name (for concept, related)",
+                        "description": "Entity or concept name (for concept, related, triggers)",
+                    },
+                    "entity": {
+                        "type": "string",
+                        "description": "Entity name (for triggers, e.g. 'Ticket')",
+                    },
+                    "event": {
+                        "type": "string",
+                        "enum": ["created", "updated", "deleted"],
+                        "description": "Event type (for triggers, default: created)",
                     },
                     "data": {
                         "type": "object",

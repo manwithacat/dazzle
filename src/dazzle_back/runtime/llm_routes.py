@@ -34,7 +34,18 @@ class IntentExecuteResponse(BaseModel):
     error: str | None = None
 
 
-def create_llm_routes(executor: LLMIntentExecutor) -> APIRouter:
+class AsyncJobResponse(BaseModel):
+    """Response for async job submission."""
+
+    job_id: str
+    status: str = "pending"
+
+
+def create_llm_routes(
+    executor: LLMIntentExecutor,
+    queue: Any | None = None,
+    ai_job_service: Any | None = None,
+) -> APIRouter:
     """Create LLM intent execution routes."""
     router = APIRouter(prefix="/_dazzle/llm", tags=["LLM"])
 
@@ -48,8 +59,18 @@ def create_llm_routes(executor: LLMIntentExecutor) -> APIRouter:
 
     @router.post("/execute/{intent_name}", response_model=IntentExecuteResponse)
     async def execute_intent(
-        intent_name: str, request: IntentExecuteRequest
-    ) -> IntentExecuteResponse:
+        intent_name: str,
+        request: IntentExecuteRequest,
+        async_mode: bool = False,
+    ) -> IntentExecuteResponse | AsyncJobResponse:
+        if async_mode and queue is not None:
+            job_id = await queue.submit(
+                intent_name,
+                request.input_data,
+                user_id=request.user_id,
+            )
+            return AsyncJobResponse(job_id=job_id)  # type: ignore[return-value]
+
         result: ExecutionResult = await executor.execute(
             intent_name, request.input_data, user_id=request.user_id
         )
@@ -63,5 +84,24 @@ def create_llm_routes(executor: LLMIntentExecutor) -> APIRouter:
             duration_ms=result.duration_ms,
             error=result.error,
         )
+
+    @router.get("/jobs/{job_id}")
+    async def get_job(job_id: str) -> dict[str, Any]:
+        """Poll job status by ID."""
+        if not ai_job_service:
+            return {"error": "AIJob service not available", "status": "unknown"}
+        try:
+            import asyncio
+
+            result = await asyncio.to_thread(
+                ai_job_service.execute,
+                action="read",
+                record_id=job_id,
+            )
+            if result:
+                return result
+            return {"job_id": job_id, "status": "not_found"}
+        except Exception:
+            return {"job_id": job_id, "status": "not_found"}
 
     return router

@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LLM intent execution: `/_dazzle/llm/execute/{intent_name}` triggers intents at runtime, records AIJob for cost tracking
 - MCP `llm` tool: `list_intents`, `list_models`, `inspect_intent`, `get_config` operations
 - Collapsible navigation groups with Lucide icon support in workspace DSL (`nav_group` keyword) and app shell sidebar (#418)
+- LLM async event queue: background job queue with token-bucket rate limiting and per-model semaphore concurrency (#417)
+- LLM entity triggers: `trigger:` clause on `llm_intent` fires intents on entity created/updated/deleted events with input mapping, write-back, and conditional execution
+- `llm_config` gains `concurrency:` block for per-model max concurrent request limits
+- Process `llm_intent` step kind: processes can now execute LLM intents as steps with `input_map` context resolution
+- Linear checkpointed process executor: sequential step execution with checkpoint-based resume on restart
+- Async job execution: `POST /_dazzle/llm/execute/{intent_name}?async_mode=true` queues jobs and returns `job_id`; poll with `GET /_dazzle/llm/jobs/{job_id}`
+- MCP `graph` tool: new `triggers` operation shows cross-references (what fires when entity X event Y occurs)
 
 ## [0.37.0] - 2026-03-07
 

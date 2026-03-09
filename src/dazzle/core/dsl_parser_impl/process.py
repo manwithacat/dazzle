@@ -690,6 +690,8 @@ class ProcessParserMixin:
         # Initialize step fields
         kind: ir.ProcessStepKind = ir.ProcessStepKind.SERVICE
         service: str | None = None
+        llm_intent: str | None = None
+        llm_input_map: dict[str, str] | None = None
         channel: str | None = None
         message: str | None = None
         wait_duration_seconds: int | None = None
@@ -718,6 +720,14 @@ class ProcessParserMixin:
                 self.expect(TokenType.COLON)
                 service = str(self.expect_identifier_or_keyword().value)
                 kind = ir.ProcessStepKind.SERVICE
+                self.skip_newlines()
+
+            # llm_intent: intent_name
+            elif self.match(TokenType.LLM_INTENT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                llm_intent = str(self.expect_identifier_or_keyword().value)
+                kind = ir.ProcessStepKind.LLM_INTENT
                 self.skip_newlines()
 
             elif self.match(TokenType.CHANNEL):
@@ -835,6 +845,13 @@ class ProcessParserMixin:
                 self.skip_newlines()
                 effects = self._parse_step_effects()
 
+            # input_map: (nested block for llm_intent steps)
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "input_map":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                llm_input_map = self._parse_step_input_map()
+
             else:
                 # Skip unknown field
                 self.advance()
@@ -852,6 +869,8 @@ class ProcessParserMixin:
             name=name,
             kind=kind,
             service=service,
+            llm_intent=llm_intent,
+            llm_input_map=llm_input_map,
             channel=channel,
             message=message,
             wait_duration_seconds=wait_duration_seconds,
@@ -1326,6 +1345,41 @@ class ProcessParserMixin:
 
         self.expect(TokenType.DEDENT)
         return mappings
+
+    def _parse_step_input_map(self) -> dict[str, str]:
+        """Parse a step input_map block (key: dotted.value pairs).
+
+        Syntax:
+            input_map:
+              title: trigger.entity.title
+              category: classify.output.category
+        """
+        result: dict[str, str] = {}
+
+        if not self.match(TokenType.INDENT):
+            return result
+
+        self.expect(TokenType.INDENT)
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key = str(self.expect_identifier_or_keyword().value)
+            self.expect(TokenType.COLON)
+
+            # Parse dotted value like trigger.entity.title
+            value = str(self.expect_identifier_or_keyword().value)
+            while self.match(TokenType.DOT):
+                self.advance()
+                value += "." + str(self.expect_identifier_or_keyword().value)
+
+            result[key] = value
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return result
 
     def _parse_retry_config(self) -> ir.RetryConfig:
         """Parse retry configuration."""

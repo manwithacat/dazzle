@@ -1506,6 +1506,70 @@ def _handle_graph_import(graph: Any, arguments: dict[str, Any]) -> str:
         return error_response(str(e))
 
 
+def _handle_graph_triggers(arguments: dict[str, Any]) -> str:
+    """Show everything that triggers when an entity event fires."""
+    from .state import get_active_project_path
+
+    entity = arguments.get("entity") or arguments.get("name")
+    event = arguments.get("event", "created")
+
+    project_root = get_active_project_path()
+    if not project_root:
+        return error_response("No active project")
+
+    from .common import load_project_appspec
+
+    appspec = load_project_appspec(project_root)
+
+    results: list[dict[str, Any]] = []
+
+    # Check LLM intent triggers
+    for intent in appspec.llm_intents or []:
+        for trigger in intent.triggers:
+            if entity and trigger.on_entity != entity:
+                continue
+            if trigger.on_event.value != event:
+                continue
+            results.append(
+                {
+                    "type": "llm_intent",
+                    "name": intent.name,
+                    "entity": trigger.on_entity,
+                    "event": trigger.on_event.value,
+                    "input_map": trigger.input_map,
+                    "write_back": trigger.write_back,
+                    "when": trigger.when,
+                }
+            )
+
+    # Check process triggers
+    for process in appspec.processes or []:
+        if process.trigger and process.trigger.entity_name:
+            if entity and process.trigger.entity_name != entity:
+                continue
+            if process.trigger.event_type != event:
+                continue
+            results.append(
+                {
+                    "type": "process",
+                    "name": process.name,
+                    "entity": process.trigger.entity_name,
+                    "event": process.trigger.event_type,
+                    "steps": [s.name for s in process.steps],
+                }
+            )
+
+    return json.dumps(
+        {
+            "entity": entity,
+            "event": event,
+            "trigger_count": len(results),
+            "triggers": results,
+        },
+        indent=2,
+    )
+
+
 def handle_graph(arguments: dict[str, Any]) -> str:
     """Handle knowledge graph operations."""
     from .state import get_knowledge_graph, refresh_knowledge_graph
@@ -1536,6 +1600,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
         "related": lambda args: _handle_graph_related(graph, args),
         "export": lambda args: json.dumps(graph.export_project_data(), indent=2),
         "import": lambda args: _handle_graph_import(graph, args),
+        "triggers": lambda args: _handle_graph_triggers(args),
     }
 
     handler_fn = handler_ops.get(operation)  # type: ignore[arg-type]

@@ -750,6 +750,8 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.CREATES,
     TokenType.DEFAULTS,
     TokenType.FIELDS,
+    # v0.37.0 LLM Trigger/Queue keywords (can be field names in input_map)
+    TokenType.TRIGGER,
     # v0.34.0 Platform Capability Keywords
     TokenType.SOFT_DELETE,
     TokenType.SEARCHABLE,

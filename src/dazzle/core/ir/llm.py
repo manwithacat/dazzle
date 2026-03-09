@@ -173,6 +173,7 @@ class LLMConfigSpec(BaseModel):
         artifact_store: Storage backend for prompts/completions
         logging: Logging policy configuration
         rate_limits: Rate limits per model (requests per minute)
+        concurrency: Max concurrent requests per model
     """
 
     default_model: str | None = None
@@ -181,6 +182,41 @@ class LLMConfigSpec(BaseModel):
     artifact_store: ArtifactStore = ArtifactStore.LOCAL
     logging: LoggingPolicySpec = Field(default_factory=LoggingPolicySpec)
     rate_limits: dict[str, int] | None = None
+    concurrency: dict[str, int] | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
+# =============================================================================
+# Trigger Specs
+# =============================================================================
+
+
+class LLMTriggerEvent(StrEnum):
+    """Entity lifecycle events that can trigger an intent."""
+
+    CREATED = "created"
+    UPDATED = "updated"
+    DELETED = "deleted"
+
+
+class LLMTriggerSpec(BaseModel):
+    """
+    Trigger that fires an intent on an entity lifecycle event.
+
+    Attributes:
+        on_entity: Entity name (e.g. "Ticket")
+        on_event: Lifecycle event (created, updated, deleted)
+        input_map: Maps entity fields to intent inputs (e.g. {"title": "entity.title"})
+        write_back: Maps intent output to entity fields (e.g. {"Ticket.category": "output"})
+        when: Optional condition expression for conditional triggers
+    """
+
+    on_entity: str
+    on_event: LLMTriggerEvent
+    input_map: dict[str, str] = Field(default_factory=dict)
+    write_back: dict[str, str] | None = None
+    when: str | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -207,6 +243,7 @@ class LLMIntentSpec(BaseModel):
         vision: Whether this intent uses vision/image input
         retry: Retry policy for failures
         pii: PII handling policy
+        triggers: Entity event triggers that fire this intent
     """
 
     name: str
@@ -219,6 +256,7 @@ class LLMIntentSpec(BaseModel):
     vision: bool = False
     retry: RetryPolicySpec | None = None
     pii: PIIPolicySpec | None = None
+    triggers: list[LLMTriggerSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

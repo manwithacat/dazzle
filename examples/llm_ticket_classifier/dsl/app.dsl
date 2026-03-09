@@ -52,17 +52,26 @@ llm_config:
     claude_haiku: 100
     claude_sonnet: 60
     gpt4o_mini: 50
+  concurrency:
+    claude_haiku: 10
+    claude_sonnet: 5
+    gpt4o_mini: 3
 
 
 # =============================================================================
 # LLM Intents (Job Definitions)
 # =============================================================================
 
-# Simple category classification
+# Simple category classification — auto-triggers on new tickets
 llm_intent classify_ticket "Classify Support Ticket":
   model: claude_haiku
   prompt: "Classify this support ticket into exactly one category: billing, technical, feature_request, account, or other.\n\nTicket:\n{{ input.description }}\n\nRespond with only the category name."
   timeout: 15
+  trigger:
+    on_entity: Ticket
+    on_event: created
+    input_map:
+      description: entity.description
 
 # Priority assessment with structured output
 llm_intent assess_priority "Assess Ticket Priority":

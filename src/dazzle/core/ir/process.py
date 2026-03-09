@@ -46,6 +46,7 @@ class StepKind(StrEnum):
     SIDE_EFFECT = "side_effect"  # Execute effects only (no service/send/wait)
     QUERY = "query"  # Query entities matching a filter
     FOREACH = "foreach"  # Iterate over results from a previous step
+    LLM_INTENT = "llm_intent"  # Execute an LLM intent
 
 
 class RetryBackoff(StrEnum):
@@ -239,6 +240,12 @@ class ProcessStepSpec(BaseModel):
 
     # For SERVICE steps
     service: str | None = Field(default=None, description="Service name to call")
+
+    # For LLM_INTENT steps
+    llm_intent: str | None = Field(default=None, description="LLM intent name to execute")
+    llm_input_map: dict[str, str] | None = Field(
+        default=None, description="Maps process context to intent inputs"
+    )
 
     # For SEND steps
     channel: str | None = Field(default=None, description="Channel name to send to")

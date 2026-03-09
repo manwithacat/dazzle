@@ -199,6 +199,9 @@ class LLMParserMixin:
               rate_limits:
                 claude_sonnet: 60
                 gpt4o: 30
+              concurrency:
+                claude_sonnet: 5
+                gpt4o: 3
         """
         self.expect(TokenType.LLM_CONFIG)
         self.expect(TokenType.COLON)
@@ -211,6 +214,7 @@ class LLMParserMixin:
         artifact_store: ir.ArtifactStore = ir.ArtifactStore.LOCAL
         logging: ir.LoggingPolicySpec = ir.LoggingPolicySpec()
         rate_limits: dict[str, int] | None = None
+        concurrency: dict[str, int] | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -280,6 +284,13 @@ class LLMParserMixin:
                 self.skip_newlines()
                 rate_limits = self._parse_rate_limits()
 
+            # concurrency: (nested block — same format as rate_limits)
+            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "concurrency":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                concurrency = self._parse_concurrency_limits()
+
             else:
                 # Skip unknown fields
                 self.advance()
@@ -294,6 +305,7 @@ class LLMParserMixin:
             artifact_store=artifact_store,
             logging=logging,
             rate_limits=rate_limits,
+            concurrency=concurrency,
         )
 
     def _parse_logging_policy(self) -> ir.LoggingPolicySpec:
@@ -383,6 +395,14 @@ class LLMParserMixin:
               pii:
                 scan: true
                 action: redact
+              trigger:
+                on_entity: Ticket
+                on_event: created
+                input_map:
+                  title: entity.title
+                write_back:
+                  Ticket.category: output
+                when: "entity.category == null"
         """
         self.expect(TokenType.LLM_INTENT)
         name = self.expect_identifier_or_keyword().value
@@ -400,6 +420,7 @@ class LLMParserMixin:
         vision: bool = False
         retry: ir.RetryPolicySpec | None = None
         pii: ir.PIIPolicySpec | None = None
+        triggers: list[ir.LLMTriggerSpec] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -471,6 +492,14 @@ class LLMParserMixin:
                 self.skip_newlines()
                 pii = self._parse_pii_policy()
 
+            # trigger: (nested block)
+            elif self.match(TokenType.TRIGGER):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                trigger = self._parse_llm_trigger()
+                triggers.append(trigger)
+
             else:
                 # Skip unknown fields
                 self.advance()
@@ -489,6 +518,7 @@ class LLMParserMixin:
             vision=vision,
             retry=retry,
             pii=pii,
+            triggers=triggers,
         )
 
     def _parse_retry_policy(self) -> ir.RetryPolicySpec:
@@ -639,3 +669,174 @@ class LLMParserMixin:
                 break
 
         return strings
+
+    def _parse_llm_trigger(self) -> ir.LLMTriggerSpec:
+        """Parse an LLM intent trigger block.
+
+        Syntax:
+            trigger:
+              on_entity: Ticket
+              on_event: created
+              input_map:
+                title: entity.title
+              write_back:
+                Ticket.category: output
+              when: "entity.category == null"
+        """
+        self.expect(TokenType.INDENT)
+
+        on_entity: str | None = None
+        on_event: ir.LLMTriggerEvent | None = None
+        input_map: dict[str, str] = {}
+        write_back: dict[str, str] | None = None
+        when: str | None = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            token = self.current_token()
+            val = str(token.value)
+
+            if val == "on_entity":
+                self.advance()
+                self.expect(TokenType.COLON)
+                on_entity = str(self.expect_identifier_or_keyword().value)
+                self.skip_newlines()
+
+            elif val == "on_event":
+                self.advance()
+                self.expect(TokenType.COLON)
+                event_str = str(self.expect_identifier_or_keyword().value)
+                try:
+                    on_event = ir.LLMTriggerEvent(event_str)
+                except ValueError:
+                    raise make_parse_error(
+                        f"Invalid trigger event: {event_str}. "
+                        "Must be: created, updated, or deleted",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+                self.skip_newlines()
+
+            elif val == "input_map":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                input_map = self._parse_string_map()
+
+            elif val == "write_back":
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                write_back = self._parse_string_map()
+
+            elif self.match(TokenType.WHEN):
+                self.advance()
+                self.expect(TokenType.COLON)
+                when = str(self.expect(TokenType.STRING).value)
+                self.skip_newlines()
+
+            else:
+                self.advance()
+                self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        if on_entity is None:
+            raise make_parse_error(
+                "Trigger requires 'on_entity' field",
+                self.file,
+                self.current_token().line,
+                self.current_token().column,
+            )
+        if on_event is None:
+            raise make_parse_error(
+                "Trigger requires 'on_event' field",
+                self.file,
+                self.current_token().line,
+                self.current_token().column,
+            )
+
+        return ir.LLMTriggerSpec(
+            on_entity=on_entity,
+            on_event=on_event,
+            input_map=input_map,
+            write_back=write_back,
+            when=when,
+        )
+
+    def _parse_string_map(self) -> dict[str, str]:
+        """Parse a block of key: value mappings into a dict.
+
+        Syntax:
+            INDENT
+              key: value
+              key: value
+            DEDENT
+
+        Keys may contain dots (e.g. Ticket.category).
+        Values are read to end of line.
+        """
+        result: dict[str, str] = {}
+
+        self.expect(TokenType.INDENT)
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # Parse key (possibly dotted like Ticket.category)
+            key = str(self.expect_identifier_or_keyword().value)
+            while self.match(TokenType.DOT):
+                self.advance()
+                key += "." + str(self.expect_identifier_or_keyword().value)
+
+            self.expect(TokenType.COLON)
+
+            # Parse value — read tokens to end of line
+            if self.match(TokenType.STRING):
+                value = str(self.current_token().value)
+                self.advance()
+            else:
+                # Read dotted identifier value like entity.title
+                value = str(self.expect_identifier_or_keyword().value)
+                while self.match(TokenType.DOT):
+                    self.advance()
+                    value += "." + str(self.expect_identifier_or_keyword().value)
+
+            result[key] = value
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return result
+
+    def _parse_concurrency_limits(self) -> dict[str, int]:
+        """Parse concurrency limits block (same format as rate_limits)."""
+        self.expect(TokenType.INDENT)
+
+        limits: dict[str, int] = {}
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            if self.match(TokenType.IDENTIFIER):
+                model_name = self.current_token().value
+                self.advance()
+                self.expect(TokenType.COLON)
+                limit = int(self.expect(TokenType.NUMBER).value)
+                limits[model_name] = limit
+                self.skip_newlines()
+
+            else:
+                self.advance()
+                self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        return limits

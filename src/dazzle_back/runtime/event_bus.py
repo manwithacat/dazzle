@@ -32,6 +32,13 @@ class EntityEventType(StrEnum):
     DELETED = "entity:deleted"
 
 
+class LLMEventType(StrEnum):
+    """LLM intent execution event types."""
+
+    INTENT_COMPLETED = "llm_intent:completed"
+    INTENT_FAILED = "llm_intent:failed"
+
+
 @dataclass
 class EntityEvent:
     """An entity change event."""
