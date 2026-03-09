@@ -145,6 +145,7 @@
           ]),
           'publishes': list([
           ]),
+          'seed_template': None,
           'soft_delete': False,
           'source': dict({
             'column': 1,

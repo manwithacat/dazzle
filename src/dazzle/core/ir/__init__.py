@@ -472,6 +472,13 @@ from .security import (
     SecurityProfile,
 )
 
+# Seed Templates (v0.38.0)
+from .seed import (
+    SeedFieldTemplate,
+    SeedStrategy,
+    SeedTemplateSpec,
+)
+
 # Services (External APIs and Domain Services)
 from .services import (
     APISpec,
@@ -1047,6 +1054,10 @@ __all__ = [
     "ApprovalEscalationSpec",
     "ApprovalOutcomeSpec",
     "ApprovalSpec",
+    # Seed Templates (v0.38.0)
+    "SeedFieldTemplate",
+    "SeedStrategy",
+    "SeedTemplateSpec",
     # SLA (v0.25.0)
     "BusinessHoursSpec",
     "SLABreachActionSpec",

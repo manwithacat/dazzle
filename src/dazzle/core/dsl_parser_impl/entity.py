@@ -62,6 +62,8 @@ class EntityParserMixin:
         # v0.34.0: Soft delete and bulk config
         soft_delete: bool = False
         bulk_config: ir.BulkConfig | None = None
+        # v0.38.0: Seed template
+        seed_template: ir.SeedTemplateSpec | None = None
 
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
@@ -423,6 +425,14 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # v0.38.0: Check for seed: block
+            if self.match(TokenType.SEED):
+                self.advance()
+                self.expect(TokenType.COLON)
+                seed_template = self._parse_seed_template()
+                self.skip_newlines()
+                continue
+
             # v0.18.0: Check for publish declaration
             if self.match(TokenType.PUBLISH):
                 publish_spec = self.parse_publish_directive(entity_name=name)
@@ -522,6 +532,7 @@ class EntityParserMixin:
             state_machine=state_machine,
             examples=examples,
             publishes=publishes,
+            seed_template=seed_template,
             source=loc,
         )
 
@@ -785,6 +796,104 @@ class EntityParserMixin:
             import_enabled=import_enabled,
             export_enabled=export_enabled,
             formats=formats,
+        )
+
+    def _parse_seed_template(self) -> ir.SeedTemplateSpec:
+        """
+        Parse seed: block.
+
+        Syntax:
+            seed:
+              strategy: rolling_window
+              window_start: -1
+              window_end: 3
+              month_anchor: 9
+              match_field: name
+              fields:
+                name: "{y}/{y1_short}"
+                start_date: "{y}-09-01"
+                end_date: "{y1}-08-31"
+                is_current: "y == current_year"
+        """
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        strategy = ir.SeedStrategy.ROLLING_WINDOW
+        window_start = -1
+        window_end = 3
+        month_anchor = 1
+        match_field: str | None = None
+        field_templates: list[ir.SeedFieldTemplate] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.COLON)
+
+            if key == "strategy":
+                val = self.expect_identifier_or_keyword().value
+                if val == "rolling_window":
+                    strategy = ir.SeedStrategy.ROLLING_WINDOW
+                else:
+                    token = self.current_token()
+                    raise make_parse_error(
+                        f"Unknown seed strategy '{val}'",
+                        self.file,
+                        token.line,
+                        token.column,
+                    )
+
+            elif key in ("window_start", "window_end"):
+                sign = 1
+                if self.match(TokenType.MINUS):
+                    self.advance()
+                    sign = -1
+                elif self.match(TokenType.PLUS):
+                    self.advance()
+                num_tok = self.expect(TokenType.NUMBER)
+                val = sign * int(num_tok.value)
+                if key == "window_start":
+                    window_start = val
+                else:
+                    window_end = val
+
+            elif key == "month_anchor":
+                month_tok = self.expect(TokenType.NUMBER)
+                month_anchor = int(month_tok.value)
+
+            elif key == "match_field":
+                match_field = self.expect_identifier_or_keyword().value
+
+            elif key == "fields":
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    field_name = self.expect_identifier_or_keyword().value
+                    self.expect(TokenType.COLON)
+                    template_val = self.expect(TokenType.STRING).value
+                    field_templates.append(
+                        ir.SeedFieldTemplate(field=field_name, template=template_val)
+                    )
+                    self.skip_newlines()
+                self.expect(TokenType.DEDENT)
+
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        return ir.SeedTemplateSpec(
+            strategy=strategy,
+            window_start=window_start,
+            window_end=window_end,
+            month_anchor=month_anchor,
+            match_field=match_field,
+            fields=field_templates,
         )
 
     def _parse_audit_directive(self) -> ir.AuditConfig:

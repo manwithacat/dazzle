@@ -1626,6 +1626,31 @@ class DazzleBackendApp:
         except Exception as e:
             logging.getLogger("dazzle.server").warning("Failed to init SLA manager: %s", e)
 
+    def _init_seed_runner(self) -> None:
+        """Auto-seed reference data from entity seed templates at startup (#428)."""
+        if not self._app or not self._appspec:
+            return
+        # Check if any entity has a seed template
+        has_seeds = any(e.seed_template for e in self._appspec.domain.entities)
+        if not has_seeds:
+            return
+
+        appspec = self._appspec
+        repositories = self._repositories
+
+        @self._app.on_event("startup")
+        async def run_seeds() -> None:
+            try:
+                from dazzle_back.runtime.seed_runner import run_seed_templates
+
+                count = await run_seed_templates(appspec, repositories)
+                if count:
+                    logging.getLogger("dazzle.server").info(
+                        "Seed runner: %d reference data row(s) ensured", count
+                    )
+            except Exception:
+                logging.getLogger("dazzle.server").warning("Seed runner failed", exc_info=True)
+
     def _wire_send_handler_to_channels(self) -> None:
         """Connect process adapter's SEND step to ChannelManager.
 
@@ -2212,6 +2237,9 @@ class DazzleBackendApp:
 
         # SLA runtime enforcement (v0.38.0)
         self._init_sla_manager()
+
+        # Seed template auto-seeding at startup (v0.38.0, #428)
+        self._init_seed_runner()
 
         # Wire process SEND steps to channel manager (v0.33.0)
         self._wire_send_handler_to_channels()

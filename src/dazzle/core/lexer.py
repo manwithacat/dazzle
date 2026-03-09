@@ -243,6 +243,7 @@ class TokenType(Enum):
     PERSONA = "persona"
     GOALS = "goals"
     PROFICIENCY = "proficiency"
+    SEED = "seed"
     SEED_SCRIPT = "seed_script"
     START_ROUTE = "start_route"
 
