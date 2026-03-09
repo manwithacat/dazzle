@@ -585,11 +585,12 @@ def create_page_routes(
 
         ws_app_name = appspec.title or appspec.name.replace("_", " ").title()
 
-        # Build nav groups from workspace nav_group declarations (v0.38.0)
-        ws_nav_groups: list[dict[str, Any]] = []
+        # Build nav groups per workspace from nav_group declarations (v0.38.0)
+        ws_nav_group_map: dict[str, list[dict[str, Any]]] = {}
         for ws in workspaces:
+            groups: list[dict[str, Any]] = []
             for ng in getattr(ws, "nav_groups", []) or []:
-                ws_nav_groups.append(
+                groups.append(
                     {
                         "label": ng.label,
                         "icon": ng.icon,
@@ -604,6 +605,7 @@ def create_page_routes(
                         ],
                     }
                 )
+            ws_nav_group_map[ws.name] = groups
 
         for workspace in workspaces:
             ws_ctx = build_workspace_context(workspace, appspec)
@@ -613,12 +615,14 @@ def create_page_routes(
                 list(workspace.access.allow_personas) if getattr(workspace, "access", None) else []
             )
             _ws_entity_items = ws_entity_nav.get(workspace.name, [])
+            _ws_nav_groups = ws_nav_group_map.get(workspace.name, [])
 
             def _make_workspace_handler(
                 ws_context: Any = _ws_ctx,
                 ws_route: str = _ws_route,
                 ws_allowed_personas: list[str] = _ws_allowed,
                 ws_entity_items: list[dict[str, Any]] = _ws_entity_items,
+                ws_groups: list[dict[str, Any]] = _ws_nav_groups,
             ) -> Any:
                 async def workspace_handler(request: Request) -> Response:
                     from dazzle_ui.runtime.template_renderer import render_fragment
@@ -692,7 +696,7 @@ def create_page_routes(
                         "workspace/workspace.html",
                         workspace=ws_context,
                         nav_items=visible_nav,
-                        nav_groups=ws_nav_groups,
+                        nav_groups=ws_groups,
                         app_name=ws_app_name,
                         current_route=effective_route,
                         is_authenticated=is_authenticated,

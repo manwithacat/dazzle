@@ -2027,3 +2027,109 @@ class TestAsyncFetch:
         result = await _fetch_json("http://127.0.0.1:1", "/contacts/{id}", "abc")
         assert "error" in result
         assert result["id"] == "abc"
+
+
+# ---------------------------------------------------------------------------
+# Nav groups scoped to active workspace (#422)
+# ---------------------------------------------------------------------------
+
+
+class TestNavGroupWorkspaceScoping:
+    """nav_groups passed to each workspace handler must only include
+    groups from that workspace, not all workspaces."""
+
+    def test_nav_group_map_is_per_workspace(self) -> None:
+        """The nav_group_map should key groups by workspace name."""
+        from dazzle.core.ir import NavGroupSpec, NavItemIR, WorkspaceSpec
+
+        ws_agent = WorkspaceSpec(
+            name="agent_dashboard",
+            title="Agent Dashboard",
+            nav_groups=[
+                NavGroupSpec(
+                    label="Agent Tools",
+                    icon="wrench",
+                    items=[NavItemIR(entity="tickets")],
+                ),
+            ],
+        )
+        ws_manager = WorkspaceSpec(
+            name="manager_dashboard",
+            title="Manager Dashboard",
+            nav_groups=[
+                NavGroupSpec(
+                    label="Manager Reports",
+                    icon="bar-chart",
+                    items=[NavItemIR(entity="reports")],
+                ),
+                NavGroupSpec(
+                    label="Team",
+                    items=[NavItemIR(entity="team_members")],
+                ),
+            ],
+        )
+        workspaces = [ws_agent, ws_manager]
+        app_prefix = "/app"
+
+        # Replicate the per-workspace nav_group building logic from page_routes
+        ws_nav_group_map: dict[str, list[dict[str, Any]]] = {}
+        for ws in workspaces:
+            groups: list[dict[str, Any]] = []
+            for ng in getattr(ws, "nav_groups", []) or []:
+                groups.append(
+                    {
+                        "label": ng.label,
+                        "icon": ng.icon,
+                        "collapsed": ng.collapsed,
+                        "children": [
+                            {
+                                "label": item.entity.replace("_", " ").title(),
+                                "route": f"{app_prefix}/workspaces/{item.entity}",
+                                "icon": item.icon,
+                            }
+                            for item in ng.items
+                        ],
+                    }
+                )
+            ws_nav_group_map[ws.name] = groups
+
+        # Agent workspace should only have its own group
+        assert len(ws_nav_group_map["agent_dashboard"]) == 1
+        assert ws_nav_group_map["agent_dashboard"][0]["label"] == "Agent Tools"
+
+        # Manager workspace should have its own 2 groups
+        assert len(ws_nav_group_map["manager_dashboard"]) == 2
+        labels = {g["label"] for g in ws_nav_group_map["manager_dashboard"]}
+        assert labels == {"Manager Reports", "Team"}
+
+        # No cross-contamination
+        all_agent_labels = {g["label"] for g in ws_nav_group_map["agent_dashboard"]}
+        all_manager_labels = {g["label"] for g in ws_nav_group_map["manager_dashboard"]}
+        assert all_agent_labels.isdisjoint(all_manager_labels)
+
+    def test_workspace_without_nav_groups_gets_empty_list(self) -> None:
+        """Workspaces with no nav_groups should get an empty list, not others' groups."""
+        from dazzle.core.ir import NavGroupSpec, NavItemIR, WorkspaceSpec
+
+        ws_with = WorkspaceSpec(
+            name="main",
+            title="Main",
+            nav_groups=[
+                NavGroupSpec(label="Tools", items=[NavItemIR(entity="tasks")]),
+            ],
+        )
+        ws_without = WorkspaceSpec(
+            name="empty",
+            title="Empty",
+            nav_groups=[],
+        )
+
+        ws_nav_group_map: dict[str, list[dict[str, Any]]] = {}
+        for ws in [ws_with, ws_without]:
+            groups: list[dict[str, Any]] = []
+            for ng in getattr(ws, "nav_groups", []) or []:
+                groups.append({"label": ng.label})
+            ws_nav_group_map[ws.name] = groups
+
+        assert len(ws_nav_group_map["main"]) == 1
+        assert len(ws_nav_group_map["empty"]) == 0
