@@ -1,0 +1,191 @@
+# Documentation Page Metadata
+# Used by docs_gen.py to group TOML concepts into reference pages.
+
+[meta]
+version = "0.37.0"
+
+[pages.entities]
+title = "Entities"
+slug = "entities"
+order = 1
+intro = """
+Entities are the core data models in DAZZLE. They define structure, \
+relationships, constraints, state machines, and access rules. This page \
+covers entity definitions, field types, enums, references, computed fields, \
+invariants, and supporting constructs like indexes and unique constraints.
+"""
+
+[pages.access-control]
+title = "Access Control"
+slug = "access-control"
+order = 2
+intro = """
+DAZZLE uses Cedar-style access rules with three layers: entity-level \
+permit/forbid blocks, surface-level access restrictions, and workspace-level \
+persona allow/deny lists. Default policy is deny. This page covers access \
+rule syntax, authentication integration, and RBAC patterns.
+"""
+
+[pages.surfaces]
+title = "Surfaces"
+slug = "surfaces"
+order = 3
+intro = """
+Surfaces define the UI and API interfaces for interacting with entities. \
+Each surface has a mode (list, view, create, edit, custom) that determines \
+how data is rendered. This page covers surface definitions, sections, \
+modes, actions, pagination, and DataTable rendering.
+"""
+
+[pages.workspaces]
+title = "Workspaces"
+slug = "workspaces"
+order = 4
+intro = """
+Workspaces compose multiple data views into cohesive dashboards or \
+information hubs. They aggregate related surfaces, metrics, and data \
+for specific user needs. This page covers workspace definitions, regions, \
+aggregates, display modes, and layout stages.
+"""
+
+[pages.ux]
+title = "UX Semantic Layer"
+slug = "ux"
+order = 5
+intro = """
+The UX semantic layer expresses WHY interfaces exist and WHAT matters to \
+users, without prescribing HOW to implement it. Personas, scopes, attention \
+signals, and information needs adapt surfaces and workspaces for different \
+roles and contexts.
+"""
+
+[pages.experiences]
+title = "Experiences"
+slug = "experiences"
+order = 6
+intro = """
+Experiences define multi-step user flows such as onboarding wizards, \
+checkout processes, and approval workflows. Each step references a surface, \
+process, or entity, with transitions driven by user events like continue, \
+back, success, and failure.
+"""
+
+[pages.services]
+title = "Services"
+slug = "services"
+order = 7
+intro = """
+Services declare custom business logic in DSL with implementation in \
+Python or TypeScript stubs. DAZZLE separates concerns into three layers: \
+DSL (declarative), Kernel (runtime), and Stubs (custom code). This page \
+covers domain services, stubs, action purity, and component roles.
+"""
+
+[pages.integrations]
+title = "Integrations"
+slug = "integrations"
+order = 8
+intro = """
+Integrations connect DAZZLE apps to external systems via declarative API \
+bindings with triggers, field mappings, and error handling. Foreign models \
+define the shape of external data for type-safe rendering without owning \
+the source records.
+"""
+
+[pages.processes]
+title = "Processes"
+slug = "processes"
+order = 9
+intro = """
+Processes orchestrate durable, multi-step workflows across entities and \
+services. They handle lifecycle transitions, scheduled jobs, event-driven \
+pipelines, and cross-entity operations that go beyond simple CRUD.
+"""
+
+[pages.stories]
+title = "Stories"
+slug = "stories"
+order = 10
+intro = """
+Stories capture expected user-visible outcomes in a structured format tied \
+to personas and entities. They serve as the contract between specification \
+and implementation, and provide traceability from requirements through \
+processes to test coverage.
+"""
+
+[pages.ledgers]
+title = "Ledgers & Transactions"
+slug = "ledgers"
+order = 11
+intro = """
+Ledgers and transactions provide TigerBeetle-backed double-entry \
+accounting. Ledger accounts define account codes, types, and constraints, \
+while transactions declare transfers between accounts with linked \
+operations and idempotency support.
+"""
+
+[pages.llm]
+title = "LLM Models & Intents"
+slug = "llm"
+order = 12
+intro = """
+DAZZLE supports declarative LLM job definitions for AI-powered tasks such \
+as classification, extraction, and generation. This page covers model \
+configuration, intent definitions with prompt templates, and global LLM \
+settings including rate limits and PII policies.
+"""
+
+[pages.testing]
+title = "Testing"
+slug = "testing"
+order = 13
+intro = """
+DAZZLE provides a comprehensive testing toolkit including E2E testing with \
+Playwright, FlowSpec test generation, semantic DOM conventions, capability \
+discovery, CRUD completeness analysis, workflow coherence checks, and \
+RBAC validation.
+"""
+
+[pages.frontend]
+title = "Frontend & Templates"
+slug = "frontend"
+order = 14
+intro = """
+The Dazzle frontend uses server-rendered Jinja2 templates with HTMX for \
+declarative HTTP interactions. This page covers the three-layer template \
+architecture, fragment contracts, out-of-band swaps, sitespec configuration, \
+copy management, section types, and static asset serving.
+"""
+
+[pages.messaging]
+title = "Messaging & Events"
+slug = "messaging"
+order = 15
+intro = """
+Messaging and events enable asynchronous communication between components \
+and users. Channels define delivery mechanisms (email, in-app, webhook), \
+while the eventing system routes domain events to subscribers and \
+integration endpoints.
+"""
+
+[pages.governance]
+title = "Governance"
+slug = "governance"
+order = 16
+intro = """
+Governance constructs enforce organisational policies, approval workflows, \
+and service-level agreements. Approvals define multi-step sign-off chains, \
+while SLAs set measurable targets with escalation rules for time-sensitive \
+operations.
+"""
+
+[pages.patterns]
+title = "Patterns"
+slug = "patterns"
+order = 17
+intro = """
+Patterns are reusable DSL recipes that combine multiple constructs into \
+proven solutions. Each pattern includes a complete, copy-paste-ready example \
+demonstrating how entities, surfaces, workspaces, and services work together \
+for common use cases.
+"""
