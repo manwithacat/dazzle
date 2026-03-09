@@ -88,7 +88,7 @@
               {{ group.label }}
             </summary>
             <ul>
-              {% for child in group.items %}
+              {% for child in group.children %}
               <li>
                 <a href="{{ child.route }}"
                    hx-get="{{ child.route }}"

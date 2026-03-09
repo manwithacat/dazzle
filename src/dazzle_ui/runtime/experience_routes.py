@@ -143,7 +143,7 @@ def create_experience_routes(
                     "label": ng.label,
                     "icon": ng.icon,
                     "collapsed": ng.collapsed,
-                    "items": [
+                    "children": [
                         {
                             "label": item.entity.replace("_", " ").title(),
                             "route": f"{app_prefix}/workspaces/{item.entity}",

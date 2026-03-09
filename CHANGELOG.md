@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Nav group `items` key collision with Python `dict.items()` in Jinja2 — renamed to `children` to fix TypeError/500 on workspace pages with nav_groups (#421)
+
 ### Added
 - Deterministic demo data loading: `dazzle demo load` loads seed CSV/JSONL files into a running instance via REST API with FK-aware topological ordering (#420)
 - `dazzle demo validate` validates seed files against DSL (FK integrity, enum values, field coverage)
