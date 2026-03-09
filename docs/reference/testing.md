@@ -1,297 +1,151 @@
 # Testing
 
-Dazzle provides a tiered testing infrastructure that matches test complexity to the appropriate tooling.
+> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
+> Do not edit manually; run `dazzle docs generate` to regenerate.
 
-## Testing Tiers
+DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation.
 
-### Tier 1: API Tests (Default)
+---
 
-**Characteristics:**
-- Fast (milliseconds per test)
-- Deterministic (same result every run)
-- Free (no API costs)
-- Generated from DSL
-- No browser required
+## E2E Testing
 
-**Best for:**
-- CRUD operations
-- Form validation
-- API response checks
-- State machine transitions
+End-to-end testing system using Playwright. Tests are auto-generated from DSL and execute against the running DNR app.
 
-**Commands:**
-```bash
-dazzle test dsl-run              # Run all generated tests
-dazzle test dsl-run --tag crud   # Filter by tag
-```
+**Related:** [Flowspec](testing.md#flowspec), [Semantic Dom](testing.md#semantic-dom), [Authentication](access-control.md#authentication)
 
-**How it works:**
-1. DSL is parsed into AppSpec
-2. Test generator creates test cases from entities and relationships
-3. Tests run via HTTP against the runtime server
-4. Results are deterministic and fast
+---
 
-### Tier 2: Scripted E2E (Playwright)
+## Flowspec
 
-**Characteristics:**
-- Medium speed (seconds per test)
-- Deterministic (same result every run)
-- Free (no API costs)
-- Uses semantic DOM selectors
-- Scenarios for state setup
+JSON/YAML specification defining E2E test flows. Auto-generated from DSL but can be customized.
 
-**Best for:**
-- Navigation verification
-- UI interaction flows
-- Form submission with UI
-- Multi-step workflows with known steps
+### Example
 
-**Commands:**
-```bash
-dazzle test playwright           # Run scripted E2E tests
-dazzle test playwright --headed  # Show browser
-```
-
-**How it works:**
-1. Scenario sets up predictable state via dev control plane
-2. Playwright navigates using `data-dazzle-*` selectors
-3. Auth bypassed via persona switching
-4. Assertions use semantic selectors
-
-### Tier 3: Agent Tests (LLM-Driven)
-
-**Characteristics:**
-- Slow (~5 seconds per step)
-- Adaptive (handles UI changes)
-- Costs money (LLM API calls)
-- Visual understanding
-
-**Best for:**
-- Visual verification ("does this look right?")
-- Exploratory testing
-- Accessibility audits
-- Regression analysis when UI changes
-- Testing unknown or dynamic UIs
-
-**Commands:**
-```bash
-dazzle test agent                    # Run agent tests (browser visible)
-dazzle test agent --headless         # Run headless
-dazzle test agent --report           # Generate HTML coverage report
-```
-
-**How it works:**
-1. Playwright launches a browser
-2. Agent observes page state (DOM + screenshot)
-3. LLM decides next action based on test goal
-4. Agent executes action and repeats
-5. LLM determines when goal is achieved
-
-## When to Use Each Tier
-
-| Scenario | Tier | Why |
-|----------|------|-----|
-| "Verify Task API returns correct data" | 1 | Pure API, no browser |
-| "Create a task via API" | 1 | CRUD, deterministic |
-| "Navigate to dashboard and see tasks" | 2 | Browser UI, scripted steps |
-| "Fill form and submit" | 2 | UI interaction, known selectors |
-| "Does the dashboard look correct?" | 3 | Visual verification |
-| "Try to break the registration form" | 3 | Exploratory, edge cases |
-| "Navigate using only keyboard" | 3 | Accessibility audit |
-
-## Test Generation
-
-Tests are generated from your DSL automatically:
-
-```bash
-dazzle test dsl-generate    # Generate test cases from DSL
-```
-
-This creates `dsl/tests/dsl_generated_tests.json` with:
-- CRUD tests for each entity (API-based)
-- Navigation tests for workspaces (Playwright, `tier1` tag)
-- Validation tests for required fields
-- State machine transition tests
-
-**All generated tests are Tier 1** - deterministic and scriptable.
-
-## Test Tags
-
-Tests are classified by tags:
-
-| Tag | Meaning |
-|-----|---------|
-| `tier1` | API-based test (no browser) |
-| `tier2` or `playwright` | Scripted Playwright test |
-| `tier3` or `agent` | LLM agent test |
-| `crud` | Create/Read/Update/Delete operations |
-| `validation` | Field validation tests |
-| `state_machine` | State transition tests |
-
-## Creating Tier 3 Tests
-
-Tier 3 (agent) tests are NOT auto-generated. Create them manually when you need:
-- Visual verification
-- Adaptive/exploratory behavior
-- Testing unknown or dynamic UIs
-
-Add tests to `dsl/tests/dsl_generated_tests.json` with the `tier3` or `agent` tag:
-
-```json
+```dsl
 {
-  "test_id": "VISUAL_DASHBOARD_CHECK",
-  "title": "Verify dashboard layout after refactor",
-  "description": "Check that all dashboard components render correctly",
-  "tags": ["tier3", "agent", "visual", "regression"],
-  "steps": [
-    {
-      "action": "navigate_to",
-      "target": "workspace:admin_dashboard",
-      "rationale": "Go to dashboard"
-    },
-    {
-      "action": "visual_check",
-      "target": "page",
-      "data": {"verify": "Layout is correct with no overlapping elements"},
-      "rationale": "Verify visual appearance"
-    }
-  ]
+  "flows": [{
+    "id": "task_crud_create",
+    "name": "Create Task",
+    "priority": "high",
+    "tags": ["crud", "task"],
+    "steps": [
+      {"type": "navigate", "url": "/tasks/new"},
+      {"type": "fill", "selector": "[data-dazzle-field='title']", "value": "Test Task"},
+      {"type": "click", "selector": "[data-dazzle-action='submit']"},
+      {"type": "assert", "condition": "url_contains", "value": "/tasks"}
+    ]
+  }]
 }
 ```
 
-## MCP Tier Guidance
+**Related:** [E2E Testing](testing.md#e2e-testing), [Semantic Dom](testing.md#semantic-dom)
 
-When using MCP tools, use `get_test_tier_guidance` to determine the right tier:
+---
 
-```
-Tool: get_test_tier_guidance
-Input: {"scenario": "verify the checkout form looks correct after CSS changes"}
-Output: {"recommendation": "tier2", "reason": "This scenario suggests visual judgment..."}
-```
+## Semantic Dom
 
-## Coverage Reports
+Convention for data attributes in DNR UI that enable reliable E2E testing. These attributes provide semantic meaning to DOM elements.
 
-### Tier 1 Coverage
-```bash
-dazzle test dsl-run --verbose    # Shows pass/fail for each test
-```
+**Related:** [E2E Testing](testing.md#e2e-testing), [Flowspec](testing.md#flowspec)
 
-### Tier 3 Coverage (Agent)
-```bash
-dazzle test agent --report
-```
+---
 
-Generates an HTML report with:
-- Summary statistics
-- Screenshots at each step
-- LLM prompts and responses (collapsible)
-- Pass/fail reasoning
+## Capability Discovery
 
-Reports are saved to: `dsl/tests/reports/agent_e2e_report_YYYYMMDD_HHMMSS.html`
+Agent-driven capability discovery system that explores a running Dazzle app and identifies gaps between the DSL specification and the actual implementation. Uses the generic agent framework with three modes: persona (open-ended exploration as a role), entity_completeness (static CRUD coverage analysis plus targeted verification), and workflow_coherence (static process/story integrity analysis plus targeted verification). Access via the 'discovery' MCP tool.
 
-## Configuration
+**Related:** [E2E Testing](testing.md#e2e-testing), [Entity Completeness](testing.md#entity-completeness), [Workflow Coherence](testing.md#workflow-coherence)
 
-### Environment Variables
+---
 
-For Tier 3 (agent) tests:
-```bash
-# .env file
-ANTHROPIC_API_KEY=sk-ant-...
-```
+## Entity Completeness
 
-### Test Filtering
+Discovery mode that statically analyzes CRUD surface coverage for each entity and checks for state machine transition UI. Identifies missing list, create, edit, and view surfaces, then guides an agent to verify findings against the running app. Use: discovery(operation='run', mode='entity_completeness').
 
-```bash
-# Tier 1 (API)
-dazzle test dsl-run --tag crud
-dazzle test dsl-run --entity Task
+**Related:** [Capability Discovery](testing.md#capability-discovery), [Workflow Coherence](testing.md#workflow-coherence)
 
-# Tier 2 (Playwright)
-dazzle test playwright --scenario active_sprint
+---
 
-# Tier 3 (Agent)
-dazzle test agent --test WS_DASHBOARD_NAV
-```
+## Workflow Coherence
 
-## Tier 3 Use Cases (Detailed Examples)
+Discovery mode that statically analyzes process and story integrity. Checks that process human_task steps reference existing surfaces, subprocess steps reference existing processes, triggers match entities with state machines, and stories have implementing processes. Use: discovery(operation='run', mode='workflow_coherence').
 
-### Complex Multi-Step Journeys
+**Related:** [Capability Discovery](testing.md#capability-discovery), [Entity Completeness](testing.md#entity-completeness)
 
-When a user flow requires decisions based on dynamic content:
+---
 
-```
-Goal: "As a new user, sign up, create a project, invite a team member,
-       and verify the invite was sent"
+## Rbac Validation
+
+NIST SP 800-162 compliance validation for Cedar-style permit/forbid/audit policies. Validates policy completeness, conflict detection, separation of duty, least privilege, default deny, and audit coverage. Uses the policy handler's analysis functions (_analyze, _find_conflicts, _coverage_matrix). Reference implementation: examples/rbac_validation/ and tests/unit/test_rbac_validation.py.
+
+**Related:** [Capability Discovery](testing.md#capability-discovery), [E2E Testing](testing.md#e2e-testing), [Access Rules](access-control.md#access-rules)
+
+---
+
+## Scenario
+
+Named demo state that sets up context for testing or demonstration. Scenarios define per-persona entry points and optional demo data.
+
+### Syntax
+
+```dsl
+scenario <name> "<Title>":
+  description: "<what this scenario tests>"
+
+  for persona <persona_name>:
+    start_route: "<url>"
+
+  [demo:]
+    [<EntityName>:]
+      [- <field>: <value>, <field>: <value>]
 ```
 
-The agent adapts to:
-- Form validation errors it discovers
-- Dynamic element loading
-- Confirmation dialogs
-- Email verification steps
+### Example
 
-### Visual Regression Detection
+```dsl
+scenario happy_path "Happy Path":
+  description: "Normal user flow - create, edit, complete"
 
-After a UI refactor:
+  for persona customer:
+    start_route: "/tickets/new"
 
-```
-Goal: "Navigate to the dashboard and verify the layout looks correct"
-```
+  for persona agent:
+    start_route: "/queue"
 
-The agent can detect:
-- Missing elements that should be present
-- Broken layouts or overlapping content
-- Color/contrast issues
-- Unexpected visual changes
+scenario with_data "Populated State":
+  description: "Pre-loaded data for testing"
 
-### Exploratory Testing
+  for persona agent:
+    start_route: "/queue"
 
-Find edge cases humans might miss:
-
-```
-Goal: "Try to break the registration form by entering unusual inputs"
+  demo:
+    Task:
+      - title: "Fix login bug", status: open, priority: high
+      - title: "Update docs", status: in_progress, priority: medium
 ```
 
-The agent will attempt:
-- Empty submissions
-- Very long strings
-- Special characters
-- SQL injection patterns (safely)
-- XSS patterns (safely)
+**Related:** [Persona](ux.md#persona), [Demo Data](testing.md#demo-data)
 
-### Accessibility Auditing
+---
 
-Verify keyboard navigation and screen reader support:
+## Demo Data
 
-```
-Goal: "Complete the checkout flow using only keyboard navigation"
-```
+Seed data embedded in scenarios or generated from demo data blueprints. Provides realistic starting state for testing and demonstrations.
 
-The agent checks:
-- Tab order is logical
-- All interactive elements are reachable
-- Focus states are visible
-- Skip links work correctly
+### Syntax
 
-### Cross-Feature Integration
+```dsl
+# Inline in scenario:
+demo:
+  <EntityName>:
+    - <field>: <value>, <field>: <value>
+    - <field>: <value>, <field>: <value>
 
-Test features that span multiple surfaces:
-
-```
-Goal: "Create a task in the dashboard, then verify it appears
-       in the mobile view with the correct status"
+# Or via MCP tool:
+# demo_data(operation="propose") → generates blueprint
+# demo_data(operation="generate") → creates seed files
 ```
 
-The agent handles:
-- Context switching between views
-- Data consistency verification
-- State synchronization
+**Related:** [Scenario](testing.md#scenario), [Persona](ux.md#persona)
 
-## Best Practices
-
-1. **Default to Tier 1** - Use API tests for CRUD and validation
-2. **Use Tier 2 for UI flows** - Scripted Playwright tests for navigation and forms
-3. **Reserve Tier 3 for judgment** - Only use agent tests when human-like judgment is needed
-4. **Run Tiers 1-2 in CI** - Fast and deterministic
-5. **Run Tier 3 periodically** - For regression and exploratory testing
-6. **Use scenarios for state** - Set up predictable state before tests
+---

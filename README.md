@@ -31,18 +31,8 @@ cd examples/simple_task && dazzle serve
 
 - [The Core Idea](#the-core-idea)
 - [Quick Start](#quick-start)
-- [How Dazzle Works: The Eight Layers](#how-dazzle-works-the-eight-layers)
-  - [Layer 1: Entities](#layer-1-entities-your-data-model)
-  - [Layer 2: Surfaces](#layer-2-surfaces-your-ui)
-  - [Layer 3: Workspaces](#layer-3-workspaces-your-dashboards)
-  - [Layer 4: Stories and Processes](#layer-4-stories-and-processes-your-business-logic)
-  - [Layer 5: Services](#layer-5-services-your-custom-code)
-  - [Layer 6: The Public Site](#layer-6-the-public-site)
-  - [Layer 7: Experiences](#layer-7-experiences-multi-step-user-flows)
-  - [Layer 8: Islands](#layer-8-islands-client-side-interactivity)
-- [How the Layers Work Together](#how-the-layers-work-together)
-- [The Pipeline: Determinism and Cognition](#the-pipeline-determinism-and-cognition)
-- [DSL Constructs Reference](#dsl-constructs-reference)
+- [DSL Feature Highlights](#dsl-feature-highlights)
+- [The Pipeline](#the-pipeline-determinism-and-cognition)
 - [The MCP Tooling Pipeline](#the-mcp-tooling-pipeline)
 - [Agent Framework](#agent-framework)
 - [Three-Tier Testing](#three-tier-testing)
@@ -126,696 +116,39 @@ Save this as `app.dsl`, run `dazzle serve`, and you have a working application w
 
 ---
 
-## How Dazzle Works: The Eight Layers
-
-Dazzle has eight conceptual layers, each handling a different concern. Understanding these layers — and knowing which one is responsible for what — is the key to working effectively with the system.
-
-### Layer 1: Entities (Your Data Model)
-
-An entity is a business concept expressed as structured data. Think of it as a database table, but described at the semantic level rather than the SQL level.
-
-```dsl
-entity Company "Company":
-  id: uuid pk
-  company_name: str required
-  company_number: str required unique
-  is_vat_registered: bool = false
-  trading_status: enum[active, dormant, struck_off] = active
-  vat_number: str
-  created_at: datetime auto_add
-  updated_at: datetime auto_update
-```
-
-What Dazzle does with this:
-- Creates a database table with correct column types
-- Enforces `required` and `unique` constraints
-- Sets default values (e.g., `is_vat_registered = false`, `trading_status = active`)
-- Generates `auto_add` timestamps on creation and `auto_update` on every save
-- Builds a repository with CRUD operations (create, read, update, delete, list with pagination)
-
-**This is critical to understand:** When your entity says `trading_status: enum[...] = active`, every new Company record gets `trading_status = active` automatically. No process needs to "set" it. No service needs to assign it. The entity layer handles it at creation time.
-
-#### State Machines
-
-Entities can declare allowed transitions between enum values:
-
-```dsl
-entity Task "Task":
-  id: uuid pk
-  title: str(200) required
-  status: enum[todo, in_progress, review, done] = todo
-  assigned_to: ref User
-
-  transitions:
-    todo -> in_progress
-    in_progress -> review
-    review -> done
-    review -> in_progress
-    done -> todo: role(admin)
-```
-
-This means you cannot set `status` to `done` without going through `review` first, and you cannot reopen a `done` task unless you have the admin role. The entity layer enforces this at the API boundary — no process or service code needed.
-
-State machines also support auto-transitions with time delays:
-
-```dsl
-  transitions:
-    pending -> expired: auto after 30 days
-    pending -> active: requires payment_confirmed
-```
-
-#### Relationships
-
-Entities link to each other with typed relationships:
-
-```dsl
-entity OrderItem "Order Item":
-  id: uuid pk
-  order: ref Order                         # Foreign key
-  product: ref Product
-  quantity: int required
-
-entity Order "Order":
-  id: uuid pk
-  customer: ref Customer
-  items: has_many OrderItem cascade         # Delete items when order deleted
-  shipping_address: embeds Address          # Embedded value object
-  invoice: has_one Invoice restrict         # Prevent delete if invoice exists
-```
-
-**Relationship types:** `ref` (foreign key), `has_many` (one-to-many with ownership), `has_one` (one-to-one), `belongs_to` (inverse FK), `embeds` (embedded value type)
-
-**Delete behaviors:** `cascade` (delete children), `restrict` (prevent delete), `nullify` (set FK to null), `readonly` (immutable relationship)
-
-#### Invariants
-
-Cross-field business rules that the entity layer enforces:
-
-```dsl
-entity Task "Task":
-  ...
-  invariants:
-    urgent_needs_date: "Urgent tasks must have a due date"
-      when priority = "urgent" then due_date is not null
-      error_code: TASK_URGENT_NO_DATE
-```
-
-#### Archetypes
-
-Reusable field templates that entities can inherit:
-
-```dsl
-archetype Timestamped:
-  created_at: datetime auto_add
-  updated_at: datetime auto_update
-
-archetype Auditable extends Timestamped:
-  created_by: ref User
-  updated_by: ref User
-
-entity Invoice "Invoice":
-  extends Auditable
-  ...
-```
-
-#### Sensitive Fields
-
-Fields containing PII or credentials can be marked `sensitive` for automatic masking and compliance:
-
-```dsl
-entity Employee "Employee":
-  id: uuid pk
-  name: str(200) required
-  bank_account: str(8) sensitive
-  ni_number: str(9) required sensitive
-```
-
-This modifier:
-- **Masks values in list views** — displays `****1234` (last 4 characters visible)
-- **Excludes from filters** — sensitive fields cannot be used as filter criteria
-- **Marks in OpenAPI** — adds `x-sensitive: true` extension to the schema
-- **Flags in entity schema** — available for compliance scanning and audit tooling
-
-#### Semantic Metadata
-
-Entities carry metadata that helps both LLMs and Dazzle's tooling understand intent:
-
-```dsl
-entity CustomerDueDiligence "Customer Due Diligence":
-  intent: "Track KYC/AML verification status for regulatory compliance"
-  domain: compliance
-  patterns: lifecycle, audit, searchable
-  ...
-```
-
-### Layer 2: Surfaces (Your UI)
-
-A surface defines how users see and interact with entity data. It maps fields to screens.
-
-```dsl
-surface company_list "Companies":
-  uses entity Company
-  mode: list
-
-  section main:
-    field company_name "Name"
-    field trading_status "Status"
-    field is_vat_registered "VAT Registered"
-
-  ux:
-    purpose: "Browse and manage client companies"
-    sort: company_name asc
-    filter: trading_status, is_vat_registered
-    search: company_name, company_number
-    empty: "No companies yet. Add your first client!"
-```
-
-What Dazzle does with this:
-- Registers an HTTP route (`/companies`)
-- Renders a DataTable with sortable column headers, filter dropdowns, debounced search, and pagination
-- Generates create, edit, detail, and delete surfaces from the same entity
-- All interaction is server-rendered HTML with HTMX for partial updates — no JavaScript framework required
-
-The `ux:` block is the semantic layer. It tells Dazzle *what interactive features this table needs*, and the runtime translates that into clickable sort arrows, `<select>` filter dropdowns, and a search input with 300ms debounce.
-
-**Surface modes:** `list` (data table), `view` (detail page), `create` (form), `edit` (form), `custom` (free-form)
-
-#### Attention Signals
-
-Surfaces can declare conditions that should draw user attention:
-
-```dsl
-  ux:
-    attention:
-      critical: status = "overdue" -> "This item is overdue"
-      warning: due_date < today and status != "done" -> "Approaching deadline"
-```
-
-When rows match these conditions, the UI highlights them — red background for critical, yellow for warning — with the message shown as a tooltip. The workspace region renderer evaluates these signals against every row and picks the highest severity.
-
-#### Persona Variants
-
-The same surface can show different fields, scopes, or behaviors to different user roles:
-
-```dsl
-  ux:
-    for admin:
-      scope: all
-      purpose: "Full company management"
-      action_primary: company_create
-    for agent:
-      scope: assigned_agent = current_user
-      purpose: "View assigned companies"
-      read_only: true
-      hide: internal_notes, margin_percentage
-```
-
-### Layer 3: Workspaces (Your Dashboards)
-
-A workspace composes multiple data views into a single dashboard page. Where surfaces show one entity, workspaces aggregate across many.
-
-```dsl
-workspace admin_dashboard "Admin Dashboard":
-  purpose: "Practice-wide operational visibility"
-  stage: "command_center"
-
-  practice_kpis:
-    source: Company
-    display: metrics
-    aggregate:
-      total_clients: count(Company)
-      active_subscriptions: count(ClientSubscription where status = active)
-      overdue_deadlines: count(ComplianceDeadline where due_date < today and status != completed)
-
-  onboarding_pipeline:
-    source: OnboardingFlow
-    filter: completed_at = null
-    sort: started_at asc
-    limit: 10
-    display: list
-    action: onboarding_flow_detail
-    empty: "No active onboardings"
-
-  urgent_tasks:
-    source: Task
-    filter: priority = urgent and status != done
-    sort: due_date asc
-    limit: 5
-    display: list
-    action: task_detail
-```
-
-Each workspace has **regions** — the named blocks like `practice_kpis` and `onboarding_pipeline`. Regions can be:
-
-- **Data regions** (`display: list`): Show filtered, sorted entity rows — like a mini surface with sortable headers, status badges, filter dropdowns, and row-click navigation
-- **Aggregate regions** (`display: metrics`): Show KPI metric cards computed from `count()`, `sum()`, `avg()`, `min()`, `max()` expressions
-- **Detail regions** (`display: detail`): Show a single record
-- **Grid regions** (`display: grid`): Card-based grid layout
-
-The `stage:` controls the CSS grid layout:
-
-| Stage | Layout | Use Case |
-|-------|--------|----------|
-| `focus_metric` | Single column, hero stat + supporting | KPI dashboard |
-| `scanner_table` | Full-width table + optional sidebar | Data browser |
-| `dual_pane_flow` | 2-column master-detail | List + detail |
-| `monitor_wall` | 2x2 or 2x3 grid | Status wall |
-| `command_center` | 12-column grid with region spans | Operations hub |
-
-At runtime, each region gets its own HTMX endpoint (`/api/workspaces/admin_dashboard/regions/practice_kpis`) that returns rendered HTML fragments. The workspace page loads instantly with skeleton placeholders, then each region fills in asynchronously.
-
-Column rendering is type-aware: enum fields render as colored badges, booleans as check/cross icons, dates as relative times ("2 hours ago"), and money fields with currency symbols. Enum and boolean columns automatically get filter dropdowns. State-machine status fields are filterable by their allowed states.
-
-### Layer 4: Stories and Processes (Your Business Logic)
-
-This is where Dazzle's architecture gets interesting, and where the layer separation matters most.
-
-**Stories** describe *what should happen* from a user's perspective:
-
-```yaml
-story_id: ST-161
-title: "Staff completes onboarding and provisions client access"
-actor: Agent
-trigger: form_submitted
-scope:
-  - OnboardingFlow
-  - OnboardingChecklist
-  - Contact
-  - EngagementLetter
-  - ClientSubscription
-happy_path_outcome:
-  - "OnboardingChecklist.services_selected = true"
-  - "OnboardingFlow.stage transitions to complete"
-  - "OnboardingFlow.completed_at set to current timestamp"
-  - "Contact.onboarding_complete = true"
-  - "EngagementLetter created in draft status"
-  - "ClientSubscription created for selected service package"
-side_effects:
-  - "Notification sent to client with portal access details"
-  - "AuditLog entry records onboarding completion"
-  - "Task created for agent to initiate CDD process"
-```
-
-**Processes** describe *how* the steps are orchestrated:
-
-```yaml
-name: staff_onboarding_flow
-implements:
-  - ST-156
-  - ST-157
-  - ST-158
-  - ST-161
-trigger:
-  kind: manual
-  entity_name: OnboardingFlow
-steps:
-  - name: check_existing_flow
-    kind: service
-    service: OnboardingFlow.check_unique_contact
-  - name: create_flow
-    kind: service
-    service: OnboardingFlow.create_or_update
-  - name: create_checklist
-    kind: service
-    service: OnboardingChecklist.create
-  - name: complete_onboarding
-    kind: service
-    service: OnboardingFlow.complete
-  - name: notify_client
-    kind: service
-    service: Notification.send_portal_access
-  - name: create_cdd_task
-    kind: service
-    service: Task.create_cdd_task
-  - name: log_completion
-    kind: service
-    service: AuditLog.create
-compensations:
-  - name: rollback_subscription
-    service: ClientSubscription.delete
-  - name: rollback_flow
-    service: OnboardingFlow.delete
-events:
-  on_start: onboarding.staff_initiated
-  on_complete: onboarding.staff_completed
-```
-
-**Here is the key insight:** The process defines *step ordering*, *failure recovery* (compensations), and *event emission*. It does NOT specify field values like "set completion_percentage to 100" — those are handled by entity defaults (Layer 1) and service implementations (Layer 5). The process orchestrates *when* things happen; the services know *what* to do.
-
-Processes also support:
-- **Human tasks** — steps that wait for user input before continuing
-- **Retry policies** — automatic retry with backoff on failure
-- **Timeout policies** — deadlines for step completion
-- **Overlap policies** — whether multiple instances can run concurrently
-- **Compensation** — rollback in reverse order when a step fails (saga pattern)
-
-### Layer 5: Services (Your Custom Code)
-
-Dazzle's DSL is deliberately **anti-Turing** — you cannot write arbitrary computation in it. This is a feature, not a limitation. It means the DSL is always analyzable, validatable, and safe.
-
-When you need real business logic — VAT calculations, NINO validation, Companies House API calls — you declare a **domain service** in the DSL and implement it in a **stub**:
-
-```dsl
-service calculate_vat "Calculate VAT":
-  kind: domain_logic
-  input:
-    invoice_id: uuid required
-    country_code: str(2)
-  output:
-    vat_amount: decimal(10,2)
-    breakdown: json
-  guarantees:
-    - "Must not mutate the invoice record"
-  stub: python
-```
-
-Dazzle auto-generates a typed Python function signature in `stubs/calculate_vat.py`. You fill in the implementation. The DSL declares the contract (inputs, outputs, guarantees); the stub provides the computation.
-
-**Service kinds:** `domain_logic` (pure business rules), `validation` (input checking), `integration` (external API calls), `workflow` (multi-step orchestration)
-
-This is also how external APIs are declared. Dazzle ships with API packs for Stripe, HMRC, Xero, Companies House, DocuSeal, SumSub, and Ordnance Survey — each pack generates the service DSL and foreign model definitions for you.
-
-### Layer 6: The Public Site
-
-Dazzle separates your public marketing site from your application. The site is defined in two files:
-
-- **`sitespec.yaml`** — Structure: page routes, navigation, section types, brand configuration
-- **`copy.md`** — Content: headlines, feature descriptions, testimonials, calls to action
-
-At runtime, copy is merged into sitespec sections. This separation means a copywriter can edit `copy.md` without touching the structural layout, and a designer can restructure pages in `sitespec.yaml` without rewriting content.
-
-Pages use typed sections (`hero`, `features`, `comparison`, `card_grid`, `trust_bar`, `cta`, `markdown`) that Dazzle renders into themed HTML. Page types include `landing`, `pricing`, `legal` (terms, privacy), and custom pages.
-
-The site layer also includes brand configuration (logo, tagline, colors), navigation structure, footer layout, and authentication page styling.
-
-### Layer 7: Experiences (Multi-Step User Flows)
-
-Experiences define wizard-like flows that guide users through multiple screens:
-
-```dsl
-experience client_onboarding "Client Onboarding":
-  start at step welcome
-
-  step welcome:
-    kind: surface
-    surface onboarding_welcome
-    on continue -> step basics
-
-  step basics:
-    kind: surface
-    surface onboarding_basics
-    on continue -> step business_type
-    on back -> step welcome
-
-  step business_type:
-    kind: surface
-    surface onboarding_business_type
-    on continue -> step business_details
-    on back -> step basics
-
-  step complete:
-    kind: surface
-    surface onboarding_complete
-```
-
-Each step references a surface, and transitions are driven by user events (`continue`, `back`, `success`, `failure`). Steps can also be `kind: process` (trigger a backend process) or `kind: integration` (call an external API).
-
-The experience layer handles navigation state; the surfaces handle data display; the processes handle data manipulation.
-
-### Layer 8: Islands (Client-Side Interactivity)
-
-Dazzle's default UI is fully server-rendered with HTMX. But sometimes you need a chart, a drag-and-drop board, or a real-time widget that genuinely requires client-side JavaScript. That is what **islands** are for — self-contained interactive components embedded within server-rendered pages.
-
-```dsl
-island task_chart "Task Progress Chart":
-  entity: Task
-  src: "islands/task-chart/index.js"
-  fallback: "Loading task chart..."
-
-  prop chart_type: str = "bar"
-  prop date_range: str = "30d"
-
-  event chart_clicked:
-    detail: [task_id, series]
-```
-
-What Dazzle does with this:
-- **Renders a container** in the page with server-side fallback content shown before JS loads
-- **Loads the JS entry point** from `src` (defaults to `/static/islands/{name}/index.js`)
-- **Passes typed props** as `data-island-props` JSON attributes
-- **Auto-generates a data endpoint** at `/api/islands/{island_name}/data` when `entity:` is declared, proxying to the entity's CRUD service with pagination
-
-Islands are intentionally opt-in and isolated. The server-rendered HTMX approach handles 90%+ of UI needs; islands handle the remaining cases where client-side rendering adds genuine value (charts, maps, rich editors, real-time dashboards).
-
-**Props**: Typed key-value pairs passed to the island (`str`, `int`, `bool`, `float` with optional defaults)
-
-**Events**: CustomEvent schemas the island may emit, with typed detail fields. The server can listen for these via HTMX's `hx-on` or standard `addEventListener`.
-
----
-
-## How the Layers Work Together
-
-Here is a concrete example: a staff member onboards a new limited company client.
-
-1. **Entity layer**: Company has `trading_status = active` as default. OnboardingFlow has `stage = started` and `flow_type = self_service` as defaults.
-2. **Experience layer**: The onboarding experience defines the step sequence — welcome → basics → business type → business details → complete.
-3. **Surface layer**: Each experience step renders a surface. The `company_create` surface shows a form with company_name and company_number fields. The `ux:` block adds search and validation.
-4. **Process layer**: The `staff_onboarding_flow` process orchestrates the multi-entity operations — create OnboardingFlow, create OnboardingChecklist, create Company, create CompanyContact link, create EngagementLetter, create ClientSubscription. If any step fails, compensations roll back in reverse order.
-5. **Service layer**: Each process step calls a service. `OnboardingFlow.complete` sets completed_at, updates completion_percentage, marks Contact.onboarding_complete. `Notification.send_portal_access` sends the welcome email.
-6. **Workspace layer**: After onboarding, the admin_dashboard workspace shows updated metrics — `total_clients` count increments, the `onboarding_pipeline` region drops the completed flow.
-7. **Site layer**: Meanwhile, the public site at `/pricing` shows the service packages available for new clients, driven entirely by sitespec.yaml + copy.md.
-8. **Island layer**: A chart on the admin dashboard shows onboarding completion rates over time — rendered client-side with Chart.js, fed by an auto-generated data endpoint.
-
-Each layer does one thing well and delegates everything else:
-
-| If you need... | You write... | You DON'T write... |
-|---|---|---|
-| A data model with defaults | Entity DSL | Migration scripts, ORM models |
-| A CRUD interface | Surface DSL | HTML templates, API routes, pagination logic |
-| A dashboard | Workspace DSL | Dashboard components, data-fetching hooks |
-| Business workflow | Process definition | Saga coordinators, event handlers |
-| Custom logic | Service stub | Framework boilerplate, dependency injection |
-| A marketing site | sitespec.yaml + copy.md | Landing page HTML, CSS, routing |
-| A multi-step wizard | Experience DSL | Router configuration, step state management |
-| A chart or rich widget | Island DSL + JS file | Data-fetching boilerplate, container plumbing |
+## DSL Feature Highlights
+
+<!-- BEGIN FEATURE TABLE -->
+| Feature | Description |
+|---------|-------------|
+| [Entities](docs/reference/entities.md) | Entities are the core data models in DAZZLE. |
+| [Access Control](docs/reference/access-control.md) | DAZZLE uses Cedar-style access rules with three layers: entity-level permit/forbid blocks, surface-level access restrictions, and workspace-level persona allow/deny lists. |
+| [Surfaces](docs/reference/surfaces.md) | Surfaces define the UI and API interfaces for interacting with entities. |
+| [Workspaces](docs/reference/workspaces.md) | Workspaces compose multiple data views into cohesive dashboards or information hubs. |
+| [UX Semantic Layer](docs/reference/ux.md) | The UX semantic layer expresses WHY interfaces exist and WHAT matters to users, without prescribing HOW to implement it. |
+| [Experiences](docs/reference/experiences.md) | Experiences define multi-step user flows such as onboarding wizards, checkout processes, and approval workflows. |
+| [Services](docs/reference/services.md) | Services declare custom business logic in DSL with implementation in Python or TypeScript stubs. |
+| [Integrations](docs/reference/integrations.md) | Integrations connect DAZZLE apps to external systems via declarative API bindings with triggers, field mappings, and error handling. |
+| [Processes](docs/reference/processes.md) | Processes orchestrate durable, multi-step workflows across entities and services. |
+| [Stories](docs/reference/stories.md) | Stories capture expected user-visible outcomes in a structured format tied to personas and entities. |
+| [Ledgers & Transactions](docs/reference/ledgers.md) | Ledgers and transactions provide TigerBeetle-backed double-entry accounting. |
+| [LLM Models & Intents](docs/reference/llm.md) | DAZZLE supports declarative LLM job definitions for AI-powered tasks such as classification, extraction, and generation. |
+| [Testing](docs/reference/testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
+| [Frontend & Templates](docs/reference/frontend.md) | The Dazzle frontend uses server-rendered Jinja2 templates with HTMX for declarative HTTP interactions. |
+| [Messaging & Events](docs/reference/messaging.md) | Messaging and events enable asynchronous communication between components and users. |
+| [Governance](docs/reference/governance.md) | Governance constructs enforce organisational policies, approval workflows, and service-level agreements. |
+| [Patterns](docs/reference/patterns.md) | Patterns are reusable DSL recipes that combine multiple constructs into proven solutions. |
+<!-- END FEATURE TABLE -->
+
+For a complete walkthrough of each layer, see the [DSL Reference](docs/reference/index.md).
 
 ---
 
 ## The Pipeline: Determinism and Cognition
 
-DAZZLE separates work into two distinct phases: a **deterministic foundation** that requires zero LLM involvement, and a **cognitive layer** where LLM creativity adds value.
+DAZZLE separates work into two distinct phases: a **deterministic foundation** that requires zero LLM involvement (parsing, linking, validation, runtime execution), and a **cognitive layer** where LLM creativity adds value (story generation, test proposals, gap analysis). The deterministic phase handles all the mechanical work that LLMs do poorly; the cognitive phase leverages what LLMs do well — understanding intent, proposing test scenarios, and identifying gaps. Every cognitive artifact (stories, test designs, processes) is saved as reviewable YAML, never executed blindly.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                        DETERMINISTIC PHASE (no LLM)                             │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌───────────┐      ┌────────────┐      ┌───────────┐      ┌─────────────────┐  │
-│  │ DSL Files │ ───▶ │   Parser   │ ───▶ │  AppSpec  │ ───▶ │ Runtime / Specs │  │
-│  │  (.dsl)   │      │  + Linker  │      │   (IR)    │      │                 │  │
-│  └───────────┘      └────────────┘      └───────────┘      └─────────────────┘  │
-│       │                   │                   │                     │           │
-│       ▼                   ▼                   ▼                     ▼           │
-│   Artifacts:         Artifacts:          Artifacts:            Artifacts:       │
-│   • core.dsl         • AST               • Entity graph        • OpenAPI spec   │
-│   • ui.dsl           • Symbol table      • Surface defs        • AsyncAPI spec  │
-│   • *.dsl            • Module graph      • Type catalog        • Running app    │
-│                                          • Validation          • HTML templates │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         COGNITIVE PHASE (LLM-assisted)                          │
-├─────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                 │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────┐  │
-│  │  Story Proposal │    │  Test Design    │    │  Process Orchestration      │  │
-│  │                 │    │                 │    │                             │  │
-│  │  "User creates  │    │  Persona-based  │    │  Multi-step workflows       │  │
-│  │   a task and    │    │  test coverage  │    │  with compensations         │  │
-│  │   assigns it"   │    │  proposals      │    │                             │  │
-│  └─────────────────┘    └─────────────────┘    └─────────────────────────────┘  │
-│          │                      │                          │                    │
-│          ▼                      ▼                          ▼                    │
-│      Artifacts:             Artifacts:                 Artifacts:               │
-│      • stories.yaml         • test_designs.yaml        • processes.yaml        │
-│      • CRUD coverage        • Playwright tests         • State diagrams        │
-│      • Edge cases           • E2E scenarios            • Saga definitions      │
-│                                                                                 │
-│  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────────────────┐  │
-│  │  Demo Data      │    │  Tenancy &      │    │  Fidelity & Gap Analysis    │  │
-│  │                 │    │  Compliance     │    │                             │  │
-│  │  Realistic      │    │  Inference      │    │  Spec vs. rendered HTML     │  │
-│  │  seed data      │    │                 │    │  cross-tool issue reports   │  │
-│  │  per-persona    │    │                 │    │                             │  │
-│  └─────────────────┘    └─────────────────┘    └─────────────────────────────┘  │
-│          │                      │                          │                    │
-│          ▼                      ▼                          ▼                    │
-│      Artifacts:             Artifacts:                 Artifacts:               │
-│      • demo_blueprint.yaml  • Tenancy config           • Fidelity scores       │
-│      • CSV/JSONL exports    • PII/GDPR hints           • Unified issues        │
-│      • Tenant fixtures      • Compliance frameworks    • Coverage gaps         │
-│                                                                                 │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
-
-| Phase | Characteristics | Token Cost | Error Rate |
-|-------|----------------|------------|------------|
-| **Deterministic** | Parsing, linking, validation, runtime execution | Zero | Near-zero (compiler-checked) |
-| **Cognitive** | Story generation, test proposals, gap analysis | One-time per feature | Reviewable artifacts |
-
-The deterministic phase handles all the mechanical work that LLMs do poorly: parsing grammars, resolving references, type checking, and generating correct code. The cognitive phase leverages what LLMs do well: understanding intent, proposing test scenarios, and identifying gaps.
-
----
-
-## DSL Constructs Reference
-
-Complete reference: [docs/reference/](docs/reference/)
-
-### Core
-
-| Construct | Purpose |
-|-----------|---------|
-| `module` | Namespace declaration for DSL files |
-| `app` | Application metadata |
-| `use` | Import constructs from other modules |
-
-### Data Modeling
-
-| Construct | Purpose |
-|-----------|---------|
-| `entity` | Domain models with typed fields, relationships, state machines, invariants, and access control |
-| `enum` | Shared enum definitions reusable across entities (e.g., `OrderStatus` with labeled values) |
-| `archetype` | Reusable field templates (e.g., `Timestamped`, `Auditable`) |
-| `foreign_model` | External API data structures (read-only, event-driven, or batch-imported) |
-
-**Field Types**: `str(N)`, `text`, `int`, `decimal(P,S)`, `bool`, `date`, `datetime`, `uuid`, `email`, `json`, `money`, `file`, `url`, `timezone`, `enum[...]`
-
-**Relationship Types**: `ref`, `has_many`, `has_one`, `belongs_to`, `embeds`
-
-**Field Modifiers**: `required`, `optional`, `pk`, `unique`, `unique?`, `auto_add`, `auto_update`, `sensitive`, `=default`
-
-**Entity Blocks**: `transitions` (state machine), `invariants` (business rules), `access` (role/owner/tenant permissions), `computed` (derived fields), `examples` (fixture data), `publishes` (event declarations)
-
-### UI Layer
-
-| Construct | Purpose |
-|-----------|---------|
-| `surface` | UI screens and forms (list, view, create, edit, custom modes) |
-| `workspace` | Dashboards with regions, filters, aggregates, and layout stages |
-| `experience` | Multi-step wizards and user flows |
-| `island` | Client-side interactive components (charts, maps, rich editors) with typed props, events, and optional entity data binding |
-| `view` | Read-only projections with grouping and aggregates (`sum`, `count`, `avg`) for dashboards and reports |
-
-**Surface Elements**: `section`, `field`, `action`, `outcome`
-
-**Workspace Elements**: `source`, `filter`, `sort`, `limit`, `display`, `aggregate`, `group_by`, `action`
-
-**Workspace Stages**: `focus_metric`, `scanner_table`, `dual_pane_flow`, `monitor_wall`, `command_center`
-
-**Experience Steps**: `kind: surface`, `kind: process`, `kind: integration` with event-driven transitions
-
-### UX Semantic Layer
-
-| Construct | Purpose |
-|-----------|---------|
-| `ux` | UI hints block within surfaces |
-| `attention` | Conditional alerts (critical, warning, notice, info) |
-| `for` | Persona-specific view customization (scope, show/hide, read_only, defaults) |
-
-**UX Properties**: `purpose`, `show`, `hide`, `sort`, `filter`, `search`, `empty`
-
-### Services and Integrations
-
-| Construct | Purpose |
-|-----------|---------|
-| `service` | External APIs (with OpenAPI spec) or domain services (with typed input/output/guarantees) |
-| `integration` | Orchestrates data flow between app and external services |
-
-**Service Kinds**: `domain_logic`, `validation`, `integration`, `workflow`
-
-**Integration Elements**: `action` (request-response), `sync` (scheduled or event-driven data synchronization)
-
-### Messaging
-
-| Construct | Purpose |
-|-----------|---------|
-| `message` | Typed message schemas |
-| `channel` | Communication pathways (email, queue, stream) |
-| `template` | Reusable message templates with attachments |
-
-**Send Triggers**: Entity events, status transitions, field changes, service events, schedules
-
-### Ledgers and Transactions
-
-| Construct | Purpose |
-|-----------|---------|
-| `ledger` | TigerBeetle account templates for double-entry accounting |
-| `transaction` | Multi-leg financial transactions with atomic guarantees |
-
-```dsl
-ledger CustomerWallet "Customer Wallet":
-  account_code: 1001
-  ledger_id: 1
-  account_type: asset
-  currency: GBP
-  flags: debits_must_not_exceed_credits
-  sync_to: Customer.balance_cache
-
-transaction RecordPayment "Record Payment":
-  execution: async
-  priority: high
-
-  transfer revenue:
-    debit: CustomerWallet
-    credit: Revenue
-    amount: payment.amount
-    code: 1
-    flags: linked
-
-  idempotency_key: payment.id
-```
-
-**Account Types**: `asset`, `liability`, `equity`, `revenue`, `expense`
-
-### Governance and Automation
-
-| Construct | Purpose |
-|-----------|---------|
-| `webhook` | Outbound HTTP notifications on entity events with HMAC/bearer/basic auth and retry policies |
-| `approval` | Approval gates with quorum, threshold conditions, time-based escalation, and auto-approve rules |
-| `sla` | Service level agreements with deadline tiers, business hours, pause conditions, and breach actions |
-
-### Personas and Scenarios
-
-| Construct | Purpose |
-|-----------|---------|
-| `persona` | User archetypes with goals, proficiency levels, default workspaces |
-| `scenario` | Named application states for development and demos |
-
-```dsl
-persona admin "Administrator":
-  description: "Full system access for practice management"
-  goals: manage_clients, monitor_compliance, configure_system
-  proficiency: expert
-  default_workspace: admin_dashboard
-
-scenario busy_sprint "Busy Sprint":
-  seed_script: fixtures/busy_sprint.json
-  for admin:
-    description: "20 active tasks, 3 overdue, 2 in review"
-  for member:
-    description: "5 assigned tasks, 1 overdue"
-```
-
-### Events and Streams
-
-| Construct | Purpose |
-|-----------|---------|
-| `publishes` | Event declarations on entities (lifecycle, field changes) |
-| `subscribe` | Event handlers and projections |
-| `stream` | HLESS (High-Level Event Semantics) with INTENT/FACT/OBSERVATION/DERIVATION records |
+See [Architecture Overview](docs/architecture/overview.md) for the full pipeline diagram.
 
 ---
 
@@ -921,91 +254,31 @@ See [MCP Server Guide](docs/architecture/mcp-server.md) for details.
 
 ## Agent Framework
 
-Dazzle includes a mission-driven agent framework that can autonomously explore, test, and analyze running applications.
+Dazzle includes a mission-driven agent framework that autonomously explores, tests, and analyzes running applications using an **observe -> decide -> act -> record** loop. It supports four discovery modes: **persona** (explore as a specific user role), **entity completeness** (CRUD coverage analysis), **workflow coherence** (process/story integrity), and **headless** (pure DSL/KG analysis without a running app). The agent produces structured observations that feed into a **narrative compiler** (grouping by severity and entity) and a **DSL emitter** (converting proposals into validated DSL code with auto-fix retry).
 
-The agent follows an **observe → decide → act → record** loop and supports four mission types:
-
-| Mission | Purpose |
-|---------|---------|
-| **Persona Discovery** | Explore a running app as a specific persona, comparing what exists against the DSL spec. Identifies missing CRUD operations, workflow gaps, navigation issues, and UX problems. |
-| **Entity Completeness** | Static CRUD coverage analysis plus targeted verification of missing operations per entity. |
-| **Workflow Coherence** | Validates process/story integrity — checks that step transitions, guards, and compensations are correctly wired. |
-| **Headless** | Pure DSL/KG persona journey analysis without a running app — traces what each persona should be able to do based on the spec alone. |
-
-The agent produces structured observations that feed into two further stages:
-
-1. **Narrative Compiler** — Groups observations by category and entity, prioritizes by severity x frequency, generates human-readable "As [persona], I expected... but found..." narratives, and validates adjacency against the knowledge graph.
-
-2. **DSL Emitter** — Converts compiler proposals into valid DSL code. Template-based generation for missing surfaces, workflow gaps, and navigation gaps, with automatic validation and retry (up to 3 attempts with auto-fix for common errors).
-
-The full discovery flow via MCP:
-```
-discovery run → discovery report → discovery compile → discovery emit
-                                                    ↘ discovery coherence (UX scoring)
-                                                    ↘ discovery verify_all_stories (batch verification)
-```
+See [Testing Reference](docs/reference/testing.md) for the full discovery workflow.
 
 ---
 
 ## Three-Tier Testing
 
-Dazzle supports three tiers of testing, each with increasing power and cost:
+Dazzle generates tests from the DSL at three tiers: **Tier 1 (DSL tests)** — fast HTTP-level API contract tests covering CRUD, state machines, and access control; **Tier 2 (Playwright)** — browser automation for UI rendering, form submission, and visual regression with viewport screenshot baselines; **Tier 3 (Agent)** — LLM-guided end-to-end user journeys that validate behavior against stories. The test design system tracks coverage across entities, personas, and processes, and proposes new tests to fill gaps.
 
-| Tier | Tool | What It Tests | Speed |
-|------|------|--------------|-------|
-| **Tier 1: DSL Tests** | `dsl_test generate` + `dsl_test run` | API contracts against the running server — CRUD operations, validation rules, state machine transitions, access control. `verify_story` checks story implementations; `diff_personas` compares route behavior across roles | Fast (HTTP calls) |
-| **Tier 2: Playwright** | `e2e_test run` + `e2e_test run_viewport` | UI rendering and interaction — form submission, navigation, DataTable behavior, fragment rendering. Viewport testing with screenshot capture and visual regression baselines across mobile/desktop | Medium (browser automation) |
-| **Tier 3: Agent** | `e2e_test run_agent` | End-to-end user journeys — an LLM agent navigates the app as a persona and validates behavior against stories. `tier_guidance` recommends the right tier for a given scenario | Slow (LLM-guided exploration) |
-
-Tests are generated from the DSL, not written by hand. The test design system tracks coverage across entities, state machines, personas, workspaces, events, and processes, and proposes new tests to fill gaps.
-
-```bash
-dazzle test dsl-run              # Tier 1: API tests
-dazzle test playwright           # Tier 2: UI tests
-dazzle test viewport             # Tier 2: Visual regression
-dazzle test agent                # Tier 3: LLM-powered tests
-```
+See [Testing Reference](docs/reference/testing.md) for details on all three tiers.
 
 ---
 
 ## API Packs
 
-Dazzle ships with pre-built integration packs for common external APIs. Each pack includes authentication configuration, operation definitions, foreign model schemas, and DSL generation templates.
+Dazzle ships with pre-built integration packs for Stripe, HMRC (6 packs), Xero, Companies House, DocuSeal, SumSub, and Ordnance Survey. Each pack includes authentication configuration, operation definitions, foreign model schemas, and DSL generation templates. Use `api_pack search` to find packs, `api_pack generate_dsl` to generate service and foreign model DSL blocks, and `mock` to test integrations with auto-started mock servers.
 
-| Provider | Packs | Category |
-|----------|-------|----------|
-| **Stripe** | `stripe:payments` | Payment processing |
-| **HMRC** | `hmrc:mtd_vat`, `hmrc:itsa`, `hmrc:cis`, `hmrc:obligations`, `hmrc:income_sources`, `hmrc:vat_lookup` | UK tax authority |
-| **Xero** | `xero:accounting` | Accounting software |
-| **Companies House** | `companies_house:company_data` | UK company registry |
-| **DocuSeal** | `docuseal:signatures` | Digital signatures |
-| **SumSub** | `sumsub:kyc` | KYC/AML verification |
-| **Ordnance Survey** | `ordnance_survey:maps` | UK mapping |
-
-Usage via MCP:
-```
-api_pack search query="payments"     # Find packs
-api_pack get pack_name="stripe:payments"  # Full details
-api_pack generate_dsl pack_name="stripe:payments"  # Generate DSL
-api_pack env_vars pack_names=["stripe:payments"]    # Generate .env.example
-```
+See [Integrations Reference](docs/reference/integrations.md) for the full API pack workflow.
 
 ---
 
 ## Fidelity Scoring
 
-DAZZLE includes a built-in fidelity scorer that measures how accurately rendered HTML reflects the DSL specification. This closes the loop between "what you declared" and "what the user sees."
-
-The scorer evaluates four dimensions:
-
-| Dimension | Weight | What it checks |
-|-----------|--------|----------------|
-| **Structural** | 35% | Every declared field, section, and action is present in the HTML |
-| **Semantic** | 30% | Input types match field types, required attributes are set, display names are humanised |
-| **Story** | 20% | User stories have corresponding action affordances (buttons, links) |
-| **Interaction** | 15% | Search/select widgets, loading indicators, debounce, empty states, error handling |
-
-Each gap found is categorised by severity (`critical`, `major`, `minor`) and returned with a concrete recommendation. The interaction dimension is spec-aware: if a surface element declares `source=` (indicating a relationship lookup), the scorer verifies that a `search_select` widget was actually rendered.
+DAZZLE includes a built-in fidelity scorer that measures how accurately rendered HTML reflects the DSL specification. It evaluates four dimensions — structural (35%, field/section/action presence), semantic (30%, input types and required attributes), story (20%, action affordances for user stories), and interaction (15%, search widgets, loading states, empty states). Each gap is categorised by severity and returned with a concrete recommendation.
 
 ```bash
 dazzle fidelity                  # Score all surfaces
@@ -1018,7 +291,7 @@ dazzle fidelity --surface orders # Score a single surface
 
 DAZZLE's frontend is server-rendered HTML using HTMX. This is a deliberate architectural choice, not a limitation.
 
-**React's strengths are for humans.** React's component model is designed around how human developers think: compositional UI building blocks, a rich ecosystem of community packages, and a mental model (declarative state → view) that maps well to how people reason about interfaces.
+**React's strengths are for humans.** React's component model is designed around how human developers think: compositional UI building blocks, a rich ecosystem of community packages, and a mental model (declarative state -> view) that maps well to how people reason about interfaces.
 
 **React's weaknesses are for LLM agents.** When the primary author is an LLM coding agent, React's strengths become liabilities:
 
@@ -1219,22 +492,11 @@ src/
 
 **Full documentation**: [manwithacat.github.io/dazzle](https://manwithacat.github.io/dazzle/)
 
-### Getting Started
-- [Installation](docs/getting-started/installation.md)
-- [Quickstart](docs/getting-started/quickstart.md)
-- [First App Tutorial](docs/getting-started/first-app.md)
-
-### DSL Reference
-- [Modules](docs/reference/modules.md) · [Entities](docs/reference/entities.md) · [Surfaces](docs/reference/surfaces.md) · [Workspaces](docs/reference/workspaces.md) · [Services](docs/reference/services.md) · [Integrations](docs/reference/integrations.md) · [Ledgers](docs/reference/ledgers.md) · [Messaging](docs/reference/messaging.md) · [UX Layer](docs/reference/ux.md) · [Scenarios](docs/reference/scenarios.md) · [Experiences](docs/reference/experiences.md) · [CLI Reference](docs/reference/cli.md) · [DSL Grammar](docs/reference/grammar.md)
-
-### Architecture
-- [Architecture Overview](docs/architecture/overview.md) · [DSL to AppSpec](docs/architecture/dsl-to-appspec.md) · [MCP Server](docs/architecture/mcp-server.md)
-
-### Examples
-- [Simple Task](docs/examples/simple-task.md) · [Contact Manager](docs/examples/contact-manager.md) · [Ops Dashboard](docs/examples/ops-dashboard.md) · [Support Tickets](docs/examples/support-tickets.md) · [FieldTest Hub](docs/examples/fieldtest-hub.md)
-
-### Contributing
-- [Development Setup](docs/contributing/dev-setup.md) · [Testing Guide](docs/contributing/testing.md) · [Adding Features](docs/contributing/adding-a-feature.md)
+- **[DSL Reference](docs/reference/index.md)** — complete guide to all DSL constructs (entities, surfaces, workspaces, services, processes, ledgers, and more)
+- **[Getting Started](docs/getting-started/)** — installation, quickstart, first app tutorial
+- **[Architecture](docs/architecture/)** — system design, DSL-to-AppSpec pipeline, MCP server internals
+- **[Contributing](docs/contributing/)** — development setup, testing guide, adding features
+- **[Examples](examples/)** — runnable example applications from beginner to advanced
 
 ---
 

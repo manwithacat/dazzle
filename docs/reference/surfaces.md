@@ -1,223 +1,256 @@
 # Surfaces
 
-Surfaces define UI screens and forms for interacting with entities.
+> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
+> Do not edit manually; run `dazzle docs generate` to regenerate.
 
-## Basic Syntax
+Surfaces define the UI and API interfaces for interacting with entities. Each surface has a mode (list, view, create, edit, custom) that determines how data is rendered. This page covers surface definitions, sections, modes, actions, pagination, and DataTable rendering.
+
+---
+
+## Surface
+
+A UI or API interface definition for interacting with entities.
+Defines WHAT data to show and HOW users interact with it.
+
+### Syntax
 
 ```dsl
-surface surface_name "Display Title":
-  uses entity EntityName
-  mode: view|create|edit|list|custom
+surface <surface_name> "<Display Name>":
+  uses entity <EntityName>
+  mode: <list|view|create|edit>
 
-  section section_name "Section Title":
-    field field_name "Label"
+  section <section_name> ["Section Title"]:
+    field <field_name> ["Field Label"] [when: <expression>]
+    ...
 
-  action action_name "Label":
-    on trigger -> outcome
+  [ux:]
+    [purpose: "<semantic intent>"]
+    [... UX directives ...]
 ```
+
+### Example
+
+```dsl
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+
+  section main:
+    field title
+    field status
+
+  ux:
+    purpose: "Track team task progress"
+    sort: status asc
+    filter: status, assigned_to
+
+# Conditional field visibility (v0.30.0)
+surface task_detail "Task Detail":
+  uses entity Task
+  mode: view
+
+  section main:
+    field title "Title"
+    field resolution "Resolution" when: status == "resolved"
+    field urgent_note "Urgent" when: days_until(due_date) < 3
+```
+
+**Related:** [Entity](entities.md#entity), [Ux Block](ux.md#ux-block), [Surface Modes](surfaces.md#surface-modes), [Datatable](surfaces.md#datatable)
+
+---
 
 ## Surface Modes
 
-| Mode | Description |
-|------|-------------|
-| `view` | Read-only display of single record |
-| `create` | Form for creating new record |
-| `edit` | Form for editing existing record |
-| `list` | Table/list of multiple records |
-| `custom` | Fully custom layout |
+Interaction modes for surfaces. Each mode renders a different UI:
+- list: DataTable with rows, pagination, action menu. Add sort/filter/search in ux: block.
+- view: Read-only detail page with Edit/Delete buttons and state machine action buttons.
+- create: Form with field inputs mapped by type (str->text input, enum->select, bool->checkbox, ref->search-select).
+- edit: Pre-populated form. State machine fields show only valid transitions in dropdown.
+- review: Read-only view optimized for approval/review workflows.
+- custom: Free-form surface for dashboard panels or specialized views.
 
-## Sections
-
-Group related fields into sections:
+### Syntax
 
 ```dsl
-surface customer_detail "Customer Details":
-  uses entity Customer
+surface <name> "<Title>":
+  uses entity <EntityName>
+  mode: <list|view|create|edit|review|custom>
+```
+
+### Example
+
+```dsl
+# List mode - DataTable with pagination
+surface task_list "Tasks":
+  uses entity Task
+  mode: list
+  section main:
+    field title "Title"
+    field status "Status"
+  ux:
+    sort: created_at desc
+    filter: status
+    search: title
+
+# View mode - read-only detail page
+surface task_detail "Task Detail":
+  uses entity Task
+  mode: view
+  section main:
+    field title
+    field description
+    field status
+
+# Create mode - form for new records
+surface task_create "New Task":
+  uses entity Task
+  mode: create
+  section main:
+    field title
+    field description
+
+# Edit mode - pre-populated form
+surface task_edit "Edit Task":
+  uses entity Task
+  mode: edit
+  section main:
+    field title
+    field description
+    field status
+```
+
+**Related:** [Surface](surfaces.md#surface), [Datatable](surfaces.md#datatable)
+
+---
+
+## Section
+
+Groups fields within a surface for visual organization. Sections provide logical grouping and can have display labels. Use to organize complex forms and detail views.
+
+### Syntax
+
+```dsl
+section <section_name> ["Display Label"]:
+  field <field_name> ["Field Label"]
+  field <field_name>
+  ...
+```
+
+### Example
+
+```dsl
+surface contact_detail "Contact Details":
+  uses entity Contact
   mode: view
 
-  section info "Basic Information":
-    field name "Full Name"
+  section main "Contact Information":
+    field first_name "First Name"
+    field last_name "Last Name"
     field email "Email Address"
     field phone "Phone"
 
-  section billing "Billing Details":
-    field billing_address "Address"
-    field payment_method "Payment Method"
+  section address "Address":
+    field street
+    field city
+    field state
+    field zip_code "ZIP Code"
+
+  section meta "Record Info":
+    field created_at "Created"
+    field updated_at "Last Updated"
+    field created_by "Created By"
+
+surface contact_edit "Edit Contact":
+  uses entity Contact
+  mode: edit
+
+  section main:
+    field first_name
+    field last_name
+    field email
+
+  section address:
+    field street
+    field city
+    field state
+    field zip_code
 ```
 
-## Actions
+### Best Practices
 
-Define interactive actions with triggers and outcomes:
+- Use descriptive section names (main, address, meta)
+- Group related fields together logically
+- Use display labels for user-facing section headers
+- Keep forms focused - don't show all fields in edit mode
+- Use 'main' section for primary/required fields
+
+**Related:** [Surface](surfaces.md#surface), Field, [Surface Modes](surfaces.md#surface-modes)
+
+---
+
+## Surface Actions
+
+Buttons on surfaces that trigger navigation or side effects. Actions define what happens on user interaction (submit, click) and where to go next.
+
+### Syntax
 
 ```dsl
-surface task_form "Create Task":
+action <action_name> "<Button Label>":
+  on submit -> surface <target_surface>
+  on submit -> experience <experience_name>
+  on submit -> experience <experience_name> step <step_name>
+  on submit -> integration <integration_name> action <action_name>
+```
+
+### Example
+
+```dsl
+surface task_create "New Task":
   uses entity Task
   mode: create
 
   section main:
-    field title "Title"
-    field description "Description"
-    field due_date "Due Date"
+    field title
+    field description
 
-  action save "Save Task":
+  action save "Create Task":
     on submit -> surface task_list
 
   action cancel "Cancel":
-    on click -> surface task_list
+    on submit -> surface task_list
 ```
 
-### Triggers
+**Related:** [Surface](surfaces.md#surface), [Experience](experiences.md#experience)
 
-| Trigger | Description |
-|---------|-------------|
-| `submit` | Form submission |
-| `click` | Button click |
-| `auto` | Automatic (on load) |
+---
 
-### Outcomes
+## Datatable
 
-Navigate to another surface, experience, or trigger integration:
+What the Dazzle runtime renders when a surface has mode: list. The base DataTable
+always includes rows, action menu (View/Edit/Delete), pagination, and HTMX partial
+updates. Adding sort/filter/search/empty directives in the ux: block enables
+interactive features: clickable sort headers, filter dropdowns, debounced search,
+column visibility toggle, and custom empty messages.
 
-```dsl
-# Navigate to surface
-on submit -> surface task_list
-
-# Navigate to experience at specific step
-on submit -> experience onboarding step welcome
-
-# Trigger integration action
-on submit -> integration payment action process_payment
-```
-
-## UX Semantic Layer
-
-Add UX hints for smarter UI generation:
+### Syntax
 
 ```dsl
-surface invoice_list "Invoices":
-  uses entity Invoice
+surface <name> "<Title>":
+  uses entity <Entity>
   mode: list
 
   section main:
-    field invoice_number "Number"
-    field customer "Customer"
-    field total "Total"
-    field status "Status"
-    field due_date "Due Date"
+    field <field1> "<Label>"
+    field <field2> "<Label>"
 
   ux:
-    purpose: "View and manage customer invoices"
-    show: invoice_number, customer, total, status, due_date
-    sort: due_date asc
-    filter: status, customer
-    search: invoice_number, customer
-    empty: "No invoices found. Create your first invoice to get started."
-
-    attention critical:
-      when: status == "overdue" and total > 1000
-      message: "High-value invoice is overdue!"
-      action: invoice_detail
-
-    attention warning:
-      when: due_date < today and status != "paid"
-      message: "Invoice payment is overdue"
+    sort: <field> [asc|desc], ...
+    filter: <enum_field>, <bool_field>, ...
+    search: <text_field1>, <text_field2>, ...
+    empty: "<message when no results>"
 ```
 
-## Complete Example
-
-```dsl
-# List view
-surface order_list "Orders":
-  uses entity Order
-  mode: list
-
-  section main:
-    field order_number "Order #"
-    field customer "Customer"
-    field order_date "Date"
-    field status "Status"
-    field subtotal "Total"
-
-  action new "New Order":
-    on click -> surface order_create
-
-  action view "View":
-    on click -> surface order_detail
-
-  ux:
-    purpose: "Browse and manage customer orders"
-    sort: order_date desc
-    filter: status, customer
-    search: order_number, customer
-
-# Create form
-surface order_create "Create Order":
-  uses entity Order
-  mode: create
-
-  section customer "Customer Info":
-    field customer "Customer"
-    field order_date "Order Date"
-
-  section items "Order Items":
-    field items "Line Items"
-
-  section options "Options":
-    field is_gift "Gift Order?"
-    field notes "Notes"
-
-  action save "Create Order":
-    on submit -> surface order_detail
-
-  action cancel "Cancel":
-    on click -> surface order_list
-
-# Detail view
-surface order_detail "Order Details":
-  uses entity Order
-  mode: view
-
-  section header "Order Information":
-    field order_number "Order Number"
-    field customer "Customer"
-    field status "Status"
-    field order_date "Order Date"
-
-  section financial "Financial":
-    field subtotal "Subtotal"
-    field tax_rate "Tax Rate"
-    field items "Line Items"
-
-  section dates "Timestamps":
-    field created_at "Created"
-    field updated_at "Last Updated"
-
-  action edit "Edit":
-    on click -> surface order_edit
-
-  action back "Back to List":
-    on click -> surface order_list
-
-# Edit form
-surface order_edit "Edit Order":
-  uses entity Order
-  mode: edit
-
-  section main:
-    field status "Status"
-    field notes "Notes"
-    field is_gift "Gift Order?"
-
-  action save "Save Changes":
-    on submit -> surface order_detail
-
-  action cancel "Cancel":
-    on click -> surface order_detail
-```
-
-## Persona Variants
-
-Customize surfaces per persona:
+### Example
 
 ```dsl
 surface task_list "Tasks":
@@ -226,23 +259,77 @@ surface task_list "Tasks":
 
   section main:
     field title "Title"
-    field assignee "Assignee"
     field status "Status"
+    field priority "Priority"
     field due_date "Due"
 
   ux:
-    for manager:
-      scope: all
-      purpose: "Monitor team task progress"
-      show: title, assignee, status, due_date
-      show_aggregate: total_tasks, overdue_count
-      action_primary: task_detail
+    sort: due_date asc
+    filter: status, priority
+    search: title, description
+    empty: "No tasks yet. Create your first task!"
 
-    for team_member:
-      scope: assignee == current_user
-      purpose: "View and complete my assigned tasks"
-      show: title, status, due_date
-      hide: assignee
-      action_primary: task_edit
-      read_only: false
+# Produces: sortable column headers, status + priority dropdown filters,
+# debounced search input, column visibility toggle (>3 cols), custom empty message
 ```
+
+### Best Practices
+
+- sort: pick the field users care about most (e.g. created_at desc for recent-first, name asc for alphabetical)
+- filter: list enum, bool, and state machine fields — they render as dropdowns
+- search: list text/string fields users would type into a search box
+- empty: write a friendly message with a call to action (e.g. 'No tasks yet. Create your first task!')
+- Every list surface should have a ux: block — the lint rule will warn if missing
+
+**Related:** [Ux Block](ux.md#ux-block), [Surface](surfaces.md#surface), [Information Needs](ux.md#information-needs)
+
+---
+
+## Pagination
+
+Automatic pagination on list surfaces. Renders page navigation buttons below the table. Preserves sort/filter/search state across page transitions. Default 20 items per page.
+
+### Syntax
+
+```dsl
+# Pagination is automatic on list surfaces - no DSL configuration needed.
+# The runtime renders Previous/Next buttons and page numbers.
+# Query parameters: ?page=2&per_page=20
+# Sort/filter/search state is preserved across page transitions.
+
+# In workspace regions, use limit: to cap results instead:
+<region_name>:
+  source: <EntityName>
+  limit: <number>       # Max records to show (1-1000)
+```
+
+### Example
+
+```dsl
+# List surface - pagination is automatic (20 per page)
+surface contact_list "Contacts":
+  uses entity Contact
+  mode: list
+  section main:
+    field name
+    field email
+    field status
+  ux:
+    sort: name asc
+    filter: status
+    search: name, email
+
+# Workspace region - use limit to cap results
+workspace dashboard "Dashboard":
+  purpose: "Overview"
+
+  recent_tasks:
+    source: Task
+    sort: created_at desc
+    limit: 5
+    display: list
+```
+
+**Related:** [Datatable](surfaces.md#datatable), [Surface](surfaces.md#surface)
+
+---

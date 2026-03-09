@@ -1,287 +1,299 @@
 # UX Semantic Layer
 
-The UX semantic layer provides hints for intelligent UI generation, including attention signals and persona-specific customizations.
+> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
+> Do not edit manually; run `dazzle docs generate` to regenerate.
 
-## UX Block Syntax
+The UX semantic layer expresses WHY interfaces exist and WHAT matters to users, without prescribing HOW to implement it. Personas, scopes, attention signals, and information needs adapt surfaces and workspaces for different roles and contexts.
 
-The `ux:` block can appear in surfaces and workspaces:
+---
+
+## Persona
+
+A role-based variant that adapts surfaces or workspaces for different user types without code duplication. Controls scope, visibility, and capabilities.
+
+### Syntax
 
 ```dsl
-ux:
-  purpose: "Description"
-  show: field1, field2
-  sort: field1 desc, field2 asc
-  filter: field1, field2
-  search: field1, field2
-  empty: "Empty state message"
-
-  attention level:
-    when: condition
-    message: "Alert message"
-    action: surface_name
-
-  for persona_name:
-    scope: condition | all
-    # persona-specific overrides
+for <persona_name>:
+  scope: <filter_expression>
+  purpose: "<persona-specific purpose>"
+  [show: <field1>, <field2>, ...]
+  [hide: <field1>, <field2>, ...]
+  [show_aggregate: <metric1>, <metric2>, ...]
+  [action_primary: <surface_name>]
+  [read_only: true|false]
 ```
 
-## UX Properties
+### Example
 
-| Property | Description |
-|----------|-------------|
-| `purpose` | Human-readable description of the view's purpose |
-| `show` | Fields to display (comma-separated) |
-| `sort` | Default sort order |
-| `filter` | Fields available for filtering |
-| `search` | Fields to include in search |
-| `empty` | Message when no records found |
+```dsl
+for admin:
+  scope: all
+  purpose: "Full user management"
+  show_aggregate: total_users, active_count
+  action_primary: user_create
+
+for manager:
+  scope: department = current_user.department
+  purpose: "Manage department users"
+  hide: salary, ssn
+  action_primary: user_invite
+
+for member:
+  scope: id = current_user.id
+  purpose: "View own profile"
+  read_only: true
+```
+
+### Best Practices
+
+- ✅ Use lowercase role names (admin, manager, member)
+- ✅ Base on roles or responsibilities
+- ❌ Avoid device-specific personas (mobile, desktop)
+- ❌ Avoid preference-based personas (dark-mode-user)
+
+**Related:** [Ux Block](ux.md#ux-block), [Scope](ux.md#scope), [Workspace](workspaces.md#workspace)
+
+---
+
+## Purpose
+
+A single-line statement capturing the semantic intent of a surface or workspace - explaining WHY it exists.
+
+### Syntax
+
+```dsl
+purpose: "<single line explanation>"
+```
+
+### Example
+
+```dsl
+purpose: "Track customer support ticket resolution"
+```
+
+### Best Practices
+
+- ✅ Focus on user intent, not implementation
+- ✅ Answer 'why does this exist?'
+- ✅ Keep to one line
+- ❌ Avoid 'List of...' or 'CRUD for...'
+
+**Related:** [Ux Block](ux.md#ux-block)
+
+---
 
 ## Attention Signals
 
-Attention signals highlight important conditions to users:
+Data-driven conditions that require user awareness or action. Signals have severity levels and can trigger actions.
+
+### Syntax
 
 ```dsl
-attention level:
-  when: condition_expression
-  message: "Alert message"
-  action: surface_name
+attention <critical|warning|notice|info>:
+  when: <condition_expression>
+  message: "<user-facing message>"
+  [action: <surface_name>]
 ```
 
-### Signal Levels
+### Example
 
-| Level | Description | Typical Use |
-|-------|-------------|-------------|
-| `critical` | Requires immediate action | Overdue invoices, system errors |
-| `warning` | Important but not urgent | Approaching deadlines, low stock |
-| `notice` | Informational alert | Status changes, new items |
-| `info` | General information | Tips, suggestions |
+```dsl
+attention critical:
+  when: due_date < today and status != done
+  message: "Overdue task"
+  action: task_edit
 
-### Condition Expressions
+attention warning:
+  when: priority = high and status = todo
+  message: "High priority - needs assignment"
+  action: task_assign
+```
 
-| Expression | Description |
-|------------|-------------|
-| `field == value` | Equality check |
-| `field != value` | Inequality check |
-| `field < value` | Less than |
-| `field > value` | Greater than |
-| `field <= value` | Less than or equal |
-| `field >= value` | Greater than or equal |
-| `condition and condition` | Logical AND |
-| `condition or condition` | Logical OR |
+### Best Practices
 
-### Built-in Values
+- ✅ Use for data anomalies requiring action
+- ✅ Use for time-sensitive conditions
+- ❌ Don't use for purely visual styling
+- ❌ Don't overuse - reserve for truly important conditions
 
-| Value | Description |
-|-------|-------------|
-| `today` | Current date |
-| `now` | Current datetime |
-| `current_user` | Logged-in user |
-| `week_start` | Start of current week |
-| `month_start` | Start of current month |
-| `first_day_of_month` | First day of current month |
+**Related:** [Ux Block](ux.md#ux-block), [Conditions](entities.md#conditions)
 
-### Attention Signal Examples
+---
+
+## Scope
+
+Filter expression defining what data a persona can see. Must be either 'all' or a comparison expression.
+
+### Syntax
+
+```dsl
+scope: all
+scope: <field> = current_user
+scope: <field> = current_user.<attribute>
+scope: <field> = <value>
+scope: <expr1> and <expr2>
+scope: <expr1> or <expr2>
+```
+
+### Example
+
+```dsl
+# Full access for admins
+for admin:
+  scope: all
+
+# Personal data - matches current user
+for member:
+  scope: owner_id = current_user
+
+# Team-scoped data
+for manager:
+  scope: team_id = current_user.team_id
+
+# Combined ownership - "my tasks"
+for member:
+  scope: assigned_to = current_user or created_by = current_user
+
+# Status-filtered with ownership
+for agent:
+  scope: status = open and assigned_to = current_user
+```
+
+**Related:** [Persona](ux.md#persona), [Conditions](entities.md#conditions)
+
+---
+
+## Information Needs
+
+Specifications for how data should be displayed, sorted, filtered, and searched - the 'what' without the 'how'. On list surfaces these directives control the DataTable's interactive features.
+
+### Syntax
+
+```dsl
+show: field1, field2, field3
+sort: field1 desc, field2 asc
+filter: status, category, assigned_to
+search: title, description, tags
+empty: "No items found. Create your first item."
+```
+
+**Related:** [Ux Block](ux.md#ux-block), [Datatable](surfaces.md#datatable)
+
+---
+
+## Defaults
+
+Default field values for a persona in create/edit forms. Pre-populates fields based on the user's role or context.
+
+### Syntax
 
 ```dsl
 ux:
-  # Critical: Requires immediate action
-  attention critical:
-    when: status == "overdue" and amount > 10000
-    message: "High-value invoice is critically overdue!"
-    action: invoice_detail
-
-  # Warning: Important but not urgent
-  attention warning:
-    when: due_date < today and status != "paid"
-    message: "Invoice payment is overdue"
-    action: invoice_detail
-
-  # Notice: Status change notification
-  attention notice:
-    when: status == "pending_review"
-    message: "Invoice ready for review"
-    action: invoice_review
-
-  # Info: General information
-  attention info:
-    when: created_at > week_start
-    message: "New this week"
+  for <persona_name>:
+    defaults:
+      <field>: <value>
+      <field>: current_user
+      <field>: current_user.<attribute>
 ```
 
-## Persona Variants
-
-Customize views for different user types:
+### Example
 
 ```dsl
-for persona_name:
-  scope: condition | all
-  purpose: "Role-specific purpose"
-  show: field1, field2
-  hide: field1, field2
-  show_aggregate: metric1, metric2
-  action_primary: surface_name
-  read_only: true|false
-  defaults:
-    field: value
-  focus: region1, region2
-```
-
-### Persona Variant Properties
-
-| Property | Description |
-|----------|-------------|
-| `scope` | Filter condition or `all` for full access |
-| `purpose` | Role-specific description |
-| `show` | Fields to display for this persona |
-| `hide` | Fields to hide from this persona |
-| `show_aggregate` | Aggregate metrics to display |
-| `action_primary` | Default action surface |
-| `read_only` | Whether persona can only view |
-| `defaults` | Default field values for new records |
-| `focus` | Regions to emphasize (workspaces) |
-
-### Persona Variant Examples
-
-```dsl
-surface task_list "Tasks":
-  uses entity Task
-  mode: list
+surface ticket_create "New Ticket":
+  uses entity Ticket
+  mode: create
 
   section main:
-    field title "Title"
-    field assignee "Assignee"
-    field status "Status"
-    field priority "Priority"
-    field due_date "Due Date"
+    field title
+    field description
+    field priority
 
   ux:
-    purpose: "View and manage tasks"
+    purpose: "Create new support ticket"
 
-    # Manager sees all tasks with team metrics
-    for manager:
-      scope: all
-      purpose: "Monitor team task progress and workload"
-      show: title, assignee, status, priority, due_date
-      show_aggregate: total_tasks, completed_this_week, overdue_count
-      action_primary: task_detail
-
-    # Team member sees only their tasks
-    for team_member:
-      scope: assignee == current_user
-      purpose: "View and complete my assigned tasks"
-      show: title, status, priority, due_date
-      hide: assignee
-      action_primary: task_edit
-      defaults:
-        assignee: current_user
-
-    # Observer has read-only access
-    for stakeholder:
-      scope: project.stakeholders contains current_user
-      purpose: "Track project task progress"
-      show: title, status, due_date
-      hide: assignee, priority
-      read_only: true
-
-workspace project_dashboard "Project Dashboard":
-  purpose: "Project overview and task tracking"
-
-  tasks:
-    source: Task
-    filter: project == current_project
-    display: list
-    action: task_detail
-
-  metrics:
-    source: Task
-    filter: project == current_project
-    aggregate:
-      total: count(*)
-      completed: count(status == "done")
-      overdue: count(due_date < today and status != "done")
-
-  ux:
-    # Project manager focuses on all regions
-    for project_manager:
-      scope: all
-      focus: metrics, tasks
-      action_primary: task_create
-
-    # Developer focuses on task list
-    for developer:
-      scope: assignee == current_user
-      focus: tasks
-      action_primary: task_edit
-```
-
-## Complete UX Example
-
-```dsl
-surface invoice_list "Invoices":
-  uses entity Invoice
-  mode: list
-
-  section main:
-    field invoice_number "Invoice #"
-    field customer "Customer"
-    field issue_date "Issued"
-    field due_date "Due Date"
-    field total "Amount"
-    field status "Status"
-
-  action new "Create Invoice":
-    on click -> surface invoice_create
-
-  action view "View":
-    on click -> surface invoice_detail
-
-  ux:
-    purpose: "Browse, filter, and manage customer invoices"
-    show: invoice_number, customer, due_date, total, status
-    sort: due_date asc
-    filter: status, customer, due_date
-    search: invoice_number, customer
-    empty: "No invoices found. Create your first invoice to get started."
-
-    # Critical: High-value overdue
-    attention critical:
-      when: status == "overdue" and total > 5000
-      message: "High-value invoice requires immediate attention!"
-      action: invoice_detail
-
-    # Warning: Any overdue
-    attention warning:
-      when: due_date < today and status != "paid"
-      message: "Invoice payment is overdue"
-      action: invoice_detail
-
-    # Notice: Due soon
-    attention notice:
-      when: due_date < today + 7 and due_date >= today and status == "sent"
-      message: "Invoice due within 7 days"
-
-    # Finance team has full access
-    for finance:
-      scope: all
-      purpose: "Manage all company invoices and payments"
-      show: invoice_number, customer, issue_date, due_date, total, status
-      show_aggregate: total_outstanding, overdue_amount
-      action_primary: invoice_detail
-
-    # Sales sees their customer invoices
-    for sales:
-      scope: customer.account_manager == current_user
-      purpose: "Track invoices for my accounts"
-      show: invoice_number, customer, due_date, total, status
-      hide: issue_date
-      read_only: true
-      action_primary: invoice_detail
-
-    # Customer portal - limited view
     for customer:
-      scope: customer == current_user.company
-      purpose: "View my invoices and payment history"
-      show: invoice_number, due_date, total, status
-      hide: customer
-      read_only: true
+      defaults:
+        created_by: current_user
+        status: open
+        priority: medium
+
+    for agent:
+      defaults:
+        created_by: current_user
+        status: open
+        assigned_to: current_user
+
+surface order_create "New Order":
+  uses entity Order
+  mode: create
+
+  ux:
+    for sales_rep:
+      defaults:
+        created_by: current_user
+        status: draft
+        region: current_user.region
 ```
+
+**Related:** [Persona](ux.md#persona), [Ux Block](ux.md#ux-block), [Surface](surfaces.md#surface)
+
+---
+
+## Ux Block
+
+Optional metadata on surfaces and workspaces expressing WHY they exist and WHAT matters to users, without prescribing HOW to implement it.
+
+### Syntax
+
+```dsl
+ux:
+  purpose: "<semantic intent>"
+
+  [show: <field1>, <field2>, ...]
+  [sort: <field> [asc|desc], ...]
+  [filter: <field1>, <field2>, ...]
+  [search: <field1>, <field2>, ...]
+  [empty: "<message>"]
+
+  [attention <level>:]
+    when: <condition>
+    message: "<user message>"
+    [action: <surface_name>]
+
+  [for <persona>:]
+    [scope: <filter_expression>]
+    [purpose: "<persona purpose>"]
+    [show: <fields>]
+    [hide: <fields>]
+    [show_aggregate: <metrics>]
+    [action_primary: <surface>]
+    [read_only: true|false]
+```
+
+### Example
+
+```dsl
+ux:
+  purpose: "Manage user accounts"
+
+  sort: name asc
+  filter: role, is_active
+  search: name, email
+
+  attention warning:
+    when: days_since(last_login) > 90
+    message: "Inactive account"
+
+  for admin:
+    scope: all
+    action_primary: user_create
+
+  for member:
+    scope: id = current_user.id
+    read_only: true
+```
+
+**Related:** [Purpose](ux.md#purpose), [Information Needs](ux.md#information-needs), [Attention Signals](ux.md#attention-signals), [Persona](ux.md#persona), [Datatable](surfaces.md#datatable)
+
+---

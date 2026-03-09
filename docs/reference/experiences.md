@@ -1,76 +1,120 @@
 # Experiences
 
-Experiences define multi-step user flows and wizards.
+> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.
+> Do not edit manually; run `dazzle docs generate` to regenerate.
 
-## Basic Syntax
+Experiences define multi-step user flows such as onboarding wizards, checkout processes, and approval workflows. Each step references a surface, process, or entity, with transitions driven by user events like continue, back, success, and failure.
+
+---
+
+## Experience
+
+A multi-step user flow or wizard that guides users through a sequence of steps.
+Experiences define step-by-step interactions with navigation, branching, and
+error recovery. Each step references a surface, process, or integration, and
+transitions between steps are driven by user events (continue, back, success,
+failure, etc.). Use experiences for onboarding wizards, checkout flows, approval
+workflows, and any multi-screen interaction that needs explicit flow control.
+
+Steps can reference entities directly with `entity: EntityName` to auto-generate
+creation forms — no separate surface definition needed. Use `creates: varname` to
+capture the created entity in flow state, and `defaults: field: $varname` to
+forward IDs between steps (e.g. setting a foreign key from a previously created
+entity). The `context:` block declares typed variables, and `when:` guards
+conditionally skip steps based on state.
+
+### Syntax
 
 ```dsl
-experience experience_name "Display Title":
-  start at step first_step
+experience <name> "<Display Name>":
+  # Optional: declare typed context variables
+  context:
+    <varname>: <EntityName>
 
-  step step_name:
-    kind: surface|process|integration
-    surface surface_name
-    on event -> step next_step
+  # Optional: access control, priority
+  access: <public|authenticated|persona(name1, name2)>
+  priority: <critical|high|medium|low>
+
+  start at step <step_name>
+
+  # Entity shorthand — auto-generates a create form from entity fields
+  step <step_name>:
+    entity: <EntityName>
+    creates: <varname>             # saves_to: context.varname
+    defaults:                      # prefill fields
+      <field>: $<varname>          # → context.varname.id
+      <field>: "<literal>"         # → quoted literal
+    on <event> -> step <target>
+
+  # Explicit surface reference (original syntax)
+  step <step_name>:
+    kind: <surface|process|integration>
+    surface <surface_name>         # when kind is surface
+    saves_to: context.<varname>    # capture created entity
+    prefill:                       # pre-populate form fields
+      <field>: context.<var>.<prop>
+      <field>: "<literal>"
+    when: context.<var>.<prop> = <value>   # conditional guard
+    on <event> -> step <target>
 ```
 
-## Experience Structure
-
-An experience consists of:
-1. **Start declaration** - Which step begins the flow
-2. **Steps** - Individual stages in the flow
-3. **Transitions** - How users move between steps
-
-## Step Kinds
-
-| Kind | Description | Properties |
-|------|-------------|------------|
-| `surface` | UI screen step | `surface` |
-| `process` | Background processing | - |
-| `integration` | External service call | `integration`, `action` |
-
-## Transitions
-
-Define how users move between steps:
+### Example
 
 ```dsl
-on event -> step next_step
-```
+# Entity creation with ID forwarding (recommended for multi-entity flows)
+experience client_onboarding "Client Onboarding":
+  start at step add_company
 
-### Transition Events
+  step add_company:
+    entity: Company
+    creates: company
+    on success -> step add_contact
 
-| Event | Description |
-|-------|-------------|
-| `submit` | Form submission |
-| `success` | Successful completion |
-| `failure` | Error occurred |
-| `cancel` | User cancelled |
-| `skip` | User skipped step |
-| `back` | User went back |
+  step add_contact:
+    entity: Contact
+    creates: contact
+    defaults:
+      company_id: $company
+    on success -> step add_address
+    on back -> step add_company
 
-## Examples
+  step add_address:
+    entity: Address
+    creates: address
+    defaults:
+      contact_id: $contact
+    on success -> step done
+    on back -> step add_contact
 
-### Simple Onboarding Flow
+  step done:
+    entity: Company
 
-```dsl
-experience onboarding "User Onboarding":
+# Surface-based flow (original syntax — still fully supported)
+experience user_onboarding "User Onboarding":
+  context:
+    company: Company
+
   start at step welcome
 
   step welcome:
     kind: surface
-    surface welcome_screen
-    on submit -> step profile
+    surface onboarding_welcome
+    on continue -> step profile
 
   step profile:
     kind: surface
-    surface profile_form
-    on submit -> step preferences
-    on skip -> step complete
+    surface onboarding_profile
+    saves_to: context.company
+    on continue -> step vat_check
+    on back -> step welcome
 
-  step preferences:
+  step vat_check:
     kind: surface
-    surface preferences_form
-    on submit -> step complete
+    surface vat_form
+    when: context.company.is_vat_registered = true
+    prefill:
+      company: context.company.id
+    on success -> step complete
     on back -> step profile
 
   step complete:
@@ -78,231 +122,70 @@ experience onboarding "User Onboarding":
     surface onboarding_complete
 ```
 
-### Order Checkout Flow
+**Related:** [Surface](surfaces.md#surface), [Process](processes.md#process), [Integration](integrations.md#integration), [State Machine](entities.md#state-machine), [Entity](entities.md#entity)
+
+---
+
+## Stage
+
+Layout stage that defines how a workspace's UI components are arranged.
+Stages are like theater stages - they provide a layout where your UI components perform.
+Select a stage to control the visual presentation of your workspace.
+
+### Syntax
 
 ```dsl
-experience checkout "Checkout":
-  start at step cart_review
+workspace <name> "<Title>":
+  purpose: "<intent>"
+  stage: "<stage_name>"  # Optional: auto-selected if omitted
 
-  step cart_review:
-    kind: surface
-    surface cart_summary
-    on submit -> step shipping
-    on cancel -> step abandoned
-
-  step shipping:
-    kind: surface
-    surface shipping_form
-    on submit -> step payment
-    on back -> step cart_review
-
-  step payment:
-    kind: surface
-    surface payment_form
-    on submit -> step process_payment
-
-  step process_payment:
-    kind: integration
-    integration payment_gateway action process
-    on success -> step confirmation
-    on failure -> step payment_error
-
-  step payment_error:
-    kind: surface
-    surface payment_error
-    on submit -> step payment
-
-  step confirmation:
-    kind: surface
-    surface order_confirmation
-
-  step abandoned:
-    kind: surface
-    surface cart_abandoned
+# Available stages:
+# - focus_metric: Spotlight - one hero KPI with supporting context
+# - scanner_table: Open stage - data-heavy table with filters
+# - dual_pane_flow: Split stage - list on one side, detail on the other
+# - monitor_wall: Gallery - multiple displays arranged in grid
+# - command_center: Control room - dense expert interface
 ```
 
-### Multi-Step Form Wizard
+### Example
 
 ```dsl
-experience application_wizard "Loan Application":
-  start at step personal_info
+# Explicit stage selection
+workspace ops_center "Operations Center":
+  purpose: "Real-time monitoring and incident response"
+  stage: "command_center"
 
-  step personal_info:
-    kind: surface
-    surface application_personal
-    on submit -> step employment
-    on cancel -> step cancelled
+  alerts:
+    source: Alert
+    filter: is_active = true
+    sort: severity desc
 
-  step employment:
-    kind: surface
-    surface application_employment
-    on submit -> step financial
-    on back -> step personal_info
+  services:
+    source: Service
+    aggregate:
+      healthy: count(Service where status = healthy)
 
-  step financial:
-    kind: surface
-    surface application_financial
-    on submit -> step documents
+# Auto-selected stage (DUAL_PANE_FLOW)
+workspace contacts "Contact Manager":
+  purpose: "Browse and view contact details"
 
-  step documents:
-    kind: surface
-    surface application_documents
-    on submit -> step review
-    on back -> step financial
+  contact_list:
+    source: Contact
+    display: list
+    limit: 20
 
-  step review:
-    kind: surface
-    surface application_review
-    on submit -> step submit_application
-    on back -> step documents
-
-  step submit_application:
-    kind: integration
-    integration loan_service action submit
-    on success -> step confirmation
-    on failure -> step submission_error
-
-  step confirmation:
-    kind: surface
-    surface application_submitted
-
-  step submission_error:
-    kind: surface
-    surface application_error
-    on submit -> step review
-
-  step cancelled:
-    kind: surface
-    surface application_cancelled
+  contact_detail:
+    source: Contact
+    display: detail
 ```
 
-### Support Ticket Flow
+### Best Practices
 
-```dsl
-experience support_request "Support Request":
-  start at step describe_issue
+- Let auto-selection work for most cases
+- Use explicit stage: for ops dashboards (command_center) or specific layouts
+- Match stage to user needs: novices prefer simpler stages, experts prefer command_center
+- Consider persona when choosing stage - same workspace can use different stages per persona
 
-  step describe_issue:
-    kind: surface
-    surface support_form
-    on submit -> step categorize
+**Related:** [Workspace](workspaces.md#workspace), [Persona](ux.md#persona), [Attention Signals](ux.md#attention-signals)
 
-  step categorize:
-    kind: process
-    on success -> step assign
-    on failure -> step manual_review
-
-  step assign:
-    kind: integration
-    integration ticketing_system action create_ticket
-    on success -> step confirmation
-    on failure -> step manual_review
-
-  step manual_review:
-    kind: surface
-    surface support_manual_queue
-
-  step confirmation:
-    kind: surface
-    surface support_confirmation
-```
-
-## Integration Steps
-
-Integration steps call external services:
-
-```dsl
-step verify_identity:
-  kind: integration
-  integration identity_service action verify
-  on success -> step approved
-  on failure -> step manual_review
-```
-
-The integration must be defined elsewhere with the referenced action.
-
-## Complete Example
-
-```dsl
-# Define the surfaces used in the experience
-surface signup_email "Enter Email":
-  uses entity User
-  mode: create
-  section main:
-    field email "Email Address"
-  action next "Continue":
-    on submit -> experience signup step verify_email
-
-surface verify_email_screen "Verify Email":
-  uses entity User
-  mode: edit
-  section main:
-    field verification_code "Verification Code"
-  action verify "Verify":
-    on submit -> experience signup step create_password
-
-surface create_password_screen "Create Password":
-  uses entity User
-  mode: edit
-  section main:
-    field password "Password"
-    field password_confirm "Confirm Password"
-  action create "Create Account":
-    on submit -> experience signup step welcome
-
-surface welcome_screen "Welcome":
-  uses entity User
-  mode: view
-  section main:
-    field name "Welcome!"
-  action start "Get Started":
-    on click -> surface dashboard
-
-# Define the experience
-experience signup "User Signup":
-  start at step enter_email
-
-  step enter_email:
-    kind: surface
-    surface signup_email
-    on submit -> step verify_email
-
-  step verify_email:
-    kind: surface
-    surface verify_email_screen
-    on submit -> step check_code
-
-  step check_code:
-    kind: integration
-    integration email_service action verify_code
-    on success -> step create_password
-    on failure -> step verify_email
-
-  step create_password:
-    kind: surface
-    surface create_password_screen
-    on submit -> step create_account
-
-  step create_account:
-    kind: process
-    on success -> step welcome
-    on failure -> step signup_error
-
-  step welcome:
-    kind: surface
-    surface welcome_screen
-
-  step signup_error:
-    kind: surface
-    surface error_screen
-    on submit -> step enter_email
-```
-
-## Best Practices
-
-1. **Define clear entry and exit points** - Users should know where they are
-2. **Handle all outcomes** - Include error and cancel paths
-3. **Allow going back** - Multi-step flows should support navigation
-4. **Keep steps focused** - Each step should do one thing
-5. **Use process steps for background work** - Keep UI steps interactive
-6. **Integrate carefully** - Handle integration failures gracefully
+---
