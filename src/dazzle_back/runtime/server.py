@@ -818,6 +818,7 @@ class DazzleBackendApp:
         self._entity_status_fields: dict[str, str] = config.entity_status_fields
         self._process_manager: Any | None = None  # ProcessManager type
         self._process_adapter: Any | None = None  # ProcessAdapter type
+        self._sla_manager: Any | None = None  # SLAManager type
         # Fragment sources from DSL source= annotations (v0.25.1)
         self._fragment_sources: dict[str, dict[str, Any]] = config.fragment_sources
         # Founder Console (v0.26.0)
@@ -1525,6 +1526,73 @@ class DazzleBackendApp:
             wired_count,
         )
 
+    def _init_sla_manager(self) -> None:
+        """Initialize SLA runtime enforcement manager (v0.38.0).
+
+        Tracks SLA timers in memory and runs a periodic background task
+        to detect tier transitions and execute breach actions.
+        """
+        if not self._app or not self._appspec:
+            return
+
+        sla_specs = self._appspec.slas
+        if not sla_specs:
+            return
+
+        try:
+            from dazzle_back.runtime.sla_manager import SLAManager
+
+            self._sla_manager = SLAManager(
+                sla_specs=sla_specs,
+                services=self._services,
+            )
+
+            sla_manager = self._sla_manager  # capture for closures
+
+            # Wire entity lifecycle events to SLA manager
+            wired_count = 0
+            for _service_name, service in self._services.items():
+                if isinstance(service, CRUDService):
+
+                    async def _on_sla_created(
+                        entity_name: str,
+                        entity_id: str,
+                        entity_data: dict[str, Any],
+                        _old_data: dict[str, Any] | None,
+                        _mgr: Any = sla_manager,
+                    ) -> None:
+                        await _mgr.on_entity_event(entity_name, entity_id, entity_data)
+
+                    async def _on_sla_updated(
+                        entity_name: str,
+                        entity_id: str,
+                        entity_data: dict[str, Any],
+                        old_data: dict[str, Any] | None,
+                        _mgr: Any = sla_manager,
+                    ) -> None:
+                        await _mgr.on_entity_event(entity_name, entity_id, entity_data, old_data)
+
+                    service.on_created(_on_sla_created)
+                    service.on_updated(_on_sla_updated)
+                    wired_count += 1
+
+            @self._app.on_event("startup")
+            async def startup_sla() -> None:
+                await sla_manager.start()
+
+            @self._app.on_event("shutdown")
+            async def shutdown_sla() -> None:
+                await sla_manager.shutdown()
+
+            logging.getLogger("dazzle.server").info(
+                "SLA manager initialized — %d SLA(s), wired to %d service(s)",
+                len(sla_specs),
+                wired_count,
+            )
+
+        except Exception as e:
+            logging.getLogger("dazzle.server").warning("Failed to init SLA manager: %s", e)
+
     def _wire_send_handler_to_channels(self) -> None:
         """Connect process adapter's SEND step to ChannelManager.
 
@@ -2108,6 +2176,9 @@ class DazzleBackendApp:
         # Process manager (v0.24.0)
         if self._enable_processes:
             self._init_process_manager()
+
+        # SLA runtime enforcement (v0.38.0)
+        self._init_sla_manager()
 
         # Wire process SEND steps to channel manager (v0.33.0)
         self._wire_send_handler_to_channels()
