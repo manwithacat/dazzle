@@ -1,4 +1,4 @@
-/* dazzle v0.34.2 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.37.0 | MIT License | https://github.com/manwithacat/dazzle */
 [data-dz-show] {
 transition: opacity 150ms ease-in, transform 150ms ease-in;
 }
@@ -1217,6 +1217,75 @@ width: 1.25rem;
 height: 1.25rem;
 color: var(--dz-hero-bg-from);
 }
+.dz-section-team {
+padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+.dz-team-grid {
+display: grid;
+grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+gap: 2rem;
+max-width: 64rem;
+margin: 0 auto;
+}
+.dz-team-card {
+text-align: center;
+padding: 2rem 1.5rem;
+}
+.dz-team-avatar {
+width: 6rem;
+height: 6rem;
+border-radius: 50%;
+margin: 0 auto 1rem;
+overflow: hidden;
+background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+display: flex;
+align-items: center;
+justify-content: center;
+}
+.dz-team-avatar img {
+width: 100%;
+height: 100%;
+object-fit: cover;
+}
+.dz-team-initials {
+font-size: 1.5rem;
+font-weight: 600;
+color: white;
+letter-spacing: 0.05em;
+}
+.dz-team-name {
+font-size: 1.125rem;
+font-weight: 600;
+margin: 0 0 0.25rem;
+}
+.dz-team-role {
+font-size: 0.875rem;
+font-weight: 500;
+color: var(--dz-hero-bg-from);
+margin: 0 0 0.75rem;
+}
+.dz-team-bio {
+font-size: 0.875rem;
+line-height: 1.6;
+color: var(--dz-text-body);
+margin: 0 0 1rem;
+}
+.dz-team-links {
+display: flex;
+gap: 0.75rem;
+justify-content: center;
+}
+.dz-team-link {
+color: var(--dz-text-body);
+transition: color var(--dz-transition-fast, 150ms);
+}
+.dz-team-link:hover {
+color: var(--dz-hero-bg-from);
+}
+.dz-team-link svg {
+width: 1.25rem;
+height: 1.25rem;
+}
 .dz-theme-toggle {
 background: transparent;
 border: none;
@@ -1241,6 +1310,28 @@ height: 1.25rem;
 .dz-theme-toggle__moon { display: block; }
 [data-theme="dark"] .dz-theme-toggle__sun { display: block; }
 [data-theme="dark"] .dz-theme-toggle__moon { display: none; }
+.dz-bg-alt {
+background: var(--dz-section-alt-bg, oklch(0.97 0.01 260));
+}
+.dz-bg-primary {
+background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
+color: white;
+}
+.dz-bg-primary .dz-section-header h2,
+.dz-bg-primary .dz-section-header p {
+color: white;
+}
+.dz-bg-dark {
+background: oklch(0.15 0.01 260);
+color: oklch(0.9 0 0);
+}
+.dz-bg-dark .dz-section-header h2,
+.dz-bg-dark .dz-section-header p {
+color: oklch(0.9 0 0);
+}
+[data-theme="dark"] .dz-bg-alt {
+background: oklch(0.12 0.01 260);
+}
 [data-theme="dark"] .dz-section-features,
 [data-theme="dark"] .dz-section-faq,
 [data-theme="dark"] .dz-section-steps {
@@ -1584,6 +1675,16 @@ text-align: center;
 max-width: 40rem;
 margin: 0 auto 3rem;
 }
+.dz-section-media {
+text-align: center;
+margin: 0 auto 2rem;
+max-width: 48rem;
+}
+.dz-section-media img {
+max-width: 100%;
+height: auto;
+border-radius: 0.5rem;
+}
 .dz-section h1 {
 font-size: var(--dz-font-size-hero-headline, 3.5rem);
 font-weight: var(--dz-font-weight-hero-headline, 800);
@@ -1629,6 +1730,13 @@ line-height: var(--dz-line-height-body, 1.6);
 }
 .dz-section-markdown {
 padding: var(--dz-spacing-section-y, 5rem) 1.5rem;
+}
+.dz-section-markdown .prose hr {
+border: none;
+height: 1px;
+background: linear-gradient(to right, transparent, var(--dz-border-subtle), transparent);
+margin: 3rem auto;
+max-width: 200px;
 }
 .dz-subhead {
 font-size: 1.25rem;
@@ -1880,6 +1988,31 @@ padding: 3rem 1.5rem;
 }
 .dz-prose h1, .dz-prose h2, .dz-prose h3 {
 text-align: left;
+}
+.dz-page-legal .dz-section-markdown .prose {
+max-width: 45rem;
+margin: 0 auto;
+padding: 2rem 1.5rem;
+}
+.dz-page-legal .dz-section-markdown .prose h1,
+.dz-page-legal .dz-section-markdown .prose h2,
+.dz-page-legal .dz-section-markdown .prose h3 {
+text-align: left;
+}
+.dz-page-legal .dz-section-markdown .prose p {
+line-height: 1.7;
+}
+.dz-page-legal .dz-section-markdown .prose h2 {
+margin-top: 2em;
+margin-bottom: 0.75em;
+font-size: 1.25rem;
+font-weight: 600;
+}
+.dz-page-legal .dz-section-markdown .prose h3 {
+margin-top: 1.5em;
+margin-bottom: 0.5em;
+font-size: 1.1rem;
+font-weight: 600;
 }
 .dz-task-surface-container {
 max-width: 75rem;
