@@ -254,6 +254,7 @@ class PageContext(BaseModel):
     user_email: str = ""
     user_name: str = ""
     user_roles: list[str] = Field(default_factory=list)
+    user_preferences: dict[str, str] = Field(default_factory=dict)
 
     # Extra data for custom templates
     extra: dict[str, Any] = Field(default_factory=dict)

@@ -90,5 +90,48 @@
                 target.scrollIntoView({ behavior: 'smooth' });
             }
         }
+
+        // ======================================================================
+        // User Preferences API (v0.38.0)
+        // ======================================================================
+
+        var _prefQueue = {};
+        var _prefTimer = null;
+
+        function _flushPrefs() {
+            var batch = _prefQueue;
+            _prefQueue = {};
+            _prefTimer = null;
+            if (Object.keys(batch).length === 0) return;
+            fetch('/auth/preferences', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({preferences: batch}),
+            }).catch(function() { /* silent — prefs are best-effort */ });
+        }
+
+        window.dzPrefs = {
+            /** Set a preference (debounced 500ms batch save). */
+            set: function(key, value) {
+                _prefQueue[key] = String(value);
+                if (_prefTimer) clearTimeout(_prefTimer);
+                _prefTimer = setTimeout(_flushPrefs, 500);
+            },
+            /** Get a preference from the server-rendered initial state. */
+            get: function(key, fallback) {
+                var el = document.getElementById('dz-user-prefs');
+                if (!el) return fallback;
+                try {
+                    var prefs = JSON.parse(el.textContent || '{}');
+                    return prefs.hasOwnProperty(key) ? prefs[key] : fallback;
+                } catch(e) { return fallback; }
+            },
+            /** Delete a preference. */
+            del: function(key) {
+                fetch('/auth/preferences/' + encodeURIComponent(key), {
+                    method: 'DELETE',
+                }).catch(function() {});
+            },
+        };
     });
 })();

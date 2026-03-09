@@ -57,6 +57,7 @@ class AuthContext(BaseModel):
     is_authenticated: bool = False
     roles: list[str] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=list)
+    preferences: dict[str, str] = Field(default_factory=dict)
 
     @property
     def user_id(self) -> UUID | None:

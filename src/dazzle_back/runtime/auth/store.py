@@ -462,11 +462,23 @@ class SessionStoreMixin:
             self.delete_session(session_id)
             return AuthContext()
 
+        # Load user preferences (methods defined on AuthStore, accessed via _execute)
+        prefs: dict[str, str] = {}
+        try:
+            rows = self._execute(
+                "SELECT key, value FROM user_preferences WHERE user_id = %s",
+                (str(user.id),),
+            )
+            prefs = {r["key"]: r["value"] for r in rows}
+        except Exception:
+            pass
+
         return AuthContext(
             user=user,
             session=session,
             is_authenticated=True,
             roles=user.roles,
+            preferences=prefs,
         )
 
     def delete_session(self, session_id: str) -> bool:
@@ -595,6 +607,19 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id)"
             )
+            # User preferences (v0.38.0)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_preferences (
+                    user_id TEXT NOT NULL REFERENCES users(id),
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (user_id, key)
+                )
+            """)
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_user_prefs_user ON user_preferences(user_id)"
+            )
             conn.commit()
         finally:
             conn.close()
@@ -628,3 +653,74 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
             return rowcount
         finally:
             conn.close()
+
+    # =========================================================================
+    # User Preferences (v0.38.0)
+    # =========================================================================
+
+    def get_preferences(self, user_id: UUID) -> dict[str, str]:
+        """Get all preferences for a user as {key: value} dict."""
+        rows = self._execute(
+            "SELECT key, value FROM user_preferences WHERE user_id = %s",
+            (str(user_id),),
+        )
+        return {r["key"]: r["value"] for r in rows}
+
+    def get_preference(self, user_id: UUID, key: str) -> str | None:
+        """Get a single preference value, or None."""
+        row = self._execute_one(
+            "SELECT value FROM user_preferences WHERE user_id = %s AND key = %s",
+            (str(user_id), key),
+        )
+        return row["value"] if row else None
+
+    def set_preference(self, user_id: UUID, key: str, value: str) -> None:
+        """Set a user preference (upsert)."""
+        now = datetime.now(UTC).isoformat()
+        self._execute_modify(
+            """
+            INSERT INTO user_preferences (user_id, key, value, updated_at)
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (user_id, key) DO UPDATE SET value = %s, updated_at = %s
+            """,
+            (str(user_id), key, value, now, value, now),
+        )
+
+    def set_preferences(self, user_id: UUID, prefs: dict[str, str]) -> None:
+        """Bulk set preferences (upsert each)."""
+        if not prefs:
+            return
+        now = datetime.now(UTC).isoformat()
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            for key, value in prefs.items():
+                cursor.execute(
+                    """
+                    INSERT INTO user_preferences (user_id, key, value, updated_at)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (user_id, key) DO UPDATE SET value = %s, updated_at = %s
+                    """,
+                    (str(user_id), key, value, now, value, now),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def delete_preference(self, user_id: UUID, key: str) -> bool:
+        """Delete a single preference. Returns True if deleted."""
+        return bool(
+            self._execute_modify(
+                "DELETE FROM user_preferences WHERE user_id = %s AND key = %s",
+                (str(user_id), key),
+            )
+        )
+
+    def delete_preferences(self, user_id: UUID) -> int:
+        """Delete all preferences for a user. Returns count deleted."""
+        return int(
+            self._execute_modify(
+                "DELETE FROM user_preferences WHERE user_id = %s",
+                (str(user_id),),
+            )
+        )

@@ -94,6 +94,11 @@
   {# Screen-reader page announcer for hx-boost navigation #}
   <div id="dz-page-announcer" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
 
+  {# Server-rendered user preferences for client-side access (v0.38.0) #}
+  {% if user_preferences %}
+  <script type="application/json" id="dz-user-prefs">{{ user_preferences | tojson }}</script>
+  {% endif %}
+
   {% block scripts_extra %}{% endblock %}
 </body>
 {% if not _htmx_partial | default(false) %}

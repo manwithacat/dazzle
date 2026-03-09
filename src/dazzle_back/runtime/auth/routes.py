@@ -430,4 +430,58 @@ def create_auth_routes(
 
         return response
 
+    # =========================================================================
+    # User Preferences (v0.38.0)
+    # =========================================================================
+
+    def _require_auth(request: FastAPIRequest) -> Any:
+        """Extract and validate session, return auth context or raise 401."""
+        session_id = request.cookies.get(cookie_name)
+        if not session_id:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        ctx = auth_store.validate_session(session_id)
+        if not ctx.is_authenticated or not ctx.user:
+            raise HTTPException(status_code=401, detail="Session expired")
+        return ctx
+
+    @router.get("/preferences")
+    async def get_preferences(request: FastAPIRequest) -> dict[str, Any]:
+        """Get all preferences for the current user."""
+        ctx = _require_auth(request)
+        return {"preferences": ctx.preferences}
+
+    @router.put("/preferences")
+    async def set_preferences(request: FastAPIRequest) -> dict[str, Any]:
+        """Bulk set preferences. Body: {"preferences": {"key": "value", ...}}."""
+        ctx = _require_auth(request)
+        body = await request.json()
+        prefs = body.get("preferences", {})
+        if not isinstance(prefs, dict):
+            raise HTTPException(status_code=400, detail="preferences must be an object")
+        # Convert all values to strings for storage
+        str_prefs = {str(k): str(v) for k, v in prefs.items()}
+        assert ctx.user is not None
+        auth_store.set_preferences(ctx.user.id, str_prefs)
+        return {"updated": len(str_prefs)}
+
+    @router.put("/preferences/{key:path}")
+    async def set_preference(key: str, request: FastAPIRequest) -> dict[str, Any]:
+        """Set a single preference. Body: {"value": "..."}."""
+        ctx = _require_auth(request)
+        assert ctx.user is not None
+        body = await request.json()
+        value = body.get("value", "")
+        auth_store.set_preference(ctx.user.id, key, str(value))
+        return {"key": key, "value": str(value)}
+
+    @router.delete("/preferences/{key:path}")
+    async def delete_preference(key: str, request: FastAPIRequest) -> dict[str, Any]:
+        """Delete a single preference."""
+        ctx = _require_auth(request)
+        assert ctx.user is not None
+        deleted = auth_store.delete_preference(ctx.user.id, key)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Preference not found")
+        return {"deleted": key}
+
     return router
