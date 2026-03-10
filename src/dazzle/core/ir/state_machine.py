@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 if TYPE_CHECKING:
     from .expressions import Expr
+    from .process import StepEffect
 
 # Time conversion constants
 SECONDS_PER_MINUTE = 60
@@ -131,6 +132,7 @@ class StateTransition(BaseModel):
     trigger: TransitionTrigger = TransitionTrigger.MANUAL
     guards: list[TransitionGuard] = Field(default_factory=list)
     auto_spec: AutoTransitionSpec | None = None
+    effects: list[StepEffect] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -202,4 +204,14 @@ def _rebuild_transition_guard() -> None:
     )
 
 
+def _rebuild_state_transition() -> None:
+    """Rebuild StateTransition to resolve forward reference to StepEffect."""
+    from .process import StepEffect
+
+    StateTransition.model_rebuild(
+        _types_namespace={"StepEffect": StepEffect},
+    )
+
+
 _rebuild_transition_guard()
+_rebuild_state_transition()

@@ -2533,5 +2533,164 @@ workspace dashboard "Dashboard":
         assert ws.context_selector is None
 
 
+class TestOnTransitionParsing:
+    """Test on_transition: block parsing (#435)."""
+
+    def test_create_effect_on_transition(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+entity VATReturn "VAT Return":
+  id: uuid pk
+  status: enum[draft,prepared,submitted]=draft
+  due_date: date required
+
+  transitions:
+    draft -> prepared
+    prepared -> submitted
+
+  on_transition:
+    draft -> prepared:
+      create Task:
+        task_type: "vat_preparation"
+        title: "Prepare VAT return"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        entity = fragment.entities[1]  # VATReturn
+        assert entity.state_machine is not None
+        t = entity.state_machine.get_transition("draft", "prepared")
+        assert t is not None
+        assert len(t.effects) == 1
+        assert t.effects[0].action.value == "create"
+        assert t.effects[0].entity_name == "Task"
+        assert len(t.effects[0].assignments) == 2
+
+    def test_update_effect_with_where(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Deadline "Deadline":
+  id: uuid pk
+  linked_return_id: uuid
+  status: str(50)
+
+entity VATReturn "VAT Return":
+  id: uuid pk
+  status: enum[draft,missed]=draft
+
+  transitions:
+    draft -> missed
+
+  on_transition:
+    draft -> missed:
+      update Deadline:
+        where: linked_return_id = self.id
+        status: "missed"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        entity = fragment.entities[1]
+        t = entity.state_machine.get_transition("draft", "missed")
+        assert t is not None
+        assert len(t.effects) == 1
+        effect = t.effects[0]
+        assert effect.action.value == "update"
+        assert effect.entity_name == "Deadline"
+        assert effect.where == "linked_return_id = self.id"
+        assert len(effect.assignments) == 1
+        assert effect.assignments[0].value == '"missed"'
+
+    def test_wildcard_source_state(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Alert "Alert":
+  id: uuid pk
+  message: str(200)
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[active,cancelled]=active
+
+  transitions:
+    * -> cancelled
+
+  on_transition:
+    * -> cancelled:
+      create Alert:
+        message: "Order cancelled"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        entity = fragment.entities[1]
+        t = entity.state_machine.get_transition("*", "cancelled")
+        assert t is not None
+        assert len(t.effects) == 1
+        assert t.effects[0].action.value == "create"
+        assert t.effects[0].entity_name == "Alert"
+
+    def test_multiple_effects_per_transition(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+entity Log "Log":
+  id: uuid pk
+  message: str(200)
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[draft,submitted]=draft
+
+  transitions:
+    draft -> submitted
+
+  on_transition:
+    draft -> submitted:
+      create Task:
+        title: "Review order"
+      create Log:
+        message: "Order submitted"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        entity = fragment.entities[2]
+        t = entity.state_machine.get_transition("draft", "submitted")
+        assert t is not None
+        assert len(t.effects) == 2
+        assert t.effects[0].entity_name == "Task"
+        assert t.effects[1].entity_name == "Log"
+
+    def test_unmatched_transition_reference_raises(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Order "Order":
+  id: uuid pk
+  status: enum[draft,submitted]=draft
+
+  transitions:
+    draft -> submitted
+
+  on_transition:
+    submitted -> draft:
+      create Task:
+        title: "test"
+"""
+        import pytest
+
+        with pytest.raises(Exception, match="undefined transition"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+
 if __name__ == "__main__":
     main()

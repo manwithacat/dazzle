@@ -474,6 +474,9 @@ class TokenType(Enum):
     COLLAPSED = "collapsed"
     CONTEXT_SELECTOR = "context_selector"
 
+    # v0.39.0 Transition Side Effects
+    ON_TRANSITION = "on_transition"
+
     # Comparison operators (for condition expressions)
     DOUBLE_EQUALS = "=="
     NOT_EQUALS = "!="

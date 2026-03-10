@@ -5,6 +5,7 @@ Handles entity declarations including fields, constraints, state machines,
 access rules, invariants, and LLM cognition features.
 """
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
@@ -71,6 +72,7 @@ class EntityParserMixin:
         visibility_rules: list[ir.VisibilityRule] = []
         permission_rules: list[ir.PermissionRule] = []
         transitions: list[ir.StateTransition] = []
+        transition_effects: list[tuple[str, str, list[ir.StepEffect]]] = []
         invariants: list[ir.InvariantSpec] = []
         publishes: list[ir.PublishSpec] = []
         audit_config: ir.AuditConfig | None = None
@@ -425,6 +427,26 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # v0.39.0: Check for on_transition: block
+            if self.match(TokenType.ON_TRANSITION):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+
+                    effect_entry = self._parse_transition_effect()
+                    transition_effects.append(effect_entry)
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
             # v0.38.0: Check for seed: block
             if self.match(TokenType.SEED):
                 self.advance()
@@ -479,6 +501,12 @@ class EntityParserMixin:
             access = ir.AccessSpec(
                 visibility=visibility_rules,
                 permissions=permission_rules,
+            )
+
+        # Merge on_transition effects into transitions
+        if transition_effects:
+            transitions = _merge_transition_effects(
+                transitions, transition_effects, self.file, self.current_token().line
             )
 
         # Build state machine spec if transitions were defined
@@ -1234,6 +1262,128 @@ class EntityParserMixin:
 
         return guards, trigger, auto_spec
 
+    def _parse_transition_effect(self) -> tuple[str, str, list[ir.StepEffect]]:
+        """Parse a single on_transition effect entry.
+
+        Syntax:
+            from_state -> to_state:
+              create EntityName:
+                field: value
+              update EntityName:
+                where: field = self.id
+                field: value
+        """
+        # Parse from_state (* for wildcard, or identifier)
+        if self.match(TokenType.STAR):
+            self.advance()
+            from_state = "*"
+        else:
+            from_state = self.expect_identifier_or_keyword().value
+
+        self.expect(TokenType.ARROW)
+        to_state = self.expect_identifier_or_keyword().value
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        effects: list[ir.StepEffect] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            # Parse action keyword (create or update)
+            action_token = self.current_token()
+            action_str = str(action_token.value).lower()
+            if action_str == "create":
+                action = ir.EffectAction.CREATE
+            elif action_str == "update":
+                action = ir.EffectAction.UPDATE
+            else:
+                raise make_parse_error(
+                    f"Expected 'create' or 'update' in on_transition effect, got '{action_str}'",
+                    self.file,
+                    action_token.line,
+                    action_token.column,
+                )
+            self.advance()
+
+            # Parse entity name
+            entity_name = str(self.expect_identifier_or_keyword().value)
+            self.expect(TokenType.COLON)
+            self.skip_newlines()
+
+            # Parse effect body: field assignments + optional where
+            where_clause: str | None = None
+            assignments: list[ir.FieldAssignment] = []
+
+            if self.match(TokenType.INDENT):
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+
+                    token = self.current_token()
+                    field_name = str(token.value)
+
+                    if field_name.lower() == "where" or self.match(TokenType.WHERE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        where_clause = self._collect_line_text()
+                        self.skip_newlines()
+                    else:
+                        # field: value assignment
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        value = self._collect_line_text()
+                        assignments.append(
+                            ir.FieldAssignment(
+                                field_path=field_name,
+                                value=value,
+                            )
+                        )
+                        self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+
+            effects.append(
+                ir.StepEffect(
+                    action=action,
+                    entity_name=entity_name,
+                    where=where_clause,
+                    assignments=assignments,
+                )
+            )
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+        return (from_state, to_state, effects)
+
+    def _collect_line_text(self) -> str:
+        """Collect remaining tokens on the current line as a single string value.
+
+        Preserves string literal quoting and merges dots without spaces.
+        """
+        parts: list[str] = []
+        while not self.match(TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+            token = self.advance()
+            # Re-add quotes for string tokens so SideEffectExecutor can identify them
+            if token.type == TokenType.STRING:
+                val = f'"{token.value}"'
+            else:
+                val = str(token.value)
+            # Merge dots without spaces (e.g. self.field)
+            if val == "." and parts:
+                parts[-1] = parts[-1] + "."
+            elif parts and parts[-1].endswith("."):
+                parts[-1] = parts[-1] + val
+            else:
+                parts.append(val)
+        return " ".join(parts).strip()
+
     def _parse_computed_expr(self) -> ir.ComputedExpr:
         """
         Parse a computed field expression.
@@ -1624,3 +1774,43 @@ class EntityParserMixin:
             computed_fields=computed_fields,
             invariants=invariants,
         )
+
+
+def _merge_transition_effects(
+    transitions: list[ir.StateTransition],
+    effects: list[tuple[str, str, list[ir.StepEffect]]],
+    file: Path,
+    line: int,
+) -> list[ir.StateTransition]:
+    """Merge on_transition effects into existing StateTransition objects.
+
+    Matches (from_state, to_state) pairs and reconstructs frozen models
+    with effects attached. Raises ParseError for unmatched references.
+    """
+    # Index transitions by (from_state, to_state)
+    by_key: dict[tuple[str, str], int] = {}
+    for i, t in enumerate(transitions):
+        by_key[(t.from_state, t.to_state)] = i
+
+    result = list(transitions)
+    for from_state, to_state, step_effects in effects:
+        key = (from_state, to_state)
+        idx = by_key.get(key)
+        if idx is None:
+            raise make_parse_error(
+                f"on_transition references undefined transition: {from_state} -> {to_state}",
+                file,
+                line,
+                0,
+            )
+        old = result[idx]
+        result[idx] = ir.StateTransition(
+            from_state=old.from_state,
+            to_state=old.to_state,
+            trigger=old.trigger,
+            guards=old.guards,
+            auto_spec=old.auto_spec,
+            effects=list(old.effects) + step_effects,
+        )
+
+    return result

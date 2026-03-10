@@ -387,7 +387,13 @@ class IntegrationParserMixin:
                 label=label,
             )
 
-        if tok.type != TokenType.IDENTIFIER or tok.value not in _TRIGGER_TYPES:
+        # on_transition is a keyword token since v0.39.0
+        if self.match(TokenType.ON_TRANSITION):
+            self.advance()
+            trigger_type = ir.MappingTriggerType.ON_TRANSITION
+        elif tok.type == TokenType.IDENTIFIER and tok.value in _TRIGGER_TYPES:
+            trigger_type = _TRIGGER_TYPES[self.advance().value]
+        else:
             raise make_parse_error(
                 f"Expected trigger type (on_create, on_update, on_delete, "
                 f"on_transition, manual), got '{tok.value}'",
@@ -395,7 +401,6 @@ class IntegrationParserMixin:
                 tok.line,
                 tok.column,
             )
-        trigger_type = _TRIGGER_TYPES[self.advance().value]
 
         condition_expr = None
         from_state = None

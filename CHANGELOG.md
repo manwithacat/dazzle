@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Declarative transition side effects: `on_transition:` blocks fire `create`/`update` actions on entity state changes (#435)
+
 ## [0.38.0] - 2026-03-09
 
 ### Fixed

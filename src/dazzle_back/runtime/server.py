@@ -1626,6 +1626,49 @@ class DazzleBackendApp:
         except Exception as e:
             logging.getLogger("dazzle.server").warning("Failed to init SLA manager: %s", e)
 
+    def _init_transition_effects(self) -> None:
+        """Wire on_transition side effects into entity update callbacks (#435)."""
+        if not self._appspec:
+            return
+
+        from dazzle.core.ir.process import StepEffect
+
+        # Collect entities that have transitions with effects
+        entity_transitions: dict[str, list[tuple[str, str, list[StepEffect]]]] = {}
+        for entity in self._appspec.domain.entities:
+            if not entity.state_machine:
+                continue
+            for t in entity.state_machine.transitions:
+                if t.effects:
+                    entity_transitions.setdefault(entity.name, []).append(
+                        (t.from_state, t.to_state, list(t.effects))
+                    )
+
+        if not entity_transitions:
+            return
+
+        from dazzle_back.runtime.side_effect_executor import SideEffectExecutor
+        from dazzle_back.runtime.transition_effects import TransitionEffectRunner
+
+        executor = SideEffectExecutor(services=self._services)
+        runner = TransitionEffectRunner(
+            executor=executor,
+            entity_transitions=entity_transitions,
+            status_fields=self._entity_status_fields,
+        )
+
+        wired = 0
+        for entity_name in entity_transitions:
+            service = self._services.get(entity_name)
+            if service and isinstance(service, CRUDService):
+                service.on_updated(runner.on_entity_updated)
+                wired += 1
+
+        if wired:
+            logging.getLogger("dazzle.server").info(
+                "Transition effects wired for %d entity/entities", wired
+            )
+
     def _init_seed_runner(self) -> None:
         """Auto-seed reference data from entity seed templates at startup (#428)."""
         if not self._app or not self._appspec:
@@ -2237,6 +2280,9 @@ class DazzleBackendApp:
 
         # SLA runtime enforcement (v0.38.0)
         self._init_sla_manager()
+
+        # Transition side effects (v0.39.0, #435)
+        self._init_transition_effects()
 
         # Seed template auto-seeding at startup (v0.38.0, #428)
         self._init_seed_runner()
