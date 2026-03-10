@@ -21,6 +21,7 @@ def create_file_routes(
     prefix: str = "/files",
     require_auth: bool = False,
     max_upload_size: int = 10 * 1024 * 1024,  # 10MB default
+    field_size_overrides: dict[tuple[str, str], int] | None = None,
 ) -> None:
     """
     Add file upload routes to FastAPI app.
@@ -39,7 +40,7 @@ def create_file_routes(
         require_auth: Whether to require authentication
     """
     try:
-        from fastapi import Depends, File, HTTPException, Query, Request, UploadFile
+        from fastapi import File, HTTPException, Query, Request, UploadFile
         from fastapi.responses import Response, StreamingResponse
     except ImportError:
         raise ImportError("FastAPI is required for file routes. Install with: pip install fastapi")
@@ -51,24 +52,17 @@ def create_file_routes(
     from .image_processor import ImageProcessor, ThumbnailService
 
     thumbnail_service = ThumbnailService()
+    _overrides = field_size_overrides or {}
 
-    def _check_content_length(request: Request) -> None:
-        """Reject requests whose Content-Length exceeds the upload size limit."""
-        content_length = request.headers.get("content-length")
-        if content_length is not None:
-            try:
-                if int(content_length) > max_upload_size:
-                    raise HTTPException(
-                        status_code=413,
-                        detail=(
-                            f"Request body too large. "
-                            f"Maximum upload size is {max_upload_size // (1024 * 1024)}MB."
-                        ),
-                    )
-            except ValueError:
-                pass  # Non-integer Content-Length — let downstream handle it
+    def _effective_max_size(entity: str | None, field: str | None) -> int:
+        """Return the upload size limit for this entity/field, or the global default."""
+        if entity and field:
+            override = _overrides.get((entity, field))
+            if override is not None:
+                return override
+        return max_upload_size
 
-    @app.post(f"{prefix}/upload", dependencies=[Depends(_check_content_length)])
+    @app.post(f"{prefix}/upload")
     @_rl.limiter.limit(_rl.upload_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def upload_file(
         request: Request,
@@ -82,6 +76,22 @@ def create_file_routes(
 
         Returns file metadata including ID and URLs.
         """
+        # Check Content-Length against the effective limit for this entity/field
+        limit = _effective_max_size(entity, field)
+        content_length = request.headers.get("content-length")
+        if content_length is not None:
+            try:
+                if int(content_length) > limit:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            f"Request body too large. "
+                            f"Maximum upload size is {limit // (1024 * 1024)}MB."
+                        ),
+                    )
+            except ValueError:
+                pass
+
         try:
             # Read file content
             content = await file.read()

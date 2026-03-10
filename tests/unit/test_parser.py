@@ -2692,5 +2692,64 @@ entity Order "Order":
             parse_dsl(dsl, Path("test.dsl"))
 
 
+class TestFileMaxSizeParsing:
+    """Test file(SIZE) max_size parsing (#436)."""
+
+    def test_file_with_mb_size(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Document "Document":
+  id: uuid pk
+  raw_file: file(200MB)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        entity = fragment.entities[0]
+        field = entity.fields[1]  # raw_file
+        assert field.type.kind.value == "file"
+        assert field.type.max_size == 200 * 1024 * 1024
+
+    def test_file_with_gb_size(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Archive "Archive":
+  id: uuid pk
+  backup: file(1GB)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        field = fragment.entities[0].fields[1]
+        assert field.type.max_size == 1 * 1024 * 1024 * 1024
+
+    def test_file_with_kb_size(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Config "Config":
+  id: uuid pk
+  logo: file(500KB)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        field = fragment.entities[0].fields[1]
+        assert field.type.max_size == 500 * 1024
+
+    def test_file_without_size(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Doc "Doc":
+  id: uuid pk
+  attachment: file
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        field = fragment.entities[0].fields[1]
+        assert field.type.kind.value == "file"
+        assert field.type.max_size is None
+
+
 if __name__ == "__main__":
     main()

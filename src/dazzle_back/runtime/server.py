@@ -2151,10 +2151,22 @@ class DazzleBackendApp:
             # Profile-based upload size limits (v1.0.0)
             _upload_limits = {"basic": 50, "standard": 10, "strict": 5}
             _max_mb = _upload_limits.get(self._security_profile, 10)
+
+            # Per-entity/field size overrides from DSL (v0.39.0, #436)
+            _field_size_overrides: dict[tuple[str, str], int] = {}
+            if self._appspec:
+                from dazzle.core.ir.fields import FieldTypeKind
+
+                for _ent in self._appspec.domain.entities:
+                    for _f in _ent.fields:
+                        if _f.type.kind == FieldTypeKind.FILE and _f.type.max_size:
+                            _field_size_overrides[(_ent.name, _f.name)] = _f.type.max_size
+
             create_file_routes(
                 self._app,
                 self._file_service,
                 max_upload_size=_max_mb * 1024 * 1024,
+                field_size_overrides=_field_size_overrides,
             )
             create_static_file_routes(
                 self._app,

@@ -126,10 +126,15 @@ class TypeParserMixin:
                 self.expect(TokenType.RPAREN)
             return ir.FieldType(kind=ir.FieldTypeKind.MONEY, currency_code=currency_code)
 
-        # file (v0.9.5)
+        # file or file(200MB) (v0.9.5, v0.39.0)
         elif token.value == "file":
             self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.FILE)
+            max_size = None
+            if self.match(TokenType.LPAREN):
+                self.advance()
+                max_size = self._parse_size_literal()
+                self.expect(TokenType.RPAREN)
+            return ir.FieldType(kind=ir.FieldTypeKind.FILE, max_size=max_size)
 
         # url (v0.9.5)
         elif token.value == "url":
@@ -472,6 +477,29 @@ class TypeParserMixin:
         ):
             return True
         return False
+
+    def _parse_size_literal(self) -> int:
+        """Parse a size literal like 200MB, 1GB, 500KB.
+
+        Returns size in bytes.
+        """
+        from ..errors import make_parse_error
+
+        num_token = self.expect(TokenType.NUMBER)
+        value = int(num_token.value)
+
+        unit_token = self.current_token()
+        unit = str(unit_token.value).upper()
+        _SIZE_UNITS = {"KB": 1024, "MB": 1024 * 1024, "GB": 1024 * 1024 * 1024}
+        if unit not in _SIZE_UNITS:
+            raise make_parse_error(
+                f"Expected size unit (KB, MB, GB), got '{unit_token.value}'",
+                self.file,
+                unit_token.line,
+                unit_token.column,
+            )
+        self.advance()
+        return value * _SIZE_UNITS[unit]
 
     def _parse_field_spec(self) -> ir.FieldSpec:
         """Parse a single field: ``name: type [modifiers] [=default]``.

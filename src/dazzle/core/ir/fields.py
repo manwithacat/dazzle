@@ -95,6 +95,8 @@ class FieldType(BaseModel):
     currency_code: str | None = None  # for money (e.g., "GBP", "USD", "EUR")
     # v0.9.5: Many-to-many via junction table
     via_entity: str | None = None  # for has_many with junction table (m:n relationship)
+    # v0.39.0: Per-field upload size limit
+    max_size: int | None = None  # for file (bytes, e.g., 200*1024*1024 for 200MB)
 
     model_config = ConfigDict(frozen=True)
 
