@@ -472,6 +472,7 @@ class TokenType(Enum):
     NAV_GROUP = "nav_group"
     ICON = "icon"
     COLLAPSED = "collapsed"
+    CONTEXT_SELECTOR = "context_selector"
 
     # Comparison operators (for condition expressions)
     DOUBLE_EQUALS = "=="

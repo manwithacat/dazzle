@@ -71,6 +71,7 @@ class WorkspaceParserMixin:
         nav_groups: list[ir.NavGroupSpec] = []
         ux_spec = None
         access_spec = None
+        context_selector = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -99,6 +100,10 @@ class WorkspaceParserMixin:
                 stage = self.expect(TokenType.STRING).value
                 self.skip_newlines()
 
+            # context_selector:
+            elif self.match(TokenType.CONTEXT_SELECTOR):
+                context_selector = self._parse_context_selector()
+
             # nav_group "Label" [icon=name] [collapsed]:
             elif self.match(TokenType.NAV_GROUP):
                 nav_groups.append(self._parse_nav_group())
@@ -126,6 +131,7 @@ class WorkspaceParserMixin:
             nav_groups=nav_groups,
             ux=ux_spec,
             access=access_spec,
+            context_selector=context_selector,
             source=loc,
         )
 
@@ -169,6 +175,64 @@ class WorkspaceParserMixin:
             self.file,
             token.line,
             token.column,
+        )
+
+    def _parse_context_selector(self) -> ir.ContextSelectorSpec:
+        """
+        Parse context_selector block within a workspace.
+
+        Syntax:
+            context_selector:
+              entity: School
+              display_field: name
+              scope_field: trust
+        """
+        self.advance()  # consume context_selector
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        entity: str | None = None
+        display_field = "name"
+        scope_field: str | None = None
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            key_token = self.expect_identifier_or_keyword()
+            key = key_token.value
+            self.expect(TokenType.COLON)
+
+            if key == "entity":
+                entity = self.expect_identifier_or_keyword().value
+            elif key == "display_field":
+                display_field = self.expect_identifier_or_keyword().value
+            elif key == "scope_field":
+                scope_field = self.expect_identifier_or_keyword().value
+            else:
+                # Skip unknown keys — consume tokens until newline
+                while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                    self.advance()
+
+            self.skip_newlines()
+
+        self.expect(TokenType.DEDENT)
+
+        if not entity:
+            token = self.current_token()
+            raise make_parse_error(
+                "context_selector requires 'entity:' field",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        return ir.ContextSelectorSpec(
+            entity=entity,
+            display_field=display_field,
+            scope_field=scope_field,
         )
 
     def _parse_hyphenated_identifier(self) -> str:

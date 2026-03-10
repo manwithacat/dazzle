@@ -647,6 +647,7 @@ from .webhooks import (
 
 # Workspaces
 from .workspaces import (
+    ContextSelectorSpec,
     DisplayMode,
     NavGroupSpec,
     NavItemIR,
@@ -714,6 +715,7 @@ __all__ = [
     # Workspaces
     "DisplayMode",
     "NavGroupSpec",
+    "ContextSelectorSpec",
     "NavItemIR",
     "WorkspaceAccessLevel",
     "WorkspaceAccessSpec",

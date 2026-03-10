@@ -2429,5 +2429,109 @@ workspace dashboard "Dashboard":
         assert ws.nav_groups == []
 
 
+class TestContextSelectorParsing:
+    """Test context_selector parsing within workspaces (#432)."""
+
+    def test_context_selector_basic(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity School "School":
+  id: uuid pk
+  name: str(100) required
+
+entity Student "Student":
+  id: uuid pk
+
+workspace school_dashboard "School Dashboard":
+  context_selector:
+    entity: School
+    display_field: name
+
+  students:
+    source: Student
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert ws.context_selector is not None
+        assert ws.context_selector.entity == "School"
+        assert ws.context_selector.display_field == "name"
+        assert ws.context_selector.scope_field is None
+
+    def test_context_selector_with_scope_field(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Trust "Trust":
+  id: uuid pk
+
+entity School "School":
+  id: uuid pk
+  name: str(100) required
+  trust: ref Trust
+
+entity Student "Student":
+  id: uuid pk
+
+workspace school_dashboard "School Dashboard":
+  context_selector:
+    entity: School
+    display_field: name
+    scope_field: trust
+
+  students:
+    source: Student
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert ws.context_selector is not None
+        assert ws.context_selector.entity == "School"
+        assert ws.context_selector.display_field == "name"
+        assert ws.context_selector.scope_field == "trust"
+
+    def test_context_selector_defaults_display_field(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity School "School":
+  id: uuid pk
+  name: str(100) required
+
+entity Student "Student":
+  id: uuid pk
+
+workspace school_dashboard "School Dashboard":
+  context_selector:
+    entity: School
+
+  students:
+    source: Student
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert ws.context_selector is not None
+        assert ws.context_selector.entity == "School"
+        assert ws.context_selector.display_field == "name"  # default
+
+    def test_workspace_without_context_selector(self):
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity Task "Task":
+  id: uuid pk
+
+workspace dashboard "Dashboard":
+  tasks:
+    source: Task
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        ws = fragment.workspaces[0]
+        assert ws.context_selector is None
+
+
 if __name__ == "__main__":
     main()
