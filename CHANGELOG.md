@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.1] - 2026-03-10
+
 ### Added
 - Declarative transition side effects: `on_transition:` blocks fire `create`/`update` actions on entity state changes (#435)
 - Configurable per-field max upload size: `file(200MB)` DSL syntax overrides global security profile limit (#436)
