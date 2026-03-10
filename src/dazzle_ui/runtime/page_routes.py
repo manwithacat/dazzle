@@ -665,6 +665,8 @@ def create_page_routes(
                     user_name = ""
                     user_roles: list[str] = []
 
+                    user_preferences: dict[str, object] = {}
+
                     if get_auth_context is not None:
                         try:
                             auth_ctx = get_auth_context(request)
@@ -673,6 +675,7 @@ def create_page_routes(
                                 user_email = auth_ctx.user.email if auth_ctx.user else ""
                                 user_name = auth_ctx.user.username if auth_ctx.user else ""
                                 user_roles = list(getattr(auth_ctx.user, "roles", None) or [])
+                                user_preferences = auth_ctx.preferences or {}
                                 # Filter nav by persona access.
                                 # Roles use "role_" prefix; persona IDs don't.
                                 normalized_roles = [r.removeprefix("role_") for r in user_roles]
@@ -719,6 +722,7 @@ def create_page_routes(
                         html = render_fragment(
                             "workspace/_content.html",
                             workspace=ws_context,
+                            user_preferences=user_preferences,
                         )
                         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
                         return HTMLResponse(content=html, headers=headers)
@@ -733,6 +737,7 @@ def create_page_routes(
                         is_authenticated=is_authenticated,
                         user_email=user_email,
                         user_name=user_name,
+                        user_preferences=user_preferences,
                         _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
                     )
                     return HTMLResponse(content=html)
