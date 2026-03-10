@@ -57,6 +57,7 @@ VALID_HOOK_POINTS = frozenset(
         "entity.post_update",
         "entity.pre_delete",
         "entity.post_delete",
+        "entity.post_upload",
         "transition.pre_transition",
         "transition.post_transition",
     }

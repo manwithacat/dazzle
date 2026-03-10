@@ -1964,6 +1964,26 @@ class DazzleBackendApp:
             for h in registry.get_hooks("entity.post_delete", entity_name):
                 service.on_deleted(h.function)
 
+        # Wire post_upload hooks to file upload callbacks (v0.39.0, #437)
+        if hasattr(self, "_upload_callbacks"):
+            for _service_name, service in self._services.items():
+                if not isinstance(service, CRUDService):
+                    continue
+                _ename = service.entity_name
+                for h in registry.get_hooks("entity.post_upload", _ename):
+                    _hook_fn = h.function
+
+                    async def _upload_hook(
+                        entity_name: str,
+                        entity_id: str,
+                        field_name: str,
+                        file_meta: dict[str, Any],
+                        fn: Any = _hook_fn,
+                    ) -> None:
+                        await fn(entity_name, entity_id, file_meta)
+
+                    self._upload_callbacks.append(_upload_hook)
+
     def _setup_auth(self) -> tuple[Any, Any]:
         """Initialize auth store, middleware, and social auth.
 
@@ -2162,11 +2182,33 @@ class DazzleBackendApp:
                         if _f.type.kind == FieldTypeKind.FILE and _f.type.max_size:
                             _field_size_overrides[(_ent.name, _f.name)] = _f.type.max_size
 
+            # Post-upload callbacks: event bus + hook registry (v0.39.0, #437)
+            # Stored on self so hook registry wiring can append later.
+            self._upload_callbacks: list[Any] = []
+            _upload_callbacks = self._upload_callbacks
+
+            from dazzle_back.runtime.event_bus import get_event_bus
+
+            _upload_bus = get_event_bus()
+
+            async def _on_file_uploaded(
+                entity_name: str,
+                entity_id: str,
+                field_name: str,
+                file_meta: dict[str, Any],
+                bus: Any = _upload_bus,
+            ) -> None:
+                data = {"field_name": field_name, **file_meta}
+                await bus.emit_file_uploaded(entity_name, entity_id, data)
+
+            _upload_callbacks.append(_on_file_uploaded)
+
             create_file_routes(
                 self._app,
                 self._file_service,
                 max_upload_size=_max_mb * 1024 * 1024,
                 field_size_overrides=_field_size_overrides,
+                on_upload_callbacks=_upload_callbacks,
             )
             create_static_file_routes(
                 self._app,

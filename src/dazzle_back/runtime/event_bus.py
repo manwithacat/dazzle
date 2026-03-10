@@ -30,6 +30,7 @@ class EntityEventType(StrEnum):
     CREATED = "entity:created"
     UPDATED = "entity:updated"
     DELETED = "entity:deleted"
+    FILE_UPLOADED = "entity:file_uploaded"
 
 
 class LLMEventType(StrEnum):
@@ -236,6 +237,23 @@ class EntityEventBus:
             entity_name=entity_name,
             entity_id=str(entity_id),
             data=None,
+            user_id=user_id,
+        )
+        await self.emit(event)
+
+    async def emit_file_uploaded(
+        self,
+        entity_name: str,
+        entity_id: str | UUID,
+        data: dict[str, Any],
+        user_id: str | None = None,
+    ) -> None:
+        """Emit an entity file_uploaded event."""
+        event = EntityEvent(
+            event_type=EntityEventType.FILE_UPLOADED,
+            entity_name=entity_name,
+            entity_id=str(entity_id),
+            data=data,
             user_id=user_id,
         )
         await self.emit(event)

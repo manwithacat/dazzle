@@ -5,6 +5,7 @@ Provides REST endpoints for file upload, download, and management.
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Any
 from uuid import UUID
 
@@ -14,6 +15,9 @@ from .file_storage import FileService
 
 logger = logging.getLogger(__name__)
 
+# Callback type: (entity_name, entity_id, field_name, file_metadata_dict) -> None
+UploadCallback = Callable[[str, str, str, dict[str, Any]], Awaitable[None]]
+
 
 def create_file_routes(
     app: FastAPI,
@@ -22,6 +26,7 @@ def create_file_routes(
     require_auth: bool = False,
     max_upload_size: int = 10 * 1024 * 1024,  # 10MB default
     field_size_overrides: dict[tuple[str, str], int] | None = None,
+    on_upload_callbacks: list[UploadCallback] | None = None,
 ) -> None:
     """
     Add file upload routes to FastAPI app.
@@ -53,6 +58,7 @@ def create_file_routes(
 
     thumbnail_service = ThumbnailService()
     _overrides = field_size_overrides or {}
+    _upload_cbs = on_upload_callbacks or []
 
     def _effective_max_size(entity: str | None, field: str | None) -> int:
         """Return the upload size limit for this entity/field, or the global default."""
@@ -132,7 +138,7 @@ def create_file_routes(
                 except Exception:
                     logger.warning("Thumbnail generation failed", exc_info=True)
 
-            return {
+            result = {
                 "id": str(metadata.id),
                 "filename": metadata.filename,
                 "content_type": metadata.content_type,
@@ -141,6 +147,16 @@ def create_file_routes(
                 "thumbnail_url": thumbnail_url,
                 "created_at": metadata.created_at.isoformat(),
             }
+
+            # Fire post-upload callbacks when entity context is provided
+            if entity and entity_id and field and _upload_cbs:
+                for cb in _upload_cbs:
+                    try:
+                        await cb(entity, entity_id, field, result)
+                    except Exception:
+                        logger.warning("Post-upload callback failed", exc_info=True)
+
+            return result
 
         except FileValidationError as e:
             logger.error("File validation failed: %s", e)
