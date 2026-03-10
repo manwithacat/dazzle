@@ -1870,6 +1870,8 @@ class DazzleBackendApp:
 
     def _setup_database(self) -> None:
         """Initialize database backend, run migrations, create repositories."""
+        import os
+
         if not self._database_url:
             raise ValueError(
                 "database_url is required. Set DATABASE_URL environment variable "
@@ -1884,6 +1886,19 @@ class DazzleBackendApp:
             self._entities,
             record_history=True,
         )
+
+        # Open connection pool and register lifecycle events (#438)
+        pool_min = int(os.environ.get("DAZZLE_DB_POOL_MIN", "2"))
+        pool_max = int(os.environ.get("DAZZLE_DB_POOL_MAX", "10"))
+        db_manager = self._db_manager
+
+        @self._app.on_event("startup")
+        async def _open_db_pool() -> None:
+            db_manager.open_pool(min_size=pool_min, max_size=pool_max)
+
+        @self._app.on_event("shutdown")
+        async def _close_db_pool() -> None:
+            db_manager.close_pool()
 
         # Build relation loader for nested ref resolution (#272)
         from dazzle_back.runtime.relation_loader import RelationLoader, RelationRegistry

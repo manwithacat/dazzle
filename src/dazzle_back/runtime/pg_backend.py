@@ -117,6 +117,10 @@ class PostgresBackend:
 
     Drop-in replacement for DatabaseManager that uses PostgreSQL
     instead of SQLite. Parses DATABASE_URL for connection parameters.
+
+    Supports optional connection pooling via psycopg_pool.ConnectionPool.
+    Call open_pool() to enable pooling; connection() will then lease from
+    the pool instead of opening a fresh TCP connection per call.
     """
 
     def __init__(self, database_url: str, search_path: str | None = None):
@@ -131,6 +135,36 @@ class PostgresBackend:
         self.database_url = database_url
         self.search_path = search_path
         self._connection: Any = None
+        self._pool: Any = None
+
+    def open_pool(self, min_size: int = 2, max_size: int = 10) -> None:
+        """Open a connection pool for this backend.
+
+        Once opened, connection() leases from the pool instead of
+        creating a fresh TCP connection per call.
+
+        Args:
+            min_size: Minimum number of connections to keep open.
+            max_size: Maximum number of connections allowed.
+        """
+        from psycopg.rows import dict_row
+        from psycopg_pool import ConnectionPool
+
+        self._pool = ConnectionPool(
+            self.database_url,
+            min_size=min_size,
+            max_size=max_size,
+            kwargs={"row_factory": dict_row},
+            open=True,
+        )
+        logger.info("Connection pool opened (min=%d, max=%d)", min_size, max_size)
+
+    def close_pool(self) -> None:
+        """Close the connection pool, if open."""
+        if self._pool is not None:
+            self._pool.close()
+            self._pool = None
+            logger.info("Connection pool closed")
 
     @property
     def _sa_url(self) -> str:
@@ -145,10 +179,22 @@ class PostgresBackend:
         """
         Get a database connection context manager.
 
+        When a pool is open, leases a connection from the pool.
+        Otherwise falls back to a direct connection (needed for
+        migrations that run before the pool is opened).
+
         Yields a wrapped psycopg connection with dict_row factory.
         Rows support string key access (row["col"]).
         The wrapper adds .execute() for sqlite3 API compatibility.
         """
+        if self._pool is not None:
+            with self._pool.connection() as conn:
+                if self.search_path:
+                    conn.execute(f"SET search_path TO {self.search_path}, public")
+                yield PgConnectionWrapper(conn)
+            return
+
+        # Direct-connect fallback (pre-pool: migrations, build-time)
         import psycopg
         from psycopg.rows import dict_row
 
