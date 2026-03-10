@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-03-09
+
 ### Fixed
 - Nav group `items` key collision with Python `dict.items()` in Jinja2 — renamed to `children` to fix TypeError/500 on workspace pages with nav_groups (#421)
 
@@ -31,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Linear checkpointed process executor: sequential step execution with checkpoint-based resume on restart
 - Async job execution: `POST /_dazzle/llm/execute/{intent_name}?async_mode=true` queues jobs and returns `job_id`; poll with `GET /_dazzle/llm/jobs/{job_id}`
 - MCP `graph` tool: new `triggers` operation shows cross-references (what fires when entity X event Y occurs)
+- Workspace context selector: multi-scope users get a dropdown to filter all workspace regions by a scope entity (e.g., School) with preference persistence (#425)
+- DSL-driven reference data seeding: entities with `seed:` blocks auto-generate rolling-window rows (academic years, fiscal years) at server startup with idempotent upsert (#428)
+- FK traversal support in workspace region filter validation (#419)
 
 ## [0.37.0] - 2026-03-07
 
