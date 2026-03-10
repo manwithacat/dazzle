@@ -9,8 +9,19 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from uuid import uuid4
 
 logger = logging.getLogger(__name__)
+
+
+def _find_uuid_pk_field(entity: Any) -> str | None:
+    """Return the name of the UUID pk field, or None if not applicable."""
+    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
+
+    for f in entity.fields:
+        if FieldModifier.PK in f.modifiers and f.type.kind == FieldTypeKind.UUID:
+            return str(f.name)
+    return None
 
 
 async def run_seed_templates(
@@ -51,6 +62,9 @@ async def run_seed_templates(
             )
             continue
 
+        # Detect UUID pk field for auto-generation
+        pk_field = _find_uuid_pk_field(entity)
+
         for row in rows:
             match_value = row.get(match_field)
             if match_value is None:
@@ -67,6 +81,10 @@ async def run_seed_templates(
                     # Row exists, skip
                     total += 1
                     continue
+
+                # Auto-generate UUID pk if not provided
+                if pk_field and pk_field not in row:
+                    row[pk_field] = str(uuid4())
 
                 # Create new row
                 await repo.create(row)
