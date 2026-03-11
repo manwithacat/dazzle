@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from dazzle.core.ir.rhythm import LifecycleReport, LifecycleStep
 
 from .common import error_response, load_project_appspec, wrap_handler_errors
+
+StepStatus = Literal["complete", "partial", "not_started"]
+Maturity = Literal["new_domain", "building", "evaluating", "mature"]
 
 
 @wrap_handler_errors
@@ -83,7 +86,7 @@ def get_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Evaluate a rhythm — static analysis of completeness, or submit scores."""
     app_spec = load_project_appspec(project_root)
-    name = args.get("name")
+    name: str = args.get("name", "")
     action = args.get("action", "evaluate")
 
     rhythm = None
@@ -262,7 +265,8 @@ def _load_latest_scores(project_root: Path, rhythm_name: str) -> list[dict[str, 
     for f in files:
         data = json.loads(f.read_text())
         if data.get("rhythm") == rhythm_name:
-            return data.get("evaluations")
+            evals: list[dict[str, Any]] | None = data.get("evaluations")
+            return evals
     return None
 
 
@@ -744,7 +748,7 @@ def _seed_gap_relations(gaps: list[dict[str, Any]]) -> None:
             gap_id = f"gap:{gap['kind']}:{hashlib.md5(gap['description'].encode(), usedforsecurity=False).hexdigest()[:8]}"
             scene_id = f"scene:{gap['rhythm']}.{gap['scene']}"
             try:
-                graph.store.create_relation(
+                graph.create_relation(
                     source_id=gap_id,
                     target_id=scene_id,
                     relation_type="gap_blocks_scene",
@@ -853,7 +857,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Step 1: model_domain — entities exist with fields
     entities_with_fields = [e for e in app_spec.domain.entities if getattr(e, "fields", None)]
     if entities_with_fields:
-        s1_status = "complete"
+        s1_status: StepStatus = "complete"
         s1_evidence = f"{len(entities_with_fields)} entities with fields"
         s1_suggestions: list[str] = []
     else:
@@ -873,7 +877,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Step 2: write_stories — at least one ACCEPTED story
     accepted_stories = [s for s in app_spec.stories if s.status == StoryStatus.ACCEPTED]
     if accepted_stories:
-        s2_status = "complete"
+        s2_status: StepStatus = "complete"
         s2_evidence = f"{len(accepted_stories)} accepted stories"
         s2_suggestions: list[str] = []
     elif app_spec.stories:
@@ -898,7 +902,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     all_persona_ids = {p.id for p in app_spec.personas}
     personas_with_rhythms = {r.persona for r in app_spec.rhythms}
     if app_spec.rhythms and personas_with_rhythms >= all_persona_ids:
-        s3_status = "complete"
+        s3_status: StepStatus = "complete"
         s3_evidence = (
             f"{len(app_spec.rhythms)} rhythms covering "
             f"{len(personas_with_rhythms)}/{len(all_persona_ids)} personas"
@@ -932,7 +936,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     scenes_with_story = [s for s in all_scenes if s[1]]
     if all_scenes and len(scenes_with_story) == len(all_scenes):
-        s4_status = "complete"
+        s4_status: StepStatus = "complete"
         s4_evidence = f"All {len(all_scenes)} scenes mapped to stories"
         s4_suggestions: list[str] = []
     elif scenes_with_story:
@@ -958,7 +962,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     td_dir = project_root / ".dazzle" / "test_designs"
     td_files = list(td_dir.glob("*.json")) if td_dir.exists() else []
     if td_files:
-        s5_status = "complete"
+        s5_status: StepStatus = "complete"
         s5_evidence = f"{len(td_files)} test design files"
         s5_suggestions: list[str] = []
     else:
@@ -979,7 +983,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     eval_dir = project_root / ".dazzle" / "evaluations"
     eval_files = list(eval_dir.glob("eval-*.json")) if eval_dir.exists() else []
     if eval_files:
-        s6_status = "complete"
+        s6_status: StepStatus = "complete"
         s6_evidence = f"{len(eval_files)} evaluation files"
         s6_suggestions: list[str] = []
     else:
@@ -999,7 +1003,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Step 7: find_gaps — .dazzle/evaluations/gaps-*.json exists
     gap_files = list(eval_dir.glob("gaps-*.json")) if eval_dir.exists() else []
     if gap_files:
-        s7_status = "complete"
+        s7_status: StepStatus = "complete"
         s7_evidence = f"{len(gap_files)} gap analysis files"
         s7_suggestions: list[str] = []
     else:
@@ -1019,7 +1023,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Step 8: iterate — always "partial" if any other step is complete
     any_complete = any(s.status == "complete" for s in steps)
     if any_complete:
-        s8_status = "partial"
+        s8_status: StepStatus = "partial"
         s8_evidence = "Iteration is ongoing"
         s8_suggestions: list[str] = ["Continue refining based on gap analysis"]
     else:
@@ -1050,7 +1054,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
             "find_gaps",
         ]
     ):
-        maturity = "mature"
+        maturity: Maturity = "mature"
     elif all(
         step_statuses.get(n) == "complete"
         for n in [

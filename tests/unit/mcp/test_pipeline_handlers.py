@@ -669,12 +669,22 @@ class TestPipelineSummaryIntegration:
             {"coverage_score": 0.9, "gaps": []}
         )
 
+        mock_rhythm = MagicMock()
+        mock_rhythm.gaps_rhythm_handler.return_value = json.dumps(
+            {
+                "gaps": [],
+                "summary": {"total": 0, "by_kind": {}, "by_severity": {}, "by_persona": {}},
+                "roadmap_order": [],
+            }
+        )
+
         handler_mods = {
             "dazzle.mcp.server.handlers.dsl": mock_dsl,
             "dazzle.mcp.server.handlers.fidelity": mock_fidelity,
             "dazzle.mcp.server.handlers.composition": mock_composition,
             "dazzle.mcp.server.handlers.dsl_test": mock_dsl_test,
             "dazzle.mcp.server.handlers.process": mock_process,
+            "dazzle.mcp.server.handlers.rhythm": mock_rhythm,
             "dazzle.mcp.server.handlers.test_design": mock_test_design,
             "dazzle.mcp.event_first_tools": None,  # triggers skipped steps
         }
@@ -715,6 +725,7 @@ class TestPipelineSummaryIntegration:
 
         handler_mods = {
             "dazzle.mcp.server.handlers.dsl": mock_dsl,
+            "dazzle.mcp.server.handlers.rhythm": MagicMock(),
             "dazzle.mcp.event_first_tools": None,
         }
         with patch.dict(sys.modules, handler_mods):
