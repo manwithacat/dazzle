@@ -1,0 +1,20 @@
+{# Select result fragment: OOB swap fragments for autofill after selection #}
+
+<div class="p-3 text-sm text-success">Selected: {{ display_val }}</div>
+
+{# Hidden value input #}
+<input type="hidden" name="{{ field_name }}" id="field-{{ field_name }}"
+       data-dazzle-field="{{ field_name }}" value="{{ selected_value }}"
+       hx-swap-oob="true" />
+
+{# Visible search input updated with display value #}
+<input type="text" id="search-input-{{ field_name }}"
+       class="input input-bordered w-full" value="{{ display_val }}"
+       hx-swap-oob="true" />
+
+{# Autofill mapped fields #}
+{% for form_field, field_value in autofill_values %}
+<input id="field-{{ form_field }}" name="{{ form_field }}"
+       data-dazzle-field="{{ form_field }}" value="{{ field_value }}"
+       hx-swap-oob="true" />
+{% endfor %}

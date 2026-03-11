@@ -993,12 +993,16 @@ class DazzleBackendApp:
                     config.github_client_secret = client_secret
                     any_configured = True
                 else:
-                    missing = []
+                    # Log which env vars are missing (names only, never values)
+                    missing_names: list[str] = []
                     if not client_id:
-                        missing.append(provider_cfg.client_id_env)
+                        missing_names.append("client_id")
                     if not client_secret:
-                        missing.append(provider_cfg.client_secret_env)
-                    logger.warning("GitHub OAuth: %s not set", ", ".join(missing))
+                        missing_names.append("client_secret")
+                    logger.warning(
+                        "GitHub OAuth: missing env vars for %s",
+                        ", ".join(missing_names),
+                    )
 
             elif provider == "apple":
                 # Apple requires team_id, key_id, private_key, bundle_id

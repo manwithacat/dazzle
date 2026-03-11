@@ -196,9 +196,17 @@ const dz = (() => {
         const msgEl = dialog.querySelector("[data-dz-dialog-message]");
         if (msgEl) msgEl.textContent = message;
       }
-      // Only allow relative URLs as actions (prevent javascript:, data:, etc.)
-      dialog.dataset.action = action && action.startsWith("/") ? action : "";
-      dialog.dataset.method = method;
+      // Sanitize: only allow safe relative URL paths as actions
+      const safeAction =
+        action && /^\/[\w/\-?.=&%]+$/.test(action) ? action : "";
+      // Sanitize: only allow known HTTP methods
+      const safeMethod = ["delete", "post", "put", "patch"].includes(
+        method.toLowerCase(),
+      )
+        ? method
+        : "delete";
+      dialog.dataset.action = safeAction;
+      dialog.dataset.method = safeMethod;
       dialog.dataset.target = target;
       dialog.dataset.swap = swap;
       // Store reference to triggering element for htmx context
@@ -277,7 +285,9 @@ const dz = (() => {
     if (!container) return;
     const alert = document.createElement("div");
     alert.className = `alert alert-${type} dz-toast-enter`;
-    alert.innerHTML = `<span>${escapeHtml(message)}</span>`;
+    const span = document.createElement("span");
+    span.textContent = message;
+    alert.appendChild(span);
     container.appendChild(alert);
     // Trigger enter animation
     requestAnimationFrame(() => alert.classList.remove("dz-toast-enter"));
@@ -598,10 +608,35 @@ const dz = (() => {
 
   /** ISO 4217 currency scales (mirrors money.py CURRENCY_SCALES) */
   const CURRENCY_SCALES = {
-    GBP: 2, USD: 2, EUR: 2, AUD: 2, CAD: 2, CHF: 2, CNY: 2, INR: 2,
-    NZD: 2, SGD: 2, HKD: 2, SEK: 2, NOK: 2, DKK: 2, ZAR: 2, MXN: 2,
-    BRL: 2, JPY: 0, KRW: 0, VND: 0, CLP: 0, ISK: 0, BHD: 3, KWD: 3,
-    OMR: 3, TND: 3, JOD: 3, IQD: 3, LYD: 3,
+    GBP: 2,
+    USD: 2,
+    EUR: 2,
+    AUD: 2,
+    CAD: 2,
+    CHF: 2,
+    CNY: 2,
+    INR: 2,
+    NZD: 2,
+    SGD: 2,
+    HKD: 2,
+    SEK: 2,
+    NOK: 2,
+    DKK: 2,
+    ZAR: 2,
+    MXN: 2,
+    BRL: 2,
+    JPY: 0,
+    KRW: 0,
+    VND: 0,
+    CLP: 0,
+    ISK: 0,
+    BHD: 3,
+    KWD: 3,
+    OMR: 3,
+    TND: 3,
+    JOD: 3,
+    IQD: 3,
+    LYD: 3,
   };
 
   /**
@@ -621,8 +656,10 @@ const dz = (() => {
     function getScale() {
       // For select-based (unpinned), read from selected option
       if (currencyEl && currencyEl.tagName === "SELECT") {
-        const opt = /** @type {HTMLSelectElement} */ (currencyEl).selectedOptions[0];
-        if (opt && opt.dataset.scale !== undefined) return parseInt(opt.dataset.scale, 10);
+        const opt = /** @type {HTMLSelectElement} */ (currencyEl)
+          .selectedOptions[0];
+        if (opt && opt.dataset.scale !== undefined)
+          return parseInt(opt.dataset.scale, 10);
       }
       // Fallback: container data-dz-scale or lookup by currency
       const scaleAttr = container.getAttribute("data-dz-scale");
@@ -671,7 +708,8 @@ const dz = (() => {
     // Currency dropdown change (unpinned)
     if (currencyEl && currencyEl.tagName === "SELECT") {
       currencyEl.addEventListener("change", () => {
-        const opt = /** @type {HTMLSelectElement} */ (currencyEl).selectedOptions[0];
+        const opt = /** @type {HTMLSelectElement} */ (currencyEl)
+          .selectedOptions[0];
         // Update container scale attr
         if (opt && opt.dataset.scale !== undefined) {
           container.setAttribute("data-dz-scale", opt.dataset.scale);
@@ -695,7 +733,7 @@ const dz = (() => {
 
   function initMoneyInputs() {
     document.querySelectorAll("[data-dz-money]").forEach((el) => {
-      if (!/** @type {HTMLElement} */ (el).dataset.dzMoneyInit) {
+      if (!(/** @type {HTMLElement} */ (el).dataset.dzMoneyInit)) {
         initMoneyField(/** @type {HTMLElement} */ (el));
       }
     });
@@ -740,8 +778,7 @@ const dz = (() => {
     function buildPreviewEl(filename) {
       const div = document.createElement("div");
       div.setAttribute("data-dz-file-preview", "");
-      div.className =
-        "flex items-center gap-2 p-3 bg-base-200 rounded-lg mb-2";
+      div.className = "flex items-center gap-2 p-3 bg-base-200 rounded-lg mb-2";
 
       // Checkmark icon
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -756,10 +793,7 @@ const dz = (() => {
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
       path.setAttribute("stroke-width", "2");
-      path.setAttribute(
-        "d",
-        "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
-      );
+      path.setAttribute("d", "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z");
       svg.appendChild(path);
       div.appendChild(svg);
 
@@ -889,7 +923,7 @@ const dz = (() => {
 
   function initFileUploads() {
     document.querySelectorAll("[data-dz-file]").forEach((el) => {
-      if (!/** @type {HTMLElement} */ (el).dataset.dzFileInit) {
+      if (!(/** @type {HTMLElement} */ (el).dataset.dzFileInit)) {
         initFileUpload(/** @type {HTMLElement} */ (el));
       }
     });
@@ -926,7 +960,8 @@ const dz = (() => {
 
       function showStage(idx) {
         stages.forEach(function (s, i) {
-          /** @type {HTMLElement} */ (s).style.display = i === idx ? "" : "none";
+          /** @type {HTMLElement} */ (s).style.display =
+            i === idx ? "" : "none";
         });
         steps.forEach(function (s, i) {
           if (i <= idx) {
@@ -937,16 +972,19 @@ const dz = (() => {
         });
         if (prevBtn) prevBtn.style.display = idx > 0 ? "" : "none";
         if (nextBtn) nextBtn.style.display = idx < total - 1 ? "" : "none";
-        if (submitBtn) submitBtn.style.display = idx === total - 1 ? "" : "none";
+        if (submitBtn)
+          submitBtn.style.display = idx === total - 1 ? "" : "none";
         current = idx;
       }
 
       function validateStage(idx) {
         var stage = stages[idx];
-        var inputs = stage.querySelectorAll("input[required], select[required], textarea[required]");
+        var inputs = stage.querySelectorAll(
+          "input[required], select[required], textarea[required]",
+        );
         var valid = true;
         inputs.forEach(function (input) {
-          if (!/** @type {HTMLInputElement} */ (input).value) {
+          if (!(/** @type {HTMLInputElement} */ (input).value)) {
             /** @type {HTMLInputElement} */ (input).reportValidity();
             valid = false;
           }
@@ -1032,12 +1070,12 @@ const dz = (() => {
         }
       });
       target.querySelectorAll("[data-dz-money]").forEach((el) => {
-        if (!/** @type {HTMLElement} */ (el).dataset.dzMoneyInit) {
+        if (!(/** @type {HTMLElement} */ (el).dataset.dzMoneyInit)) {
           initMoneyField(/** @type {HTMLElement} */ (el));
         }
       });
       target.querySelectorAll("[data-dz-file]").forEach((el) => {
-        if (!/** @type {HTMLElement} */ (el).dataset.dzFileInit) {
+        if (!(/** @type {HTMLElement} */ (el).dataset.dzFileInit)) {
           initFileUpload(/** @type {HTMLElement} */ (el));
         }
       });
