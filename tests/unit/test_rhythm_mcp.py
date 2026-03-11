@@ -154,6 +154,103 @@ def test_evaluate_rhythm(mock_appspec):
         assert "checks" in data
 
 
+def test_evaluate_workspace_reference_passes():
+    """Workspace references use workspace_exists check, not surface_exists."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="annual",
+        title="Annual Arc",
+        persona="customer",
+        phases=[
+            PhaseSpec(
+                name="start",
+                scenes=[
+                    SceneSpec(
+                        name="dashboard",
+                        title="Visit Dashboard",
+                        surface="customer_dashboard",
+                        actions=["browse"],
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+
+    persona = MagicMock()
+    persona.id = "customer"
+    spec.personas = [persona]
+
+    # customer_dashboard is a workspace, not a surface
+    spec.surfaces = []
+    workspace = MagicMock()
+    workspace.name = "customer_dashboard"
+    spec.workspaces = [workspace]
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "annual"})
+        data = json.loads(result)
+
+        ws_checks = [c for c in data["checks"] if c["check"] == "workspace_exists"]
+        assert len(ws_checks) == 1
+        assert ws_checks[0]["pass"] is True
+        assert ws_checks[0]["target"] == "customer_dashboard"
+
+        # No surface_exists failures
+        surf_checks = [c for c in data["checks"] if c["check"] == "surface_exists"]
+        assert len(surf_checks) == 0
+
+        # All hard checks pass
+        hard_checks = [c for c in data["checks"] if not c.get("advisory")]
+        assert all(c["pass"] for c in hard_checks)
+
+
+def test_evaluate_unknown_target_fails():
+    """A reference that is neither a surface nor a workspace should fail."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="test",
+        title="Test",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="start",
+                scenes=[
+                    SceneSpec(name="s1", title="S1", surface="nonexistent"),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+
+    spec.surfaces = []
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "test"})
+        data = json.loads(result)
+
+        surf_checks = [c for c in data["checks"] if c["check"] == "surface_exists"]
+        assert len(surf_checks) == 1
+        assert surf_checks[0]["pass"] is False
+
+
 def test_list_rhythms_includes_ambient_phases(mock_appspec_with_kinds):
     """list operation includes ambient phase count."""
     from dazzle.mcp.server.handlers.rhythm import list_rhythms_handler
@@ -1931,3 +2028,262 @@ def test_fidelity_not_found():
         result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "nope"}))
 
     assert "error" in result
+
+
+def test_fidelity_fuzzy_action_match():
+    """Standard action 'approve' fuzzy-matches 'client_approve' (#454)."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(
+                        name="vat_approval",
+                        surface="vat_return",
+                        actions=["approve"],
+                        expects="return_approved",
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    # Surface has 'client_approve' and 'approve_return' but NOT exact 'approve'
+    spec.surfaces = [
+        _make_fidelity_surface(
+            "vat_return",
+            ["return", "status", "amount"],
+            ["client_approve", "approve_return", "submit_hmrc"],
+        )
+    ]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    # 'approve' should fuzzy-match 'client_approve' / 'approve_return'
+    assert result["scenes_proxied"] == 0
+    assert result["rhythm_fidelity"] == 1.0
+
+
+def test_fidelity_passive_action_always_matches():
+    """Passive actions (browse, review) match any surface (#454)."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(
+                        name="check_pnl",
+                        surface="pnl_dashboard",
+                        actions=["browse", "review"],
+                        expects="pnl_visible",
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    # Surface has unrelated actions — browse/review are passive so should still match
+    spec.surfaces = [
+        _make_fidelity_surface(
+            "pnl_dashboard",
+            ["pnl", "revenue", "expense"],
+            ["export_csv"],
+        )
+    ]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    assert result["scenes_proxied"] == 0
+
+
+def test_fidelity_keyword_stemming():
+    """Stemmed keywords match: 'deadlines' matches field 'deadline_type' (#457)."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(
+                        name="review_deadlines",
+                        surface="deadline_view",
+                        expects="upcoming_deadlines_visible_for_next_90_days",
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    # Field 'deadline_type' should match 'deadlines' via stemming
+    spec.surfaces = [
+        _make_fidelity_surface(
+            "deadline_view",
+            ["deadline_type", "due_date", "entity_type", "status"],
+        )
+    ]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    # 'deadlines' stems to 'deadline', which matches 'deadline' from 'deadline_type'
+    assert result["scenes_proxied"] == 0
+    assert result["rhythm_fidelity"] == 1.0
+
+
+def test_naive_stem():
+    """_naive_stem strips common suffixes correctly."""
+    from dazzle.mcp.server.handlers.rhythm import _naive_stem
+
+    assert _naive_stem("deadlines") == "deadline"
+    assert _naive_stem("visible") == "vis"  # strips 'ible'
+    assert _naive_stem("upcoming") == "upcom"  # strips 'ing'
+    assert _naive_stem("vat") == "vat"  # too short to strip
+    assert _naive_stem("visibility") == "visibil"  # strips 'ity'
+
+
+# ---------------------------------------------------------------------------
+# Story injection from stories.json (#455 / #456)
+# ---------------------------------------------------------------------------
+
+
+def _make_json_story_data(story_id: str, title: str = "Test Story") -> dict:
+    """Build a story dict compatible with StoriesContainer."""
+    return {
+        "story_id": story_id,
+        "title": title,
+        "actor": "user",
+        "trigger": "user_click",
+        "scope": [],
+        "given": [],
+        "when": [],
+        "then": [{"expression": "it works"}],
+    }
+
+
+def test_inject_json_stories_merges_into_modules(tmp_path):
+    """JSON stories are injected into module fragments for linker validation."""
+    from dazzle.core.appspec_loader import _inject_json_stories
+    from dazzle.core.ir.module import ModuleFragment, ModuleIR
+
+    mod = ModuleIR(
+        name="test",
+        file=tmp_path / "test.dsl",
+        fragment=ModuleFragment(),
+    )
+
+    stories_dir = tmp_path / ".dazzle" / "stories"
+    stories_dir.mkdir(parents=True)
+    import json as json_mod
+
+    stories_data = {
+        "version": "1.0",
+        "stories": [_make_json_story_data("ST-001")],
+    }
+    (stories_dir / "stories.json").write_text(json_mod.dumps(stories_data))
+
+    _inject_json_stories([mod], tmp_path)
+
+    assert len(mod.fragment.stories) == 1
+    assert mod.fragment.stories[0].story_id == "ST-001"
+
+
+def test_inject_json_stories_skips_dsl_duplicates(tmp_path):
+    """Stories already in DSL modules are not duplicated from JSON."""
+    from dazzle.core.appspec_loader import _inject_json_stories
+    from dazzle.core.ir.module import ModuleFragment, ModuleIR
+
+    dsl_story = StorySpec(
+        story_id="ST-001",
+        title="DSL Story",
+        actor="user",
+        trigger=StoryTrigger.USER_CLICK,
+        scope=[],
+        given=[],
+        when=[],
+        then=[],
+    )
+    mod = ModuleIR(
+        name="test",
+        file=tmp_path / "test.dsl",
+        fragment=ModuleFragment(stories=[dsl_story]),
+    )
+
+    stories_dir = tmp_path / ".dazzle" / "stories"
+    stories_dir.mkdir(parents=True)
+    import json as json_mod
+
+    stories_data = {
+        "version": "1.0",
+        "stories": [
+            _make_json_story_data("ST-001", "JSON duplicate"),
+            _make_json_story_data("ST-002", "JSON only"),
+        ],
+    }
+    (stories_dir / "stories.json").write_text(json_mod.dumps(stories_data))
+
+    _inject_json_stories([mod], tmp_path)
+
+    # ST-001 not duplicated, ST-002 added
+    assert len(mod.fragment.stories) == 2
+    assert mod.fragment.stories[0].story_id == "ST-001"
+    assert mod.fragment.stories[0].title == "DSL Story"  # DSL version kept
+    assert mod.fragment.stories[1].story_id == "ST-002"
+
+
+def test_inject_json_stories_no_file(tmp_path):
+    """No stories.json file → no injection, no error."""
+    from dazzle.core.appspec_loader import _inject_json_stories
+    from dazzle.core.ir.module import ModuleFragment, ModuleIR
+
+    mod = ModuleIR(
+        name="test",
+        file=tmp_path / "test.dsl",
+        fragment=ModuleFragment(),
+    )
+
+    _inject_json_stories([mod], tmp_path)
+
+    assert len(mod.fragment.stories) == 0

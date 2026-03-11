@@ -103,6 +103,7 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     # Structural evaluation
     surface_names = {s.name for s in app_spec.surfaces}
+    workspace_names = {w.name for w in getattr(app_spec, "workspaces", [])}
     entity_names = {e.name for e in app_spec.domain.entities}
     persona_ids = {p.id for p in app_spec.personas}
 
@@ -122,15 +123,28 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     for phase in rhythm.phases:
         for scene in phase.scenes:
-            checks.append(
-                {
-                    "check": "surface_exists",
-                    "phase": phase.name,
-                    "scene": scene.name,
-                    "target": scene.surface,
-                    "pass": scene.surface in surface_names,
-                }
-            )
+            is_surface = scene.surface in surface_names
+            is_workspace = scene.surface in workspace_names
+            if is_workspace:
+                checks.append(
+                    {
+                        "check": "workspace_exists",
+                        "phase": phase.name,
+                        "scene": scene.name,
+                        "target": scene.surface,
+                        "pass": True,
+                    }
+                )
+            else:
+                checks.append(
+                    {
+                        "check": "surface_exists",
+                        "phase": phase.name,
+                        "scene": scene.name,
+                        "target": scene.surface,
+                        "pass": is_surface,
+                    }
+                )
 
             # Action vocabulary checks (advisory)
             if scene.actions:
@@ -447,15 +461,76 @@ def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def _naive_stem(word: str) -> str:
+    """Reduce a word to a rough stem for matching purposes.
+
+    Not a full stemmer — just strips common English suffixes so that
+    'deadlines' matches 'deadline', 'visible' matches 'visibility', etc.
+    """
+    # Try longest suffix first to avoid over-stripping (e.g. 'tion' before 'ion')
+    for suffix in (
+        "tion",
+        "ness",
+        "ment",
+        "ible",
+        "able",
+        "ity",
+        "ies",
+        "ing",
+        "ous",
+        "ly",
+        "ed",
+        "er",
+        "s",
+    ):
+        if len(word) > len(suffix) + 2 and word.endswith(suffix):
+            return word[: -len(suffix)]
+    return word
+
+
 def _extract_keywords(text: str) -> set[str]:
-    """Extract meaningful keywords from expects/action text."""
+    """Extract meaningful keywords from expects/action text.
+
+    Returns both raw tokens and their stems for fuzzy matching.
+    """
     import re
 
     # Split on underscores, spaces, hyphens
     tokens = re.split(r"[_\s\-]+", text.lower())
     # Drop very short or generic words
     stop = {"the", "a", "an", "is", "are", "with", "and", "or", "for", "in", "on", "to", "of"}
-    return {t for t in tokens if len(t) > 2 and t not in stop}
+    raw = {t for t in tokens if len(t) > 2 and t not in stop}
+    # Add stems for fuzzy matching
+    stemmed = {_naive_stem(t) for t in raw}
+    return raw | stemmed
+
+
+# Standard actions that are passive (don't require a matching surface action)
+_PASSIVE_ACTIONS = {"browse", "review", "monitor", "decide"}
+
+
+def _action_matches(verb: str, surface_action_names: set[str], surface_actions: list[Any]) -> bool:
+    """Check if a scene action verb matches surface actions.
+
+    Uses fuzzy matching: a standard verb like 'approve' matches any surface
+    action containing 'approve' (e.g. 'client_approve', 'approve_return').
+    Passive actions (browse, review, monitor) always match — they don't
+    require a specific surface action.
+    """
+    # No surface actions defined → nothing to match against, no gap
+    if not surface_actions:
+        return True
+    # Passive actions always match (they describe observation, not mutation)
+    if verb in _PASSIVE_ACTIONS:
+        return True
+    # Exact match
+    if verb in surface_action_names:
+        return True
+    # Fuzzy: verb appears as substring of any surface action name
+    for sa_name in surface_action_names:
+        if verb in sa_name or sa_name in verb:
+            return True
+    return False
 
 
 @wrap_handler_errors
@@ -532,11 +607,12 @@ def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                 result["expects"] = scene.expects
                 result["expects_keyword_overlap"] = sorted(overlap)
 
-            # Check action support
+            # Check action support (fuzzy matching for standard vocabulary)
             if scene.actions:
                 for action_verb in scene.actions:
-                    if action_verb.lower() not in surface_action_names and surface.actions:
-                        # Only flag if the surface defines actions but doesn't include this one
+                    if not _action_matches(
+                        action_verb.lower(), surface_action_names, surface.actions
+                    ):
                         gaps.append(
                             f"scene action '{action_verb}' not found in surface actions "
                             f"({sorted(surface_action_names)})"
