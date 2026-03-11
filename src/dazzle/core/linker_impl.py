@@ -101,6 +101,10 @@ class ProcessSymbols:
     stories: dict[str, ir.StorySpec] = field(default_factory=dict)
     personas: dict[str, ir.PersonaSpec] = field(default_factory=dict)
     scenarios: dict[str, ir.ScenarioSpec] = field(default_factory=dict)
+    rhythms: dict[str, ir.RhythmSpec] = field(default_factory=dict)  # v0.39.0
+
+    def add_rhythm(self, rhythm: ir.RhythmSpec, module_name: str, sources: dict[str, str]) -> None:
+        _add_symbol(self.rhythms, rhythm.name, rhythm, "rhythm", module_name, sources)
 
     def add_process(
         self, process: ir.ProcessSpec, module_name: str, sources: dict[str, str]
@@ -205,6 +209,10 @@ class SymbolTable:
     def scenarios(self) -> dict[str, ir.ScenarioSpec]:
         return self._process.scenarios
 
+    @property
+    def rhythms(self) -> dict[str, ir.RhythmSpec]:
+        return self._process.rhythms
+
     # --- Delegated add methods ---
 
     def add_entity(self, entity: ir.EntitySpec, module_name: str) -> None:
@@ -268,6 +276,10 @@ class SymbolTable:
     def add_story(self, story: ir.StorySpec, module_name: str) -> None:
         """Add story to symbol table, checking for duplicates (v0.22.0)."""
         self._process.add_story(story, module_name, self.symbol_sources)
+
+    def add_rhythm(self, rhythm: ir.RhythmSpec, module_name: str) -> None:
+        """Add rhythm to symbol table, checking for duplicates (v0.39.0)."""
+        self._process.add_rhythm(rhythm, module_name, self.symbol_sources)
 
     def add_llm_model(self, llm_model: ir.LLMModelSpec, module_name: str) -> None:
         """Add LLM model to symbol table, checking for duplicates (v0.21.0)."""
@@ -539,6 +551,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add UI Islands
         for island in module.fragment.islands:
             symbols.add_island(island, module.name)
+
+        # Add rhythms (v0.39.0)
+        for rhythm in module.fragment.rhythms:
+            symbols.add_rhythm(rhythm, module.name)
 
     return symbols
 
@@ -1085,6 +1101,38 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     "default_model: in llm_config."
                 )
 
+    # Validate rhythm references (v0.39.0)
+    for rhythm_name, rhythm in symbols.rhythms.items():
+        # Persona must exist
+        if rhythm.persona not in symbols.personas:
+            errors.append(f"Rhythm '{rhythm_name}' references unknown persona '{rhythm.persona}'")
+
+        # Track scene names for uniqueness within rhythm
+        seen_scenes: set[str] = set()
+        for phase in rhythm.phases:
+            for scene in phase.scenes:
+                if scene.name in seen_scenes:
+                    errors.append(f"Rhythm '{rhythm_name}' has duplicate scene name '{scene.name}'")
+                seen_scenes.add(scene.name)
+
+                if scene.surface not in symbols.surfaces:
+                    errors.append(
+                        f"Rhythm '{rhythm_name}' scene '{scene.name}' references "
+                        f"unknown surface '{scene.surface}'"
+                    )
+
+                if scene.entity and scene.entity not in symbols.entities:
+                    errors.append(
+                        f"Rhythm '{rhythm_name}' scene '{scene.name}' references "
+                        f"unknown entity '{scene.entity}'"
+                    )
+
+                if scene.story and scene.story not in symbols.stories:
+                    errors.append(
+                        f"Rhythm '{rhythm_name}' scene '{scene.name}' references "
+                        f"unknown story '{scene.story}'"
+                    )
+
     return errors
 
 
@@ -1111,6 +1159,7 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         personas=list(symbols.personas.values()),  # v0.8.5
         scenarios=list(symbols.scenarios.values()),  # v0.8.5
         stories=list(symbols.stories.values()),  # v0.22.0
+        rhythms=list(symbols.rhythms.values()),  # v0.39.0
         llm_config=symbols.llm_config,  # v0.21.0
         llm_models=list(symbols.llm_models.values()),  # v0.21.0
         llm_intents=list(symbols.llm_intents.values()),  # v0.21.0
