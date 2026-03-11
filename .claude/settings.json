@@ -157,7 +157,20 @@
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/code_formatter.py",
             "timeout": 30,
+            "async": true,
             "statusMessage": "Formatting code..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop_lint.py",
+            "timeout": 30,
+            "statusMessage": "End-of-turn lint check..."
           }
         ]
       }
@@ -170,6 +183,30 @@
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent_context.py",
             "timeout": 10,
             "statusMessage": "Injecting Dazzle context..."
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent_stop.py",
+            "timeout": 15,
+            "statusMessage": "Validating subagent results..."
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/worktree_setup.sh",
+            "timeout": 60,
+            "statusMessage": "Setting up worktree environment..."
           }
         ]
       }
