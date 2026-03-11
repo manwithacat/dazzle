@@ -51,8 +51,9 @@ story ST-001 "Staff sends invoice to client":
 ```
 
 - `status:` is optional, defaults to `draft`
-- Valid values: `draft`, `accepted`, `rejected`
-- `STATUS` is already a lexer keyword
+- Valid values: `draft`, `accepted`, `rejected` — invalid values are a parse error
+  (same pattern as `_parse_story_trigger`)
+- `STATUS` is already a lexer keyword — parser needs an `elif` branch for it
 - No timestamps — git history and KG track that
 - `description` works as a docstring after the title (parser already supports this)
 
@@ -115,7 +116,7 @@ Used by `story propose` and `story save` MCP handlers, and the CLI `story propos
 | `story coverage` handler | Read from appspec |
 | `get_next_story_id()` | Scan `appspec.stories` instead of JSON |
 | CLI `story propose` / `list` / `generate-tests` | Use appspec + emitter |
-| `update_story_status()` callers | Rewrite story block in DSL file (find-and-replace `status:` line) |
+| `update_story_status()` callers | Parse DSL file, locate story by ID, emit updated block, replace in file |
 
 ## Testing
 
@@ -134,14 +135,34 @@ Used by `story propose` and `story save` MCP handlers, and the CLI `story propos
 - Run `dazzle validate` on each to confirm parser round-trip
 - Full test suite pass after migration
 
+## Status Update Algorithm
+
+When `update_story_status(file, story_id, new_status)` is called:
+
+1. Read the DSL file as text
+2. Parse to locate the story block boundaries (start line of `story {id}`, end at next
+   top-level construct or EOF)
+3. Parse the story block to get a `StorySpec`
+4. Create updated spec with new status
+5. Emit via `emit_story_dsl()` to get replacement text
+6. Replace the original block in the file text
+7. Write file back
+
+This is a targeted text replacement — only the affected story block changes.
+
 ## Migration Script
 
 One-time conversion of existing example projects:
+
 1. Read `stories.json`
-2. Convert each story: `preconditions` → `given:`, `happy_path_outcome` → `then:`
-3. Best-effort for `constraints` → `unless:` branches, `side_effects` → `then:` items
-4. Emit via `emit_story_dsl()` to `dsl/stories.dsl`
-5. Delete JSON files and directories
+2. For each story, determine Gherkin fields:
+   - If `given` is non-empty, use it; otherwise convert `preconditions` → `given`
+   - If `then` is non-empty, use it; otherwise convert `happy_path_outcome` → `then`
+   - `constraints` → additional `then` assertions
+   - `side_effects` → additional `then` items
+   - `variants` → logged and dropped (no clean mapping)
+3. Emit via `emit_story_dsl()` to `dsl/stories.dsl`
+4. Delete JSON files and directories
 
 ## Out of Scope
 
