@@ -77,9 +77,10 @@ def get_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 @wrap_handler_errors
 def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Evaluate a rhythm — static analysis of completeness."""
+    """Evaluate a rhythm — static analysis of completeness, or submit scores."""
     app_spec = load_project_appspec(project_root)
     name = args.get("name")
+    action = args.get("action", "evaluate")
 
     rhythm = None
     for r in app_spec.rhythms:
@@ -90,6 +91,10 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     if rhythm is None:
         return error_response(f"Rhythm '{name}' not found")
 
+    if action == "submit_scores":
+        return _submit_scores(project_root, name, args.get("scores", []))
+
+    # Structural evaluation
     surface_names = {s.name for s in app_spec.surfaces}
     entity_names = {e.name for e in app_spec.domain.entities}
     persona_ids = {p.id for p in app_spec.personas}
@@ -150,14 +155,55 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     passed = sum(1 for c in checks if c["pass"])
     total = len(checks)
 
+    stored_scores = _load_latest_scores(project_root, name)
+
     return json.dumps(
         {
             "rhythm": name,
             "summary": f"{passed}/{total} checks passed",
             "checks": checks,
+            "scene_scores": stored_scores,
         },
         indent=2,
     )
+
+
+def _submit_scores(project_root: Path, rhythm_name: str, scores_data: list[dict[str, Any]]) -> str:
+    """Persist agent-produced scene evaluation scores."""
+    import datetime
+
+    from dazzle.core.ir.rhythm import SceneEvaluation
+
+    evaluations = [SceneEvaluation(**s) for s in scores_data]
+
+    eval_dir = project_root / ".dazzle" / "evaluations"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+
+    ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S")
+    path = eval_dir / f"eval-{ts}.json"
+
+    data = {
+        "rhythm": rhythm_name,
+        "timestamp": ts,
+        "evaluations": [e.model_dump() for e in evaluations],
+    }
+    path.write_text(json.dumps(data, indent=2))
+
+    return json.dumps({"stored": str(path), "count": len(evaluations)})
+
+
+def _load_latest_scores(project_root: Path, rhythm_name: str) -> list[dict[str, Any]] | None:
+    """Load most recent evaluation scores for a rhythm."""
+    eval_dir = project_root / ".dazzle" / "evaluations"
+    if not eval_dir.exists():
+        return None
+
+    files = sorted(eval_dir.glob("eval-*.json"), reverse=True)
+    for f in files:
+        data = json.loads(f.read_text())
+        if data.get("rhythm") == rhythm_name:
+            return data.get("evaluations")
+    return None
 
 
 @wrap_handler_errors
