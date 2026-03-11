@@ -1512,8 +1512,11 @@ rhythm_block = "rhythm" IDENTIFIER [STRING] ":" NEWLINE INDENT
   DEDENT
 
 phase_block = "phase" IDENTIFIER ":" NEWLINE INDENT
+    ["kind" ":" PHASE_KIND NEWLINE]
     scene_block*
   DEDENT
+
+PHASE_KIND = "onboarding" | "active" | "periodic" | "ambient" | "offboarding"
 
 scene_block = "scene" IDENTIFIER [STRING] ":" NEWLINE INDENT
     "on" ":" IDENTIFIER NEWLINE
@@ -1529,6 +1532,7 @@ identifier_list = IDENTIFIER ("," IDENTIFIER)*
 **Properties:**
 - `persona` — references a defined persona (validated at link time)
 - `cadence` — free-form temporal frequency hint (agent-interpreted)
+- `kind` — phase kind classification (optional; one of `onboarding`, `active`, `periodic`, `ambient`, `offboarding`)
 - `on` — surface reference (validated at link time)
 - `action` — free-form action verbs (agent-interpreted)
 - `entity` — entity reference (validated at link time, optional)
@@ -1542,11 +1546,13 @@ rhythm onboarding "New User Onboarding":
   cadence: "quarterly"
 
   phase discovery:
+    kind: onboarding
     scene browse_catalog "Browse Courses":
       on: course_list
       action: filter, browse
 
   phase engagement:
+    kind: active
     scene enroll "Enroll":
       on: course_detail
       action: submit
