@@ -87,6 +87,24 @@ def _clickable_url(url: str, label: str | None = None) -> str:
     return f"\x1b]8;;{url}\x1b\\{display}\x1b]8;;\x1b\\"
 
 
+def _set_factory_env(
+    project_root: Path | None,
+    enable_dev_mode: bool,
+    enable_test_mode: bool,
+) -> None:
+    """Set environment variables for create_app_factory in multi-worker mode.
+
+    When workers > 1, uvicorn forks and re-imports the app in each child.
+    The factory reads config from env vars, so we set them here before fork.
+    """
+    if project_root is not None:
+        os.environ.setdefault("DAZZLE_PROJECT_ROOT", str(project_root))
+    if enable_dev_mode:
+        os.environ.setdefault("DAZZLE_ENV", "development")
+    elif enable_test_mode:
+        os.environ.setdefault("DAZZLE_ENV", "test")
+
+
 # =============================================================================
 # Unified Server (single-port FastAPI)
 # =============================================================================
@@ -279,7 +297,17 @@ def run_unified_server(
         uvicorn_kwargs["workers"] = workers
 
     try:
-        uvicorn.run(app, **uvicorn_kwargs)
+        if workers is not None and workers > 1:
+            # Multi-worker requires an import string so uvicorn can fork and
+            # re-import the app in each child process.
+            _set_factory_env(project_root, enable_dev_mode, enable_test_mode)
+            uvicorn.run(
+                "dazzle_back.runtime.app_factory:create_app_factory",
+                factory=True,
+                **uvicorn_kwargs,
+            )
+        else:
+            uvicorn.run(app, **uvicorn_kwargs)
     except KeyboardInterrupt:
         print("\n[Dazzle] Shutting down...")
     except OSError as e:
@@ -394,7 +422,15 @@ def run_backend_only(
         uvicorn_kwargs["workers"] = workers
 
     try:
-        uvicorn.run(app, **uvicorn_kwargs)
+        if workers is not None and workers > 1:
+            _set_factory_env(project_root, enable_dev_mode, enable_test_mode)
+            uvicorn.run(
+                "dazzle_back.runtime.app_factory:create_app_factory",
+                factory=True,
+                **uvicorn_kwargs,
+            )
+        else:
+            uvicorn.run(app, **uvicorn_kwargs)
     except KeyboardInterrupt:
         print("\n[Dazzle] Shutting down...")
     except OSError as e:
