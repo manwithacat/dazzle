@@ -50,6 +50,7 @@ class PhaseSpec(BaseModel):
 
     name: str = Field(..., description="Phase identifier")
     kind: PhaseKind | None = Field(default=None, description="Phase kind hint")
+    cadence: str | None = Field(default=None, description="Temporal cadence hint for this phase")
     scenes: list[SceneSpec] = Field(default_factory=list, description="Scenes in phase")
     source: SourceLocation | None = None
 

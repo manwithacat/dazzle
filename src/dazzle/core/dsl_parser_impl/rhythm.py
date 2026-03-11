@@ -47,6 +47,8 @@ class RhythmParserMixin:
               persona COLON IDENTIFIER NEWLINE
               [cadence COLON STRING NEWLINE]
               (phase IDENTIFIER COLON NEWLINE INDENT
+                [kind COLON IDENTIFIER NEWLINE]
+                [cadence COLON STRING NEWLINE]
                 (scene IDENTIFIER STRING? COLON NEWLINE INDENT
                   on COLON IDENTIFIER NEWLINE  ; surface or workspace
                   [action COLON identifier_list NEWLINE]
@@ -130,6 +132,7 @@ class RhythmParserMixin:
 
         scenes: list[ir.SceneSpec] = []
         kind: ir.PhaseKind | None = None
+        cadence: str | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -150,6 +153,11 @@ class RhythmParserMixin:
                     except ValueError:
                         kind = None
                     self.skip_newlines()
+                elif token.value == "cadence":
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    cadence = self.expect(TokenType.STRING).value
+                    self.skip_newlines()
                 else:
                     self.advance()
                     if self.match(TokenType.COLON):
@@ -158,7 +166,7 @@ class RhythmParserMixin:
 
         self.expect(TokenType.DEDENT)
 
-        return ir.PhaseSpec(name=name, kind=kind, scenes=scenes, source=loc)
+        return ir.PhaseSpec(name=name, kind=kind, cadence=cadence, scenes=scenes, source=loc)
 
     def _parse_rhythm_scene(self) -> ir.SceneSpec:
         """Parse a scene block within a phase."""

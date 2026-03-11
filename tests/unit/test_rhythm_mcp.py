@@ -181,6 +181,52 @@ def test_get_rhythm_includes_phase_kind(mock_appspec_with_kinds):
         assert data["phases"][1]["kind"] == "ambient"
 
 
+def test_get_rhythm_includes_phase_cadence():
+    """get operation includes cadence on phases."""
+    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="fiscal",
+        title="Fiscal Year",
+        persona="director",
+        phases=[
+            PhaseSpec(
+                name="q1",
+                kind=PhaseKind.PERIODIC,
+                cadence="January-March",
+                scenes=[
+                    SceneSpec(name="review", surface="budget_list"),
+                ],
+            ),
+            PhaseSpec(
+                name="ongoing",
+                kind=PhaseKind.AMBIENT,
+                cadence="ad-hoc, between deadlines",
+                scenes=[
+                    SceneSpec(name="check", surface="dashboard"),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "director"
+    spec.personas = [persona]
+    spec.surfaces = []
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = get_rhythm_handler(Path("/fake"), {"name": "fiscal"})
+        data = json.loads(result)
+        assert data["phases"][0]["cadence"] == "January-March"
+        assert data["phases"][1]["cadence"] == "ad-hoc, between deadlines"
+
+
 def test_get_rhythm_phase_kind_null_when_unset(mock_appspec):
     """get operation returns null kind when phase has no kind set."""
     from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler

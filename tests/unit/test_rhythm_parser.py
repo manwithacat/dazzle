@@ -195,6 +195,65 @@ rhythm r "R":
     assert fragment.rhythms[0].phases[0].kind is None
 
 
+def test_parse_phase_cadence():
+    """Phase-level cadence is parsed from string."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm fiscal "Fiscal Year":
+  persona: director
+
+  phase ongoing:
+    kind: ambient
+    cadence: "ad-hoc, between deadlines"
+    scene check "Check Dashboard":
+      on: dashboard
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    phase = fragment.rhythms[0].phases[0]
+    assert phase.cadence == "ad-hoc, between deadlines"
+    assert phase.kind is not None
+    assert phase.kind.value == "ambient"
+
+
+def test_parse_phase_cadence_without_kind():
+    """Phase cadence works without kind."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm fiscal "Fiscal Year":
+  persona: director
+
+  phase q1:
+    cadence: "January-March"
+    scene review "Q1 Review":
+      on: dashboard
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    phase = fragment.rhythms[0].phases[0]
+    assert phase.cadence == "January-March"
+    assert phase.kind is None
+
+
+def test_parse_phase_cadence_none_by_default():
+    """Phase cadence is None when not specified."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm r "R":
+  persona: user
+
+  phase p:
+    scene s "S":
+      on: surf
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    assert fragment.rhythms[0].phases[0].cadence is None
+
+
 def test_parse_scene_story_as_string():
     """story: field accepts quoted strings for hyphenated IDs like ST-020."""
     dsl = """\
