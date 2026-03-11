@@ -11,6 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.appspec_loader import _inject_json_stories
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
@@ -108,6 +109,9 @@ def load_appspec_for_project(project_path: Path) -> bool:
         if not modules:
             logger.warning("No modules parsed from %s", project_path)
             return False
+
+        # Inject JSON stories before linking
+        _inject_json_stories(modules, project_path)
 
         # Build AppSpec
         appspec = build_appspec(modules, manifest.project_root)
@@ -322,6 +326,7 @@ def validate_all_projects() -> str:
             manifest = load_manifest(path / "dazzle.toml")
             dsl_files = discover_dsl_files(path, manifest)
             modules = parse_modules(dsl_files)
+            _inject_json_stories(modules, path)
             app_spec = build_appspec(modules, manifest.project_root)
 
             results[name] = {

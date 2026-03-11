@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from dazzle.core import ir
+from dazzle.core.appspec_loader import _inject_json_stories
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
@@ -1097,6 +1098,7 @@ def handle_extract_semantics(args: dict[str, Any], project_path: Path) -> str:
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
+        _inject_json_stories(modules, project_path)
         appspec = build_appspec(modules, manifest.project_root)
 
         extraction = extract_semantics(appspec)
@@ -1143,6 +1145,7 @@ def handle_validate_events(args: dict[str, Any], project_path: Path) -> str:
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
+        _inject_json_stories(modules, project_path)
         appspec = build_appspec(modules, manifest.project_root)
 
         result = validate_event_first(appspec)
@@ -1168,6 +1171,7 @@ def handle_infer_tenancy(args: dict[str, Any], project_path: Path) -> str:
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
+        _inject_json_stories(modules, project_path)
         appspec = build_appspec(modules, manifest.project_root)
 
         result = infer_multi_tenancy(appspec)
@@ -1184,6 +1188,7 @@ def handle_infer_compliance(args: dict[str, Any], project_path: Path) -> str:
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
+        _inject_json_stories(modules, project_path)
         appspec = build_appspec(modules, manifest.project_root)
 
         result = infer_compliance_requirements(appspec)
@@ -1200,6 +1205,7 @@ def handle_infer_analytics(args: dict[str, Any], project_path: Path) -> str:
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
+        _inject_json_stories(modules, project_path)
         appspec = build_appspec(modules, manifest.project_root)
 
         result = infer_analytics_intent(appspec)
@@ -1459,6 +1465,7 @@ def handle_extract_guards(args: dict[str, Any], project_path: Path) -> str:
         manifest = load_manifest(project_path / "dazzle.toml")
         dsl_files = discover_dsl_files(project_path, manifest)
         modules = parse_modules(dsl_files)
+        _inject_json_stories(modules, project_path)
         appspec = build_appspec(modules, manifest.project_root)
 
         proposals = extract_guards(appspec)
