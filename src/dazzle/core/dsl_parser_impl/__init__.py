@@ -35,6 +35,7 @@ from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
 from .notification import NotificationParserMixin
 from .process import ProcessParserMixin
+from .rhythm import RhythmParserMixin
 from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
 from .sla import SLAParserMixin
@@ -62,6 +63,7 @@ class Parser(
     WorkspaceParserMixin,
     ScenarioParserMixin,
     StoryParserMixin,
+    RhythmParserMixin,
     MessagingParserMixin,
     EventingParserMixin,
     HLESSParserMixin,
@@ -183,6 +185,12 @@ class Parser(
                 self.advance()  # consume 'story' token
                 story = self.parse_story()
                 fragment = _updated(fragment, stories=[*fragment.stories, story])
+
+            # v0.39.0 Rhythms
+            elif self.match(TokenType.RHYTHM):
+                self.advance()  # consume 'rhythm' token
+                rhythm = self.parse_rhythm()
+                fragment = _updated(fragment, rhythms=[*fragment.rhythms, rhythm])
 
             # v0.9.0 Messaging Channels
             elif self.match(TokenType.MESSAGE):
@@ -396,6 +404,7 @@ __all__ = [
     "WorkspaceParserMixin",
     "ScenarioParserMixin",
     "StoryParserMixin",
+    "RhythmParserMixin",
     "MessagingParserMixin",
     "EventingParserMixin",
     "HLESSParserMixin",

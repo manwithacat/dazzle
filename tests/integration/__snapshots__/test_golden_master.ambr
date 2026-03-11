@@ -201,6 +201,8 @@
     ]),
     'projections': list([
     ]),
+    'rhythms': list([
+    ]),
     'scenarios': list([
     ]),
     'schedules': list([
