@@ -395,7 +395,7 @@ rhythm onboarding "New User Onboarding":
 - Use `rhythm coverage` to find personas without rhythms and surfaces without scenes
 - Let the MCP `propose` operation generate rhythms — it analyzes your app's surfaces and entities
 
-**Related:** [Stories](stories.md#story), [Processes](processes.md#process), [Personas](ux.md#persona), [Surfaces](surfaces.md)
+**Related:** Stories, Processes, Personas, Surfaces (see docs/reference/)
 
 ---
 ```

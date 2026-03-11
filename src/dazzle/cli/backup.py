@@ -193,9 +193,14 @@ def restore_command(
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
 
-        # Extract archive
+        # Extract archive — extract members individually to prevent path traversal
         with tarfile.open(from_path, "r:gz") as tar:
-            tar.extractall(tmp)
+            for member in tar.getmembers():
+                member_path = Path(tmp / member.name).resolve()
+                if not member_path.is_relative_to(tmp):
+                    msg = f"Refusing to extract '{member.name}' — path traversal detected"
+                    raise ValueError(msg)
+                tar.extract(member, tmp, filter="data")
 
         # Read metadata
         meta_path = tmp / "metadata.json"

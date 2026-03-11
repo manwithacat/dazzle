@@ -741,7 +741,7 @@ def _seed_gap_relations(gaps: list[dict[str, Any]]) -> None:
 
     for gap in gaps:
         if gap.get("scene") and gap.get("rhythm"):
-            gap_id = f"gap:{gap['kind']}:{hashlib.md5(gap['description'].encode()).hexdigest()[:8]}"
+            gap_id = f"gap:{gap['kind']}:{hashlib.md5(gap['description'].encode(), usedforsecurity=False).hexdigest()[:8]}"
             scene_id = f"scene:{gap['rhythm']}.{gap['scene']}"
             try:
                 graph.store.create_relation(
