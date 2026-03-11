@@ -1640,7 +1640,7 @@ def test_evaluate_surface_reuse_same_expects_no_advisory():
     data = json.loads(result)
 
     spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
-    assert len(spec_checks) == 0
+    assert spec_checks == []
 
 
 def test_evaluate_surface_reuse_no_expects_no_advisory():
@@ -1679,3 +1679,255 @@ def test_evaluate_surface_reuse_no_expects_no_advisory():
 
     spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
     assert len(spec_checks) == 0
+
+
+# ---------------------------------------------------------------------------
+# Rhythm fidelity tests
+# ---------------------------------------------------------------------------
+
+
+def _make_fidelity_surface(
+    name: str, field_names: list[str], action_names: list[str] | None = None
+):
+    """Build a mock surface with fields and optional actions."""
+    surf = MagicMock()
+    surf.name = name
+
+    elements = []
+    for fn in field_names:
+        elem = MagicMock()
+        elem.field_name = fn
+        elements.append(elem)
+
+    section = MagicMock()
+    section.elements = elements
+    surf.sections = [section]
+
+    actions = []
+    for an in action_names or []:
+        act = MagicMock()
+        act.name = an
+        actions.append(act)
+    surf.actions = actions
+    surf.access = None
+    surf.entity_ref = None
+
+    return surf
+
+
+def test_fidelity_scene_served():
+    """Scene with expects matching surface fields is served."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(
+                        name="check_balance",
+                        surface="wallet_detail",
+                        expects="balance_visible",
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = [
+        _make_fidelity_surface("wallet_detail", ["balance", "currency", "last_updated"])
+    ]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    assert result["rhythm_fidelity"] == 1.0
+    assert result["scenes_served"] == 1
+    assert result["scenes_proxied"] == 0
+
+
+def test_fidelity_scene_proxied():
+    """Scene with expects not matching surface fields is flagged as proxy."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(
+                        name="dividend_review",
+                        surface="company_detail",
+                        expects="distributable_reserves_visible",
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = [
+        _make_fidelity_surface("company_detail", ["name", "registration_number", "address"])
+    ]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    assert result["rhythm_fidelity"] == 0.0
+    assert result["scenes_proxied"] == 1
+    assert len(result["proxy_scenes"]) == 1
+    assert result["proxy_scenes"][0]["scene"] == "dividend_review"
+    assert "distributable_reserves_visible" in result["proxy_scenes"][0]["gaps"][0]
+
+
+def test_fidelity_mixed_scenes():
+    """Mix of served and proxied scenes gives correct fidelity score."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(name="s1", surface="task_list", expects="task_title_visible"),
+                    SceneSpec(
+                        name="s2",
+                        surface="company_detail",
+                        expects="financial_summary_visible",
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = [
+        _make_fidelity_surface("task_list", ["title", "status", "due_date"]),
+        _make_fidelity_surface("company_detail", ["name", "address"]),
+    ]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    assert result["rhythm_fidelity"] == 0.5
+    assert result["scenes_served"] == 1
+    assert result["scenes_proxied"] == 1
+
+
+def test_fidelity_workspace_scene_served():
+    """Scenes targeting workspaces are treated as served."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="arrive", surface="director_dash")],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = []
+    w1 = MagicMock()
+    w1.name = "director_dash"
+    spec.workspaces = [w1]
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    assert result["rhythm_fidelity"] == 1.0
+    assert result["scenes_served"] == 1
+
+
+def test_fidelity_scene_without_expects_served():
+    """Scenes without expects are served (no expectation to violate)."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="browse", surface="task_list")],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = [_make_fidelity_surface("task_list", ["title"])]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "r1"}))
+
+    assert result["rhythm_fidelity"] == 1.0
+
+
+def test_fidelity_not_found():
+    """Fidelity returns error for unknown rhythm."""
+    from dazzle.mcp.server.handlers.rhythm import fidelity_rhythm_handler
+
+    spec = MagicMock()
+    spec.rhythms = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = json.loads(fidelity_rhythm_handler(Path("/fake"), {"name": "nope"}))
+
+    assert "error" in result

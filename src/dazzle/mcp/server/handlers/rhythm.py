@@ -438,6 +438,142 @@ def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
+# ---------------------------------------------------------------------------
+# Fidelity handler
+# ---------------------------------------------------------------------------
+
+
+def _extract_keywords(text: str) -> set[str]:
+    """Extract meaningful keywords from expects/action text."""
+    import re
+
+    # Split on underscores, spaces, hyphens
+    tokens = re.split(r"[_\s\-]+", text.lower())
+    # Drop very short or generic words
+    stop = {"the", "a", "an", "is", "are", "with", "and", "or", "for", "in", "on", "to", "of"}
+    return {t for t in tokens if len(t) > 2 and t not in stop}
+
+
+@wrap_handler_errors
+def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Measure how well surfaces serve scene intent (rhythm fidelity)."""
+    app_spec = load_project_appspec(project_root)
+    name = args.get("name")
+
+    if not name:
+        return error_response("'name' parameter required for fidelity")
+
+    rhythm = None
+    for r in app_spec.rhythms:
+        if r.name == name:
+            rhythm = r
+            break
+    if rhythm is None:
+        return error_response(f"Rhythm '{name}' not found")
+
+    # Build lookup maps
+    surface_map = {s.name: s for s in app_spec.surfaces}
+    workspace_names = {getattr(w, "name", "") for w in getattr(app_spec, "workspaces", [])}
+
+    scene_results: list[dict[str, Any]] = []
+    scenes_served = 0
+    proxy_scenes: list[dict[str, Any]] = []
+
+    for phase in rhythm.phases:
+        for scene in phase.scenes:
+            surface = surface_map.get(scene.surface)
+            result: dict[str, Any] = {
+                "scene": scene.name,
+                "phase": phase.name,
+                "surface": scene.surface,
+            }
+
+            # If surface is a workspace or not found, we can't analyze field alignment
+            if surface is None:
+                if scene.surface in workspace_names:
+                    result["status"] = "workspace"
+                    result["served"] = True
+                    scenes_served += 1
+                else:
+                    result["status"] = "missing"
+                    result["served"] = False
+                scene_results.append(result)
+                continue
+
+            # Collect surface field names
+            field_names: set[str] = set()
+            for section in surface.sections:
+                for elem in section.elements:
+                    field_names.add(elem.field_name.lower())
+
+            # Collect surface action names
+            surface_action_names = {a.name.lower() for a in surface.actions}
+
+            gaps: list[str] = []
+
+            # Check field coverage against expects
+            if scene.expects:
+                expects_keywords = _extract_keywords(scene.expects)
+                field_keywords = set()
+                for fn in field_names:
+                    field_keywords.update(_extract_keywords(fn))
+
+                overlap = expects_keywords & field_keywords
+                if expects_keywords and not overlap:
+                    gaps.append(
+                        f"expects '{scene.expects}' but surface has no matching fields "
+                        f"(surface fields: {sorted(field_names) if field_names else 'none'})"
+                    )
+
+                result["expects"] = scene.expects
+                result["expects_keyword_overlap"] = sorted(overlap)
+
+            # Check action support
+            if scene.actions:
+                for action_verb in scene.actions:
+                    if action_verb.lower() not in surface_action_names and surface.actions:
+                        # Only flag if the surface defines actions but doesn't include this one
+                        gaps.append(
+                            f"scene action '{action_verb}' not found in surface actions "
+                            f"({sorted(surface_action_names)})"
+                        )
+
+            result["field_count"] = len(field_names)
+            result["gaps"] = gaps
+            result["served"] = len(gaps) == 0
+
+            if result["served"]:
+                scenes_served += 1
+
+            if gaps:
+                proxy_scenes.append(
+                    {
+                        "scene": scene.name,
+                        "phase": phase.name,
+                        "surface": scene.surface,
+                        "gaps": gaps,
+                    }
+                )
+
+            scene_results.append(result)
+
+    total_scenes = len(scene_results)
+    fidelity_score = round(scenes_served / total_scenes, 2) if total_scenes else 1.0
+
+    return json.dumps(
+        {
+            "rhythm": name,
+            "rhythm_fidelity": fidelity_score,
+            "total_scenes": total_scenes,
+            "scenes_served": scenes_served,
+            "scenes_proxied": len(proxy_scenes),
+            "proxy_scenes": proxy_scenes,
+            "details": scene_results,
+        },
+        indent=2,
+    )
+
+
 @wrap_handler_errors
 def gaps_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyse gaps between scenes and stories."""

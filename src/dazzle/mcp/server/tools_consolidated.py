@@ -353,7 +353,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="rhythm",
-            description="Rhythm operations: propose, evaluate, gaps, coverage, get, list, lifecycle. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
+            description="Rhythm operations: propose, evaluate, gaps, coverage, fidelity, get, list, lifecycle. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -364,6 +364,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "evaluate",
                             "gaps",
                             "coverage",
+                            "fidelity",
                             "get",
                             "list",
                             "lifecycle",
