@@ -349,6 +349,33 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # Rhythm
+        # =====================================================================
+        Tool(
+            name="rhythm",
+            description="Rhythm operations: propose, evaluate, coverage, get, list. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["propose", "evaluate", "coverage", "get", "list"],
+                        "description": "Operation to perform",
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "Rhythm name (for get, evaluate)",
+                    },
+                    "persona": {
+                        "type": "string",
+                        "description": "Persona ID (for propose)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Demo Data (replaces 4 tools)
         # =====================================================================
         Tool(

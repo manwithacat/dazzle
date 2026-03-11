@@ -350,6 +350,41 @@ def handle_story(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
+# Rhythm Handler
+# =============================================================================
+
+
+def handle_rhythm(arguments: dict[str, Any]) -> str:
+    """Handle consolidated rhythm operations."""
+    from .handlers.rhythm import (
+        coverage_rhythms_handler,
+        evaluate_rhythm_handler,
+        get_rhythm_handler,
+        list_rhythms_handler,
+        propose_rhythm_handler,
+    )
+
+    operation = arguments.get("operation")
+    project_path = _resolve_project(arguments)
+
+    if project_path is None:
+        return _project_error()
+
+    ops: dict[str, Callable[..., str]] = {
+        "propose": propose_rhythm_handler,
+        "evaluate": evaluate_rhythm_handler,
+        "coverage": coverage_rhythms_handler,
+        "get": get_rhythm_handler,
+        "list": list_rhythms_handler,
+    }
+
+    handler = ops.get(operation)
+    if handler is None:
+        return unknown_op_response(operation, "rhythm")
+    return handler(project_path, arguments)
+
+
+# =============================================================================
 # Demo Data Handler
 # =============================================================================
 
@@ -1778,6 +1813,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "api_pack": handle_api_pack,
     "mock": handle_mock,
     "story": handle_story,
+    "rhythm": handle_rhythm,
     "demo_data": handle_demo_data,
     "test_design": handle_test_design,
     "sitespec": handle_sitespec,
