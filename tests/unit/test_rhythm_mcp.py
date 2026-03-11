@@ -58,6 +58,45 @@ def mock_appspec():
     return spec
 
 
+@pytest.fixture
+def mock_appspec_with_kinds():
+    from dazzle.core.ir.rhythm import PhaseKind, PhaseSpec, RhythmSpec, SceneSpec
+
+    rhythm = RhythmSpec(
+        name="onboarding",
+        title="New User Onboarding",
+        persona="new_user",
+        cadence="quarterly",
+        phases=[
+            PhaseSpec(
+                name="discovery",
+                kind=PhaseKind.ACTIVE,
+                scenes=[
+                    SceneSpec(name="browse", title="Browse Courses", surface="course_list"),
+                ],
+            ),
+            PhaseSpec(
+                name="background",
+                kind=PhaseKind.AMBIENT,
+                scenes=[
+                    SceneSpec(name="notify", title="Notify", surface="notifications"),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+
+    persona = MagicMock()
+    persona.id = "new_user"
+    persona.name = "New User"
+    spec.personas = [persona]
+
+    spec.surfaces = []
+    spec.domain.entities = []
+    return spec
+
+
 def test_list_rhythms(mock_appspec):
     from dazzle.mcp.server.handlers.rhythm import list_rhythms_handler
 
@@ -112,6 +151,46 @@ def test_evaluate_rhythm(mock_appspec):
         assert "checks" in data
 
 
+def test_list_rhythms_includes_ambient_phases(mock_appspec_with_kinds):
+    """list operation includes ambient phase count."""
+    from dazzle.mcp.server.handlers.rhythm import list_rhythms_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec_with_kinds,
+    ):
+        result = list_rhythms_handler(Path("/fake"), {})
+        data = json.loads(result)
+        assert data["rhythms"][0]["ambient_phases"] == 1
+
+
+def test_get_rhythm_includes_phase_kind(mock_appspec_with_kinds):
+    """get operation includes kind on phases."""
+    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec_with_kinds,
+    ):
+        result = get_rhythm_handler(Path("/fake"), {"name": "onboarding"})
+        data = json.loads(result)
+        assert data["phases"][0]["kind"] == "active"
+        assert data["phases"][1]["kind"] == "ambient"
+
+
+def test_get_rhythm_phase_kind_null_when_unset(mock_appspec):
+    """get operation returns null kind when phase has no kind set."""
+    from dazzle.mcp.server.handlers.rhythm import get_rhythm_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        result = get_rhythm_handler(Path("/fake"), {"name": "onboarding"})
+        data = json.loads(result)
+        assert data["phases"][0]["kind"] is None
+
+
 def test_coverage_rhythms(mock_appspec):
     from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
 
@@ -125,3 +204,129 @@ def test_coverage_rhythms(mock_appspec):
         assert "personas_without_rhythms" in data
         assert "surfaces_exercised" in data
         assert "surfaces_unexercised" in data
+
+
+def test_evaluate_submit_scores_persists(tmp_path, mock_appspec):
+    """submit_scores action writes evaluation to .dazzle/evaluations/."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    scores = [
+        {
+            "scene_name": "browse",
+            "phase_name": "discovery",
+            "dimensions": [
+                {"dimension": "arrival", "score": "pass", "evidence": "ok"},
+                {"dimension": "orientation", "score": "pass", "evidence": "ok"},
+                {"dimension": "action", "score": "pass", "evidence": "ok"},
+                {"dimension": "completion", "score": "pass", "evidence": "ok"},
+                {"dimension": "confidence", "score": "pass", "evidence": "ok"},
+            ],
+            "gap_type": "none",
+            "story_ref": None,
+        }
+    ]
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".dazzle").mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        result = evaluate_rhythm_handler(
+            project,
+            {"name": "onboarding", "action": "submit_scores", "scores": scores},
+        )
+    data = json.loads(result)
+    assert "stored" in data
+    assert data["count"] == 1
+
+    eval_dir = project / ".dazzle" / "evaluations"
+    assert eval_dir.exists()
+    eval_files = list(eval_dir.glob("eval-*.json"))
+    assert len(eval_files) == 1
+
+    stored = json.loads(eval_files[0].read_text())
+    assert stored["rhythm"] == "onboarding"
+    assert len(stored["evaluations"]) == 1
+    assert stored["evaluations"][0]["scene_name"] == "browse"
+
+
+def test_evaluate_submit_scores_validates_rhythm(tmp_path, mock_appspec):
+    """submit_scores returns error when rhythm not found."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".dazzle").mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        result = evaluate_rhythm_handler(
+            project,
+            {"name": "nonexistent", "action": "submit_scores", "scores": []},
+        )
+    data = json.loads(result)
+    assert "error" in data
+
+
+def test_evaluate_returns_stored_scores(tmp_path, mock_appspec):
+    """evaluate action returns stored scores alongside structural checks."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    scores = [
+        {
+            "scene_name": "browse",
+            "phase_name": "discovery",
+            "dimensions": [
+                {"dimension": "arrival", "score": "pass", "evidence": "ok"},
+                {"dimension": "orientation", "score": "pass", "evidence": "ok"},
+                {"dimension": "action", "score": "pass", "evidence": "ok"},
+                {"dimension": "completion", "score": "pass", "evidence": "ok"},
+                {"dimension": "confidence", "score": "pass", "evidence": "ok"},
+            ],
+            "gap_type": "none",
+            "story_ref": None,
+        }
+    ]
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / ".dazzle").mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        # Submit scores first
+        evaluate_rhythm_handler(
+            project,
+            {"name": "onboarding", "action": "submit_scores", "scores": scores},
+        )
+
+        # Now run structural evaluate — should include scene_scores
+        result = evaluate_rhythm_handler(
+            project,
+            {"name": "onboarding"},
+        )
+    data = json.loads(result)
+    assert "checks" in data
+    assert "scene_scores" in data
+    assert data["scene_scores"] is not None
+    assert len(data["scene_scores"]) == 1
+    assert data["scene_scores"][0]["scene_name"] == "browse"
+
+
+def test_evaluate_no_stored_scores(mock_appspec):
+    """evaluate action returns null scene_scores when none stored."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "onboarding"})
+    data = json.loads(result)
+    assert "scene_scores" in data
+    assert data["scene_scores"] is None

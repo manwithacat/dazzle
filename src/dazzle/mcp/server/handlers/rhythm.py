@@ -27,6 +27,7 @@ def list_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
                 "persona": r.persona,
                 "cadence": r.cadence,
                 "phase_count": len(r.phases),
+                "ambient_phases": sum(1 for p in r.phases if p.kind and p.kind.value == "ambient"),
                 "scene_count": sum(len(p.scenes) for p in r.phases),
             }
         )
@@ -51,6 +52,7 @@ def get_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                     "phases": [
                         {
                             "name": p.name,
+                            "kind": p.kind.value if p.kind else None,
                             "scenes": [
                                 {
                                     "name": s.name,
