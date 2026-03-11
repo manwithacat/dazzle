@@ -308,3 +308,234 @@ def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
         },
         indent=2,
     )
+
+
+@wrap_handler_errors
+def gaps_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyse gaps between scenes and stories."""
+    import datetime
+
+    from dazzle.core.ir.stories import StoryStatus
+
+    app_spec = load_project_appspec(project_root)
+
+    gaps: list[dict[str, Any]] = []
+    story_by_id = {s.story_id: s for s in app_spec.stories}
+    scene_story_refs: set[str] = set()
+    persona_has_ambient: dict[str, bool] = {}
+    personas_with_rhythms: set[str] = set()
+
+    for rhythm in app_spec.rhythms:
+        personas_with_rhythms.add(rhythm.persona)
+        has_ambient = False
+
+        for phase in rhythm.phases:
+            if phase.kind and phase.kind.value == "ambient":
+                has_ambient = True
+
+            for scene in phase.scenes:
+                if scene.story:
+                    scene_story_refs.add(scene.story)
+                    story = story_by_id.get(scene.story)
+                    if story is None:
+                        gaps.append(
+                            {
+                                "kind": "capability",
+                                "severity": "blocking",
+                                "scene": scene.name,
+                                "phase": phase.name,
+                                "rhythm": rhythm.name,
+                                "persona": rhythm.persona,
+                                "story_ref": scene.story,
+                                "surface_ref": scene.surface,
+                                "description": (
+                                    f"Scene '{scene.name}' references "
+                                    f"non-existent story '{scene.story}'"
+                                ),
+                            }
+                        )
+                    elif story.status == StoryStatus.DRAFT:
+                        gaps.append(
+                            {
+                                "kind": "capability",
+                                "severity": "blocking",
+                                "scene": scene.name,
+                                "phase": phase.name,
+                                "rhythm": rhythm.name,
+                                "persona": rhythm.persona,
+                                "story_ref": scene.story,
+                                "surface_ref": scene.surface,
+                                "description": (
+                                    f"Scene '{scene.name}' references DRAFT story '{scene.story}'"
+                                ),
+                            }
+                        )
+                else:
+                    gaps.append(
+                        {
+                            "kind": "unmapped",
+                            "severity": "advisory",
+                            "scene": scene.name,
+                            "phase": phase.name,
+                            "rhythm": rhythm.name,
+                            "persona": rhythm.persona,
+                            "story_ref": None,
+                            "surface_ref": scene.surface,
+                            "description": f"Scene '{scene.name}' has no story: reference",
+                        }
+                    )
+
+        persona_has_ambient[rhythm.persona] = has_ambient
+
+    # Orphan stories
+    for story_id, story in story_by_id.items():
+        if story_id not in scene_story_refs:
+            gaps.append(
+                {
+                    "kind": "orphan",
+                    "severity": "advisory",
+                    "scene": None,
+                    "phase": None,
+                    "rhythm": "",
+                    "persona": getattr(story, "actor", ""),
+                    "story_ref": story_id,
+                    "surface_ref": None,
+                    "description": f"Story '{story_id}' is not referenced by any scene",
+                }
+            )
+
+    # Ambient gaps
+    for persona_id, has_ambient in persona_has_ambient.items():
+        if not has_ambient:
+            gaps.append(
+                {
+                    "kind": "ambient",
+                    "severity": "advisory",
+                    "scene": None,
+                    "phase": None,
+                    "rhythm": "",
+                    "persona": persona_id,
+                    "story_ref": None,
+                    "surface_ref": None,
+                    "description": f"Persona '{persona_id}' has no ambient phase",
+                }
+            )
+
+    # Unscored personas
+    personas_with_stories = {s.actor for s in app_spec.stories}
+    for pid in sorted(personas_with_stories - personas_with_rhythms):
+        gaps.append(
+            {
+                "kind": "unscored",
+                "severity": "advisory",
+                "scene": None,
+                "phase": None,
+                "rhythm": "",
+                "persona": pid,
+                "story_ref": None,
+                "surface_ref": None,
+                "description": f"Persona '{pid}' has stories but no rhythm",
+            }
+        )
+
+    # Layer in evaluated gaps from stored scores
+    _layer_evaluated_gaps(project_root, gaps)
+
+    # Build summary
+    summary = _build_gaps_summary(gaps)
+
+    # Sort for roadmap: blocking > degraded > advisory
+    severity_order = {"blocking": 0, "degraded": 1, "advisory": 2}
+    roadmap = sorted(gaps, key=lambda g: severity_order.get(g["severity"], 9))
+
+    result = {"gaps": gaps, "summary": summary, "roadmap_order": roadmap}
+
+    # Persist
+    eval_dir = project_root / ".dazzle" / "evaluations"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S")
+    (eval_dir / f"gaps-{ts}.json").write_text(json.dumps(result, indent=2))
+
+    return json.dumps(result, indent=2)
+
+
+def _build_gaps_summary(gaps: list[dict[str, Any]]) -> dict[str, Any]:
+    """Build aggregate gap counts."""
+    by_kind: dict[str, int] = {}
+    by_severity: dict[str, int] = {}
+    by_persona: dict[str, int] = {}
+    for g in gaps:
+        by_kind[g["kind"]] = by_kind.get(g["kind"], 0) + 1
+        by_severity[g["severity"]] = by_severity.get(g["severity"], 0) + 1
+        if g["persona"]:
+            by_persona[g["persona"]] = by_persona.get(g["persona"], 0) + 1
+    return {
+        "total": len(gaps),
+        "by_kind": by_kind,
+        "by_severity": by_severity,
+        "by_persona": by_persona,
+    }
+
+
+def _layer_evaluated_gaps(project_root: Path, gaps: list[dict[str, Any]]) -> None:
+    """Layer in gaps from stored evaluation scores."""
+    eval_dir = project_root / ".dazzle" / "evaluations"
+    if not eval_dir.exists():
+        return
+
+    files = sorted(eval_dir.glob("eval-*.json"), reverse=True)
+    if not files:
+        return
+
+    # Use the most recent evaluation file
+    data = json.loads(files[0].read_text())
+    evaluations = data.get("evaluations", [])
+    rhythm_name = data.get("rhythm", "")
+
+    for ev in evaluations:
+        dims = {d["dimension"]: d["score"] for d in ev.get("dimensions", [])}
+        scene_name = ev.get("scene_name", "")
+        phase_name = ev.get("phase_name", "")
+
+        if dims.get("action") == "fail":
+            gaps.append(
+                {
+                    "kind": "capability",
+                    "severity": "blocking",
+                    "scene": scene_name,
+                    "phase": phase_name,
+                    "rhythm": rhythm_name,
+                    "persona": "",
+                    "story_ref": ev.get("story_ref"),
+                    "surface_ref": None,
+                    "description": f"Scene '{scene_name}' failed action dimension",
+                }
+            )
+        elif dims.get("arrival") == "fail" or dims.get("orientation") == "fail":
+            gaps.append(
+                {
+                    "kind": "surface",
+                    "severity": "degraded",
+                    "scene": scene_name,
+                    "phase": phase_name,
+                    "rhythm": rhythm_name,
+                    "persona": "",
+                    "story_ref": None,
+                    "surface_ref": None,
+                    "description": (f"Scene '{scene_name}' failed arrival/orientation dimension"),
+                }
+            )
+        elif dims.get("completion") == "fail":
+            gaps.append(
+                {
+                    "kind": "workflow",
+                    "severity": "blocking",
+                    "scene": scene_name,
+                    "phase": phase_name,
+                    "rhythm": rhythm_name,
+                    "persona": "",
+                    "story_ref": None,
+                    "surface_ref": None,
+                    "description": f"Scene '{scene_name}' failed completion dimension",
+                }
+            )

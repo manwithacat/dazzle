@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from dazzle.core.ir.rhythm import PhaseKind, PhaseSpec, RhythmSpec, SceneSpec
+from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
 
 
 @pytest.fixture
@@ -406,3 +407,382 @@ def test_evaluate_no_stored_scores(mock_appspec):
     data = json.loads(result)
     assert "scene_scores" in data
     assert data["scene_scores"] is None
+
+
+# ---------------------------------------------------------------------------
+# Gaps analysis tests
+# ---------------------------------------------------------------------------
+
+
+def _make_story(
+    story_id: str,
+    actor: str = "user",
+    status: StoryStatus = StoryStatus.ACCEPTED,
+) -> StorySpec:
+    return StorySpec(
+        story_id=story_id,
+        title=f"Story {story_id}",
+        actor=actor,
+        trigger=StoryTrigger.USER_CLICK,
+        scope=["Task"],
+        status=status,
+        created_at="2026-01-01T00:00:00",
+    )
+
+
+def _make_gaps_appspec(
+    *,
+    rhythms: list[RhythmSpec] | None = None,
+    stories: list[StorySpec] | None = None,
+    persona_ids: list[str] | None = None,
+) -> MagicMock:
+    spec = MagicMock()
+    spec.rhythms = rhythms or []
+    spec.stories = stories or []
+    personas = []
+    for pid in persona_ids or []:
+        p = MagicMock()
+        p.id = pid
+        personas.append(p)
+    spec.personas = personas
+    spec.surfaces = []
+    spec.domain.entities = []
+    return spec
+
+
+def test_gaps_missing_story(tmp_path):
+    """Scene referencing non-existent story produces blocking capability gap."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-999")],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    cap_gaps = [g for g in result["gaps"] if g["kind"] == "capability"]
+    assert len(cap_gaps) >= 1
+    assert cap_gaps[0]["severity"] == "blocking"
+    assert "ST-999" in cap_gaps[0]["description"]
+
+
+def test_gaps_draft_story(tmp_path):
+    """Scene referencing DRAFT story produces blocking capability gap."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    story = _make_story("ST-001", actor="user", status=StoryStatus.DRAFT)
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    cap_gaps = [g for g in result["gaps"] if g["kind"] == "capability"]
+    assert len(cap_gaps) >= 1
+    assert cap_gaps[0]["severity"] == "blocking"
+    assert "DRAFT" in cap_gaps[0]["description"]
+
+
+def test_gaps_unmapped_scene(tmp_path):
+    """Scene without story ref produces advisory unmapped gap."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1")],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    unmapped = [g for g in result["gaps"] if g["kind"] == "unmapped"]
+    assert len(unmapped) == 1
+    assert unmapped[0]["severity"] == "advisory"
+
+
+def test_gaps_orphan_story(tmp_path):
+    """Story not referenced by any scene produces advisory orphan gap."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    story = _make_story("ST-001", actor="user")
+    other_story = _make_story("ST-002", actor="user")
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-002")],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story, other_story], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    orphans = [g for g in result["gaps"] if g["kind"] == "orphan"]
+    assert len(orphans) == 1
+    assert orphans[0]["severity"] == "advisory"
+    assert "ST-001" in orphans[0]["description"]
+
+
+def test_gaps_no_ambient(tmp_path):
+    """Persona with rhythm but no ambient phase produces advisory ambient gap."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    story = _make_story("ST-001", actor="user")
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                kind=PhaseKind.ACTIVE,
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    ambient = [g for g in result["gaps"] if g["kind"] == "ambient"]
+    assert len(ambient) == 1
+    assert ambient[0]["severity"] == "advisory"
+    assert "user" in ambient[0]["description"]
+
+
+def test_gaps_unscored_persona(tmp_path):
+    """Persona with stories but no rhythm produces advisory unscored gap."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    story = _make_story("ST-001", actor="lonely_persona")
+    app = _make_gaps_appspec(rhythms=[], stories=[story], persona_ids=["lonely_persona"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    unscored = [g for g in result["gaps"] if g["kind"] == "unscored"]
+    assert len(unscored) == 1
+    assert unscored[0]["severity"] == "advisory"
+    assert "lonely_persona" in unscored[0]["description"]
+
+
+def test_gaps_roadmap_blocking_first(tmp_path):
+    """Blocking gaps appear before advisory in roadmap_order."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(name="unmapped_scene", surface="sf1"),  # advisory
+                    SceneSpec(name="bad_ref", surface="sf2", story="ST-NOPE"),  # blocking
+                ],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    roadmap = result["roadmap_order"]
+    assert len(roadmap) >= 2
+    blocking_indices = [i for i, g in enumerate(roadmap) if g["severity"] == "blocking"]
+    advisory_indices = [i for i, g in enumerate(roadmap) if g["severity"] == "advisory"]
+    assert blocking_indices
+    assert advisory_indices
+    assert max(blocking_indices) < min(advisory_indices)
+
+
+def test_gaps_summary_counts(tmp_path):
+    """Summary totals are correct."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    orphan_story = _make_story("ST-ORPHAN", actor="user")
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(name="s1", surface="sf1"),  # unmapped
+                    SceneSpec(name="s2", surface="sf2", story="ST-NOPE"),  # capability
+                ],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[orphan_story], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    summary = result["summary"]
+    assert summary["total"] == len(result["gaps"])
+    assert sum(summary["by_kind"].values()) == summary["total"]
+    assert sum(summary["by_severity"].values()) == summary["total"]
+
+
+def test_gaps_persists_report(tmp_path):
+    """Report written to .dazzle/evaluations/gaps-*.json."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1")],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        gaps_rhythm_handler(project, {})
+
+    eval_dir = project / ".dazzle" / "evaluations"
+    assert eval_dir.exists()
+    gap_files = list(eval_dir.glob("gaps-*.json"))
+    assert len(gap_files) == 1
+    stored = json.loads(gap_files[0].read_text())
+    assert "gaps" in stored
+    assert "summary" in stored
+    assert "roadmap_order" in stored
+
+
+def test_gaps_layers_evaluated_failures(tmp_path):
+    """Evaluation failures from stored eval files are layered in."""
+    from dazzle.mcp.server.handlers.rhythm import gaps_rhythm_handler
+
+    story = _make_story("ST-001", actor="user")
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_gaps_appspec(rhythms=[rhythm], stories=[story], persona_ids=["user"])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    # Write an eval file with a failure
+    eval_dir = project / ".dazzle" / "evaluations"
+    eval_dir.mkdir(parents=True)
+    eval_data = {
+        "rhythm": "r1",
+        "timestamp": "20260101-000000",
+        "evaluations": [
+            {
+                "scene_name": "s1",
+                "phase_name": "p1",
+                "dimensions": [
+                    {"dimension": "action", "score": "fail", "evidence": "broken"},
+                ],
+                "gap_type": "capability",
+                "story_ref": "ST-001",
+            },
+        ],
+    }
+    (eval_dir / "eval-20260101-000000.json").write_text(json.dumps(eval_data))
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(gaps_rhythm_handler(project, {}))
+
+    eval_gaps = [g for g in result["gaps"] if "failed action" in g.get("description", "")]
+    assert len(eval_gaps) == 1
+    assert eval_gaps[0]["severity"] == "blocking"
