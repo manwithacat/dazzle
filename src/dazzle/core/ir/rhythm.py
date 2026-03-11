@@ -12,7 +12,7 @@ strings interpreted by AI agents per domain.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .location import SourceLocation
 
 
-class PhaseKind(str, Enum):
+class PhaseKind(StrEnum):
     """Temporal nature of a rhythm phase."""
 
     ONBOARDING = "onboarding"
