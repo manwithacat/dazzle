@@ -131,7 +131,7 @@ Deterministic analysis from AppSpec alone:
 - Scenes with no `story:` reference → **unmapped scene** (advisory)
 - Stories that no scene references → **orphan story** (advisory)
 - Personas with rhythms but no `ambient` phase → **ambient utility gap**
-- Personas with stories but no rhythm → **unscored persona**
+- Personas with stories but no rhythm → **unscored persona** (no journey to evaluate capabilities against)
 
 ### Evaluated gaps (after `evaluate` run)
 
@@ -229,13 +229,13 @@ This operation reads state. It never writes, blocks, or refuses. The manifesto's
 - `_parse_rhythm_phase()` gains optional `kind:` field parsing
 - `PhaseSpec` gains `kind: PhaseKind | None` (note: `PhaseSpec` is frozen — `kind` must be passed at construction time)
 - `PhaseKind` enum: `onboarding`, `active`, `periodic`, `ambient`, `offboarding`
-- Story references in scenes (`story:` field) use story names as identifiers (e.g., `story: approve_vat_return`), not hyphenated IDs like `ST-012`. The DSL examples in Section 1 used hyphenated IDs for readability but implementation should use standard identifiers consistent with the existing parser
+- Story references in scenes (`story:` field) use story names as identifiers (e.g., `story: approve_vat_return`), consistent with the existing parser
 
 ### MCP handler changes
 
 | Operation | Change |
 |-----------|--------|
-| `rhythm evaluate` | Enriched with scene dimension scoring |
+| `rhythm evaluate` | Enriched: new `submit_scores` action for agent-produced dimension scoring; existing `evaluate` action returns stored scores alongside structural results |
 | `rhythm gaps` | **New.** Static and evaluated modes |
 | `rhythm lifecycle` | **New.** Lifecycle status report |
 | `rhythm propose` | Updated prompt: aware of phase kinds, suggests ambient phases |
