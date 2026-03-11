@@ -154,3 +154,69 @@ rhythm onboarding "Onboarding":
 """
     with pytest.raises(Exception, match="[Dd]uplicate.*scene|scene.*browse"):
         _build_appspec(dsl)
+
+
+def test_rhythm_story_reference_hyphenated():
+    """Quoted hyphenated story IDs resolve correctly in linker."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn things"
+
+entity Course "Course":
+  id: uuid pk
+  title: str(200) required
+
+surface course_list "Courses":
+  uses entity Course
+  mode: list
+  section main:
+    field title "Title"
+
+story ST-020 "Browse available courses":
+  actor: new_user
+  trigger: user_click
+
+  then:
+    - "User sees courses"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase discovery:
+    scene browse "Browse":
+      on: course_list
+      story: "ST-020"
+"""
+    appspec = _build_appspec(dsl)
+    scene = appspec.rhythms[0].phases[0].scenes[0]
+    assert scene.story == "ST-020"
+
+
+def test_rhythm_invalid_story_reference_error():
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn things"
+
+surface course_list "Courses":
+  mode: list
+  section main:
+    field title "Title"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase discovery:
+    scene browse "Browse":
+      on: course_list
+      story: "ST-999"
+"""
+    with pytest.raises(Exception, match="story|ST-999"):
+        _build_appspec(dsl)

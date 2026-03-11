@@ -14,7 +14,7 @@ DSL Syntax (v0.39.0):
           action: filter, browse
           entity: Course
           expects: "visible_results"
-          story: browse_courses
+          story: "ST-020"
 """
 
 from __future__ import annotations
@@ -52,7 +52,7 @@ class RhythmParserMixin:
                   [action COLON identifier_list NEWLINE]
                   [entity COLON IDENTIFIER NEWLINE]
                   [expects COLON STRING NEWLINE]
-                  [story COLON IDENTIFIER NEWLINE]
+                  [story COLON (IDENTIFIER | STRING) NEWLINE]
                 DEDENT)*
               DEDENT)*
             DEDENT
@@ -213,7 +213,10 @@ class RhythmParserMixin:
             elif field_name == "story":
                 self.advance()
                 self.expect(TokenType.COLON)
-                story = self.expect_identifier_or_keyword().value
+                if self.match(TokenType.STRING):
+                    story = self.advance().value
+                else:
+                    story = self.expect_identifier_or_keyword().value
                 self.skip_newlines()
 
             else:

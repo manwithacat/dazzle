@@ -195,6 +195,44 @@ rhythm r "R":
     assert fragment.rhythms[0].phases[0].kind is None
 
 
+def test_parse_scene_story_as_string():
+    """story: field accepts quoted strings for hyphenated IDs like ST-020."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase engagement:
+    scene enroll "Enroll":
+      on: course_detail
+      story: "ST-020"
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    scene = fragment.rhythms[0].phases[0].scenes[0]
+    assert scene.story == "ST-020"
+
+
+def test_parse_scene_story_as_identifier():
+    """story: field still accepts bare identifiers for backward compat."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase engagement:
+    scene enroll "Enroll":
+      on: course_detail
+      story: enroll_story
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    scene = fragment.rhythms[0].phases[0].scenes[0]
+    assert scene.story == "enroll_story"
+
+
 def test_parse_scene_missing_on_raises():
     dsl = """\
 module test_app
