@@ -461,9 +461,16 @@ from .process import StepKind as ProcessStepKind
 
 # Rhythms (v0.39.0 Longitudinal UX Evaluation)
 from .rhythm import (
+    Gap,
+    GapsReport,
+    GapsSummary,
+    LifecycleReport,
+    LifecycleStep,
     PhaseKind,
     PhaseSpec,
     RhythmSpec,
+    SceneDimensionScore,
+    SceneEvaluation,
     SceneSpec,
 )
 
@@ -1065,8 +1072,16 @@ __all__ = [
     "ApprovalOutcomeSpec",
     "ApprovalSpec",
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
+    "Gap",
+    "GapsReport",
+    "GapsSummary",
+    "LifecycleReport",
+    "LifecycleStep",
+    "PhaseKind",
     "PhaseSpec",
     "RhythmSpec",
+    "SceneDimensionScore",
+    "SceneEvaluation",
     "SceneSpec",
     # Seed Templates (v0.38.0)
     "SeedFieldTemplate",
