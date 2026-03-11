@@ -60,6 +60,7 @@ from .process import (
     ProcessSpec,
     ScheduleSpec,
 )
+from .rhythm import RhythmSpec
 from .scenarios import ScenarioSpec
 from .security import SecurityConfig
 from .services import APISpec, DomainServiceSpec
@@ -164,6 +165,8 @@ class AppSpec(BaseModel):
     islands: list[IslandSpec] = Field(default_factory=list)
     # Notifications (v0.34.0)
     notifications: list[NotificationSpec] = Field(default_factory=list)
+    # Rhythms (v0.39.0 Longitudinal UX Evaluation)
+    rhythms: list[RhythmSpec] = Field(default_factory=list)
     # Global audit trail (v0.34.0) — when True, all entities are audited by default
     audit_trail: bool = False
 
