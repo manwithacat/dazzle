@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 
 def _import_knowledge_graph_module(module_name: str):
@@ -186,3 +187,95 @@ class TestSeedPipeline:
         )
         assert stats["aliases"] >= 100, f"Expected >=100 aliases, got {stats['aliases']}"
         assert stats["relations"] >= 50, f"Expected >=50 relations, got {stats['relations']}"
+
+
+class TestSeedSceneStoryRelations:
+    """Tests for seed_scene_story_relations."""
+
+    @staticmethod
+    def _make_scene(name: str, surface: str, story: str | None = None) -> MagicMock:
+        scene = MagicMock()
+        scene.name = name
+        scene.surface = surface
+        scene.story = story
+        return scene
+
+    @staticmethod
+    def _make_phase(name: str, scenes: list) -> MagicMock:
+        phase = MagicMock()
+        phase.name = name
+        phase.scenes = scenes
+        return phase
+
+    @staticmethod
+    def _make_rhythm(name: str, phases: list) -> MagicMock:
+        rhythm = MagicMock()
+        rhythm.name = name
+        rhythm.phases = phases
+        return rhythm
+
+    @staticmethod
+    def _make_app_spec(rhythms: list) -> MagicMock:
+        spec = MagicMock()
+        spec.rhythms = rhythms
+        return spec
+
+    def test_scene_exercises_story_creates_relations(self) -> None:
+        """Test that scenes with story refs create scene_exercises_story relations."""
+        graph = KnowledgeGraph(":memory:")
+        scene = self._make_scene("browse_tasks", "task_list", story="manage_tasks")
+        phase = self._make_phase("discovery", [scene])
+        rhythm = self._make_rhythm("admin_journey", [phase])
+        app_spec = self._make_app_spec([rhythm])
+
+        count = _seed_module.seed_scene_story_relations(graph, app_spec)
+
+        assert count == 1
+        relations = graph.get_relations(relation_type="scene_exercises_story")
+        assert len(relations) == 1
+        rel = relations[0]
+        assert rel.source_id == "scene:admin_journey.browse_tasks"
+        assert rel.target_id == "story:manage_tasks"
+        assert rel.metadata["rhythm"] == "admin_journey"
+        assert rel.metadata["phase"] == "discovery"
+
+    def test_scene_without_story_skipped(self) -> None:
+        """Test that scenes without story refs are skipped."""
+        graph = KnowledgeGraph(":memory:")
+        scene = self._make_scene("browse_tasks", "task_list", story=None)
+        phase = self._make_phase("discovery", [scene])
+        rhythm = self._make_rhythm("admin_journey", [phase])
+        app_spec = self._make_app_spec([rhythm])
+
+        count = _seed_module.seed_scene_story_relations(graph, app_spec)
+
+        assert count == 0
+        relations = graph.get_relations(relation_type="scene_exercises_story")
+        assert len(relations) == 0
+
+    def test_multiple_rhythms_and_scenes(self) -> None:
+        """Test seeding across multiple rhythms with multiple scenes."""
+        graph = KnowledgeGraph(":memory:")
+        s1 = self._make_scene("browse", "list_view", story="story_a")
+        s2 = self._make_scene("edit", "edit_view", story="story_b")
+        s3 = self._make_scene("idle", "dash", story=None)  # no story
+        p1 = self._make_phase("active", [s1, s2])
+        p2 = self._make_phase("passive", [s3])
+        r1 = self._make_rhythm("user_journey", [p1])
+        r2 = self._make_rhythm("admin_journey", [p2])
+        app_spec = self._make_app_spec([r1, r2])
+
+        count = _seed_module.seed_scene_story_relations(graph, app_spec)
+
+        assert count == 2
+        relations = graph.get_relations(relation_type="scene_exercises_story")
+        assert len(relations) == 2
+
+    def test_empty_rhythms(self) -> None:
+        """Test seeding with no rhythms produces zero relations."""
+        graph = KnowledgeGraph(":memory:")
+        app_spec = self._make_app_spec([])
+
+        count = _seed_module.seed_scene_story_relations(graph, app_spec)
+
+        assert count == 0
