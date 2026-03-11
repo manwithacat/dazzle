@@ -1,6 +1,7 @@
 import os
 import tomllib
 from dataclasses import dataclass, field
+from importlib.metadata import version
 from pathlib import Path
 
 
@@ -321,7 +322,36 @@ class ProjectManifest:
     auth: AuthConfig = field(default_factory=AuthConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     dev: DevConfig = field(default_factory=DevConfig)
+    framework_version: str | None = None
     cdn: bool = True  # Serve assets from jsDelivr CDN; set [ui] cdn = false for air-gapped
+
+
+def check_framework_version(manifest: ProjectManifest) -> None:
+    """Raise SystemExit if installed version doesn't satisfy constraint."""
+    if not manifest.framework_version:
+        return
+    from packaging.specifiers import SpecifierSet
+    from packaging.version import Version
+
+    installed = Version(version("dazzle-dsl"))
+    constraint = manifest.framework_version
+    # Handle tilde shorthand: "~0.38" → ">=0.38,<0.39"
+    if constraint.startswith("~"):
+        base = constraint[1:]
+        parts = base.split(".")
+        if len(parts) >= 2:
+            upper = f"{int(parts[0])}.{int(parts[1]) + 1}"
+        else:
+            upper = f"{int(parts[0]) + 1}"
+        spec = SpecifierSet(f">={base},<{upper}")
+    else:
+        spec = SpecifierSet(constraint)
+    if installed not in spec:
+        raise SystemExit(
+            f"Framework version mismatch: installed {installed}, "
+            f"project requires {constraint}. "
+            f"Run: pip install 'dazzle-dsl{constraint}'"
+        )
 
 
 def load_manifest(path: Path) -> ProjectManifest:
@@ -497,6 +527,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         auth=auth_config,
         database=database_config,
         dev=dev_config,
+        framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
     )
 
