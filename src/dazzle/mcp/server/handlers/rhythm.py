@@ -173,6 +173,35 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                         }
                     )
 
+    # Surface reuse / specialization signal (advisory)
+    surface_scenes: dict[str, list[dict[str, str | None]]] = {}
+    for phase in rhythm.phases:
+        for scene in phase.scenes:
+            surface_scenes.setdefault(scene.surface, []).append(
+                {"scene": scene.name, "phase": phase.name, "expects": scene.expects}
+            )
+    for surf, usages in surface_scenes.items():
+        if len(usages) < 2:
+            continue
+        expects_values = {u["expects"] for u in usages if u["expects"]}
+        if len(expects_values) > 1:
+            scene_names = [u["scene"] for u in usages]
+            checks.append(
+                {
+                    "check": "surface_specialization",
+                    "surface": surf,
+                    "scenes": scene_names,
+                    "expects_values": sorted(expects_values),
+                    "pass": False,
+                    "advisory": True,
+                    "message": (
+                        f"Surface '{surf}' used in {len(usages)} scenes with "
+                        f"different expectations — consider whether these intents "
+                        f"warrant separate surfaces."
+                    ),
+                }
+            )
+
     hard_checks = [c for c in checks if not c.get("advisory")]
     advisory_checks = [c for c in checks if c.get("advisory")]
     passed = sum(1 for c in hard_checks if c["pass"])

@@ -1542,3 +1542,140 @@ def test_evaluate_advisory_not_counted_in_summary():
     assert data["summary"] == "2/2 checks passed"
     # But there's an advisory warning for custom_verb
     assert data["advisory_warnings"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Surface reuse / specialization signal tests
+# ---------------------------------------------------------------------------
+
+
+def test_evaluate_surface_reuse_different_expects():
+    """Surface used in multiple scenes with different expects produces advisory."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(
+                        name="confirm_stmt",
+                        surface="deadline_detail",
+                        expects="confirmation_statement_visible",
+                    ),
+                ],
+            ),
+            PhaseSpec(
+                name="p2",
+                scenes=[
+                    SceneSpec(
+                        name="ct600_review",
+                        surface="deadline_detail",
+                        expects="ct600_deadline_with_filing_status",
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = []
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
+    data = json.loads(result)
+
+    spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
+    assert len(spec_checks) == 1
+    assert spec_checks[0]["surface"] == "deadline_detail"
+    assert spec_checks[0]["pass"] is False
+    assert spec_checks[0]["advisory"] is True
+    assert "deadline_detail" in spec_checks[0]["message"]
+    assert set(spec_checks[0]["scenes"]) == {"confirm_stmt", "ct600_review"}
+
+
+def test_evaluate_surface_reuse_same_expects_no_advisory():
+    """Surface used in multiple scenes with same expects produces no advisory."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(name="s1", surface="dashboard", expects="data_visible"),
+                    SceneSpec(name="s2", surface="dashboard", expects="data_visible"),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = []
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
+    data = json.loads(result)
+
+    spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
+    assert len(spec_checks) == 0
+
+
+def test_evaluate_surface_reuse_no_expects_no_advisory():
+    """Surface used in multiple scenes without expects produces no advisory."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(name="s1", surface="dashboard"),
+                    SceneSpec(name="s2", surface="dashboard"),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = []
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
+    data = json.loads(result)
+
+    spec_checks = [c for c in data["checks"] if c["check"] == "surface_specialization"]
+    assert len(spec_checks) == 0
