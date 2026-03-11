@@ -378,7 +378,7 @@ def handle_rhythm(arguments: dict[str, Any]) -> str:
         "list": list_rhythms_handler,
     }
 
-    handler = ops.get(operation)
+    handler = ops.get(operation)  # type: ignore[arg-type]
     if handler is None:
         return unknown_op_response(operation, "rhythm")
     return handler(project_path, arguments)

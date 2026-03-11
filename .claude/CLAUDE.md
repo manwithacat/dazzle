@@ -93,7 +93,7 @@ surface task_list "Tasks":
     field completed "Done"
 ```
 
-**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `view`, `webhook`, `approval`, `sla`
+**Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `view`, `webhook`, `approval`, `sla`, `rhythm`
 
 ### TigerBeetle Ledgers
 
@@ -161,6 +161,7 @@ The DAZZLE MCP server (`dazzle mcp`) provides 32 tools:
 | `validate_all_projects` | Validate all projects |
 | `dsl` | validate, inspect_entity, inspect_surface, lint, analyze, fidelity, export_frontend_spec |
 | `story` | propose, save, get, generate_tests, coverage |
+| `rhythm` | propose, evaluate, coverage, get, list |
 | `process` | propose, save, list, inspect, diagram, coverage |
 | `test_design` | propose_persona, gaps, save, get, auto_populate, improve_coverage |
 | `dsl_test` | generate, run, run_all, coverage, verify_story, diff_personas |
