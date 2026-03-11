@@ -160,8 +160,8 @@ The DAZZLE MCP server (`dazzle mcp`) provides 32 tools:
 | `get_active_project` | Show current project |
 | `validate_all_projects` | Validate all projects |
 | `dsl` | validate, inspect_entity, inspect_surface, lint, analyze, fidelity, export_frontend_spec |
-| `story` | propose, save, get, generate_tests, coverage |
-| `rhythm` | propose, evaluate, coverage, get, list |
+| `story` | propose, save, get, wall, generate_tests, coverage |
+| `rhythm` | propose, evaluate, gaps, lifecycle, coverage, get, list |
 | `process` | propose, save, list, inspect, diagram, coverage |
 | `test_design` | propose_persona, gaps, save, get, auto_populate, improve_coverage |
 | `dsl_test` | generate, run, run_all, coverage, verify_story, diff_personas |
