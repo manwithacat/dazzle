@@ -56,6 +56,7 @@ def get_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                             "name": p.name,
                             "kind": p.kind.value if p.kind else None,
                             "cadence": p.cadence,
+                            "depends_on": p.depends_on,
                             "scenes": [
                                 {
                                     "name": s.name,

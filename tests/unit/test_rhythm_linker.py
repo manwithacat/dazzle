@@ -233,6 +233,134 @@ rhythm onboarding "Onboarding":
     assert scene.surface == "student_dash"
 
 
+def test_rhythm_phase_depends_on_valid():
+    """Valid depends_on reference passes linker."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn"
+
+surface welcome "Welcome":
+  mode: view
+  section main:
+    field title "Title"
+
+surface course_list "Courses":
+  mode: list
+  section main:
+    field title "Title"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase setup:
+    kind: gate
+    scene welcome "Welcome":
+      on: welcome
+
+  phase learning:
+    depends_on: setup
+    scene browse "Browse":
+      on: course_list
+"""
+    appspec = _build_appspec(dsl)
+    assert appspec.rhythms[0].phases[1].depends_on == "setup"
+
+
+def test_rhythm_phase_depends_on_unknown_error():
+    """depends_on referencing nonexistent phase is a linker error."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn"
+
+surface course_list "Courses":
+  mode: list
+  section main:
+    field title "Title"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase learning:
+    depends_on: nonexistent
+    scene browse "Browse":
+      on: course_list
+"""
+    with pytest.raises(Exception, match="depends_on|nonexistent"):
+        _build_appspec(dsl)
+
+
+def test_rhythm_phase_depends_on_self_error():
+    """Phase depending on itself is a linker error."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn"
+
+surface course_list "Courses":
+  mode: list
+  section main:
+    field title "Title"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase learning:
+    depends_on: learning
+    scene browse "Browse":
+      on: course_list
+"""
+    with pytest.raises(Exception, match="depends on itself|circular"):
+        _build_appspec(dsl)
+
+
+def test_rhythm_phase_circular_dependency_error():
+    """Circular phase dependencies are a linker error."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn"
+
+surface s1 "S1":
+  mode: list
+  section main:
+    field title "Title"
+
+surface s2 "S2":
+  mode: list
+  section main:
+    field title "Title"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase a:
+    depends_on: b
+    scene sa "SA":
+      on: s1
+
+  phase b:
+    depends_on: a
+    scene sb "SB":
+      on: s2
+"""
+    with pytest.raises(Exception, match="circular"):
+        _build_appspec(dsl)
+
+
 def test_rhythm_invalid_story_reference_error():
     dsl = """\
 module test_app

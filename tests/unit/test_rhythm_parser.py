@@ -237,6 +237,52 @@ rhythm fiscal "Fiscal Year":
     assert phase.kind is None
 
 
+def test_parse_phase_depends_on():
+    """Phase depends_on is parsed from identifier."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm fiscal "Fiscal Year":
+  persona: director
+
+  phase onboarding:
+    kind: gate
+    scene welcome "Welcome":
+      on: welcome_page
+
+  phase q1:
+    kind: periodic
+    depends_on: onboarding
+    scene review "Q1 Review":
+      on: dashboard
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    phases = fragment.rhythms[0].phases
+    assert phases[0].depends_on is None
+    assert phases[1].depends_on == "onboarding"
+
+
+def test_parse_phase_kind_gate():
+    """Phase kind 'gate' is parsed correctly."""
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm r "R":
+  persona: user
+
+  phase setup:
+    kind: gate
+    scene s "S":
+      on: surf
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    phase = fragment.rhythms[0].phases[0]
+    assert phase.kind is not None
+    assert phase.kind.value == "gate"
+
+
 def test_parse_phase_cadence_none_by_default():
     """Phase cadence is None when not specified."""
     dsl = """\

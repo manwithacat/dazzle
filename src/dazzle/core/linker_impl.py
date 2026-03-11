@@ -1136,6 +1136,33 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                         f"unknown story '{scene.story}'"
                     )
 
+        # Validate phase dependencies
+        phase_names = {p.name for p in rhythm.phases}
+        for phase in rhythm.phases:
+            if phase.depends_on:
+                if phase.depends_on not in phase_names:
+                    errors.append(
+                        f"Rhythm '{rhythm_name}' phase '{phase.name}' depends_on "
+                        f"unknown phase '{phase.depends_on}'"
+                    )
+                elif phase.depends_on == phase.name:
+                    errors.append(f"Rhythm '{rhythm_name}' phase '{phase.name}' depends on itself")
+
+        # Check for circular dependencies in phase DAG
+        dep_map = {p.name: p.depends_on for p in rhythm.phases if p.depends_on}
+        for start in dep_map:
+            visited: set[str] = set()
+            current = start
+            while current in dep_map:
+                if current in visited:
+                    errors.append(
+                        f"Rhythm '{rhythm_name}' has circular phase dependency "
+                        f"involving '{current}'"
+                    )
+                    break
+                visited.add(current)
+                current = dep_map[current]
+
     return errors
 
 

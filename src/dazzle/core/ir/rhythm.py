@@ -24,6 +24,7 @@ class PhaseKind(StrEnum):
     """Temporal nature of a rhythm phase."""
 
     ONBOARDING = "onboarding"
+    GATE = "gate"
     ACTIVE = "active"
     PERIODIC = "periodic"
     AMBIENT = "ambient"
@@ -51,6 +52,9 @@ class PhaseSpec(BaseModel):
     name: str = Field(..., description="Phase identifier")
     kind: PhaseKind | None = Field(default=None, description="Phase kind hint")
     cadence: str | None = Field(default=None, description="Temporal cadence hint for this phase")
+    depends_on: str | None = Field(
+        default=None, description="Phase name this phase depends on (must complete first)"
+    )
     scenes: list[SceneSpec] = Field(default_factory=list, description="Scenes in phase")
     source: SourceLocation | None = None
 
