@@ -651,6 +651,9 @@ class MigrationHistory:
 # =============================================================================
 
 
+_MIGRATION_LOCK_ID = 8_370_291_746  # arbitrary advisory lock id for Dazzle migrations
+
+
 def auto_migrate(
     db_manager: DatabaseBackend,
     entities: list[EntitySpec],
@@ -659,7 +662,9 @@ def auto_migrate(
     """
     Automatically migrate database to match entity specifications.
 
-    This is the main entry point for auto-migration.
+    This is the main entry point for auto-migration. Uses a PostgreSQL
+    advisory lock so that only one worker runs migrations concurrently
+    (safe for multi-worker deployments).
 
     Args:
         db_manager: Database manager instance (PostgresBackend)
@@ -669,21 +674,26 @@ def auto_migrate(
     Returns:
         The executed migration plan
     """
-    planner = MigrationPlanner(db_manager)
-    plan = planner.plan_migrations(entities)
+    with db_manager.connection() as conn:
+        conn.execute("SELECT pg_advisory_lock(%s)", (_MIGRATION_LOCK_ID,))
+        try:
+            planner = MigrationPlanner(db_manager)
+            plan = planner.plan_migrations(entities)
 
-    if plan.is_empty:
-        return plan
+            if plan.is_empty:
+                return plan
 
-    executor = MigrationExecutor(db_manager)
-    executed = executor.execute_safe(plan)
+            executor = MigrationExecutor(db_manager)
+            executed = executor.execute_safe(plan)
 
-    if record_history and executed:
-        history = MigrationHistory(db_manager)
-        for step in executed:
-            history.record_migration(step)
+            if record_history and executed:
+                history = MigrationHistory(db_manager)
+                for step in executed:
+                    history.record_migration(step)
 
-    return plan
+            return plan
+        finally:
+            conn.execute("SELECT pg_advisory_unlock(%s)", (_MIGRATION_LOCK_ID,))
 
 
 def plan_migrations(

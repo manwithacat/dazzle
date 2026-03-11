@@ -161,6 +161,11 @@ def serve_command(
         "--mock/--no-mock",
         help="Auto-start vendor mocks for API packs without credentials. Default: enabled in local mode.",
     ),
+    workers: int | None = typer.Option(
+        None,
+        "--workers",
+        help="Number of uvicorn workers (default: 1).",
+    ),
 ) -> None:
     """
     Serve Dazzle app (backend API + UI with live data).
@@ -205,6 +210,13 @@ def serve_command(
     dev_config_override_test: bool | None = None
     try:
         mf = load_manifest(manifest_path)
+        from dazzle.core.manifest import check_framework_version
+
+        try:
+            if mf:
+                check_framework_version(mf)
+        except SystemExit:
+            raise
         auth_enabled = mf.auth.enabled
         project_name = mf.name or project_root.name
         # Get manifest dev config overrides (v0.24.0)
@@ -445,6 +457,7 @@ def serve_command(
             sitespec_data=sitespec_data,
             project_root=project_root,
             redis_url=redis_url,
+            workers=workers,
         )
         return
 
@@ -554,4 +567,5 @@ def serve_command(
         theme_preset=mf.theme.preset,
         theme_overrides=theme_overrides if theme_overrides else None,
         redis_url=redis_url,
+        workers=workers,
     )

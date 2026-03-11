@@ -110,6 +110,7 @@ def run_unified_server(
     theme_preset: str = "saas-default",
     theme_overrides: dict[str, Any] | None = None,
     redis_url: str = "",
+    workers: int | None = None,
     *,
     config: UnifiedServerConfig | None = None,
 ) -> None:
@@ -269,8 +270,16 @@ def run_unified_server(
     print("-" * 60)
     print()
 
+    uvicorn_kwargs: dict[str, Any] = {
+        "host": host,
+        "port": port,
+        "log_level": "info",
+    }
+    if workers is not None:
+        uvicorn_kwargs["workers"] = workers
+
     try:
-        uvicorn.run(app, host=host, port=port, log_level="info")
+        uvicorn.run(app, **uvicorn_kwargs)
     except KeyboardInterrupt:
         print("\n[Dazzle] Shutting down...")
     except OSError as e:
@@ -297,6 +306,7 @@ def run_backend_only(
     sitespec_data: dict[str, Any] | None = None,
     project_root: Path | None = None,
     redis_url: str = "",
+    workers: int | None = None,
 ) -> None:
     """
     Run only the FastAPI backend server.
@@ -375,8 +385,16 @@ def run_backend_only(
     print("-" * 60)
     print()
 
+    uvicorn_kwargs: dict[str, Any] = {
+        "host": host,
+        "port": port,
+        "log_level": "info",
+    }
+    if workers is not None:
+        uvicorn_kwargs["workers"] = workers
+
     try:
-        uvicorn.run(app, host=host, port=port, log_level="info")
+        uvicorn.run(app, **uvicorn_kwargs)
     except KeyboardInterrupt:
         print("\n[Dazzle] Shutting down...")
     except OSError as e:
