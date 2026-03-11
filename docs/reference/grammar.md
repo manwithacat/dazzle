@@ -612,6 +612,34 @@ unless_block  ::= "unless" ":" NEWLINE
                   DEDENT ;
 
 (* =============================================================================
+   Rhythm Definitions (v0.39.0)
+   ============================================================================= *)
+
+rhythm_block  ::= "rhythm" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    "persona" ":" IDENT NEWLINE
+                    ("cadence" ":" STRING NEWLINE)?
+                    phase_block*
+                  DEDENT ;
+
+phase_block   ::= "phase" IDENT ":" NEWLINE
+                  INDENT
+                    scene_block*
+                  DEDENT ;
+
+scene_block   ::= "scene" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    "on" ":" IDENT NEWLINE
+                    ("action" ":" identifier_list NEWLINE)?
+                    ("entity" ":" IDENT NEWLINE)?
+                    ("expects" ":" STRING NEWLINE)?
+                    ("story" ":" IDENT NEWLINE)?
+                  DEDENT ;
+
+identifier_list
+              ::= IDENT ("," IDENT)* ;
+
+(* =============================================================================
    Process Workflows and Schedules
    ============================================================================= *)
 
@@ -1470,6 +1498,60 @@ schedule daily_report "Daily Report":
   process: generate_report
   cron: "0 9 * * *"
   timezone: "Europe/London"
+```
+
+### Rhythm (v0.39.0)
+
+Rhythms define longitudinal persona journey maps through the app, organized into temporal phases containing scenes.
+
+```ebnf
+rhythm_block = "rhythm" IDENTIFIER [STRING] ":" NEWLINE INDENT
+    "persona" ":" IDENTIFIER NEWLINE
+    ["cadence" ":" STRING NEWLINE]
+    phase_block*
+  DEDENT
+
+phase_block = "phase" IDENTIFIER ":" NEWLINE INDENT
+    scene_block*
+  DEDENT
+
+scene_block = "scene" IDENTIFIER [STRING] ":" NEWLINE INDENT
+    "on" ":" IDENTIFIER NEWLINE
+    ["action" ":" identifier_list NEWLINE]
+    ["entity" ":" IDENTIFIER NEWLINE]
+    ["expects" ":" STRING NEWLINE]
+    ["story" ":" IDENTIFIER NEWLINE]
+  DEDENT
+
+identifier_list = IDENTIFIER ("," IDENTIFIER)*
+```
+
+**Properties:**
+- `persona` — references a defined persona (validated at link time)
+- `cadence` — free-form temporal frequency hint (agent-interpreted)
+- `on` — surface reference (validated at link time)
+- `action` — free-form action verbs (agent-interpreted)
+- `entity` — entity reference (validated at link time, optional)
+- `expects` — free-form expected outcome (agent-interpreted)
+- `story` — link to existing story (validated at link time, optional)
+
+**Example:**
+```dsl
+rhythm onboarding "New User Onboarding":
+  persona: new_user
+  cadence: "quarterly"
+
+  phase discovery:
+    scene browse_catalog "Browse Courses":
+      on: course_list
+      action: filter, browse
+
+  phase engagement:
+    scene enroll "Enroll":
+      on: course_detail
+      action: submit
+      entity: Enrollment
+      expects: "enrollment_confirmed"
 ```
 
 ### Integration
