@@ -31,6 +31,32 @@ class PhaseKind(StrEnum):
     OFFBOARDING = "offboarding"
 
 
+# ---------------------------------------------------------------------------
+# Standard action vocabulary
+# ---------------------------------------------------------------------------
+
+ACTION_VOCABULARY: dict[str, dict[str, str]] = {
+    # Observe archetype — "show me"
+    "browse": {"archetype": "observe", "meaning": "Navigate, read, verify content visible"},
+    "search": {"archetype": "observe", "meaning": "Find specific items via filtering"},
+    # Act archetype — "do this"
+    "submit": {"archetype": "act", "meaning": "Create or update data"},
+    "upload": {"archetype": "act", "meaning": "Attach a file"},
+    "configure": {"archetype": "act", "meaning": "Adjust settings or preferences"},
+    # Decide archetype — "I've checked this, proceed"
+    "review": {"archetype": "decide", "meaning": "Assess content for correctness"},
+    "approve": {"archetype": "decide", "meaning": "Authorize a state transition"},
+}
+
+ARCHETYPES = {"observe", "act", "decide"}
+
+
+def classify_action(action: str) -> str:
+    """Return the archetype for an action verb, or 'custom' if not standard."""
+    entry = ACTION_VOCABULARY.get(action)
+    return entry["archetype"] if entry else "custom"
+
+
 class SceneSpec(BaseModel):
     """A single scene — a persona action on a surface within a rhythm phase."""
 

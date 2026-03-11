@@ -352,3 +352,20 @@ rhythm onboarding "Onboarding":
 """
     with pytest.raises(Exception, match="on"):
         parse_dsl(dsl, Path("test.dsl"))
+
+
+def test_classify_action_standard():
+    """classify_action returns archetype for standard verbs."""
+    from dazzle.core.ir.rhythm import classify_action
+
+    assert classify_action("browse") == "observe"
+    assert classify_action("submit") == "act"
+    assert classify_action("approve") == "decide"
+
+
+def test_classify_action_custom():
+    """classify_action returns 'custom' for non-standard verbs."""
+    from dazzle.core.ir.rhythm import classify_action
+
+    assert classify_action("wiggle") == "custom"
+    assert classify_action("yeet") == "custom"

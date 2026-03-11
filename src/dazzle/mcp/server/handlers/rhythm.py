@@ -129,6 +129,23 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                 }
             )
 
+            # Action vocabulary checks (advisory)
+            if scene.actions:
+                from dazzle.core.ir.rhythm import ACTION_VOCABULARY
+
+                for action_verb in scene.actions:
+                    is_standard = action_verb in ACTION_VOCABULARY
+                    checks.append(
+                        {
+                            "check": "action_standard",
+                            "phase": phase.name,
+                            "scene": scene.name,
+                            "action": action_verb,
+                            "pass": is_standard,
+                            "advisory": True,
+                        }
+                    )
+
             if scene.entity:
                 entity_exists = scene.entity in entity_names
                 checks.append(
@@ -156,18 +173,28 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                         }
                     )
 
-    passed = sum(1 for c in checks if c["pass"])
-    total = len(checks)
+    hard_checks = [c for c in checks if not c.get("advisory")]
+    advisory_checks = [c for c in checks if c.get("advisory")]
+    passed = sum(1 for c in hard_checks if c["pass"])
+    total = len(hard_checks)
+    advisory_warnings = sum(1 for c in advisory_checks if not c["pass"])
 
     stored_scores = _load_latest_scores(project_root, name)
 
+    result: dict[str, Any] = {
+        "rhythm": name,
+        "summary": f"{passed}/{total} checks passed",
+        "checks": checks,
+        "scene_scores": stored_scores,
+    }
+    if advisory_warnings:
+        result["advisory_warnings"] = advisory_warnings
+        from dazzle.core.ir.rhythm import ACTION_VOCABULARY
+
+        result["action_vocabulary"] = list(ACTION_VOCABULARY.keys())
+
     return json.dumps(
-        {
-            "rhythm": name,
-            "summary": f"{passed}/{total} checks passed",
-            "checks": checks,
-            "scene_scores": stored_scores,
-        },
+        result,
         indent=2,
     )
 

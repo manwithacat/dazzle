@@ -1424,3 +1424,121 @@ def test_propose_rhythm_includes_ambient_phase(mock_appspec):
     dsl = data["proposed_dsl"]
     assert "kind: ambient" in dsl
     assert "phase ambient:" in dsl
+
+
+# ---------------------------------------------------------------------------
+# Action vocabulary tests
+# ---------------------------------------------------------------------------
+
+
+def test_evaluate_standard_actions_no_advisory(mock_appspec):
+    """Standard action verbs produce no advisory warnings."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "onboarding"})
+    data = json.loads(result)
+    # mock_appspec has scene with actions=["submit"] which is standard
+    action_checks = [c for c in data["checks"] if c["check"] == "action_standard"]
+    assert len(action_checks) == 1
+    assert action_checks[0]["pass"] is True
+    assert "advisory_warnings" not in data
+
+
+def test_evaluate_nonstandard_actions_advisory():
+    """Non-standard action verbs produce advisory warnings."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(
+                        name="s1",
+                        surface="sf1",
+                        actions=["submit", "wiggle", "yeet"],
+                    ),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+    spec.surfaces = []
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
+    data = json.loads(result)
+
+    action_checks = [c for c in data["checks"] if c["check"] == "action_standard"]
+    assert len(action_checks) == 3
+    passed = [c for c in action_checks if c["pass"]]
+    failed = [c for c in action_checks if not c["pass"]]
+    assert len(passed) == 1  # submit
+    assert len(failed) == 2  # wiggle, yeet
+    # All action checks are advisory
+    assert all(c.get("advisory") is True for c in action_checks)
+
+    # Advisory warnings count and vocabulary hint
+    assert data["advisory_warnings"] == 2
+    assert "action_vocabulary" in data
+    assert "submit" in data["action_vocabulary"]
+    assert "browse" in data["action_vocabulary"]
+
+
+def test_evaluate_advisory_not_counted_in_summary():
+    """Advisory checks do not affect the pass/total summary."""
+    from dazzle.mcp.server.handlers.rhythm import evaluate_rhythm_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(name="s1", surface="sf1", actions=["custom_verb"]),
+                ],
+            ),
+        ],
+    )
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+    persona = MagicMock()
+    persona.id = "user"
+    spec.personas = [persona]
+
+    s1 = MagicMock()
+    s1.name = "sf1"
+    s1.entity_ref = None
+    spec.surfaces = [s1]
+    spec.workspaces = []
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = evaluate_rhythm_handler(Path("/fake"), {"name": "r1"})
+    data = json.loads(result)
+
+    # Hard checks: persona_exists (pass) + surface_exists (pass) = 2/2
+    assert data["summary"] == "2/2 checks passed"
+    # But there's an advisory warning for custom_verb
+    assert data["advisory_warnings"] == 1
