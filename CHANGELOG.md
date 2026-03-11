@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-03-11
+
+### Added
+- Rhythm fidelity metric: `fidelity` operation measures how well surfaces serve scene intent by comparing `expects:` keywords against surface field names (#450)
+- Surface reuse detection: `evaluate` handler flags surfaces used in multiple scenes with divergent `expects:` values as specialization signals (#448)
+- Standardized action vocabulary: 7 action verbs mapped to 3 archetypes (observe, act, decide) with `classify_action()` API and advisory warnings for non-standard verbs (#449)
+- Phase-level `depends_on:` field for declaring phase ordering constraints with circular dependency detection (#451)
+- Phase kind `gate` for mandatory completion phases (#451)
+- Phase-level `cadence:` field for temporal frequency hints (#447)
+- Persona-scoped coverage metric respecting surface ACL `allow_personas`/`deny_personas` (#446)
+- Scenes can target workspaces via `on:` field, tracked separately in coverage (#445)
+
+### Fixed
+- Rhythm `story:` field now accepts quoted strings for hyphenated IDs like `"ST-020"` (#452)
+
 ## [0.39.0] - 2026-03-11
 
 ### Added
