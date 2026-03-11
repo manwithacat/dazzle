@@ -131,6 +131,7 @@ Save this as `app.dsl`, run `dazzle serve`, and you have a working application w
 | [Integrations](docs/reference/integrations.md) | Integrations connect DAZZLE apps to external systems via declarative API bindings with triggers, field mappings, and error handling. |
 | [Processes](docs/reference/processes.md) | Processes orchestrate durable, multi-step workflows across entities and services. |
 | [Stories](docs/reference/stories.md) | Stories capture expected user-visible outcomes in a structured format tied to personas and entities. |
+| [Rhythms](docs/guides/rhythms.md) | Rhythms capture longitudinal persona journeys organized into temporal phases containing scenes — evaluable actions on specific surfaces. Use `rhythm propose` to generate from natural language. |
 | [Ledgers & Transactions](docs/reference/ledgers.md) | Ledgers and transactions provide TigerBeetle-backed double-entry accounting. |
 | [LLM Models & Intents](docs/reference/llm.md) | DAZZLE supports declarative LLM job definitions for AI-powered tasks such as classification, extraction, and generation. |
 | [Testing](docs/reference/testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
@@ -178,6 +179,7 @@ Generate stories, design tests, execute them at three tiers, and seed realistic 
 | `dsl_test` | generate, run, run_all, coverage, list, create_sessions, diff_personas, verify_story | API tests — including `verify_story` (check story implementations) and `diff_personas` (compare route behavior across roles) |
 | `e2e_test` | check_infra, run, run_agent, coverage, list_flows, tier_guidance, run_viewport, list_viewport_specs, save_viewport_specs | Browser E2E with Playwright — viewport testing, screenshot capture, visual regression baselines, and `tier_guidance` for test strategy |
 | `demo_data` | propose, save, get, generate | Generate realistic seed data per persona/tenant |
+| `rhythm` | propose, evaluate, coverage, get, list | Longitudinal persona journey maps — propose rhythms from natural language, evaluate surface/entity coverage, find persona gaps |
 
 ### 3. Analyze and Audit
 
@@ -493,6 +495,7 @@ src/
 **Full documentation**: [manwithacat.github.io/dazzle](https://manwithacat.github.io/dazzle/)
 
 - **[DSL Reference](docs/reference/index.md)** — complete guide to all DSL constructs (entities, surfaces, workspaces, services, processes, ledgers, and more)
+- **[Rhythm Guide](docs/guides/rhythms.md)** — understanding longitudinal persona journey evaluation
 - **[Getting Started](docs/getting-started/)** — installation, quickstart, first app tutorial
 - **[Architecture](docs/architecture/)** — system design, DSL-to-AppSpec pipeline, MCP server internals
 - **[Contributing](docs/contributing/)** — development setup, testing guide, adding features
