@@ -1,7 +1,7 @@
 # DAZZLE Development Roadmap
 
 **Last Updated**: 2026-02-01
-**Current Version**: v0.38.1
+**Current Version**: v0.39.0
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
 

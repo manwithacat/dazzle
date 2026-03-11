@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-03-11
+
+### Added
+- Rhythm DSL construct: `rhythm`, `phase`, `scene` keywords for longitudinal persona journey evaluation (#444)
+- Rhythm MCP tool with 5 operations: `propose`, `evaluate`, `coverage`, `get`, `list`
+- Static rhythm evaluation: surface existence, entity coverage, navigation coherence checks
+- Rhythm conceptual guide (`docs/guides/rhythms.md`) and reference page (`docs/reference/rhythms.md`)
+
 ## [0.38.1] - 2026-03-10
 
 ### Added
