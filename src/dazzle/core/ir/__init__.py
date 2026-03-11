@@ -461,6 +461,7 @@ from .process import StepKind as ProcessStepKind
 
 # Rhythms (v0.39.0 Longitudinal UX Evaluation)
 from .rhythm import (
+    PhaseKind,
     PhaseSpec,
     RhythmSpec,
     SceneSpec,

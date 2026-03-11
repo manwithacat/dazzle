@@ -1,6 +1,9 @@
 """Tests for rhythm IR types."""
 
-from dazzle.core.ir.rhythm import PhaseSpec, RhythmSpec, SceneSpec
+import pytest
+from pydantic import ValidationError
+
+from dazzle.core.ir.rhythm import PhaseKind, PhaseSpec, RhythmSpec, SceneSpec
 
 
 def test_scene_spec_minimal():
@@ -80,3 +83,27 @@ def test_rhythm_spec_full():
     assert rhythm.cadence == "quarterly"
     assert len(rhythm.phases) == 2
     assert rhythm.phases[0].scenes[0].name == "browse"
+
+
+def test_phase_kind_enum_values():
+    assert PhaseKind.ONBOARDING.value == "onboarding"
+    assert PhaseKind.ACTIVE.value == "active"
+    assert PhaseKind.PERIODIC.value == "periodic"
+    assert PhaseKind.AMBIENT.value == "ambient"
+    assert PhaseKind.OFFBOARDING.value == "offboarding"
+
+
+def test_phase_spec_kind_none_by_default():
+    phase = PhaseSpec(name="test", scenes=[])
+    assert phase.kind is None
+
+
+def test_phase_spec_kind_set():
+    phase = PhaseSpec(name="test", kind=PhaseKind.AMBIENT, scenes=[])
+    assert phase.kind == PhaseKind.AMBIENT
+
+
+def test_phase_spec_kind_frozen():
+    phase = PhaseSpec(name="test", kind=PhaseKind.ACTIVE, scenes=[])
+    with pytest.raises(ValidationError):
+        phase.kind = PhaseKind.AMBIENT
