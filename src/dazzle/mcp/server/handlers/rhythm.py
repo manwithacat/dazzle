@@ -303,6 +303,20 @@ def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                 lines.append(f"      entity: {entity_ref}")
             lines.append("")
 
+    # Ambient phase — what the system surfaces when nothing is due
+    lines.append("  phase ambient:")
+    lines.append("    kind: ambient")
+    first_surface = (
+        list_surfaces[0]
+        if list_surfaces
+        else (detail_surfaces[0] if detail_surfaces else "dashboard")
+    )
+    lines.append('    scene check_status "Check Status":')
+    lines.append(f"      on: {first_surface}")
+    lines.append("      action: browse")
+    lines.append('      expects: "relevant_information_visible"')
+    lines.append("")
+
     return json.dumps(
         {
             "persona": persona_id,

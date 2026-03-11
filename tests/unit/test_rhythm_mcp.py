@@ -1158,3 +1158,18 @@ def test_lifecycle_steps_have_suggestions(tmp_path):
     for step in result["steps"]:
         if step["status"] == "not_started":
             assert len(step["suggestions"]) > 0, f"Step {step['name']} has no suggestions"
+
+
+def test_propose_rhythm_includes_ambient_phase(mock_appspec):
+    """Proposed rhythm includes an ambient phase."""
+    from dazzle.mcp.server.handlers.rhythm import propose_rhythm_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        result = propose_rhythm_handler(Path("/fake"), {"persona": "new_user"})
+    data = json.loads(result)
+    dsl = data["proposed_dsl"]
+    assert "kind: ambient" in dsl
+    assert "phase ambient:" in dsl

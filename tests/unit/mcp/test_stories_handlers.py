@@ -6,7 +6,7 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -616,6 +616,53 @@ class TestProposeStoriesHandler:
         # All stories should be scoped to Task
         for story in data["stories"]:
             assert "Task" in story["scope"]
+
+    def test_planning_inversion_generates_stories_from_unmapped_scenes(self, tmp_path) -> None:
+        """Unmapped scenes in rhythms produce stories via planning inversion."""
+        from dazzle.core.ir.rhythm import PhaseSpec, RhythmSpec, SceneSpec
+
+        project = tmp_path / "proj"
+        project.mkdir()
+        dazzle_dir = project / ".dazzle"
+        dazzle_dir.mkdir()
+        (dazzle_dir / "stories").mkdir()
+
+        # Build a minimal mock appspec with a rhythm containing an unmapped scene
+        app_spec = MagicMock()
+        app_spec.domain.entities = []
+        app_spec.workspaces = []
+        app_spec.personas = []
+
+        rhythm = RhythmSpec(
+            name="r1",
+            title="Journey",
+            persona="user",
+            phases=[
+                PhaseSpec(
+                    name="active",
+                    scenes=[
+                        SceneSpec(
+                            name="check_inbox",
+                            surface="inbox",
+                            actions=["browse"],
+                            # no story= reference — unmapped
+                        ),
+                    ],
+                ),
+            ],
+        )
+        app_spec.rhythms = [rhythm]
+
+        with patch(
+            "dazzle.mcp.server.handlers.stories.load_project_appspec",
+            return_value=app_spec,
+        ):
+            result = propose_stories_from_dsl_handler(project, {})
+
+        data = json.loads(result)
+        assert data["proposed_count"] >= 1
+        titles = [s["title"] for s in data["stories"]]
+        assert any("inbox" in t for t in titles)
 
 
 class TestGenerateTestsHandler:

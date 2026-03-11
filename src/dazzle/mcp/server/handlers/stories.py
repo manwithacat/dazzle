@@ -235,6 +235,45 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                     )
                 )
 
+    # Planning inversion: generate stories for unmapped scenes
+    progress.log_sync("Generating stories from unmapped scenes...")
+    for rhythm in app_spec.rhythms:
+        for phase in rhythm.phases:
+            for scene in phase.scenes:
+                if scene.story:
+                    continue  # already mapped to a story
+                if story_count >= max_stories:
+                    break
+
+                actor = default_actor
+                # Resolve persona label from rhythm
+                for p in app_spec.personas:
+                    if p.id == rhythm.persona:
+                        actor = p.label or p.id
+                        break
+
+                scope = [scene.entity] if scene.entity else []
+                action_desc = ", ".join(scene.actions) if scene.actions else "interact"
+
+                stories.append(
+                    StorySpec(
+                        story_id=next_id(),
+                        title=f"{actor} {action_desc}s on {scene.surface}",
+                        actor=actor,
+                        trigger=StoryTrigger.USER_CLICK,
+                        scope=scope,
+                        preconditions=[f"{actor} is on {scene.surface} surface"],
+                        happy_path_outcome=[
+                            scene.expects or f"Action completes on {scene.surface}",
+                        ],
+                        side_effects=[],
+                        constraints=[],
+                        variants=[],
+                        status=StoryStatus.DRAFT,
+                        created_at=now,
+                    )
+                )
+
     # Auto-save draft stories to avoid requiring a separate save call
     # (which would force full content through context twice)
     from dazzle.core.stories_persistence import add_stories
