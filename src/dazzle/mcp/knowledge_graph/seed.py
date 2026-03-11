@@ -59,10 +59,15 @@ def seed_framework_knowledge(graph: KnowledgeGraph) -> dict[str, int]:
     Seed the knowledge graph with framework knowledge from TOML files.
 
     Idempotent: deletes existing framework entities before re-seeding.
+    FK enforcement is disabled during the delete-recreate cycle to
+    prevent constraint errors from partially-deleted intermediate states.
+
+    If seeding fails for any reason, the error is logged and an empty
+    stats dict is returned — KG seeding is non-critical (#443).
 
     Returns stats dict with counts of what was created.
     """
-    stats = {
+    stats: dict[str, int] = {
         "concepts": 0,
         "patterns": 0,
         "inference_entries": 0,
@@ -70,28 +75,47 @@ def seed_framework_knowledge(graph: KnowledgeGraph) -> dict[str, int]:
         "relations": 0,
     }
 
-    # Clean out old framework data
-    graph.delete_by_metadata_key("source", "framework")
-    graph.clear_aliases()
+    try:
+        # Disable FK enforcement during the full delete-recreate cycle.
+        # The entire graph is being rebuilt from scratch — FK constraints
+        # during this window are meaningless and can cause spin loops (#443).
+        conn = graph._get_connection()
+        try:
+            conn.execute("PRAGMA foreign_keys = OFF")
+        finally:
+            graph._close_connection(conn)
 
-    # Load and seed semantic KB (concepts + patterns)
-    _seed_semantic_kb(graph, stats)
+        # Clean out old framework data
+        graph.delete_by_metadata_key("source", "framework")
+        graph.clear_aliases()
 
-    # Load and seed inference KB
-    _seed_inference_kb(graph, stats)
+        # Load and seed semantic KB (concepts + patterns)
+        _seed_semantic_kb(graph, stats)
 
-    # Write seed version
-    graph.set_seed_meta("seed_version", compute_seed_version())
+        # Load and seed inference KB
+        _seed_inference_kb(graph, stats)
 
-    logger.info(
-        "Seeded framework knowledge: %d concepts, %d patterns, "
-        "%d inference entries, %d aliases, %d relations",
-        stats["concepts"],
-        stats["patterns"],
-        stats["inference_entries"],
-        stats["aliases"],
-        stats["relations"],
-    )
+        # Write seed version
+        graph.set_seed_meta("seed_version", compute_seed_version())
+
+        logger.info(
+            "Seeded framework knowledge: %d concepts, %d patterns, "
+            "%d inference entries, %d aliases, %d relations",
+            stats["concepts"],
+            stats["patterns"],
+            stats["inference_entries"],
+            stats["aliases"],
+            stats["relations"],
+        )
+    except Exception:
+        logger.exception("KG seeding failed — skipping (non-critical)")
+    finally:
+        # Re-enable FK enforcement
+        conn = graph._get_connection()
+        try:
+            conn.execute("PRAGMA foreign_keys = ON")
+        finally:
+            graph._close_connection(conn)
 
     return stats
 

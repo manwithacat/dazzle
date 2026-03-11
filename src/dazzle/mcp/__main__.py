@@ -6,9 +6,18 @@ Run with: python -m dazzle.mcp [--working-dir PATH]
 
 import argparse
 import asyncio
+import faulthandler
+import signal
+import sys
 from pathlib import Path
 
 from dazzle.mcp.server import run_server
+
+# Enable faulthandler for debugging hung processes (#443).
+# kill -SIGUSR1 <pid> dumps a Python traceback to stderr.
+faulthandler.enable()
+if sys.platform != "win32":
+    faulthandler.register(signal.SIGUSR1)
 
 
 def main() -> None:

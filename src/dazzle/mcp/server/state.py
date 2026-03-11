@@ -349,11 +349,16 @@ def init_knowledge_graph(root: Path) -> None:
     logger.info("Knowledge graph initialized at: %s", _state.graph_db_path)
 
     # Seed framework knowledge (concepts, patterns, inference triggers)
+    # Wrapped in try/except because seeding is non-critical — the MCP server
+    # must continue to function even if KG seeding fails (#443).
     from dazzle.mcp.knowledge_graph.seed import ensure_seeded
 
-    seeded = ensure_seeded(_state.knowledge_graph)
-    if seeded:
-        logger.info("Framework knowledge seeded into knowledge graph")
+    try:
+        seeded = ensure_seeded(_state.knowledge_graph)
+        if seeded:
+            logger.info("Framework knowledge seeded into knowledge graph")
+    except Exception:
+        logger.exception("KG seeding failed during init — continuing without KG data")
 
     # Check if graph needs population with project data
     stats = _state.knowledge_graph.get_stats()
@@ -427,7 +432,10 @@ def reinit_knowledge_graph(project_root: Path) -> None:
     logger.info("Knowledge graph re-initialized at: %s", _state.graph_db_path)
 
     # Seed framework data (fast if already seeded — version check)
-    ensure_seeded(_state.knowledge_graph)
+    try:
+        ensure_seeded(_state.knowledge_graph)
+    except Exception:
+        logger.exception("KG seeding failed during reinit — continuing without KG data")
 
     # Populate project DSL data
     from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
