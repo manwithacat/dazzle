@@ -1892,11 +1892,14 @@ class DazzleBackendApp:
         pool_max = int(os.environ.get("DAZZLE_DB_POOL_MAX", "10"))
         db_manager = self._db_manager
 
-        @self._app.on_event("startup")
+        assert self._app is not None
+        app = self._app
+
+        @app.on_event("startup")
         async def _open_db_pool() -> None:
             db_manager.open_pool(min_size=pool_min, max_size=pool_max)
 
-        @self._app.on_event("shutdown")
+        @app.on_event("shutdown")
         async def _close_db_pool() -> None:
             db_manager.close_pool()
 
