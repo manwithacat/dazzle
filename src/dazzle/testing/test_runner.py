@@ -438,17 +438,23 @@ class DazzleClient:
         try:
             if self._test_routes_available is not False:
                 resp = self._request(
-                    "DELETE", f"{self.api_url}/__test__/entity/{entity_name}/{entity_id}"
+                    "DELETE", self.api_url + "/__test__/entity/" + entity_name + "/" + entity_id
                 )
                 if resp.status_code == 200:
                     return True
+                if resp.status_code == 403:
+                    # Missing X-Test-Secret — don't fall through to REST
+                    return False
                 if resp.status_code == 404 and "Unknown entity" not in resp.text:
                     self._test_routes_available = False
+                elif resp.status_code >= 500:
+                    # Server error — don't waste time on REST fallback
+                    return False
 
             endpoint = self._entity_endpoint(entity_name)
             resp = self._request(
                 "DELETE",
-                f"{self.api_url}{endpoint}/{entity_id}",
+                self.api_url + endpoint + "/" + entity_id,
                 headers=self._auth_headers(),
             )
             return resp.status_code in (200, 204)
@@ -559,15 +565,20 @@ class DazzleClient:
         deleted = 0
         max_passes = 3
 
-        for _pass_num in range(max_passes):
+        for pass_num in range(max_passes):
             still_pending: list[tuple[str, str]] = []
+            pass_deleted = 0
             for entity_name, entity_id in pending:
                 if self.delete_entity(entity_name, entity_id):
                     deleted += 1
+                    pass_deleted += 1
                 else:
                     still_pending.append((entity_name, entity_id))
             pending = still_pending
             if not pending:
+                break
+            # Bail if no progress after first pass — retrying won't help
+            if pass_num > 0 and pass_deleted == 0:
                 break
 
         self._created_entities.clear()
