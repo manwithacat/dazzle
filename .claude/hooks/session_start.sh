@@ -18,22 +18,21 @@ if [ -d ".venv" ]; then
 fi
 
 # Verify dazzle is available
-if ! command -v dazzle &> /dev/null; then
-    echo "Warning: dazzle CLI not found in PATH" >&2
+if ! python -m dazzle --help &> /dev/null; then
+    echo "Warning: dazzle module not available" >&2
     exit 0  # Non-blocking
 fi
 
 # Quick validation of the project
-if [ -f "dazzle.yaml" ]; then
-    if ! dazzle validate --quiet 2>/dev/null; then
+if [ -f "dazzle.toml" ]; then
+    if ! python -m dazzle validate --quiet 2>/dev/null; then
         echo "Note: DSL validation issues detected. Run 'dazzle validate' for details."
     fi
 fi
 
 # Inject context about the environment
 if [ -n "$CLAUDE_ENV_FILE" ]; then
-    # Export any needed environment variables
-    echo "DAZZLE_PROJECT_ROOT=$PROJECT_DIR" >> "$CLAUDE_ENV_FILE"
+    echo 'export DAZZLE_PROJECT_ROOT='"$PROJECT_DIR" >> "$CLAUDE_ENV_FILE"
 fi
 
 # Success message (shown in verbose mode)

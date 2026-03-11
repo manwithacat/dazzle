@@ -42,7 +42,11 @@ def main():
 
     # Run dazzle validate
     result = subprocess.run(
-        ["dazzle", "validate"], cwd=project_root, capture_output=True, text=True, timeout=30
+        ["python", "-m", "dazzle", "validate"],
+        cwd=project_root,
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
 
     if result.returncode != 0:

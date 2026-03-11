@@ -108,11 +108,13 @@
   "hooks": {
     "SessionStart": [
       {
+        "matcher": "startup|resume|clear|compact",
         "hooks": [
           {
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session_start.sh",
-            "timeout": 30
+            "timeout": 30,
+            "statusMessage": "Initializing Dazzle environment..."
           }
         ]
       }
@@ -124,7 +126,8 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bash_validator.py",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Validating bash command..."
           }
         ]
       },
@@ -134,7 +137,8 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/file_protection.py",
-            "timeout": 10
+            "timeout": 10,
+            "statusMessage": "Checking file protection..."
           }
         ]
       }
@@ -146,7 +150,50 @@
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/dsl_validator.py",
-            "timeout": 30
+            "timeout": 30,
+            "statusMessage": "Validating DSL..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/code_formatter.py",
+            "timeout": 30,
+            "statusMessage": "Formatting code..."
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/subagent_context.py",
+            "timeout": 10,
+            "statusMessage": "Injecting Dazzle context..."
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/compact_context.py",
+            "timeout": 10,
+            "statusMessage": "Preserving session context..."
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/session_cleanup.sh",
+            "timeout": 10,
+            "statusMessage": "Cleaning up session..."
           }
         ]
       }
