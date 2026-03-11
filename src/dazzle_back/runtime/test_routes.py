@@ -118,6 +118,7 @@ def create_test_routes(
     repositories: dict[str, SQLiteRepository[Any]],
     entities: list[EntitySpec],
     auth_store: Any = None,
+    personas: list[dict[str, Any]] | None = None,
 ) -> APIRouter:
     """
     Create test routes for E2E testing.
@@ -127,6 +128,7 @@ def create_test_routes(
         repositories: Dictionary of repositories by entity name
         entities: List of entity specifications
         auth_store: Optional AuthStore for creating real test sessions
+        personas: Optional list of persona configurations for demo user recreation
 
     Returns:
         APIRouter with test endpoints
@@ -224,9 +226,11 @@ def create_test_routes(
     @router.post("/reset")
     async def reset_test_data() -> dict[str, str]:
         """
-        Clear all data from the database.
+        Clear all data from the database and recreate demo auth users.
 
-        Truncates all entity tables while preserving schema.
+        Truncates all entity tables while preserving schema, then
+        recreates auth users for each configured persona so that
+        ``/__test__/authenticate`` works immediately after reset.
         """
         with db_manager.connection() as conn:
             for sql in entity_sql.values():
@@ -234,6 +238,25 @@ def create_test_routes(
                     conn.execute(sql.delete_all)
                 except Exception:
                     logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
+
+        # Recreate demo auth users from personas (#465)
+        if auth_store is not None and personas:
+            for p in personas:
+                pid = p.get("id", "")
+                if not pid:
+                    continue
+                email = pid + "@demo.dazzle.local"
+                try:
+                    user = auth_store.get_user_by_email(email)
+                    if not user:
+                        auth_store.create_user(
+                            email=email,
+                            password="demo_" + pid + "_password",  # nosec B106
+                            username=p.get("label") or pid,
+                            roles=[pid],
+                        )
+                except Exception:
+                    logger.debug("Could not recreate demo user for %s", pid, exc_info=True)
 
         return {"status": "reset_complete"}
 

@@ -2247,6 +2247,7 @@ class DazzleBackendApp:
                 repositories=self._repositories,
                 entities=self._entities,
                 auth_store=self._auth_store,
+                personas=self._personas,
             )
             self._app.include_router(test_router)
 
