@@ -196,6 +196,43 @@ rhythm onboarding "Onboarding":
     assert scene.story == "ST-020"
 
 
+def test_rhythm_scene_targets_workspace():
+    """Scene on: field can reference a workspace."""
+    dsl = """\
+module test_app
+app test "Test"
+
+persona new_user "New User":
+  goals:
+    - "Learn things"
+
+entity Course "Course":
+  id: uuid pk
+  title: str(200) required
+
+surface course_list "Courses":
+  uses entity Course
+  mode: list
+  section main:
+    field title "Title"
+
+workspace student_dash "Student Dashboard":
+  courses:
+    source: Course
+    display: list
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase discovery:
+    scene arrive "Arrive at Dashboard":
+      on: student_dash
+"""
+    appspec = _build_appspec(dsl)
+    scene = appspec.rhythms[0].phases[0].scenes[0]
+    assert scene.surface == "student_dash"
+
+
 def test_rhythm_invalid_story_reference_error():
     dsl = """\
 module test_app

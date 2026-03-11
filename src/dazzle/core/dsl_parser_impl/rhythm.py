@@ -48,7 +48,7 @@ class RhythmParserMixin:
               [cadence COLON STRING NEWLINE]
               (phase IDENTIFIER COLON NEWLINE INDENT
                 (scene IDENTIFIER STRING? COLON NEWLINE INDENT
-                  on COLON IDENTIFIER NEWLINE
+                  on COLON IDENTIFIER NEWLINE  ; surface or workspace
                   [action COLON identifier_list NEWLINE]
                   [entity COLON IDENTIFIER NEWLINE]
                   [expects COLON STRING NEWLINE]

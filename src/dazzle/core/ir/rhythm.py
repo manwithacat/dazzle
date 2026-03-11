@@ -35,7 +35,7 @@ class SceneSpec(BaseModel):
 
     name: str = Field(..., description="Scene identifier")
     title: str | None = Field(default=None, description="Human-readable title")
-    surface: str = Field(..., description="Surface this scene exercises")
+    surface: str = Field(..., description="Surface or workspace this scene exercises")
     actions: list[str] = Field(default_factory=list, description="Action verbs")
     entity: str | None = Field(default=None, description="Entity reference")
     expects: str | None = Field(default=None, description="Expected outcome")

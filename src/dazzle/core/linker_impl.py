@@ -1115,10 +1115,13 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                     errors.append(f"Rhythm '{rhythm_name}' has duplicate scene name '{scene.name}'")
                 seen_scenes.add(scene.name)
 
-                if scene.surface not in symbols.surfaces:
+                if (
+                    scene.surface not in symbols.surfaces
+                    and scene.surface not in symbols.workspaces
+                ):
                     errors.append(
                         f"Rhythm '{rhythm_name}' scene '{scene.name}' references "
-                        f"unknown surface '{scene.surface}'"
+                        f"unknown surface or workspace '{scene.surface}'"
                     )
 
                 if scene.entity and scene.entity not in symbols.entities:

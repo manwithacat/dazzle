@@ -54,6 +54,7 @@ def mock_appspec():
     surf_detail.access = None
 
     spec.surfaces = [surf_list, surf_detail]
+    spec.workspaces = []
 
     entity = MagicMock()
     entity.name = "Enrollment"
@@ -94,6 +95,7 @@ def mock_appspec_with_kinds():
     spec.personas = [persona]
 
     spec.surfaces = []
+    spec.workspaces = []
     spec.domain.entities = []
     return spec
 
@@ -415,7 +417,7 @@ def test_coverage_persona_scoped(mock_appspec):
         assert "new_user" in pc
         # Both surfaces have access=None (no auth required) → both accessible
         assert pc["new_user"]["accessible_surfaces"] == 2
-        assert pc["new_user"]["exercised_surfaces"] == 2
+        assert pc["new_user"]["exercised"] == 2
         assert pc["new_user"]["coverage_pct"] == 100
 
 
@@ -485,9 +487,65 @@ def test_coverage_persona_scoped_with_acl():
     # director can access: budget_review, approval_queue, public_page (3 of 4)
     assert pc["accessible_surfaces"] == 3
     # rhythm exercises: budget_review, approval_queue (2 of 3 accessible)
-    assert pc["exercised_surfaces"] == 2
+    assert pc["exercised"] == 2
     assert pc["coverage_pct"] == 67  # 2/3 rounded
     assert pc["unexercised"] == ["public_page"]
+
+
+def test_coverage_workspace_targets():
+    """Scenes targeting workspaces are tracked separately in coverage."""
+    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
+
+    rhythm = RhythmSpec(
+        name="director_arc",
+        title="Director Arc",
+        persona="director",
+        phases=[
+            PhaseSpec(
+                name="daily",
+                scenes=[
+                    SceneSpec(name="arrive", surface="director_dash"),
+                    SceneSpec(name="review", surface="budget_list"),
+                ],
+            ),
+        ],
+    )
+
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+
+    persona = MagicMock()
+    persona.id = "director"
+    spec.personas = [persona]
+
+    s1 = MagicMock()
+    s1.name = "budget_list"
+    s1.access = None
+    spec.surfaces = [s1]
+
+    w1 = MagicMock()
+    w1.name = "director_dash"
+    spec.workspaces = [w1]
+
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = coverage_rhythms_handler(Path("/fake"), {})
+        data = json.loads(result)
+
+    assert data["total_workspaces"] == 1
+    assert data["workspaces_exercised"] == ["director_dash"]
+    assert data["workspaces_unexercised"] == []
+    assert "budget_list" in data["surfaces_exercised"]
+    # director_dash should NOT appear in surfaces_exercised
+    assert "director_dash" not in data["surfaces_exercised"]
+
+    pc = data["persona_coverage"]["director"]
+    assert pc["accessible_workspaces"] == 1
+    assert pc["exercised"] == 2  # budget_list + director_dash
 
 
 def test_coverage_persona_deny_list():
@@ -536,7 +594,7 @@ def test_coverage_persona_deny_list():
 
     pc = data["persona_coverage"]["intern"]
     assert pc["accessible_surfaces"] == 1  # only public_docs
-    assert pc["exercised_surfaces"] == 1
+    assert pc["exercised"] == 1
     assert pc["coverage_pct"] == 100
 
 
@@ -591,6 +649,7 @@ def _make_gaps_appspec(
         personas.append(p)
     spec.personas = personas
     spec.surfaces = []
+    spec.workspaces = []
     spec.domain.entities = []
     return spec
 
@@ -957,6 +1016,7 @@ def _make_lifecycle_appspec(
         personas.append(p)
     spec.personas = personas
     spec.surfaces = []
+    spec.workspaces = []
     return spec
 
 

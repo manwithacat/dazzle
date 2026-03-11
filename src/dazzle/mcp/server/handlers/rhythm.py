@@ -238,42 +238,51 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     all_persona_ids = {p.id for p in app_spec.personas}
     all_surface_names = {s.name for s in app_spec.surfaces}
+    all_workspace_names = {w.name for w in getattr(app_spec, "workspaces", [])}
 
     personas_with_rhythms: set[str] = set()
     personas_with_ambient: set[str] = set()
     surfaces_exercised: set[str] = set()
-    # Per-persona: which surfaces their rhythms exercise
-    persona_surfaces: dict[str, set[str]] = {}
+    workspaces_exercised: set[str] = set()
+    # Per-persona: which surfaces/workspaces their rhythms exercise
+    persona_targets: dict[str, set[str]] = {}
 
     for r in app_spec.rhythms:
         personas_with_rhythms.add(r.persona)
-        if r.persona not in persona_surfaces:
-            persona_surfaces[r.persona] = set()
+        if r.persona not in persona_targets:
+            persona_targets[r.persona] = set()
         for phase in r.phases:
             if phase.kind and phase.kind.value == "ambient":
                 personas_with_ambient.add(r.persona)
             for scene in phase.scenes:
-                surfaces_exercised.add(scene.surface)
-                persona_surfaces[r.persona].add(scene.surface)
+                persona_targets[r.persona].add(scene.surface)
+                if scene.surface in all_workspace_names:
+                    workspaces_exercised.add(scene.surface)
+                else:
+                    surfaces_exercised.add(scene.surface)
 
-    # Per-persona scoped coverage
+    # Per-persona scoped coverage (surfaces + workspaces)
     persona_coverage: dict[str, dict[str, Any]] = {}
     for pid in sorted(personas_with_rhythms):
         accessible = _surfaces_accessible_by_persona(pid, app_spec.surfaces)
-        exercised = persona_surfaces.get(pid, set())
-        exercised_accessible = exercised & accessible
-        pct = round(100 * len(exercised_accessible) / len(accessible)) if accessible else 0
+        # Workspaces are always accessible to their persona (no ACL on workspace level)
+        accessible_all = accessible | all_workspace_names
+        exercised = persona_targets.get(pid, set())
+        exercised_accessible = exercised & accessible_all
+        pct = round(100 * len(exercised_accessible) / len(accessible_all)) if accessible_all else 0
         persona_coverage[pid] = {
             "accessible_surfaces": len(accessible),
-            "exercised_surfaces": len(exercised_accessible),
+            "accessible_workspaces": len(all_workspace_names),
+            "exercised": len(exercised_accessible),
             "coverage_pct": pct,
-            "unexercised": sorted(accessible - exercised_accessible),
+            "unexercised": sorted(accessible_all - exercised_accessible),
         }
 
     return json.dumps(
         {
             "total_personas": len(all_persona_ids),
             "total_surfaces": len(all_surface_names),
+            "total_workspaces": len(all_workspace_names),
             "total_rhythms": len(app_spec.rhythms),
             "personas_with_rhythms": sorted(personas_with_rhythms),
             "personas_without_rhythms": sorted(all_persona_ids - personas_with_rhythms),
@@ -281,6 +290,8 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
             "personas_without_ambient": sorted(personas_with_rhythms - personas_with_ambient),
             "surfaces_exercised": sorted(surfaces_exercised),
             "surfaces_unexercised": sorted(all_surface_names - surfaces_exercised),
+            "workspaces_exercised": sorted(workspaces_exercised),
+            "workspaces_unexercised": sorted(all_workspace_names - workspaces_exercised),
             "persona_coverage": persona_coverage,
         },
         indent=2,
