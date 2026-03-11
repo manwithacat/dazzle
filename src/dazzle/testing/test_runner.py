@@ -115,7 +115,11 @@ class DazzleClient:
     def __init__(self, api_url: str, ui_url: str, timeout: float = 10.0):
         self.api_url = api_url.rstrip("/")
         self.ui_url = ui_url.rstrip("/")
-        self.client = httpx.Client(timeout=timeout)
+        headers: dict[str, str] = {}
+        test_secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+        if test_secret:
+            headers["X-Test-Secret"] = test_secret
+        self.client = httpx.Client(timeout=timeout, headers=headers)
         self._auth_token: str | None = None
         self._test_routes_available: bool | None = None  # None = unknown
         self._created_entities: list[tuple[str, str]] = []  # (entity_name, entity_id)
@@ -1620,7 +1624,7 @@ class TestRunner:
                         return str(val)
             except Exception:
                 logger.warning(
-                    "Failed to read test credential '%s' for persona '%s'",
+                    "Failed to read test auth field '%s' for persona '%s'",
                     field,
                     persona,
                     exc_info=True,

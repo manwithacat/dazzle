@@ -10,7 +10,6 @@ Provides unified E2E test execution that:
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 import socket
@@ -21,6 +20,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -354,23 +355,27 @@ class E2ERunner:
                 self.api_url = api_url
                 self._fixture_ids: dict[str, str] = {}
 
+            def _http_client(self) -> httpx.Client:
+                """Lazy httpx client with test secret header if set."""
+                if not hasattr(self, "_client"):
+                    headers: dict[str, str] = {}
+                    secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+                    if secret:
+                        headers["X-Test-Secret"] = secret
+                    self._client = httpx.Client(timeout=10.0, headers=headers)
+                return self._client
+
             def reset_sync(self) -> None:
                 """Reset test data by calling /__test__/reset endpoint."""
-                import urllib.request
-
                 try:
-                    url = f"{self.api_url}/__test__/reset"
-                    req = urllib.request.Request(url, method="POST", data=b"")
-                    with urllib.request.urlopen(req, timeout=10) as response:
-                        response.read()
+                    url = self.api_url + "/__test__/reset"
+                    self._http_client().post(url)
                 except Exception as e:
                     # Log but don't fail - test mode might not be enabled
                     print(f"Warning: Could not reset test data: {e}")
 
             def seed_sync(self, fixtures: list[Any]) -> None:
                 """Seed fixtures by calling /__test__/seed endpoint."""
-                import urllib.request
-
                 if not fixtures:
                     return
 
@@ -386,15 +391,9 @@ class E2ERunner:
                             for f in fixtures
                         ]
                     }
-                    url = f"{self.api_url}/__test__/seed"
-                    req = urllib.request.Request(
-                        url,
-                        method="POST",
-                        data=json.dumps(seed_data).encode(),
-                        headers={"Content-Type": "application/json"},
-                    )
-                    with urllib.request.urlopen(req, timeout=10) as response:
-                        result = json.loads(response.read())
+                    url = self.api_url + "/__test__/seed"
+                    resp = self._http_client().post(url, json=seed_data)
+                    result = resp.json()
                     # Store created entity IDs back into fixture data
                     # so _resolve_step_value can find e.g. User_valid.id
                     if "created" in result:
@@ -432,25 +431,23 @@ class E2ERunner:
 
             def get_entity_count_sync(self, entity_name: str) -> int:
                 """Get entity count via API."""
-                import urllib.request
-
                 try:
                     # Runtime API routes are at /{plural}, not /api/{entity}s
                     from dazzle.core.strings import to_api_plural
 
-                    url = f"{self.api_url}/{to_api_plural(entity_name)}"
-                    with urllib.request.urlopen(url, timeout=5) as response:
-                        data = json.loads(response.read().decode())
-                        if isinstance(data, list):
-                            return len(data)
-                        # Paginated response: {"items": [...], "total": N, ...}
-                        if isinstance(data, dict):
-                            if "total" in data:
-                                return int(data["total"])
-                            if "items" in data:
-                                return len(data["items"])
-                            return int(data.get("count", 0))
-                        return 0
+                    url = self.api_url + "/" + to_api_plural(entity_name)
+                    resp = self._http_client().get(url)
+                    data = resp.json()
+                    if isinstance(data, list):
+                        return len(data)
+                    # Paginated response: {"items": [...], "total": N, ...}
+                    if isinstance(data, dict):
+                        if "total" in data:
+                            return int(data["total"])
+                        if "items" in data:
+                            return len(data["items"])
+                        return int(data.get("count", 0))
+                    return 0
                 except Exception:
                     return 0
 

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -121,7 +122,11 @@ class SessionManager:
         role = role or persona_id
         close_client = client is None
         if client is None:
-            client = httpx.AsyncClient(timeout=30.0)
+            headers: dict[str, str] = {}
+            test_secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+            if test_secret:
+                headers["X-Test-Secret"] = test_secret
+            client = httpx.AsyncClient(timeout=30.0, headers=headers)
 
         try:
             session = await self._authenticate_via_test_endpoint(client, persona_id, role)

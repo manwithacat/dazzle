@@ -156,6 +156,10 @@ assert_status() {
   local curl_args=(-s -o /tmp/dazzle_response -w "%{http_code}" -X "$method")
   curl_args+=(-H "Content-Type: application/json")
 
+  if [ -n "${DAZZLE_TEST_SECRET:-}" ]; then
+    curl_args+=(-H "X-Test-Secret: $DAZZLE_TEST_SECRET")
+  fi
+
   if [ -n "$auth" ]; then
     curl_args+=(-H "Authorization: Bearer $auth")
   fi
@@ -213,7 +217,11 @@ report() {
 cleanup() {
   rm -f /tmp/dazzle_response
   # Reset test data if endpoint available
-  curl -s -X POST "${BASE_URL}/__test__/reset" -H "Content-Type: application/json" &>/dev/null || true
+  local reset_args=(-s -X POST -H "Content-Type: application/json")
+  if [ -n "${DAZZLE_TEST_SECRET:-}" ]; then
+    reset_args+=(-H "X-Test-Secret: $DAZZLE_TEST_SECRET")
+  fi
+  curl "${reset_args[@]}" "${BASE_URL}/__test__/reset" &>/dev/null || true
 }
 trap cleanup EXIT
 

@@ -138,8 +138,14 @@ class EventTestClient:
     BACKOFF_SECONDS = (1.0, 2.0, 4.0)
 
     def __init__(self, api_url: str, timeout: float = 10.0):
+        import os
+
         self.api_url = api_url.rstrip("/")
-        self.client = httpx.Client(timeout=timeout)
+        headers: dict[str, str] = {}
+        test_secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+        if test_secret:
+            headers["X-Test-Secret"] = test_secret
+        self.client = httpx.Client(timeout=timeout, headers=headers)
         self._event_log: list[EventLogEntry] = []
         self._offset = 0
 

@@ -5,19 +5,25 @@ Provides /__test__/* endpoints for seeding fixtures, resetting data,
 and capturing database snapshots.
 
 These endpoints are only available when test mode is enabled.
+When ``DAZZLE_TEST_SECRET`` is set, all routes require the
+``X-Test-Secret`` header to match (#458).
 """
 
 import logging
+import os
+import re
 from typing import Any
 
 try:
-    from fastapi import APIRouter, HTTPException
+    from fastapi import APIRouter, Depends, HTTPException, Request
 
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
     APIRouter = None  # type: ignore[misc, assignment]
+    Depends = None  # type: ignore[misc, assignment]
     HTTPException = None  # type: ignore[misc, assignment]
+    Request = None  # type: ignore[misc, assignment]
 
 from pydantic import BaseModel
 
@@ -25,6 +31,30 @@ from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
 from dazzle_back.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
+
+# Identifier pattern: letters, digits, underscores only (SQL-safe)
+_SAFE_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+class _EntitySQL:
+    """Pre-computed SQL statements for a known entity table.
+
+    All SQL is built once at router creation time from validated entity
+    names — no string formatting happens at request time.
+    """
+
+    __slots__ = ("name", "select_all", "select_count", "delete_all", "delete_by_id")
+
+    def __init__(self, name: str) -> None:
+        if not _SAFE_IDENT_RE.match(name):
+            raise ValueError("Invalid entity name: " + name)
+        quoted = '"' + name + '"'
+        self.name = name
+        self.select_all = "SELECT * FROM " + quoted
+        self.select_count = "SELECT COUNT(*) FROM " + quoted
+        self.delete_all = "DELETE FROM " + quoted
+        self.delete_by_id = "DELETE FROM " + quoted + " WHERE id = %s"
+
 
 # =============================================================================
 # Request/Response Models
@@ -109,10 +139,29 @@ def create_test_routes(
             "FastAPI is required for test routes. Install it with: pip install fastapi"
         )
 
-    router = APIRouter(prefix="/__test__", tags=["Testing"])
+    # Pre-compute SQL statements from validated entity names (startup-time only)
+    entity_sql: dict[str, _EntitySQL] = {e.name: _EntitySQL(e.name) for e in entities}
 
-    # Build entity lookup
-    entity_lookup = {e.name: e for e in entities}
+    # --- Authentication dependency ---
+    # When DAZZLE_TEST_SECRET is set, require X-Test-Secret header.
+    # When unset, test routes are open (backward compat for local dev).
+    test_secret = os.environ.get("DAZZLE_TEST_SECRET", "")
+
+    async def _verify_test_secret(request: Request) -> None:  # type: ignore[valid-type]
+        if not test_secret:
+            return
+        header_val = request.headers.get("X-Test-Secret", "")
+        if header_val != test_secret:
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid or missing X-Test-Secret header",
+            )
+
+    router = APIRouter(
+        prefix="/__test__",
+        tags=["Testing"],
+        dependencies=[Depends(_verify_test_secret)],
+    )
 
     @router.post("/seed", response_model=SeedResponse)
     async def seed_fixtures(request: SeedRequest) -> SeedResponse:
@@ -143,7 +192,7 @@ def create_test_routes(
             if not repo:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Unknown entity: {entity_name}",
+                    detail="Unknown entity: " + entity_name,
                 )
 
             # Prepare data
@@ -167,7 +216,7 @@ def create_test_routes(
                 logger.error("Failed to create %s: %s", entity_name, e)
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Failed to create {entity_name}",
+                    detail="Failed to create " + entity_name,
                 )
 
         return SeedResponse(created=created)
@@ -180,11 +229,11 @@ def create_test_routes(
         Truncates all entity tables while preserving schema.
         """
         with db_manager.connection() as conn:
-            for entity in entities:
+            for sql in entity_sql.values():
                 try:
-                    conn.execute(f"DELETE FROM {entity.name}")
+                    conn.execute(sql.delete_all)
                 except Exception:
-                    logger.debug("Table %s might not exist yet", entity.name, exc_info=True)
+                    logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
 
         return {"status": "reset_complete"}
 
@@ -198,14 +247,14 @@ def create_test_routes(
         result: dict[str, list[dict[str, Any]]] = {}
 
         with db_manager.connection() as conn:
-            for entity in entities:
+            for sql in entity_sql.values():
                 try:
-                    cursor = conn.execute(f"SELECT * FROM {entity.name}")
+                    cursor = conn.execute(sql.select_all)
                     rows = cursor.fetchall()
-                    result[entity.name] = [dict(row) for row in rows]
+                    result[sql.name] = [dict(row) for row in rows]
                 except Exception:
                     # Table might not exist
-                    result[entity.name] = []
+                    result[sql.name] = []
 
         return SnapshotResponse(entities=result)
 
@@ -225,7 +274,7 @@ def create_test_routes(
 
         if auth_store is not None:
             # Create (or reuse) a real user + session in the auth store
-            email = f"{username}@test.local"
+            email = username + "@test.local"
             user = auth_store.get_user_by_email(email)
             if not user:
                 user = auth_store.create_user(
@@ -273,15 +322,16 @@ def create_test_routes(
         Returns:
             List of all records
         """
-        if entity_name not in entity_lookup:
+        sql = entity_sql.get(entity_name)
+        if sql is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"Unknown entity: {entity_name}",
+                detail="Unknown entity: " + entity_name,
             )
 
         with db_manager.connection() as conn:
             try:
-                cursor = conn.execute(f"SELECT * FROM {entity_name}")
+                cursor = conn.execute(sql.select_all)
                 rows = cursor.fetchall()
                 return [dict(row) for row in rows]
             except Exception:
@@ -298,15 +348,16 @@ def create_test_routes(
         Returns:
             Count of records
         """
-        if entity_name not in entity_lookup:
+        sql = entity_sql.get(entity_name)
+        if sql is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"Unknown entity: {entity_name}",
+                detail="Unknown entity: " + entity_name,
             )
 
         with db_manager.connection() as conn:
             try:
-                cursor = conn.execute(f"SELECT COUNT(*) FROM {entity_name}")
+                cursor = conn.execute(sql.select_count)
                 row = cursor.fetchone()
                 count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
                 return {"count": count}
@@ -325,21 +376,19 @@ def create_test_routes(
         Returns:
             Status message
         """
-        if entity_name not in entity_lookup:
+        sql = entity_sql.get(entity_name)
+        if sql is None:
             raise HTTPException(
                 status_code=404,
-                detail=f"Unknown entity: {entity_name}",
+                detail="Unknown entity: " + entity_name,
             )
 
         with db_manager.connection() as conn:
-            cursor = conn.execute(
-                f"DELETE FROM {entity_name} WHERE id = %s",
-                (entity_id,),
-            )
+            cursor = conn.execute(sql.delete_by_id, (entity_id,))
             if cursor.rowcount == 0:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Entity not found: {entity_name}/{entity_id}",
+                    detail="Entity not found: " + entity_name + "/" + entity_id,
                 )
 
         return {"status": "deleted"}
