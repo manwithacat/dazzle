@@ -6,11 +6,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from dazzle.core.ir.rhythm import PhaseKind, PhaseSpec, RhythmSpec, SceneSpec
+
 
 @pytest.fixture
 def mock_appspec():
-    from dazzle.core.ir.rhythm import PhaseSpec, RhythmSpec, SceneSpec
-
     rhythm = RhythmSpec(
         name="onboarding",
         title="New User Onboarding",
@@ -60,8 +60,6 @@ def mock_appspec():
 
 @pytest.fixture
 def mock_appspec_with_kinds():
-    from dazzle.core.ir.rhythm import PhaseKind, PhaseSpec, RhythmSpec, SceneSpec
-
     rhythm = RhythmSpec(
         name="onboarding",
         title="New User Onboarding",
@@ -316,6 +314,84 @@ def test_evaluate_returns_stored_scores(tmp_path, mock_appspec):
     assert data["scene_scores"] is not None
     assert len(data["scene_scores"]) == 1
     assert data["scene_scores"][0]["scene_name"] == "browse"
+
+
+@pytest.fixture
+def mock_appspec_coverage_ambient():
+    """Two personas: one with an ambient phase, one without."""
+
+    rhythm_with_ambient = RhythmSpec(
+        name="daily_check",
+        title="Daily Check",
+        persona="power_user",
+        cadence="daily",
+        phases=[
+            PhaseSpec(
+                name="work",
+                kind=PhaseKind.ACTIVE,
+                scenes=[
+                    SceneSpec(name="do_work", title="Do Work", surface="dashboard"),
+                ],
+            ),
+            PhaseSpec(
+                name="monitoring",
+                kind=PhaseKind.AMBIENT,
+                scenes=[
+                    SceneSpec(name="alerts", title="Alerts", surface="alerts_panel"),
+                ],
+            ),
+        ],
+    )
+    rhythm_without_ambient = RhythmSpec(
+        name="onboarding",
+        title="Onboarding",
+        persona="new_user",
+        cadence="once",
+        phases=[
+            PhaseSpec(
+                name="setup",
+                kind=PhaseKind.ACTIVE,
+                scenes=[
+                    SceneSpec(name="register", title="Register", surface="signup"),
+                ],
+            ),
+        ],
+    )
+
+    spec = MagicMock()
+    spec.rhythms = [rhythm_with_ambient, rhythm_without_ambient]
+
+    p1 = MagicMock()
+    p1.id = "power_user"
+    p2 = MagicMock()
+    p2.id = "new_user"
+    spec.personas = [p1, p2]
+
+    s1 = MagicMock()
+    s1.name = "dashboard"
+    s2 = MagicMock()
+    s2.name = "alerts_panel"
+    s3 = MagicMock()
+    s3.name = "signup"
+    spec.surfaces = [s1, s2, s3]
+    spec.domain.entities = []
+    return spec
+
+
+def test_coverage_includes_ambient_analysis(mock_appspec_coverage_ambient):
+    """Coverage output includes ambient persona analysis."""
+    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec_coverage_ambient,
+    ):
+        result = coverage_rhythms_handler(Path("/fake"), {})
+        data = json.loads(result)
+        assert "personas_with_ambient" in data
+        assert "personas_without_ambient" in data
+        assert data["personas_with_ambient"] == ["power_user"]
+        assert data["personas_without_ambient"] == ["new_user"]
 
 
 def test_evaluate_no_stored_scores(mock_appspec):

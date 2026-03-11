@@ -215,11 +215,14 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
     all_surface_names = {s.name for s in app_spec.surfaces}
 
     personas_with_rhythms: set[str] = set()
+    personas_with_ambient: set[str] = set()
     surfaces_exercised: set[str] = set()
 
     for r in app_spec.rhythms:
         personas_with_rhythms.add(r.persona)
         for phase in r.phases:
+            if phase.kind and phase.kind.value == "ambient":
+                personas_with_ambient.add(r.persona)
             for scene in phase.scenes:
                 surfaces_exercised.add(scene.surface)
 
@@ -230,6 +233,8 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
             "total_rhythms": len(app_spec.rhythms),
             "personas_with_rhythms": sorted(personas_with_rhythms),
             "personas_without_rhythms": sorted(all_persona_ids - personas_with_rhythms),
+            "personas_with_ambient": sorted(personas_with_ambient),
+            "personas_without_ambient": sorted(personas_with_rhythms - personas_with_ambient),
             "surfaces_exercised": sorted(surfaces_exercised),
             "surfaces_unexercised": sorted(all_surface_names - surfaces_exercised),
         },
