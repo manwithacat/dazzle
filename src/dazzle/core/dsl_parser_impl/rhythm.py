@@ -129,6 +129,7 @@ class RhythmParserMixin:
         self.expect(TokenType.INDENT)
 
         scenes: list[ir.SceneSpec] = []
+        kind: ir.PhaseKind | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -139,14 +140,25 @@ class RhythmParserMixin:
                 self.advance()
                 scenes.append(self._parse_rhythm_scene())
             else:
-                self.advance()
-                if self.match(TokenType.COLON):
+                token = self.current_token()
+                if token.value == "kind":
                     self.advance()
-                    self._skip_rhythm_field()
+                    self.expect(TokenType.COLON)
+                    kind_value = self.expect_identifier_or_keyword().value
+                    try:
+                        kind = ir.PhaseKind(kind_value)
+                    except ValueError:
+                        kind = None
+                    self.skip_newlines()
+                else:
+                    self.advance()
+                    if self.match(TokenType.COLON):
+                        self.advance()
+                        self._skip_rhythm_field()
 
         self.expect(TokenType.DEDENT)
 
-        return ir.PhaseSpec(name=name, scenes=scenes, source=loc)
+        return ir.PhaseSpec(name=name, kind=kind, scenes=scenes, source=loc)
 
     def _parse_rhythm_scene(self) -> ir.SceneSpec:
         """Parse a scene block within a phase."""

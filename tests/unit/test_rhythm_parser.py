@@ -124,6 +124,77 @@ rhythm onboarding "Onboarding":
         parse_dsl(dsl, Path("test.dsl"))
 
 
+def test_parse_phase_with_kind():
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase setup:
+    kind: onboarding
+    scene browse "Browse":
+      on: course_list
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    phase = fragment.rhythms[0].phases[0]
+    assert phase.kind is not None
+    assert phase.kind.value == "onboarding"
+
+
+def test_parse_phase_kind_all_values():
+    for kind_val in ["onboarding", "active", "periodic", "ambient", "offboarding"]:
+        dsl = f"""\
+module test_app
+app test "Test"
+
+rhythm r "R":
+  persona: user
+
+  phase p:
+    kind: {kind_val}
+    scene s "S":
+      on: surf
+"""
+        _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        assert fragment.rhythms[0].phases[0].kind is not None
+        assert fragment.rhythms[0].phases[0].kind.value == kind_val
+
+
+def test_parse_phase_without_kind_is_none():
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm onboarding "Onboarding":
+  persona: new_user
+
+  phase discovery:
+    scene browse "Browse":
+      on: course_list
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    assert fragment.rhythms[0].phases[0].kind is None
+
+
+def test_parse_phase_invalid_kind_ignored():
+    dsl = """\
+module test_app
+app test "Test"
+
+rhythm r "R":
+  persona: user
+
+  phase p:
+    kind: nonexistent
+    scene s "S":
+      on: surf
+"""
+    _mod, _app, _title, _config, _uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+    assert fragment.rhythms[0].phases[0].kind is None
+
+
 def test_parse_scene_missing_on_raises():
     dsl = """\
 module test_app
