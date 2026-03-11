@@ -151,6 +151,17 @@ class TestMCPServerIntegration:
 
     def test_tool_call_validate_dsl(self, mcp_server, request_id_counter):
         """Test calling the dsl tool with validate operation."""
+        # Select a project first — dev mode no longer auto-selects (#459)
+        request_id_counter["id"] += 1
+        select_resp = send_jsonrpc(
+            mcp_server,
+            "tools/call",
+            {"name": "select_project", "arguments": {"project_name": "simple_task"}},
+            id=request_id_counter["id"],
+        )
+        select_data = json.loads(select_resp["result"]["content"][0]["text"])
+        assert select_data["status"] == "selected"
+
         request_id_counter["id"] += 1
         tool_name = "dsl"
         tool_args = {"operation": "validate"}
@@ -272,9 +283,8 @@ class TestMCPDevMode:
         # Should have discovered projects
         assert len(mcp_state.get_available_projects()) > 0
 
-        # Should have auto-selected first project
-        assert mcp_state.get_active_project() is not None
-        assert mcp_state.get_active_project() in mcp_state.get_available_projects()
+        # Should NOT auto-select — requires explicit select_project (#459)
+        assert mcp_state.get_active_project() is None
 
     async def test_dev_mode_tools_available(self):
         """Test that dev mode tools are available when in dev mode."""
@@ -312,7 +322,8 @@ class TestMCPDevMode:
         assert data["mode"] == "dev"
         assert "projects" in data
         assert len(data["projects"]) > 0
-        assert data["active_project"] is not None
+        # No auto-selection in dev mode (#459)
+        assert data["active_project"] is None
 
     async def test_select_project_tool(self):
         """Test the select_project tool."""
@@ -325,8 +336,8 @@ class TestMCPDevMode:
         project_names = list(mcp_state.get_available_projects().keys())
         assert len(project_names) > 0
 
-        # Select a project
-        target_project = project_names[-1]  # Pick last one (different from auto-selected first)
+        # Select a project (none auto-selected, so pick any)
+        target_project = project_names[-1]
         result = await call_tool("select_project", {"project_name": target_project})
 
         data = json.loads(result[0].text)
@@ -359,7 +370,8 @@ class TestMCPDevMode:
         data = json.loads(result[0].text)
         assert data["mode"] == "dev"
         assert "active_project" in data
-        assert data["active_project"] is not None
+        # No auto-selection in dev mode (#459) — None until explicitly set
+        assert data["active_project"] is None
 
     @pytest.mark.slow
     async def test_validate_all_projects_tool(self):
@@ -379,9 +391,14 @@ class TestMCPDevMode:
     async def test_validate_dsl_in_dev_mode(self):
         """Test that dsl validate works with active project in dev mode."""
         from dazzle.mcp.server import call_tool
+        from dazzle.mcp.server import state as mcp_state
         from dazzle.mcp.server.state import init_dev_mode
 
         init_dev_mode(PROJECT_ROOT)
+        # Must explicitly select a project first (#459)
+        projects = list(mcp_state.get_available_projects().keys())
+        if projects:
+            mcp_state.set_active_project(projects[0])
 
         result = await call_tool("dsl", {"operation": "validate"})
 
@@ -502,17 +519,28 @@ class TestMCPDevModeCWDDetection:
         finally:
             mcp_state.set_project_root(original_root)
 
-    def test_get_active_project_path_falls_back_to_example(self):
-        """In dev mode without CWD toml, falls back to active example project."""
+    def test_get_active_project_path_none_without_selection(self):
+        """In dev mode without CWD toml or explicit selection, returns None."""
         from dazzle.mcp.server import state as mcp_state
 
         mcp_state.init_dev_mode(PROJECT_ROOT)
         assert mcp_state.is_dev_mode()
 
-        # PROJECT_ROOT has no dazzle.toml, so should fall back to example
+        # No auto-selection and PROJECT_ROOT has no dazzle.toml → None (#459)
         result = mcp_state.get_active_project_path()
-        active = mcp_state.get_active_project()
-        assert result == mcp_state.get_available_projects()[active]
+        assert result is None
+
+    def test_get_active_project_path_after_explicit_select(self):
+        """In dev mode with explicit selection, returns that project."""
+        from dazzle.mcp.server import state as mcp_state
+
+        mcp_state.init_dev_mode(PROJECT_ROOT)
+        projects = mcp_state.get_available_projects()
+        target = sorted(projects.keys())[0]
+        mcp_state.set_active_project(target)
+
+        result = mcp_state.get_active_project_path()
+        assert result == projects[target]
 
     def test_resolve_project_path_prefers_cwd_toml(self, tmp_path: Path):
         """resolve_project_path prefers CWD dazzle.toml over active example project."""

@@ -141,7 +141,14 @@ def get_active_project_path() -> Path | None:
     if project_manifest(_state.project_root).exists():
         return _state.project_root
     if _state.active_project and _state.active_project in _state.available_projects:
+        logger.debug(
+            "Dev mode: falling back to active project '%s' — "
+            "pass project_path to avoid cross-project pollution",
+            _state.active_project,
+        )
         return _state.available_projects[_state.active_project]
+    # No active project selected in dev mode — return None so callers
+    # know they must ask the user to select_project first.
     return None
 
 
@@ -310,11 +317,17 @@ def init_dev_mode(root: Path) -> None:
 
     if _state.is_dev_mode:
         _state.available_projects = _discover_example_projects(root)
-        # Auto-select first project if available
-        if _state.available_projects:
-            _state.active_project = sorted(_state.available_projects.keys())[0]
-            logger.info("Dev mode: auto-selected project '%s'", _state.active_project)
-        logger.info("Dev mode enabled with %s example projects", len(_state.available_projects))
+        # Do NOT auto-select — require explicit project selection to prevent
+        # cross-project pollution (#459).  Handlers that receive no explicit
+        # project_path will get None from get_active_project_path() and must
+        # fall back to get_project_root() or error out.
+        _state.active_project = None
+        names = sorted(_state.available_projects.keys())
+        logger.info(
+            "Dev mode enabled with %d example projects: %s. Use select_project to choose one.",
+            len(names),
+            ", ".join(names) if names else "(none)",
+        )
     else:
         _state.available_projects = {}
         _state.active_project = None
