@@ -786,3 +786,375 @@ def test_gaps_layers_evaluated_failures(tmp_path):
     eval_gaps = [g for g in result["gaps"] if "failed action" in g.get("description", "")]
     assert len(eval_gaps) == 1
     assert eval_gaps[0]["severity"] == "blocking"
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle handler tests
+# ---------------------------------------------------------------------------
+
+
+def _make_lifecycle_appspec(
+    *,
+    entities: list[MagicMock] | None = None,
+    stories: list[StorySpec] | None = None,
+    rhythms: list[RhythmSpec] | None = None,
+    persona_ids: list[str] | None = None,
+) -> MagicMock:
+    """Build a mock appspec for lifecycle tests."""
+    spec = MagicMock()
+    spec.domain.entities = entities or []
+    spec.stories = stories or []
+    spec.rhythms = rhythms or []
+    personas = []
+    for pid in persona_ids or []:
+        p = MagicMock()
+        p.id = pid
+        personas.append(p)
+    spec.personas = personas
+    spec.surfaces = []
+    return spec
+
+
+def _make_entity(name: str, field_count: int = 2) -> MagicMock:
+    """Build a mock entity with fields."""
+    entity = MagicMock()
+    entity.name = name
+    entity.fields = [MagicMock() for _ in range(field_count)]
+    return entity
+
+
+def test_lifecycle_empty_project(tmp_path):
+    """Empty project -> new_domain, all steps not_started."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    app = _make_lifecycle_appspec()
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["maturity"] == "new_domain"
+    assert len(result["steps"]) == 8
+    assert result["steps"][0]["name"] == "model_domain"
+    assert result["steps"][0]["status"] == "not_started"
+    assert result["current_focus"] == "model_domain"
+
+
+def test_lifecycle_with_entities(tmp_path):
+    """Project with entities -> step 1 complete."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    app = _make_lifecycle_appspec(entities=[_make_entity("Task")])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["steps"][0]["status"] == "complete"
+    assert result["steps"][0]["name"] == "model_domain"
+    # Still new_domain since only step 1 complete
+    assert result["maturity"] == "new_domain"
+    assert result["current_focus"] == "write_stories"
+
+
+def test_lifecycle_maturity_building(tmp_path):
+    """Steps 1-3 complete -> building."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_lifecycle_appspec(
+        entities=[_make_entity("Task")],
+        stories=[story],
+        rhythms=[rhythm],
+        persona_ids=["user"],
+    )
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["steps"][0]["status"] == "complete"  # model_domain
+    assert result["steps"][1]["status"] == "complete"  # write_stories
+    assert result["steps"][2]["status"] == "complete"  # write_rhythms
+    assert result["maturity"] == "building"
+
+
+def test_lifecycle_write_rhythms_partial_persona_coverage(tmp_path):
+    """Rhythms exist but don't cover all personas -> partial."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_lifecycle_appspec(
+        entities=[_make_entity("Task")],
+        stories=[story],
+        rhythms=[rhythm],
+        persona_ids=["user", "admin"],  # admin has no rhythm
+    )
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["steps"][2]["status"] == "partial"
+    assert result["steps"][2]["name"] == "write_rhythms"
+
+
+def test_lifecycle_map_scenes_partial(tmp_path):
+    """Some scenes missing story refs -> step 4 partial."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[
+                    SceneSpec(name="s1", surface="sf1", story="ST-001"),
+                    SceneSpec(name="s2", surface="sf2"),  # no story ref
+                ],
+            ),
+        ],
+    )
+    app = _make_lifecycle_appspec(
+        entities=[_make_entity("Task")],
+        stories=[story],
+        rhythms=[rhythm],
+        persona_ids=["user"],
+    )
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["steps"][3]["status"] == "partial"
+    assert result["steps"][3]["name"] == "map_scenes_to_stories"
+
+
+def test_lifecycle_current_focus_is_first_incomplete(tmp_path):
+    """current_focus points to first non-complete step."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    # Only entities -> steps 2-8 incomplete, focus should be write_stories
+    app = _make_lifecycle_appspec(entities=[_make_entity("Task")])
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["current_focus"] == "write_stories"
+
+
+def test_lifecycle_build_from_stories(tmp_path):
+    """Step 5 complete when test_designs dir has JSON files."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_lifecycle_appspec(
+        entities=[_make_entity("Task")],
+        stories=[story],
+        rhythms=[rhythm],
+        persona_ids=["user"],
+    )
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    # Create test_designs directory with a JSON file
+    td_dir = project / ".dazzle" / "test_designs"
+    td_dir.mkdir(parents=True)
+    (td_dir / "design1.json").write_text("{}")
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["steps"][4]["status"] == "complete"
+    assert result["steps"][4]["name"] == "build_from_stories"
+
+
+def test_lifecycle_evaluating_maturity(tmp_path):
+    """Steps 1-5 complete -> evaluating."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_lifecycle_appspec(
+        entities=[_make_entity("Task")],
+        stories=[story],
+        rhythms=[rhythm],
+        persona_ids=["user"],
+    )
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    # Step 5: test_designs
+    td_dir = project / ".dazzle" / "test_designs"
+    td_dir.mkdir(parents=True)
+    (td_dir / "design1.json").write_text("{}")
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["maturity"] == "evaluating"
+
+
+def test_lifecycle_mature(tmp_path):
+    """Steps 1-7 complete -> mature."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    story = _make_story("ST-001", actor="user", status=StoryStatus.ACCEPTED)
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="user",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="sf1", story="ST-001")],
+            ),
+        ],
+    )
+    app = _make_lifecycle_appspec(
+        entities=[_make_entity("Task")],
+        stories=[story],
+        rhythms=[rhythm],
+        persona_ids=["user"],
+    )
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    # Step 5: test_designs
+    td_dir = project / ".dazzle" / "test_designs"
+    td_dir.mkdir(parents=True)
+    (td_dir / "design1.json").write_text("{}")
+
+    # Step 6: evaluations/eval-*.json
+    eval_dir = project / ".dazzle" / "evaluations"
+    eval_dir.mkdir(parents=True)
+    (eval_dir / "eval-20260101-000000.json").write_text("{}")
+
+    # Step 7: evaluations/gaps-*.json
+    (eval_dir / "gaps-20260101-000000.json").write_text("{}")
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["maturity"] == "mature"
+    # Step 8 should be partial (since other steps are complete)
+    assert result["steps"][7]["status"] == "partial"
+    assert result["steps"][7]["name"] == "iterate"
+
+
+def test_lifecycle_iterate_not_started_when_nothing_complete(tmp_path):
+    """Step 8 (iterate) is not_started when no other step is complete."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    app = _make_lifecycle_appspec()
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    assert result["steps"][7]["status"] == "not_started"
+    assert result["steps"][7]["name"] == "iterate"
+
+
+def test_lifecycle_steps_have_suggestions(tmp_path):
+    """Incomplete steps include actionable suggestions."""
+    from dazzle.mcp.server.handlers.rhythm import lifecycle_rhythm_handler
+
+    app = _make_lifecycle_appspec()
+    project = tmp_path / "proj"
+    project.mkdir()
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=app,
+    ):
+        result = json.loads(lifecycle_rhythm_handler(project, {}))
+
+    # not_started steps should have suggestions
+    for step in result["steps"]:
+        if step["status"] == "not_started":
+            assert len(step["suggestions"]) > 0, f"Step {step['name']} has no suggestions"

@@ -359,7 +359,9 @@ def handle_rhythm(arguments: dict[str, Any]) -> str:
     from .handlers.rhythm import (
         coverage_rhythms_handler,
         evaluate_rhythm_handler,
+        gaps_rhythm_handler,
         get_rhythm_handler,
+        lifecycle_rhythm_handler,
         list_rhythms_handler,
         propose_rhythm_handler,
     )
@@ -373,9 +375,11 @@ def handle_rhythm(arguments: dict[str, Any]) -> str:
     ops: dict[str, Callable[..., str]] = {
         "propose": propose_rhythm_handler,
         "evaluate": evaluate_rhythm_handler,
+        "gaps": gaps_rhythm_handler,
         "coverage": coverage_rhythms_handler,
         "get": get_rhythm_handler,
         "list": list_rhythms_handler,
+        "lifecycle": lifecycle_rhythm_handler,
     }
 
     handler = ops.get(operation)  # type: ignore[arg-type]
