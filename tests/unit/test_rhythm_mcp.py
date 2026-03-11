@@ -45,11 +45,13 @@ def mock_appspec():
     surf_list.name = "course_list"
     surf_list.mode = "list"
     surf_list.entity_ref = None
+    surf_list.access = None
 
     surf_detail = MagicMock()
     surf_detail.name = "course_detail"
     surf_detail.mode = "detail"
     surf_detail.entity_ref = "Enrollment"
+    surf_detail.access = None
 
     spec.surfaces = [surf_list, surf_detail]
 
@@ -370,10 +372,13 @@ def mock_appspec_coverage_ambient():
 
     s1 = MagicMock()
     s1.name = "dashboard"
+    s1.access = None
     s2 = MagicMock()
     s2.name = "alerts_panel"
+    s2.access = None
     s3 = MagicMock()
     s3.name = "signup"
+    s3.access = None
     spec.surfaces = [s1, s2, s3]
     spec.domain.entities = []
     return spec
@@ -393,6 +398,146 @@ def test_coverage_includes_ambient_analysis(mock_appspec_coverage_ambient):
         assert "personas_without_ambient" in data
         assert data["personas_with_ambient"] == ["power_user"]
         assert data["personas_without_ambient"] == ["new_user"]
+
+
+def test_coverage_persona_scoped(mock_appspec):
+    """Coverage includes per-persona scoped metrics."""
+    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=mock_appspec,
+    ):
+        result = coverage_rhythms_handler(Path("/fake"), {})
+        data = json.loads(result)
+        assert "persona_coverage" in data
+        pc = data["persona_coverage"]
+        assert "new_user" in pc
+        # Both surfaces have access=None (no auth required) → both accessible
+        assert pc["new_user"]["accessible_surfaces"] == 2
+        assert pc["new_user"]["exercised_surfaces"] == 2
+        assert pc["new_user"]["coverage_pct"] == 100
+
+
+def test_coverage_persona_scoped_with_acl():
+    """Persona-scoped coverage respects allow_personas ACL."""
+    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
+
+    rhythm = RhythmSpec(
+        name="director_arc",
+        title="Director Arc",
+        persona="director",
+        phases=[
+            PhaseSpec(
+                name="fiscal",
+                scenes=[
+                    SceneSpec(name="review", surface="budget_review"),
+                    SceneSpec(name="approve", surface="approval_queue"),
+                ],
+            ),
+        ],
+    )
+
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+
+    persona = MagicMock()
+    persona.id = "director"
+    spec.personas = [persona]
+
+    # 4 surfaces: 2 accessible to director, 2 restricted to other roles
+    s1 = MagicMock()
+    s1.name = "budget_review"
+    s1.access = MagicMock()
+    s1.access.require_auth = True
+    s1.access.allow_personas = ["director", "finance"]
+    s1.access.deny_personas = []
+
+    s2 = MagicMock()
+    s2.name = "approval_queue"
+    s2.access = MagicMock()
+    s2.access.require_auth = True
+    s2.access.allow_personas = ["director"]
+    s2.access.deny_personas = []
+
+    s3 = MagicMock()
+    s3.name = "agent_capacity"
+    s3.access = MagicMock()
+    s3.access.require_auth = True
+    s3.access.allow_personas = ["agent_manager"]
+    s3.access.deny_personas = []
+
+    s4 = MagicMock()
+    s4.name = "public_page"
+    s4.access = None  # No auth required
+
+    spec.surfaces = [s1, s2, s3, s4]
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = coverage_rhythms_handler(Path("/fake"), {})
+        data = json.loads(result)
+
+    pc = data["persona_coverage"]["director"]
+    # director can access: budget_review, approval_queue, public_page (3 of 4)
+    assert pc["accessible_surfaces"] == 3
+    # rhythm exercises: budget_review, approval_queue (2 of 3 accessible)
+    assert pc["exercised_surfaces"] == 2
+    assert pc["coverage_pct"] == 67  # 2/3 rounded
+    assert pc["unexercised"] == ["public_page"]
+
+
+def test_coverage_persona_deny_list():
+    """Persona denied by deny_personas is excluded from surface access."""
+    from dazzle.mcp.server.handlers.rhythm import coverage_rhythms_handler
+
+    rhythm = RhythmSpec(
+        name="r1",
+        title="R1",
+        persona="intern",
+        phases=[
+            PhaseSpec(
+                name="p1",
+                scenes=[SceneSpec(name="s1", surface="public_docs")],
+            ),
+        ],
+    )
+
+    spec = MagicMock()
+    spec.rhythms = [rhythm]
+
+    persona = MagicMock()
+    persona.id = "intern"
+    spec.personas = [persona]
+
+    s1 = MagicMock()
+    s1.name = "public_docs"
+    s1.access = None
+
+    s2 = MagicMock()
+    s2.name = "admin_panel"
+    s2.access = MagicMock()
+    s2.access.require_auth = True
+    s2.access.allow_personas = []  # all authenticated
+    s2.access.deny_personas = ["intern"]
+
+    spec.surfaces = [s1, s2]
+    spec.domain.entities = []
+
+    with patch(
+        "dazzle.mcp.server.handlers.rhythm.load_project_appspec",
+        return_value=spec,
+    ):
+        result = coverage_rhythms_handler(Path("/fake"), {})
+        data = json.loads(result)
+
+    pc = data["persona_coverage"]["intern"]
+    assert pc["accessible_surfaces"] == 1  # only public_docs
+    assert pc["exercised_surfaces"] == 1
+    assert pc["coverage_pct"] == 100
 
 
 def test_evaluate_no_stored_scores(mock_appspec):

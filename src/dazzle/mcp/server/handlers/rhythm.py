@@ -208,6 +208,29 @@ def _load_latest_scores(project_root: Path, rhythm_name: str) -> list[dict[str, 
     return None
 
 
+def _surfaces_accessible_by_persona(persona_id: str, surfaces: list[Any]) -> set[str]:
+    """Compute which surfaces a persona can access based on ACL rules.
+
+    Rules:
+    - No access spec or require_auth=False → accessible to all
+    - allow_personas set and persona not in it → inaccessible
+    - deny_personas set and persona in it → inaccessible
+    - Otherwise → accessible
+    """
+    accessible: set[str] = set()
+    for s in surfaces:
+        access = getattr(s, "access", None)
+        if access is None or not access.require_auth:
+            accessible.add(s.name)
+            continue
+        if access.deny_personas and persona_id in access.deny_personas:
+            continue
+        if access.allow_personas and persona_id not in access.allow_personas:
+            continue
+        accessible.add(s.name)
+    return accessible
+
+
 @wrap_handler_errors
 def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyse persona and surface coverage across all rhythms."""
@@ -219,14 +242,33 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
     personas_with_rhythms: set[str] = set()
     personas_with_ambient: set[str] = set()
     surfaces_exercised: set[str] = set()
+    # Per-persona: which surfaces their rhythms exercise
+    persona_surfaces: dict[str, set[str]] = {}
 
     for r in app_spec.rhythms:
         personas_with_rhythms.add(r.persona)
+        if r.persona not in persona_surfaces:
+            persona_surfaces[r.persona] = set()
         for phase in r.phases:
             if phase.kind and phase.kind.value == "ambient":
                 personas_with_ambient.add(r.persona)
             for scene in phase.scenes:
                 surfaces_exercised.add(scene.surface)
+                persona_surfaces[r.persona].add(scene.surface)
+
+    # Per-persona scoped coverage
+    persona_coverage: dict[str, dict[str, Any]] = {}
+    for pid in sorted(personas_with_rhythms):
+        accessible = _surfaces_accessible_by_persona(pid, app_spec.surfaces)
+        exercised = persona_surfaces.get(pid, set())
+        exercised_accessible = exercised & accessible
+        pct = round(100 * len(exercised_accessible) / len(accessible)) if accessible else 0
+        persona_coverage[pid] = {
+            "accessible_surfaces": len(accessible),
+            "exercised_surfaces": len(exercised_accessible),
+            "coverage_pct": pct,
+            "unexercised": sorted(accessible - exercised_accessible),
+        }
 
     return json.dumps(
         {
@@ -239,6 +281,7 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
             "personas_without_ambient": sorted(personas_with_rhythms - personas_with_ambient),
             "surfaces_exercised": sorted(surfaces_exercised),
             "surfaces_unexercised": sorted(all_surface_names - surfaces_exercised),
+            "persona_coverage": persona_coverage,
         },
         indent=2,
     )
