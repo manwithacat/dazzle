@@ -253,6 +253,11 @@ class TokenType(Enum):
     TRIGGER = "trigger"
     UNLESS = "unless"
 
+    # v0.39.0 Rhythm DSL Keywords
+    RHYTHM = "rhythm"
+    PHASE = "phase"
+    SCENE = "scene"
+
     # v0.25.0 Top-Level Construct Keywords
     ENUM = "enum"
     WEBHOOK = "webhook"
