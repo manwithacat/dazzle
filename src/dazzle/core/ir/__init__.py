@@ -459,6 +459,13 @@ from .process import (
 from .process import RetryBackoff as ProcessRetryBackoff
 from .process import StepKind as ProcessStepKind
 
+# Rhythms (v0.39.0 Longitudinal UX Evaluation)
+from .rhythm import (
+    PhaseSpec,
+    RhythmSpec,
+    SceneSpec,
+)
+
 # Scenarios (v0.8.5)
 from .scenarios import (
     DemoFixture,
@@ -1056,6 +1063,10 @@ __all__ = [
     "ApprovalEscalationSpec",
     "ApprovalOutcomeSpec",
     "ApprovalSpec",
+    # Rhythms (v0.39.0 Longitudinal UX Evaluation)
+    "PhaseSpec",
+    "RhythmSpec",
+    "SceneSpec",
     # Seed Templates (v0.38.0)
     "SeedFieldTemplate",
     "SeedStrategy",
