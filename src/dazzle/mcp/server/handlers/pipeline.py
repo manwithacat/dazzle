@@ -39,8 +39,9 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
       8. story(scope_fidelity)
       9. process(coverage)
      10. test_design(gaps)
-     11. semantics(extract)
-     12. semantics(validate_events)
+     11. rhythm(gaps)
+     12. semantics(extract)
+     13. semantics(validate_events)
 
     Each step runs regardless of prior failures (unless stop_on_error=True).
     Returns a structured JSON report with per-step results and overall summary.
@@ -91,6 +92,7 @@ def _build_quality_steps(
     from .dsl_test import generate_dsl_tests_handler, get_dsl_test_coverage_handler
     from .fidelity import score_fidelity_handler
     from .process import scope_fidelity_handler, stories_coverage_handler
+    from .rhythm import gaps_rhythm_handler
     from .test_design import get_test_gaps_handler
 
     steps: list[QualityStep] = [
@@ -143,6 +145,12 @@ def _build_quality_steps(
             name="test_design(gaps)",
             handler=get_test_gaps_handler,
             handler_args=(project_path, {}),
+        ),
+        QualityStep(
+            name="rhythm(gaps)",
+            handler=gaps_rhythm_handler,
+            handler_args=(project_path, {}),
+            optional=True,
         ),
     ]
 
