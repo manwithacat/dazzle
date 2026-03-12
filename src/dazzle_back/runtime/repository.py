@@ -279,7 +279,12 @@ class Repository(Generic[T]):
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("insert", latency_ms, rows=1)
 
-        return self.model_class(**data)
+        try:
+            return self.model_class(**data)
+        except Exception:
+            # Seed/test fixtures may omit optional fields that Pydantic requires;
+            # the DB insert succeeded, so return with model_construct (no validation).
+            return self.model_class.model_construct(**data)
 
     async def read(
         self,

@@ -218,7 +218,7 @@ def create_test_routes(
                 logger.error("Failed to create %s: %s", entity_name, e)
                 raise HTTPException(
                     status_code=400,
-                    detail="Failed to create " + entity_name,
+                    detail=f"Failed to create {entity_name}: {e}",
                 )
 
         return SeedResponse(created=created)
