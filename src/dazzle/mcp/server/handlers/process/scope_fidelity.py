@@ -218,12 +218,13 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
         else:
             active_stories.append(s)
 
+    total_active = len(active_stories)
     progress.log_sync(
-        f"Analyzing scope fidelity for {len(active_stories)} stories "
-        f"against {len(processes)} processes..."
+        f"Analyzing scope fidelity for {total_active} stories against {len(processes)} processes..."
     )
 
-    for story in active_stories:
+    for idx, story in enumerate(active_stories, 1):
+        progress.advance_sync(idx, total_active, f"Checking scope: {story.story_id}")
         scope = story.scope
         implementing = implements_map.get(story.story_id, [])
 

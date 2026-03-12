@@ -161,8 +161,10 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
         default_actor = app_spec.personas[0].label or app_spec.personas[0].id
 
     progress.log_sync("Generating stories from entities...")
+    total_entities = len(app_spec.domain.entities)
     # Generate stories from entities
-    for entity in app_spec.domain.entities:
+    for ent_idx, entity in enumerate(app_spec.domain.entities, 1):
+        progress.advance_sync(ent_idx, total_entities, f"Analyzing {entity.name}")
         if filter_entities and entity.name not in filter_entities:
             continue
 
@@ -685,9 +687,13 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
             status=TestDesignStatus.PROPOSED,
         )
 
-    progress.log_sync(f"Converting {len(stories)} stories to test designs...")
+    total_stories = len(stories)
+    progress.log_sync(f"Converting {total_stories} stories to test designs...")
     # Convert all stories to test designs
-    test_designs = [story_to_test_design(s, i) for i, s in enumerate(stories)]
+    test_designs = []
+    for i, s in enumerate(stories):
+        progress.advance_sync(i + 1, total_stories, f"Converting {s.story_id}")
+        test_designs.append(story_to_test_design(s, i))
 
     # Auto-save generated test designs to avoid a separate save round-trip
     from dazzle.testing.test_design_persistence import add_test_designs

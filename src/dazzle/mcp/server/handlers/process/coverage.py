@@ -162,10 +162,12 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
         else:
             active_stories.append(s)
 
+    total_active = len(active_stories)
     progress.log_sync(
-        f"Analyzing coverage for {len(active_stories)} stories against {len(processes)} processes..."
+        f"Analyzing coverage for {total_active} stories against {len(processes)} processes..."
     )
-    for story in active_stories:
+    for idx, story in enumerate(active_stories, 1):
+        progress.advance_sync(idx, total_active, f"Checking {story.story_id}")
         sid = story.story_id
         title = story.title
 
