@@ -2323,7 +2323,7 @@ def test_populate(
                     persona=story.actor,
                     trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
                     steps=steps,
-                    expected_outcomes=story.effective_then.copy(),
+                    expected_outcomes=[c.expression for c in story.then],
                     entities=story.scope.copy(),
                     tags=[f"story:{story.story_id}", "auto-populated"],
                     status=TestDesignStatus.PROPOSED,

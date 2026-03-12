@@ -528,9 +528,6 @@ def _build_test_criteria(
             criteria["when"] = [c.expression for c in story.when]
         if story.then:
             criteria["then"] = [c.expression for c in story.then]
-        if story.constraints:
-            criteria["constraints"] = list(story.constraints)
-
         result.append(criteria)
 
     # From test designs

@@ -148,22 +148,23 @@ def _make_story(
     actor: str = "User",
     trigger: StoryTrigger = StoryTrigger.FORM_SUBMITTED,
     scope: list[str] | None = None,
-    happy_path_outcome: list[str] | None = None,
+    then: list | None = None,
     unless: list | None = None,
-    constraints: list[str] | None = None,
-    side_effects: list[str] | None = None,
 ) -> StorySpec:
     """Create a StorySpec for testing."""
+    from dazzle.core.ir.stories import StoryCondition
+
+    then_conditions = []
+    if then:
+        then_conditions = [StoryCondition(expression=t) if isinstance(t, str) else t for t in then]
     return StorySpec(
         story_id=story_id,
         title=title,
         actor=actor,
         trigger=trigger,
         scope=scope or [],
-        happy_path_outcome=happy_path_outcome or [],
+        then=then_conditions,
         unless=unless or [],
-        constraints=constraints or [],
-        side_effects=side_effects or [],
     )
 
 
@@ -445,25 +446,6 @@ class TestReviewChecklist:
         stories = [_make_story()]
         assert _build_review_checklist(stories) == []
 
-    def test_constraint_items(self):
-        stories = [
-            _make_story("ST-001", constraints=["Cannot send twice", "Amount > 0"]),
-        ]
-        checklist = _build_review_checklist(stories)
-        assert len(checklist) == 2
-        assert checklist[0]["type"] == "constraint"
-        assert checklist[0]["obligation"] == "Cannot send twice"
-        assert "ST-001" == checklist[0]["story_id"]
-
-    def test_side_effect_items(self):
-        stories = [
-            _make_story("ST-001", side_effects=["send_confirmation_email"]),
-        ]
-        checklist = _build_review_checklist(stories)
-        assert len(checklist) == 1
-        assert checklist[0]["type"] == "side_effect"
-        assert "send_confirmation_email" in checklist[0]["verify"]
-
     def test_exception_items(self):
         from dazzle.core.ir.stories import StoryException
 
@@ -490,14 +472,12 @@ class TestReviewChecklist:
         stories = [
             _make_story(
                 "ST-001",
-                constraints=["Four-eye rule"],
-                side_effects=["audit_log"],
                 unless=[StoryException(condition="Timeout", then_outcomes=["Retry"])],
             ),
         ]
         checklist = _build_review_checklist(stories)
         types = {item["type"] for item in checklist}
-        assert types == {"constraint", "side_effect", "exception"}
+        assert types == {"exception"}
 
 
 # =============================================================================

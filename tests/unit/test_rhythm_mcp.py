@@ -2190,7 +2190,7 @@ def test_naive_stem():
 
 
 def _make_json_story_data(story_id: str, title: str = "Test Story") -> dict:
-    """Build a story dict compatible with StoriesContainer."""
+    """Build a story dict compatible with StorySpec."""
     return {
         "story_id": story_id,
         "title": title,

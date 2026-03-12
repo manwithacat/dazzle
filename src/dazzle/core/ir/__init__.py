@@ -565,7 +565,6 @@ from .state_machine import (
 
 # Stories (v0.12.0 Behaviour Layer, v0.22.0 DSL syntax)
 from .stories import (
-    StoriesContainer,
     StoryCondition,
     StoryException,
     StorySpec,
@@ -891,7 +890,6 @@ __all__ = [
     "SecurityConfig",
     "SecurityProfile",
     # Stories (v0.12.0 Behaviour Layer, v0.22.0 DSL syntax)
-    "StoriesContainer",
     "StoryCondition",
     "StoryException",
     "StorySpec",

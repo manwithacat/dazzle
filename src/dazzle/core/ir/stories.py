@@ -4,15 +4,7 @@ Story specification types for DAZZLE Behaviour Layer.
 This module contains IR types for behavioural user stories that bridge
 the gap between DSL specifications and implementation code.
 
-Stories are non-Turing-complete specifications that describe:
-- What should happen (outcomes)
-- When it should happen (triggers)
-- Who is involved (actors, entities)
-- What constraints must be maintained
-
-Stories can be defined in DSL syntax (v0.22.0) or as JSON artifacts
-in .dazzle/stories/. DSL syntax provides Gherkin-style given/when/then
-conditions for clearer acceptance criteria.
+Stories use Gherkin-style given/when/then conditions defined in DSL syntax.
 """
 
 from __future__ import annotations
@@ -110,11 +102,11 @@ class StorySpec(BaseModel):
 
     A story describes a single coherent behavior from the perspective
     of an actor (persona). Stories are:
-    - Defined in DSL syntax (v0.22.0) or proposed by LLM
+    - Defined in DSL syntax (v0.22.0)
     - Reviewed and edited by humans
     - Used to generate ProcessSpec implementations
 
-    DSL Syntax (v0.22.0):
+    DSL Syntax:
         story ST-001 "Staff sends invoice to client":
           actor: StaffUser
           trigger: status_changed
@@ -147,14 +139,6 @@ class StorySpec(BaseModel):
         then: Expected outcomes (Gherkin-style)
         unless: Exception branches with alternative outcomes
         status: Acceptance status (draft, accepted, rejected)
-        created_at: ISO 8601 timestamp when story was created
-        accepted_at: ISO 8601 timestamp when story was accepted
-        # Legacy fields for backward compatibility
-        preconditions: Legacy field, maps to given
-        happy_path_outcome: Legacy field, maps to then
-        side_effects: Named effects (notifications, logs, integrations)
-        constraints: Invariants that must never be violated
-        variants: Edge cases or alternative flows
 
     Example:
         StorySpec(
@@ -180,7 +164,7 @@ class StorySpec(BaseModel):
     trigger: StoryTrigger = Field(..., description="Event that initiates this story")
     scope: list[str] = Field(default_factory=list, description="Entity names directly involved")
 
-    # Gherkin-style conditions (v0.22.0)
+    # Gherkin-style conditions
     given: list[StoryCondition] = Field(default_factory=list, description="Preconditions (given)")
     when: list[StoryCondition] = Field(
         default_factory=list, description="Trigger conditions (when)"
@@ -188,79 +172,8 @@ class StorySpec(BaseModel):
     then: list[StoryCondition] = Field(default_factory=list, description="Expected outcomes (then)")
     unless: list[StoryException] = Field(default_factory=list, description="Exception branches")
 
-    # Legacy fields for backward compatibility with JSON stories
-    preconditions: list[str] = Field(
-        default_factory=list, description="Legacy: Conditions that must be true before"
-    )
-    happy_path_outcome: list[str] = Field(
-        default_factory=list, description="Legacy: Statements true after success"
-    )
-    side_effects: list[str] = Field(
-        default_factory=list, description="Named effects (notifications, logs)"
-    )
-    constraints: list[str] = Field(
-        default_factory=list, description="Invariants that must never be violated"
-    )
-    variants: list[str] = Field(default_factory=list, description="Edge cases or alternative flows")
-
     status: StoryStatus = Field(default=StoryStatus.DRAFT, description="Acceptance status")
-    created_at: str | None = Field(default=None, description="ISO 8601 timestamp when created")
-    accepted_at: str | None = Field(default=None, description="ISO 8601 timestamp when accepted")
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
-
-    model_config = ConfigDict(frozen=True)
-
-    def with_status(self, status: StoryStatus, accepted_at: str | None = None) -> StorySpec:
-        """Create a copy with updated status."""
-        return StorySpec(
-            story_id=self.story_id,
-            title=self.title,
-            description=self.description,
-            actor=self.actor,
-            trigger=self.trigger,
-            scope=self.scope,
-            given=self.given,
-            when=self.when,
-            then=self.then,
-            unless=self.unless,
-            preconditions=self.preconditions,
-            happy_path_outcome=self.happy_path_outcome,
-            side_effects=self.side_effects,
-            constraints=self.constraints,
-            variants=self.variants,
-            status=status,
-            created_at=self.created_at,
-            accepted_at=accepted_at or self.accepted_at,
-        )
-
-    @property
-    def effective_given(self) -> list[str]:
-        """Get given conditions as strings, merging Gherkin and legacy formats."""
-        if self.given:
-            return [c.expression for c in self.given]
-        return self.preconditions
-
-    @property
-    def effective_then(self) -> list[str]:
-        """Get then outcomes as strings, merging Gherkin and legacy formats."""
-        if self.then:
-            return [c.expression for c in self.then]
-        return self.happy_path_outcome
-
-
-class StoriesContainer(BaseModel):
-    """
-    Container for storing stories with version information.
-
-    This is the root object stored in .dazzle/stories/stories.json.
-
-    Attributes:
-        version: Schema version for future migrations
-        stories: List of story specifications
-    """
-
-    version: str = Field(default="1.0", description="Schema version")
-    stories: list[StorySpec] = Field(default_factory=list, description="List of stories")
 
     model_config = ConfigDict(frozen=True)

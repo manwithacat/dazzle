@@ -390,8 +390,8 @@ def _find_missing_aspects(
     then_outcomes: list[str] = []
     if story.then:
         then_outcomes = [c.expression for c in story.then]
-    elif story.happy_path_outcome:
-        then_outcomes = story.happy_path_outcome
+    elif story.then:
+        then_outcomes = [c.expression for c in story.then]
 
     for outcome in then_outcomes:
         if not _outcome_matches_pool(outcome, match_pool, satisfies_outcomes, impl_procs):

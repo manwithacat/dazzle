@@ -1341,55 +1341,7 @@ def extract_guards(appspec: ir.AppSpec) -> list[dict[str, Any]]:
 
     proposals: list[dict[str, Any]] = []
 
-    for story in stories:
-        if not story.constraints:
-            continue
-
-        story_entities = story.scope if story.scope else []
-
-        for constraint in story.constraints:
-            constraint_lower = constraint.lower()
-
-            for _key, guard_type, keywords in _GUARD_PATTERNS:
-                if not any(kw in constraint_lower for kw in keywords):
-                    continue
-
-                for entity_name in story_entities:
-                    matched_entity = entity_sm.get(entity_name)
-                    if not matched_entity:
-                        continue
-
-                    sm = matched_entity.state_machine
-                    target_transitions = _match_transitions_to_constraint(constraint_lower, sm)
-
-                    if target_transitions:
-                        for from_s, to_s in target_transitions:
-                            proposals.append(
-                                {
-                                    "entity": entity_name,
-                                    "transition": f"{from_s} → {to_s}",
-                                    "guard_type": guard_type,
-                                    "guard_expression": _build_guard_expression(
-                                        guard_type, constraint, matched_entity
-                                    ),
-                                    "source_story": story.story_id,
-                                    "source_constraint": constraint,
-                                }
-                            )
-                    else:
-                        proposals.append(
-                            {
-                                "entity": entity_name,
-                                "transition": "*",
-                                "guard_type": guard_type,
-                                "guard_expression": _build_guard_expression(
-                                    guard_type, constraint, matched_entity
-                                ),
-                                "source_story": story.story_id,
-                                "source_constraint": constraint,
-                            }
-                        )
-                    break  # One guard per constraint per entity
+    # Stories no longer carry constraints; guard proposal generation is a no-op.
 
     # Deduplicate
     seen: set[str] = set()

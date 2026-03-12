@@ -1202,13 +1202,11 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                 "actor": s.actor,
                 "trigger": s.trigger.value,
                 "scope": s.scope,
-                "preconditions": s.preconditions,
-                "happy_path_outcome": s.happy_path_outcome,
-                "side_effects": s.side_effects,
-                "constraints": s.constraints,
-                "variants": s.variants,
+                "given": [c.expression for c in s.given],
+                "when": [c.expression for c in s.when],
+                "then": [c.expression for c in s.then],
+                "unless": [{"condition": e.condition, "then": e.then_outcomes} for e in s.unless],
                 "status": s.status.value,
-                "created_at": s.created_at,
             }
             for s in stories
         ]
@@ -1293,14 +1291,11 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
                 "actor": s.actor,
                 "trigger": s.trigger.value if s.trigger else None,
                 "scope": s.scope,
-                "preconditions": s.preconditions,
-                "happy_path_outcome": s.happy_path_outcome,
-                "side_effects": s.side_effects,
-                "constraints": s.constraints,
-                "variants": s.variants,
+                "given": [c.expression for c in s.given],
+                "when": [c.expression for c in s.when],
+                "then": [c.expression for c in s.then],
+                "unless": [{"condition": e.condition, "then": e.then_outcomes} for e in s.unless],
                 "status": s.status.value,
-                "created_at": s.created_at,
-                "accepted_at": s.accepted_at,
             }
             for s in all_stories
         ]
