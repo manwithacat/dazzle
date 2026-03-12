@@ -100,9 +100,9 @@ def _set_factory_env(
     if project_root is not None:
         os.environ.setdefault("DAZZLE_PROJECT_ROOT", str(project_root))
     if enable_dev_mode:
-        os.environ.setdefault("DAZZLE_ENV", "development")
+        os.environ["DAZZLE_ENV"] = "development"
     elif enable_test_mode:
-        os.environ.setdefault("DAZZLE_ENV", "test")
+        os.environ["DAZZLE_ENV"] = "test"
 
 
 # =============================================================================
