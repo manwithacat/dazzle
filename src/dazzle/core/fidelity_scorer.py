@@ -485,12 +485,17 @@ _W_THEN = 0.20
 _W_UNLESS = 0.05
 
 
-def _extract_field_from_path(field_path: str | None) -> str | None:
-    """Extract field name from a dotted path like 'Task.status' -> 'status'."""
+def _extract_field_from_path(field_path: str | None) -> tuple[str | None, str | None]:
+    """Extract (entity, field) from a dotted path like 'Task.status' -> ('Task', 'status').
+
+    Returns (None, field_name) when no entity prefix is present.
+    """
     if not field_path:
-        return None
+        return None, None
     parts = field_path.split(".")
-    return parts[-1] if len(parts) > 1 else parts[0]
+    if len(parts) > 1:
+        return parts[0], parts[-1]
+    return None, parts[0]
 
 
 def _check_story_embodiment(
@@ -533,7 +538,10 @@ def _check_story_embodiment(
     for story in relevant_stories:
         # 1. Given-condition fields
         for cond in story.given:
-            field_name = _extract_field_from_path(cond.field_path)
+            field_entity, field_name = _extract_field_from_path(cond.field_path)
+            # Skip if the condition targets a different entity (#481)
+            if field_entity and entity_name and field_entity != entity_name:
+                continue
             if field_name and field_name not in surface_field_names:
                 gaps.append(
                     FidelityGap(
@@ -606,7 +614,10 @@ def _check_story_embodiment(
 
         # 4. Then-outcome verification
         for cond in story.then:
-            field_name = _extract_field_from_path(cond.field_path)
+            field_entity, field_name = _extract_field_from_path(cond.field_path)
+            # Skip if the outcome targets a different entity (#481)
+            if field_entity and entity_name and field_entity != entity_name:
+                continue
             if field_name and field_name not in surface_field_names:
                 # Also check if the field appears in the rendered text
                 if field_name.lower() not in all_text_lower:

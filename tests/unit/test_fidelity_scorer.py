@@ -165,6 +165,22 @@ class TestGivenConditionFields:
         ]
         assert len(precond_gaps) == 0
 
+    def test_given_cross_entity_skipped(self) -> None:
+        """Given-condition on a different entity should not flag the surface (#481)."""
+        surface = _make_surface(
+            name="checklist_list", entity_ref="Checklist", field_names=["title"]
+        )
+        story = _make_story(
+            given=[StoryCondition(expression="Contact.phone populated", field_path="Contact.phone")]
+        )
+        root = parse_html("<div><button>Go</button></div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        precond_gaps = [
+            g for g in gaps if g.category == FidelityGapCategory.STORY_PRECONDITION_MISSING
+        ]
+        assert len(precond_gaps) == 0
+
     def test_given_without_field_path_skipped(self) -> None:
         surface = _make_surface(field_names=["title"])
         story = _make_story(given=[StoryCondition(expression="User is logged in", field_path=None)])
@@ -246,6 +262,25 @@ class TestThenOutcomeVerification:
             ]
         )
         root = parse_html("<div>completed_at: 2024-01-01</div>")
+
+        gaps = _check_story_embodiment(surface, None, root, None, [story])
+        outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
+        assert len(outcome_gaps) == 0
+
+    def test_outcome_cross_entity_skipped(self) -> None:
+        """Outcome on a different entity should not flag the surface (#481)."""
+        surface = _make_surface(
+            name="checklist_create", entity_ref="Checklist", field_names=["title"]
+        )
+        story = _make_story(
+            then=[
+                StoryCondition(
+                    expression="Contact.phone populated from form",
+                    field_path="Contact.phone",
+                )
+            ]
+        )
+        root = parse_html("<div><button>Save</button></div>")
 
         gaps = _check_story_embodiment(surface, None, root, None, [story])
         outcome_gaps = [g for g in gaps if g.category == FidelityGapCategory.STORY_OUTCOME_MISSING]
