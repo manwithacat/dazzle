@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+import sqlite3
+from pathlib import Path
+
+import pytest
+
 from dazzle.mcp.server.workshop import ToolCall, WorkshopData, _format_duration, _format_ts
 
 
@@ -201,3 +206,124 @@ class TestFormatHelpers:
 
     def test_format_duration_minutes(self):
         assert _format_duration(125.0) == "2m5s"
+
+
+# ── Integration: SQLite → read_new_entries_db → WorkshopData.ingest ──────────
+
+
+@pytest.fixture()
+def activity_db(tmp_path: Path) -> Path:
+    """Create a temporary SQLite DB with the activity_events schema and a
+    tool_start → progress → tool_end sequence."""
+    db_path = tmp_path / "activity.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        """
+        CREATE TABLE activity_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            event_type TEXT NOT NULL,
+            tool TEXT NOT NULL,
+            operation TEXT,
+            ts TEXT,
+            success INTEGER,
+            duration_ms REAL,
+            error TEXT,
+            warnings INTEGER DEFAULT 0,
+            progress_current INTEGER,
+            progress_total INTEGER,
+            message TEXT,
+            level TEXT,
+            source TEXT,
+            context_json TEXT
+        )
+        """
+    )
+    conn.execute(
+        """INSERT INTO activity_events
+           (session_id, event_type, tool, operation, ts, source)
+           VALUES ('s1', 'tool_start', 'pipeline', 'run',
+                   '2026-03-12T10:00:00.000+00:00', 'mcp')"""
+    )
+    conn.execute(
+        """INSERT INTO activity_events
+           (session_id, event_type, tool, operation, ts, progress_current,
+            progress_total, message, source)
+           VALUES ('s1', 'progress', 'pipeline', 'run',
+                   '2026-03-12T10:00:01.000+00:00', 3, 8, 'Step 3 of 8', 'mcp')"""
+    )
+    conn.execute(
+        """INSERT INTO activity_events
+           (session_id, event_type, tool, operation, ts, success, duration_ms,
+            context_json, source)
+           VALUES ('s1', 'tool_end', 'pipeline', 'run',
+                   '2026-03-12T10:00:02.500+00:00', 1, 2500,
+                   '{"summary": "8/8 steps passed"}', 'mcp')"""
+    )
+    conn.commit()
+    conn.close()
+    return db_path
+
+
+class TestSqliteIntegration:
+    """Integration: SQLite polling → WorkshopData.ingest → state verification."""
+
+    def test_full_lifecycle(self, activity_db: Path) -> None:
+        from dazzle.mcp.server.workshop import WorkshopData, read_new_entries_db
+
+        data = WorkshopData()
+
+        # Poll entries from the database
+        entries = read_new_entries_db(activity_db, data)
+        assert len(entries) == 3
+
+        # Ingest each entry
+        for entry in entries:
+            data.ingest(entry)
+
+        # Verify final state
+        assert data.total_calls == 1  # one tool_start
+        assert len(data.active) == 0  # finished
+        assert len(data.completed) == 1
+        assert data.error_count == 0
+
+        call = data.completed[0]
+        assert call.tool == "pipeline"
+        assert call.operation == "run"
+        assert call.finished
+        assert call.success is True
+        assert call.duration_ms == 2500
+        assert call.summary == "8/8 steps passed"
+        # Progress was recorded in events
+        assert len(call.events) == 2  # progress + tool_end
+        assert call.events[0]["message"] == "Step 3 of 8"
+
+    def test_cursor_based_polling(self, activity_db: Path) -> None:
+        from dazzle.mcp.server.workshop import WorkshopData, read_new_entries_db
+
+        data = WorkshopData()
+
+        entries = read_new_entries_db(activity_db, data)
+        assert len(entries) == 3
+        assert data._last_event_id > 0
+
+        # Second poll returns nothing
+        more = read_new_entries_db(activity_db, data)
+        assert len(more) == 0
+
+    def test_persistent_connection(self, activity_db: Path) -> None:
+        """read_new_entries_db can reuse a persistent connection."""
+        from dazzle.mcp.server.workshop import WorkshopData, read_new_entries_db
+
+        data = WorkshopData()
+        conn = sqlite3.connect(str(activity_db), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+
+        entries = read_new_entries_db(activity_db, data, conn=conn)
+        assert len(entries) == 3
+
+        # Connection still usable
+        more = read_new_entries_db(activity_db, data, conn=conn)
+        assert len(more) == 0
+
+        conn.close()

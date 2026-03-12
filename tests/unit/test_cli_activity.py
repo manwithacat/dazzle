@@ -309,10 +309,10 @@ class TestWorkshopSourceDisplay:
         assert entry["source"] == "cli"
 
     def test_ingest_tracks_source_on_active(self) -> None:
-        """WorkshopState.ingest should store source on ActiveTool."""
-        from dazzle.mcp.server.workshop import WorkshopState
+        """WorkshopData.ingest should store source on ToolCall."""
+        from dazzle.mcp.server.workshop import WorkshopData
 
-        state = WorkshopState()
+        state = WorkshopData()
         state.ingest(
             {
                 "type": "tool_start",
@@ -323,14 +323,14 @@ class TestWorkshopSourceDisplay:
             }
         )
 
-        at = state.active["pipeline.run"]
+        at = state.active["pipeline.run.2026-02-14T10:00:00"]
         assert at.source == "cli"
 
     def test_ingest_tracks_source_on_completed(self) -> None:
-        """WorkshopState.ingest should store source on CompletedTool."""
-        from dazzle.mcp.server.workshop import WorkshopState
+        """WorkshopData.ingest should store source on completed ToolCall."""
+        from dazzle.mcp.server.workshop import WorkshopData
 
-        state = WorkshopState()
+        state = WorkshopData()
         state.ingest(
             {
                 "type": "tool_start",
@@ -355,11 +355,11 @@ class TestWorkshopSourceDisplay:
         ct = state.completed[0]
         assert ct.source == "cli"
 
-    def test_render_shows_cli_tag(self) -> None:
-        """render_workshop should prepend 'CLI' to CLI-sourced tool labels."""
-        from dazzle.mcp.server.workshop import WorkshopState, render_workshop
+    def test_cli_source_label(self) -> None:
+        """CLI-sourced tool calls should have the correct label and source."""
+        from dazzle.mcp.server.workshop import WorkshopData
 
-        state = WorkshopState()
+        state = WorkshopData()
         state.ingest(
             {
                 "type": "tool_start",
@@ -381,11 +381,6 @@ class TestWorkshopSourceDisplay:
             }
         )
 
-        render_workshop(state, "test", "1.0")
-        # The rendered output should contain 'CLI pipeline.run'
-        # We verify by checking the CompletedTool label generation
         ct = state.completed[0]
-        label = f"{ct.tool}.{ct.operation}" if ct.operation else ct.tool
-        if ct.source == "cli":
-            label = f"CLI {label}"
-        assert label == "CLI pipeline.run"
+        assert ct.label == "pipeline.run"
+        assert ct.source == "cli"

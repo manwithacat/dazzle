@@ -214,32 +214,41 @@ class WorkshopData:
 # ── SQLite reading ───────────────────────────────────────────────────────────
 
 
-def read_new_entries_db(db_path: Path, data: WorkshopData) -> list[dict[str, Any]]:
+def read_new_entries_db(
+    db_path: Path,
+    data: WorkshopData,
+    conn: sqlite3.Connection | None = None,
+) -> list[dict[str, Any]]:
     """Read new activity events from the SQLite database.
 
     Uses cursor-based polling via ``_last_event_id``.
     Returns entries as dicts compatible with ``WorkshopData.ingest()``.
+
+    If *conn* is supplied it is reused (avoiding a new connection per poll).
+    Falls back to opening a fresh connection when *conn* is ``None``.
     """
     if not db_path.exists():
         return []
 
     entries: list[dict[str, Any]] = []
+    own_conn = conn is None
     try:
-        conn = sqlite3.connect(str(db_path), check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        try:
-            rows = conn.execute(
-                "SELECT * FROM activity_events WHERE id > ? ORDER BY id ASC LIMIT 200",
-                (data._last_event_id,),
-            ).fetchall()
-            for row in rows:
-                entry = _db_row_to_entry(dict(row))
-                entries.append(entry)
-                data._last_event_id = row["id"]
-        finally:
-            conn.close()
+        if conn is None:
+            conn = sqlite3.connect(str(db_path), check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT * FROM activity_events WHERE id > ? ORDER BY id ASC LIMIT 200",
+            (data._last_event_id,),
+        ).fetchall()
+        for row in rows:
+            entry = _db_row_to_entry(dict(row))
+            entries.append(entry)
+            data._last_event_id = row["id"]
     except Exception:
         logger.debug("Failed to poll activity events", exc_info=True)
+    finally:
+        if own_conn and conn is not None:
+            conn.close()
     return entries
 
 
@@ -414,9 +423,28 @@ if TEXTUAL_AVAILABLE:
             )
             yield Footer()
 
+        _active_ids: set[str] = set()
+        _completed_count: int = 0
+
         def update_display(self, data: WorkshopData) -> None:
-            """Refresh the dashboard from current data."""
-            # Active tools
+            """Refresh the dashboard, diffing data to avoid full rebuilds."""
+            self._update_active_panel(data)
+            self._update_completed_panel(data)
+
+            # Update title with stats
+            app = self.app
+            if isinstance(app, WorkshopApp):
+                errs = f" | {data.error_count} errors" if data.error_count else ""
+                app.sub_title = f"{data.total_calls} calls{errs}"
+
+        def _update_active_panel(self, data: WorkshopData) -> None:
+            """Diff active calls and only rebuild when the set changes."""
+            current_ids = set(data.active.keys())
+            if current_ids == self._active_ids:
+                # Active widgets auto-refresh their spinners/elapsed via auto_refresh
+                return
+
+            self._active_ids = current_ids
             active_panel = self.query_one("#active-panel", Vertical)
             active_panel.remove_children()
             if data.active:
@@ -426,23 +454,52 @@ if TEXTUAL_AVAILABLE:
             else:
                 active_panel.mount(Label(" No active tools", classes="dim"))
 
-            # Completed tools
-            completed_panel = self.query_one("#completed-panel", VerticalScroll)
-            completed_panel.remove_children()
-            recent = data.completed[-data.max_done :]
-            if recent:
-                completed_panel.mount(Label(" History \u2500" * 4, classes="section-header"))
-                for i, call in enumerate(reversed(recent)):
-                    row = CompletedToolRow(call, id=f"completed-{i}")
-                    completed_panel.mount(row)
-            else:
-                completed_panel.mount(Label(" No completed calls yet", classes="dim"))
+        def _update_completed_panel(self, data: WorkshopData) -> None:
+            """Append only new completed items instead of rebuilding."""
+            new_count = len(data.completed)
+            if new_count == self._completed_count:
+                return
 
-            # Update title with stats
-            app = self.app
-            if isinstance(app, WorkshopApp):
-                errs = f" | {data.error_count} errors" if data.error_count else ""
-                app.sub_title = f"{data.total_calls} calls{errs}"
+            completed_panel = self.query_one("#completed-panel", VerticalScroll)
+
+            if self._completed_count == 0:
+                # First population — mount header + all items
+                completed_panel.remove_children()
+                recent = data.completed[-data.max_done :]
+                if recent:
+                    completed_panel.mount(Label(" History \u2500" * 4, classes="section-header"))
+                    for i, call in enumerate(reversed(recent)):
+                        completed_panel.mount(CompletedToolRow(call, id=f"completed-{i}"))
+                else:
+                    completed_panel.mount(Label(" No completed calls yet", classes="dim"))
+            else:
+                # Incremental — append new items after the header
+                new_items = data.completed[self._completed_count :]
+                # Remove "no completed calls" placeholder if present
+                placeholders = completed_panel.query(".dim")
+                for p in placeholders:
+                    p.remove()
+                # Add header if this is the first batch after placeholder
+                if self._completed_count == 0 and new_items:
+                    completed_panel.mount(Label(" History \u2500" * 4, classes="section-header"))
+                # Mount new rows at the top (after header)
+                header = completed_panel.query(".section-header")
+                after_widget = header.first() if header else None
+                for call in reversed(new_items):
+                    idx = new_count - 1  # unique enough id
+                    new_count -= 1
+                    row = CompletedToolRow(call, id=f"completed-{idx}")
+                    if after_widget is not None:
+                        completed_panel.mount(row, after=after_widget)
+                    else:
+                        completed_panel.mount(row)
+                # Trim if over max
+                all_rows = list(completed_panel.query("CompletedToolRow"))
+                if len(all_rows) > data.max_done:
+                    for row in all_rows[data.max_done :]:
+                        row.remove()
+
+            self._completed_count = len(data.completed)
 
         def action_session(self) -> None:
             app = self.app
@@ -521,11 +578,19 @@ if TEXTUAL_AVAILABLE:
             self.sub_title = project_name
             self.data = WorkshopData(max_done=max_done, bell=bell)
             self._poll_timer: Timer | None = None
+            self._conn: sqlite3.Connection | None = None
+
+        def _get_conn(self) -> sqlite3.Connection:
+            """Return (and cache) a persistent SQLite connection."""
+            if self._conn is None:
+                self._conn = sqlite3.connect(str(self._db_path), check_same_thread=False)
+                self._conn.row_factory = sqlite3.Row
+            return self._conn
 
         def on_mount(self) -> None:
             """Start polling and load initial data."""
             # Ingest existing events
-            for entry in read_new_entries_db(self._db_path, self.data):
+            for entry in read_new_entries_db(self._db_path, self.data, conn=self._get_conn()):
                 self.data.ingest(entry)
             self._update_dashboard()
             # Start poll timer
@@ -533,7 +598,13 @@ if TEXTUAL_AVAILABLE:
 
         def _poll(self) -> None:
             """Poll SQLite for new events."""
-            new_entries = read_new_entries_db(self._db_path, self.data)
+            try:
+                conn = self._get_conn()
+            except Exception:
+                # Connection went stale — reset and retry next cycle
+                self._conn = None
+                return
+            new_entries = read_new_entries_db(self._db_path, self.data, conn=conn)
             if new_entries:
                 for entry in new_entries:
                     self.data.ingest(entry)

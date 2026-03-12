@@ -45,9 +45,9 @@ def db_path(tmp_path: Path) -> Path:
 
 class TestReadNewEntriesDb:
     def test_reads_all_events(self, db_path):
-        from dazzle.mcp.server.workshop import WorkshopState, read_new_entries_db
+        from dazzle.mcp.server.workshop import WorkshopData, read_new_entries_db
 
-        state = WorkshopState()
+        state = WorkshopData()
         entries = read_new_entries_db(db_path, state)
         assert len(entries) == 4
         assert entries[0]["type"] == "tool_start"
@@ -57,9 +57,9 @@ class TestReadNewEntriesDb:
         assert entries[1]["duration_ms"] == 42.0
 
     def test_cursor_advances(self, db_path):
-        from dazzle.mcp.server.workshop import WorkshopState, read_new_entries_db
+        from dazzle.mcp.server.workshop import WorkshopData, read_new_entries_db
 
-        state = WorkshopState()
+        state = WorkshopData()
         entries = read_new_entries_db(db_path, state)
         assert len(entries) == 4
         assert state._last_event_id > 0
@@ -69,9 +69,9 @@ class TestReadNewEntriesDb:
         assert len(more) == 0
 
     def test_handles_missing_db(self, tmp_path):
-        from dazzle.mcp.server.workshop import WorkshopState, read_new_entries_db
+        from dazzle.mcp.server.workshop import WorkshopData, read_new_entries_db
 
-        state = WorkshopState()
+        state = WorkshopData()
         entries = read_new_entries_db(tmp_path / "missing.db", state)
         assert entries == []
 
@@ -183,9 +183,9 @@ class TestDetectDbPath:
 
 class TestIngestFromSqlite:
     def test_ingest_sqlite_events(self, db_path):
-        from dazzle.mcp.server.workshop import WorkshopState, read_new_entries_db
+        from dazzle.mcp.server.workshop import WorkshopData, read_new_entries_db
 
-        state = WorkshopState()
+        state = WorkshopData()
         entries = read_new_entries_db(db_path, state)
         for entry in entries:
             state.ingest(entry)

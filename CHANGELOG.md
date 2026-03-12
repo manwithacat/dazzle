@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `dazzle workshop` rewritten from Rich to Textual TUI with keyboard-driven drill-down
+  - DashboardScreen: live active tools + recent completed history
+  - SessionScreen: all calls grouped by tool, collapsible groups
+  - CallDetailScreen: full progress timeline for a single call
+  - Navigation: Enter to drill in, Esc to go back, j/k for movement
+- Workshop now requires `textual>=1.0.0` via optional `workshop` extra
+
+### Added
+- Handler progress instrumentation: 15 handlers now emit structured progress events
+  - pipeline, story.coverage, dsl_test, sentinel, composition, e2e_test,
+    dsl.validate, dsl.fidelity, discovery, process.coverage, nightly
+- `context_json` on tool completion events for structured summaries in workshop
+
 ## [0.41.0] - 2026-03-12
 
 ### Added
