@@ -328,8 +328,8 @@ class DazzleAdapter(BaseAdapter):
 
         if len(parts) >= 2 and parts[-1] in modes:
             mode = parts[-1]
-            # Join all parts except mode, apply runtime slug convention
-            entity_slug = "-".join(parts[:-1])
+            # Join all parts except mode — entity slugs are concatenated lowercase
+            entity_slug = "".join(parts[:-1])
             base = f"{self.base_url}/app/{entity_slug}"
             if mode == "list":
                 return base

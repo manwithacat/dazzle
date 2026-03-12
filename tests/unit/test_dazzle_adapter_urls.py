@@ -19,12 +19,12 @@ class TestResolveViewUrl:
         assert adapter.resolve_view_url("trust_list") == "http://localhost:3000/app/trust"
 
     def test_compound_entity_list(self, adapter: DazzleAdapter) -> None:
-        assert adapter.resolve_view_url("exam_board_list") == "http://localhost:3000/app/exam-board"
+        assert adapter.resolve_view_url("exam_board_list") == "http://localhost:3000/app/examboard"
 
     def test_compound_entity_create(self, adapter: DazzleAdapter) -> None:
         assert (
             adapter.resolve_view_url("exam_board_create")
-            == "http://localhost:3000/app/exam-board/create"
+            == "http://localhost:3000/app/examboard/create"
         )
 
     def test_simple_entity_detail(self, adapter: DazzleAdapter) -> None:
@@ -33,7 +33,7 @@ class TestResolveViewUrl:
     def test_compound_entity_edit(self, adapter: DazzleAdapter) -> None:
         assert (
             adapter.resolve_view_url("mark_scheme_edit")
-            == "http://localhost:3000/app/mark-scheme/{id}/edit"
+            == "http://localhost:3000/app/markscheme/{id}/edit"
         )
 
     def test_simple_entity_create(self, adapter: DazzleAdapter) -> None:

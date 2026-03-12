@@ -417,7 +417,7 @@ class E2ERunner:
                 parts = view_id.split("_")
                 if len(parts) >= 2:
                     mode = parts[-1]
-                    entity = "-".join(parts[:-1])
+                    entity = "".join(parts[:-1])
                     mode_routes = {
                         "list": f"{self.base_url}/app/{entity}",
                         "create": f"{self.base_url}/app/{entity}/create",
