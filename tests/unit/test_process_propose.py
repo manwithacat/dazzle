@@ -202,7 +202,7 @@ class TestCrudDetection:
         story = _make_story(
             trigger=StoryTrigger.FORM_SUBMITTED,
             scope=["Task"],
-            happy_path_outcome=["New Task is saved"],
+            then=["New Task is saved"],
         )
         assert _is_crud_story(story) is True
 
@@ -210,7 +210,7 @@ class TestCrudDetection:
         story = _make_story(
             trigger=StoryTrigger.STATUS_CHANGED,
             scope=["Task"],
-            happy_path_outcome=["Task becomes completed"],
+            then=["Task becomes completed"],
         )
         assert _is_crud_story(story) is False
 
@@ -220,7 +220,7 @@ class TestCrudDetection:
         story = _make_story(
             trigger=StoryTrigger.FORM_SUBMITTED,
             scope=["Task"],
-            happy_path_outcome=["Task is saved"],
+            then=["Task is saved"],
             unless=[StoryException(condition="Title is empty", then_outcomes=["Error shown"])],
         )
         assert _is_crud_story(story) is False
@@ -229,7 +229,7 @@ class TestCrudDetection:
         story = _make_story(
             trigger=StoryTrigger.FORM_SUBMITTED,
             scope=["Task", "Project"],
-            happy_path_outcome=["Task is saved"],
+            then=["Task is saved"],
         )
         assert _is_crud_story(story) is False
 
@@ -237,7 +237,7 @@ class TestCrudDetection:
         story = _make_story(
             trigger=StoryTrigger.FORM_SUBMITTED,
             scope=["Task"],
-            happy_path_outcome=["Email notification is sent to manager"],
+            then=["Email notification is sent to manager"],
         )
         assert _is_crud_story(story) is False
 
@@ -245,7 +245,7 @@ class TestCrudDetection:
         story = _make_story(
             trigger=StoryTrigger.CRON_DAILY,
             scope=["Report"],
-            happy_path_outcome=["Report is created"],
+            then=["Report is created"],
         )
         assert _is_crud_story(story) is False
 
@@ -264,14 +264,14 @@ class TestStoryClustering:
                 "ST-001",
                 "Create task",
                 scope=["Task"],
-                happy_path_outcome=["Task is saved"],
+                then=["Task is saved"],
                 trigger=StoryTrigger.FORM_SUBMITTED,
             ),
             _make_story(
                 "ST-002",
                 "Delete task",
                 scope=["Task"],
-                happy_path_outcome=["Task is deleted"],
+                then=["Task is deleted"],
                 trigger=StoryTrigger.USER_CLICK,
             ),
         ]
@@ -396,30 +396,6 @@ class TestDesignQuestions:
         ]
         questions = _generate_design_questions(stories, "Task", _make_app_spec())
         assert any("failure" in q.lower() or "retry" in q.lower() for q in questions)
-
-    def test_constraint_question(self):
-        stories = [
-            _make_story(
-                "ST-001",
-                scope=["Invoice"],
-                trigger=StoryTrigger.STATUS_CHANGED,
-                constraints=["Cannot send twice"],
-            ),
-        ]
-        questions = _generate_design_questions(stories, "Invoice", _make_app_spec())
-        assert any("cannot send twice" in q.lower() for q in questions)
-
-    def test_side_effect_question(self):
-        stories = [
-            _make_story(
-                "ST-001",
-                scope=["Task"],
-                trigger=StoryTrigger.STATUS_CHANGED,
-                side_effects=["send_email_notification"],
-            ),
-        ]
-        questions = _generate_design_questions(stories, "Task", _make_app_spec())
-        assert any("send_email_notification" in q for q in questions)
 
     def test_integration_title_question(self):
         stories = [
