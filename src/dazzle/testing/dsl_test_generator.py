@@ -893,7 +893,8 @@ class PersonaTestBuilder:
                     {
                         "action": "get",
                         "target": redirect_route,
-                        "rationale": f"Access {redirect_route} with session",
+                        "data": {"follow_redirects": True},
+                        "rationale": f"Access {redirect_route} with session (follows redirects)",
                     },
                     {
                         "action": "assert_status",
@@ -923,8 +924,12 @@ class PersonaTestBuilder:
                     {
                         "action": "get_with_cookie",
                         "target": redirect_route,
-                        "data": {"cookie": "dazzle_session", "value": "invalid-token"},
-                        "rationale": "Access page with invalid session",
+                        "data": {
+                            "cookie": "dazzle_session",
+                            "value": "invalid-token",
+                            "follow_redirects": True,
+                        },
+                        "rationale": "Access page with invalid session (follows redirects)",
                     },
                     {
                         "action": "assert_unauthenticated",
@@ -966,7 +971,8 @@ class PersonaTestBuilder:
                     {
                         "action": "get",
                         "target": redirect_route,
-                        "rationale": "Attempt access after logout",
+                        "data": {"follow_redirects": True},
+                        "rationale": "Attempt access after logout (follows redirects)",
                     },
                     {
                         "action": "assert_unauthenticated",

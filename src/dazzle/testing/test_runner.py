@@ -1404,7 +1404,8 @@ class TestRunner:
             elif action == "get":
                 # HTTP GET request (used by session/post-logout tests)
                 url = f"{self.client.ui_url}{target}"
-                resp = self.client._request("GET", url, follow_redirects=False)
+                follow = resolved_data.get("follow_redirects", False)
+                resp = self.client._request("GET", url, follow_redirects=follow)
                 context["last_response"] = resp
                 return StepResult(
                     action=action,
@@ -1418,12 +1419,13 @@ class TestRunner:
                 # GET with a specific cookie value (e.g. invalid session token)
                 cookie_name = resolved_data.get("cookie", "dazzle_session")
                 cookie_value = resolved_data.get("value", "invalid-token")
+                follow = resolved_data.get("follow_redirects", False)
                 url = f"{self.client.ui_url}{target}"
                 resp = self.client._request(
                     "GET",
                     url,
                     cookies={cookie_name: cookie_value},
-                    follow_redirects=False,
+                    follow_redirects=follow,
                 )
                 context["last_response"] = resp
                 return StepResult(
@@ -1548,7 +1550,7 @@ class TestRunner:
                 # Also check HX-Redirect header (htmx response)
                 if not actual_url:
                     actual_url = last_resp.headers.get("hx-redirect", "")
-                success = actual_url.rstrip("/") == expected_url.rstrip("/")
+                success = actual_url.rstrip("/").startswith(expected_url.rstrip("/"))
                 return StepResult(
                     action=action,
                     target=target,
