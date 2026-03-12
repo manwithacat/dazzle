@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Breaking:** Stories now use DSL-only persistence (`dsl/stories.dsl`) — removed JSON persistence layer (`stories.json`, `StoriesContainer`, `_inject_json_stories`)
+- Story IR uses Gherkin fields (`given`, `when`, `then`, `unless`) — removed legacy fields (`preconditions`, `happy_path_outcome`, `side_effects`, `constraints`, `variants`, `created_at`, `accepted_at`)
+
+### Added
+- `status:` field in story DSL (`draft|accepted|rejected`, defaults to `draft`)
+- Story DSL emitter: `emit_story_dsl()`, `append_stories_to_dsl()`, `get_next_story_id_from_appspec()`
+- `when:` block in story DSL grammar for explicit trigger conditions
+
+### Removed
+- `src/dazzle/core/stories_persistence.py` — JSON read/write layer
+- `StoriesContainer` class and `with_status()` / `effective_given` / `effective_then` helpers
+- `_inject_json_stories()` from appspec loader
+
 ## [0.40.0] - 2026-03-11
 
 ### Added
