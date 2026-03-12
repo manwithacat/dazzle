@@ -27,13 +27,13 @@ from dazzle.mcp.server.workshop import (
 if not TEXTUAL_AVAILABLE:
     # Module imported without textual — provide empty stubs so the import
     # succeeds but the classes are unusable (CLI guards prevent reaching here).
-    class ToolCallRow:  # type: ignore[no-redef]
+    class ToolCallRow:  # type: ignore[no-redef,unused-ignore]
         pass
 
-    class SessionScreen:  # type: ignore[no-redef]
+    class SessionScreen:  # type: ignore[no-redef,unused-ignore]
         pass
 
-    class CallDetailScreen:  # type: ignore[no-redef]
+    class CallDetailScreen:  # type: ignore[no-redef,unused-ignore]
         pass
 
 
@@ -98,9 +98,8 @@ if TEXTUAL_AVAILABLE:
                 header_text = (
                     f"{tool_name} ({len(calls)} calls, {_format_duration(total_dur)} total)"
                 )
-                collapsible = Collapsible(title=header_text, collapsed=False)
-                for call in reversed(calls):
-                    collapsible.compose_add_child(ToolCallRow(call))
+                rows = [ToolCallRow(call) for call in reversed(calls)]  # type: ignore[call-arg]
+                collapsible = Collapsible(*rows, title=header_text, collapsed=False)  # type: ignore[arg-type]
                 body.mount(collapsible)
 
         def action_drill_down(self) -> None:

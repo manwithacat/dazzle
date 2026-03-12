@@ -103,8 +103,9 @@ class ToolCall:
         # Fall back to last event message
         if self.events:
             for evt in reversed(self.events):
-                if evt.get("message"):
-                    return evt["message"]
+                msg = evt.get("message")
+                if msg:
+                    return str(msg)
         return ""
 
     @property
@@ -112,7 +113,7 @@ class ToolCall:
         """Purpose description from first log event."""
         for evt in self.events:
             if evt.get("type") in (TYPE_LOG, TYPE_PROGRESS) and evt.get("message"):
-                return evt["message"]
+                return str(evt["message"])
         return self.label
 
 
@@ -156,42 +157,42 @@ class WorkshopData:
             return call
 
         # Find the active call for this tool
-        call = self._find_active(tool, operation)
+        active_call: ToolCall | None = self._find_active(tool, operation)
 
         if etype == TYPE_TOOL_END:
-            if call:
-                call.finished = True
-                call.success = entry.get("success", True)
-                call.duration_ms = entry.get("duration_ms")
-                call.error = entry.get("error")
-                call.warnings = entry.get("warnings", 0)
-                call.context_json = entry.get("context_json")
-                call.events.append(entry)
-                del self.active[call.call_id]
-                self.completed.append(call)
+            if active_call:
+                active_call.finished = True
+                active_call.success = entry.get("success", True)
+                active_call.duration_ms = entry.get("duration_ms")
+                active_call.error = entry.get("error")
+                active_call.warnings = entry.get("warnings", 0)
+                active_call.context_json = entry.get("context_json")
+                active_call.events.append(entry)
+                del self.active[active_call.call_id]
+                self.completed.append(active_call)
                 if len(self.completed) > self.max_done * 2:
                     self.completed = self.completed[-self.max_done :]
-                if not call.success:
+                if not active_call.success:
                     self.error_count += 1
-                if call.warnings:
-                    self.warning_count += call.warnings
-            return call
+                if active_call.warnings:
+                    self.warning_count += active_call.warnings
+            return active_call
 
         if etype == TYPE_PROGRESS:
-            if call:
-                call.progress_current = entry.get("current")
-                call.progress_total = entry.get("total")
-                call.status_message = entry.get("message")
-                call.events.append(entry)
-            return call
+            if active_call:
+                active_call.progress_current = entry.get("current")
+                active_call.progress_total = entry.get("total")
+                active_call.status_message = entry.get("message")
+                active_call.events.append(entry)
+            return active_call
 
         if etype in (TYPE_LOG, TYPE_ERROR):
-            if call:
-                call.status_message = entry.get("message")
-                call.events.append(entry)
+            if active_call:
+                active_call.status_message = entry.get("message")
+                active_call.events.append(entry)
             if etype == TYPE_ERROR:
                 self.error_count += 1
-            return call
+            return active_call
 
         return None
 
@@ -496,8 +497,8 @@ if TEXTUAL_AVAILABLE:
                 # Trim if over max
                 all_rows = list(completed_panel.query("CompletedToolRow"))
                 if len(all_rows) > data.max_done:
-                    for row in all_rows[data.max_done :]:
-                        row.remove()
+                    for stale_row in all_rows[data.max_done :]:
+                        stale_row.remove()
 
             self._completed_count = len(data.completed)
 
@@ -506,7 +507,7 @@ if TEXTUAL_AVAILABLE:
             if isinstance(app, WorkshopApp):
                 from dazzle.mcp.server.workshop_screens import SessionScreen
 
-                self.app.push_screen(SessionScreen())
+                self.app.push_screen(SessionScreen())  # type: ignore[call-overload]
 
         def action_drill_down(self) -> None:
             """Drill into the selected completed call."""
@@ -518,7 +519,7 @@ if TEXTUAL_AVAILABLE:
             if isinstance(focused, CompletedToolRow):
                 from dazzle.mcp.server.workshop_screens import CallDetailScreen
 
-                self.app.push_screen(CallDetailScreen(focused._call))
+                self.app.push_screen(CallDetailScreen(focused._call))  # type: ignore[call-overload,call-arg]
 
         def action_cursor_down(self) -> None:
             self.focus_next()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dazzle-dsl"
-version = "0.41.0"
+version = "0.41.1"
 description = "DAZZLE - Domain-Aware, Token-Efficient DSL for LLM-Enabled Apps"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -271,6 +271,12 @@ disallow_untyped_decorators = false
 module = "dazzle.core.process.celery_tasks"
 # Celery decorators are untyped
 disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = ["dazzle.mcp.server.workshop", "dazzle.mcp.server.workshop_screens"]
+# Textual generics (Screen[T], App[T]) and dynamic widget APIs don't satisfy strict mypy
+disallow_any_generics = false
+disallow_subclassing_any = false
 
 [tool.ruff]
 line-length = 100
