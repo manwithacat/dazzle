@@ -98,6 +98,17 @@ def run_step(
 
     if activity_store is not None:
         try:
+            # Build compact context_json for the workshop TUI
+            ctx: dict[str, Any] = {
+                "operation": step.name,
+                "status": result.get("status", "unknown"),
+                "duration_ms": result.get("duration_ms", 0),
+            }
+            # Extract compact metrics if available
+            metrics = extract_step_metrics(step.name, result.get("result"))
+            if metrics:
+                ctx["metrics"] = metrics
+
             activity_store.log_event(
                 "tool_end",
                 namespaced,
@@ -106,6 +117,7 @@ def run_step(
                 duration_ms=result.get("duration_ms", 0),
                 error=error_msg,
                 source="cli",
+                context_json=json.dumps(ctx),
             )
         except Exception:
             logger.debug("Failed to log step end", exc_info=True)
