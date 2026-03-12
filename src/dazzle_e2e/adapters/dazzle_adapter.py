@@ -314,29 +314,35 @@ class DazzleAdapter(BaseAdapter):
         """
         Resolve a view ID to a Dazzle URL.
 
-        Dazzle uses path-based routing.
+        Dazzle combined server routes entity views under /app/ with
+        slug = entity_name.lower().replace("_", "-").
 
         Args:
-            view_id: View identifier
+            view_id: View identifier (e.g. "task_list", "exam_board_create")
 
         Returns:
             Full URL for the view
         """
-        # Runtime uses path-based routing
         parts = view_id.split("_")
-        if len(parts) == 1:
-            return f"{self.base_url}/{parts[0]}"
-        elif parts[-1] == "list":
-            return f"{self.base_url}/{parts[0]}"
-        elif parts[-1] == "create":
-            return f"{self.base_url}/{parts[0]}/create"
-        elif parts[-1] == "detail":
-            return f"{self.base_url}/{parts[0]}/{{id}}"
-        elif parts[-1] == "edit":
-            return f"{self.base_url}/{parts[0]}/{{id}}/edit"
-        else:
-            # Dashboard/workspace routes
-            return f"{self.base_url}/{view_id.replace('_', '/')}"
+        modes = {"list", "create", "detail", "edit", "review"}
+
+        if len(parts) >= 2 and parts[-1] in modes:
+            mode = parts[-1]
+            # Join all parts except mode, apply runtime slug convention
+            entity_slug = "-".join(parts[:-1])
+            base = f"{self.base_url}/app/{entity_slug}"
+            if mode == "list":
+                return base
+            elif mode == "create":
+                return f"{base}/create"
+            elif mode == "detail":
+                return f"{base}/{{id}}"
+            elif mode == "edit":
+                return f"{base}/{{id}}/edit"
+            elif mode == "review":
+                return f"{base}/review/{{id}}"
+        # Dashboard/workspace routes
+        return f"{self.base_url}/app/{view_id.replace('_', '/')}"
 
     # =========================================================================
     # Synchronous Methods (for CLI usage)

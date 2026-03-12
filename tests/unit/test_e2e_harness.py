@@ -140,7 +140,7 @@ class TestDazzleAdapterURLResolution:
         adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_list")
 
-        assert url == "http://localhost:3000/task"
+        assert url == "http://localhost:3000/app/task"
 
     def test_resolve_create_view_url(self) -> None:
         """Test resolving a create view URL."""
@@ -149,7 +149,7 @@ class TestDazzleAdapterURLResolution:
         adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_create")
 
-        assert url == "http://localhost:3000/task/create"
+        assert url == "http://localhost:3000/app/task/create"
 
     def test_resolve_detail_view_url(self) -> None:
         """Test resolving a detail view URL."""
@@ -158,7 +158,7 @@ class TestDazzleAdapterURLResolution:
         adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_detail")
 
-        assert url == "http://localhost:3000/task/{id}"
+        assert url == "http://localhost:3000/app/task/{id}"
 
     def test_resolve_edit_view_url(self) -> None:
         """Test resolving an edit view URL."""
@@ -167,7 +167,7 @@ class TestDazzleAdapterURLResolution:
         adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("task_edit")
 
-        assert url == "http://localhost:3000/task/{id}/edit"
+        assert url == "http://localhost:3000/app/task/{id}/edit"
 
     def test_resolve_dashboard_url(self) -> None:
         """Test resolving a dashboard view URL."""
@@ -176,7 +176,7 @@ class TestDazzleAdapterURLResolution:
         adapter = DazzleAdapter(base_url="http://localhost:3000")
         url = adapter.resolve_view_url("admin_dashboard")
 
-        assert url == "http://localhost:3000/admin/dashboard"
+        assert url == "http://localhost:3000/app/admin/dashboard"
 
 
 class TestBaseAdapterURLResolution:
