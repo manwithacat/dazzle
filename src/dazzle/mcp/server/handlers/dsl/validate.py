@@ -7,7 +7,6 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.appspec_loader import _inject_json_stories
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
@@ -29,7 +28,6 @@ def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     manifest = load_manifest(project_root / "dazzle.toml")
     dsl_files = discover_dsl_files(project_root, manifest)
     modules = parse_modules(dsl_files)
-    _inject_json_stories(modules, project_root)
     app_spec = build_appspec(modules, manifest.project_root)
 
     result: dict[str, Any] = {

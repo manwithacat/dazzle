@@ -164,10 +164,7 @@ class PopulationHandlers:
             if not dsl_files:
                 return {"error": "No DSL files found", **stats}
 
-            from dazzle.core.appspec_loader import _inject_json_stories
-
             modules = parse_modules(dsl_files)
-            _inject_json_stories(modules, root)
             appspec = build_appspec(modules, manifest.project_root)
 
             self._populate_entities(appspec, stats)
