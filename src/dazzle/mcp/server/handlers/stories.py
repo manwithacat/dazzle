@@ -7,7 +7,6 @@ Handles DSL spec extraction, story proposal, saving, and retrieval.
 from __future__ import annotations
 
 import json
-from datetime import UTC
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -133,10 +132,8 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
 @wrap_handler_errors
 def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze DSL and propose behavioural user stories."""
-    from datetime import datetime
-
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.stories_persistence import get_next_story_id
+    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
     progress = extract_progress(args)
     progress.log_sync("Parsing DSL and building app spec...")
@@ -148,8 +145,8 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
     stories: list[StorySpec] = []
     story_count = 0
 
-    # Get starting story ID
-    base_id = get_next_story_id(project_root)
+    # Get starting story ID from existing stories in appspec
+    base_id = get_next_story_id_from_appspec(app_spec.stories)
     base_num = int(base_id[3:])
 
     def next_id() -> str:
@@ -157,8 +154,6 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
         result = f"ST-{base_num + story_count:03d}"
         story_count += 1
         return result
-
-    now = datetime.now(UTC).isoformat()
 
     # Default persona
     default_actor = "User"
@@ -184,6 +179,12 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                 break
 
         # Story: Create entity via form
+        required_field_conditions = [
+            StoryCondition(expression=f"{f.name} must be valid")
+            for f in entity.fields
+            if f.is_required
+        ][:MAX_CONSTRAINTS_PER_STORY]
+
         stories.append(
             StorySpec(
                 story_id=next_id(),
@@ -191,18 +192,15 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                 actor=actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
                 scope=[entity.name],
-                preconditions=[f"{actor} has permission to create {entity.name}"],
-                happy_path_outcome=[
-                    f"New {entity.name} is saved to database",
-                    f"{actor} sees confirmation message",
+                given=[
+                    StoryCondition(expression=f"{actor} has permission to create {entity.name}")
                 ],
-                side_effects=[],
-                constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][
-                    :MAX_CONSTRAINTS_PER_STORY
+                then=[
+                    StoryCondition(expression=f"New {entity.name} is saved to database"),
+                    StoryCondition(expression=f"{actor} sees confirmation message"),
+                    *required_field_conditions,
                 ],
-                variants=["Validation error on required field"],
                 status=StoryStatus.DRAFT,
-                created_at=now,
             )
         )
 
@@ -220,18 +218,18 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                         actor=actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
                         scope=[entity.name],
-                        preconditions=[
-                            f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                        given=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                            )
                         ],
-                        happy_path_outcome=[
-                            f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
-                            "Timestamp is recorded",
+                        then=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'"
+                            ),
+                            StoryCondition(expression="Timestamp is recorded"),
                         ],
-                        side_effects=[],
-                        constraints=[f"Transition only allowed from '{transition.from_state}'"],
-                        variants=[],
                         status=StoryStatus.DRAFT,
-                        created_at=now,
                     )
                 )
 
@@ -262,24 +260,19 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                         actor=actor,
                         trigger=StoryTrigger.USER_CLICK,
                         scope=scope,
-                        preconditions=[f"{actor} is on {scene.surface} surface"],
-                        happy_path_outcome=[
-                            scene.expects or f"Action completes on {scene.surface}",
+                        given=[StoryCondition(expression=f"{actor} is on {scene.surface} surface")],
+                        then=[
+                            StoryCondition(
+                                expression=scene.expects or f"Action completes on {scene.surface}"
+                            ),
                         ],
-                        side_effects=[],
-                        constraints=[],
-                        variants=[],
                         status=StoryStatus.DRAFT,
-                        created_at=now,
                     )
                 )
 
-    # Auto-save draft stories to avoid requiring a separate save call
-    # (which would force full content through context twice)
-    from dazzle.core.stories_persistence import add_stories
-
-    progress.log_sync(f"Saving {len(stories)} draft stories...")
-    add_stories(project_root, stories, overwrite=False)
+    # Auto-save draft stories to DSL file
+    progress.log_sync(f"Saving {len(stories)} draft stories to dsl/stories.dsl...")
+    append_stories_to_dsl(project_root, stories)
 
     # Return summaries only — the LLM just generated these and knows
     # the content; full details can be fetched on demand.
@@ -287,7 +280,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
         {
             "proposed_count": len(stories),
             "max_stories": max_stories,
-            "note": "Draft stories saved. Use story(operation='get', story_ids=['ST-001']) for full details.",
+            "note": "Draft stories saved to dsl/stories.dsl. Use story(operation='get', story_ids=['ST-001']) for full details.",
             "stories": [serialize_story_summary(s) for s in stories],
         },
         indent=2,
@@ -296,13 +289,12 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
 
 @wrap_handler_errors
 def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Save stories to .dazzle/stories/stories.json."""
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.stories_persistence import add_stories, get_stories_file
+    """Save stories to dsl/stories.dsl."""
+    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.story_emitter import append_stories_to_dsl
 
     progress = extract_progress(args)
     stories_data = args.get("stories", [])
-    overwrite = args.get("overwrite", False)
 
     if not stories_data:
         return error_response("No stories provided")
@@ -311,35 +303,40 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Convert to StorySpec objects with validation
     stories: list[StorySpec] = []
     for s in stories_data:
+        # Handle Gherkin fields, with legacy field conversion for backward compat
+        if not s.get("given") and s.get("preconditions"):
+            story_given = [StoryCondition(expression=c) for c in s["preconditions"]]
+        else:
+            story_given = [StoryCondition(expression=c) for c in s.get("given", [])]
+
+        story_when = [StoryCondition(expression=c) for c in s.get("when", [])]
+
+        if not s.get("then") and s.get("happy_path_outcome"):
+            story_then = [StoryCondition(expression=c) for c in s["happy_path_outcome"]]
+        else:
+            story_then = [StoryCondition(expression=c) for c in s.get("then", [])]
+
         story = StorySpec(
             story_id=s["story_id"],
             title=s["title"],
             actor=s["actor"],
             trigger=StoryTrigger(s["trigger"]),
             scope=s.get("scope", []),
-            preconditions=s.get("preconditions", []),
-            happy_path_outcome=s.get("happy_path_outcome", []),
-            side_effects=s.get("side_effects", []),
-            constraints=s.get("constraints", []),
-            variants=s.get("variants", []),
+            given=story_given,
+            when=story_when,
+            then=story_then,
             status=StoryStatus(s.get("status", "draft")),
-            created_at=s.get("created_at"),
-            accepted_at=s.get("accepted_at"),
         )
         stories.append(story)
 
-    progress.log_sync(f"Saving {len(stories)} stories...")
-    # Save stories
-    all_stories = add_stories(project_root, stories, overwrite=overwrite)
-    stories_file = get_stories_file(project_root)
+    progress.log_sync(f"Saving {len(stories)} stories to dsl/stories.dsl...")
+    stories_file = append_stories_to_dsl(project_root, stories)
 
     return json.dumps(
         {
             "status": "saved",
             "file": str(stories_file),
             "saved_count": len(stories),
-            "total_count": len(all_stories),
-            "overwrite": overwrite,
         },
         indent=2,
     )
@@ -354,26 +351,27 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     usage proportional to what the caller actually needs.
     """
     from dazzle.core.ir.stories import StoryStatus
-    from dazzle.core.stories_persistence import get_stories_by_status, get_stories_file
 
     progress = extract_progress(args)
     status_filter = args.get("status_filter", "all")
     story_ids = args.get("story_ids")
 
-    progress.log_sync("Loading stories...")
-    status = None
+    progress.log_sync("Loading stories from appspec...")
+    app_spec = load_project_appspec(project_root)
+    stories = list(app_spec.stories)
+
+    # Filter by status
     if status_filter != "all":
         status = StoryStatus(status_filter)
-
-    stories = get_stories_by_status(project_root, status)
-    stories_file = get_stories_file(project_root)
+        stories = [s for s in stories if s.status == status]
 
     if story_ids:
         # Return full content for requested stories only
-        filtered = [s for s in stories if s.story_id in story_ids]
+        id_set = set(story_ids)
+        filtered = [s for s in stories if s.story_id in id_set]
         return json.dumps(
             {
-                "file": str(stories_file),
+                "source": "dsl",
                 "filter": status_filter,
                 "count": len(filtered),
                 "stories": [serialize_story(s) for s in filtered],
@@ -384,7 +382,7 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Default: return compact summaries
     return json.dumps(
         {
-            "file": str(stories_file),
+            "source": "dsl",
             "filter": status_filter,
             "count": len(stories),
             "stories": [serialize_story_summary(s) for s in stories],
@@ -406,7 +404,6 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     Optionally filtered by persona (actor).
     """
     from dazzle.core.ir.stories import StoryStatus
-    from dazzle.core.stories_persistence import get_stories_by_status
 
     from .process import stories_coverage_handler
 
@@ -414,11 +411,13 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     actor_filter_str: str | None = args.get("persona")
 
     progress.log_sync("Loading stories for wall view...")
+    app_spec = load_project_appspec(project_root)
+
     # Get accepted stories (the founder's approved work)
-    stories = get_stories_by_status(project_root, StoryStatus.ACCEPTED)
+    stories = [s for s in app_spec.stories if s.status == StoryStatus.ACCEPTED]
     if not stories:
         # Fall back to all stories
-        stories = get_stories_by_status(project_root, None)
+        stories = list(app_spec.stories)
 
     progress.log_sync("Calculating coverage data...")
     # Get coverage data
@@ -508,24 +507,27 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
         TestDesignStep,
         TestDesignTrigger,
     )
-    from dazzle.core.stories_persistence import get_stories_by_status
 
     progress = extract_progress(args)
     story_ids = args.get("story_ids")
     include_draft = args.get("include_draft", False)
 
     progress.log_sync("Loading stories for test generation...")
-    # Get stories to convert
-    stories = get_stories_by_status(project_root, StoryStatus.ACCEPTED)
+    app_spec = load_project_appspec(project_root)
+    all_stories = list(app_spec.stories)
+
+    # Get accepted stories
+    stories = [s for s in all_stories if s.status == StoryStatus.ACCEPTED]
 
     # Optionally include draft stories
     if include_draft:
-        draft_stories = get_stories_by_status(project_root, StoryStatus.DRAFT)
+        draft_stories = [s for s in all_stories if s.status == StoryStatus.DRAFT]
         stories = stories + draft_stories
 
     # Filter by specific story IDs if provided
     if story_ids:
-        stories = [s for s in stories if s.story_id in story_ids]
+        id_set = set(story_ids)
+        stories = [s for s in stories if s.story_id in id_set]
 
     if not stories:
         return json.dumps(
@@ -555,8 +557,8 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
             )
         )
 
-        # Step 2: Setup steps from given/preconditions
-        for condition in story.effective_given:
+        # Step 2: Setup steps from given conditions
+        for condition in [c.expression for c in story.given]:
             # Parse condition to determine appropriate action
             if "is set" in condition.lower() or "exists" in condition.lower():
                 # Existence check - create or navigate
@@ -667,12 +669,8 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
                     )
                 )
 
-        # Expected outcomes from then/happy_path_outcome
-        expected_outcomes = story.effective_then.copy()
-
-        # Add side effects as outcomes
-        for effect in story.side_effects:
-            expected_outcomes.append(f"Side effect: {effect}")
+        # Expected outcomes from then conditions
+        expected_outcomes = [c.expression for c in story.then]
 
         return TestDesignSpec(
             test_id=test_id,

@@ -24,17 +24,15 @@ _STORY_SUMMARY_FIELDS = {"story_id", "title", "actor", "status", "scope"}
 _STORY_FULL_FIELDS = {
     "story_id",
     "title",
+    "description",
     "actor",
     "trigger",
     "scope",
-    "preconditions",
-    "happy_path_outcome",
-    "side_effects",
-    "constraints",
-    "variants",
+    "given",
+    "when",
+    "then",
+    "unless",
     "status",
-    "created_at",
-    "accepted_at",
 }
 
 

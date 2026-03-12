@@ -100,6 +100,7 @@ class StoryParserMixin:
         actor = None
         trigger = None
         scope: list[str] = []
+        status: ir.StoryStatus | None = None
         given: list[ir.StoryCondition] = []
         when: list[ir.StoryCondition] = []
         then: list[ir.StoryCondition] = []
@@ -111,7 +112,14 @@ class StoryParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            if self.match(TokenType.ACTOR):
+            if self.match(TokenType.STATUS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                status_str = self.expect_identifier_or_keyword().value
+                status = self._parse_story_status(status_str)
+                self.skip_newlines()
+
+            elif self.match(TokenType.ACTOR):
                 self.advance()
                 self.expect(TokenType.COLON)
                 actor = self.expect_identifier_or_keyword().value
@@ -190,6 +198,7 @@ class StoryParserMixin:
             actor=actor,
             trigger=trigger,
             scope=scope,
+            status=status or ir.StoryStatus.DRAFT,
             given=given,
             when=when,
             then=then,
@@ -217,6 +226,27 @@ class StoryParserMixin:
         valid_triggers = ", ".join(trigger_map.keys())
         raise make_parse_error(
             f"Invalid story trigger '{trigger_str}'. Valid triggers: {valid_triggers}",
+            self.file,
+            self.current_token().line,
+            self.current_token().column,
+        )
+
+    def _parse_story_status(self, status_str: str) -> ir.StoryStatus:
+        """Parse status string to StoryStatus enum."""
+        status_map = {
+            "draft": ir.StoryStatus.DRAFT,
+            "accepted": ir.StoryStatus.ACCEPTED,
+            "rejected": ir.StoryStatus.REJECTED,
+        }
+
+        if status_str in status_map:
+            return status_map[status_str]
+
+        from ..errors import make_parse_error
+
+        valid_statuses = ", ".join(status_map.keys())
+        raise make_parse_error(
+            f"Invalid story status '{status_str}'. Valid statuses: {valid_statuses}",
             self.file,
             self.current_token().line,
             self.current_token().column,
@@ -425,6 +455,7 @@ class StoryParserMixin:
     def _skip_to_next_field(self) -> None:
         """Skip tokens until we reach the next field or end of block."""
         while not self.match(
+            TokenType.STATUS,
             TokenType.ACTOR,
             TokenType.TRIGGER,
             TokenType.SCOPE,

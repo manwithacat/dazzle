@@ -193,17 +193,13 @@ entity Task "Task":
     dazzle_dir = project_dir / ".dazzle"
     dazzle_dir.mkdir()
 
-    # Create stories directory
-    stories_dir = dazzle_dir / "stories"
-    stories_dir.mkdir()
-
     return project_dir
 
 
 @pytest.fixture
 def mock_story():
-    """Create a mock StorySpec object."""
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    """Create a mock StorySpec object with Gherkin fields."""
+    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
 
     return StorySpec(
         story_id="ST-001",
@@ -211,13 +207,10 @@ def mock_story():
         actor="User",
         trigger=StoryTrigger.FORM_SUBMITTED,
         scope=["Task"],
-        preconditions=["User has permission to create Task"],
-        happy_path_outcome=["New Task is saved to database"],
-        side_effects=[],
-        constraints=["title must be valid"],
-        variants=["Validation error on required field"],
+        given=[StoryCondition(expression="User has permission to create Task")],
+        when=[],
+        then=[StoryCondition(expression="New Task is saved to database")],
         status=StoryStatus.DRAFT,
-        created_at="2025-01-01T00:00:00Z",
     )
 
 
@@ -274,25 +267,27 @@ class TestSerializeStorySummary:
         """Test that summary excludes detailed fields."""
         result = _serialize_story_summary(mock_story)
 
-        assert "preconditions" not in result
-        assert "happy_path_outcome" not in result
-        assert "constraints" not in result
+        # Gherkin fields should not be in summary
+        assert "given" not in result
+        assert "when" not in result
+        assert "then" not in result
 
 
 class TestSerializeStory:
     """Tests for full story serialization."""
 
     def test_serializes_all_fields(self, mock_story) -> None:
-        """Test that full serialization includes all fields."""
+        """Test that full serialization includes Gherkin fields."""
         result = _serialize_story(mock_story)
 
         assert result["story_id"] == "ST-001"
         assert result["title"] == "User creates a new Task"
         assert result["trigger"] == "form_submitted"
-        assert result["preconditions"] == ["User has permission to create Task"]
-        assert result["happy_path_outcome"] == ["New Task is saved to database"]
-        assert result["constraints"] == ["title must be valid"]
-        assert result["variants"] == ["Validation error on required field"]
+        # Gherkin fields
+        assert len(result["given"]) == 1
+        assert result["given"][0]["expression"] == "User has permission to create Task"
+        assert len(result["then"]) == 1
+        assert result["then"][0]["expression"] == "New Task is saved to database"
 
 
 class TestSerializeEntitySummary:
@@ -497,7 +492,7 @@ class TestSaveStoriesHandler:
         assert "No stories provided" in data["error"]
 
     def test_saves_valid_story(self, temp_project) -> None:
-        """Test saving a valid story."""
+        """Test saving a valid story with Gherkin fields."""
         stories = [
             {
                 "story_id": "ST-001",
@@ -505,6 +500,32 @@ class TestSaveStoriesHandler:
                 "actor": "User",
                 "trigger": "form_submitted",
                 "scope": ["Task"],
+                "given": ["User has permission"],
+                "then": ["Task is saved"],
+                "status": "draft",
+            }
+        ]
+
+        result = save_stories_handler(temp_project, {"stories": stories})
+        data = json.loads(result)
+
+        assert data.get("status") == "saved"
+        assert data.get("saved_count") == 1
+        # Verify DSL file was created
+        stories_file = Path(data["file"])
+        assert stories_file.exists()
+
+    def test_saves_story_with_legacy_fields(self, temp_project) -> None:
+        """Test backward compat: legacy preconditions/happy_path_outcome converted to given/then."""
+        stories = [
+            {
+                "story_id": "ST-001",
+                "title": "Test Story",
+                "actor": "User",
+                "trigger": "form_submitted",
+                "scope": ["Task"],
+                "preconditions": ["User has permission"],
+                "happy_path_outcome": ["Task is saved"],
                 "status": "draft",
             }
         ]
@@ -543,18 +564,22 @@ class TestGetStoriesHandler:
 
     def test_filters_by_status(self, temp_project) -> None:
         """Test filtering stories by status."""
-        # First save a story
-        stories = [
-            {
-                "story_id": "ST-001",
-                "title": "Test Story",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "status": "accepted",
-            }
-        ]
-        save_stories_handler(temp_project, {"stories": stories})
+        # Write a story DSL file with accepted status
+        dsl_dir = temp_project / "dsl"
+        stories_dsl = dsl_dir / "stories.dsl"
+        stories_dsl.write_text(
+            """
+story ST-001 "Test Story":
+  status: accepted
+  actor: User
+  trigger: form_submitted
+  scope: [Task]
+  given:
+    - "User has permission"
+  then:
+    - "Task is saved"
+"""
+        )
 
         # Get only accepted stories
         result = get_stories_handler(temp_project, {"status_filter": "accepted"})
@@ -564,28 +589,30 @@ class TestGetStoriesHandler:
 
     def test_returns_full_details_for_story_ids(self, temp_project) -> None:
         """Test getting full story details by ID."""
-        # First save a story
-        stories = [
-            {
-                "story_id": "ST-001",
-                "title": "Test Story",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "preconditions": ["Has permission"],
-                "happy_path_outcome": ["Success"],
-                "status": "draft",
-            }
-        ]
-        save_stories_handler(temp_project, {"stories": stories})
+        # Write a story DSL file
+        dsl_dir = temp_project / "dsl"
+        stories_dsl = dsl_dir / "stories.dsl"
+        stories_dsl.write_text(
+            """
+story ST-001 "Test Story":
+  actor: User
+  trigger: form_submitted
+  scope: [Task]
+  given:
+    - "User has permission"
+  then:
+    - "Task is saved"
+"""
+        )
 
         result = get_stories_handler(temp_project, {"story_ids": ["ST-001"]})
         data = json.loads(result)
 
         assert data["count"] == 1
         story = data["stories"][0]
-        # Full details should include preconditions
-        assert "preconditions" in story
+        # Full details should include Gherkin fields
+        assert "given" in story
+        assert len(story["given"]) == 1
 
 
 class TestProposeStoriesHandler:
@@ -623,15 +650,13 @@ class TestProposeStoriesHandler:
 
         project = tmp_path / "proj"
         project.mkdir()
-        dazzle_dir = project / ".dazzle"
-        dazzle_dir.mkdir()
-        (dazzle_dir / "stories").mkdir()
 
         # Build a minimal mock appspec with a rhythm containing an unmapped scene
         app_spec = MagicMock()
         app_spec.domain.entities = []
         app_spec.workspaces = []
         app_spec.personas = []
+        app_spec.stories = []
 
         rhythm = RhythmSpec(
             name="r1",
@@ -678,20 +703,22 @@ class TestGenerateTestsHandler:
 
     def test_generates_tests_from_accepted_stories(self, temp_project) -> None:
         """Test generating tests from accepted stories."""
-        # First save an accepted story
-        stories = [
-            {
-                "story_id": "ST-001",
-                "title": "User creates Task",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "preconditions": ["User has permission"],
-                "happy_path_outcome": ["Task is saved"],
-                "status": "accepted",
-            }
-        ]
-        save_stories_handler(temp_project, {"stories": stories})
+        # Write accepted story to DSL
+        dsl_dir = temp_project / "dsl"
+        stories_dsl = dsl_dir / "stories.dsl"
+        stories_dsl.write_text(
+            """
+story ST-001 "User creates Task":
+  status: accepted
+  actor: User
+  trigger: form_submitted
+  scope: [Task]
+  given:
+    - "User has permission"
+  then:
+    - "Task is saved"
+"""
+        )
 
         result = generate_tests_from_stories_handler(temp_project, {})
         data = json.loads(result)
@@ -701,18 +728,17 @@ class TestGenerateTestsHandler:
 
     def test_include_draft_option(self, temp_project) -> None:
         """Test including draft stories in test generation."""
-        # Save a draft story
-        stories = [
-            {
-                "story_id": "ST-001",
-                "title": "Draft Story",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "status": "draft",
-            }
-        ]
-        save_stories_handler(temp_project, {"stories": stories})
+        # Write a draft story to DSL
+        dsl_dir = temp_project / "dsl"
+        stories_dsl = dsl_dir / "stories.dsl"
+        stories_dsl.write_text(
+            """
+story ST-001 "Draft Story":
+  actor: User
+  trigger: form_submitted
+  scope: [Task]
+"""
+        )
 
         result = generate_tests_from_stories_handler(temp_project, {"include_draft": True})
         data = json.loads(result)
@@ -722,26 +748,24 @@ class TestGenerateTestsHandler:
 
     def test_filters_by_story_ids(self, temp_project) -> None:
         """Test filtering test generation by story IDs."""
-        # Save multiple accepted stories
-        stories = [
-            {
-                "story_id": "ST-001",
-                "title": "Story 1",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "status": "accepted",
-            },
-            {
-                "story_id": "ST-002",
-                "title": "Story 2",
-                "actor": "User",
-                "trigger": "form_submitted",
-                "scope": ["Task"],
-                "status": "accepted",
-            },
-        ]
-        save_stories_handler(temp_project, {"stories": stories})
+        # Write multiple accepted stories to DSL
+        dsl_dir = temp_project / "dsl"
+        stories_dsl = dsl_dir / "stories.dsl"
+        stories_dsl.write_text(
+            """
+story ST-001 "Story 1":
+  status: accepted
+  actor: User
+  trigger: form_submitted
+  scope: [Task]
+
+story ST-002 "Story 2":
+  status: accepted
+  actor: User
+  trigger: form_submitted
+  scope: [Task]
+"""
+        )
 
         result = generate_tests_from_stories_handler(temp_project, {"story_ids": ["ST-001"]})
         data = json.loads(result)
