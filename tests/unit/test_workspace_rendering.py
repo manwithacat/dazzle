@@ -849,3 +849,48 @@ class TestViewportLazyLoading:
 
         for stage in STAGE_GRID_MAP:
             assert stage in STAGE_FOLD_COUNTS, f"Missing fold count for stage: {stage}"
+
+
+# ===========================================================================
+# Test mode current_user resolution (#483)
+# ===========================================================================
+
+
+class TestCurrentUserTestMode:
+    """Test that current_user is resolved even with require_auth=False (#483)."""
+
+    def test_guard_condition_allows_auth_resolution_without_require_auth(self) -> None:
+        """The guard for current_user resolution checks auth_middleware, not require_auth.
+
+        Previously the guard was ``if ctx.require_auth and ctx.auth_middleware``,
+        which skipped user resolution entirely in test mode.  After #483 the guard
+        is just ``if ctx.auth_middleware``.
+        """
+        import ast
+        import inspect
+        import textwrap
+
+        from dazzle_back.runtime.workspace_rendering import _workspace_region_handler
+
+        source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
+        tree = ast.parse(source)
+
+        # Walk the AST looking for `if ctx.auth_middleware:` without `ctx.require_auth`
+        found_guard = False
+        for node in ast.walk(tree):
+            if isinstance(node, ast.If):
+                test_src = ast.dump(node.test)
+                # The guard should reference auth_middleware but NOT require_auth
+                if "auth_middleware" in test_src and "require_auth" not in test_src:
+                    found_guard = True
+                    break
+                # Fail if we still see the old combined guard
+                if "require_auth" in test_src and "auth_middleware" in test_src:
+                    raise AssertionError(
+                        "Guard still combines require_auth and auth_middleware — "
+                        "current_user won't resolve in test mode"
+                    )
+
+        assert found_guard, (
+            "Could not find `if ctx.auth_middleware:` guard in _workspace_region_handler"
+        )

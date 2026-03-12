@@ -263,8 +263,10 @@ async def _workspace_region_handler(
 
     # Resolve current user ID for filter expressions (e.g. reviewer == current_user)
     # Auth user IDs and User entity IDs are separate; resolve via email match (#480).
+    # Always attempt resolution when middleware is available, even in test mode
+    # where require_auth is False — the user may still be authenticated (#483).
     _current_user_id: str | None = None
-    if ctx.require_auth and ctx.auth_middleware:
+    if ctx.auth_middleware:
         try:
             _auth = ctx.auth_middleware.get_auth_context(request)
             if _auth and _auth.is_authenticated and _auth.user:
