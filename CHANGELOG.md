@@ -9,16 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **Breaking:** Stories now use DSL-only persistence (`dsl/stories.dsl`) — removed JSON persistence layer (`stories.json`, `StoriesContainer`, `_inject_json_stories`)
-- Story IR uses Gherkin fields (`given`, `when`, `then`, `unless`) — removed legacy fields (`preconditions`, `happy_path_outcome`, `side_effects`, `constraints`, `variants`, `created_at`, `accepted_at`)
+## [0.41.0] - 2026-03-12
 
 ### Added
-- `status:` field in story DSL (`draft|accepted|rejected`, defaults to `draft`)
-- Story DSL emitter: `emit_story_dsl()`, `append_stories_to_dsl()`, `get_next_story_id_from_appspec()`
-- `when:` block in story DSL grammar for explicit trigger conditions
+- **Convergent BDD:** `rule` DSL construct — domain-level business invariants with `kind` (constraint/precondition/authorization/derivation), `origin` (top_down/bottom_up), and `invariant` fields
+- **Convergent BDD:** `question` DSL construct — typed specification gaps that block artifacts until resolved, with `blocks`, `raised_by`, and `status` fields
+- `exercises:` field on stories — links stories to rules they exercise for convergence tracking
+- Rule and question parser mixins (`RuleParserMixin`, `QuestionParserMixin`)
+- Rule and question emitters (`emit_rule_dsl`, `emit_question_dsl`, `append_rules_to_dsl`, `append_questions_to_dsl`)
+- Linker validation: rule scope, story exercises, question blocks, open-question-blocks-accepted-artifact error
+- MCP operations: `rule_propose`, `rule_get`, `rule_coverage`, `question_get`, `question_resolve` (story tool); `converge`, `question_raise` (discovery tool)
+- `rule(coverage)` and `rule(converge)` pipeline quality steps
+- Convergence handler: structural analysis of rule-story alignment, gap detection, coverage scoring
+- Semantics KB: `rule`, `question`, `convergence` concepts with aliases and relations
+
+### Changed
+- **Breaking:** Stories now use DSL-only persistence (`dsl/stories.dsl`) — removed JSON persistence layer (`stories.json`, `StoriesContainer`, `_inject_json_stories`)
+- **Breaking:** `unless` keyword on stories raises parse error — use `rule` construct with boundary stories instead
+- Story IR uses Gherkin fields (`given`, `when`, `then`) — removed legacy fields (`preconditions`, `happy_path_outcome`, `side_effects`, `constraints`, `variants`, `created_at`, `accepted_at`)
+- `rbac_validation` example migrated from `unless` to rule + boundary story pattern
 
 ### Removed
+- `StoryException` class and `unless` field from `StorySpec`
+- `unless` handling from fidelity scorer, process proposals, process coverage, serializers
+- `unless_block` from grammar
 - `src/dazzle/core/stories_persistence.py` — JSON read/write layer
 - `StoriesContainer` class and `with_status()` / `effective_given` / `effective_then` helpers
 - `_inject_json_stories()` from appspec loader
