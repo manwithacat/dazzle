@@ -76,6 +76,7 @@ dev = [
     "fastapi>=0.100.0",
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.24.0",
+    "textual>=1.0.0",
 ]
 # Runtime server dependencies for `dazzle serve --local` (v0.34.3 — Issue #388)
 serve = [
@@ -143,6 +144,10 @@ mobile_full = [
     "google-auth>=2.25.0",
     "httpx>=0.25.0",
     "firebase-admin>=6.2.0",
+]
+# Workshop TUI (Textual-based interactive display)
+workshop = [
+    "textual>=1.0.0",
 ]
 # AWS services (S3 storage, SES email)
 aws = [
