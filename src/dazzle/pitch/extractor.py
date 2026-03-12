@@ -119,10 +119,7 @@ def extract_pitch_context(project_root: Path, spec: PitchSpec) -> PitchContext:
 
         # Count stories
         try:
-            from dazzle.core.stories_persistence import load_stories
-
-            stories = load_stories(project_root)
-            ctx.story_count = len(stories)
+            ctx.story_count = len(appspec.stories) if appspec.stories else 0
         except Exception:
             logger.debug("Failed to load stories for pitch context", exc_info=True)
 

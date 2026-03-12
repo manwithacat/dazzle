@@ -2138,7 +2138,7 @@ def test_populate(
     """
     from datetime import UTC, datetime
 
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.ir.test_design import (
         TestDesignAction,
         TestDesignSpec,
@@ -2146,7 +2146,7 @@ def test_populate(
         TestDesignStep,
         TestDesignTrigger,
     )
-    from dazzle.core.stories_persistence import add_stories, get_next_story_id
+    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
     from dazzle.testing.test_design_persistence import add_test_designs
 
     manifest_path = Path(manifest).resolve()
@@ -2165,7 +2165,7 @@ def test_populate(
     # 1. Propose and auto-accept stories
     typer.secho("Step 1: Proposing stories from DSL...", bold=True)
 
-    base_id = get_next_story_id(root)
+    base_id = get_next_story_id_from_appspec(appspec.stories)
     base_num = int(base_id[3:])
     story_count = 0
 
@@ -2194,14 +2194,20 @@ def test_populate(
                 actor=default_actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
                 scope=[entity.name],
-                preconditions=[f"{default_actor} has permission to create {entity.name}"],
-                happy_path_outcome=[
-                    f"New {entity.name} is saved to database",
-                    f"{default_actor} sees confirmation message",
+                given=[
+                    StoryCondition(
+                        expression=f"{default_actor} has permission to create {entity.name}"
+                    ),
                 ],
-                side_effects=[],
-                constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][:3],
-                variants=["Validation error on required field"],
+                when=[
+                    StoryCondition(
+                        expression=f"{default_actor} submits {entity.name} creation form"
+                    ),
+                ],
+                then=[
+                    StoryCondition(expression=f"New {entity.name} is saved to database"),
+                    StoryCondition(expression=f"{default_actor} sees confirmation message"),
+                ],
                 status=StoryStatus.ACCEPTED,  # Auto-accept
                 created_at=now,
                 accepted_at=now,
@@ -2225,15 +2231,24 @@ def test_populate(
                         actor=default_actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
                         scope=[entity.name],
-                        preconditions=[
-                            f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                        given=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
                         ],
-                        happy_path_outcome=[
-                            f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                        when=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} changes to '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
                         ],
-                        side_effects=[],
-                        constraints=[],
-                        variants=[],
+                        then=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
+                        ],
                         status=StoryStatus.ACCEPTED,
                         created_at=now,
                         accepted_at=now,
@@ -2241,9 +2256,8 @@ def test_populate(
                 )
 
     # Save stories
-    all_stories = add_stories(root, stories, overwrite=False)
-    typer.secho(f"  ✓ Proposed and accepted {len(stories)} stories", fg=typer.colors.GREEN)
-    typer.echo(f"    Total stories in project: {len(all_stories)}")
+    append_stories_to_dsl(root, stories)
+    typer.secho(f"  Proposed and accepted {len(stories)} stories", fg=typer.colors.GREEN)
 
     # 2. Generate test designs from stories
     if include_test_designs:
@@ -2309,7 +2323,7 @@ def test_populate(
                     persona=story.actor,
                     trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
                     steps=steps,
-                    expected_outcomes=story.happy_path_outcome.copy(),
+                    expected_outcomes=story.effective_then.copy(),
                     entities=story.scope.copy(),
                     tags=[f"story:{story.story_id}", "auto-populated"],
                     status=TestDesignStatus.PROPOSED,

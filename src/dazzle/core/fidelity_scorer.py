@@ -858,15 +858,8 @@ def _load_stories_for_scoring(
     appspec: AppSpec,
     project_root: str | None = None,
 ) -> list[StorySpec]:
-    """Get stories from appspec, falling back to persisted stories."""
-    stories = list(appspec.stories) if appspec.stories else []
-    if not stories and project_root:
-        from pathlib import Path
-
-        from dazzle.core.stories_persistence import load_stories
-
-        stories = load_stories(Path(project_root))
-    return stories
+    """Get stories from appspec."""
+    return list(appspec.stories) if appspec.stories else []
 
 
 def score_appspec_fidelity(

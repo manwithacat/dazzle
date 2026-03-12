@@ -63,8 +63,8 @@ def propose_stories(
     """
     from datetime import UTC, datetime
 
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.stories_persistence import add_stories, get_next_story_id
+    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
     manifest_path = Path(manifest).resolve()
 
@@ -83,7 +83,7 @@ def propose_stories(
     typer.echo(f"Proposing stories for '{appspec.name}'...")
 
     # Get starting story ID
-    base_id = get_next_story_id(root)
+    base_id = get_next_story_id_from_appspec(appspec.stories)
     base_num = int(base_id[3:])
     story_count = 0
 
@@ -120,14 +120,16 @@ def propose_stories(
                 actor=actor,
                 trigger=StoryTrigger.FORM_SUBMITTED,
                 scope=[entity.name],
-                preconditions=[f"{actor} has permission to create {entity.name}"],
-                happy_path_outcome=[
-                    f"New {entity.name} is saved to database",
-                    f"{actor} sees confirmation message",
+                given=[
+                    StoryCondition(expression=f"{actor} has permission to create {entity.name}"),
                 ],
-                side_effects=[],
-                constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][:3],
-                variants=["Validation error on required field"],
+                when=[
+                    StoryCondition(expression=f"{actor} submits {entity.name} creation form"),
+                ],
+                then=[
+                    StoryCondition(expression=f"New {entity.name} is saved to database"),
+                    StoryCondition(expression=f"{actor} sees confirmation message"),
+                ],
                 status=StoryStatus.ACCEPTED if auto_accept else StoryStatus.DRAFT,
                 created_at=now,
                 accepted_at=now if auto_accept else None,
@@ -151,16 +153,25 @@ def propose_stories(
                         actor=actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
                         scope=[entity.name],
-                        preconditions=[
-                            f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                        given=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
                         ],
-                        happy_path_outcome=[
-                            f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
-                            "Timestamp is recorded",
+                        when=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} changes to '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
                         ],
-                        side_effects=[],
-                        constraints=[f"Transition only allowed from '{transition.from_state}'"],
-                        variants=[],
+                        then=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
+                            StoryCondition(expression="Timestamp is recorded"),
+                        ],
                         status=StoryStatus.ACCEPTED if auto_accept else StoryStatus.DRAFT,
                         created_at=now,
                         accepted_at=now if auto_accept else None,
@@ -183,10 +194,9 @@ def propose_stories(
 
     # Save stories
     if save:
-        all_stories = add_stories(root, stories, overwrite=False)
+        append_stories_to_dsl(root, stories)
         typer.echo()
-        typer.secho(f"Saved {len(stories)} stories to dsl/stories/", fg=typer.colors.GREEN)
-        typer.echo(f"Total stories in project: {len(all_stories)}")
+        typer.secho(f"Saved {len(stories)} stories to dsl/stories.dsl", fg=typer.colors.GREEN)
 
     # Output JSON if requested
     if output:
@@ -200,8 +210,9 @@ def propose_stories(
                 "actor": s.actor,
                 "trigger": s.trigger.value,
                 "scope": s.scope,
-                "preconditions": s.preconditions,
-                "happy_path_outcome": s.happy_path_outcome,
+                "given": [c.expression for c in s.given],
+                "when": [c.expression for c in s.when],
+                "then": [c.expression for c in s.then],
                 "status": s.status.value,
             }
             for s in stories
@@ -241,7 +252,6 @@ def list_stories(
         dazzle story list --status accepted  # List accepted stories only
     """
     from dazzle.core.ir.stories import StoryStatus
-    from dazzle.core.stories_persistence import get_stories_by_status
 
     manifest_path = Path(manifest).resolve()
     root = manifest_path.parent
@@ -256,7 +266,17 @@ def list_stories(
             typer.echo("Valid statuses: draft, accepted, rejected", err=True)
             raise typer.Exit(code=1)
 
-    stories = get_stories_by_status(root, status_filter)
+    try:
+        appspec = load_project_appspec(root)
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    all_stories = appspec.stories or []
+    if status_filter:
+        stories = [s for s in all_stories if s.status == status_filter]
+    else:
+        stories = list(all_stories)
 
     if not stories:
         typer.echo(f"No stories found (filter: {status})")
@@ -311,17 +331,24 @@ def generate_tests(
         TestDesignStep,
         TestDesignTrigger,
     )
-    from dazzle.core.stories_persistence import get_stories_by_status
     from dazzle.testing.test_design_persistence import add_test_designs
 
     manifest_path = Path(manifest).resolve()
     root = manifest_path.parent
 
+    try:
+        appspec = load_project_appspec(root)
+    except (ParseError, DazzleError) as e:
+        typer.echo(f"Error loading spec: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    all_stories = appspec.stories or []
+
     # Get stories to convert
-    stories = get_stories_by_status(root, StoryStatus.ACCEPTED)
+    stories = [s for s in all_stories if s.status == StoryStatus.ACCEPTED]
 
     if include_draft:
-        draft_stories = get_stories_by_status(root, StoryStatus.DRAFT)
+        draft_stories = [s for s in all_stories if s.status == StoryStatus.DRAFT]
         stories = list(stories) + list(draft_stories)
 
     if not stories:
@@ -397,7 +424,7 @@ def generate_tests(
                 persona=story.actor,
                 trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
                 steps=steps,
-                expected_outcomes=story.happy_path_outcome.copy(),
+                expected_outcomes=story.effective_then.copy(),
                 entities=story.scope.copy(),
                 tags=[f"story:{story.story_id}", "auto-generated"],
                 status=TestDesignStatus.PROPOSED,
