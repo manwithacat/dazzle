@@ -636,7 +636,7 @@ class TestHelperFunctions:
             actor="User",
             trigger=StoryTrigger.FORM_SUBMITTED,
             scope=["Task"],
-            happy_path_outcome=["Task is saved"],
+            then=[StoryCondition(expression="Task is saved")],
         )
         assert _is_crud_story(crud) is True
 

@@ -160,33 +160,23 @@ class TestBuildGuardExpression:
 
 
 class TestExtractGuards:
-    def test_extracts_from_constraint(self):
+    def test_no_stories_returns_empty(self):
+        appspec = MagicMock()
+        appspec.domain.entities = []
+        appspec.stories = []
+        appspec.metadata = {}
+
+        assert extract_guards(appspec) == []
+
+    def test_stories_without_constraints_returns_empty(self):
+        """Stories no longer carry constraints — guard extraction is a no-op."""
         entity = _make_entity(
             "VATReturn",
             ["preparer", "reviewer"],
             [("draft", "prepared"), ("prepared", "reviewed")],
         )
 
-        story = _make_story(
-            "ST-001",
-            scope=["VATReturn"],
-            constraints=["Reviewer must differ from preparer"],
-        )
-
-        appspec = MagicMock()
-        appspec.domain.entities = [entity]
-        appspec.stories = [story]
-        appspec.metadata = {}
-
-        proposals = extract_guards(appspec)
-        assert len(proposals) >= 1
-        assert proposals[0]["entity"] == "VATReturn"
-        assert proposals[0]["guard_type"] == "requires_different_field"
-        assert proposals[0]["source_story"] == "ST-001"
-
-    def test_no_constraints_returns_empty(self):
-        entity = _make_entity("Task", [], [("open", "closed")])
-        story = _make_story("ST-001", scope=["Task"], constraints=[])
+        story = _make_story("ST-001", scope=["VATReturn"])
 
         appspec = MagicMock()
         appspec.domain.entities = [entity]
@@ -194,42 +184,3 @@ class TestExtractGuards:
         appspec.metadata = {}
 
         assert extract_guards(appspec) == []
-
-    def test_no_state_machine_skipped(self):
-        entity = MagicMock()
-        entity.name = "Task"
-        entity.state_machine = None
-
-        story = _make_story("ST-001", scope=["Task"], constraints=["Only admin can delete"])
-
-        appspec = MagicMock()
-        appspec.domain.entities = [entity]
-        appspec.stories = [story]
-        appspec.metadata = {}
-
-        assert extract_guards(appspec) == []
-
-    def test_deduplication(self):
-        entity = _make_entity("VATReturn", ["preparer", "reviewer"], [("draft", "prepared")])
-
-        # Two stories with same constraint for same entity
-        story1 = _make_story(
-            "ST-001",
-            scope=["VATReturn"],
-            constraints=["Reviewer must differ from preparer"],
-        )
-        story2 = _make_story(
-            "ST-002",
-            scope=["VATReturn"],
-            constraints=["Reviewer must differ from preparer"],
-        )
-
-        appspec = MagicMock()
-        appspec.domain.entities = [entity]
-        appspec.stories = [story1, story2]
-        appspec.metadata = {}
-
-        proposals = extract_guards(appspec)
-        # Should be deduplicated (same entity, transition, expression)
-        expressions = [p["guard_expression"] for p in proposals]
-        assert len(set(expressions)) == len(expressions)
