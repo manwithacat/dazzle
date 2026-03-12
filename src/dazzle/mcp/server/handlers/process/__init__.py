@@ -13,7 +13,6 @@ from .coverage import (
     StoryCoverage,
     _collect_process_match_pool,
     _find_missing_aspects,
-    _find_missing_aspects_from_index,
     _infer_structural_satisfaction,
     _outcome_matches_pool,
     stories_coverage_handler,
@@ -57,7 +56,6 @@ __all__ = [
     "UI_FEEDBACK_PATTERNS",
     "_collect_process_match_pool",
     "_find_missing_aspects",
-    "_find_missing_aspects_from_index",
     "_infer_structural_satisfaction",
     "_outcome_matches_pool",
     # Diagrams

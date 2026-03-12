@@ -12,7 +12,7 @@ Tests cover:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from dazzle.core.fidelity_scorer import (
     _check_form_structure,
@@ -299,15 +299,12 @@ class TestLoadStoriesForScoring:
         result = _load_stories_for_scoring(appspec)
         assert len(result) == 1
 
-    def test_falls_back_to_persisted(self, tmp_path) -> None:
+    def test_empty_stories_returns_empty(self) -> None:
         appspec = MagicMock()
         appspec.stories = []
-        persisted = [_make_story()]
 
-        with patch("dazzle.core.stories_persistence.load_stories", return_value=persisted):
-            result = _load_stories_for_scoring(appspec, str(tmp_path))
-
-        assert len(result) == 1
+        result = _load_stories_for_scoring(appspec)
+        assert len(result) == 0
 
     def test_no_fallback_without_project_root(self) -> None:
         appspec = MagicMock()

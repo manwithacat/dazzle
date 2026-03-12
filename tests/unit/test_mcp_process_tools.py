@@ -197,15 +197,9 @@ class TestStoriesCoverage:
         """Test coverage when no stories exist (including persisted)."""
         from dazzle.mcp.server.handlers.process import stories_coverage_handler
 
-        with (
-            patch(
-                "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-                return_value=mock_app_spec_no_stories,
-            ),
-            patch(
-                "dazzle.core.stories_persistence.load_story_index",
-                return_value=[],
-            ),
+        with patch(
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
+            return_value=mock_app_spec_no_stories,
         ):
             result = stories_coverage_handler(tmp_path, {})
             data = json.loads(result)
@@ -339,55 +333,6 @@ class TestStoriesCoverage:
         assert len(data["stories"]) == 1
         assert data["stories"][0]["story_id"] == "ST-001"
 
-    def test_coverage_excludes_rejected_from_story_index(self, tmp_path: Path) -> None:
-        """Test that rejected stories are excluded when using story index path."""
-        from dazzle.mcp.server.handlers.process import stories_coverage_handler
-
-        app_spec = MagicMock()
-        app_spec.stories = []  # Empty so it falls through to story index
-        app_spec.processes = []
-
-        story_index = [
-            {
-                "story_id": "ST-001",
-                "title": "Accepted story",
-                "status": "accepted",
-                "actor": "User",
-                "scope": ["Order"],
-                "then": [],
-                "unless": [],
-                "happy_path_outcome": [],
-            },
-            {
-                "story_id": "ST-002",
-                "title": "Rejected story",
-                "status": "rejected",
-                "actor": "User",
-                "scope": ["User"],
-                "then": [],
-                "unless": [],
-                "happy_path_outcome": [],
-            },
-        ]
-
-        with (
-            patch(
-                "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-                return_value=app_spec,
-            ),
-            patch(
-                "dazzle.core.stories_persistence.load_story_index",
-                return_value=story_index,
-            ),
-        ):
-            result = stories_coverage_handler(tmp_path, {})
-            data = json.loads(result)
-
-        assert data["total_stories"] == 1
-        assert data["rejected_excluded"] == 1
-        assert len(data["stories"]) == 1
-        assert data["stories"][0]["story_id"] == "ST-001"
-
 
 class TestProposeProcesses:
     """Tests for propose_processes_from_stories handler."""
@@ -437,15 +382,9 @@ class TestProposeProcesses:
         """Test propose returns error when no stories found even after fallback."""
         from dazzle.mcp.server.handlers.process import propose_processes_handler
 
-        with (
-            patch(
-                "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-                return_value=mock_app_spec_no_stories,
-            ),
-            patch(
-                "dazzle.core.stories_persistence.load_stories",
-                return_value=[],
-            ),
+        with patch(
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
+            return_value=mock_app_spec_no_stories,
         ):
             result = propose_processes_handler(tmp_path, {})
             data = json.loads(result)

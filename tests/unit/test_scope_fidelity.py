@@ -380,15 +380,9 @@ class TestScopeFidelityHandler:
     def test_no_stories_error(self) -> None:
         app_spec = MagicMock()
         app_spec.stories = []
-        with (
-            patch(
-                "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-                return_value=app_spec,
-            ),
-            patch(
-                "dazzle.core.stories_persistence.load_story_index",
-                return_value=[],
-            ),
+        with patch(
+            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
+            return_value=app_spec,
         ):
             result = scope_fidelity_handler(Path("/fake"), {})
         data = json.loads(result)
