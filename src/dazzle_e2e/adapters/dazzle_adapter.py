@@ -5,6 +5,7 @@ Provides test infrastructure for Dazzle-based applications.
 """
 
 import logging
+import os
 from typing import Any
 
 import httpx
@@ -41,10 +42,16 @@ class DazzleAdapter(BaseAdapter):
         self._client: httpx.AsyncClient | None = None
         self._fixture_ids: dict[str, str] = {}  # fixture_id -> created entity ID
 
+        # Build test headers from DAZZLE_TEST_SECRET (#467)
+        self._test_headers: dict[str, str] = {}
+        test_secret = os.environ.get("DAZZLE_TEST_SECRET")
+        if test_secret:
+            self._test_headers["X-Test-Secret"] = test_secret
+
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create the HTTP client."""
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=self.timeout)
+            self._client = httpx.AsyncClient(timeout=self.timeout, headers=self._test_headers)
         return self._client
 
     async def close(self) -> None:
@@ -347,7 +354,7 @@ class DazzleAdapter(BaseAdapter):
             for fixture in fixtures
         ]
 
-        with httpx.Client(timeout=self.timeout) as client:
+        with httpx.Client(timeout=self.timeout, headers=self._test_headers) as client:
             response = client.post(
                 f"{self.api_url}/__test__/seed",
                 json={"fixtures": fixture_data},
@@ -367,13 +374,13 @@ class DazzleAdapter(BaseAdapter):
 
     def reset_sync(self) -> None:
         """Synchronous version of reset for CLI usage."""
-        with httpx.Client(timeout=self.timeout) as client:
+        with httpx.Client(timeout=self.timeout, headers=self._test_headers) as client:
             response = client.post(f"{self.api_url}/__test__/reset")
             response.raise_for_status()
 
     def snapshot_sync(self) -> dict[str, list[dict[str, Any]]]:
         """Synchronous version of snapshot for CLI usage."""
-        with httpx.Client(timeout=self.timeout) as client:
+        with httpx.Client(timeout=self.timeout, headers=self._test_headers) as client:
             response = client.get(f"{self.api_url}/__test__/snapshot")
             response.raise_for_status()
             snap_result: dict[str, list[dict[str, Any]]] = response.json()
@@ -394,7 +401,7 @@ class DazzleAdapter(BaseAdapter):
         if role:
             auth_data["role"] = role
 
-        with httpx.Client(timeout=self.timeout) as client:
+        with httpx.Client(timeout=self.timeout, headers=self._test_headers) as client:
             # Try regular auth first
             response = client.post(
                 f"{self.api_url}/auth/login",
@@ -416,7 +423,7 @@ class DazzleAdapter(BaseAdapter):
 
     def get_entity_count_sync(self, entity: str) -> int:
         """Get entity count synchronously for assertions."""
-        with httpx.Client(timeout=self.timeout) as client:
+        with httpx.Client(timeout=self.timeout, headers=self._test_headers) as client:
             response = client.get(f"{self.api_url}/__test__/entity/{entity}/count")
 
             if response.status_code == 200:
