@@ -864,7 +864,7 @@ def _generate_user_management_surfaces(entity: ir.EntitySpec) -> list[ir.Surface
 
     Generates:
     - user_list: List all users (admin view)
-    - user_view: View user details
+    - user_detail: View user details
     - user_create: Create new user
     - user_edit: Edit user
 
@@ -929,7 +929,7 @@ def _generate_user_management_surfaces(entity: ir.EntitySpec) -> list[ir.Surface
     ]
 
     view_surface = ir.SurfaceSpec(
-        name=f"{snake_name}_view",
+        name=f"{snake_name}_detail",
         title=f"{entity.title or entity.name} Details",
         entity_ref=entity.name,
         mode=ir.SurfaceMode.VIEW,

@@ -702,7 +702,7 @@ entity User "User":
 
         surface_names = {s.name for s in surfaces}
         assert "user_list" in surface_names
-        assert "user_view" in surface_names
+        assert "user_detail" in surface_names
         assert "user_create" in surface_names
         assert "user_edit" in surface_names
 

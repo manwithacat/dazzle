@@ -1039,7 +1039,7 @@ entity User "User":
 
 # Auto-generated surfaces (admin-only):
 # - user_list: List all users
-# - user_view: View user details
+# - user_detail: View user details
 # - user_create: Create new user
 # - user_edit: Edit user
 
