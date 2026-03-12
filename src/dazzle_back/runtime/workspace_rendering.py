@@ -262,12 +262,35 @@ async def _workspace_region_handler(
                 raise HTTPException(status_code=403, detail="Workspace access denied")
 
     # Resolve current user ID for filter expressions (e.g. reviewer == current_user)
+    # Auth user IDs and User entity IDs are separate; resolve via email match (#480).
     _current_user_id: str | None = None
     if ctx.require_auth and ctx.auth_middleware:
         try:
             _auth = ctx.auth_middleware.get_auth_context(request)
             if _auth and _auth.is_authenticated and _auth.user:
-                _current_user_id = str(_auth.user.id)
+                # Try to find the User entity record by email so filters use entity IDs
+                _resolved = False
+                _email = getattr(_auth.user, "email", None)
+                if _email and ctx.repositories:
+                    _user_repo = ctx.repositories.get("User")
+                    if _user_repo:
+                        try:
+                            _user_result = await _user_repo.list(
+                                filters={"email": _email}, page_size=1
+                            )
+                            _user_items = (
+                                _user_result.items if hasattr(_user_result, "items") else []
+                            )
+                            if _user_items:
+                                _entity_user = _user_items[0]
+                                _uid = getattr(_entity_user, "id", None)
+                                if _uid:
+                                    _current_user_id = str(_uid)
+                                    _resolved = True
+                        except Exception:
+                            logger.debug("Could not resolve User entity by email", exc_info=True)
+                if not _resolved:
+                    _current_user_id = str(_auth.user.id)
         except Exception:
             logger.debug("Failed to resolve current user for filter context", exc_info=True)
     _filter_context: dict[str, Any] = {}
