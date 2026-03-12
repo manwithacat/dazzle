@@ -766,6 +766,17 @@ def _analyze_experience_reachability(
         if exp_surfaces & workspace_surfaces:
             continue
 
+        # Fallback: infer reachability from the experience's access spec.
+        # If the experience explicitly allows this persona (or allows all
+        # authenticated users and doesn't deny this persona), treat it as
+        # reachable — the DSL has no explicit workspace→experience link yet.
+        exp_access = getattr(exp, "access", None)
+        if exp_access is not None:
+            allow = getattr(exp_access, "allow_personas", []) or []
+            deny = getattr(exp_access, "deny_personas", []) or []
+            if persona_id not in deny and (not allow or persona_id in allow):
+                continue
+
         # Find start surface for the description
         start_step = exp.start_step
         start_surface = None

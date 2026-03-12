@@ -116,12 +116,14 @@ def _make_experience(
     title: str = "",
     steps: list[Any] | None = None,
     start_step: str | None = None,
+    access: Any | None = None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         name=name,
         title=title or name,
         steps=steps or [],
         start_step=start_step,
+        access=access,
     )
 
 
@@ -695,6 +697,110 @@ class TestExperienceReachability:
         assert "experience:client_onboarding" in artefacts
         assert "workspace:customer_dash" in artefacts
         assert "surface:onboard_welcome" in artefacts
+
+    def test_access_spec_allows_persona_no_gap(self) -> None:
+        """Experience with access.allow_personas including persona → reachable."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        access = SimpleNamespace(allow_personas=["customer"], deny_personas=[])
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            entities=[_make_entity("Company")],
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            workspaces=[_make_workspace("customer_dash", regions=[])],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                    access=access,
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 0
+
+    def test_access_spec_empty_allow_no_deny_no_gap(self) -> None:
+        """Experience with empty allow_personas and persona not denied → reachable."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        access = SimpleNamespace(allow_personas=[], deny_personas=[])
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            entities=[_make_entity("Company")],
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            workspaces=[_make_workspace("customer_dash", regions=[])],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                    access=access,
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 0
+
+    def test_access_spec_denies_persona_still_gap(self) -> None:
+        """Experience with deny_personas including persona → still unreachable."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        access = SimpleNamespace(allow_personas=[], deny_personas=["customer"])
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            entities=[_make_entity("Company")],
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            workspaces=[_make_workspace("customer_dash", regions=[])],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                    access=access,
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 1
+
+    def test_access_spec_allows_other_persona_still_gap(self) -> None:
+        """Experience with allow_personas NOT including persona → still unreachable."""
+        from dazzle.agent.missions.persona_journey import _analyze_experience_reachability
+
+        access = SimpleNamespace(allow_personas=["admin"], deny_personas=[])
+        persona = _make_persona("customer", default_workspace="customer_dash")
+        appspec = _make_appspec(
+            entities=[_make_entity("Company")],
+            surfaces=[
+                _make_surface("onboard_welcome", mode="view", entity_ref="Company"),
+            ],
+            workspaces=[_make_workspace("customer_dash", regions=[])],
+            stories=[_make_story("S1", actor="customer", scope=["Company"])],
+            experiences=[
+                _make_experience(
+                    "client_onboarding",
+                    steps=[_make_exp_step("welcome", surface="onboard_welcome")],
+                    start_step="welcome",
+                    access=access,
+                ),
+            ],
+        )
+        accessible = {"onboard_welcome"}
+        gaps = _analyze_experience_reachability("customer", persona, appspec, accessible)
+        assert len(gaps) == 1
 
     def test_observation_conversion(self) -> None:
         """unreachable_experience gaps convert to navigation_gap Observations."""
