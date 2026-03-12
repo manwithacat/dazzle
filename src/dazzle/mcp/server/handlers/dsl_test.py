@@ -474,6 +474,8 @@ def run_all_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
             response["failed_tests"] = failed_tests
         response["passed_count"] = len(passed_tests)
 
+        progress.log_sync(f"Tests complete: {len(passed_tests)} passed, {len(failed_tests)} failed")
+
         # Persist test results to knowledge graph
         try:
             run_id = _persist_test_results(
@@ -586,6 +588,8 @@ def run_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
             response["failed_tests"] = failed_tests
         if passed_tests:
             response["passed_tests"] = passed_tests
+
+        progress.log_sync(f"Tests complete: {len(passed_tests)} passed, {len(failed_tests)} failed")
 
         return json.dumps(response, indent=2)
 
