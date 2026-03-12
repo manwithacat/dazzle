@@ -45,6 +45,12 @@ def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
     orch = ScanOrchestrator(project_path)
     result = orch.run_scan(appspec, config)
 
+    by_sev = result.summary.by_severity
+    high_sev = by_sev.get("critical", 0) + by_sev.get("high", 0)
+    progress.log_sync(
+        f"Scan complete: {result.summary.total_findings} findings ({high_sev} high-severity)"
+    )
+
     detail = args.get("detail", "issues")
     wall_ms = (time.monotonic() - t0) * 1000
 
