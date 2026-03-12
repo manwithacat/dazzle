@@ -54,6 +54,9 @@ def audit_composition_handler(project_path: Path, args: dict[str, Any]) -> str:
         )
 
     result = run_composition_audit(sitespec, routes_filter=routes_filter)
+    pages_audited = len(result.get("pages", []))
+    score = result.get("overall_score", 100)
+    progress.log_sync(f"Audit complete: {pages_audited} pages, score {score}/100")
     return json.dumps(result, indent=2)
 
 
