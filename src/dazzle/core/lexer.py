@@ -258,6 +258,10 @@ class TokenType(Enum):
     PHASE = "phase"
     SCENE = "scene"
 
+    # v0.41.0 Convergent BDD Keywords
+    RULE = "rule"
+    QUESTION_DECL = "question"
+
     # v0.25.0 Top-Level Construct Keywords
     ENUM = "enum"
     WEBHOOK = "webhook"

@@ -35,7 +35,9 @@ from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
 from .notification import NotificationParserMixin
 from .process import ProcessParserMixin
+from .question import QuestionParserMixin
 from .rhythm import RhythmParserMixin
+from .rule import RuleParserMixin
 from .scenario import ScenarioParserMixin
 from .service import ServiceParserMixin
 from .sla import SLAParserMixin
@@ -63,6 +65,8 @@ class Parser(
     WorkspaceParserMixin,
     ScenarioParserMixin,
     StoryParserMixin,
+    RuleParserMixin,
+    QuestionParserMixin,
     RhythmParserMixin,
     MessagingParserMixin,
     EventingParserMixin,
@@ -191,6 +195,17 @@ class Parser(
                 self.advance()  # consume 'rhythm' token
                 rhythm = self.parse_rhythm()
                 fragment = _updated(fragment, rhythms=[*fragment.rhythms, rhythm])
+
+            # v0.41.0 Convergent BDD
+            elif self.match(TokenType.RULE):
+                self.advance()  # consume 'rule' token
+                rule = self.parse_rule()
+                fragment = _updated(fragment, rules=[*fragment.rules, rule])
+
+            elif self.match(TokenType.QUESTION_DECL):
+                self.advance()  # consume 'question' token
+                question = self.parse_question()
+                fragment = _updated(fragment, questions=[*fragment.questions, question])
 
             # v0.9.0 Messaging Channels
             elif self.match(TokenType.MESSAGE):

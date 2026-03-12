@@ -459,6 +459,12 @@ from .process import (
 from .process import RetryBackoff as ProcessRetryBackoff
 from .process import StepKind as ProcessStepKind
 
+# Questions (v0.41.0 Convergent BDD)
+from .questions import (
+    QuestionSpec,
+    QuestionStatus,
+)
+
 # Rhythms (v0.39.0 Longitudinal UX Evaluation)
 from .rhythm import (
     Gap,
@@ -472,6 +478,14 @@ from .rhythm import (
     SceneDimensionScore,
     SceneEvaluation,
     SceneSpec,
+)
+
+# Rules (v0.41.0 Convergent BDD)
+from .rules import (
+    RuleKind,
+    RuleOrigin,
+    RuleSpec,
+    RuleStatus,
 )
 
 # Scenarios (v0.8.5)
@@ -889,6 +903,14 @@ __all__ = [
     # Security (v0.11.0)
     "SecurityConfig",
     "SecurityProfile",
+    # Rules (v0.41.0 Convergent BDD)
+    "RuleKind",
+    "RuleOrigin",
+    "RuleSpec",
+    "RuleStatus",
+    # Questions (v0.41.0 Convergent BDD)
+    "QuestionSpec",
+    "QuestionStatus",
     # Stories (v0.12.0 Behaviour Layer, v0.22.0 DSL syntax)
     "StoryCondition",
     "StoryException",

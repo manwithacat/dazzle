@@ -128,6 +128,8 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         personas=merged_fragment.personas,  # v0.8.5
         scenarios=merged_fragment.scenarios,  # v0.8.5
         stories=merged_fragment.stories,  # v0.22.0 Stories
+        rules=merged_fragment.rules,  # v0.41.0 Convergent BDD
+        questions=merged_fragment.questions,  # v0.41.0 Convergent BDD
         rhythms=merged_fragment.rhythms,  # v0.39.0 Rhythms
         security=security_config,  # v0.11.0 Security
         llm_config=merged_fragment.llm_config,  # v0.21.0 LLM Jobs

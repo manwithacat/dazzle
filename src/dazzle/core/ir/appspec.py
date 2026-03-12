@@ -60,7 +60,9 @@ from .process import (
     ProcessSpec,
     ScheduleSpec,
 )
+from .questions import QuestionSpec
 from .rhythm import RhythmSpec
+from .rules import RuleSpec
 from .scenarios import ScenarioSpec
 from .security import SecurityConfig
 from .services import APISpec, DomainServiceSpec
@@ -119,6 +121,10 @@ class AppSpec(BaseModel):
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
     # Stories (v0.22.0 DSL syntax)
     stories: list[StorySpec] = Field(default_factory=list)
+    # Rules (v0.41.0 Convergent BDD)
+    rules: list[RuleSpec] = Field(default_factory=list)
+    # Questions (v0.41.0 Convergent BDD)
+    questions: list[QuestionSpec] = Field(default_factory=list)
     # Messaging Channels (v0.9.0)
     messages: list[MessageSpec] = Field(default_factory=list)
     channels: list[ChannelSpec] = Field(default_factory=list)
@@ -291,6 +297,32 @@ class AppSpec(BaseModel):
     def get_stories_by_entity(self, entity_name: str) -> list[StorySpec]:
         """Get all stories involving a specific entity."""
         return [s for s in self.stories if entity_name in s.scope]
+
+    # Rule getters (v0.41.0 Convergent BDD)
+
+    def get_rule(self, rule_id: str) -> RuleSpec | None:
+        """Get rule by ID."""
+        for rule in self.rules:
+            if rule.rule_id == rule_id:
+                return rule
+        return None
+
+    def get_rules_by_scope(self, entity_name: str) -> list[RuleSpec]:
+        """Get all rules whose scope includes a specific entity."""
+        return [r for r in self.rules if entity_name in r.scope]
+
+    # Question getters (v0.41.0 Convergent BDD)
+
+    def get_question(self, question_id: str) -> QuestionSpec | None:
+        """Get question by ID."""
+        for question in self.questions:
+            if question.question_id == question_id:
+                return question
+        return None
+
+    def get_questions_blocking(self, artefact_id: str) -> list[QuestionSpec]:
+        """Get all open questions that block a specific artefact."""
+        return [q for q in self.questions if artefact_id in q.blocks]
 
     # Messaging getters (v0.9.0)
 

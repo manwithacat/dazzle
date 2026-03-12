@@ -58,7 +58,9 @@ from .process import (
     ProcessSpec,
     ScheduleSpec,
 )
+from .questions import QuestionSpec
 from .rhythm import RhythmSpec
+from .rules import RuleSpec
 from .scenarios import ScenarioSpec
 from .services import APISpec, DomainServiceSpec
 from .sla import SLASpec
@@ -135,6 +137,10 @@ class ModuleFragment(BaseModel):
     scenarios: list[ScenarioSpec] = Field(default_factory=list)  # v0.8.5
     # Stories (v0.22.0 DSL syntax)
     stories: list[StorySpec] = Field(default_factory=list)
+    # Rules (v0.41.0 Convergent BDD)
+    rules: list[RuleSpec] = Field(default_factory=list)
+    # Questions (v0.41.0 Convergent BDD)
+    questions: list[QuestionSpec] = Field(default_factory=list)
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     rhythms: list[RhythmSpec] = Field(default_factory=list)
     # Messaging Channels (v0.9.0)

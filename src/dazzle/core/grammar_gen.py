@@ -41,6 +41,8 @@ _MIXIN_SECTIONS: list[tuple[str, str, str]] = [
     ("test", "API Contract Tests", "Testing"),
     ("scenario", "Scenario and Demo Data", "Testing"),
     ("story", "Story Definitions", "Workflow"),
+    ("rule", "Rule Definitions", "Workflow"),
+    ("question", "Question Definitions", "Workflow"),
     ("process", "Process Workflows", "Workflow"),
     ("messaging", "Messaging Channels", "Eventing"),
     ("eventing", "Event-First Architecture", "Eventing"),
@@ -377,6 +379,8 @@ statement     ::= entity_decl
                 | persona_decl
                 | scenario_decl
                 | story_decl
+                | rule_decl
+                | question_decl
                 | process_decl
                 | schedule_decl
                 | message_decl
@@ -981,6 +985,31 @@ unless_block  ::= "unless" ":" NEWLINE
 """
 
 
+def _build_rule_section() -> str:
+    return """\
+rule_decl     ::= "rule" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    ("kind" ":" IDENT NEWLINE)?
+                    ("origin" ":" IDENT NEWLINE)?
+                    ("invariant" ":" (STRING | TEXT) NEWLINE)?
+                    ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
+                    ("status" ":" IDENT NEWLINE)?
+                  DEDENT ;
+"""
+
+
+def _build_question_section() -> str:
+    return """\
+question_decl ::= "question" IDENT STRING? ":" NEWLINE
+                  INDENT
+                    ("blocks" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
+                    ("raised_by" ":" IDENT NEWLINE)?
+                    ("status" ":" IDENT NEWLINE)?
+                    ("resolution" ":" (STRING | TEXT) NEWLINE)?
+                  DEDENT ;
+"""
+
+
 def _build_process_section() -> str:
     return """\
 process_decl  ::= "process" IDENT STRING? ":" NEWLINE
@@ -1377,6 +1406,8 @@ _GRAMMAR_SECTIONS: dict[str, list[tuple[str | None, object]]] = {
     ],
     "Workflow": [
         ("Story Definitions", _build_story_section),
+        ("Rule Definitions", _build_rule_section),
+        ("Question Definitions", _build_question_section),
         ("Process Workflows and Schedules", _build_process_section),
     ],
     "Integration": [

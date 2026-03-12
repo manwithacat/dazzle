@@ -201,7 +201,11 @@
     ]),
     'projections': list([
     ]),
+    'questions': list([
+    ]),
     'rhythms': list([
+    ]),
+    'rules': list([
     ]),
     'scenarios': list([
     ]),
