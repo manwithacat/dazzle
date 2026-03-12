@@ -1,35 +1,27 @@
-"""Dazzle Workshop — Rich Live TUI for the MCP activity store.
+"""Dazzle Workshop — Textual TUI for MCP activity observation.
 
-Presents a gamified, Dwarf-Fortress-inspired "workshop" view of MCP tool
-invocations.  Reads the SQLite activity store and renders:
-
-  - **Workbench**: active tools with progress bars and elapsed time
-  - **Done**: scrolling list of completed tool calls
-  - **Status bar**: live counters (working / done / errors / uptime)
+Three-screen interactive display:
+  - **Dashboard**: live active tools + recent completed history
+  - **Session**: all calls grouped by tool, collapsible
+  - **Call Detail**: full progress timeline for a single call
 
 Usage::
 
-    dazzle workshop                          # watch current directory
+    dazzle workshop                          # launch TUI
     dazzle workshop -p examples/simple_task  # watch specific project
     dazzle workshop --info                   # print log path and exit
 """
 
 from __future__ import annotations
 
+import json
 import logging
-import sys
+import sqlite3
 import time
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
-
-from rich.console import Console, Group
-from rich.live import Live
-from rich.panel import Panel
-from rich.progress_bar import ProgressBar
-from rich.table import Table
-from rich.text import Text
 
 from dazzle.core.paths import project_activity_log, project_kg_db
 from dazzle.mcp.server.activity_log import (
@@ -44,48 +36,93 @@ logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-DEFAULT_TAIL = 20  # completed entries to keep visible
-POLL_INTERVAL = 0.25  # seconds between log reads
+DEFAULT_TAIL = 25  # completed entries visible on dashboard
+POLL_INTERVAL_S = 0.25  # seconds between SQLite polls
 
 
-# ── State ────────────────────────────────────────────────────────────────────
+# ── Data models ──────────────────────────────────────────────────────────────
 
 
 @dataclass
-class ActiveTool:
-    """An in-flight tool invocation."""
+class ToolCall:
+    """A single MCP tool invocation with its full event timeline."""
 
+    call_id: str  # "{tool}.{operation}.{start_ts}" — unique-ish key
     tool: str
     operation: str | None
-    start_time: float  # monotonic
-    ts: str  # wall-clock from log entry
+    start_ts: str  # wall-clock ISO timestamp
+    start_mono: float  # monotonic time for elapsed calculation
+    events: list[dict[str, Any]] = field(default_factory=list)
+    # Final state (set on tool_end)
+    finished: bool = False
+    success: bool | None = None
+    duration_ms: float | None = None
+    error: str | None = None
+    warnings: int = 0
+    context_json: str | None = None
+    source: str = "mcp"
+    # Live progress (updated on progress events)
     progress_current: int | None = None
     progress_total: int | None = None
     status_message: str | None = None
-    source: str = "mcp"
+
+    @property
+    def label(self) -> str:
+        """Human-readable tool.operation label."""
+        if self.operation:
+            return f"{self.tool}.{self.operation}"
+        return self.tool
+
+    @property
+    def elapsed_s(self) -> float:
+        """Seconds since start (live) or final duration."""
+        if self.duration_ms is not None:
+            return self.duration_ms / 1000
+        return time.monotonic() - self.start_mono
+
+    @property
+    def summary(self) -> str:
+        """One-line summary from context_json or last event message."""
+        if self.context_json:
+            try:
+                ctx = json.loads(self.context_json)
+                if isinstance(ctx, dict):
+                    # Look for common summary keys
+                    for key in ("summary", "message", "status"):
+                        if key in ctx:
+                            return str(ctx[key])
+                    # Fall back to compact repr of top-level keys
+                    parts = []
+                    for k, v in ctx.items():
+                        if isinstance(v, (int, float, str, bool)):
+                            parts.append(f"{k}={v}")
+                    if parts:
+                        return ", ".join(parts[:4])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        # Fall back to last event message
+        if self.events:
+            for evt in reversed(self.events):
+                if evt.get("message"):
+                    return evt["message"]
+        return ""
+
+    @property
+    def purpose(self) -> str:
+        """Purpose description from first log event."""
+        for evt in self.events:
+            if evt.get("type") in (TYPE_LOG, TYPE_PROGRESS) and evt.get("message"):
+                return evt["message"]
+        return self.label
 
 
 @dataclass
-class CompletedTool:
-    """A finished tool invocation."""
+class WorkshopData:
+    """All ingested activity data, powering all three screens."""
 
-    tool: str
-    operation: str | None
-    ts: str
-    success: bool
-    duration_ms: float | None
-    error: str | None = None
-    warnings: int = 0
-    source: str = "mcp"
-    context_json: str | None = None
-
-
-@dataclass
-class WorkshopState:
-    """Mutable display state built from activity entries."""
-
-    active: dict[str, ActiveTool] = field(default_factory=dict)
-    completed: list[CompletedTool] = field(default_factory=list)
+    active: dict[str, ToolCall] = field(default_factory=dict)
+    completed: list[ToolCall] = field(default_factory=list)
+    all_calls: list[ToolCall] = field(default_factory=list)
     total_calls: int = 0
     error_count: int = 0
     warning_count: int = 0
@@ -94,145 +131,111 @@ class WorkshopState:
     bell: bool = False
     # SQLite cursor
     _last_event_id: int = 0
-    # Session tracking for exit summary
-    _fastest: tuple[str, float] | None = None
-    _slowest: tuple[str, float] | None = None
 
-    @property
-    def done_count(self) -> int:
-        return len(self.completed)
-
-    @property
-    def working_count(self) -> int:
-        return len(self.active)
-
-    def ingest(self, entry: dict[str, Any]) -> None:
-        """Process a single JSONL entry and update state."""
-        etype = entry.get("type")
-        tool = entry.get("tool", "")
+    def ingest(self, entry: dict[str, Any]) -> ToolCall | None:
+        """Ingest a single activity event. Returns the affected ToolCall, if any."""
+        etype = entry.get("type", "")
+        tool = entry.get("tool", "unknown")
         operation = entry.get("operation")
         ts = entry.get("ts", "")
         source = entry.get("source", "mcp")
-        key = f"{tool}.{operation}" if operation else tool
 
         if etype == TYPE_TOOL_START:
-            self.total_calls += 1
-            self.active[key] = ActiveTool(
+            call_id = f"{tool}.{operation}.{ts}"
+            call = ToolCall(
+                call_id=call_id,
                 tool=tool,
                 operation=operation,
-                start_time=time.monotonic(),
-                ts=ts,
+                start_ts=ts,
+                start_mono=time.monotonic(),
                 source=source,
             )
+            self.active[call_id] = call
+            self.all_calls.append(call)
+            self.total_calls += 1
+            return call
 
-        elif etype == TYPE_TOOL_END:
-            self.active.pop(key, None)
-            success = entry.get("success", True)
-            dur = entry.get("duration_ms")
-            warns = entry.get("warnings", 0)
+        # Find the active call for this tool
+        call = self._find_active(tool, operation)
 
-            if not success:
-                self.error_count += 1
-                if self.bell:
-                    sys.stderr.write("\a")
-                    sys.stderr.flush()
-
-            if warns:
-                self.warning_count += warns
-
-            # Track fastest/slowest for session summary
-            if dur is not None:
-                if self._fastest is None or dur < self._fastest[1]:
-                    self._fastest = (key, dur)
-                if self._slowest is None or dur > self._slowest[1]:
-                    self._slowest = (key, dur)
-
-            self.completed.append(
-                CompletedTool(
-                    tool=tool,
-                    operation=operation,
-                    ts=ts,
-                    success=success,
-                    duration_ms=dur,
-                    error=entry.get("error"),
-                    warnings=warns,
-                    source=source,
-                    context_json=entry.get("context_json"),
-                )
-            )
-            # Cap completed list
-            if len(self.completed) > self.max_done:
-                self.completed = self.completed[-self.max_done :]
-
-        elif etype == TYPE_PROGRESS:
-            if key in self.active:
-                at = self.active[key]
-                cur = entry.get("current")
-                tot = entry.get("total")
-                if cur is not None:
-                    at.progress_current = cur
-                if tot is not None:
-                    at.progress_total = tot
-                msg = entry.get("message")
-                if msg:
-                    at.status_message = msg
-
-        elif etype == TYPE_LOG:
-            if key in self.active:
-                msg = entry.get("message")
-                if msg:
-                    self.active[key].status_message = msg
-
-        elif etype == TYPE_ERROR:
-            self.error_count += 1
-            if self.bell:
-                sys.stderr.write("\a")
-                sys.stderr.flush()
-            # Also remove from active if present
-            if key in self.active:
-                self.active.pop(key)
-                self.completed.append(
-                    CompletedTool(
-                        tool=tool,
-                        operation=operation,
-                        ts=ts,
-                        success=False,
-                        duration_ms=None,
-                        error=entry.get("message", "error"),
-                        source=source,
-                    )
-                )
-                if len(self.completed) > self.max_done:
+        if etype == TYPE_TOOL_END:
+            if call:
+                call.finished = True
+                call.success = entry.get("success", True)
+                call.duration_ms = entry.get("duration_ms")
+                call.error = entry.get("error")
+                call.warnings = entry.get("warnings", 0)
+                call.context_json = entry.get("context_json")
+                call.events.append(entry)
+                del self.active[call.call_id]
+                self.completed.append(call)
+                if len(self.completed) > self.max_done * 2:
                     self.completed = self.completed[-self.max_done :]
+                if not call.success:
+                    self.error_count += 1
+                if call.warnings:
+                    self.warning_count += call.warnings
+            return call
+
+        if etype == TYPE_PROGRESS:
+            if call:
+                call.progress_current = entry.get("current")
+                call.progress_total = entry.get("total")
+                call.status_message = entry.get("message")
+                call.events.append(entry)
+            return call
+
+        if etype in (TYPE_LOG, TYPE_ERROR):
+            if call:
+                call.status_message = entry.get("message")
+                call.events.append(entry)
+            if etype == TYPE_ERROR:
+                self.error_count += 1
+            return call
+
+        return None
+
+    def _find_active(self, tool: str, operation: str | None) -> ToolCall | None:
+        """Find the most recent active call matching tool/operation."""
+        for call_id in reversed(list(self.active)):
+            call = self.active[call_id]
+            if call.tool == tool and (operation is None or call.operation == operation):
+                return call
+        return None
+
+    def calls_grouped_by_tool(self) -> dict[str, list[ToolCall]]:
+        """Group all_calls by tool name for SessionScreen."""
+        groups: dict[str, list[ToolCall]] = {}
+        for call in self.all_calls:
+            groups.setdefault(call.tool, []).append(call)
+        return groups
 
 
 # ── SQLite reading ───────────────────────────────────────────────────────────
 
 
-def read_new_entries_db(db_path: Path, state: WorkshopState) -> list[dict[str, Any]]:
+def read_new_entries_db(db_path: Path, data: WorkshopData) -> list[dict[str, Any]]:
     """Read new activity events from the SQLite database.
 
     Uses cursor-based polling via ``_last_event_id``.
-    Returns entries as dicts compatible with ``WorkshopState.ingest()``.
+    Returns entries as dicts compatible with ``WorkshopData.ingest()``.
     """
     if not db_path.exists():
         return []
 
     entries: list[dict[str, Any]] = []
     try:
-        import sqlite3
-
         conn = sqlite3.connect(str(db_path), check_same_thread=False)
         conn.row_factory = sqlite3.Row
         try:
             rows = conn.execute(
                 "SELECT * FROM activity_events WHERE id > ? ORDER BY id ASC LIMIT 200",
-                (state._last_event_id,),
+                (data._last_event_id,),
             ).fetchall()
             for row in rows:
                 entry = _db_row_to_entry(dict(row))
                 entries.append(entry)
-                state._last_event_id = row["id"]
+                data._last_event_id = row["id"]
         finally:
             conn.close()
     except Exception:
@@ -241,7 +244,7 @@ def read_new_entries_db(db_path: Path, state: WorkshopState) -> list[dict[str, A
 
 
 def _db_row_to_entry(row: dict[str, Any]) -> dict[str, Any]:
-    """Convert a DB row dict to the entry format expected by WorkshopState.ingest()."""
+    """Convert a DB row dict to the entry format expected by WorkshopData.ingest()."""
     entry: dict[str, Any] = {
         "type": row["event_type"],
         "tool": row["tool"],
@@ -278,8 +281,6 @@ def _detect_db_path(project_dir: Path) -> Path | None:
     if not db_path.exists():
         return None
     try:
-        import sqlite3
-
         conn = sqlite3.connect(str(db_path), check_same_thread=False)
         try:
             conn.execute("SELECT 1 FROM activity_events LIMIT 0")
@@ -292,308 +293,319 @@ def _detect_db_path(project_dir: Path) -> Path | None:
         return None
 
 
-# ── Rendering ────────────────────────────────────────────────────────────────
+# ── Formatting helpers ───────────────────────────────────────────────────────
 
 
 def _format_ts(ts_raw: str) -> str:
     """Extract HH:MM:SS from an ISO timestamp."""
+    if not ts_raw:
+        return "??:??:??"
     try:
-        dt = datetime.fromisoformat(ts_raw)
-        return dt.strftime("%H:%M:%S")
-    except (ValueError, AttributeError):
-        return ts_raw[:8] if ts_raw else "??:??:??"
+        if "T" in ts_raw:
+            return ts_raw.split("T")[1][:8]
+        return ts_raw[:8]
+    except Exception:
+        return ts_raw[:8] if len(ts_raw) >= 8 else ts_raw
 
 
-def _format_result_annotation(ct: CompletedTool) -> Text:
-    """Build a Rich Text annotation from context_json (e.g. test results)."""
-    if not ct.context_json:
-        extra = Text()
-        if ct.warnings:
-            extra.append(f"\u26a0 {ct.warnings}", style="yellow")
-        return extra
-
-    import json
-
-    try:
-        ctx = json.loads(ct.context_json)
-    except (json.JSONDecodeError, TypeError):
-        return Text()
-
-    passed = ctx.get("passed")
-    total = ctx.get("total")
-    failed = ctx.get("failed", 0)
-    if passed is not None and total is not None:
-        txt = Text()
-        txt.append("[")
-        if failed == 0:
-            txt.append(f"{passed}/{total} PASS", style="bold green")
-        elif passed / max(total, 1) >= 0.8:
-            txt.append(f"{passed}/{total} PASS", style="bold yellow")
-        else:
-            txt.append(f"{passed}/{total} PASS", style="bold red")
-        txt.append("]")
-        return txt
-
-    return Text()
-
-
-def _format_duration(ms: float | None) -> str:
-    """Human-readable duration."""
-    if ms is None:
-        return ""
-    if ms < 1000:
-        return f"{ms:.0f}ms"
-    return f"{ms / 1000:.1f}s"
-
-
-def _format_elapsed(start: float) -> str:
-    """Elapsed since monotonic start — ticks live every render."""
-    elapsed = time.monotonic() - start
-    if elapsed < 60:
-        return f"{elapsed:.1f}s"
-    minutes = int(elapsed // 60)
-    secs = elapsed % 60
+def _format_duration(seconds: float) -> str:
+    """Format seconds to a compact display string."""
+    if seconds < 0.1:
+        return "<0.1s"
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    minutes = int(seconds // 60)
+    secs = seconds % 60
     return f"{minutes}m{secs:.0f}s"
 
 
-def _format_uptime(start: float) -> str:
-    """Uptime string."""
-    elapsed = time.monotonic() - start
-    if elapsed < 60:
-        return f"up {elapsed:.0f}s"
-    minutes = int(elapsed // 60)
-    secs = int(elapsed % 60)
-    if minutes < 60:
-        return f"up {minutes}m{secs:02d}s"
-    hours = minutes // 60
-    mins = minutes % 60
-    return f"up {hours}h{mins:02d}m"
+def _relative_time(start_ts: str, event_ts: str) -> str:
+    """Compute relative time string between two ISO timestamps."""
+    try:
+        start = datetime.fromisoformat(start_ts.replace("Z", "+00:00"))
+        event = datetime.fromisoformat(event_ts.replace("Z", "+00:00"))
+        delta = (event - start).total_seconds()
+        return f"{delta:05.1f}s"
+    except (ValueError, TypeError):
+        return "  ?.?s"
 
 
-def render_workshop(
-    state: WorkshopState,
-    project_name: str,
-    version: str,
-    backend: str = "",
-) -> Group:
-    """Build the full workshop renderable."""
-    now_str = datetime.now(UTC).strftime("%H:%M:%S")
+# ── Textual App ──────────────────────────────────────────────────────────────
 
-    # ── Header ───────────────────────────────────────────────────────────
-    header = Text()
-    header.append("  \u2692  ", style="bold yellow")
-    header.append("DAZZLE WORKSHOP", style="bold white")
-    header.append(f" \u00b7 {project_name}", style="dim white")
-    if version:
-        header.append(f" v{version}", style="dim white")
-    if backend:
-        header.append(f" ({backend})", style="dim")
-    header.append(f"  {now_str}", style="dim")
-    header.append("  \u2502  Ctrl-C to exit", style="dim")
+try:
+    from textual.app import App, ComposeResult
+    from textual.binding import Binding
+    from textual.containers import Container, Vertical, VerticalScroll
+    from textual.screen import Screen
+    from textual.timer import Timer
+    from textual.widgets import Footer, Header, Label, Static
 
-    # ── Workbench ────────────────────────────────────────────────────────
-    wb_table = Table.grid(padding=(0, 1))
-    wb_table.add_column(width=2)  # icon
-    wb_table.add_column(min_width=22)  # tool label + progress
-    wb_table.add_column(min_width=8)  # elapsed
+    TEXTUAL_AVAILABLE = True
+except ImportError:
+    TEXTUAL_AVAILABLE = False
 
-    if state.active:
-        for at in state.active.values():
-            label = f"{at.tool}.{at.operation}" if at.operation else at.tool
-            if at.source == "cli":
-                label = f"CLI {label}"
 
-            row_icon = Text("\u26cf", style="bold yellow")  # ⛏
-            row_main = Text()
-            row_main.append(f"{label}  ", style="bold cyan")
+if TEXTUAL_AVAILABLE:
 
-            if at.progress_current is not None and at.progress_total and at.progress_total > 0:
-                ratio = min(at.progress_current / at.progress_total, 1.0)
-                pct = f"{ratio * 100:.0f}%"
-                counter = f"[{at.progress_current}/{at.progress_total}]"
-                row_main.append("")
-                bar = ProgressBar(
-                    total=at.progress_total,
-                    completed=at.progress_current,
-                    width=20,
-                    style="bar.back",
-                    complete_style="bar.complete",
-                    finished_style="bar.finished",
-                )
-                row_elapsed = Text(
-                    f"{pct}  {counter}  {_format_elapsed(at.start_time)}",
-                    style="dim",
-                )
-                wb_table.add_row(row_icon, Group(row_main, bar), row_elapsed)
+    class ActiveToolWidget(Static):
+        """Renders a single active (in-flight) tool call.
+
+        Uses auto_refresh so the spinner animates and elapsed time
+        updates even when no new events arrive.
+        """
+
+        def __init__(self, call: ToolCall, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            self._call = call
+            self.auto_refresh = 1 / 4
+
+        def render(self) -> str:
+            c = self._call
+            elapsed = _format_duration(c.elapsed_s)
+            progress = ""
+            if c.progress_current is not None and c.progress_total:
+                pct = c.progress_current / c.progress_total
+                filled = int(pct * 16)
+                bar = "\u2588" * filled + "\u2591" * (16 - filled)
+                progress = f" {bar} {c.progress_current}/{c.progress_total}"
             else:
-                row_elapsed = Text(_format_elapsed(at.start_time), style="dim")
-                wb_table.add_row(row_icon, row_main, row_elapsed)
+                # Spinner
+                frames = "\u280b\u2819\u2839\u2838\u283c\u2834\u2826\u2827"
+                idx = int(time.monotonic() * 8) % len(frames)
+                progress = f" {frames[idx]}"
 
-            # Sub-step line
-            if at.status_message:
-                sub = Text()
-                sub.append(f"  \u2514 {at.status_message}", style="dim italic")
-                wb_table.add_row(Text(""), sub, Text(""))
-    else:
-        idle = Text("  Idle \u2014 waiting for work...", style="dim italic")
-        wb_table.add_row(Text(""), idle, Text(""))
+            status = f"  \u2514 {c.status_message}" if c.status_message else ""
+            return f"\u26cf {c.label}{progress}  {elapsed}\n{status}"
 
-    workbench_panel = Panel(
-        wb_table,
-        title="[bold]WORKBENCH[/bold]",
-        title_align="left",
-        border_style="blue",
-        padding=(0, 1),
-    )
+    class CompletedToolRow(Static):
+        """Renders a single completed tool call row."""
 
-    # ── Done ─────────────────────────────────────────────────────────────
-    done_table = Table.grid(padding=(0, 1))
-    done_table.add_column(width=10)  # timestamp
-    done_table.add_column(width=2)  # icon
-    done_table.add_column(min_width=24)  # tool label
-    done_table.add_column(min_width=8)  # duration
-    done_table.add_column()  # extra info
+        can_focus = True
 
-    if state.completed:
-        for ct in state.completed:
-            ts = Text(_format_ts(ct.ts), style="dim")
-            label = f"{ct.tool}.{ct.operation}" if ct.operation else ct.tool
-            if ct.source == "cli":
-                label = f"CLI {label}"
+        def __init__(self, call: ToolCall, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            self._call = call
 
-            if ct.success:
-                icon = Text("\u2714", style="green")  # ✔
-                tool_text = Text(label)
-                dur = Text(_format_duration(ct.duration_ms), style="dim")
-                extra = _format_result_annotation(ct)
-                done_table.add_row(ts, icon, tool_text, dur, extra)
+        def render(self) -> str:
+            c = self._call
+            ts = _format_ts(c.start_ts)
+            icon = "\u2714" if c.success else "\u2718"
+            dur = _format_duration(c.elapsed_s)
+            summary = f"  [{c.summary}]" if c.summary else ""
+            return f" {ts}  {icon} {c.label:<28} {dur:>8}{summary}"
+
+    class DashboardScreen(Screen):
+        """Live activity dashboard — default screen."""
+
+        BINDINGS = [
+            Binding("q", "quit", "Quit"),
+            Binding("s", "session", "Session View"),
+            Binding("j", "cursor_down", "Down", show=False),
+            Binding("k", "cursor_up", "Up", show=False),
+            Binding("enter", "drill_down", "Detail"),
+        ]
+
+        def compose(self) -> ComposeResult:
+            yield Header()
+            yield Container(
+                Vertical(id="active-panel"),
+                VerticalScroll(id="completed-panel"),
+                id="dashboard-body",
+            )
+            yield Footer()
+
+        def update_display(self, data: WorkshopData) -> None:
+            """Refresh the dashboard from current data."""
+            # Active tools
+            active_panel = self.query_one("#active-panel", Vertical)
+            active_panel.remove_children()
+            if data.active:
+                active_panel.mount(Label(" Active \u2500" * 4, classes="section-header"))
+                for call in data.active.values():
+                    active_panel.mount(ActiveToolWidget(call))
             else:
-                icon = Text("\u2718", style="bold red")  # ✘
-                tool_text = Text(label, style="red")
-                dur = Text(_format_duration(ct.duration_ms), style="dim")
-                extra = _format_result_annotation(ct) or Text(ct.error or "failed", style="red dim")
-                done_table.add_row(ts, icon, tool_text, dur, extra)
-    else:
-        empty = Text("  No completed calls yet.", style="dim italic")
-        done_table.add_row(Text(""), Text(""), empty, Text(""), Text(""))
+                active_panel.mount(Label(" No active tools", classes="dim"))
 
-    done_panel = Panel(
-        done_table,
-        title="[bold]DONE[/bold]",
-        title_align="left",
-        border_style="green" if not state.error_count else "yellow",
-        padding=(0, 1),
-    )
+            # Completed tools
+            completed_panel = self.query_one("#completed-panel", VerticalScroll)
+            completed_panel.remove_children()
+            recent = data.completed[-data.max_done :]
+            if recent:
+                completed_panel.mount(Label(" History \u2500" * 4, classes="section-header"))
+                for i, call in enumerate(reversed(recent)):
+                    row = CompletedToolRow(call, id=f"completed-{i}")
+                    completed_panel.mount(row)
+            else:
+                completed_panel.mount(Label(" No completed calls yet", classes="dim"))
 
-    # ── Status bar ───────────────────────────────────────────────────────
-    status = Text()
-    status.append("  \u26cf ", style="bold yellow")
-    status.append(f"{state.working_count} working", style="cyan")
-    status.append(" \u00b7 ", style="dim")
-    status.append("\u2714 ", style="green")
-    status.append(f"{state.done_count} done", style="green")
-    if state.error_count:
-        status.append(" \u00b7 ", style="dim")
-        status.append("\u2718 ", style="red")
-        status.append(f"{state.error_count} err", style="red")
-    if state.warning_count:
-        status.append(" \u00b7 ", style="dim")
-        status.append(f"\u26a0 {state.warning_count}", style="yellow")
-    status.append("  \u2502  ", style="dim")
-    status.append(f"{state.total_calls} calls", style="dim")
-    status.append("  \u2502  ", style="dim")
-    status.append(_format_uptime(state.start_time), style="dim")
+            # Update title with stats
+            app = self.app
+            if isinstance(app, WorkshopApp):
+                errs = f" | {data.error_count} errors" if data.error_count else ""
+                app.sub_title = f"{data.total_calls} calls{errs}"
 
-    status_panel = Panel(status, border_style="dim", padding=(0, 0))
+        def action_session(self) -> None:
+            app = self.app
+            if isinstance(app, WorkshopApp):
+                from dazzle.mcp.server.workshop_screens import SessionScreen
 
-    return Group(header, workbench_panel, done_panel, status_panel)
+                self.app.push_screen(SessionScreen())
 
+        def action_drill_down(self) -> None:
+            """Drill into the selected completed call."""
+            app = self.app
+            if not isinstance(app, WorkshopApp):
+                return
+            # Find the focused CompletedToolRow
+            focused = self.focused
+            if isinstance(focused, CompletedToolRow):
+                from dazzle.mcp.server.workshop_screens import CallDetailScreen
 
-# ── Session summary ──────────────────────────────────────────────────────────
+                self.app.push_screen(CallDetailScreen(focused._call))
 
+        def action_cursor_down(self) -> None:
+            self.focus_next()
 
-def print_session_summary(state: WorkshopState, console: Console) -> None:
-    """Print a session summary on exit."""
-    if state.total_calls == 0:
-        return
+        def action_cursor_up(self) -> None:
+            self.focus_previous()
 
-    elapsed = time.monotonic() - state.start_time
-    if elapsed < 60:
-        dur_str = f"{elapsed:.0f}s"
-    else:
-        mins = int(elapsed // 60)
-        secs = int(elapsed % 60)
-        dur_str = f"{mins}m {secs:02d}s"
+        def action_quit(self) -> None:
+            self.app.exit()
 
-    ok = state.total_calls - state.error_count
-    console.print()
-    console.print("[bold]\u2550\u2550\u2550 SESSION COMPLETE \u2550\u2550\u2550[/bold]")
-    console.print(f"  Duration:  {dur_str}")
-    console.print(
-        f"  Tools run: {state.total_calls} "
-        f"([green]{ok} \u2714[/green]"
-        + (f", [red]{state.error_count} \u2718[/red]" if state.error_count else "")
-        + (f", [yellow]\u26a0 {state.warning_count}[/yellow]" if state.warning_count else "")
-        + ")"
-    )
-    if state._fastest:
-        console.print(f"  Fastest:   {state._fastest[0]} ({_format_duration(state._fastest[1])})")
-    if state._slowest and state._slowest != state._fastest:
-        console.print(f"  Slowest:   {state._slowest[0]} ({_format_duration(state._slowest[1])})")
-    console.print()
+    class WorkshopApp(App):
+        """Dazzle Workshop — MCP Activity Observer."""
 
+        TITLE = "Dazzle Workshop"
+        CSS = """
+        #dashboard-body {
+            height: 1fr;
+        }
+        #active-panel {
+            height: auto;
+            max-height: 40%;
+            padding: 0 1;
+        }
+        #completed-panel {
+            height: 1fr;
+            padding: 0 1;
+        }
+        .section-header {
+            color: $accent;
+            text-style: bold;
+        }
+        .dim {
+            color: $text-muted;
+        }
+        ActiveToolWidget {
+            height: auto;
+            padding: 0 0 0 1;
+        }
+        CompletedToolRow {
+            height: 1;
+        }
+        CompletedToolRow:focus {
+            background: $accent 20%;
+        }
+        """
 
-# ── Main loop ────────────────────────────────────────────────────────────────
+        def __init__(
+            self,
+            db_path: Path,
+            project_name: str = "unknown",
+            *,
+            max_done: int = DEFAULT_TAIL,
+            bell: bool = False,
+        ) -> None:
+            super().__init__()
+            self._db_path = db_path
+            self.sub_title = project_name
+            self.data = WorkshopData(max_done=max_done, bell=bell)
+            self._poll_timer: Timer | None = None
 
+        def on_mount(self) -> None:
+            """Start polling and load initial data."""
+            # Ingest existing events
+            for entry in read_new_entries_db(self._db_path, self.data):
+                self.data.ingest(entry)
+            self._update_dashboard()
+            # Start poll timer
+            self._poll_timer = self.set_interval(POLL_INTERVAL_S, self._poll)
 
-def watch(
-    db_path: Path,
-    project_name: str = "unknown",
-    version: str = "",
-    *,
-    max_done: int = DEFAULT_TAIL,
-    bell: bool = False,
-) -> None:
-    """Run the Rich Live display loop.  Blocks until Ctrl-C.
+        def _poll(self) -> None:
+            """Poll SQLite for new events."""
+            new_entries = read_new_entries_db(self._db_path, self.data)
+            if new_entries:
+                for entry in new_entries:
+                    self.data.ingest(entry)
+                self._update_dashboard()
+                # Bell on errors
+                if self.data.bell and any(e.get("type") == TYPE_ERROR for e in new_entries):
+                    self.bell()
 
-    Reads activity events from the SQLite database at *db_path*.
-    """
-    state = WorkshopState(max_done=max_done, bell=bell)
-    backend = "SQLite"
+        def _update_dashboard(self) -> None:
+            """Refresh the dashboard screen if it's active."""
+            screen = self.screen
+            if isinstance(screen, DashboardScreen):
+                screen.update_display(self.data)
 
-    # Ingest any existing entries so we start with history
-    for entry in read_new_entries_db(db_path, state):
-        state.ingest(entry)
+        def get_default_screen(self) -> DashboardScreen:
+            return DashboardScreen()
 
-    console = Console()
-    with Live(
-        render_workshop(state, project_name, version, backend),
-        refresh_per_second=4,
-        screen=False,
-        console=console,
-    ) as live:
-        try:
-            while True:
-                time.sleep(POLL_INTERVAL)
-                new = read_new_entries_db(db_path, state)
-                for entry in new:
-                    state.ingest(entry)
-                live.update(render_workshop(state, project_name, version, backend))
-        except KeyboardInterrupt:
-            pass
+    # ── Entry-point wrappers (called by CLI) ──
 
-    print_session_summary(state, console)
+    def run_workshop(
+        project_dir: Path,
+        *,
+        info: bool = False,
+        tail: int = DEFAULT_TAIL,
+        bell: bool = False,
+    ) -> None:
+        """Entry point: resolve project info, find DB, launch Textual app."""
+        project_dir = project_dir.resolve()
+        project_name, version, config = _load_project_config(project_dir)
+
+        if info:
+            log_path = _resolve_log_path(project_dir, config)
+            print(str(log_path))
+            return
+
+        db_path = _detect_db_path(project_dir)
+        if db_path is None:
+            print(
+                "Error: No activity database found.\n"
+                "Run the MCP server first so it creates the SQLite activity store.\n"
+                f"Expected: {project_kg_db(project_dir)}"
+            )
+            raise SystemExit(1)
+
+        app = WorkshopApp(db_path, project_name, max_done=tail, bell=bell)
+        app.run()
+
+else:
+    # Textual not installed — provide a stub that prints an error
+    def run_workshop(
+        project_dir: Path,
+        *,
+        info: bool = False,
+        tail: int = DEFAULT_TAIL,
+        bell: bool = False,
+    ) -> None:
+        """Stub when textual is not installed."""
+        if info:
+            project_dir = project_dir.resolve()
+            _project_name, _version, config = _load_project_config(project_dir)
+            log_path = _resolve_log_path(project_dir, config)
+            print(str(log_path))
+            return
+        print("Workshop TUI requires the 'workshop' extra:\n  pip install dazzle-dsl[workshop]")
+        raise SystemExit(1)
 
 
 # ── Config helpers ───────────────────────────────────────────────────────────
 
 
 def _resolve_log_path(project_dir: Path, config: dict[str, Any]) -> Path:
-    """Determine log path from config or convention.
-
-    Checks ``[workshop] log`` in dazzle.toml first, falls back to the
-    standard ``.dazzle/mcp-activity.log`` location.
-    """
+    """Determine log path from config or convention."""
     custom = config.get("workshop", {}).get("log")
     if custom:
         p = Path(custom)
@@ -621,45 +633,8 @@ def _load_project_config(project_dir: Path) -> tuple[str, str, dict[str, Any]]:
     return project_name, version, config
 
 
-# ── Entry points ─────────────────────────────────────────────────────────────
-
-
 def get_log_path(project_dir: Path) -> Path:
     """Resolve the activity log path for a project.  Public API for --info."""
     project_dir = project_dir.resolve()
     _, _, config = _load_project_config(project_dir)
     return _resolve_log_path(project_dir, config)
-
-
-def run_workshop(
-    project_dir: Path,
-    *,
-    info: bool = False,
-    tail: int = DEFAULT_TAIL,
-    bell: bool = False,
-) -> None:
-    """Entry point: resolve project info, find log, start watch."""
-    project_dir = project_dir.resolve()
-    project_name, version, config = _load_project_config(project_dir)
-
-    console = Console()
-
-    # --info: just print the log path and exit
-    if info:
-        log_path = _resolve_log_path(project_dir, config)
-        console.print(str(log_path))
-        return
-
-    # Require SQLite backend
-    db_path = _detect_db_path(project_dir)
-    if db_path is None:
-        console.print(
-            "[red bold]Error:[/red bold] No activity database found.\n"
-            "Run the MCP server first so it creates the SQLite activity store.\n"
-            f"Expected: {project_kg_db(project_dir)}"
-        )
-        raise SystemExit(1)
-
-    # Clear screen and jump straight into the TUI
-    console.clear()
-    watch(db_path, project_name, version, max_done=tail, bell=bell)
