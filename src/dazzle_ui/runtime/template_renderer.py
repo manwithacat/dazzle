@@ -188,13 +188,18 @@ def _basename_or_url_filter(value: Any) -> str:
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict.
 
-    Checks: name, company_name, first_name+last_name, forename+surname, title, label, email, id.
+    Priority chain:
+    1. Well-known fields: name, company_name, first+last, forename+surname, title, label, email
+    2. First non-id string value (catches entity-specific fields like component_name, question_text)
+    3. id (UUID fallback)
+
     This is the canonical ref display chain — used by the ref_display filter,
     truncate_text filter, and table_rows.html template.
     """
     if not isinstance(value, dict):
         return str(value) if value else fallback
-    return str(
+    # Well-known fields
+    result = (
         value.get("name")
         or value.get("company_name")
         or (
@@ -208,8 +213,15 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
         or value.get("title")
         or value.get("label")
         or value.get("email")
-        or value.get("id", fallback)
     )
+    if result:
+        return str(result)
+    # Fallback: first non-id, non-empty string value (#479)
+    _skip = {"id", "created_at", "updated_at", "deleted_at"}
+    for k, v in value.items():
+        if k not in _skip and isinstance(v, str) and v and len(v) < 200:
+            return v
+    return str(value.get("id", fallback))
 
 
 def _ref_display_filter(value: Any) -> str:

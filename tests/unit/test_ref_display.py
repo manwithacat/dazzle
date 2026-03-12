@@ -77,5 +77,26 @@ class TestRefDisplayName:
         )
         assert result == "John Doe"
 
+    def test_first_string_fallback(self) -> None:
+        """Entities with non-standard display fields use first string value (#479)."""
+        result = _ref_display_name({"id": "abc-123", "component_name": "Reading Comprehension"})
+        assert result == "Reading Comprehension"
+
+    def test_first_string_skips_timestamps(self) -> None:
+        """Timestamp fields are skipped in the first-string fallback."""
+        result = _ref_display_name(
+            {
+                "id": "abc",
+                "created_at": "2026-01-01T00:00:00Z",
+                "question_text": "What is 2+2?",
+            }
+        )
+        assert result == "What is 2+2?"
+
+    def test_first_string_skips_long_values(self) -> None:
+        """Very long strings (>=200 chars) are skipped — likely not display names."""
+        result = _ref_display_name({"id": "abc", "blob": "x" * 200})
+        assert result == "abc"
+
     def test_custom_fallback(self) -> None:
         assert _ref_display_name(None, fallback="N/A") == "N/A"
