@@ -17,7 +17,7 @@ from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
-from .common import wrap_handler_errors
+from .common import extract_progress, wrap_handler_errors
 from .orchestration import QualityStep, aggregate_results, run_step
 
 logger = logging.getLogger("dazzle.mcp.handlers.nightly")
@@ -151,6 +151,8 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Qualit
 @wrap_handler_errors
 def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
     """Run quality steps in parallel with topological scheduling."""
+    progress = extract_progress(args)
+    progress.log_sync("Starting nightly pipeline (parallel)...")
     stop_on_error = args.get("stop_on_error", False)
     base_url = args.get("base_url")
     detail = args.get("detail", "issues")
@@ -246,6 +248,7 @@ def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
             step_name = futures.pop(done_fut)
             step_result = done_fut.result()
             completed[step_name] = step_result
+            progress.advance_sync(len(completed), len(all_steps), f"Completed {step_name}")
 
             if step_result.get("status") == "error":
                 failed_names.add(step_name)
