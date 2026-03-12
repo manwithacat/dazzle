@@ -61,7 +61,6 @@ def propose_stories(
         dazzle story propose -e Task,Project      # Focus on specific entities
         dazzle story propose --max 50             # Propose up to 50 stories
     """
-    from datetime import UTC, datetime
 
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
@@ -92,8 +91,6 @@ def propose_stories(
         result = f"ST-{base_num + story_count:03d}"
         story_count += 1
         return result
-
-    now = datetime.now(UTC).isoformat()
 
     # Default persona
     default_actor = "User"
@@ -131,8 +128,6 @@ def propose_stories(
                     StoryCondition(expression=f"{actor} sees confirmation message"),
                 ],
                 status=StoryStatus.ACCEPTED if auto_accept else StoryStatus.DRAFT,
-                created_at=now,
-                accepted_at=now if auto_accept else None,
             )
         )
 
@@ -173,8 +168,6 @@ def propose_stories(
                             StoryCondition(expression="Timestamp is recorded"),
                         ],
                         status=StoryStatus.ACCEPTED if auto_accept else StoryStatus.DRAFT,
-                        created_at=now,
-                        accepted_at=now if auto_accept else None,
                     )
                 )
 
@@ -229,8 +222,8 @@ def propose_stories(
         typer.echo("  2. dazzle test dsl-run            # Run generated tests")
     else:
         typer.echo("Next steps:")
-        typer.echo("  1. Review stories in dsl/stories/stories.json")
-        typer.echo("  2. Change status to 'accepted' for stories you want to test")
+        typer.echo("  1. Review stories in dsl/stories.dsl")
+        typer.echo("  2. Add 'status: accepted' for stories you want to test")
         typer.echo("  3. dazzle story generate-tests    # Generate test designs")
 
 

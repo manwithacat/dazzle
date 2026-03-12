@@ -827,14 +827,13 @@ def _generate_entity_stories(
     max_stories: int,
     existing_titles: set[str],
     default_actor: str,
-    now: str,
     next_story_id: Callable[[], str],
 ) -> tuple[list[Any], int]:
     """Generate stories from entities and their state machine transitions.
 
     Returns (new_stories, skipped_count).
     """
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
 
     stories: list[StorySpec] = []
     skipped = 0
@@ -857,19 +856,21 @@ def _generate_entity_stories(
                     actor=default_actor,
                     trigger=StoryTrigger.FORM_SUBMITTED,
                     scope=[entity.name],
-                    preconditions=[f"{default_actor} has permission to create {entity.name}"],
-                    happy_path_outcome=[
-                        f"New {entity.name} is saved to database",
-                        f"{default_actor} sees confirmation message",
+                    given=[
+                        StoryCondition(
+                            expression=f"{default_actor} has permission to create {entity.name}"
+                        ),
                     ],
-                    side_effects=[],
-                    constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][
-                        :3
+                    when=[
+                        StoryCondition(
+                            expression=f"{default_actor} submits {entity.name} creation form"
+                        ),
                     ],
-                    variants=["Validation error on required field"],
+                    then=[
+                        StoryCondition(expression=f"New {entity.name} is saved to database"),
+                        StoryCondition(expression=f"{default_actor} sees confirmation message"),
+                    ],
                     status=StoryStatus.ACCEPTED,
-                    created_at=now,
-                    accepted_at=now,
                 )
             )
             count += 1
@@ -892,18 +893,25 @@ def _generate_entity_stories(
                         actor=default_actor,
                         trigger=StoryTrigger.STATUS_CHANGED,
                         scope=[entity.name],
-                        preconditions=[
-                            f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                        given=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
                         ],
-                        happy_path_outcome=[
-                            f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                        when=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} changes to '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
                         ],
-                        side_effects=[],
-                        constraints=[],
-                        variants=[],
+                        then=[
+                            StoryCondition(
+                                expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                                field_path=f"{entity.name}.{sm.status_field}",
+                            ),
+                        ],
                         status=StoryStatus.ACCEPTED,
-                        created_at=now,
-                        accepted_at=now,
                     )
                 )
                 count += 1
@@ -1013,8 +1021,6 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
     Returns:
         JSON string with summary of what was created
     """
-    from datetime import UTC, datetime
-
     from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
     from dazzle.testing.test_design_persistence import add_test_designs
 
@@ -1041,13 +1047,12 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
         story_count += 1
         return result
 
-    now = datetime.now(UTC).isoformat()
     default_actor = "User"
     if appspec.personas:
         default_actor = appspec.personas[0].label or appspec.personas[0].id
 
     stories, skipped = _generate_entity_stories(
-        appspec, max_stories, existing_titles, default_actor, now, next_story_id
+        appspec, max_stories, existing_titles, default_actor, next_story_id
     )
 
     # Save stories to DSL

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -1093,9 +1092,7 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
 
 def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Analyze DSL and propose behavioural user stories."""
-    from datetime import datetime
-
-    from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
+    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.story_emitter import get_next_story_id_from_appspec
 
     try:
@@ -1116,8 +1113,6 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
             result = f"ST-{base_num + story_count:03d}"
             story_count += 1
             return result
-
-        now = datetime.now(UTC).isoformat()
 
         # Default persona
         default_actor = "User"
@@ -1150,18 +1145,19 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                     actor=actor,
                     trigger=StoryTrigger.FORM_SUBMITTED,
                     scope=[entity.name],
-                    preconditions=[f"{actor} has permission to create {entity.name}"],
-                    happy_path_outcome=[
-                        f"New {entity.name} is saved to database",
-                        f"{actor} sees confirmation message",
+                    given=[
+                        StoryCondition(
+                            expression=f"{actor} has permission to create {entity.name}"
+                        ),
                     ],
-                    side_effects=[],
-                    constraints=[f.name + " must be valid" for f in entity.fields if f.is_required][
-                        :3
+                    when=[
+                        StoryCondition(expression=f"{actor} submits {entity.name} creation form"),
                     ],
-                    variants=["Validation error on required field"],
+                    then=[
+                        StoryCondition(expression=f"New {entity.name} is saved to database"),
+                        StoryCondition(expression=f"{actor} sees confirmation message"),
+                    ],
                     status=StoryStatus.DRAFT,
-                    created_at=now,
                 )
             )
 
@@ -1179,18 +1175,26 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                             actor=actor,
                             trigger=StoryTrigger.STATUS_CHANGED,
                             scope=[entity.name],
-                            preconditions=[
-                                f"{entity.name}.{sm.status_field} is '{transition.from_state}'"
+                            given=[
+                                StoryCondition(
+                                    expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
+                                    field_path=f"{entity.name}.{sm.status_field}",
+                                ),
                             ],
-                            happy_path_outcome=[
-                                f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
-                                "Timestamp is recorded",
+                            when=[
+                                StoryCondition(
+                                    expression=f"{entity.name}.{sm.status_field} changes to '{transition.to_state}'",
+                                    field_path=f"{entity.name}.{sm.status_field}",
+                                ),
                             ],
-                            side_effects=[],
-                            constraints=[f"Transition only allowed from '{transition.from_state}'"],
-                            variants=[],
+                            then=[
+                                StoryCondition(
+                                    expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
+                                    field_path=f"{entity.name}.{sm.status_field}",
+                                ),
+                                StoryCondition(expression="Timestamp is recorded"),
+                            ],
                             status=StoryStatus.DRAFT,
-                            created_at=now,
                         )
                     )
 
@@ -1225,7 +1229,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
 
 
 def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Save stories to .dazzle/stories/stories.json."""
+    """Save stories to dsl/stories.dsl."""
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.story_emitter import append_stories_to_dsl
 
@@ -1238,20 +1242,23 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         # Convert to StorySpec objects with validation
         stories: list[StorySpec] = []
         for s in stories_data:
+            from dazzle.core.ir.stories import StoryCondition
+
+            # Convert to Gherkin fields, with legacy fallback
+            given_raw = s.get("given") or s.get("preconditions", [])
+            then_raw = s.get("then") or s.get("happy_path_outcome", [])
+            when_raw = s.get("when", [])
+
             story = StorySpec(
                 story_id=s["story_id"],
                 title=s["title"],
                 actor=s["actor"],
                 trigger=StoryTrigger(s["trigger"]),
                 scope=s.get("scope", []),
-                preconditions=s.get("preconditions", []),
-                happy_path_outcome=s.get("happy_path_outcome", []),
-                side_effects=s.get("side_effects", []),
-                constraints=s.get("constraints", []),
-                variants=s.get("variants", []),
+                given=[StoryCondition(expression=c) for c in given_raw],
+                when=[StoryCondition(expression=c) for c in when_raw],
+                then=[StoryCondition(expression=c) for c in then_raw],
                 status=StoryStatus(s.get("status", "draft")),
-                created_at=s.get("created_at"),
-                accepted_at=s.get("accepted_at"),
             )
             stories.append(story)
 

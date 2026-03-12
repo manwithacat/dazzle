@@ -2136,8 +2136,6 @@ def test_populate(
         dazzle test populate --max-stories 50   # More stories
         dazzle test populate --no-tests         # Stories only
     """
-    from datetime import UTC, datetime
-
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.ir.test_design import (
         TestDesignAction,
@@ -2175,7 +2173,6 @@ def test_populate(
         story_count += 1
         return result
 
-    now = datetime.now(UTC).isoformat()
     default_actor = "User"
     if appspec.personas:
         default_actor = appspec.personas[0].label or appspec.personas[0].id
@@ -2209,8 +2206,6 @@ def test_populate(
                     StoryCondition(expression=f"{default_actor} sees confirmation message"),
                 ],
                 status=StoryStatus.ACCEPTED,  # Auto-accept
-                created_at=now,
-                accepted_at=now,
             )
         )
 
@@ -2250,8 +2245,6 @@ def test_populate(
                             ),
                         ],
                         status=StoryStatus.ACCEPTED,
-                        created_at=now,
-                        accepted_at=now,
                     )
                 )
 
