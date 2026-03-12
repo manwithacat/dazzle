@@ -81,6 +81,63 @@ class TestSurfaceConverterRBAC:
         assert delete_ep is not None
         assert delete_ep.require_roles == ["admin"]
 
+    def test_read_endpoint_auto_generated_for_list_only_entity(self) -> None:
+        """Entities with LIST surface but no VIEW surface get a READ endpoint."""
+        surface = SurfaceSpec(
+            name="task_list",
+            entity_ref="Task",
+            mode=SurfaceMode.LIST,
+            sections=[],
+        )
+        _services, endpoints = convert_surfaces_to_services([surface])
+        read_ep = next(
+            (ep for ep in endpoints if ep.method == HttpMethod.GET and "{id}" in ep.path),
+            None,
+        )
+        assert read_ep is not None
+        assert read_ep.path == "/tasks/{id}"
+
+    def test_read_endpoint_inherits_access_from_list_surface(self) -> None:
+        """Auto-generated READ endpoints inherit access from the list surface."""
+        surface = SurfaceSpec(
+            name="admin_tasks",
+            entity_ref="Task",
+            mode=SurfaceMode.LIST,
+            sections=[],
+            access=SurfaceAccessSpec(
+                require_auth=True,
+                allow_personas=["admin"],
+            ),
+        )
+        _services, endpoints = convert_surfaces_to_services([surface])
+        read_ep = next(
+            (ep for ep in endpoints if ep.method == HttpMethod.GET and "{id}" in ep.path),
+            None,
+        )
+        assert read_ep is not None
+        assert read_ep.require_roles == ["admin"]
+
+    def test_no_duplicate_read_when_view_surface_exists(self) -> None:
+        """No duplicate READ endpoint when entity already has a VIEW surface."""
+        surfaces = [
+            SurfaceSpec(
+                name="task_list",
+                entity_ref="Task",
+                mode=SurfaceMode.LIST,
+                sections=[],
+            ),
+            SurfaceSpec(
+                name="task_detail",
+                entity_ref="Task",
+                mode=SurfaceMode.VIEW,
+                sections=[],
+            ),
+        ]
+        _services, endpoints = convert_surfaces_to_services(surfaces)
+        read_eps = [ep for ep in endpoints if ep.method == HttpMethod.GET and "{id}" in ep.path]
+        # Only the VIEW-generated one, no auto-generated duplicate
+        assert len(read_eps) == 1
+
 
 # =============================================================================
 # EndpointSpec: require_roles field

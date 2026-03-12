@@ -270,9 +270,11 @@ def convert_surfaces_to_services(
     services: list[ServiceSpec] = []
     endpoints: list[EndpointSpec] = []
 
-    # Track entities that have list surfaces (for adding DELETE endpoints)
+    # Track entities that have list surfaces (for adding READ/DELETE endpoints)
     # Maps entity_name -> list of require_roles from surfaces
     entities_with_list: dict[str, list[str]] = {}
+    # Track entities that already have a READ endpoint (VIEW/EDIT surface)
+    entities_with_read: set[str] = set()
 
     for surface in surfaces:
         # Get entity if available
@@ -288,18 +290,45 @@ def convert_surfaces_to_services(
         endpoint = convert_surface_to_endpoint(surface, service.name)
         endpoints.append(endpoint)
 
-        # Track entities with list surfaces for DELETE endpoint generation
+        # Track entities with list surfaces for READ/DELETE endpoint generation
         if surface.mode == ir.SurfaceMode.LIST and surface.entity_ref:
             require_roles: list[str] = []
             if surface.access and surface.access.allow_personas:
                 require_roles = list(surface.access.allow_personas)
             entities_with_list[surface.entity_ref] = require_roles
 
-    # Add DELETE endpoints for entities that have list surfaces
-    # This enables CRUD delete operations on entity tables
-    for entity_name, delete_require_roles in entities_with_list.items():
+        # Track entities that already have a VIEW/EDIT surface (= READ endpoint)
+        if surface.mode in (ir.SurfaceMode.VIEW, ir.SurfaceMode.EDIT) and surface.entity_ref:
+            entities_with_read.add(surface.entity_ref)
+
+    # Add READ and DELETE endpoints for entities that have list surfaces
+    for entity_name, roles in entities_with_list.items():
         entity_lower = entity_name.lower()
         entity_plural = to_api_plural(entity_name)
+
+        # Add READ endpoint if no VIEW/EDIT surface already provides one
+        if entity_name not in entities_with_read:
+            read_service = ServiceSpec(
+                name=f"read_{entity_lower}",
+                inputs=SchemaSpec(fields=[SchemaFieldSpec(name="id", type="uuid", required=True)]),
+                outputs=SchemaSpec(fields=[]),
+                domain_operation=DomainOperation(
+                    entity=entity_name,
+                    kind=OperationKind.READ,
+                ),
+            )
+            services.append(read_service)
+
+            read_endpoint = EndpointSpec(
+                name=f"read_{entity_lower}_endpoint",
+                service=f"read_{entity_lower}",
+                method=HttpMethod.GET,
+                path=f"/{entity_plural}/{{id}}",
+                description=f"Get {entity_name}",
+                tags=[entity_name],
+                require_roles=roles,
+            )
+            endpoints.append(read_endpoint)
 
         # Create delete service
         delete_service = ServiceSpec(
@@ -323,7 +352,7 @@ def convert_surfaces_to_services(
             path=f"/{entity_plural}/{{id}}",
             description=f"Delete {entity_name}",
             tags=[entity_name],
-            require_roles=delete_require_roles,
+            require_roles=roles,
         )
         endpoints.append(delete_endpoint)
 
