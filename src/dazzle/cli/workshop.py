@@ -19,10 +19,10 @@ def workshop_command(
         help="Print the resolved activity log path and exit.",
     ),
     tail: int = typer.Option(
-        20,
+        25,
         "--tail",
         "-n",
-        help="Number of completed entries to keep visible (default: 20).",
+        help="Number of completed entries on dashboard (default: 25).",
     ),
     bell: bool = typer.Option(
         False,
@@ -43,8 +43,7 @@ def workshop_command(
     """Watch MCP activity in a live workshop view."""
     # Suppress logging before importing MCP modules — the server __init__
     # calls logging.basicConfig(level=DEBUG) which floods stderr with handler
-    # registration noise.  The workshop only reads log files / SQLite; it
-    # doesn't need server-level logging.
+    # registration noise.
     logging.disable(logging.CRITICAL)
 
     if explore:
