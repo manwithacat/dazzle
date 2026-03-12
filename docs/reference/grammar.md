@@ -60,7 +60,7 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **Persona & Scenario Keywords**: `scenario`, `demo`, `persona`, `goals`, `proficiency`, `seed_script`, `start_route`
 
-**v0.22.0 Story DSL Keywords**: `story`, `actor`, `trigger`, `unless`
+**v0.22.0 Story DSL Keywords**: `story`, `actor`, `trigger`, `unless`, `status` (v0.40.0: added `status` field)
 
 **v0.24.0 TigerBeetle Ledger Keywords**: `ledger`, `transaction`, `transfer`, `debit`, `credit`, `amount`, `account_code`, `ledger_id`, `account_type`, `currency`, `flags`, `sync_to`, `idempotency_key`, `validation`, `execution`, `priority`, `pending_id`, `user_data`, `tenant_scoped`, `metadata_mapping`
 
@@ -588,15 +588,22 @@ step_transition
 
 story_decl    ::= "story" IDENT STRING? ":" NEWLINE
                   INDENT
+                    ("status" ":" ("draft" | "accepted" | "rejected") NEWLINE)?
                     ("actor" ":" IDENT NEWLINE)?
                     ("trigger" ":" IDENT NEWLINE)?
                     ("scope" ":" "[" IDENT ("," IDENT)* "]" NEWLINE)?
                     given_block?
+                    when_block?
                     then_block?
                     unless_block?
                   DEDENT ;
 
 given_block   ::= "given" ":" NEWLINE
+                  INDENT
+                    ("-" STRING NEWLINE)+
+                  DEDENT ;
+
+when_block    ::= "when" ":" NEWLINE
                   INDENT
                     ("-" STRING NEWLINE)+
                   DEDENT ;
@@ -1460,6 +1467,7 @@ workspace dashboard "Dashboard":
 
 ```dsl
 story ST-001 "User completes task":
+  status: accepted
   actor: StaffUser
   trigger: status_changed
   scope: [Task]
