@@ -38,7 +38,7 @@ def _make_surface(
 
 
 def _make_workspace(name: str, regions: list[Any] | None = None) -> SimpleNamespace:
-    return SimpleNamespace(name=name, regions=regions or [], access=None)
+    return SimpleNamespace(name=name, regions=regions or [], access=None, nav_groups=[])
 
 
 def _make_region(name: str, source: str | None = None) -> SimpleNamespace:

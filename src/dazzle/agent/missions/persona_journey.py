@@ -920,13 +920,18 @@ def _analyze_cross_entity_gaps(
     gaps: list[PersonaJourneyGap] = []
     stories = _get_persona_stories(persona_id, appspec)
 
-    # Build entity → workspace map using region.source (entity name)
+    # Build entity → workspace map using region.source and nav_group items (#477)
     entity_workspaces: dict[str, set[str]] = {}
     for ws in appspec.workspaces:
         for region in ws.regions:
             source = region.source
             if source:
                 entity_workspaces.setdefault(source, set()).add(ws.name)
+        for ng in getattr(ws, "nav_groups", []) or []:
+            for item in getattr(ng, "items", []) or []:
+                entity = getattr(item, "entity", None)
+                if entity:
+                    entity_workspaces.setdefault(entity, set()).add(ws.name)
 
     # Build FK adjacency set — if entity A has a ref field pointing to entity B,
     # the framework auto-links them in list/detail rendering (clickable FK links).

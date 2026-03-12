@@ -27,8 +27,11 @@ def _make_workspace(
     name: str,
     regions: list[Any] | None = None,
     access: Any | None = None,
+    nav_groups: list[Any] | None = None,
 ) -> SimpleNamespace:
-    return SimpleNamespace(name=name, regions=regions or [], access=access)
+    return SimpleNamespace(
+        name=name, regions=regions or [], access=access, nav_groups=nav_groups or []
+    )
 
 
 def _make_region(
@@ -873,6 +876,30 @@ class TestCrossEntityGaps:
         gaps = _analyze_cross_entity_gaps("admin", persona, appspec, accessible)
         assert len(gaps) >= 1
         assert gaps[0].gap_type == "cross_entity_gap"
+
+    def test_two_entities_same_nav_group(self) -> None:
+        """Entities in the same workspace nav_group should not flag cross_entity_gap (#477)."""
+        from dazzle.agent.missions.persona_journey import _analyze_cross_entity_gaps
+
+        persona = _make_persona("admin")
+        nav_item_task = SimpleNamespace(entity="Task")
+        nav_item_user = SimpleNamespace(entity="User")
+        nav_group = SimpleNamespace(label="Main", items=[nav_item_task, nav_item_user])
+        appspec = _make_appspec(
+            surfaces=[
+                _make_surface("task_list", mode="list", entity_ref="Task"),
+                _make_surface("user_list", mode="list", entity_ref="User"),
+            ],
+            workspaces=[
+                _make_workspace("main", nav_groups=[nav_group]),
+            ],
+            stories=[
+                _make_story("S1", actor="admin", scope=["Task", "User"]),
+            ],
+        )
+        accessible = {"task_list", "user_list"}
+        gaps = _analyze_cross_entity_gaps("admin", persona, appspec, accessible)
+        assert len(gaps) == 0
 
 
 # =============================================================================
