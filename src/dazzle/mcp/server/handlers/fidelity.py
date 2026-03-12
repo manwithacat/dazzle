@@ -91,7 +91,9 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
 
     # Build response
     surface_breakdown = []
-    for ss in report.surface_scores:
+    total_surfaces = len(report.surface_scores)
+    for idx, ss in enumerate(report.surface_scores, 1):
+        progress.advance_sync(idx, total_surfaces, f"Scoring {ss.surface_name}")
         surface_breakdown.append(
             {
                 "surface": ss.surface_name,

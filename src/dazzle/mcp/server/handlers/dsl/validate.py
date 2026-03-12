@@ -30,12 +30,18 @@ def validate_dsl(project_root: Path, args: dict[str, Any] | None = None) -> str:
     modules = parse_modules(dsl_files)
     app_spec = build_appspec(modules, manifest.project_root)
 
+    n_entities = len(app_spec.domain.entities)
+    n_surfaces = len(app_spec.surfaces)
+    progress.log_sync(
+        f"Validated: {len(modules)} modules, {n_entities} entities, {n_surfaces} surfaces"
+    )
+
     result: dict[str, Any] = {
         "status": "valid",
         "project_path": str(project_root),
         "modules": len(modules),
-        "entities": len(app_spec.domain.entities),
-        "surfaces": len(app_spec.surfaces),
+        "entities": n_entities,
+        "surfaces": n_surfaces,
         "apis": len(app_spec.apis),
     }
 
