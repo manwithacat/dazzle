@@ -233,6 +233,7 @@ def run_e2e_tests_handler(
     )
 
     result = runner.run_all(options)
+    progress.log_sync(f"E2E tests done: {result.passed} passed, {result.failed} failed")
 
     # Format response
     if result.error:
