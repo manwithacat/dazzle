@@ -741,6 +741,7 @@ def _compile_view_surface(
             entity_name=entity_name,
             title=surface.title or f"{entity_name} Details",
             fields=fields,
+            api_endpoint=f"{api_endpoint}/{{id}}",
             edit_url=f"{app_prefix}/{entity_slug}/{{id}}/edit",
             delete_url=f"{api_endpoint}/{{id}}",
             back_url=f"{app_prefix}/{entity_slug}",

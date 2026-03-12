@@ -169,6 +169,7 @@ class DetailContext(BaseModel):
     title: str
     fields: list[FieldContext]
     item: dict[str, Any] = Field(default_factory=dict)
+    api_endpoint: str | None = None
     edit_url: str | None = None
     delete_url: str | None = None
     back_url: str = "/"

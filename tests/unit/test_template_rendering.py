@@ -235,6 +235,14 @@ class TestCompileSurfaceToContext:
         assert ctx.detail.edit_url is not None
         assert "{id}" in ctx.detail.edit_url
 
+    def test_detail_context_has_api_endpoint(self) -> None:
+        """DetailContext must have api_endpoint with {id} for data fetching (#478)."""
+        ctx = compile_surface_to_context(_view_surface(), _task_entity())
+
+        assert ctx.detail is not None
+        assert ctx.detail.api_endpoint is not None
+        assert "{id}" in ctx.detail.api_endpoint
+
     def test_create_form_field_types(self) -> None:
         """Form fields should map IR types to HTML input types."""
         surface = SurfaceSpec(

@@ -262,10 +262,10 @@ def create_page_routes(
             if path_id and ctx.detail:
                 req_detail = ctx.detail.model_copy(deep=True)
 
-                # Fetch item data using the *original* URL template
+                # Fetch item data using the API endpoint template
                 req_detail.item = await _fetch_json(
                     effective_backend_url,
-                    ctx.detail.delete_url or ctx.detail.back_url,
+                    ctx.detail.api_endpoint or ctx.detail.delete_url,
                     path_id,
                     _cookies,
                 )
