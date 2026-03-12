@@ -7,10 +7,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from dazzle.core.appspec_loader import load_project_appspec
 from dazzle.core.paths import project_discovery_dir, project_kg_db
 
-from ..common import wrap_handler_errors
+from ..common import load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
@@ -24,14 +23,14 @@ def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
     runs them, and returns a structured pass/fail report — the automated UAT.
     """
     from dazzle.core.ir.stories import StoryStatus
-    from dazzle.core.stories_persistence import get_stories_by_status
 
     from ..dsl_test import verify_story_handler
 
     base_url = args.get("base_url")
 
-    # Load accepted stories
-    stories = get_stories_by_status(project_path, StoryStatus.ACCEPTED)
+    # Load accepted stories from appspec
+    app_spec = load_project_appspec(project_path)
+    stories = [s for s in app_spec.stories if s.status == StoryStatus.ACCEPTED]
     if not stories:
         return json.dumps(
             {

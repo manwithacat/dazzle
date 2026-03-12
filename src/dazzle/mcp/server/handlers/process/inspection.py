@@ -46,12 +46,6 @@ def inspect_process_handler(project_root: Path, args: dict[str, Any]) -> str:
 
     stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
 
-    # Fall back to persisted stories from .dazzle/stories/stories.json
-    if not stories:
-        from dazzle.core.stories_persistence import load_stories
-
-        stories = load_stories(project_root)
-
     proc = next((p for p in processes if p.name == process_name), None)
     if not proc:
         available = [p.name for p in processes]

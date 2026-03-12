@@ -1328,11 +1328,7 @@ def extract_guards(appspec: ir.AppSpec) -> list[dict[str, Any]]:
     Scans story constraints for guard-implying language and cross-references
     entity state machines to propose guards for transitions.
     """
-    from dazzle.core.stories_persistence import load_stories
-
     stories = list(appspec.stories) if appspec.stories else []
-    if not stories and appspec.metadata.get("project_root"):
-        stories = load_stories(Path(appspec.metadata["project_root"]))
 
     if not stories:
         return []

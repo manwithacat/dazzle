@@ -1096,7 +1096,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
     from datetime import datetime
 
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.stories_persistence import get_next_story_id
+    from dazzle.core.story_emitter import get_next_story_id_from_appspec
 
     try:
         app_spec = load_project_appspec(project_root)
@@ -1108,7 +1108,7 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
         story_count = 0
 
         # Get starting story ID
-        base_id = get_next_story_id(project_root)
+        base_id = get_next_story_id_from_appspec(list(app_spec.stories) if app_spec.stories else [])
         base_num = int(base_id[3:])
 
         def next_id() -> str:
@@ -1229,10 +1229,9 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
 def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Save stories to .dazzle/stories/stories.json."""
     from dazzle.core.ir.stories import StorySpec, StoryStatus, StoryTrigger
-    from dazzle.core.stories_persistence import add_stories, get_stories_file
+    from dazzle.core.story_emitter import append_stories_to_dsl
 
     stories_data = args.get("stories", [])
-    overwrite = args.get("overwrite", False)
 
     if not stories_data:
         return json.dumps({"error": "No stories provided"})
@@ -1258,17 +1257,14 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
             )
             stories.append(story)
 
-        # Save stories
-        all_stories = add_stories(project_root, stories, overwrite=overwrite)
-        stories_file = get_stories_file(project_root)
+        # Save stories to DSL
+        dsl_file = append_stories_to_dsl(project_root, stories)
 
         return json.dumps(
             {
                 "status": "saved",
-                "file": str(stories_file),
+                "file": str(dsl_file),
                 "saved_count": len(stories),
-                "total_count": len(all_stories),
-                "overwrite": overwrite,
             },
             indent=2,
         )
@@ -1279,24 +1275,23 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
 def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Retrieve stories filtered by status."""
     from dazzle.core.ir.stories import StoryStatus
-    from dazzle.core.stories_persistence import get_stories_by_status, get_stories_file
 
     status_filter = args.get("status_filter", "all")
 
     try:
-        status = None
-        if status_filter != "all":
-            status = StoryStatus(status_filter)
+        app_spec = load_project_appspec(project_root)
+        all_stories = list(app_spec.stories) if app_spec.stories else []
 
-        stories = get_stories_by_status(project_root, status)
-        stories_file = get_stories_file(project_root)
+        if status_filter != "all":
+            target_status = StoryStatus(status_filter)
+            all_stories = [s for s in all_stories if s.status == target_status]
 
         stories_data = [
             {
                 "story_id": s.story_id,
                 "title": s.title,
                 "actor": s.actor,
-                "trigger": s.trigger.value,
+                "trigger": s.trigger.value if s.trigger else None,
                 "scope": s.scope,
                 "preconditions": s.preconditions,
                 "happy_path_outcome": s.happy_path_outcome,
@@ -1307,12 +1302,11 @@ def get_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
                 "created_at": s.created_at,
                 "accepted_at": s.accepted_at,
             }
-            for s in stories
+            for s in all_stories
         ]
 
         return json.dumps(
             {
-                "file": str(stories_file),
                 "filter": status_filter,
                 "count": len(stories_data),
                 "stories": stories_data,

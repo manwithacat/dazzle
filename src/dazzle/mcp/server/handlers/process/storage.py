@@ -85,10 +85,6 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     # Validate story references exist
     app_spec = _helpers.load_app_spec(project_root)
     stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
-    if not stories:
-        from dazzle.core.stories_persistence import load_stories
-
-        stories = load_stories(project_root)
 
     story_ids = {s.story_id for s in stories}
     warnings: list[str] = []

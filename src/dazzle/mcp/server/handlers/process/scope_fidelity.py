@@ -174,21 +174,15 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress.log_sync("Loading app spec for scope fidelity analysis...")
     app_spec = _helpers.load_app_spec(project_root)
 
-    # Load stories
+    # Load stories from appspec
     stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
     if not stories:
-        from dazzle.core.stories_persistence import load_story_index
-
-        story_index = load_story_index(project_root)
-        if not story_index:
-            return json.dumps(
-                {
-                    "error": "No stories found in project",
-                    "hint": "Use story(operation='propose') to generate stories first.",
-                }
-            )
-        # Convert index dicts to lightweight objects for uniform handling
-        return _analyze_from_index(story_index, app_spec, project_root, args, progress)
+        return json.dumps(
+            {
+                "error": "No stories found in project",
+                "hint": "Define stories in DSL, or use story(operation='propose') to generate them.",
+            }
+        )
 
     # Load processes (DSL + persisted)
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
@@ -307,150 +301,6 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
     # Compute overall metrics
-    scope_coverage_percent = (
-        round(total_covered_entities / total_scope_entities * 100, 1)
-        if total_scope_entities > 0
-        else 100.0
-    )
-    stories_with_scope = full_count + partial_count + no_process_count
-    stories_fully_covered_percent = (
-        round(full_count / stories_with_scope * 100, 1) if stories_with_scope > 0 else 100.0
-    )
-
-    return _build_response(
-        results=results,
-        full_count=full_count,
-        partial_count=partial_count,
-        no_scope_count=no_scope_count,
-        no_process_count=no_process_count,
-        rejected_count=rejected_count,
-        total_scope_entities=total_scope_entities,
-        total_covered_entities=total_covered_entities,
-        scope_coverage_percent=scope_coverage_percent,
-        stories_fully_covered_percent=stories_fully_covered_percent,
-        args=args,
-    )
-
-
-def _analyze_from_index(
-    story_index: list[dict[str, Any]],
-    app_spec: Any,
-    project_root: Path,
-    args: dict[str, Any],
-    progress: Any,
-) -> str:
-    """Scope fidelity analysis from lightweight story index dicts."""
-
-    processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
-    from dazzle.core.process_persistence import load_processes as load_persisted_processes
-
-    persisted = load_persisted_processes(project_root)
-    dsl_names = {p.name for p in processes}
-    for p in persisted:
-        if p.name not in dsl_names:
-            processes.append(p)
-
-    implements_map: dict[str, list[str]] = {}
-    for proc in processes:
-        for story_id in proc.implements:
-            implements_map.setdefault(story_id, []).append(proc.name)
-
-    results: list[StoryScopeFidelity] = []
-    full_count = 0
-    partial_count = 0
-    no_scope_count = 0
-    no_process_count = 0
-    total_scope_entities = 0
-    total_covered_entities = 0
-    rejected_count = 0
-
-    active_stories = []
-    for item in story_index:
-        if item.get("status") == "rejected":
-            rejected_count += 1
-        else:
-            active_stories.append(item)
-
-    progress.log_sync(f"Analyzing scope fidelity for {len(active_stories)} stories (from index)...")
-
-    for item in active_stories:
-        sid = item["story_id"]
-        title = item["title"]
-        scope = item.get("scope", [])
-        implementing = implements_map.get(sid, [])
-
-        if not scope:
-            no_scope_count += 1
-            results.append(
-                StoryScopeFidelity(
-                    story_id=sid,
-                    title=title,
-                    scope=[],
-                    status="no_scope",
-                    covered_entities=[],
-                    missing_entities=[],
-                    implementing_processes=implementing,
-                    gaps=[],
-                )
-            )
-            continue
-
-        total_scope_entities += len(scope)
-
-        if not implementing:
-            no_process_count += 1
-            results.append(
-                StoryScopeFidelity(
-                    story_id=sid,
-                    title=title,
-                    scope=scope,
-                    status="no_process",
-                    covered_entities=[],
-                    missing_entities=list(scope),
-                    implementing_processes=[],
-                    gaps=[ScopeGap(entity=e, hint="No implementing process found") for e in scope],
-                )
-            )
-            continue
-
-        all_tokens: set[str] = set()
-        for proc_name in implementing:
-            matched_proc = next((p for p in processes if p.name == proc_name), None)
-            if matched_proc:
-                all_tokens.update(_collect_process_entity_tokens(matched_proc))
-
-        covered = [e for e in scope if _entity_matches_tokens(e, all_tokens)]
-        missing = [e for e in scope if not _entity_matches_tokens(e, all_tokens)]
-        total_covered_entities += len(covered)
-
-        gaps = [
-            ScopeGap(
-                entity=e,
-                hint=f"Add a .list, .read, or context-loading step for {e}",
-            )
-            for e in missing
-        ]
-
-        if missing:
-            partial_count += 1
-            fidelity_status: Literal["full", "partial", "no_scope", "no_process"] = "partial"
-        else:
-            full_count += 1
-            fidelity_status = "full"
-
-        results.append(
-            StoryScopeFidelity(
-                story_id=sid,
-                title=title,
-                scope=scope,
-                status=fidelity_status,
-                covered_entities=covered,
-                missing_entities=missing,
-                implementing_processes=implementing,
-                gaps=gaps,
-            )
-        )
-
     scope_coverage_percent = (
         round(total_covered_entities / total_scope_entities * 100, 1)
         if total_scope_entities > 0

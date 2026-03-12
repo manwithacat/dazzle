@@ -86,13 +86,7 @@ def export_frontend_spec_handler(project_root: Path, args: dict[str, Any]) -> st
 
     # Load stories (optional)
     progress.log_sync("Loading stories...")
-    stories = []
-    try:
-        from dazzle.core.stories_persistence import load_stories
-
-        stories = load_stories(project_root)
-    except Exception:
-        logger.debug("Optional stories not available", exc_info=True)
+    stories = list(app_spec.stories) if app_spec.stories else []
 
     # Load test designs (optional)
     progress.log_sync("Loading test designs...")

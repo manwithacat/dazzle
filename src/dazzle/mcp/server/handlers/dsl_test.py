@@ -23,9 +23,10 @@ def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
     a per-story pass/fail verdict with test details.
     """
     try:
-        from dazzle.core.stories_persistence import load_stories
         from dazzle.testing.dsl_test_generator import generate_tests_from_dsl
         from dazzle.testing.unified_runner import UnifiedTestRunner
+
+        from .common import load_project_appspec
 
         story_id = args.get("story_id")
         story_ids_list: list[str] = args.get("story_ids") or []
@@ -43,8 +44,9 @@ def verify_story_handler(project_root: Path, args: dict[str, Any]) -> str:
             if preflight_err:
                 return preflight_err
 
-        # Load all stories
-        all_stories = load_stories(project_root)
+        # Load all stories from appspec
+        app_spec = load_project_appspec(project_root)
+        all_stories = list(app_spec.stories) if app_spec.stories else []
         story_map = {s.story_id: s for s in all_stories}
 
         # Resolve requested stories

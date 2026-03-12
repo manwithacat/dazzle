@@ -118,25 +118,18 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     progress.log_sync("Loading app spec for coverage analysis...")
     app_spec = _helpers.load_app_spec(project_root)
 
-    # Use lightweight index when stories aren't in the AppSpec
+    # Load stories from appspec
     stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
-    used_index = False
 
     if not stories:
-        from dazzle.core.stories_persistence import load_story_index
-
-        story_index = load_story_index(project_root)
-        used_index = bool(story_index)
-
-        if not used_index:
-            return json.dumps(
-                {
-                    "error": "No stories found in project",
-                    "hint": (
-                        "Use propose_stories_from_dsl to generate stories, or define them in DSL."
-                    ),
-                }
-            )
+        return json.dumps(
+            {
+                "error": "No stories found in project",
+                "hint": (
+                    "Define stories in DSL, or use story(operation='propose') to generate them."
+                ),
+            }
+        )
 
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
@@ -160,33 +153,21 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
     partial_count = 0
     uncovered_count = 0
 
-    # Iterate using lightweight index or full stories
-    story_index_list: list[dict[str, Any]] = (
-        story_index if used_index else []  # noqa: F821
-    )
-    items: list[Any] = stories if stories else story_index_list
-
     # Exclude rejected stories from coverage calculations
     rejected_count = 0
-    filtered_items: list[Any] = []
-    for item in items:
-        item_status = item["status"] if used_index else getattr(item, "status", "draft")
-        if item_status == "rejected":
+    active_stories: list[StorySpec] = []
+    for s in stories:
+        if getattr(s, "status", "draft") == "rejected":
             rejected_count += 1
         else:
-            filtered_items.append(item)
-    items = filtered_items
+            active_stories.append(s)
 
     progress.log_sync(
-        f"Analyzing coverage for {len(items)} stories against {len(processes)} processes..."
+        f"Analyzing coverage for {len(active_stories)} stories against {len(processes)} processes..."
     )
-    for item in items:
-        if used_index:
-            sid = item["story_id"]
-            title = item["title"]
-        else:
-            sid = item.story_id
-            title = item.title
+    for story in active_stories:
+        sid = story.story_id
+        title = story.title
 
         implementing = implements_map.get(sid, [])
 
@@ -195,10 +176,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
             uncovered_count += 1
             missing = ["No implementing process"]
         else:
-            if used_index:
-                missing = _find_missing_aspects_from_index(item, processes, implementing)
-            else:
-                missing = _find_missing_aspects(item, processes, implementing)
+            missing = _find_missing_aspects(story, processes, implementing)
             if missing:
                 status = "partial"
                 partial_count += 1
@@ -216,7 +194,7 @@ def stories_coverage_handler(project_root: Path, args: dict[str, Any]) -> str:
             )
         )
 
-    total = len(items)
+    total = len(active_stories)
     coverage_percent = (covered_count / total * 100) if total > 0 else 0.0
     progress.log_sync(
         f"Coverage: {covered_count} covered, {partial_count} partial, {uncovered_count} uncovered"
@@ -425,37 +403,5 @@ def _find_missing_aspects(
             exception.condition, match_pool, satisfies_outcomes, impl_procs
         ):
             missing.append(f"Exception: {exception.condition}")
-
-    return missing
-
-
-def _find_missing_aspects_from_index(
-    story_dict: dict[str, Any],
-    processes: list[ProcessSpec],
-    implementing: list[str],
-) -> list[str]:
-    """Like _find_missing_aspects but works with lightweight story dicts."""
-    missing: list[str] = []
-    match_pool, satisfies_outcomes, impl_procs = _collect_process_match_pool(
-        processes, implementing
-    )
-
-    # Extract then outcomes from raw dict
-    then_outcomes: list[str] = []
-    raw_then = story_dict.get("then", [])
-    if raw_then:
-        then_outcomes = [c["expression"] if isinstance(c, dict) else str(c) for c in raw_then]
-    elif story_dict.get("happy_path_outcome"):
-        then_outcomes = story_dict["happy_path_outcome"]
-
-    for outcome in then_outcomes:
-        if not _outcome_matches_pool(outcome, match_pool, satisfies_outcomes, impl_procs):
-            missing.append(outcome)
-
-    # Check unless exceptions from raw dict
-    for exception in story_dict.get("unless", []):
-        condition = exception["condition"] if isinstance(exception, dict) else str(exception)
-        if not _outcome_matches_pool(condition, match_pool, satisfies_outcomes, impl_procs):
-            missing.append(f"Exception: {condition}")
 
     return missing

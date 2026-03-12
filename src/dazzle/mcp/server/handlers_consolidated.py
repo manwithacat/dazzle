@@ -1015,7 +1015,7 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
     """
     from datetime import UTC, datetime
 
-    from dazzle.core.stories_persistence import add_stories, get_next_story_id, load_stories
+    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
     from dazzle.testing.test_design_persistence import add_test_designs
 
     max_stories = arguments.get("max_stories", 30)
@@ -1027,11 +1027,11 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
         return error_response(f"Failed to load DSL: {e}")
 
     # Load existing stories and build a title set for dedup
-    existing_stories = load_stories(project_path)
+    existing_stories = list(appspec.stories) if appspec.stories else []
     existing_titles = {s.title for s in existing_stories}
 
     # Get starting story ID
-    base_id = get_next_story_id(project_path)
+    base_id = get_next_story_id_from_appspec(existing_stories)
     base_num = int(base_id[3:])
     story_count = 0
 
@@ -1050,13 +1050,14 @@ def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
         appspec, max_stories, existing_titles, default_actor, now, next_story_id
     )
 
-    # Save stories
-    all_stories = add_stories(project_path, stories, overwrite=False)
+    # Save stories to DSL
+    if stories:
+        append_stories_to_dsl(project_path, stories)
 
     result: dict[str, Any] = {
         "stories_proposed": len(stories),
         "stories_skipped_as_duplicates": skipped,
-        "stories_total": len(all_stories),
+        "stories_total": len(existing_stories) + len(stories),
         "status": "success",
     }
 
