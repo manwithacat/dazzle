@@ -10,7 +10,7 @@ from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
 
-from ..common import wrap_handler_errors
+from ..common import extract_progress, wrap_handler_errors
 from ._helpers import deserialize_observations, load_report_data
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
@@ -32,9 +32,12 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     from dazzle.agent.compiler import NarrativeCompiler
     from dazzle.agent.emitter import DslEmitter, build_emit_context
 
+    progress = extract_progress(args)
     persona = args.get("persona", "user")
     proposal_ids = args.get("proposal_ids")
     t0 = time.monotonic()
+
+    progress.log_sync("Emitting DSL from proposals...")
 
     loaded = load_report_data(project_path, args.get("session_id"))
     if isinstance(loaded, str):
@@ -67,8 +70,11 @@ def emit_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     context = build_emit_context(appspec)
 
     # Emit DSL for each proposal
+    progress.log_sync(f"Generating DSL for {len(proposals)} proposals...")
     emitter = DslEmitter()
     results = emitter.emit_batch(proposals, context)
+    valid_count = sum(1 for r in results if r.valid)
+    progress.log_sync(f"Emitted {len(results)} blocks ({valid_count} valid)")
 
     # Build response
     wall_ms = (time.monotonic() - t0) * 1000

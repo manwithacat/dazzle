@@ -10,7 +10,7 @@ from typing import Any
 
 from dazzle.core.appspec_loader import load_project_appspec
 
-from ..common import wrap_async_handler_errors, wrap_handler_errors
+from ..common import extract_progress, wrap_async_handler_errors, wrap_handler_errors
 from ._helpers import (
     _get_persona_session_info,
     _populate_kg_for_discovery,
@@ -213,6 +213,8 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
     """
     from dazzle.agent.missions.persona_journey import run_headless_discovery
 
+    progress = extract_progress(args)
+    progress.log_sync("Running headless persona journey analysis...")
     persona_ids = args.get("persona_ids")
     if isinstance(persona_ids, str):
         persona_ids = [persona_ids]
@@ -230,6 +232,11 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
         appspec=appspec,
         persona_ids=persona_ids,
         kg_store=kg_store,
+    )
+
+    progress.log_sync(
+        f"Analysis complete: {len(report.persona_reports)} personas, "
+        f"{sum(len(pr.gaps) for pr in report.persona_reports)} gaps"
     )
 
     # Convert to observations for pipeline compatibility

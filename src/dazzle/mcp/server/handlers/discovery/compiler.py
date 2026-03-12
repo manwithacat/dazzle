@@ -10,7 +10,7 @@ from typing import Any
 
 from dazzle.core.paths import project_discovery_dir, project_kg_db
 
-from ..common import error_response, wrap_handler_errors
+from ..common import error_response, extract_progress, wrap_handler_errors
 from ._helpers import deserialize_observations, load_report_data
 
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
@@ -83,9 +83,11 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
     from dazzle.agent.compiler import NarrativeCompiler
 
+    progress = extract_progress(args)
     persona = args.get("persona", "user")
     t0 = time.monotonic()
 
+    progress.log_sync("Compiling discovery observations...")
     loaded = load_report_data(project_path, args.get("session_id"))
     if isinstance(loaded, str):
         return loaded
@@ -115,8 +117,10 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
             logger.debug("Knowledge graph not available for compile", exc_info=True)
 
     # Compile
+    progress.log_sync(f"Compiling {len(observations)} observations...")
     compiler = NarrativeCompiler(persona=persona, kg_store=kg_store)
     proposals = compiler.compile(observations)
+    progress.log_sync(f"Compiled into {len(proposals)} proposals")
 
     result: dict[str, Any] = compiler.to_json(proposals)
     result["session_id"] = session_id
