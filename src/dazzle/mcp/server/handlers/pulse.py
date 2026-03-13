@@ -31,8 +31,11 @@ logger = logging.getLogger("dazzle.mcp.handlers.pulse")
 # ---------------------------------------------------------------------------
 
 
-@wrap_handler_errors
-def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+def pulse_run_impl(
+    project_path: Path,
+    *,
+    business_context: str | None = None,
+) -> dict[str, Any]:
     """Generate a founder-ready project health report.
 
     Chains five data sources:
@@ -42,41 +45,27 @@ def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
       4. policy(coverage) — security posture
       5. semantics(compliance) — regulatory alignment
 
-    Returns JSON with both structured metrics and a markdown narrative.
+    Returns a dict with both structured metrics and a markdown narrative.
     """
-    progress = extract_progress(args)
-    business_context = args.get("business_context")
-
     t0 = time.monotonic()
 
-    # Collect raw data from each source (failures are captured, not raised)
-    progress.advance_sync(1, 6, "Running quality pipeline")
     pipeline_data = _collect_pipeline(project_path)
-    progress.advance_sync(2, 6, "Checking story coverage")
     stories_data = _collect_stories(project_path)
-    progress.advance_sync(3, 6, "Site coherence check")
     coherence_data = _collect_coherence(project_path, business_context)
-    progress.advance_sync(4, 6, "Policy coverage")
     policy_data = _collect_policy(project_path)
-    progress.advance_sync(5, 6, "Compliance analysis")
     compliance_data = _collect_compliance(project_path)
-    progress.advance_sync(6, 6, "Building health report")
 
-    # Derive project name from validate step
     project_name = _extract_project_name(pipeline_data, project_path)
 
-    # Synthesise high-level metrics
     radar = _compute_radar(
         pipeline_data, stories_data, coherence_data, policy_data, compliance_data
     )
     health_score = _composite_health(radar)
 
-    # Identify what needs the founder's attention
     needs_input = _founder_decisions(stories_data, coherence_data, policy_data)
     recent_wins = _recent_wins(pipeline_data, stories_data, policy_data)
     blockers = _framework_blockers(pipeline_data, coherence_data)
 
-    # Render the founder-facing markdown
     markdown = _render_markdown(
         project_name=project_name,
         health_score=health_score,
@@ -90,31 +79,46 @@ def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     duration_ms = (time.monotonic() - t0) * 1000
 
-    return json.dumps(
-        {
-            "status": "complete",
-            "project_name": project_name,
-            "health_score": round(health_score, 1),
-            "radar": radar,
-            "needs_input": needs_input,
-            "recent_wins": recent_wins,
-            "blockers": blockers,
-            "markdown": markdown,
-            "duration_ms": round(duration_ms, 1),
-        },
-        indent=2,
-    )
+    return {
+        "status": "complete",
+        "project_name": project_name,
+        "health_score": round(health_score, 1),
+        "radar": radar,
+        "needs_input": needs_input,
+        "recent_wins": recent_wins,
+        "blockers": blockers,
+        "markdown": markdown,
+        "duration_ms": round(duration_ms, 1),
+    }
 
 
 @wrap_handler_errors
-def radar_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+def run_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Generate a founder-ready project health report."""
+    progress = extract_progress(args)
+    progress.advance_sync(1, 6, "Running quality pipeline")
+    progress.advance_sync(2, 6, "Checking story coverage")
+    progress.advance_sync(3, 6, "Site coherence check")
+    progress.advance_sync(4, 6, "Policy coverage")
+    progress.advance_sync(5, 6, "Compliance analysis")
+    progress.advance_sync(6, 6, "Building health report")
+    result = pulse_run_impl(
+        project_path,
+        business_context=args.get("business_context"),
+    )
+    return json.dumps(result, indent=2)
+
+
+def pulse_radar_impl(
+    project_path: Path,
+    *,
+    business_context: str | None = None,
+) -> dict[str, Any]:
     """Return just the 6-axis readiness radar with plain-language axis labels.
 
     Lighter than ``run`` — skips narrative generation, returns radar scores
     and a compact ASCII chart suitable for quick status checks.
     """
-    business_context = args.get("business_context")
-
     t0 = time.monotonic()
 
     pipeline_data = _collect_pipeline(project_path)
@@ -129,7 +133,6 @@ def radar_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     health_score = _composite_health(radar)
     project_name = _extract_project_name(pipeline_data, project_path)
 
-    # Render a compact radar chart
     chart_lines = [f"{project_name} — {health_score:.0f}% Launch Ready", ""]
     for axis in _RADAR_AXES:
         score = radar.get(axis, 0)
@@ -139,37 +142,41 @@ def radar_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     duration_ms = (time.monotonic() - t0) * 1000
 
-    return json.dumps(
-        {
-            "status": "complete",
-            "project_name": project_name,
-            "health_score": round(health_score, 1),
-            "radar": radar,
-            "chart": "\n".join(chart_lines),
-            "duration_ms": round(duration_ms, 1),
-        },
-        indent=2,
-    )
+    return {
+        "status": "complete",
+        "project_name": project_name,
+        "health_score": round(health_score, 1),
+        "radar": radar,
+        "chart": "\n".join(chart_lines),
+        "duration_ms": round(duration_ms, 1),
+    }
 
 
 @wrap_handler_errors
-def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+def radar_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Return just the 6-axis readiness radar with plain-language axis labels."""
+    result = pulse_radar_impl(
+        project_path,
+        business_context=args.get("business_context"),
+    )
+    return json.dumps(result, indent=2)
+
+
+def pulse_persona_impl(
+    project_path: Path,
+    *,
+    persona_name: str,
+) -> dict[str, Any]:
     """Show the app through a specific persona's eyes.
 
     Lists what this persona can do (covered stories), what's partially
     working, and what's not started — all in plain language.
     """
-    persona_name = args.get("persona")
-    if not persona_name:
-        return error_response("persona parameter is required")
-
     t0 = time.monotonic()
 
-    # Story list has actor field; coverage has per-story status
     story_list_data = _collect_story_list(project_path)
     coverage_data = _collect_stories(project_path)
 
-    # Get all stories for this persona (exact match first, then partial)
     all_stories: list[dict[str, Any]] = story_list_data.get("stories", [])
     persona_stories = [s for s in all_stories if s.get("actor", "").lower() == persona_name.lower()]
 
@@ -178,7 +185,6 @@ def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
             s for s in all_stories if persona_name.lower() in s.get("actor", "").lower()
         ]
 
-    # Build coverage map from coverage handler (story_id -> covered/partial/uncovered)
     coverage_map: dict[str, str] = {}
     for item in coverage_data.get("stories", []):
         coverage_map[item.get("story_id", "")] = item.get("status", "unknown")
@@ -201,7 +207,6 @@ def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     working_count = len(working)
     experience_score = round((working_count / total * 100) if total > 0 else 0, 1)
 
-    # Render persona-view markdown
     md_lines = [f"Viewing as: {persona_name}", ""]
     if working:
         for title in working:
@@ -217,24 +222,34 @@ def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     duration_ms = (time.monotonic() - t0) * 1000
 
-    return json.dumps(
-        {
-            "status": "complete",
-            "persona": persona_name,
-            "experience_score": experience_score,
-            "total_stories": total,
-            "working": working,
-            "partial": partial,
-            "not_started": not_started,
-            "markdown": "\n".join(md_lines),
-            "duration_ms": round(duration_ms, 1),
-        },
-        indent=2,
-    )
+    return {
+        "status": "complete",
+        "persona": persona_name,
+        "experience_score": experience_score,
+        "total_stories": total,
+        "working": working,
+        "partial": partial,
+        "not_started": not_started,
+        "markdown": "\n".join(md_lines),
+        "duration_ms": round(duration_ms, 1),
+    }
 
 
 @wrap_handler_errors
-def timeline_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+def persona_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Show the app through a specific persona's eyes."""
+    persona_name = args.get("persona")
+    if not persona_name:
+        return error_response("persona parameter is required")
+    result = pulse_persona_impl(project_path, persona_name=persona_name)
+    return json.dumps(result, indent=2)
+
+
+def pulse_timeline_impl(
+    project_path: Path,
+    *,
+    business_context: str | None = None,
+) -> dict[str, Any]:
     """Auto-detected milestone timeline.
 
     Derives milestones from current project state: what has been achieved
@@ -247,13 +262,12 @@ def timeline_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     stories_data = _collect_stories(project_path)
     story_list_data = _collect_story_list(project_path)
     policy_data = _collect_policy(project_path)
-    coherence_data = _collect_coherence(project_path, args.get("business_context"))
+    coherence_data = _collect_coherence(project_path, business_context)
 
     milestones = _derive_milestones(
         pipeline_data, stories_data, story_list_data, policy_data, coherence_data
     )
 
-    # Render timeline markdown
     md_lines = [f"{_extract_project_name(pipeline_data, project_path)} — Milestone Timeline", ""]
     done_count = sum(1 for m in milestones if m["done"])
     total_count = len(milestones)
@@ -269,21 +283,31 @@ def timeline_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     duration_ms = (time.monotonic() - t0) * 1000
 
-    return json.dumps(
-        {
-            "status": "complete",
-            "milestones": milestones,
-            "done": done_count,
-            "total": total_count,
-            "markdown": "\n".join(md_lines),
-            "duration_ms": round(duration_ms, 1),
-        },
-        indent=2,
-    )
+    return {
+        "status": "complete",
+        "milestones": milestones,
+        "done": done_count,
+        "total": total_count,
+        "markdown": "\n".join(md_lines),
+        "duration_ms": round(duration_ms, 1),
+    }
 
 
 @wrap_handler_errors
-def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+def timeline_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Auto-detected milestone timeline."""
+    result = pulse_timeline_impl(
+        project_path,
+        business_context=args.get("business_context"),
+    )
+    return json.dumps(result, indent=2)
+
+
+def pulse_decisions_impl(
+    project_path: Path,
+    *,
+    business_context: str | None = None,
+) -> dict[str, Any]:
     """Founder decision queue with actionable choices.
 
     Returns decisions that require founder judgment — business context,
@@ -292,13 +316,12 @@ def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
     t0 = time.monotonic()
 
     stories_data = _collect_stories(project_path)
-    coherence_data = _collect_coherence(project_path, args.get("business_context"))
+    coherence_data = _collect_coherence(project_path, business_context)
     policy_data = _collect_policy(project_path)
     pipeline_data = _collect_pipeline(project_path)
 
     decisions = _decision_queue(stories_data, coherence_data, policy_data, pipeline_data)
 
-    # Render decision queue markdown
     md_lines: list[str] = []
     if decisions:
         md_lines.append(f"Decisions waiting ({len(decisions)}):")
@@ -313,20 +336,30 @@ def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
     duration_ms = (time.monotonic() - t0) * 1000
 
-    return json.dumps(
-        {
-            "status": "complete",
-            "decisions": decisions,
-            "count": len(decisions),
-            "markdown": "\n".join(md_lines),
-            "duration_ms": round(duration_ms, 1),
-        },
-        indent=2,
-    )
+    return {
+        "status": "complete",
+        "decisions": decisions,
+        "count": len(decisions),
+        "markdown": "\n".join(md_lines),
+        "duration_ms": round(duration_ms, 1),
+    }
 
 
 @wrap_handler_errors
-def wfs_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+def decisions_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Founder decision queue with actionable choices."""
+    result = pulse_decisions_impl(
+        project_path,
+        business_context=args.get("business_context"),
+    )
+    return json.dumps(result, indent=2)
+
+
+def pulse_wfs_impl(
+    project_path: Path,
+    *,
+    persona_filter: str | None = None,
+) -> dict[str, Any]:
     """Workflow Friction Score — per-persona dashboard-to-workflow friction.
 
     Quantifies how many clicks/navigations a persona needs to go from their
@@ -343,39 +376,37 @@ def wfs_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
         A (Ambiguity)    — 0=filtered region, 1=unfiltered list
 
     Rating: 0-2 excellent, 3-4 acceptable, 5+ needs work
-
-    Optional args:
-        persona  — score a single persona (default: all personas)
     """
-    t0 = time.monotonic()
-
     from .common import load_project_appspec
+
+    t0 = time.monotonic()
 
     appspec = load_project_appspec(project_path)
     if appspec is None:
-        return json.dumps(
-            {"status": "error", "error": "Could not load AppSpec from project"},
-        )
+        return {"status": "error", "error": "Could not load AppSpec from project"}
 
-    persona_filter = args.get("persona")
     results = compute_wfs(appspec, persona_filter=persona_filter)
-
-    # Render markdown
     md_lines = _render_wfs_markdown(results)
-
     duration_ms = (time.monotonic() - t0) * 1000
 
-    return json.dumps(
-        {
-            "status": "complete",
-            "personas": results["personas"],
-            "overall_avg": results["overall_avg"],
-            "rating": results["rating"],
-            "markdown": "\n".join(md_lines),
-            "duration_ms": round(duration_ms, 1),
-        },
-        indent=2,
+    return {
+        "status": "complete",
+        "personas": results["personas"],
+        "overall_avg": results["overall_avg"],
+        "rating": results["rating"],
+        "markdown": "\n".join(md_lines),
+        "duration_ms": round(duration_ms, 1),
+    }
+
+
+@wrap_handler_errors
+def wfs_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Workflow Friction Score — per-persona dashboard-to-workflow friction."""
+    result = pulse_wfs_impl(
+        project_path,
+        persona_filter=args.get("persona"),
     )
+    return json.dumps(result, indent=2)
 
 
 # ---------------------------------------------------------------------------
