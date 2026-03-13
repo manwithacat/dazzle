@@ -42,12 +42,27 @@ def evaluate_condition(
         elif condition["operator"] == "or":
             return left_result or right_result
 
+    # Handle role check
+    if "role_check" in condition and condition["role_check"] is not None:
+        return _evaluate_role_check(condition["role_check"], context)
+
     # Handle simple comparison
     if "comparison" in condition and condition["comparison"]:
         return _evaluate_comparison(condition["comparison"], record, context)
 
     # Empty condition = always true
     return True
+
+
+def _evaluate_role_check(
+    role_check: dict[str, Any],
+    context: dict[str, Any],
+) -> bool:
+    role_name = role_check.get("role_name")
+    if not role_name:
+        return False
+    user_roles = context.get("user_roles", [])
+    return role_name in user_roles
 
 
 def _evaluate_comparison(
@@ -259,6 +274,14 @@ def condition_to_sql_filter(
         Dictionary of field filters for repository
     """
     filters: dict[str, Any] = {}
+
+    # Handle role check — evaluate immediately since roles are in context
+    if "role_check" in condition and condition["role_check"]:
+        role_name = condition["role_check"].get("role_name")
+        user_roles = context.get("user_roles", [])
+        if role_name and role_name in user_roles:
+            return {}  # Role satisfied, no additional SQL filter needed
+        return {"_role_denied": True}  # Sentinel that repository interprets as deny-all
 
     # For simple AND conditions, we can build filters
     if "comparison" in condition and condition["comparison"]:
