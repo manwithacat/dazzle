@@ -154,26 +154,81 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 - Check deps: `dazzle lsp check`
 - Grammar path: `dazzle lsp grammar-path`
 
-## MCP Server
+## MCP / CLI Boundary
 
-The DAZZLE MCP server (`dazzle mcp`) provides 32+ tools covering: project management, DSL validation/linting, stories, rhythms, processes, test design, E2E testing, discovery, pipeline/nightly audits, sentinel scanning, knowledge graph, sitespec, semantics, composition, policy, pulse, pitch, bootstrap, spec analysis, demo data, API packs, mocking, contributions, and user management.
+**MCP tools** = stateless reads returning data (fast, no side effects). Claude can continue thinking while these run.
 
-Run `dazzle mcp` or use `status mcp` for the full tool/operation listing.
+**CLI commands** = anything that does work (generates, runs, writes, calls LLMs). Use `dazzle <group> <command>`.
 
-Use MCP tools for DSL semantics; this file for codebase conventions.
+### MCP Tools (24 knowledge/query tools)
+
+| Tool | Operations |
+|------|-----------|
+| `dsl` | validate, inspect_entity, inspect_surface, lint, analyze, fidelity, export_frontend_spec |
+| `story` | get, coverage, scope_fidelity |
+| `rhythm` | get, list, coverage |
+| `process` | list, inspect, list_runs, get_run, coverage |
+| `test_design` | get, gaps |
+| `discovery` | coherence |
+| `graph` | query, dependencies, neighbourhood, concept, inference, export, import |
+| `knowledge` | concept, examples, workflow, inference |
+| `semantics` | extract, validate_events, tenancy, compliance, analytics |
+| `sitespec` | get, validate, scaffold, coherence, review, advise, get_copy, scaffold_copy, review_copy, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts |
+| `composition` | audit, capture, analyze, report, inspect_styles |
+| `policy` | analyze, conflicts, coverage, simulate |
+| `sentinel` | findings, status, history |
+| `test_intelligence` | summary, failures, regression, coverage, context |
+| `api_pack` | list, search, get |
+| `mock` | status, request_log |
+| `demo_data` | get |
+| `pitch` | get |
+| `status` | mcp, logs, telemetry, activity |
+| `bootstrap` | entry point for "build me an app" requests |
+| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas |
+| `user_management` | list, create, get, update, deactivate |
+| `user_profile` | observe, observe_message, get, reset |
+| `llm` | ask |
+
+### CLI Commands (process operations)
+
+```bash
+# Discovery & pipeline
+dazzle discovery run|report|compile|emit|status|verify-all-stories
+dazzle e2e check-infra|coverage|list-flows|tier-guidance|run-viewport|list-viewport-specs|save-viewport-specs
+
+# Story & rhythm workflow
+dazzle story propose|list|generate-tests|scope-fidelity
+dazzle rhythm propose|evaluate|gaps|fidelity|lifecycle
+dazzle process propose|save|diagram
+dazzle test-design propose-persona|save|coverage-actions|runtime-gaps|save-runtime|improve-coverage
+
+# Testing
+dazzle test verify-story|generate|run|run-all|coverage|diff-personas
+
+# Quality
+dazzle pulse run|radar|persona|timeline|decisions|wfs
+dazzle pitch review|update|enrich|init-assets
+dazzle sentinel scan|suppress
+
+# Data & integration
+dazzle demo propose|save|generate
+dazzle api-pack generate-dsl|env-vars|infrastructure|scaffold
+dazzle mock scenarios|fire-webhook|inject-error|scaffold-scenario
+dazzle contribution templates|create|validate|examples
+```
 
 ## Vendor Integration Workflow
 
 When integrating a third-party API:
-1. `api_pack search` — check for existing pack
-2. `api_pack scaffold` — create pack TOML (from OpenAPI or blank)
+1. `dazzle api-pack search` (MCP) — check for existing pack
+2. `dazzle api-pack scaffold` (CLI) — create pack TOML (from OpenAPI or blank)
    - Save to `.dazzle/api_packs/<vendor>/<name>.toml`
-3. `api_pack generate_dsl` — generate service + foreign_model DSL blocks
+3. `dazzle api-pack generate-dsl` (CLI) — generate service + foreign_model DSL blocks
 4. Write integration + mapping DSL blocks
 5. `dazzle serve --local` — mocks auto-start for all pack references
-6. `mock fire_webhook` — test webhook handling
-7. `mock request_log` — verify integration calls
-8. `mock scenarios action=activate` — test edge cases
+6. `dazzle mock fire-webhook` (CLI) — test webhook handling
+7. `mock request_log` (MCP) — verify integration calls
+8. `dazzle mock scenarios` (CLI) — test edge cases
 
 ### Project-Local Packs
 Place custom packs in `.dazzle/api_packs/<vendor>/<name>.toml`.
