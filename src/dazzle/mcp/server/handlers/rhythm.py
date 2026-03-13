@@ -82,12 +82,14 @@ def get_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     return error_response(f"Rhythm '{name}' not found")
 
 
-@wrap_handler_errors
-def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+def rhythm_evaluate_impl(
+    project_root: Path,
+    name: str,
+    action: str = "evaluate",
+    scores: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Evaluate a rhythm — static analysis of completeness, or submit scores."""
     app_spec = load_project_appspec(project_root)
-    name: str = args.get("name", "")
-    action = args.get("action", "evaluate")
 
     rhythm = None
     for r in app_spec.rhythms:
@@ -96,10 +98,10 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
             break
 
     if rhythm is None:
-        return error_response(f"Rhythm '{name}' not found")
+        return {"error": f"Rhythm '{name}' not found"}
 
     if action == "submit_scores":
-        return _submit_scores(project_root, name, args.get("scores", []))
+        return json.loads(_submit_scores(project_root, name, scores or []))
 
     # Structural evaluation
     surface_names = {s.name for s in app_spec.surfaces}
@@ -239,10 +241,23 @@ def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         result["action_vocabulary"] = list(ACTION_VOCABULARY.keys())
 
-    return json.dumps(
-        result,
-        indent=2,
+    return result
+
+
+@wrap_handler_errors
+def evaluate_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Evaluate a rhythm — static analysis of completeness, or submit scores."""
+    name: str = args.get("name", "")
+    action = args.get("action", "evaluate")
+    result = rhythm_evaluate_impl(
+        project_root,
+        name=name,
+        action=action,
+        scores=args.get("scores", []),
     )
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
 
 
 def _submit_scores(project_root: Path, rhythm_name: str, scores_data: list[dict[str, Any]]) -> str:
@@ -374,14 +389,12 @@ def coverage_rhythms_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@wrap_handler_errors
-def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+def rhythm_propose_impl(project_root: Path, persona_id: str) -> dict[str, Any]:
     """Propose a rhythm for a given persona based on app analysis."""
-    app_spec = load_project_appspec(project_root)
-    persona_id = args.get("persona")
-
     if not persona_id:
-        return error_response("'persona' parameter required for propose")
+        return {"error": "'persona' parameter required for propose"}
+
+    app_spec = load_project_appspec(project_root)
 
     persona = None
     for p in app_spec.personas:
@@ -390,7 +403,7 @@ def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
             break
 
     if persona is None:
-        return error_response(f"Persona '{persona_id}' not found")
+        return {"error": f"Persona '{persona_id}' not found"}
 
     list_surfaces: list[str] = []
     detail_surfaces: list[str] = []
@@ -447,13 +460,20 @@ def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     lines.append('      expects: "relevant_information_visible"')
     lines.append("")
 
-    return json.dumps(
-        {
-            "persona": persona_id,
-            "proposed_dsl": "\n".join(lines),
-        },
-        indent=2,
-    )
+    return {
+        "persona": persona_id,
+        "proposed_dsl": "\n".join(lines),
+    }
+
+
+@wrap_handler_errors
+def propose_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Propose a rhythm for a given persona based on app analysis."""
+    persona_id = args.get("persona", "")
+    result = rhythm_propose_impl(project_root, persona_id=persona_id)
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -533,14 +553,12 @@ def _action_matches(verb: str, surface_action_names: set[str], surface_actions: 
     return False
 
 
-@wrap_handler_errors
-def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+def rhythm_fidelity_impl(project_root: Path, name: str) -> dict[str, Any]:
     """Measure how well surfaces serve scene intent (rhythm fidelity)."""
-    app_spec = load_project_appspec(project_root)
-    name = args.get("name")
-
     if not name:
-        return error_response("'name' parameter required for fidelity")
+        return {"error": "'name' parameter required for fidelity"}
+
+    app_spec = load_project_appspec(project_root)
 
     rhythm = None
     for r in app_spec.rhythms:
@@ -548,7 +566,7 @@ def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
             rhythm = r
             break
     if rhythm is None:
-        return error_response(f"Rhythm '{name}' not found")
+        return {"error": f"Rhythm '{name}' not found"}
 
     # Build lookup maps
     surface_map = {s.name: s for s in app_spec.surfaces}
@@ -561,7 +579,7 @@ def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     for phase in rhythm.phases:
         for scene in phase.scenes:
             surface = surface_map.get(scene.surface)
-            result: dict[str, Any] = {
+            scene_result: dict[str, Any] = {
                 "scene": scene.name,
                 "phase": phase.name,
                 "surface": scene.surface,
@@ -570,13 +588,13 @@ def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
             # If surface is a workspace or not found, we can't analyze field alignment
             if surface is None:
                 if scene.surface in workspace_names:
-                    result["status"] = "workspace"
-                    result["served"] = True
+                    scene_result["status"] = "workspace"
+                    scene_result["served"] = True
                     scenes_served += 1
                 else:
-                    result["status"] = "missing"
-                    result["served"] = False
-                scene_results.append(result)
+                    scene_result["status"] = "missing"
+                    scene_result["served"] = False
+                scene_results.append(scene_result)
                 continue
 
             # Collect surface field names
@@ -604,8 +622,8 @@ def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                         f"(surface fields: {sorted(field_names) if field_names else 'none'})"
                     )
 
-                result["expects"] = scene.expects
-                result["expects_keyword_overlap"] = sorted(overlap)
+                scene_result["expects"] = scene.expects
+                scene_result["expects_keyword_overlap"] = sorted(overlap)
 
             # Check action support (fuzzy matching for standard vocabulary)
             if scene.actions:
@@ -618,11 +636,11 @@ def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                             f"({sorted(surface_action_names)})"
                         )
 
-            result["field_count"] = len(field_names)
-            result["gaps"] = gaps
-            result["served"] = len(gaps) == 0
+            scene_result["field_count"] = len(field_names)
+            scene_result["gaps"] = gaps
+            scene_result["served"] = len(gaps) == 0
 
-            if result["served"]:
+            if scene_result["served"]:
                 scenes_served += 1
 
             if gaps:
@@ -635,27 +653,33 @@ def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
                     }
                 )
 
-            scene_results.append(result)
+            scene_results.append(scene_result)
 
     total_scenes = len(scene_results)
     fidelity_score = round(scenes_served / total_scenes, 2) if total_scenes else 1.0
 
-    return json.dumps(
-        {
-            "rhythm": name,
-            "rhythm_fidelity": fidelity_score,
-            "total_scenes": total_scenes,
-            "scenes_served": scenes_served,
-            "scenes_proxied": len(proxy_scenes),
-            "proxy_scenes": proxy_scenes,
-            "details": scene_results,
-        },
-        indent=2,
-    )
+    return {
+        "rhythm": name,
+        "rhythm_fidelity": fidelity_score,
+        "total_scenes": total_scenes,
+        "scenes_served": scenes_served,
+        "scenes_proxied": len(proxy_scenes),
+        "proxy_scenes": proxy_scenes,
+        "details": scene_results,
+    }
 
 
 @wrap_handler_errors
-def gaps_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+def fidelity_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Measure how well surfaces serve scene intent (rhythm fidelity)."""
+    name = args.get("name", "")
+    result = rhythm_fidelity_impl(project_root, name=name)
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
+
+
+def rhythm_gaps_impl(project_root: Path) -> dict[str, Any]:
     """Analyse gaps between scenes and stories."""
     import datetime
 
@@ -792,7 +816,7 @@ def gaps_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     severity_order = {"blocking": 0, "degraded": 1, "advisory": 2}
     roadmap = sorted(gaps, key=lambda g: severity_order.get(g["severity"], 9))
 
-    result = {"gaps": gaps, "summary": summary, "roadmap_order": roadmap}
+    result: dict[str, Any] = {"gaps": gaps, "summary": summary, "roadmap_order": roadmap}
 
     # Seed KG relations (advisory — never blocks)
     _seed_gap_relations(gaps)
@@ -803,7 +827,13 @@ def gaps_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
     ts = datetime.datetime.now(datetime.UTC).strftime("%Y%m%d-%H%M%S")
     (eval_dir / f"gaps-{ts}.json").write_text(json.dumps(result, indent=2))
 
-    return json.dumps(result, indent=2)
+    return result
+
+
+@wrap_handler_errors
+def gaps_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyse gaps between scenes and stories."""
+    return json.dumps(rhythm_gaps_impl(project_root), indent=2)
 
 
 def _seed_gap_relations(gaps: list[dict[str, Any]]) -> None:
@@ -921,8 +951,7 @@ def _layer_evaluated_gaps(project_root: Path, gaps: list[dict[str, Any]]) -> Non
 # ---------------------------------------------------------------------------
 
 
-@wrap_handler_errors
-def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+def rhythm_lifecycle_impl(project_root: Path) -> dict[str, Any]:
     """Report lifecycle status against the 8-step operating model."""
     from dazzle.core.ir.stories import StoryStatus
 
@@ -1019,7 +1048,7 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
         unmapped = [s[0] for s in all_scenes if not s[1]]
         s4_status = "partial"
         s4_evidence = f"{len(scenes_with_story)}/{len(all_scenes)} scenes mapped"
-        s4_suggestions = [f"Add story: reference to scene '{name}'" for name in unmapped[:5]]
+        s4_suggestions = [f"Add story: reference to scene '{sname}'" for sname in unmapped[:5]]
     else:
         s4_status = "not_started"
         s4_evidence = "No scenes mapped to stories" if all_scenes else "No scenes defined"
@@ -1163,4 +1192,10 @@ def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
         maturity=maturity,
     )
 
-    return json.dumps(report.model_dump(), indent=2)
+    return report.model_dump()
+
+
+@wrap_handler_errors
+def lifecycle_rhythm_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Report lifecycle status against the 8-step operating model."""
+    return json.dumps(rhythm_lifecycle_impl(project_root), indent=2)
