@@ -175,6 +175,8 @@
     ]),
     'foreign_models': list([
     ]),
+    'grant_schemas': list([
+    ]),
     'hless_mode': <HLESSMode.STRICT: 'strict'>,
     'hless_pragma': None,
     'integrations': list([

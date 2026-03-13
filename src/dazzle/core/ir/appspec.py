@@ -30,6 +30,7 @@ from .governance import (
     PoliciesSpec,
     TenancySpec,
 )
+from .grants import GrantSchemaSpec
 from .hless import (
     HLESSMode,
     HLESSPragma,
@@ -173,6 +174,8 @@ class AppSpec(BaseModel):
     notifications: list[NotificationSpec] = Field(default_factory=list)
     # Rhythms (v0.39.0 Longitudinal UX Evaluation)
     rhythms: list[RhythmSpec] = Field(default_factory=list)
+    # Grant Schemas (v0.42.0 Runtime RBAC)
+    grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
     # Global audit trail (v0.34.0) — when True, all entities are audited by default
     audit_trail: bool = False
 
@@ -323,6 +326,19 @@ class AppSpec(BaseModel):
     def get_questions_blocking(self, artefact_id: str) -> list[QuestionSpec]:
         """Get all open questions that block a specific artefact."""
         return [q for q in self.questions if artefact_id in q.blocks]
+
+    # Grant Schema getters (v0.42.0 Runtime RBAC)
+
+    def get_grant_schema(self, name: str) -> GrantSchemaSpec | None:
+        """Get grant schema by name."""
+        for schema in self.grant_schemas:
+            if schema.name == name:
+                return schema
+        return None
+
+    def get_grant_schemas_by_scope(self, entity_name: str) -> list[GrantSchemaSpec]:
+        """Get all grant schemas scoped to a specific entity."""
+        return [s for s in self.grant_schemas if s.scope == entity_name]
 
     # Messaging getters (v0.9.0)
 

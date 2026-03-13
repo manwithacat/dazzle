@@ -30,6 +30,7 @@ from .governance import (
     PoliciesSpec,
     TenancySpec,
 )
+from .grants import GrantSchemaSpec
 from .hless import (
     HLESSPragma,
     StreamSpec,
@@ -186,6 +187,8 @@ class ModuleFragment(BaseModel):
     islands: list[IslandSpec] = Field(default_factory=list)
     # Notifications (v0.34.0)
     notifications: list[NotificationSpec] = Field(default_factory=list)
+    # Grant Schemas (v0.42.0 Runtime RBAC)
+    grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
