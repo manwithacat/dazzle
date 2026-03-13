@@ -89,6 +89,20 @@ class ConditionParserMixin:
             self.expect(TokenType.RPAREN)
             return ir.ConditionExpr(role_check=ir.RoleCheck(role_name=role_name))
 
+        # Handle has_grant("relation", scope_field) - grant check (v0.42.0)
+        if self.match(TokenType.IDENTIFIER) and self.current_token().value == "has_grant":
+            self.advance()
+            self.expect(TokenType.LPAREN)
+            # First arg: relation name (string literal)
+            relation = self.expect(TokenType.STRING).value
+            self.expect(TokenType.COMMA)
+            # Second arg: scope field (identifier)
+            scope_field = self.expect_identifier_or_keyword().value
+            self.expect(TokenType.RPAREN)
+            return ir.ConditionExpr(
+                grant_check=ir.GrantCheck(relation=relation, scope_field=scope_field)
+            )
+
         # Parse comparison
         comparison = self._parse_comparison()
         return ir.ConditionExpr(comparison=comparison)
