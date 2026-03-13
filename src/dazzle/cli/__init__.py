@@ -174,11 +174,14 @@ from dazzle.cli.nightly import nightly_app  # noqa: E402
 from dazzle.cli.overrides import overrides_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
+from dazzle.cli.process_cli import process_app  # noqa: E402
 from dazzle.cli.pulse import pulse_app  # noqa: E402
+from dazzle.cli.rhythm import rhythm_app  # noqa: E402
 from dazzle.cli.sentinel import sentinel_app  # noqa: E402
 from dazzle.cli.specs import specs_app  # noqa: E402
 from dazzle.cli.story import story_app  # noqa: E402
 from dazzle.cli.stubs import stubs_app  # noqa: E402
+from dazzle.cli.test_design import test_design_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
@@ -208,7 +211,10 @@ app.add_typer(kg_app, name="kg")
 app.add_typer(lsp_app, name="lsp")
 app.add_typer(mcp_app, name="mcp")
 app.add_typer(mock_app, name="mock")
+app.add_typer(process_app, name="process")
+app.add_typer(rhythm_app, name="rhythm")
 app.add_typer(sentinel_app, name="sentinel")
+app.add_typer(test_design_app, name="test-design")
 app.add_typer(overrides_app, name="overrides")
 
 
