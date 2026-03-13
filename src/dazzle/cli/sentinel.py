@@ -175,3 +175,24 @@ def sentinel_status(
     else:
         typer.echo("\n  No scans yet")
     typer.echo()
+
+
+@sentinel_app.command("history")
+def sentinel_history(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    limit: int = typer.Option(10, "--limit", "-n", help="Number of scans to show"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """List recent sentinel scans."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.sentinel import sentinel_history_impl
+
+    root = _resolve_root(manifest)
+
+    try:
+        result = sentinel_history_impl(project_path=root, limit=limit)
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=as_json))
