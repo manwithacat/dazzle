@@ -5,6 +5,9 @@ Commands:
   dazzle demo load      — Load seed data into a running instance
   dazzle demo validate  — Validate seed files against DSL
   dazzle demo reset     — Clear and reload demo data
+  dazzle demo propose   — Propose a demo data blueprint from DSL
+  dazzle demo save      — Save a blueprint JSON file
+  dazzle demo generate  — Generate demo data files from the blueprint
 """
 
 from __future__ import annotations
@@ -271,3 +274,175 @@ def reset_command(
 
     if report.total_failed > 0:
         raise typer.Exit(1)
+
+
+@demo_app.command(name="propose")
+def propose_command(
+    domain_description: str = typer.Option(
+        "",
+        "--domain",
+        "-d",
+        help="Domain description (e.g. 'solar energy installer')",
+    ),
+    tenant_count: int = typer.Option(
+        2,
+        "--tenants",
+        "-t",
+        help="Number of demo tenants to generate",
+    ),
+    entities: str | None = typer.Option(
+        None,
+        "--entities",
+        "-e",
+        help="Comma-separated entity names to include (default: all)",
+    ),
+    include_metadata: bool = typer.Option(
+        True,
+        "--metadata/--no-metadata",
+        help="Include tenant and persona metadata",
+    ),
+    quick_mode: bool = typer.Option(
+        False,
+        "--quick",
+        "-q",
+        help="Quick mode: only entities with surfaces/references",
+    ),
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project",
+        help="Project root directory",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Analyze DSL and propose a Demo Data Blueprint."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.demo_data import demo_propose_impl
+
+    project_root = project_root.resolve()
+
+    filter_entities: list[str] | None = None
+    if entities:
+        filter_entities = [e.strip() for e in entities.split(",")]
+
+    try:
+        result = demo_propose_impl(
+            project_root,
+            domain_description=domain_description,
+            tenant_count=tenant_count,
+            filter_entities=filter_entities,
+            include_metadata=include_metadata,
+            quick_mode=quick_mode,
+        )
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@demo_app.command(name="save")
+def save_command(
+    blueprint_file: Path = typer.Option(
+        ...,
+        "--blueprint-file",
+        "-f",
+        help="Path to JSON file containing the blueprint data",
+    ),
+    merge_entities: bool = typer.Option(
+        False,
+        "--merge",
+        help="Merge new entities with existing blueprint",
+    ),
+    validate_coverage: bool = typer.Option(
+        True,
+        "--validate/--no-validate",
+        help="Validate entity coverage against DSL",
+    ),
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project",
+        help="Project root directory",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Save a Demo Data Blueprint to .dazzle/demo_data/blueprint.json."""
+    import json
+
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.demo_data import demo_save_impl
+
+    project_root = project_root.resolve()
+
+    blueprint_path = Path(blueprint_file).resolve()
+    if not blueprint_path.exists():
+        typer.echo(f"File not found: {blueprint_path}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        blueprint_data = json.loads(blueprint_path.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        typer.echo(f"Error reading blueprint file: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        result = demo_save_impl(
+            project_root,
+            blueprint_data=blueprint_data,
+            merge_entities=merge_entities,
+            validate_coverage=validate_coverage,
+        )
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@demo_app.command(name="generate")
+def generate_command(
+    output_format: str = typer.Option(
+        "csv",
+        "--format",
+        help="Output format (csv or json)",
+    ),
+    output_dir: str = typer.Option(
+        "demo_data",
+        "--output-dir",
+        "-o",
+        help="Output directory relative to project root",
+    ),
+    entities: str | None = typer.Option(
+        None,
+        "--entities",
+        "-e",
+        help="Comma-separated entity names to generate (default: all)",
+    ),
+    project_root: Path = typer.Option(
+        Path("."),
+        "--project",
+        help="Project root directory",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Generate demo data files from the blueprint."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.demo_data import demo_generate_impl
+
+    project_root = project_root.resolve()
+
+    filter_entities: list[str] | None = None
+    if entities:
+        filter_entities = [e.strip() for e in entities.split(",")]
+
+    try:
+        result = demo_generate_impl(
+            project_root,
+            output_format=output_format,
+            output_dir=output_dir,
+            filter_entities=filter_entities,
+        )
+    except Exception as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=json_output))
