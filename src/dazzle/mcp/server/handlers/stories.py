@@ -129,18 +129,21 @@ def get_dsl_spec_handler(project_root: Path, args: dict[str, Any]) -> str:
     return json.dumps(spec, indent=2)
 
 
-@wrap_handler_errors
-def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Analyze DSL and propose behavioural user stories."""
+def story_propose_impl(
+    project_root: Path,
+    max_stories: int = 30,
+    filter_entities: list[str] | None = None,
+) -> dict[str, Any]:
+    """Analyze DSL and propose behavioural user stories.
+
+    Pure function — no MCP types. Loads the project appspec, generates draft
+    stories from entities and unmapped rhythm scenes, saves them to
+    ``dsl/stories.dsl``, and returns a plain dict with summaries.
+    """
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
 
-    progress = extract_progress(args)
-    progress.log_sync("Parsing DSL and building app spec...")
     app_spec = load_project_appspec(project_root)
-
-    max_stories = args.get("max_stories", 30)
-    filter_entities = args.get("entities")
 
     stories: list[StorySpec] = []
     story_count = 0
@@ -160,11 +163,8 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
     if app_spec.personas:
         default_actor = app_spec.personas[0].label or app_spec.personas[0].id
 
-    progress.log_sync("Generating stories from entities...")
-    total_entities = len(app_spec.domain.entities)
     # Generate stories from entities
-    for ent_idx, entity in enumerate(app_spec.domain.entities, 1):
-        progress.advance_sync(ent_idx, total_entities, f"Analyzing {entity.name}")
+    for entity in app_spec.domain.entities:
         if filter_entities and entity.name not in filter_entities:
             continue
 
@@ -236,7 +236,6 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                 )
 
     # Planning inversion: generate stories for unmapped scenes
-    progress.log_sync("Generating stories from unmapped scenes...")
     for rhythm in app_spec.rhythms:
         for phase in rhythm.phases:
             for scene in phase.scenes:
@@ -273,35 +272,54 @@ def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -
                 )
 
     # Auto-save draft stories to DSL file
-    progress.log_sync(f"Saving {len(stories)} draft stories to dsl/stories.dsl...")
     append_stories_to_dsl(project_root, stories)
 
-    # Return summaries only — the LLM just generated these and knows
-    # the content; full details can be fetched on demand.
-    return json.dumps(
-        {
-            "proposed_count": len(stories),
-            "max_stories": max_stories,
-            "note": "Draft stories saved to dsl/stories.dsl. Use story(operation='get', story_ids=['ST-001']) for full details.",
-            "stories": [serialize_story_summary(s) for s in stories],
-        },
-        indent=2,
-    )
+    return {
+        "proposed_count": len(stories),
+        "max_stories": max_stories,
+        "note": "Draft stories saved to dsl/stories.dsl. Use story(operation='get', story_ids=['ST-001']) for full details.",
+        "stories": [serialize_story_summary(s) for s in stories],
+    }
 
 
 @wrap_handler_errors
-def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Save stories to dsl/stories.dsl."""
+def propose_stories_from_dsl_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyze DSL and propose behavioural user stories."""
+    progress = extract_progress(args)
+    progress.log_sync("Parsing DSL and building app spec...")
+
+    max_stories = args.get("max_stories", 30)
+    filter_entities = args.get("entities")
+
+    progress.log_sync("Generating stories from entities...")
+    result = story_propose_impl(
+        project_root,
+        max_stories=max_stories,
+        filter_entities=filter_entities,
+    )
+
+    progress.log_sync(f"Saving {result['proposed_count']} draft stories to dsl/stories.dsl...")
+    return json.dumps(result, indent=2)
+
+
+def story_save_impl(
+    project_root: Path,
+    stories_data: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Validate and save a list of story dicts to dsl/stories.dsl.
+
+    Pure function — no MCP types. Converts raw story dicts (including legacy
+    field names) to ``StorySpec`` objects, appends them to the stories DSL
+    file, and returns a plain dict with save metadata.
+
+    Raises ``ValueError`` when ``stories_data`` is empty.
+    """
     from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
     from dazzle.core.story_emitter import append_stories_to_dsl
 
-    progress = extract_progress(args)
-    stories_data = args.get("stories", [])
-
     if not stories_data:
-        return error_response("No stories provided")
+        raise ValueError("No stories provided")
 
-    progress.log_sync("Validating stories...")
     # Convert to StorySpec objects with validation
     stories: list[StorySpec] = []
     for s in stories_data:
@@ -331,17 +349,29 @@ def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
         stories.append(story)
 
-    progress.log_sync(f"Saving {len(stories)} stories to dsl/stories.dsl...")
     stories_file = append_stories_to_dsl(project_root, stories)
 
-    return json.dumps(
-        {
-            "status": "saved",
-            "file": str(stories_file),
-            "saved_count": len(stories),
-        },
-        indent=2,
-    )
+    return {
+        "status": "saved",
+        "file": str(stories_file),
+        "saved_count": len(stories),
+    }
+
+
+@wrap_handler_errors
+def save_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Save stories to dsl/stories.dsl."""
+    progress = extract_progress(args)
+    stories_data = args.get("stories", [])
+
+    if not stories_data:
+        return error_response("No stories provided")
+
+    progress.log_sync("Validating stories...")
+    progress.log_sync(f"Saving {len(stories_data)} stories to dsl/stories.dsl...")
+    result = story_save_impl(project_root, stories_data)
+
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors
@@ -493,13 +523,18 @@ def wall_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
 
 
-@wrap_handler_errors
-def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate test designs from accepted stories.
+def story_generate_tests_impl(
+    project_root: Path,
+    story_ids: list[str] | None = None,
+    include_draft: bool = False,
+) -> dict[str, Any]:
+    """Generate test designs from accepted (and optionally draft) stories.
 
-    Converts behavioural stories (what should happen) into test designs
-    (how to verify it happens). This bridges the gap between story
-    acceptance criteria and executable test cases.
+    Pure function — no MCP types. Converts behavioural stories into
+    ``TestDesignSpec`` objects, saves them via
+    ``add_test_designs``, and returns a plain dict with summaries.
+
+    Returns a dict with ``status='no_stories'`` when no matching stories exist.
     """
     from dazzle.core.ir.stories import StoryStatus, StoryTrigger
     from dazzle.core.ir.test_design import (
@@ -510,11 +545,6 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
         TestDesignTrigger,
     )
 
-    progress = extract_progress(args)
-    story_ids = args.get("story_ids")
-    include_draft = args.get("include_draft", False)
-
-    progress.log_sync("Loading stories for test generation...")
     app_spec = load_project_appspec(project_root)
     all_stories = list(app_spec.stories)
 
@@ -532,12 +562,10 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
         stories = [s for s in stories if s.story_id in id_set]
 
     if not stories:
-        return json.dumps(
-            {
-                "status": "no_stories",
-                "message": "No stories found. Use propose_stories_from_dsl or save_stories first.",
-            }
-        )
+        return {
+            "status": "no_stories",
+            "message": "No stories found. Use propose_stories_from_dsl or save_stories first.",
+        }
 
     # Get trigger mapping (lazily initialized)
     trigger_map = _get_trigger_map()
@@ -687,30 +715,50 @@ def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]
             status=TestDesignStatus.PROPOSED,
         )
 
-    total_stories = len(stories)
-    progress.log_sync(f"Converting {total_stories} stories to test designs...")
     # Convert all stories to test designs
-    test_designs = []
-    for i, s in enumerate(stories):
-        progress.advance_sync(i + 1, total_stories, f"Converting {s.story_id}")
-        test_designs.append(story_to_test_design(s, i))
+    test_designs = [story_to_test_design(s, i) for i, s in enumerate(stories)]
 
     # Auto-save generated test designs to avoid a separate save round-trip
     from dazzle.testing.test_design_persistence import add_test_designs
 
-    progress.log_sync("Saving test designs...")
     add_test_designs(project_root, test_designs, overwrite=False)
 
-    # Return summaries only to reduce context usage
-    return json.dumps(
-        {
-            "status": "generated",
-            "count": len(test_designs),
-            "note": "Test designs saved. Use test_design(operation='get', status_filter='proposed') for full details.",
-            "test_designs": [serialize_test_design_summary(td) for td in test_designs],
-        },
-        indent=2,
+    return {
+        "status": "generated",
+        "count": len(test_designs),
+        "note": "Test designs saved. Use test_design(operation='get', status_filter='proposed') for full details.",
+        "test_designs": [serialize_test_design_summary(td) for td in test_designs],
+    }
+
+
+@wrap_handler_errors
+def generate_tests_from_stories_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate test designs from accepted stories.
+
+    Converts behavioural stories (what should happen) into test designs
+    (how to verify it happens). This bridges the gap between story
+    acceptance criteria and executable test cases.
+    """
+    progress = extract_progress(args)
+    story_ids = args.get("story_ids")
+    include_draft = args.get("include_draft", False)
+
+    progress.log_sync("Loading stories for test generation...")
+    result = story_generate_tests_impl(
+        project_root,
+        story_ids=story_ids,
+        include_draft=include_draft,
     )
+
+    if result.get("status") == "no_stories":
+        return json.dumps(result)
+
+    total = result["count"]
+    progress.log_sync(f"Converting {total} stories to test designs...")
+    progress.log_sync("Saving test designs...")
+
+    # Return summaries only to reduce context usage
+    return json.dumps(result, indent=2)
 
 
 def _extract_entity_from_condition(condition: str, scope: list[str]) -> str:
