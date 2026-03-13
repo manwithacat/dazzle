@@ -78,46 +78,118 @@ CONTRIBUTION_TYPES = [
 
 GITHUB_ISSUE_BASE = "https://github.com/manwithacat/dazzle/issues/new"
 
-
-@wrap_handler_errors
-def templates_handler(args: dict[str, Any]) -> str:
-    """List available contribution templates."""
-    progress = extract_progress(args)
-    progress.log_sync("Loading contribution templates...")
-    return json.dumps(
-        {
-            "templates": CONTRIBUTION_TYPES,
-            "submission_url": GITHUB_ISSUE_BASE,
-            "usage": "Use create operation with type and content to generate a contribution package",
+_EXAMPLES: dict[str, Any] = {
+    "api_pack": {
+        "title": "Plaid Banking API",
+        "description": "Access bank account data via Plaid",
+        "content": {
+            "provider": "Plaid",
+            "category": "banking",
+            "base_url": "https://api.plaid.com",
+            "docs_url": "https://plaid.com/docs",
+            "auth_type": "api_key",
+            "env_vars": {
+                "PLAID_CLIENT_ID": "Plaid client ID",
+                "PLAID_SECRET": "Plaid secret key",
+            },
+            "operations": {
+                "get_accounts": {"method": "GET", "path": "/accounts/get"},
+                "get_transactions": {"method": "GET", "path": "/transactions/get"},
+            },
+            "models": {
+                "Account": {
+                    "fields": {
+                        "account_id": "str(50) pk",
+                        "name": "str(100)",
+                        "type": "str(20)",
+                        "balance": "decimal(12,2)",
+                    }
+                }
+            },
         },
-        indent=2,
-    )
+    },
+    "bug_fix": {
+        "title": "Fix list pagination reset on filter clear",
+        "description": "Pagination resets to page 1 when clearing filters",
+        "content": {
+            "reproduction_steps": [
+                "Navigate to a list view with pagination",
+                "Apply a filter",
+                "Go to page 2 or later",
+                "Clear the filter",
+            ],
+            "expected": "Stay on current page after clearing filter",
+            "actual": "Page resets to 1",
+            "files_changed": ["src/dazzle_ui/runtime/static/js/components.js"],
+            "testing_notes": "Verified fix on simple_task example",
+        },
+    },
+    "ui_pattern": {
+        "title": "Collapsible sidebar navigation",
+        "description": "Allow sidebar to collapse to icons only",
+        "content": {
+            "use_case": "Users with smaller screens or who prefer more content area",
+            "current_behavior": "Sidebar is always fully expanded",
+            "proposed_behavior": "Sidebar collapses to icon-only mode with hover expansion",
+            "surface_dsl": 'surface settings "Settings":\n  layout: sidebar_collapsible\n  section main:\n    field theme "Theme"\n',
+        },
+    },
+    "dsl_pattern": {
+        "title": "Approval workflow pattern",
+        "description": "Multi-step approval with escalation",
+        "content": {
+            "pattern_type": "workflow",
+            "dsl_code": 'entity PurchaseOrder "Purchase Order":\n  id: uuid pk\n  amount: decimal(12,2)\n  status: enum[draft,pending,approved,rejected]\n\n  state_machine:\n    field: status\n    initial: draft\n    transitions:\n      submit: draft -> pending\n      approve: pending -> approved when amount < 1000\n      escalate: pending -> pending when amount >= 1000\n      reject: pending -> rejected\n',
+            "use_cases": ["Purchase approvals", "Time-off requests", "Document review"],
+        },
+    },
+    "feature_request": {
+        "title": "GraphQL API generation",
+        "description": "Generate GraphQL schema from DSL entities",
+        "content": {
+            "motivation": "Teams using GraphQL need native support",
+            "proposed_solution": "Add graphql_api option to surface definition",
+            "dsl_impact": "New surface mode: graphql",
+            "backwards_compatibility": "Fully backwards compatible, opt-in feature",
+        },
+    },
+}
 
 
-@wrap_handler_errors
-def create_handler(args: dict[str, Any]) -> str:
+# ---------------------------------------------------------------------------
+# Impl functions (no MCP types, explicit params, return plain dicts)
+# ---------------------------------------------------------------------------
+
+
+def contribution_templates_impl() -> dict[str, Any]:
+    """List available contribution templates."""
+    return {
+        "templates": CONTRIBUTION_TYPES,
+        "submission_url": GITHUB_ISSUE_BASE,
+        "usage": "Use create operation with type and content to generate a contribution package",
+    }
+
+
+def contribution_create_impl(
+    *,
+    contrib_type: str,
+    title: str = "Untitled Contribution",
+    description: str = "",
+    content: dict[str, Any] | None = None,
+    output_dir: str | None = None,
+) -> dict[str, Any]:
     """Create a contribution package."""
-    progress = extract_progress(args)
-    progress.log_sync("Creating contribution package...")
-    contrib_type = args.get("type")
-    title = args.get("title", "Untitled Contribution")
-    description = args.get("description", "")
-    content = args.get("content", {})
-    output_dir = args.get("output_dir")
-
-    if not contrib_type:
-        return error_response("type is required")
+    if content is None:
+        content = {}
 
     valid_types = [t["type"] for t in CONTRIBUTION_TYPES]
     if contrib_type not in valid_types:
-        return error_response(f"Invalid type: {contrib_type}. Valid types: {valid_types}")
+        return {"error": f"Invalid type: {contrib_type}. Valid types: {valid_types}"}
 
-    # Pre-check GitHub auth before doing expensive generation work
     from dazzle.mcp.server.github_issues import gh_auth_guidance
 
     gh_status = gh_auth_guidance()
 
-    # Generate contribution based on type
     if contrib_type == "api_pack":
         result = _generate_api_pack(title, description, content, output_dir)
     elif contrib_type == "bug_fix":
@@ -129,9 +201,8 @@ def create_handler(args: dict[str, Any]) -> str:
     elif contrib_type == "feature_request":
         result = _generate_feature_request(title, description, content, output_dir)
     else:
-        return error_response(f"Unhandled type: {contrib_type}")
+        return {"error": f"Unhandled type: {contrib_type}"}
 
-    # Attempt to create a GitHub issue (only if authenticated)
     if gh_status["authenticated"]:
         from dazzle.mcp.server.github_issues import create_github_issue
 
@@ -159,6 +230,81 @@ def create_handler(args: dict[str, Any]) -> str:
             ),
         }
 
+    return result
+
+
+def contribution_validate_impl(
+    *,
+    contrib_type: str,
+    content: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate a contribution package."""
+    if content is None:
+        content = {}
+
+    type_def = next((t for t in CONTRIBUTION_TYPES if t["type"] == contrib_type), None)
+    if not type_def:
+        return {"error": f"Unknown type: {contrib_type}"}
+
+    missing = []
+    for field in type_def["required_content"]:
+        if field not in content or not content[field]:
+            missing.append(field)
+
+    if missing:
+        return {
+            "valid": False,
+            "missing_required": missing,
+            "type": contrib_type,
+        }
+
+    return {
+        "valid": True,
+        "type": contrib_type,
+        "message": "All required fields present",
+    }
+
+
+def contribution_examples_impl(*, contrib_type: str = "api_pack") -> dict[str, Any]:
+    """Show example contributions."""
+    example = _EXAMPLES.get(contrib_type)
+    if not example:
+        return {"error": f"No example for type: {contrib_type}"}
+
+    return {
+        "type": contrib_type,
+        "example": example,
+        "usage": f"Use create operation with type='{contrib_type}' and similar content",
+    }
+
+
+@wrap_handler_errors
+def templates_handler(args: dict[str, Any]) -> str:
+    """List available contribution templates."""
+    progress = extract_progress(args)
+    progress.log_sync("Loading contribution templates...")
+    return json.dumps(contribution_templates_impl(), indent=2)
+
+
+@wrap_handler_errors
+def create_handler(args: dict[str, Any]) -> str:
+    """Create a contribution package."""
+    progress = extract_progress(args)
+    progress.log_sync("Creating contribution package...")
+    contrib_type = args.get("type")
+
+    if not contrib_type:
+        return error_response("type is required")
+
+    result = contribution_create_impl(
+        contrib_type=contrib_type,
+        title=args.get("title", "Untitled Contribution"),
+        description=args.get("description", ""),
+        content=args.get("content", {}),
+        output_dir=args.get("output_dir"),
+    )
+    if "error" in result:
+        return error_response(result["error"])
     return json.dumps(result, indent=2)
 
 
@@ -168,38 +314,17 @@ def validate_handler(args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     progress.log_sync("Validating contribution...")
     contrib_type = args.get("type")
-    content = args.get("content", {})
 
     if not contrib_type:
         return error_response("type is required")
 
-    # Find the type definition
-    type_def = next((t for t in CONTRIBUTION_TYPES if t["type"] == contrib_type), None)
-    if not type_def:
-        return error_response(f"Unknown type: {contrib_type}")
-
-    # Check required fields
-    missing = []
-    for field in type_def["required_content"]:
-        if field not in content or not content[field]:
-            missing.append(field)
-
-    if missing:
-        return json.dumps(
-            {
-                "valid": False,
-                "missing_required": missing,
-                "type": contrib_type,
-            }
-        )
-
-    return json.dumps(
-        {
-            "valid": True,
-            "type": contrib_type,
-            "message": "All required fields present",
-        }
+    result = contribution_validate_impl(
+        contrib_type=contrib_type,
+        content=args.get("content", {}),
     )
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result)
 
 
 @wrap_handler_errors
@@ -207,114 +332,10 @@ def examples_handler(args: dict[str, Any]) -> str:
     """Show example contributions."""
     progress = extract_progress(args)
     progress.log_sync("Loading example contributions...")
-    contrib_type = args.get("type", "api_pack")
-
-    examples = {
-        "api_pack": {
-            "title": "Plaid Banking API",
-            "description": "Access bank account data via Plaid",
-            "content": {
-                "provider": "Plaid",
-                "category": "banking",
-                "base_url": "https://api.plaid.com",
-                "docs_url": "https://plaid.com/docs",
-                "auth_type": "api_key",
-                "env_vars": {
-                    "PLAID_CLIENT_ID": "Plaid client ID",
-                    "PLAID_SECRET": "Plaid secret key",
-                },
-                "operations": {
-                    "get_accounts": {"method": "GET", "path": "/accounts/get"},
-                    "get_transactions": {"method": "GET", "path": "/transactions/get"},
-                },
-                "models": {
-                    "Account": {
-                        "fields": {
-                            "account_id": "str(50) pk",
-                            "name": "str(100)",
-                            "type": "str(20)",
-                            "balance": "decimal(12,2)",
-                        }
-                    }
-                },
-            },
-        },
-        "bug_fix": {
-            "title": "Fix list pagination reset on filter clear",
-            "description": "Pagination resets to page 1 when clearing filters",
-            "content": {
-                "reproduction_steps": [
-                    "Navigate to a list view with pagination",
-                    "Apply a filter",
-                    "Go to page 2 or later",
-                    "Clear the filter",
-                ],
-                "expected": "Stay on current page after clearing filter",
-                "actual": "Page resets to 1",
-                "files_changed": ["src/dazzle_ui/runtime/static/js/components.js"],
-                "testing_notes": "Verified fix on simple_task example",
-            },
-        },
-        "ui_pattern": {
-            "title": "Collapsible sidebar navigation",
-            "description": "Allow sidebar to collapse to icons only",
-            "content": {
-                "use_case": "Users with smaller screens or who prefer more content area",
-                "current_behavior": "Sidebar is always fully expanded",
-                "proposed_behavior": "Sidebar collapses to icon-only mode with hover expansion",
-                "surface_dsl": """surface settings "Settings":
-  layout: sidebar_collapsible
-  section main:
-    field theme "Theme"
-""",
-            },
-        },
-        "dsl_pattern": {
-            "title": "Approval workflow pattern",
-            "description": "Multi-step approval with escalation",
-            "content": {
-                "pattern_type": "workflow",
-                "dsl_code": """entity PurchaseOrder "Purchase Order":
-  id: uuid pk
-  amount: decimal(12,2)
-  status: enum[draft,pending,approved,rejected]
-
-  state_machine:
-    field: status
-    initial: draft
-    transitions:
-      submit: draft -> pending
-      approve: pending -> approved when amount < 1000
-      escalate: pending -> pending when amount >= 1000
-      reject: pending -> rejected
-""",
-                "use_cases": ["Purchase approvals", "Time-off requests", "Document review"],
-            },
-        },
-        "feature_request": {
-            "title": "GraphQL API generation",
-            "description": "Generate GraphQL schema from DSL entities",
-            "content": {
-                "motivation": "Teams using GraphQL need native support",
-                "proposed_solution": "Add graphql_api option to surface definition",
-                "dsl_impact": "New surface mode: graphql",
-                "backwards_compatibility": "Fully backwards compatible, opt-in feature",
-            },
-        },
-    }
-
-    example = examples.get(contrib_type)
-    if not example:
-        return error_response(f"No example for type: {contrib_type}")
-
-    return json.dumps(
-        {
-            "type": contrib_type,
-            "example": example,
-            "usage": f"Use create operation with type='{contrib_type}' and similar content",
-        },
-        indent=2,
-    )
+    result = contribution_examples_impl(contrib_type=args.get("type", "api_pack"))
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
 
 
 # =============================================================================
