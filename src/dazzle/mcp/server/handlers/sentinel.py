@@ -18,52 +18,39 @@ from .common import error_response, extract_progress, load_project_appspec, wrap
 # ---------------------------------------------------------------------------
 
 
-@wrap_handler_errors
-def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """Run sentinel scan against project DSL."""
-    progress = extract_progress(args)
+def sentinel_scan_impl(
+    project_path: Path,
+    agents: list[str] | None,
+    severity_threshold: str,
+    trigger: str,
+    detail: str,
+) -> dict[str, Any]:
+    """Run sentinel scan against project DSL. Returns scan result dict."""
     t0 = time.monotonic()
-    progress.log_sync("Loading project DSL...")
     appspec = load_project_appspec(project_path)
     from dazzle.sentinel.models import AgentId, ScanConfig, Severity
 
-    agent_ids = None
-    raw_agents = args.get("agents")
-    if raw_agents:
-        agent_ids = [AgentId(a) for a in raw_agents]
-
-    severity = args.get("severity_threshold", "info")
+    agent_ids = [AgentId(a) for a in agents] if agents else None
     config = ScanConfig(
         agents=agent_ids,
-        severity_threshold=Severity(severity),
-        trigger=args.get("trigger", "manual"),
+        severity_threshold=Severity(severity_threshold),
+        trigger=trigger,
     )
 
     from dazzle.sentinel.orchestrator import ScanOrchestrator
 
-    progress.log_sync("Running sentinel scan...")
     orch = ScanOrchestrator(project_path)
     result = orch.run_scan(appspec, config)
 
-    by_sev = result.summary.by_severity
-    high_sev = by_sev.get("critical", 0) + by_sev.get("high", 0)
-    progress.log_sync(
-        f"Scan complete: {result.summary.total_findings} findings ({high_sev} high-severity)"
-    )
-
-    detail = args.get("detail", "issues")
     wall_ms = (time.monotonic() - t0) * 1000
 
     if detail == "metrics":
-        return json.dumps(
-            {
-                "status": "ok",
-                "scan_id": result.scan_id,
-                "summary": result.summary.model_dump(),
-                "duration_ms": round(wall_ms, 1),
-            },
-            indent=2,
-        )
+        return {
+            "status": "ok",
+            "scan_id": result.scan_id,
+            "summary": result.summary.model_dump(),
+            "duration_ms": round(wall_ms, 1),
+        }
 
     findings_data = [f.model_dump() for f in result.findings]
     if detail == "issues":
@@ -83,6 +70,36 @@ def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
     if detail == "full":
         out["agent_results"] = [ar.model_dump() for ar in result.agent_results]
 
+    return out
+
+
+@wrap_handler_errors
+def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Run sentinel scan against project DSL."""
+    progress = extract_progress(args)
+    progress.log_sync("Loading project DSL...")
+    raw_agents = args.get("agents")
+    agent_list: list[str] | None = list(raw_agents) if raw_agents else None
+    progress.log_sync("Running sentinel scan...")
+    out = sentinel_scan_impl(
+        project_path=project_path,
+        agents=agent_list,
+        severity_threshold=args.get("severity_threshold", "info"),
+        trigger=args.get("trigger", "manual"),
+        detail=args.get("detail", "issues"),
+    )
+    by_sev = (
+        out.get("summary", {}).get("by_severity", {})
+        if isinstance(out.get("summary"), dict)
+        else {}
+    )
+    high_sev = by_sev.get("critical", 0) + by_sev.get("high", 0)
+    total = (
+        out.get("summary", {}).get("total_findings", 0)
+        if isinstance(out.get("summary"), dict)
+        else 0
+    )
+    progress.log_sync(f"Scan complete: {total} findings ({high_sev} high-severity)")
     return json.dumps(out, indent=2)
 
 
@@ -91,39 +108,51 @@ def scan_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@wrap_handler_errors
-def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """Get findings from latest or specific scan."""
+def sentinel_findings_impl(
+    project_path: Path,
+    scan_id: str | None,
+    agent: str | None,
+    severity: str | None,
+) -> dict[str, Any]:
+    """Get findings from latest or specific scan. Returns findings dict."""
     from dazzle.sentinel.store import FindingStore
 
     store = FindingStore(project_path)
 
-    scan_id = args.get("scan_id")
     if scan_id:
         scan = store.load_scan(scan_id)
         if scan is None:
-            return error_response(f"Scan '{scan_id}' not found")
+            return {"error": f"Scan '{scan_id}' not found"}
         findings = scan.findings
     else:
         findings = store.load_latest_findings()
 
-    agent_filter = args.get("agent")
-    if agent_filter:
-        findings = [f for f in findings if f.agent.value == agent_filter]
+    if agent:
+        findings = [f for f in findings if f.agent.value == agent]
 
-    severity_filter = args.get("severity")
-    if severity_filter:
+    if severity:
         sev_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
-        threshold = sev_order.get(severity_filter, 4)
+        threshold = sev_order.get(severity, 4)
         findings = [f for f in findings if sev_order.get(f.severity.value, 4) <= threshold]
 
-    return json.dumps(
-        {
-            "findings": [f.model_dump() for f in findings],
-            "count": len(findings),
-        },
-        indent=2,
+    return {
+        "findings": [f.model_dump() for f in findings],
+        "count": len(findings),
+    }
+
+
+@wrap_handler_errors
+def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Get findings from latest or specific scan."""
+    result = sentinel_findings_impl(
+        project_path=project_path,
+        scan_id=args.get("scan_id"),
+        agent=args.get("agent"),
+        severity=args.get("severity"),
     )
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -131,21 +160,36 @@ def findings_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@wrap_handler_errors
-def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """Mark a finding as false_positive."""
+def sentinel_suppress_impl(
+    project_path: Path,
+    finding_id: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Mark a finding as false_positive. Returns status dict."""
     from dazzle.sentinel.store import FindingStore
-
-    finding_id = args.get("finding_id")
-    reason = args.get("reason")
-    if not finding_id or not reason:
-        return error_response("finding_id and reason are required")
 
     store = FindingStore(project_path)
     ok = store.suppress_finding(finding_id, reason)
     if ok:
-        return json.dumps({"status": "suppressed", "finding_id": finding_id})
-    return error_response(f"Finding '{finding_id}' not found in latest scan")
+        return {"status": "suppressed", "finding_id": finding_id}
+    return {"error": f"Finding '{finding_id}' not found in latest scan"}
+
+
+@wrap_handler_errors
+def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Mark a finding as false_positive."""
+    finding_id = args.get("finding_id")
+    reason = args.get("reason")
+    if not finding_id or not reason:
+        return error_response("finding_id and reason are required")
+    result = sentinel_suppress_impl(
+        project_path=project_path,
+        finding_id=finding_id,
+        reason=reason,
+    )
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result)
 
 
 # ---------------------------------------------------------------------------
@@ -153,8 +197,7 @@ def suppress_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-@wrap_handler_errors
-def status_handler(project_path: Path, args: dict[str, Any]) -> str:
+def sentinel_status_impl(project_path: Path) -> dict[str, Any]:
     """Return infrastructure status: available agents, last scan info."""
     from dazzle.sentinel.agents import get_all_agents
     from dazzle.sentinel.store import FindingStore
@@ -163,16 +206,17 @@ def status_handler(project_path: Path, args: dict[str, Any]) -> str:
     store = FindingStore(project_path)
     scans = store.list_scans(limit=1)
 
-    return json.dumps(
-        {
-            "project_path": str(project_path),
-            "agents": [
-                {"id": a.agent_id.value, "heuristics": len(a.get_heuristics())} for a in agents
-            ],
-            "last_scan": scans[0] if scans else None,
-        },
-        indent=2,
-    )
+    return {
+        "project_path": str(project_path),
+        "agents": [{"id": a.agent_id.value, "heuristics": len(a.get_heuristics())} for a in agents],
+        "last_scan": scans[0] if scans else None,
+    }
+
+
+@wrap_handler_errors
+def status_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Return infrastructure status: available agents, last scan info."""
+    return json.dumps(sentinel_status_impl(project_path), indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -180,13 +224,19 @@ def status_handler(project_path: Path, args: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def sentinel_history_impl(project_path: Path, limit: int) -> dict[str, Any]:
+    """List recent scans. Returns scans dict."""
+    from dazzle.sentinel.store import FindingStore
+
+    store = FindingStore(project_path)
+    scans = store.list_scans(limit=limit)
+    return {"scans": scans, "count": len(scans)}
+
+
 @wrap_handler_errors
 def history_handler(project_path: Path, args: dict[str, Any]) -> str:
     """List recent scans."""
-    from dazzle.sentinel.store import FindingStore
-
-    limit = args.get("limit", 10)
-    store = FindingStore(project_path)
-    scans = store.list_scans(limit=limit)
-
-    return json.dumps({"scans": scans, "count": len(scans)}, indent=2)
+    return json.dumps(
+        sentinel_history_impl(project_path=project_path, limit=args.get("limit", 10)),
+        indent=2,
+    )
