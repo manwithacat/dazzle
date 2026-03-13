@@ -45,28 +45,26 @@ class ProcessRunSummary:
 # =============================================================================
 
 
-@wrap_handler_errors
-def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
+def process_save_impl(
+    project_root: Path,
+    raw_processes: list[Any],
+    overwrite: bool = False,
+) -> dict[str, Any]:
     """Save composed processes to .dazzle/processes/processes.json.
 
-    Accepts a list of process definitions and persists them. Validates
-    that referenced story IDs exist and entity references are valid.
+    Validates that referenced story IDs exist and entity references are valid.
 
-    Args (via args dict):
-        processes: List of process dicts (ProcessSpec-compatible)
-        overwrite: If True, replace processes with matching names (default: False)
+    Args:
+        project_root: Root directory of the project.
+        raw_processes: List of process dicts (ProcessSpec-compatible).
+        overwrite: If True, replace processes with matching names.
     """
-    progress = extract_progress(args)
     from dazzle.core.ir.process import ProcessSpec
     from dazzle.core.process_persistence import add_processes
 
-    raw_processes = args.get("processes")
     if not raw_processes or not isinstance(raw_processes, list):
-        return error_response("processes list is required")
+        return {"error": "processes list is required"}
 
-    overwrite = args.get("overwrite", False)
-
-    progress.log_sync("Validating processes...")
     # Validate and parse processes
     parsed: list[ProcessSpec] = []
     errors: list[str] = []
@@ -79,9 +77,8 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
             errors.append(f"Process {i}: {e}")
 
     if errors:
-        return json.dumps({"error": "Validation failed", "details": errors})
+        return {"error": "Validation failed", "details": errors}
 
-    progress.log_sync("Validating story and entity references...")
     # Validate story references exist
     app_spec = _helpers.load_app_spec(project_root)
     stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
@@ -103,7 +100,6 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
                     f"unknown entity '{proc.trigger.entity_name}'"
                 )
 
-    progress.log_sync(f"Saving {len(parsed)} processes...")
     # Save
     all_processes = add_processes(project_root, parsed, overwrite=overwrite)
 
@@ -115,6 +111,35 @@ def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     if warnings:
         result["warnings"] = warnings
 
+    return result
+
+
+@wrap_handler_errors
+def save_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Save composed processes to .dazzle/processes/processes.json.
+
+    Accepts a list of process definitions and persists them. Validates
+    that referenced story IDs exist and entity references are valid.
+
+    Args (via args dict):
+        processes: List of process dicts (ProcessSpec-compatible)
+        overwrite: If True, replace processes with matching names (default: False)
+    """
+    progress = extract_progress(args)
+    raw_processes = args.get("processes")
+    if not raw_processes or not isinstance(raw_processes, list):
+        return error_response("processes list is required")
+
+    progress.log_sync("Validating processes...")
+    progress.log_sync("Validating story and entity references...")
+    result = process_save_impl(
+        project_root,
+        raw_processes=raw_processes,
+        overwrite=args.get("overwrite", False),
+    )
+    if "error" in result and "details" not in result:
+        return error_response(result["error"])
+    progress.log_sync(f"Saving {result.get('saved', 0)} processes...")
     return json.dumps(result, indent=2)
 
 

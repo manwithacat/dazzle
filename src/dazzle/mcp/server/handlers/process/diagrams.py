@@ -29,6 +29,54 @@ FLOW_FAILURE_KEYWORDS = ("fail", "error")
 # =============================================================================
 
 
+def process_diagram_impl(
+    project_root: Path,
+    process_name: str,
+    include_compensations: bool = False,
+    diagram_type: str = "flowchart",
+) -> dict[str, Any]:
+    """Generate a Mermaid diagram for a process.
+
+    Produces a flowchart showing:
+    - Process trigger (start node)
+    - Steps as nodes with kind-specific shapes
+    - Flow control edges (on_success, on_failure)
+    - Human task outcome branches
+    - Parallel step groupings
+    - Compensation handlers (optional)
+    """
+    app_spec = _helpers.load_app_spec(project_root)
+
+    processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
+
+    # Merge with persisted processes
+    from dazzle.core.process_persistence import load_processes as load_persisted_processes
+
+    persisted = load_persisted_processes(project_root)
+    dsl_names = {p.name for p in processes}
+    for p in persisted:
+        if p.name not in dsl_names:
+            processes.append(p)
+
+    proc = next((p for p in processes if p.name == process_name), None)
+    if not proc:
+        available = [p.name for p in processes]
+        return {
+            "error": f"Process '{process_name}' not found",
+            "available_processes": available,
+        }
+
+    # Generate diagram
+    mermaid_code = _generate_process_mermaid(proc, include_compensations, diagram_type)
+
+    return {
+        "process_name": proc.name,
+        "title": proc.title,
+        "type": diagram_type,
+        "diagram": mermaid_code,
+    }
+
+
 @wrap_handler_errors
 def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Generate a Mermaid diagram for a process.
@@ -50,41 +98,13 @@ def get_process_diagram_handler(project_root: Path, args: dict[str, Any]) -> str
         return error_response("process_name is required")
 
     progress.log_sync(f"Generating {diagram_type} diagram for '{process_name}'...")
-    app_spec = _helpers.load_app_spec(project_root)
-
-    processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
-
-    # Merge with persisted processes
-    from dazzle.core.process_persistence import load_processes as load_persisted_processes
-
-    persisted = load_persisted_processes(project_root)
-    dsl_names = {p.name for p in processes}
-    for p in persisted:
-        if p.name not in dsl_names:
-            processes.append(p)
-
-    proc = next((p for p in processes if p.name == process_name), None)
-    if not proc:
-        available = [p.name for p in processes]
-        return json.dumps(
-            {
-                "error": f"Process '{process_name}' not found",
-                "available_processes": available,
-            }
-        )
-
-    # Generate diagram
-    mermaid_code = _generate_process_mermaid(proc, include_compensations, diagram_type)
-
-    return json.dumps(
-        {
-            "process_name": proc.name,
-            "title": proc.title,
-            "type": diagram_type,
-            "diagram": mermaid_code,
-        },
-        indent=2,
+    result = process_diagram_impl(
+        project_root,
+        process_name=process_name,
+        include_compensations=include_compensations,
+        diagram_type=diagram_type,
     )
+    return json.dumps(result, indent=2)
 
 
 # =============================================================================

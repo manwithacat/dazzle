@@ -53,30 +53,28 @@ class WorkflowProposal:
 # =============================================================================
 
 
-@wrap_handler_errors
-def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
+def process_propose_impl(
+    project_root: Path,
+    story_ids: list[str] | None = None,
+    include_crud: bool = False,
+) -> dict[str, Any]:
     """Generate workflow design briefs from uncovered stories.
 
     Clusters stories into workflow-oriented groups and returns design briefs
     that guide the agent in composing processes, rather than generating
     ready-made DSL stubs.
     """
-    progress = extract_progress(args)
-    progress.log_sync("Loading app spec and stories...")
     app_spec = _helpers.load_app_spec(project_root)
-    story_ids = args.get("story_ids")
 
     stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
 
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
 
     if not stories:
-        return json.dumps(
-            {
-                "error": "No stories found",
-                "hint": "Use propose_stories_from_dsl first.",
-            }
-        )
+        return {
+            "error": "No stories found",
+            "hint": "Use propose_stories_from_dsl first.",
+        }
 
     # Build implements mapping
     implements_map: dict[str, list[str]] = {}
@@ -97,14 +95,11 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         ]
 
     if not target_stories:
-        return json.dumps(
-            {
-                "status": "all_covered",
-                "message": "All stories are fully covered by processes.",
-            }
-        )
+        return {
+            "status": "all_covered",
+            "message": "All stories are fully covered by processes.",
+        }
 
-    progress.log_sync(f"Clustering {len(target_stories)} stories into workflows...")
     # Cluster stories into workflows and build design briefs
     proposals = _cluster_stories_into_workflows(target_stories, app_spec)
 
@@ -113,8 +108,6 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
     entities: dict[str, dict[str, Any]] = {}
     workflows: list[dict[str, Any]] = []
     skipped_crud: list[str] = []
-
-    include_crud = args.get("include_crud", False)
 
     for proposal in proposals:
         if proposal.entity and proposal.entity not in entities:
@@ -166,6 +159,24 @@ def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
         result["skipped_crud"] = skipped_crud
         result["skipped_crud_count"] = len(skipped_crud)
 
+    return result
+
+
+@wrap_handler_errors
+def propose_processes_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate workflow design briefs from uncovered stories.
+
+    Clusters stories into workflow-oriented groups and returns design briefs
+    that guide the agent in composing processes, rather than generating
+    ready-made DSL stubs.
+    """
+    progress = extract_progress(args)
+    progress.log_sync("Loading app spec and stories...")
+    result = process_propose_impl(
+        project_root,
+        story_ids=args.get("story_ids"),
+        include_crud=args.get("include_crud", False),
+    )
     return json.dumps(result, indent=2)
 
 
