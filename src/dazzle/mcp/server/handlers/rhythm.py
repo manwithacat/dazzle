@@ -101,7 +101,8 @@ def rhythm_evaluate_impl(
         return {"error": f"Rhythm '{name}' not found"}
 
     if action == "submit_scores":
-        return json.loads(_submit_scores(project_root, name, scores or []))
+        scores_result: dict[str, Any] = json.loads(_submit_scores(project_root, name, scores or []))
+        return scores_result
 
     # Structural evaluation
     surface_names = {s.name for s in app_spec.surfaces}

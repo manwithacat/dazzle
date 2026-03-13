@@ -313,7 +313,7 @@ def nightly_run_impl(
     data["_meta"]["parallel"] = True
     data["_meta"]["workers"] = workers
 
-    return data
+    return data  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

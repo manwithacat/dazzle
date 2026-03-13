@@ -775,7 +775,7 @@ def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
         # For bash format without save, the impl returns {"format": "bash", "script": <str>}
         # The original handler returned the raw script string — preserve that behaviour.
         if fmt == "bash" and not save and "script" in result:
-            return result["script"]
+            return str(result["script"])
 
         return json.dumps(result, indent=2)
 

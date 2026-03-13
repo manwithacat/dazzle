@@ -28,13 +28,13 @@ def sentinel_scan_impl(
     """Run sentinel scan against project DSL. Returns scan result dict."""
     t0 = time.monotonic()
     appspec = load_project_appspec(project_path)
-    from dazzle.sentinel.models import AgentId, ScanConfig, Severity
+    from dazzle.sentinel.models import AgentId, ScanConfig, ScanTrigger, Severity
 
     agent_ids = [AgentId(a) for a in agents] if agents else None
     config = ScanConfig(
         agents=agent_ids,
         severity_threshold=Severity(severity_threshold),
-        trigger=trigger,
+        trigger=ScanTrigger(trigger),
     )
 
     from dazzle.sentinel.orchestrator import ScanOrchestrator

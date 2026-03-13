@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
 
-def format_output(result: dict, *, as_json: bool = False) -> str:
+def format_output(result: dict[str, Any], *, as_json: bool = False) -> str:
     """Format a handler result dict for terminal output."""
     if as_json:
         return json.dumps(result, indent=2, default=str)
