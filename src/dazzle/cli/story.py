@@ -460,3 +460,43 @@ def generate_tests(
     typer.echo()
     typer.echo("Next steps:")
     typer.echo("  dazzle test dsl-run    # Run the generated tests")
+
+
+@story_app.command("scope-fidelity")
+def scope_fidelity(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    status_filter: str = typer.Option(
+        "all", "--filter", "-f", help="Status filter: all, full, partial, gaps_only"
+    ),
+    limit: int = typer.Option(50, "--limit", "-l", help="Max stories to return"),
+    offset: int = typer.Option(0, "--offset", help="Pagination offset"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Check story scope fidelity against implementing processes.
+
+    Verifies that implementing processes exercise all entities declared
+    in each story's scope list.
+
+    Examples:
+        dazzle story scope-fidelity                         # All stories
+        dazzle story scope-fidelity --filter gaps_only      # Only gaps
+        dazzle story scope-fidelity --json                  # JSON output
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.process.scope_fidelity import scope_fidelity_impl
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    result = scope_fidelity_impl(
+        root,
+        status_filter=status_filter,
+        limit=limit,
+        offset=offset,
+    )
+
+    if "error" in result:
+        typer.echo(f"Error: {result['error']}", err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=json_output))

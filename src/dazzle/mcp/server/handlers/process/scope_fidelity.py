@@ -160,29 +160,26 @@ def _pascal_to_snake(name: str) -> str:
 # =============================================================================
 
 
-@wrap_handler_errors
-def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
+def scope_fidelity_impl(
+    project_root: Path,
+    *,
+    status_filter: str = "all",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
     """Analyze scope fidelity: do implementing processes cover all story scope entities?
 
-    Args (via args dict):
-        status_filter: "all" | "full" | "partial" | "gaps_only" (default: "all")
-            "gaps_only" shows stories with partial or no_process status only
-        limit: Max stories to return (default: 50)
-        offset: Pagination offset (default: 0)
+    Returns a plain dict with analysis results.
     """
-    progress = extract_progress(args)
-    progress.log_sync("Loading app spec for scope fidelity analysis...")
     app_spec = _helpers.load_app_spec(project_root)
 
     # Load stories from appspec
     stories: list[StorySpec] = list(app_spec.stories) if app_spec.stories else []
     if not stories:
-        return json.dumps(
-            {
-                "error": "No stories found in project",
-                "hint": "Define stories in DSL, or use story(operation='propose') to generate them.",
-            }
-        )
+        return {
+            "error": "No stories found in project",
+            "hint": "Define stories in DSL, or use story(operation='propose') to generate them.",
+        }
 
     # Load processes (DSL + persisted)
     processes: list[ProcessSpec] = list(app_spec.processes) if app_spec.processes else []
@@ -218,13 +215,7 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
         else:
             active_stories.append(s)
 
-    total_active = len(active_stories)
-    progress.log_sync(
-        f"Analyzing scope fidelity for {total_active} stories against {len(processes)} processes..."
-    )
-
-    for idx, story in enumerate(active_stories, 1):
-        progress.advance_sync(idx, total_active, f"Checking scope: {story.story_id}")
+    for story in active_stories:
         scope = story.scope
         implementing = implements_map.get(story.story_id, [])
 
@@ -283,17 +274,17 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
 
         if missing:
             partial_count += 1
-            status: Literal["full", "partial", "no_scope", "no_process"] = "partial"
+            fidelity_status: Literal["full", "partial", "no_scope", "no_process"] = "partial"
         else:
             full_count += 1
-            status = "full"
+            fidelity_status = "full"
 
         results.append(
             StoryScopeFidelity(
                 story_id=story.story_id,
                 title=story.title,
                 scope=scope,
-                status=status,
+                status=fidelity_status,
                 covered_entities=covered,
                 missing_entities=missing,
                 implementing_processes=implementing,
@@ -312,7 +303,7 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
         round(full_count / stories_with_scope * 100, 1) if stories_with_scope > 0 else 100.0
     )
 
-    return _build_response(
+    return _build_response_dict(
         results=results,
         full_count=full_count,
         partial_count=partial_count,
@@ -323,8 +314,23 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
         total_covered_entities=total_covered_entities,
         scope_coverage_percent=scope_coverage_percent,
         stories_fully_covered_percent=stories_fully_covered_percent,
-        args=args,
+        status_filter=status_filter,
+        limit=limit,
+        offset=offset,
     )
+
+
+@wrap_handler_errors
+def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """MCP wrapper for scope fidelity analysis."""
+    extract_progress(args)  # consume progress context
+    result = scope_fidelity_impl(
+        project_root,
+        status_filter=args.get("status_filter", "all"),
+        limit=args.get("limit", 50),
+        offset=args.get("offset", 0),
+    )
+    return json.dumps(result, indent=2)
 
 
 # =============================================================================
@@ -332,7 +338,7 @@ def scope_fidelity_handler(project_root: Path, args: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def _build_response(
+def _build_response_dict(
     *,
     results: list[StoryScopeFidelity],
     full_count: int,
@@ -344,11 +350,12 @@ def _build_response(
     total_covered_entities: int,
     scope_coverage_percent: float,
     stories_fully_covered_percent: float,
-    args: dict[str, Any],
-) -> str:
-    """Build the JSON response with filtering and pagination."""
+    status_filter: str = "all",
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Build the response dict with filtering and pagination."""
     # Apply status filter
-    status_filter = args.get("status_filter", "all")
     if status_filter == "gaps_only":
         results = [r for r in results if r.status in ("partial", "no_process")]
     elif status_filter != "all":
@@ -359,8 +366,6 @@ def _build_response(
     results.sort(key=lambda r: _priority.get(r.status, 9))
 
     # Pagination
-    limit = args.get("limit", 50)
-    offset = args.get("offset", 0)
     page = results[offset : offset + limit]
     has_more = (offset + limit) < len(results)
 
@@ -401,4 +406,4 @@ def _build_response(
             "to close these gaps."
         )
 
-    return json.dumps(response, indent=2)
+    return response

@@ -2709,3 +2709,27 @@ def test_diff_personas(
 
         detail_str = f" ({', '.join(details)})" if details else ""
         typer.echo(f"  {pid:20s} {status_str}{detail_str}")
+
+
+@test_app.command("verify-story")
+def verify_story(
+    story_ids: str = typer.Argument(..., help="Comma-separated story IDs to verify"),
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    base_url: str = typer.Option(None, "--base-url", "-u", help="API base URL"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Verify stories against DSL tests.
+
+    Examples:
+        dazzle test verify-story ST-001
+        dazzle test verify-story ST-001,ST-002 --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.dsl_test import dsl_test_verify_story_impl
+
+    manifest_path = Path(manifest).resolve()
+    root = manifest_path.parent
+
+    ids = [s.strip() for s in story_ids.split(",")]
+    result = dsl_test_verify_story_impl(root, story_ids=ids, base_url=base_url)
+    typer.echo(format_output(result, as_json=json_output))

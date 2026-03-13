@@ -37,6 +37,7 @@ from .scope_fidelity import (
     ScopeGap,
     StoryScopeFidelity,
     scope_fidelity_handler,
+    scope_fidelity_impl,
 )
 from .storage import (
     ProcessRunSummary,
@@ -83,4 +84,5 @@ __all__ = [
     "ScopeGap",
     "StoryScopeFidelity",
     "scope_fidelity_handler",
+    "scope_fidelity_impl",
 ]
