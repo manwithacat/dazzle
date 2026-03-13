@@ -155,9 +155,11 @@ app.command(name="check")(check_command)
 # =============================================================================
 # Sub-apps
 # =============================================================================
+from dazzle.cli.api_pack import api_pack_app  # noqa: E402
 from dazzle.cli.auth import auth_app  # noqa: E402
 from dazzle.cli.backup import backup_app  # noqa: E402
 from dazzle.cli.composition import composition_app  # noqa: E402
+from dazzle.cli.contribution import contribution_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.demo import demo_app  # noqa: E402
 from dazzle.cli.deploy import deploy_app  # noqa: E402
@@ -185,9 +187,11 @@ from dazzle.cli.test_design import test_design_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
+app.add_typer(api_pack_app, name="api-pack")
 app.add_typer(auth_app, name="auth")
 app.add_typer(backup_app, name="backup")
 app.add_typer(composition_app, name="composition")
+app.add_typer(contribution_app, name="contribution")
 app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")
 app.add_typer(discovery_app, name="discovery")
