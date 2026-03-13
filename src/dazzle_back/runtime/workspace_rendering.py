@@ -319,6 +319,32 @@ async def _workspace_region_handler(
     if _context_id:
         _filter_context["current_context"] = _context_id
 
+    # Pre-fetch active grants for has_grant() condition evaluation (v0.42.0)
+    if _current_user_id:
+        try:
+            from .grant_store import GrantStore
+
+            # Get DB connection from any available repository
+            _db_mgr = None
+            if ctx.repositories:
+                for _r in ctx.repositories.values():
+                    _db_mgr = getattr(_r, "db", None)
+                    if _db_mgr:
+                        break
+            if _db_mgr:
+                _grant_conn = _db_mgr.get_persistent_connection()
+                _grant_store = GrantStore(_grant_conn)
+                _active_grants = _grant_store.list_grants(
+                    principal_id=_current_user_id, status="active"
+                )
+                _filter_context["active_grants"] = _active_grants
+            else:
+                _filter_context["active_grants"] = []
+        except Exception:
+            # Grant tables may not exist if no grant_schemas defined
+            logger.debug("Could not pre-fetch grants", exc_info=True)
+            _filter_context["active_grants"] = []
+
     # Query the source entity
     items: list[dict[str, Any]] = []
     total = 0
@@ -447,7 +473,7 @@ async def _workspace_region_handler(
             for sig in ctx.attention_signals:
                 try:
                     cond_dict = sig.condition.model_dump(exclude_none=True)
-                    if _eval_cond(cond_dict, item, {}):
+                    if _eval_cond(cond_dict, item, _filter_context):
                         lvl = sig.level.value if hasattr(sig.level, "value") else str(sig.level)
                         sev = _severity_order.get(lvl, 99)
                         if sev < best_sev:
