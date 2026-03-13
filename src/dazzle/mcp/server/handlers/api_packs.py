@@ -12,6 +12,156 @@ from typing import Any
 
 from .common import error_response, extract_progress, wrap_handler_errors
 
+# ---------------------------------------------------------------------------
+# Impl functions (no MCP types, explicit params, return plain dicts)
+# ---------------------------------------------------------------------------
+
+
+def api_pack_generate_dsl_impl(*, pack_name: str) -> dict[str, Any]:
+    """Generate DSL service and foreign_model blocks from an API pack."""
+    from dazzle.api_kb import load_pack
+
+    pack = load_pack(pack_name)
+    if pack is None:
+        return {"error": f"Pack '{pack_name}' not found"}
+
+    dsl_parts = []
+    dsl_parts.append(pack.generate_service_dsl())
+    for model in pack.foreign_models:
+        dsl_parts.append(pack.generate_foreign_model_dsl(model))
+
+    dsl_code = "\n\n".join(dsl_parts)
+    integration_template = pack.generate_integration_template()
+
+    return {
+        "pack": pack_name,
+        "provider": pack.provider,
+        "dsl": dsl_code,
+        "integration_template": integration_template,
+        "env_vars_required": [e.name for e in pack.env_vars if e.required],
+        "hint": "Add the DSL blocks to your file. The integration_template shows recommended cache settings.",
+    }
+
+
+def api_pack_env_vars_impl(*, pack_names: list[str] | None = None) -> dict[str, Any]:
+    """Get .env.example content for specified packs or all packs."""
+    from dazzle.api_kb.loader import generate_env_example
+
+    env_example = generate_env_example(pack_names)
+
+    return {
+        "packs": pack_names if pack_names else "all",
+        "env_example": env_example,
+        "hint": "Add this to your .env file and fill in the values",
+    }
+
+
+def api_pack_infrastructure_impl(project_path: Path) -> dict[str, Any]:
+    """Discover infrastructure requirements for services declared in DSL."""
+    from dazzle.api_kb import load_pack
+
+    from .common import load_project_appspec
+
+    appspec = load_project_appspec(project_path)
+    services: list[dict[str, Any]] = []
+    for svc in getattr(appspec, "services", []) or []:
+        spec_inline = getattr(svc, "spec_inline", None) or ""
+        pack_name = spec_inline.removeprefix("pack:") if spec_inline.startswith("pack:") else None
+        pack = load_pack(pack_name) if pack_name else None
+
+        entry: dict[str, Any] = {
+            "service": svc.name,
+            "title": getattr(svc, "title", None),
+            "pack": pack_name,
+        }
+
+        if pack and pack.infrastructure:
+            entry["infrastructure"] = _serialize_infrastructure(pack.infrastructure)
+            entry["env_vars"] = [
+                {"name": e.name, "required": e.required, "description": e.description}
+                for e in pack.env_vars
+            ]
+        else:
+            entry["infrastructure"] = None
+            entry["hint"] = (
+                "No infrastructure metadata in API pack" if pack_name else "No pack reference"
+            )
+
+        services.append(entry)
+
+    self_hosted = [
+        s
+        for s in services
+        if (s.get("infrastructure") or {}).get("hosting") in ("self_hosted", "both")
+    ]
+    cloud_only = [
+        s for s in services if (s.get("infrastructure") or {}).get("hosting") == "cloud_only"
+    ]
+    unknown = [s for s in services if s.get("infrastructure") is None]
+
+    return {
+        "service_count": len(services),
+        "self_hosted_count": len(self_hosted),
+        "cloud_only_count": len(cloud_only),
+        "unknown_count": len(unknown),
+        "services": services,
+    }
+
+
+def api_pack_scaffold_impl(
+    *,
+    openapi_spec: dict[str, Any] | None = None,
+    openapi_url: str | None = None,
+    provider: str = "MyVendor",
+    category: str = "api",
+    pack_name: str = "",
+) -> dict[str, Any]:
+    """Scaffold a new API pack TOML from OpenAPI spec or blank template."""
+    from dazzle.api_kb.openapi_importer import import_from_openapi, scaffold_blank
+
+    toml_content: str
+
+    if openapi_spec:
+        toml_content = import_from_openapi(openapi_spec)
+    elif openapi_url:
+        import httpx
+
+        resp = httpx.get(openapi_url, timeout=30.0, follow_redirects=True)
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "")
+        if "yaml" in content_type or openapi_url.endswith((".yaml", ".yml")):
+            try:
+                import yaml
+
+                spec_data = yaml.safe_load(resp.text)
+            except ImportError:
+                return {
+                    "error": "PyYAML required for YAML OpenAPI specs. Install with: pip install pyyaml"
+                }
+        else:
+            spec_data = resp.json()
+        toml_content = import_from_openapi(spec_data)
+    else:
+        if not pack_name:
+            pack_name = f"{provider.lower().replace(' ', '_')}_{category}"
+        toml_content = scaffold_blank(provider, category, pack_name)
+
+    if not pack_name:
+        import re
+
+        match = re.search(r'name\s*=\s*"([^"]+)"', toml_content)
+        pack_name = match.group(1) if match else "custom_pack"
+
+    parts = pack_name.split("_", 1)
+    vendor_dir = parts[0] if len(parts) > 1 else pack_name
+    save_path = f".dazzle/api_packs/{vendor_dir}/{pack_name}.toml"
+
+    return {
+        "toml": toml_content,
+        "save_path": save_path,
+        "hint": f'Save to {save_path} in your project directory, then reference with spec: inline "pack:{pack_name}"',
+    }
+
 
 @wrap_handler_errors
 def list_api_packs_handler(args: dict[str, Any]) -> str:
@@ -169,41 +319,14 @@ def _serialize_infrastructure(infra: Any) -> dict[str, Any] | None:
 def generate_service_dsl_handler(args: dict[str, Any]) -> str:
     """Generate DSL service and foreign_model blocks from an API pack."""
     progress = extract_progress(args)
-    from dazzle.api_kb import load_pack
-
     progress.log_sync("Generating DSL from API pack...")
     pack_name = args.get("pack_name")
     if not pack_name:
         return error_response("pack_name parameter required")
-
-    pack = load_pack(pack_name)
-    if pack is None:
-        return error_response(f"Pack '{pack_name}' not found")
-
-    # Generate the DSL code
-    dsl_parts = []
-
-    # Service block
-    dsl_parts.append(pack.generate_service_dsl())
-
-    # Foreign model blocks
-    for model in pack.foreign_models:
-        dsl_parts.append(pack.generate_foreign_model_dsl(model))
-
-    dsl_code = "\n\n".join(dsl_parts)
-    integration_template = pack.generate_integration_template()
-
-    return json.dumps(
-        {
-            "pack": pack_name,
-            "provider": pack.provider,
-            "dsl": dsl_code,
-            "integration_template": integration_template,
-            "env_vars_required": [e.name for e in pack.env_vars if e.required],
-            "hint": "Add the DSL blocks to your file. The integration_template shows recommended cache settings.",
-        },
-        indent=2,
-    )
+    result = api_pack_generate_dsl_impl(pack_name=pack_name)
+    if "error" in result:
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors
@@ -211,61 +334,10 @@ def infrastructure_handler(project_path: Path | None, args: dict[str, Any]) -> s
     """Discover infrastructure requirements for services declared in DSL."""
     progress = extract_progress(args)
     progress.log_sync("Discovering infrastructure requirements...")
-    from dazzle.api_kb import load_pack
-
-    from .common import load_project_appspec
-
     if project_path is None:
         return error_response("No active project")
-
-    appspec = load_project_appspec(Path(project_path))
-    services: list[dict[str, Any]] = []
-    for svc in getattr(appspec, "services", []) or []:
-        spec_inline = getattr(svc, "spec_inline", None) or ""
-        pack_name = spec_inline.removeprefix("pack:") if spec_inline.startswith("pack:") else None
-        pack = load_pack(pack_name) if pack_name else None
-
-        entry: dict[str, Any] = {
-            "service": svc.name,
-            "title": getattr(svc, "title", None),
-            "pack": pack_name,
-        }
-
-        if pack and pack.infrastructure:
-            entry["infrastructure"] = _serialize_infrastructure(pack.infrastructure)
-            entry["env_vars"] = [
-                {"name": e.name, "required": e.required, "description": e.description}
-                for e in pack.env_vars
-            ]
-        else:
-            entry["infrastructure"] = None
-            entry["hint"] = (
-                "No infrastructure metadata in API pack" if pack_name else "No pack reference"
-            )
-
-        services.append(entry)
-
-    # Classify
-    self_hosted = [
-        s
-        for s in services
-        if (s.get("infrastructure") or {}).get("hosting") in ("self_hosted", "both")
-    ]
-    cloud_only = [
-        s for s in services if (s.get("infrastructure") or {}).get("hosting") == "cloud_only"
-    ]
-    unknown = [s for s in services if s.get("infrastructure") is None]
-
-    return json.dumps(
-        {
-            "service_count": len(services),
-            "self_hosted_count": len(self_hosted),
-            "cloud_only_count": len(cloud_only),
-            "unknown_count": len(unknown),
-            "services": services,
-        },
-        indent=2,
-    )
+    result = api_pack_infrastructure_impl(Path(project_path))
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors
@@ -273,68 +345,16 @@ def scaffold_pack_handler(project_path: Path | None, args: dict[str, Any]) -> st
     """Scaffold a new API pack TOML from OpenAPI spec or blank template."""
     progress = extract_progress(args)
     progress.log_sync("Scaffolding API pack...")
-
-    from dazzle.api_kb.openapi_importer import import_from_openapi, scaffold_blank
-
-    openapi_spec = args.get("openapi_spec")
-    openapi_url = args.get("openapi_url")
-    provider = args.get("provider", "MyVendor")
-    category = args.get("category", "api")
-    pack_name = args.get("pack_name", "")
-
-    toml_content: str
-
-    if openapi_spec:
-        # Convert OpenAPI spec dict to TOML
-        toml_content = import_from_openapi(openapi_spec)
-    elif openapi_url:
-        # Fetch and convert
-        import httpx
-
-        resp = httpx.get(openapi_url, timeout=30.0, follow_redirects=True)
-        resp.raise_for_status()
-        content_type = resp.headers.get("content-type", "")
-        if "yaml" in content_type or openapi_url.endswith((".yaml", ".yml")):
-            try:
-                import yaml
-
-                spec_data = yaml.safe_load(resp.text)
-            except ImportError:
-                return json.dumps(
-                    {
-                        "error": "PyYAML required for YAML OpenAPI specs. Install with: pip install pyyaml"
-                    }
-                )
-        else:
-            spec_data = resp.json()
-        toml_content = import_from_openapi(spec_data)
-    else:
-        # Blank template
-        if not pack_name:
-            pack_name = f"{provider.lower().replace(' ', '_')}_{category}"
-        toml_content = scaffold_blank(provider, category, pack_name)
-
-    # Determine save path
-    if not pack_name:
-        # Extract from generated TOML
-        import re
-
-        match = re.search(r'name\s*=\s*"([^"]+)"', toml_content)
-        pack_name = match.group(1) if match else "custom_pack"
-
-    # Derive provider directory from pack_name
-    parts = pack_name.split("_", 1)
-    vendor_dir = parts[0] if len(parts) > 1 else pack_name
-    save_path = f".dazzle/api_packs/{vendor_dir}/{pack_name}.toml"
-
-    return json.dumps(
-        {
-            "toml": toml_content,
-            "save_path": save_path,
-            "hint": f'Save to {save_path} in your project directory, then reference with spec: inline "pack:{pack_name}"',
-        },
-        indent=2,
+    result = api_pack_scaffold_impl(
+        openapi_spec=args.get("openapi_spec"),
+        openapi_url=args.get("openapi_url"),
+        provider=args.get("provider", "MyVendor"),
+        category=args.get("category", "api"),
+        pack_name=args.get("pack_name", ""),
     )
+    if "error" in result:
+        return json.dumps(result)
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors
@@ -342,17 +362,5 @@ def get_env_vars_for_packs_handler(args: dict[str, Any]) -> str:
     """Get .env.example content for specified packs or all packs."""
     progress = extract_progress(args)
     progress.log_sync("Generating env vars...")
-    from dazzle.api_kb.loader import generate_env_example
-
-    pack_names = args.get("pack_names")
-
-    env_example = generate_env_example(pack_names)
-
-    return json.dumps(
-        {
-            "packs": pack_names if pack_names else "all",
-            "env_example": env_example,
-            "hint": "Add this to your .env file and fill in the values",
-        },
-        indent=2,
-    )
+    result = api_pack_env_vars_impl(pack_names=args.get("pack_names"))
+    return json.dumps(result, indent=2)
