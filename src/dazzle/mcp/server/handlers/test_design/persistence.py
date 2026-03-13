@@ -14,8 +14,17 @@ from .proposals import _parse_test_design_action, _parse_test_design_trigger
 logger = logging.getLogger("dazzle.mcp")
 
 
-@wrap_handler_errors
-def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
+# ---------------------------------------------------------------------------
+# Impl function (no MCP types, explicit params, returns plain dict)
+# ---------------------------------------------------------------------------
+
+
+def test_design_save_impl(
+    project_root: Path,
+    *,
+    designs_data: list[dict[str, Any]],
+    overwrite: bool = False,
+) -> dict[str, Any]:
     """Save test designs to dsl/tests/designs.json."""
     from dazzle.core.ir.test_design import (
         TestDesignAction,
@@ -26,16 +35,6 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
     )
     from dazzle.testing.test_design_persistence import add_test_designs, get_dsl_tests_dir
 
-    progress = extract_progress(args)
-
-    designs_data = args.get("designs", [])
-    overwrite = args.get("overwrite", False)
-
-    if not designs_data:
-        return error_response("No designs provided")
-
-    progress.log_sync("Saving test designs...")
-    # Convert dict data to TestDesignSpec objects
     designs: list[TestDesignSpec] = []
     for d in designs_data:
         steps = []
@@ -71,7 +70,6 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
             )
         )
 
-    # Save designs
     result = add_test_designs(project_root, designs, overwrite=overwrite, to_dsl=True)
     designs_file = get_dsl_tests_dir(project_root) / "designs.json"
 
@@ -90,7 +88,25 @@ def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
             "auto-assigned new unique IDs. See remapped_ids for details."
         )
 
-    return json.dumps(response, indent=2)
+    return response
+
+
+@wrap_handler_errors
+def save_test_designs_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Save test designs to dsl/tests/designs.json."""
+    progress = extract_progress(args)
+
+    designs_data = args.get("designs", [])
+    if not designs_data:
+        return error_response("No designs provided")
+
+    progress.log_sync("Saving test designs...")
+    result = test_design_save_impl(
+        project_root,
+        designs_data=designs_data,
+        overwrite=args.get("overwrite", False),
+    )
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors

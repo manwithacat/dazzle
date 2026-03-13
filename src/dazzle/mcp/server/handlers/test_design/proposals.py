@@ -13,36 +13,18 @@ from ..serializers import serialize_test_design
 logger = logging.getLogger("dazzle.mcp")
 
 
-def _parse_test_design_action(value: str) -> Any:
-    """Parse a TestDesignAction with descriptive error on invalid input."""
-    from dazzle.core.ir.test_design import TestDesignAction
-
-    try:
-        return TestDesignAction(value)
-    except ValueError:
-        valid = ", ".join(a.value for a in TestDesignAction)
-        raise ValueError(f"'{value}' is not a valid action. Valid actions: {valid}") from None
+# ---------------------------------------------------------------------------
+# Impl function (no MCP types, explicit params, returns plain dict)
+# ---------------------------------------------------------------------------
 
 
-def _parse_test_design_trigger(value: str) -> Any:
-    """Parse a TestDesignTrigger with descriptive error on invalid input."""
-    from dazzle.core.ir.test_design import TestDesignTrigger
-
-    try:
-        return TestDesignTrigger(value)
-    except ValueError:
-        valid = ", ".join(t.value for t in TestDesignTrigger)
-        raise ValueError(f"'{value}' is not a valid trigger. Valid triggers: {valid}") from None
-
-
-@wrap_handler_errors
-def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """
-    Generate test designs from persona goals and workflows.
-
-    Analyzes a persona's goals from DSL and proposes tests that verify
-    the persona can achieve their stated objectives.
-    """
+def test_design_propose_persona_impl(
+    project_root: Path,
+    *,
+    persona_filter: str | None = None,
+    max_tests: int = 10,
+) -> dict[str, Any]:
+    """Generate test designs from persona goals and workflows."""
     from datetime import UTC, datetime
 
     from dazzle.core.ir.test_design import (
@@ -54,18 +36,11 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
     )
     from dazzle.testing.test_design_persistence import get_next_test_design_id
 
-    progress = extract_progress(args)
-
-    progress.log_sync("Proposing persona tests...")
     app_spec = load_project_appspec(project_root)
-
-    persona_filter = args.get("persona")
-    max_tests = args.get("max_tests", 10)
 
     designs: list[TestDesignSpec] = []
     design_count = 0
 
-    # Get starting ID
     base_id = get_next_test_design_id(project_root)
     base_num = int(base_id[3:])
 
@@ -77,7 +52,6 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
 
     now = datetime.now(UTC)
 
-    # Filter personas
     personas_to_process = app_spec.personas
     if persona_filter:
         personas_to_process = [
@@ -85,13 +59,11 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
         ]
 
     if not personas_to_process:
-        return json.dumps(
-            {
-                "status": "no_personas",
-                "message": "No personas found in DSL. Add persona definitions to generate persona-centric tests.",
-                "available_personas": [p.id for p in app_spec.personas],
-            }
-        )
+        return {
+            "status": "no_personas",
+            "message": "No personas found in DSL. Add persona definitions to generate persona-centric tests.",
+            "available_personas": [p.id for p in app_spec.personas],
+        }
 
     for persona in personas_to_process:
         if design_count >= max_tests:
@@ -99,12 +71,10 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
 
         persona_name = persona.label or persona.id
 
-        # Generate tests for each persona goal
-        for goal in persona.goals[:3]:  # Limit goals per persona
+        for goal in persona.goals[:3]:
             if design_count >= max_tests:
                 break
 
-            # Create test design for this goal
             steps = [
                 TestDesignStep(
                     action=TestDesignAction.LOGIN_AS,
@@ -113,13 +83,10 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
                 ),
             ]
 
-            # Find surfaces this persona can access
-            # Note: WorkspaceSpec doesn't directly link to persona; use all workspaces
             surfaces_for_persona = []
             for ws in app_spec.workspaces:
                 surfaces_for_persona.extend(ws.regions)
 
-            # If persona has access to surfaces, navigate to first one
             if surfaces_for_persona:
                 steps.append(
                     TestDesignStep(
@@ -131,7 +98,6 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
                     )
                 )
 
-            # Add goal-specific action (inferred from goal text)
             if "create" in goal.lower() or "add" in goal.lower():
                 steps.append(
                     TestDesignStep(
@@ -172,7 +138,7 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
                         f"Goal achieved: {goal}",
                         "No errors or permission denials",
                     ],
-                    entities=[],  # Will be filled by agent
+                    entities=[],
                     surfaces=[s.name for s in surfaces_for_persona[:2]],
                     tags=["persona", persona.id, "goal"],
                     status=TestDesignStatus.PROPOSED,
@@ -182,10 +148,8 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
                 )
             )
 
-        # Generate test for persona accessing a workspace
-        # Note: WorkspaceSpec doesn't directly link to persona; generate test for first workspace
         if app_spec.workspaces and design_count < max_tests:
-            ws = app_spec.workspaces[0]  # Use first workspace
+            ws = app_spec.workspaces[0]
             designs.append(
                 TestDesignSpec(
                     test_id=next_id(),
@@ -224,16 +188,52 @@ def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> s
                 )
             )
 
-    # Convert to JSON-serializable format
     designs_data = [serialize_test_design(d) for d in designs]
 
-    return json.dumps(
-        {
-            "proposed_count": len(designs_data),
-            "max_tests": max_tests,
-            "personas_analyzed": [p.id for p in personas_to_process],
-            "note": "These are draft test designs. Review and call save_test_designs with accepted designs.",
-            "designs": designs_data,
-        },
-        indent=2,
+    return {
+        "proposed_count": len(designs_data),
+        "max_tests": max_tests,
+        "personas_analyzed": [p.id for p in personas_to_process],
+        "note": "These are draft test designs. Review and call save_test_designs with accepted designs.",
+        "designs": designs_data,
+    }
+
+
+def _parse_test_design_action(value: str) -> Any:
+    """Parse a TestDesignAction with descriptive error on invalid input."""
+    from dazzle.core.ir.test_design import TestDesignAction
+
+    try:
+        return TestDesignAction(value)
+    except ValueError:
+        valid = ", ".join(a.value for a in TestDesignAction)
+        raise ValueError(f"'{value}' is not a valid action. Valid actions: {valid}") from None
+
+
+def _parse_test_design_trigger(value: str) -> Any:
+    """Parse a TestDesignTrigger with descriptive error on invalid input."""
+    from dazzle.core.ir.test_design import TestDesignTrigger
+
+    try:
+        return TestDesignTrigger(value)
+    except ValueError:
+        valid = ", ".join(t.value for t in TestDesignTrigger)
+        raise ValueError(f"'{value}' is not a valid trigger. Valid triggers: {valid}") from None
+
+
+@wrap_handler_errors
+def propose_persona_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """
+    Generate test designs from persona goals and workflows.
+
+    Analyzes a persona's goals from DSL and proposes tests that verify
+    the persona can achieve their stated objectives.
+    """
+    progress = extract_progress(args)
+    progress.log_sync("Proposing persona tests...")
+    result = test_design_propose_persona_impl(
+        project_root,
+        persona_filter=args.get("persona"),
+        max_tests=args.get("max_tests", 10),
     )
+    return json.dumps(result, indent=2)
