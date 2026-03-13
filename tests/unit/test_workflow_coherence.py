@@ -504,26 +504,14 @@ class TestBuildWorkflowCoherenceMission:
 
 
 class TestModeRouting:
-    def test_tool_schema_has_mode_enum(self) -> None:
-        """Verify the consolidated tool schema includes mode enum by reading source."""
-        # Read the tools_consolidated.py source and check for mode enum
-        # This avoids MCP import issues while still verifying the schema.
-        from pathlib import Path
+    def test_tool_schema_has_coherence_operation(self) -> None:
+        """Verify the consolidated tool schema includes coherence operation."""
+        from dazzle.mcp.server.tools_consolidated import get_consolidated_tools
 
-        tools_file = (
-            Path(__file__).resolve().parents[2]
-            / "src"
-            / "dazzle"
-            / "mcp"
-            / "server"
-            / "tools_consolidated.py"
-        )
-        source = tools_file.read_text()
-        # Verify the mode property exists in discovery tool section
-        assert '"mode"' in source
-        assert '"persona"' in source
-        assert '"entity_completeness"' in source
-        assert '"workflow_coherence"' in source
+        tools = get_consolidated_tools()
+        discovery_tool = next(t for t in tools if t.name == "discovery")
+        ops = discovery_tool.inputSchema["properties"]["operation"]["enum"]
+        assert "coherence" in ops
 
     def test_unknown_mode_error(self) -> None:
         """Verify that an unknown mode returns an error via the handler."""

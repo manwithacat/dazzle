@@ -6,7 +6,7 @@ tools with enum-based operations. Each operation is explicitly listed in the
 schema, preserving discoverability for LLMs.
 
 Consolidation strategy:
-- 66 original tools → 24 consolidated tools (+ 4 dev-mode project tools)
+- 66 original tools → 18 consolidated tools (+ 4 dev-mode project tools)
 - Knowledge tools (5) → MCP Resources (no schema overhead)
 - CRUD patterns unified: list/get/inspect → single tool with operation enum
 
@@ -66,11 +66,17 @@ PROJECT_PATH_SCHEMA = {
 
 def get_consolidated_tools() -> list[Tool]:
     """
-    Get consolidated tools (24 tools replacing 66 original tools).
+    Get consolidated tools (18 tools — knowledge/query operations only).
+
+    Process operations (dsl_test, e2e_test, nightly, pipeline, pulse,
+    contribution) are available via CLI commands instead.
 
     Each tool uses an 'operation' enum to specify the action, preserving
     discoverability while reducing schema overhead.
     """
+    # NOTE: Process operations (dsl_test, e2e_test, nightly, pipeline, pulse,
+    # contribution) have been moved to CLI commands. Only knowledge/query
+    # operations remain in the MCP server.
     return [
         # =====================================================================
         # DSL Operations (replaces 7 tools)
@@ -148,7 +154,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="api_pack",
-            description="API pack operations: list, search, get, generate_dsl, env_vars, infrastructure, scaffold. Project-local packs in .dazzle/api_packs/ override built-in packs.",
+            description="API pack operations: list, search, get. Project-local packs in .dazzle/api_packs/ override built-in packs.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -158,21 +164,12 @@ def get_consolidated_tools() -> list[Tool]:
                             "list",
                             "search",
                             "get",
-                            "generate_dsl",
-                            "env_vars",
-                            "infrastructure",
-                            "scaffold",
                         ],
                         "description": "Operation to perform",
                     },
                     "pack_name": {
                         "type": "string",
-                        "description": "Pack name (for get, generate_dsl)",
-                    },
-                    "pack_names": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Pack names (for env_vars)",
+                        "description": "Pack name (for get)",
                     },
                     "query": {
                         "type": "string",
@@ -186,18 +183,6 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Filter by provider (for search)",
                     },
-                    "openapi_url": {
-                        "type": "string",
-                        "description": "OpenAPI spec URL (for scaffold, converts to pack TOML)",
-                    },
-                    "openapi_spec": {
-                        "type": "object",
-                        "description": "OpenAPI spec as JSON object (for scaffold)",
-                    },
-                    "from_scratch": {
-                        "type": "boolean",
-                        "description": "Generate blank template (for scaffold, default if no openapi_*)",
-                    },
                     **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["operation"],
@@ -208,7 +193,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="mock",
-            description="Vendor mock server management: status, scenarios, fire_webhook, request_log, inject_error, scaffold_scenario. Operates on auto-started mock servers during 'dazzle serve'.",
+            description="Vendor mock server management: status, request_log. Operates on auto-started mock servers during 'dazzle serve'.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -216,34 +201,13 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "enum": [
                             "status",
-                            "scenarios",
-                            "fire_webhook",
                             "request_log",
-                            "inject_error",
-                            "scaffold_scenario",
                         ],
                         "description": "Operation to perform",
                     },
                     "vendor": {
                         "type": "string",
                         "description": "API pack name (e.g. 'sumsub_kyc')",
-                    },
-                    "action": {
-                        "type": "string",
-                        "enum": ["list", "activate", "deactivate"],
-                        "description": "Action for scenarios operation (default: list)",
-                    },
-                    "scenario_name": {
-                        "type": "string",
-                        "description": "Scenario name (for scenarios activate, scaffold_scenario)",
-                    },
-                    "event": {
-                        "type": "string",
-                        "description": "Webhook event name (for fire_webhook)",
-                    },
-                    "overrides": {
-                        "type": "object",
-                        "description": "Payload overrides (for fire_webhook)",
                     },
                     "method": {
                         "type": "string",
@@ -257,22 +221,6 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "integer",
                         "description": "Max results (for request_log, default: 20)",
                     },
-                    "operation_name": {
-                        "type": "string",
-                        "description": "API operation name (for inject_error)",
-                    },
-                    "status_code": {
-                        "type": "integer",
-                        "description": "HTTP status code to inject (for inject_error, default: 500)",
-                    },
-                    "body": {
-                        "type": "object",
-                        "description": "Error response body (for inject_error)",
-                    },
-                    "after_n": {
-                        "type": "integer",
-                        "description": "Trigger after N successful calls (for inject_error)",
-                    },
                     **PROJECT_PATH_SCHEMA,
                 },
                 "required": ["operation"],
@@ -283,38 +231,18 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="story",
-            description="Story operations: propose, save, get, generate_tests, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). scope_fidelity checks that implementing processes exercise all entities in story scope.",
+            description="Story operations: get, wall, coverage, scope_fidelity. Use get with view='wall' for a founder-friendly board grouped by implementation status (working/needs polish/not started). scope_fidelity checks that implementing processes exercise all entities in story scope.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
                         "enum": [
-                            "propose",
-                            "save",
                             "get",
-                            "generate_tests",
                             "coverage",
                             "scope_fidelity",
                         ],
                         "description": "Operation to perform",
-                    },
-                    "entities": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Filter by entities (for propose)",
-                    },
-                    "max_stories": {
-                        "type": "integer",
-                        "description": "Max stories to propose (default: 30)",
-                    },
-                    "stories": {
-                        "type": "array",
-                        "description": "Stories to save (for save)",
-                    },
-                    "overwrite": {
-                        "type": "boolean",
-                        "description": "Overwrite existing (for save)",
                     },
                     "status_filter": {
                         "type": "string",
@@ -324,11 +252,7 @@ def get_consolidated_tools() -> list[Tool]:
                     "story_ids": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Story IDs (for get: fetch full details; for generate_tests)",
-                    },
-                    "include_draft": {
-                        "type": "boolean",
-                        "description": "Include draft stories (for generate_tests)",
+                        "description": "Story IDs (for get: fetch full details)",
                     },
                     "view": {
                         "type": "string",
@@ -353,31 +277,22 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="rhythm",
-            description="Rhythm operations: propose, evaluate, gaps, coverage, fidelity, get, list, lifecycle. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
+            description="Rhythm operations: get, list, coverage. Rhythms are longitudinal persona journey maps through the app, organized into temporal phases containing scenes (actions on surfaces).",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
                         "enum": [
-                            "propose",
-                            "evaluate",
-                            "gaps",
-                            "coverage",
-                            "fidelity",
                             "get",
                             "list",
-                            "lifecycle",
+                            "coverage",
                         ],
                         "description": "Operation to perform",
                     },
                     "name": {
                         "type": "string",
-                        "description": "Rhythm name (for get, evaluate)",
-                    },
-                    "persona": {
-                        "type": "string",
-                        "description": "Persona ID (for propose)",
+                        "description": "Rhythm name (for get)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -389,68 +304,14 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="demo_data",
-            description="Demo data operations: propose, save, get, generate, load, validate_seeds",
+            description="Demo data operations: get. Retrieve the current demo data blueprint.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["propose", "save", "get", "generate", "load", "validate_seeds"],
+                        "enum": ["get"],
                         "description": "Operation to perform",
-                    },
-                    "domain_description": {
-                        "type": "string",
-                        "description": "Domain description (for propose)",
-                    },
-                    "base_url": {
-                        "type": "string",
-                        "description": "Target instance URL (for load, default: http://localhost:8000)",
-                    },
-                    "email": {
-                        "type": "string",
-                        "description": "Admin email for authentication (for load)",
-                    },
-                    "password": {
-                        "type": "string",
-                        "description": "Admin password for authentication (for load)",
-                    },
-                    "data_dir": {
-                        "type": "string",
-                        "description": "Seed data directory (for load/validate_seeds, auto-detected if omitted)",
-                    },
-                    "entities": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Specific entities (for propose, generate, load)",
-                    },
-                    "tenant_count": {
-                        "type": "integer",
-                        "description": "Number of tenants (for propose)",
-                    },
-                    "quick_mode": {
-                        "type": "boolean",
-                        "description": "Quick mode (for propose)",
-                    },
-                    "blueprint": {
-                        "type": "object",
-                        "description": "Blueprint to save (for save)",
-                    },
-                    "merge": {
-                        "type": "boolean",
-                        "description": "Merge with existing (for save)",
-                    },
-                    "validate": {
-                        "type": "boolean",
-                        "description": "Validate blueprint (for save)",
-                    },
-                    "format": {
-                        "type": "string",
-                        "enum": ["csv", "jsonl"],
-                        "description": "Output format (for generate)",
-                    },
-                    "output_dir": {
-                        "type": "string",
-                        "description": "Output directory (for generate)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -462,44 +323,17 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="test_design",
-            description="Test design operations: propose_persona, gaps, save, get, coverage_actions, runtime_gaps, save_runtime, auto_populate, improve_coverage",
+            description="Test design operations: get, gaps. Query test designs and identify coverage gaps.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
                         "enum": [
-                            "propose_persona",
-                            "gaps",
-                            "save",
                             "get",
-                            "coverage_actions",
-                            "runtime_gaps",
-                            "save_runtime",
-                            "auto_populate",
-                            "improve_coverage",
+                            "gaps",
                         ],
                         "description": "Operation to perform",
-                    },
-                    "persona": {
-                        "type": "string",
-                        "description": "Persona name (for propose_persona)",
-                    },
-                    "max_tests": {
-                        "type": "integer",
-                        "description": "Max tests (for propose_persona)",
-                    },
-                    "designs": {
-                        "type": "array",
-                        "description": "Test designs (for save)",
-                    },
-                    "overwrite": {
-                        "type": "boolean",
-                        "description": "Overwrite existing (for save)",
-                    },
-                    "to_dsl": {
-                        "type": "boolean",
-                        "description": "Save to dsl/ (for save)",
                     },
                     "status_filter": {
                         "type": "string",
@@ -517,31 +351,6 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "array",
                         "items": {"type": "string"},
                         "description": "Test design IDs to fetch full details (for get)",
-                    },
-                    "focus": {
-                        "type": "string",
-                        "enum": ["all", "personas", "entities", "state_machines", "scenarios"],
-                        "description": "Focus area (for coverage_actions)",
-                    },
-                    "max_actions": {
-                        "type": "integer",
-                        "description": "Max actions (for coverage_actions, runtime_gaps, improve_coverage)",
-                    },
-                    "max_stories": {
-                        "type": "integer",
-                        "description": "Max stories to propose (for auto_populate, default: 30)",
-                    },
-                    "include_test_designs": {
-                        "type": "boolean",
-                        "description": "Generate test designs from stories (for auto_populate, default: true)",
-                    },
-                    "coverage_report_path": {
-                        "type": "string",
-                        "description": "Coverage report path (for runtime_gaps)",
-                    },
-                    "coverage_data": {
-                        "type": "object",
-                        "description": "Coverage data (for save_runtime)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -641,44 +450,24 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="process",
-            description="Process operations: propose, save, list, inspect, list_runs, get_run, diagram, coverage",
+            description="Process operations: list, inspect, list_runs, get_run, coverage",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
                         "enum": [
-                            "propose",
-                            "save",
                             "list",
                             "inspect",
                             "list_runs",
                             "get_run",
-                            "diagram",
                             "coverage",
                         ],
                         "description": "Operation to perform",
                     },
                     "process_name": {
                         "type": "string",
-                        "description": "Process name (for inspect, diagram)",
-                    },
-                    "processes": {
-                        "type": "array",
-                        "description": "Process definitions to save (for save)",
-                    },
-                    "overwrite": {
-                        "type": "boolean",
-                        "description": "Overwrite existing processes with same name (for save)",
-                    },
-                    "story_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Story IDs (for propose)",
-                    },
-                    "include_crud": {
-                        "type": "boolean",
-                        "description": "Include CRUD stories as compose_process proposals (for propose, default: false)",
+                        "description": "Process name (for inspect)",
                     },
                     "run_id": {
                         "type": "string",
@@ -711,195 +500,6 @@ def get_consolidated_tools() -> list[Tool]:
                     "offset": {
                         "type": "integer",
                         "description": "Skip N results for pagination (for coverage, default: 0)",
-                    },
-                    "type": {
-                        "type": "string",
-                        "enum": ["flowchart", "stateDiagram"],
-                        "description": "Diagram type (for diagram)",
-                    },
-                    "include_compensations": {
-                        "type": "boolean",
-                        "description": "Include compensations (for diagram)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # DSL Tests (replaces 4 tools)
-        # =====================================================================
-        Tool(
-            name="dsl_test",
-            description="DSL test operations: generate, run, run_all, coverage, list, create_sessions, diff_personas, verify_story",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "generate",
-                            "run",
-                            "run_all",
-                            "coverage",
-                            "list",
-                            "create_sessions",
-                            "diff_personas",
-                            "verify_story",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "save": {
-                        "type": "boolean",
-                        "description": "Save generated tests (for generate)",
-                    },
-                    "format": {
-                        "type": "string",
-                        "enum": ["json", "yaml", "bash"],
-                        "description": "Output format (for generate)",
-                    },
-                    "base_url": {
-                        "type": "string",
-                        "description": "Server URL (for run, create_sessions, diff_personas)",
-                    },
-                    "entity": {
-                        "type": "string",
-                        "description": "Filter by entity (for run, list)",
-                    },
-                    "category": {
-                        "type": "string",
-                        "description": "Filter by category (for run, list)",
-                    },
-                    "test_id": {
-                        "type": "string",
-                        "description": "Specific test ID (for run)",
-                    },
-                    "regenerate": {
-                        "type": "boolean",
-                        "description": "Regenerate before run (for run)",
-                    },
-                    "detailed": {
-                        "type": "boolean",
-                        "description": "Detailed output (for coverage)",
-                    },
-                    "persona": {
-                        "type": "string",
-                        "description": "Run tests as specific persona (for run)",
-                    },
-                    "force": {
-                        "type": "boolean",
-                        "description": "Force recreate sessions (for create_sessions)",
-                    },
-                    "route": {
-                        "type": "string",
-                        "description": "Route to diff (for diff_personas)",
-                    },
-                    "routes": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Routes to diff (for diff_personas)",
-                    },
-                    "persona_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Persona IDs to compare (for diff_personas, default: all)",
-                    },
-                    "story_id": {
-                        "type": "string",
-                        "description": "Story ID to verify (for verify_story)",
-                    },
-                    "story_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Story IDs to verify (for verify_story, alternative to single story_id)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # E2E Tests (replaces 5 tools)
-        # =====================================================================
-        Tool(
-            name="e2e_test",
-            description="E2E test operations: check_infra, run, run_agent, coverage, list_flows, tier_guidance, run_viewport, list_viewport_specs, save_viewport_specs",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": [
-                            "check_infra",
-                            "run",
-                            "run_agent",
-                            "coverage",
-                            "list_flows",
-                            "tier_guidance",
-                            "run_viewport",
-                            "list_viewport_specs",
-                            "save_viewport_specs",
-                        ],
-                        "description": "Operation to perform",
-                    },
-                    "headless": {
-                        "type": "boolean",
-                        "description": "Headless mode (for run, run_agent)",
-                    },
-                    "priority": {
-                        "type": "string",
-                        "enum": ["high", "medium", "low"],
-                        "description": "Filter by priority (for run, list_flows)",
-                    },
-                    "tag": {
-                        "type": "string",
-                        "description": "Filter by tag (for run, list_flows)",
-                    },
-                    "test_id": {
-                        "type": "string",
-                        "description": "Specific test ID (for run_agent)",
-                    },
-                    "model": {
-                        "type": "string",
-                        "description": "LLM model (for run_agent)",
-                    },
-                    "limit": {
-                        "type": "integer",
-                        "description": "Max flows (for list_flows)",
-                    },
-                    "scenario": {
-                        "type": "string",
-                        "description": "Test scenario description (for tier_guidance)",
-                    },
-                    "viewports": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Viewport names to test (for run_viewport, e.g. ['mobile', 'desktop'])",
-                    },
-                    "viewport_specs": {
-                        "type": "array",
-                        "description": "Custom viewport specs to save (for save_viewport_specs)",
-                    },
-                    "to_dsl": {
-                        "type": "boolean",
-                        "description": "Save to dsl/ directory (for save_viewport_specs, default: true)",
-                    },
-                    "persona_id": {
-                        "type": "string",
-                        "description": "Persona ID for authenticated viewport testing (for run_viewport)",
-                    },
-                    "persona_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Multiple persona IDs to test (for run_viewport, runs matrix per persona)",
-                    },
-                    "capture_screenshots": {
-                        "type": "boolean",
-                        "description": "Capture screenshots for visual regression (for run_viewport)",
-                    },
-                    "update_baselines": {
-                        "type": "boolean",
-                        "description": "Update baseline screenshots (for run_viewport)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -1032,83 +632,18 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="pitch",
-            description="Pitch deck operations: scaffold, generate, validate, get, review, update, enrich, init_assets. Generate investor pitch decks from pitchspec.yaml + DSL data. Workflow: scaffold → enrich → update → validate → generate → review → iterate.",
+            description="Pitch deck operations: get. Retrieve the current pitchspec.",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
                         "enum": [
-                            "scaffold",
-                            "generate",
-                            "validate",
                             "get",
-                            "review",
-                            "update",
-                            "enrich",
-                            "init_assets",
                         ],
                         "description": "Operation to perform",
-                    },
-                    "format": {
-                        "type": "string",
-                        "enum": ["pptx", "narrative", "all"],
-                        "description": "Output format (for generate)",
-                    },
-                    "overwrite": {
-                        "type": "boolean",
-                        "description": "Overwrite existing (for scaffold)",
-                    },
-                    "patch": {
-                        "type": "object",
-                        "description": "Partial pitchspec data to merge (for update)",
                     },
                     **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Contribution (community contribution packaging)
-        # =====================================================================
-        Tool(
-            name="contribution",
-            description="Community contribution: templates, create, validate, examples. Package API packs, UI patterns, bug fixes, DSL patterns, and feature requests for sharing with the Dazzle team.",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["templates", "create", "validate", "examples"],
-                        "description": "Operation to perform",
-                    },
-                    "type": {
-                        "type": "string",
-                        "enum": [
-                            "api_pack",
-                            "ui_pattern",
-                            "bug_fix",
-                            "dsl_pattern",
-                            "feature_request",
-                        ],
-                        "description": "Contribution type (for create, validate, examples)",
-                    },
-                    "title": {
-                        "type": "string",
-                        "description": "Contribution title (for create)",
-                    },
-                    "description": {
-                        "type": "string",
-                        "description": "What this contributes (for create)",
-                    },
-                    "content": {
-                        "type": "object",
-                        "description": "Type-specific content (for create, validate)",
-                    },
-                    "output_dir": {
-                        "type": "string",
-                        "description": "Directory to write output files (for create)",
-                    },
                 },
                 "required": ["operation"],
             },
@@ -1432,148 +967,16 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="discovery",
-            description="Capability discovery operations: run (build discovery mission), report (get results), compile (convert observations to proposals), emit (generate DSL from proposals), status (check readiness), verify_all_stories (batch verify accepted stories against API tests), coherence (persona-by-persona authenticated UX coherence score). Mode 'headless' runs pure DSL/KG persona journey analysis without a running app. Other modes explore a running Dazzle app as a persona and identify gaps between DSL spec and implementation.",
+            description="Capability discovery operations: coherence (persona-by-persona authenticated UX coherence score).",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
                         "enum": [
-                            "run",
-                            "report",
-                            "compile",
-                            "emit",
-                            "status",
-                            "verify_all_stories",
                             "coherence",
                         ],
                         "description": "Operation to perform",
-                    },
-                    "mode": {
-                        "type": "string",
-                        "enum": [
-                            "persona",
-                            "entity_completeness",
-                            "workflow_coherence",
-                            "headless",
-                        ],
-                        "description": "Discovery mode. 'headless' analyzes persona journeys without a running app (default: persona)",
-                    },
-                    "persona": {
-                        "type": "string",
-                        "description": "Persona to explore as (for run/compile/emit, default: admin)",
-                    },
-                    "base_url": {
-                        "type": "string",
-                        "description": "Base URL of the running app (for run, default: http://localhost:3000)",
-                    },
-                    "max_steps": {
-                        "type": "integer",
-                        "description": "Maximum exploration steps (for run, default: 50)",
-                    },
-                    "token_budget": {
-                        "type": "integer",
-                        "description": "Token budget for LLM (for run, default: 200000)",
-                    },
-                    "session_id": {
-                        "type": "string",
-                        "description": "Specific session ID (for report/compile/emit)",
-                    },
-                    "proposal_ids": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Specific proposal IDs to emit (for emit, default: all)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Pipeline (batch quality audit)
-        # =====================================================================
-        Tool(
-            name="pipeline",
-            description=(
-                "Full deterministic quality audit in a single call. "
-                "Chains: validate → lint → fidelity → composition_audit → test_generate → "
-                "test_coverage → story_coverage → process_coverage → test_design_gaps → semantics. "
-                "If base_url is provided, also runs all API tests. "
-                "Returns structured JSON with per-step results and overall summary."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["run"],
-                        "description": "Operation to perform",
-                    },
-                    "base_url": {
-                        "type": "string",
-                        "description": "Server URL — if provided, also runs dsl_test(run_all) as final step",
-                    },
-                    "stop_on_error": {
-                        "type": "boolean",
-                        "description": "Stop pipeline on first error (default: false, continues collecting results)",
-                    },
-                    "detail": {
-                        "type": "string",
-                        "enum": ["metrics", "issues", "full"],
-                        "description": (
-                            "Response detail level (default: 'issues'). "
-                            "'metrics': compact stats per step (~1KB). "
-                            "'issues': metrics for clean steps, full results for steps with problems (~5-20KB). "
-                            "'full': complete results for every step (~200KB+)."
-                        ),
-                    },
-                    "summary": {
-                        "type": "boolean",
-                        "description": "[Deprecated — use 'detail' instead] Backward-compat: true→metrics, false→full.",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Nightly (parallel quality runner)
-        # =====================================================================
-        Tool(
-            name="nightly",
-            description=(
-                "Parallel quality runner — same steps as pipeline but fans out "
-                "independent steps using a thread pool for faster wall-clock time. "
-                "Operations: run. Returns structured JSON identical to pipeline."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["run"],
-                        "description": "Operation to perform",
-                    },
-                    "base_url": {
-                        "type": "string",
-                        "description": "Server URL — if provided, also runs dsl_test(run_all)",
-                    },
-                    "stop_on_error": {
-                        "type": "boolean",
-                        "description": "Stop on first error (default: false)",
-                    },
-                    "workers": {
-                        "type": "integer",
-                        "description": "Max parallel workers (default: 4)",
-                    },
-                    "detail": {
-                        "type": "string",
-                        "enum": ["metrics", "issues", "full"],
-                        "description": (
-                            "Response detail level (default: 'issues'). "
-                            "'metrics': compact. 'issues': expand steps with problems. "
-                            "'full': complete results."
-                        ),
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -1613,48 +1016,6 @@ def get_consolidated_tools() -> list[Tool]:
                         "type": "string",
                         "enum": ["create", "read", "update", "delete", "list"],
                         "description": "CRUD operation to simulate (required for simulate)",
-                    },
-                    **PROJECT_PATH_SCHEMA,
-                },
-                "required": ["operation"],
-            },
-        ),
-        # =====================================================================
-        # Pulse (founder-ready health report)
-        # =====================================================================
-        Tool(
-            name="pulse",
-            description=(
-                "Founder-ready project health report. "
-                "Operations: run (full report with narrative), "
-                "radar (compact 6-axis readiness chart), "
-                "persona (view app through a specific persona's eyes), "
-                "wfs (workflow friction score per persona). "
-                "Returns a Launch Readiness score, 6-axis radar, "
-                "decisions needing founder input, recent wins, and blockers. "
-                "Output: structured JSON with a 'markdown' field containing "
-                "the human-readable report."
-            ),
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "operation": {
-                        "type": "string",
-                        "enum": ["run", "radar", "persona", "timeline", "decisions", "wfs"],
-                        "description": "Operation to perform",
-                    },
-                    "persona": {
-                        "type": "string",
-                        "description": (
-                            "Persona name to view through (required for persona operation)"
-                        ),
-                    },
-                    "business_context": {
-                        "type": "string",
-                        "description": (
-                            "Business type hint for coherence check "
-                            "(saas, marketplace, agency, ecommerce)"
-                        ),
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
@@ -1819,9 +1180,7 @@ def get_consolidated_tools() -> list[Tool]:
         Tool(
             name="sentinel",
             description=(
-                "Sentinel operations: scan (run failure-mode detection against DSL), "
-                "findings (get findings from latest/specific scan), "
-                "suppress (mark finding as false positive), "
+                "Sentinel operations: findings (get findings from latest/specific scan), "
                 "status (available agents and last scan), "
                 "history (list recent scans). "
                 "Deterministic static analysis of the IR — no source code scanning."
@@ -1832,28 +1191,16 @@ def get_consolidated_tools() -> list[Tool]:
                     "operation": {
                         "type": "string",
                         "enum": [
-                            "scan",
                             "findings",
-                            "suppress",
                             "status",
                             "history",
                         ],
                         "description": "Operation to perform",
                     },
-                    "agents": {
-                        "type": "array",
-                        "items": {"type": "string"},
-                        "description": "Agent IDs to run (for scan). Options: DI, AA, MT, BL. Default: all.",
-                    },
                     "severity_threshold": {
                         "type": "string",
                         "enum": ["critical", "high", "medium", "low", "info"],
-                        "description": "Minimum severity to include (for scan/findings). Default: info.",
-                    },
-                    "detail": {
-                        "type": "string",
-                        "enum": ["metrics", "issues", "full"],
-                        "description": "Response detail level (for scan). Default: issues.",
+                        "description": "Minimum severity to include (for findings). Default: info.",
                     },
                     "agent": {
                         "type": "string",
@@ -1866,14 +1213,6 @@ def get_consolidated_tools() -> list[Tool]:
                     "scan_id": {
                         "type": "string",
                         "description": "Specific scan ID (for findings).",
-                    },
-                    "finding_id": {
-                        "type": "string",
-                        "description": "Finding ID to suppress (for suppress).",
-                    },
-                    "reason": {
-                        "type": "string",
-                        "description": "Reason for suppression (for suppress).",
                     },
                     "limit": {
                         "type": "integer",

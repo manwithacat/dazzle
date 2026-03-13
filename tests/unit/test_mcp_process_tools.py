@@ -3,8 +3,7 @@ Unit tests for MCP process tools.
 
 Tests cover:
 - Story coverage analysis
-- Process proposal generation
-- Process inspection
+- Process listing and inspection
 - Process run listing
 """
 
@@ -334,82 +333,6 @@ class TestStoriesCoverage:
         assert data["stories"][0]["story_id"] == "ST-001"
 
 
-class TestProposeProcesses:
-    """Tests for propose_processes_from_stories handler."""
-
-    def test_propose_for_uncovered_stories(
-        self, mock_app_spec_no_processes: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test proposing processes for uncovered stories."""
-        from dazzle.mcp.server.handlers.process import propose_processes_handler
-
-        with patch(
-            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-            return_value=mock_app_spec_no_processes,
-        ):
-            result = propose_processes_handler(tmp_path, {})
-            data = json.loads(result)
-
-        assert "error" not in data
-        # Both stories are STATUS_CHANGED on Task → lifecycle workflow
-        assert data["workflow_count"] >= 1
-
-        for workflow in data["workflows"]:
-            assert "name" in workflow
-            assert "title" in workflow
-            assert "implements" in workflow
-
-    def test_propose_for_specific_story(
-        self, mock_app_spec_no_processes: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test proposing process for a specific story."""
-        from dazzle.mcp.server.handlers.process import propose_processes_handler
-
-        with patch(
-            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-            return_value=mock_app_spec_no_processes,
-        ):
-            result = propose_processes_handler(tmp_path, {"story_ids": ["ST-001"]})
-            data = json.loads(result)
-
-        assert "error" not in data
-        assert data["workflow_count"] >= 1
-        assert "ST-001" in data["workflows"][0]["implements"]
-
-    def test_propose_no_stories_with_fallback(
-        self, mock_app_spec_no_stories: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test propose returns error when no stories found even after fallback."""
-        from dazzle.mcp.server.handlers.process import propose_processes_handler
-
-        with patch(
-            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-            return_value=mock_app_spec_no_stories,
-        ):
-            result = propose_processes_handler(tmp_path, {})
-            data = json.loads(result)
-
-        assert "error" in data
-        assert "No stories found" in data["error"]
-
-    def test_propose_all_covered(
-        self, mock_app_spec_with_coverage: MagicMock, tmp_path: Path
-    ) -> None:
-        """Test proposing when some stories are covered."""
-        from dazzle.mcp.server.handlers.process import propose_processes_handler
-
-        with patch(
-            "dazzle.mcp.server.handlers.process._helpers.load_app_spec",
-            return_value=mock_app_spec_with_coverage,
-        ):
-            result = propose_processes_handler(tmp_path, {})
-            data = json.loads(result)
-
-        # ST-002 is still uncovered, so it should propose
-        assert "error" not in data
-        assert data["workflow_count"] >= 1
-
-
 class TestListProcesses:
     """Tests for list_processes handler."""
 
@@ -590,11 +513,11 @@ class TestToolSchemas:
         schema = process_tool.inputSchema
         operations = schema["properties"]["operation"]["enum"]
 
-        assert "propose" in operations
-        assert "save" in operations
         assert "list" in operations
         assert "inspect" in operations
         assert "coverage" in operations
+        assert "list_runs" in operations
+        assert "get_run" in operations
 
     def test_process_tool_in_all_consolidated_tools(self) -> None:
         """Test that process tool is included in get_all_consolidated_tools."""

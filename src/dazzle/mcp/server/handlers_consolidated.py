@@ -243,12 +243,8 @@ def handle_dsl(arguments: dict[str, Any]) -> str:
 def handle_api_pack(arguments: dict[str, Any]) -> str:
     """Handle consolidated API pack operations."""
     from .handlers.api_packs import (
-        generate_service_dsl_handler,
         get_api_pack_handler,
-        get_env_vars_for_packs_handler,
-        infrastructure_handler,
         list_api_packs_handler,
-        scaffold_pack_handler,
         search_api_packs_handler,
     )
 
@@ -263,28 +259,13 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
         "list": list_api_packs_handler,
         "search": search_api_packs_handler,
         "get": get_api_pack_handler,
-        "generate_dsl": generate_service_dsl_handler,
-        "env_vars": get_env_vars_for_packs_handler,
     }
 
     operation = arguments.get("operation")
 
-    # Most ops are standalone (no project_path)
     standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
     if standalone is not None:
         return standalone(arguments)
-
-    # infrastructure needs project context
-    if operation == "infrastructure":
-        if project_path is None:
-            return _project_error()
-        return infrastructure_handler(project_path=project_path, args=arguments)
-
-    # scaffold needs project context
-    if operation == "scaffold":
-        if project_path is None:
-            return _project_error()
-        return scaffold_pack_handler(project_path=project_path, args=arguments)
 
     return unknown_op_response(operation, "API pack")
 
@@ -299,11 +280,7 @@ handle_mock: Callable[[dict[str, Any]], str] = _make_project_handler(
     "mock",
     {
         "status": f"{_MOD_MOCK}:mock_status_handler",
-        "scenarios": f"{_MOD_MOCK}:mock_scenarios_handler",
-        "fire_webhook": f"{_MOD_MOCK}:mock_fire_webhook_handler",
         "request_log": f"{_MOD_MOCK}:mock_request_log_handler",
-        "inject_error": f"{_MOD_MOCK}:mock_inject_error_handler",
-        "scaffold_scenario": f"{_MOD_MOCK}:mock_scaffold_scenario_handler",
     },
 )
 
@@ -314,13 +291,10 @@ handle_mock: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 def handle_story(arguments: dict[str, Any]) -> str:
-    """Handle consolidated story operations."""
+    """Handle consolidated story operations (read-only)."""
     from .handlers.process import scope_fidelity_handler, stories_coverage_handler
     from .handlers.stories import (
-        generate_tests_from_stories_handler,
         get_stories_handler,
-        propose_stories_from_dsl_handler,
-        save_stories_handler,
         wall_stories_handler,
     )
 
@@ -335,10 +309,7 @@ def handle_story(arguments: dict[str, Any]) -> str:
         return wall_stories_handler(project_path, arguments)
 
     ops: dict[str, Callable[..., str]] = {
-        "propose": propose_stories_from_dsl_handler,
-        "save": save_stories_handler,
         "get": get_stories_handler,
-        "generate_tests": generate_tests_from_stories_handler,
         "coverage": stories_coverage_handler,
         "scope_fidelity": scope_fidelity_handler,
     }
@@ -355,16 +326,11 @@ def handle_story(arguments: dict[str, Any]) -> str:
 
 
 def handle_rhythm(arguments: dict[str, Any]) -> str:
-    """Handle consolidated rhythm operations."""
+    """Handle consolidated rhythm operations (read-only)."""
     from .handlers.rhythm import (
         coverage_rhythms_handler,
-        evaluate_rhythm_handler,
-        fidelity_rhythm_handler,
-        gaps_rhythm_handler,
         get_rhythm_handler,
-        lifecycle_rhythm_handler,
         list_rhythms_handler,
-        propose_rhythm_handler,
     )
 
     operation = arguments.get("operation")
@@ -374,14 +340,9 @@ def handle_rhythm(arguments: dict[str, Any]) -> str:
         return _project_error()
 
     ops: dict[str, Callable[..., str]] = {
-        "propose": propose_rhythm_handler,
-        "evaluate": evaluate_rhythm_handler,
-        "gaps": gaps_rhythm_handler,
         "coverage": coverage_rhythms_handler,
-        "fidelity": fidelity_rhythm_handler,
         "get": get_rhythm_handler,
         "list": list_rhythms_handler,
-        "lifecycle": lifecycle_rhythm_handler,
     }
 
     handler = ops.get(operation)  # type: ignore[arg-type]
@@ -399,18 +360,9 @@ _MOD_DEMO = "dazzle.mcp.server.handlers.demo_data"
 handle_demo_data: Callable[[dict[str, Any]], str] = _make_project_handler(
     "demo data",
     {
-        "propose": f"{_MOD_DEMO}:propose_demo_blueprint_handler",
-        "save": f"{_MOD_DEMO}:save_demo_blueprint_handler",
         "get": f"{_MOD_DEMO}:get_demo_blueprint_handler",
-        "generate": f"{_MOD_DEMO}:generate_demo_data_handler",
-        "load": f"{_MOD_DEMO}:load_demo_data_handler",
-        "validate_seeds": f"{_MOD_DEMO}:validate_demo_data_handler",
     },
 )
-
-
-# NOTE: handle_test_design is defined after _auto_populate_tests / _improve_coverage
-# because those local helpers must exist before the factory assignment executes.
 
 
 # =============================================================================
@@ -484,120 +436,13 @@ _MOD_PROC = "dazzle.mcp.server.handlers.process"
 handle_process: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
     "process",
     {
-        "propose": f"{_MOD_PROC}:propose_processes_handler",
-        "save": f"{_MOD_PROC}:save_processes_handler",
         "list": f"{_MOD_PROC}:list_processes_handler",
         "inspect": f"{_MOD_PROC}:inspect_process_handler",
         "list_runs": f"{_MOD_PROC}:list_process_runs_handler",
         "get_run": f"{_MOD_PROC}:get_process_run_handler",
-        "diagram": f"{_MOD_PROC}:get_process_diagram_handler",
         "coverage": f"{_MOD_PROC}:stories_coverage_handler",
     },
 )
-
-
-# =============================================================================
-# DSL Test Handler
-# =============================================================================
-
-_MOD_DT = "dazzle.mcp.server.handlers.dsl_test"
-
-handle_dsl_test: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
-    "DSL test",
-    {
-        "generate": f"{_MOD_DT}:generate_dsl_tests_handler",
-        "run": f"{_MOD_DT}:run_dsl_tests_handler",
-        "run_all": f"{_MOD_DT}:run_all_dsl_tests_handler",
-        "coverage": f"{_MOD_DT}:get_dsl_test_coverage_handler",
-        "list": f"{_MOD_DT}:list_dsl_tests_handler",
-        "create_sessions": f"{_MOD_DT}:create_sessions_handler",
-        "diff_personas": f"{_MOD_DT}:diff_personas_handler",
-        "verify_story": f"{_MOD_DT}:verify_story_handler",
-    },
-)
-
-
-# =============================================================================
-# E2E Test Handler
-# =============================================================================
-
-
-async def handle_e2e_test(arguments: dict[str, Any]) -> str:
-    """Handle consolidated E2E test operations."""
-    from .handlers.testing import (
-        check_test_infrastructure_handler,
-        get_e2e_test_coverage_handler,
-        get_test_tier_guidance_handler,
-        list_e2e_flows_handler,
-        run_agent_e2e_tests_handler,
-        run_e2e_tests_handler,
-    )
-
-    operation = arguments.get("operation")
-
-    # check_infra and tier_guidance don't need project context
-    standalone_ops: dict[str, Callable[..., Any]] = {
-        "check_infra": lambda: check_test_infrastructure_handler(),
-        "tier_guidance": lambda: get_test_tier_guidance_handler(arguments),
-    }
-
-    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
-    if standalone is not None:
-        return str(standalone())
-
-    # Other operations need project context
-    project_path = _resolve_project(arguments)
-    if project_path is None:
-        return _project_error()
-
-    pp = str(project_path)
-
-    if operation == "run":
-        return run_e2e_tests_handler(
-            project_path=pp,
-            priority=arguments.get("priority"),
-            tag=arguments.get("tag"),
-            headless=arguments.get("headless", True),
-        )
-    elif operation == "run_agent":
-        rv: str = await run_agent_e2e_tests_handler(
-            project_path=pp,
-            test_id=arguments.get("test_id"),
-            headless=arguments.get("headless", True),
-            model=arguments.get("model"),
-        )
-        return rv
-    elif operation == "coverage":
-        return get_e2e_test_coverage_handler(project_path=pp)
-    elif operation == "list_flows":
-        return list_e2e_flows_handler(
-            project_path=pp,
-            priority=arguments.get("priority"),
-            tag=arguments.get("tag"),
-            limit=arguments.get("limit", 20),
-        )
-    elif operation == "run_viewport":
-        from .handlers.viewport_testing import run_viewport_tests_handler
-
-        return run_viewport_tests_handler(
-            project_path=pp,
-            headless=arguments.get("headless", True),
-            viewports=arguments.get("viewports"),
-            persona_id=arguments.get("persona_id"),
-            capture_screenshots=arguments.get("capture_screenshots", False),
-            update_baselines=arguments.get("update_baselines", False),
-        )
-    elif operation in ("list_viewport_specs", "save_viewport_specs"):
-        from .handlers.viewport_testing import manage_viewport_specs_handler
-
-        return manage_viewport_specs_handler(
-            project_path=pp,
-            operation=operation,
-            specs=arguments.get("viewport_specs"),
-            to_dsl=arguments.get("to_dsl", True),
-        )
-    else:
-        return unknown_op_response(operation, "E2E test")
 
 
 # =============================================================================
@@ -811,523 +656,7 @@ async def handle_user_management(arguments: dict[str, Any]) -> str:
 
 
 # =============================================================================
-# Helper Functions for Enhanced Operations
-# =============================================================================
-
-
-def _load_appspec(project_path: Path) -> Any:
-    """Load and return appspec from project, or raise on failure."""
-    from dazzle.core.appspec_loader import load_project_appspec
-
-    return load_project_appspec(project_path)
-
-
-def _generate_entity_stories(
-    appspec: Any,
-    max_stories: int,
-    existing_titles: set[str],
-    default_actor: str,
-    next_story_id: Callable[[], str],
-) -> tuple[list[Any], int]:
-    """Generate stories from entities and their state machine transitions.
-
-    Returns (new_stories, skipped_count).
-    """
-    from dazzle.core.ir.stories import StoryCondition, StorySpec, StoryStatus, StoryTrigger
-
-    stories: list[StorySpec] = []
-    skipped = 0
-    count = 0
-
-    for entity in appspec.domain.entities:
-        if count >= max_stories:
-            break
-
-        # Create story (skip if title already exists)
-        title = f"{default_actor} creates a new {entity.title or entity.name}"
-        if title in existing_titles:
-            skipped += 1
-        else:
-            existing_titles.add(title)
-            stories.append(
-                StorySpec(
-                    story_id=next_story_id(),
-                    title=title,
-                    actor=default_actor,
-                    trigger=StoryTrigger.FORM_SUBMITTED,
-                    scope=[entity.name],
-                    given=[
-                        StoryCondition(
-                            expression=f"{default_actor} has permission to create {entity.name}"
-                        ),
-                    ],
-                    when=[
-                        StoryCondition(
-                            expression=f"{default_actor} submits {entity.name} creation form"
-                        ),
-                    ],
-                    then=[
-                        StoryCondition(expression=f"New {entity.name} is saved to database"),
-                        StoryCondition(expression=f"{default_actor} sees confirmation message"),
-                    ],
-                    status=StoryStatus.ACCEPTED,
-                )
-            )
-            count += 1
-
-        # State machine transitions
-        if entity.state_machine:
-            for transition in entity.state_machine.transitions[:3]:
-                if count >= max_stories:
-                    break
-                sm = entity.state_machine
-                title = f"{default_actor} changes {entity.name} from {transition.from_state} to {transition.to_state}"
-                if title in existing_titles:
-                    skipped += 1
-                    continue
-                existing_titles.add(title)
-                stories.append(
-                    StorySpec(
-                        story_id=next_story_id(),
-                        title=title,
-                        actor=default_actor,
-                        trigger=StoryTrigger.STATUS_CHANGED,
-                        scope=[entity.name],
-                        given=[
-                            StoryCondition(
-                                expression=f"{entity.name}.{sm.status_field} is '{transition.from_state}'",
-                                field_path=f"{entity.name}.{sm.status_field}",
-                            ),
-                        ],
-                        when=[
-                            StoryCondition(
-                                expression=f"{entity.name}.{sm.status_field} changes to '{transition.to_state}'",
-                                field_path=f"{entity.name}.{sm.status_field}",
-                            ),
-                        ],
-                        then=[
-                            StoryCondition(
-                                expression=f"{entity.name}.{sm.status_field} becomes '{transition.to_state}'",
-                                field_path=f"{entity.name}.{sm.status_field}",
-                            ),
-                        ],
-                        status=StoryStatus.ACCEPTED,
-                    )
-                )
-                count += 1
-
-    return stories, skipped
-
-
-def _generate_test_designs_from_stories(stories: list[Any]) -> list[Any]:
-    """Generate test design specs from a list of stories.
-
-    Returns list of TestDesignSpec instances.
-    """
-    from dazzle.core.ir.stories import StoryTrigger
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
-
-    trigger_map = {
-        StoryTrigger.FORM_SUBMITTED: TestDesignTrigger.FORM_SUBMITTED,
-        StoryTrigger.STATUS_CHANGED: TestDesignTrigger.STATUS_CHANGED,
-        StoryTrigger.USER_CLICK: TestDesignTrigger.USER_CLICK,
-    }
-
-    test_designs: list[TestDesignSpec] = []
-
-    for story in stories:
-        test_id = story.story_id.replace("ST-", "TD-")
-
-        steps: list[TestDesignStep] = [
-            TestDesignStep(
-                action=TestDesignAction.LOGIN_AS,
-                target=story.actor,
-                rationale=f"Test from {story.actor}'s perspective",
-            )
-        ]
-
-        if story.trigger == StoryTrigger.FORM_SUBMITTED:
-            scope_entity = story.scope[0] if story.scope else "form"
-            steps.extend(
-                [
-                    TestDesignStep(
-                        action=TestDesignAction.NAVIGATE_TO,
-                        target=f"{scope_entity}_create",
-                        rationale="Navigate to creation form",
-                    ),
-                    TestDesignStep(
-                        action=TestDesignAction.FILL,
-                        target="form",
-                        data={"fields": "required_fields"},
-                        rationale="Fill form with test data",
-                    ),
-                    TestDesignStep(
-                        action=TestDesignAction.CLICK,
-                        target="submit_button",
-                        rationale="Submit the form",
-                    ),
-                ]
-            )
-        elif story.trigger == StoryTrigger.STATUS_CHANGED:
-            scope_entity = story.scope[0] if story.scope else "entity"
-            steps.append(
-                TestDesignStep(
-                    action=TestDesignAction.TRIGGER_TRANSITION,
-                    target=scope_entity,
-                    rationale="Trigger status change",
-                )
-            )
-
-        test_designs.append(
-            TestDesignSpec(
-                test_id=test_id,
-                title=f"Verify: {story.title}",
-                description=f"Test generated from story {story.story_id}",
-                persona=story.actor,
-                trigger=trigger_map.get(story.trigger, TestDesignTrigger.USER_CLICK),
-                steps=steps,
-                expected_outcomes=[c.expression for c in story.then],
-                entities=story.scope.copy(),
-                tags=[f"story:{story.story_id}", "auto-populated"],
-                status=TestDesignStatus.PROPOSED,
-            )
-        )
-
-    return test_designs
-
-
-def _auto_populate_tests(project_path: Path, arguments: dict[str, Any]) -> str:
-    """
-    Auto-populate stories and test designs from DSL.
-
-    This operation runs the full autonomous workflow:
-    1. Propose stories from DSL entities
-    2. Auto-accept all proposed stories
-    3. Generate test designs from accepted stories
-    4. Save everything to dsl/stories/ and dsl/tests/
-
-    Args:
-        project_path: Path to the project directory
-        arguments: dict with optional keys:
-            - max_stories: Maximum stories to propose (default: 30)
-            - include_test_designs: Whether to generate test designs (default: True)
-
-    Returns:
-        JSON string with summary of what was created
-    """
-    from dazzle.core.story_emitter import append_stories_to_dsl, get_next_story_id_from_appspec
-    from dazzle.testing.test_design_persistence import add_test_designs
-
-    max_stories = arguments.get("max_stories", 30)
-    include_test_designs = arguments.get("include_test_designs", True)
-
-    try:
-        appspec = _load_appspec(project_path)
-    except Exception as e:
-        return error_response(f"Failed to load DSL: {e}")
-
-    # Load existing stories and build a title set for dedup
-    existing_stories = list(appspec.stories) if appspec.stories else []
-    existing_titles = {s.title for s in existing_stories}
-
-    # Get starting story ID
-    base_id = get_next_story_id_from_appspec(existing_stories)
-    base_num = int(base_id[3:])
-    story_count = 0
-
-    def next_story_id() -> str:
-        nonlocal story_count
-        result = f"ST-{base_num + story_count:03d}"
-        story_count += 1
-        return result
-
-    default_actor = "User"
-    if appspec.personas:
-        default_actor = appspec.personas[0].label or appspec.personas[0].id
-
-    stories, skipped = _generate_entity_stories(
-        appspec, max_stories, existing_titles, default_actor, next_story_id
-    )
-
-    # Save stories to DSL
-    if stories:
-        append_stories_to_dsl(project_path, stories)
-
-    result: dict[str, Any] = {
-        "stories_proposed": len(stories),
-        "stories_skipped_as_duplicates": skipped,
-        "stories_total": len(existing_stories) + len(stories),
-        "status": "success",
-    }
-
-    # Generate test designs from stories
-    if include_test_designs and stories:
-        test_designs = _generate_test_designs_from_stories(stories)
-        add_test_designs(project_path, test_designs, overwrite=False, to_dsl=True)
-        result["test_designs_generated"] = len(test_designs)
-
-    result["next_steps"] = [
-        "dazzle test dsl-run    # Run Tier 1 API tests",
-        "dazzle test run-all    # Run all test tiers",
-    ]
-
-    return json.dumps(result, indent=2)
-
-
-def _propose_persona_coverage_tests(
-    appspec: Any,
-    covered_personas: set[str],
-    max_actions: int,
-    start_id: int,
-) -> tuple[list[Any], list[dict[str, Any]], int]:
-    """Generate test designs for uncovered personas.
-
-    Returns (new_designs, actions_taken, next_id).
-    """
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
-
-    new_designs: list[TestDesignSpec] = []
-    actions_taken: list[dict[str, Any]] = []
-    next_id = start_id
-
-    for persona in appspec.personas:
-        if len(actions_taken) >= max_actions:
-            break
-        if persona.id not in covered_personas and persona.goals:
-            new_designs.append(
-                TestDesignSpec(
-                    test_id=f"TD-{next_id:03d}",
-                    title=f"Verify {persona.label or persona.id} can achieve their goals",
-                    description=f"Auto-generated to cover persona {persona.id}",
-                    persona=persona.id,
-                    trigger=TestDesignTrigger.USER_CLICK,
-                    steps=[
-                        TestDesignStep(
-                            action=TestDesignAction.LOGIN_AS,
-                            target=persona.id,
-                            rationale=f"Test as {persona.id}",
-                        ),
-                        TestDesignStep(
-                            action=TestDesignAction.NAVIGATE_TO,
-                            target="dashboard",
-                            rationale="Navigate to main view",
-                        ),
-                    ],
-                    expected_outcomes=[f"{persona.id} can access their workspace"],
-                    entities=[],
-                    tags=["auto-coverage", f"persona:{persona.id}"],
-                    status=TestDesignStatus.PROPOSED,
-                )
-            )
-            next_id += 1
-            actions_taken.append(
-                {
-                    "action": "propose_persona_test",
-                    "persona": persona.id,
-                    "test_id": new_designs[-1].test_id,
-                }
-            )
-
-    return new_designs, actions_taken, next_id
-
-
-def _propose_entity_coverage_tests(
-    appspec: Any,
-    uncovered_entities: set[str],
-    max_actions: int,
-    actions_so_far: int,
-    start_id: int,
-) -> tuple[list[Any], list[dict[str, Any]]]:
-    """Generate test designs for uncovered entities.
-
-    Returns (new_designs, actions_taken).
-    """
-    from dazzle.core.ir.test_design import (
-        TestDesignAction,
-        TestDesignSpec,
-        TestDesignStatus,
-        TestDesignStep,
-        TestDesignTrigger,
-    )
-
-    new_designs: list[TestDesignSpec] = []
-    actions_taken: list[dict[str, Any]] = []
-    next_id = start_id
-
-    for entity in appspec.domain.entities:
-        if actions_so_far + len(actions_taken) >= max_actions:
-            break
-        if entity.name in uncovered_entities:
-            new_designs.append(
-                TestDesignSpec(
-                    test_id=f"TD-{next_id:03d}",
-                    title=f"CRUD operations for {entity.title or entity.name}",
-                    description=f"Auto-generated to cover entity {entity.name}",
-                    persona="User",
-                    trigger=TestDesignTrigger.FORM_SUBMITTED,
-                    steps=[
-                        TestDesignStep(
-                            action=TestDesignAction.NAVIGATE_TO,
-                            target=f"{entity.name}_create",
-                            rationale="Navigate to creation form",
-                        ),
-                        TestDesignStep(
-                            action=TestDesignAction.FILL,
-                            target="form",
-                            data={"fields": "required"},
-                            rationale="Fill required fields",
-                        ),
-                        TestDesignStep(
-                            action=TestDesignAction.CLICK,
-                            target="submit",
-                            rationale="Submit form",
-                        ),
-                    ],
-                    expected_outcomes=[f"{entity.name} is created successfully"],
-                    entities=[entity.name],
-                    tags=["auto-coverage", f"entity:{entity.name}", "crud"],
-                    status=TestDesignStatus.PROPOSED,
-                )
-            )
-            next_id += 1
-            actions_taken.append(
-                {
-                    "action": "propose_entity_test",
-                    "entity": entity.name,
-                    "test_id": new_designs[-1].test_id,
-                }
-            )
-
-    return new_designs, actions_taken
-
-
-def _improve_coverage(project_path: Path, arguments: dict[str, Any]) -> str:
-    """
-    Execute top coverage improvement actions automatically.
-
-    This operation:
-    1. Gets prioritized coverage actions
-    2. Executes the top N actions automatically
-    3. Returns a summary of what was done
-
-    Args:
-        project_path: Path to the project directory
-        arguments: dict with optional keys:
-            - max_actions: Maximum actions to execute (default: 5)
-            - focus: Focus area - "all", "personas", "entities", "scenarios" (default: "all")
-
-    Returns:
-        JSON string with summary of actions taken
-    """
-    from dazzle.testing.test_design_persistence import add_test_designs, load_test_designs
-
-    max_actions = arguments.get("max_actions", 5)
-    focus = arguments.get("focus", "all")
-
-    try:
-        appspec = _load_appspec(project_path)
-    except Exception as e:
-        return error_response(f"Failed to load DSL: {e}")
-
-    # Load existing test designs
-    existing_designs = load_test_designs(project_path)
-
-    # Track what's covered
-    covered_personas: set[str] = set()
-    covered_entities: set[str] = set()
-
-    for design in existing_designs:
-        if design.persona:
-            covered_personas.add(design.persona)
-        covered_entities.update(design.entities)
-
-    # Find gaps
-    all_entities = {e.name for e in appspec.domain.entities}
-    all_personas = {p.id for p in appspec.personas}
-
-    uncovered_entities = all_entities - covered_entities
-    uncovered_personas = all_personas - covered_personas
-
-    actions_taken: list[dict[str, Any]] = []
-    new_designs: list[Any] = []
-    next_id = len(existing_designs) + 1
-
-    # Priority 1: Uncovered personas
-    if focus in ("all", "personas"):
-        persona_designs, persona_actions, next_id = _propose_persona_coverage_tests(
-            appspec, covered_personas, max_actions, next_id
-        )
-        new_designs.extend(persona_designs)
-        actions_taken.extend(persona_actions)
-
-    # Priority 2: Uncovered entities
-    if focus in ("all", "entities"):
-        entity_designs, entity_actions = _propose_entity_coverage_tests(
-            appspec, uncovered_entities, max_actions, len(actions_taken), next_id
-        )
-        new_designs.extend(entity_designs)
-        actions_taken.extend(entity_actions)
-
-    # Save new test designs
-    if new_designs:
-        add_test_designs(project_path, new_designs, overwrite=False, to_dsl=True)
-
-    # Calculate new coverage
-    new_entity_coverage = (
-        (
-            len(covered_entities)
-            + len([a for a in actions_taken if a["action"] == "propose_entity_test"])
-        )
-        / len(all_entities)
-        * 100
-        if all_entities
-        else 100
-    )
-    new_persona_coverage = (
-        (
-            len(covered_personas)
-            + len([a for a in actions_taken if a["action"] == "propose_persona_test"])
-        )
-        / len(all_personas)
-        * 100
-        if all_personas
-        else 100
-    )
-
-    return json.dumps(
-        {
-            "actions_taken": len(actions_taken),
-            "actions": actions_taken,
-            "test_designs_created": len(new_designs),
-            "coverage": {
-                "entities": f"{new_entity_coverage:.1f}%",
-                "personas": f"{new_persona_coverage:.1f}%",
-            },
-            "gaps_remaining": {
-                "entities": len(uncovered_entities)
-                - len([a for a in actions_taken if a["action"] == "propose_entity_test"]),
-                "personas": len(uncovered_personas)
-                - len([a for a in actions_taken if a["action"] == "propose_persona_test"]),
-            },
-        },
-        indent=2,
-    )
-
-
-# =============================================================================
-# Test Design Handler (placed here because it references local helpers above)
+# Test Design Handler
 # =============================================================================
 
 _MOD_TD = "dazzle.mcp.server.handlers.test_design"
@@ -1335,15 +664,8 @@ _MOD_TD = "dazzle.mcp.server.handlers.test_design"
 handle_test_design: Callable[[dict[str, Any]], str] = _make_project_handler(
     "test design",
     {
-        "propose_persona": f"{_MOD_TD}:propose_persona_tests_handler",
-        "gaps": f"{_MOD_TD}:get_test_gaps_handler",
-        "save": f"{_MOD_TD}:save_test_designs_handler",
         "get": f"{_MOD_TD}:get_test_designs_handler",
-        "coverage_actions": f"{_MOD_TD}:get_coverage_actions_handler",
-        "runtime_gaps": f"{_MOD_TD}:get_runtime_coverage_gaps_handler",
-        "save_runtime": f"{_MOD_TD}:save_runtime_coverage_handler",
-        "auto_populate": _auto_populate_tests,
-        "improve_coverage": _improve_coverage,
+        "gaps": f"{_MOD_TD}:get_test_gaps_handler",
     },
 )
 
@@ -1357,31 +679,7 @@ _MOD_PITCH = "dazzle.mcp.server.handlers.pitch"
 handle_pitch: Callable[[dict[str, Any]], str] = _make_project_handler(
     "pitch",
     {
-        "scaffold": f"{_MOD_PITCH}:scaffold_pitchspec_handler",
-        "generate": f"{_MOD_PITCH}:generate_pitch_handler",
-        "validate": f"{_MOD_PITCH}:validate_pitchspec_handler",
         "get": f"{_MOD_PITCH}:get_pitchspec_handler",
-        "review": f"{_MOD_PITCH}:review_pitchspec_handler",
-        "update": f"{_MOD_PITCH}:update_pitchspec_handler",
-        "enrich": f"{_MOD_PITCH}:enrich_pitchspec_handler",
-        "init_assets": f"{_MOD_PITCH}:init_assets_handler",
-    },
-)
-
-
-# =============================================================================
-# Contribution Handler
-# =============================================================================
-
-_MOD_CONTRIB = "dazzle.mcp.server.handlers.contribution"
-
-handle_contribution: Callable[[dict[str, Any]], str] = _make_standalone_handler(
-    "contribution",
-    {
-        "templates": f"{_MOD_CONTRIB}:templates_handler",
-        "create": f"{_MOD_CONTRIB}:create_handler",
-        "validate": f"{_MOD_CONTRIB}:validate_handler",
-        "examples": f"{_MOD_CONTRIB}:examples_handler",
     },
 )
 
@@ -1665,12 +963,6 @@ _MOD_DISC = "dazzle.mcp.server.handlers.discovery"
 handle_discovery: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
     "discovery",
     {
-        "run": f"{_MOD_DISC}:run_discovery_handler",
-        "report": f"{_MOD_DISC}:get_discovery_report_handler",
-        "compile": f"{_MOD_DISC}:compile_discovery_handler",
-        "emit": f"{_MOD_DISC}:emit_discovery_handler",
-        "status": f"{_MOD_DISC}:discovery_status_handler",
-        "verify_all_stories": f"{_MOD_DISC}:verify_all_stories_handler",
         "coherence": f"{_MOD_DISC}:app_coherence_handler",
     },
 )
@@ -1702,45 +994,6 @@ def handle_policy(arguments: dict[str, Any]) -> str:
         return _project_error()
 
     return _handle(project_path, arguments)
-
-
-# =============================================================================
-# Pipeline Handler
-# =============================================================================
-
-handle_pipeline: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "pipeline",
-    {"run": "dazzle.mcp.server.handlers.pipeline:run_pipeline_handler"},
-)
-
-
-# =============================================================================
-# Nightly Handler
-# =============================================================================
-
-handle_nightly: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "nightly",
-    {"run": "dazzle.mcp.server.handlers.nightly:run_nightly_handler"},
-)
-
-
-# =============================================================================
-# Pulse (founder-ready health report)
-# =============================================================================
-
-_MOD_PULSE = "dazzle.mcp.server.handlers.pulse"
-
-handle_pulse: Callable[[dict[str, Any]], str] = _make_project_handler(
-    "pulse",
-    {
-        "run": f"{_MOD_PULSE}:run_pulse_handler",
-        "radar": f"{_MOD_PULSE}:radar_pulse_handler",
-        "persona": f"{_MOD_PULSE}:persona_pulse_handler",
-        "timeline": f"{_MOD_PULSE}:timeline_pulse_handler",
-        "decisions": f"{_MOD_PULSE}:decisions_pulse_handler",
-        "wfs": f"{_MOD_PULSE}:wfs_pulse_handler",
-    },
-)
 
 
 # =============================================================================
@@ -1789,9 +1042,7 @@ _MOD_SENT = "dazzle.mcp.server.handlers.sentinel"
 handle_sentinel: Callable[[dict[str, Any]], str] = _make_project_handler(
     "sentinel",
     {
-        "scan": f"{_MOD_SENT}:scan_handler",
         "findings": f"{_MOD_SENT}:findings_handler",
-        "suppress": f"{_MOD_SENT}:suppress_handler",
         "status": f"{_MOD_SENT}:status_handler",
         "history": f"{_MOD_SENT}:history_handler",
     },
@@ -1831,22 +1082,16 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "sitespec": handle_sitespec,
     "semantics": handle_semantics,
     "process": handle_process,
-    "dsl_test": handle_dsl_test,
-    "e2e_test": handle_e2e_test,
     "status": handle_status,
     "knowledge": handle_knowledge,
     "pitch": handle_pitch,
-    "contribution": handle_contribution,
     "user_management": handle_user_management,
     "bootstrap": handle_bootstrap,
     "spec_analyze": handle_spec_analyze,
     "graph": handle_graph,
     "discovery": handle_discovery,
-    "nightly": handle_nightly,
-    "pipeline": handle_pipeline,
     "user_profile": handle_user_profile,
     "policy": handle_policy,
-    "pulse": handle_pulse,
     "composition": handle_composition,
     "sentinel": handle_sentinel,
     "test_intelligence": handle_test_intelligence,
