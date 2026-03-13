@@ -27,6 +27,7 @@ from .enum import EnumParserMixin
 from .eventing import EventingParserMixin
 from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
+from .grant import GrantParserMixin
 from .hless import HLESSParserMixin
 from .integration import IntegrationParserMixin
 from .island import IslandParserMixin
@@ -82,6 +83,7 @@ class Parser(
     SLAParserMixin,
     IslandParserMixin,
     NotificationParserMixin,
+    GrantParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -367,6 +369,12 @@ class Parser(
                     fragment, notifications=[*fragment.notifications, notification_spec]
                 )
 
+            # v0.42.0 Grant Schemas (Runtime RBAC)
+            elif self.match(TokenType.GRANT_SCHEMA):
+                self.advance()  # consume 'grant_schema' token
+                grant_schema = self.parse_grant_schema()
+                fragment = _updated(fragment, grant_schemas=[*fragment.grant_schemas, grant_schema])
+
             else:
                 token = self.current_token()
                 if token.type == TokenType.EOF:
@@ -431,4 +439,5 @@ __all__ = [
     "ApprovalParserMixin",
     "SLAParserMixin",
     "IslandParserMixin",
+    "GrantParserMixin",
 ]
