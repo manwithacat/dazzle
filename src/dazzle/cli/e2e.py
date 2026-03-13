@@ -1,9 +1,13 @@
 """
-Docker-based E2E testing CLI commands.
+E2E testing CLI commands.
 
-Commands for running E2E tests with UX coverage tracking in Docker containers.
+Docker-based E2E tests and impl-based commands for check-infra, coverage,
+list-flows, tier-guidance, and viewport testing.
 """
 
+from __future__ import annotations
+
+import json
 import shutil
 import subprocess
 import sys
@@ -12,7 +16,7 @@ from pathlib import Path
 import typer
 
 e2e_app = typer.Typer(
-    help="Docker-based E2E testing with UX coverage tracking.",
+    help="E2E testing with UX coverage tracking.",
     no_args_is_help=True,
 )
 
@@ -289,3 +293,194 @@ def e2e_clean() -> None:
         typer.echo(f"  Removed: {container}")
 
     typer.secho("✓ Cleanup complete", fg=typer.colors.GREEN)
+
+
+# ---------------------------------------------------------------------------
+# impl-based commands
+# ---------------------------------------------------------------------------
+
+
+@e2e_app.command("check-infra")
+def e2e_check_infra(
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Check E2E test infrastructure requirements.
+
+    Examples:
+        dazzle e2e check-infra
+        dazzle e2e check-infra --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.testing import check_test_infrastructure_impl
+
+    result = check_test_infrastructure_impl()
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@e2e_app.command("coverage")
+def e2e_coverage(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Analyze E2E test coverage for the project.
+
+    Examples:
+        dazzle e2e coverage
+        dazzle e2e coverage --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.cli.common import resolve_project
+    from dazzle.mcp.server.handlers.testing import get_e2e_test_coverage_impl
+
+    root = resolve_project(manifest)
+    result = get_e2e_test_coverage_impl(root)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@e2e_app.command("list-flows")
+def e2e_list_flows(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    priority: str = typer.Option(
+        None, "--priority", "-p", help="Filter by priority (high, medium, low)"
+    ),
+    tag: str = typer.Option(None, "--tag", "-t", help="Filter by tag"),
+    limit: int = typer.Option(50, "--limit", "-l", help="Maximum number of flows to return"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """List available E2E test flows.
+
+    Examples:
+        dazzle e2e list-flows
+        dazzle e2e list-flows --priority high
+        dazzle e2e list-flows --tag crud --limit 10
+        dazzle e2e list-flows --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.cli.common import resolve_project
+    from dazzle.mcp.server.handlers.testing import list_e2e_flows_impl
+
+    root = resolve_project(manifest)
+    result = list_e2e_flows_impl(root, priority=priority, tag=tag, limit=limit)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@e2e_app.command("tier-guidance")
+def e2e_tier_guidance(
+    scenario: str = typer.Argument(..., help="Scenario description to get tier guidance for"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Provide guidance on which test tier to use for a scenario.
+
+    Examples:
+        dazzle e2e tier-guidance "visual layout regression"
+        dazzle e2e tier-guidance "CRUD operations on tasks" --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.testing import get_test_tier_guidance_impl
+
+    result = get_test_tier_guidance_impl(scenario)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@e2e_app.command("run-viewport")
+def e2e_run_viewport(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    headless: bool = typer.Option(
+        True, "--headless/--no-headless", help="Run browser in headless mode"
+    ),
+    viewports: str = typer.Option(
+        None, "--viewports", help="Viewport names (comma-separated, e.g. mobile,tablet,desktop)"
+    ),
+    persona_id: str = typer.Option(None, "--persona", help="Persona ID to test as"),
+    capture_screenshots: bool = typer.Option(
+        False, "--screenshots", help="Capture screenshots during tests"
+    ),
+    update_baselines: bool = typer.Option(
+        False, "--update-baselines", help="Update baseline screenshots"
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Run viewport assertions against a running app.
+
+    Examples:
+        dazzle e2e run-viewport
+        dazzle e2e run-viewport --viewports mobile,tablet
+        dazzle e2e run-viewport --persona admin --screenshots
+        dazzle e2e run-viewport --no-headless --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.cli.common import resolve_project
+    from dazzle.mcp.server.handlers.viewport_testing import run_viewport_tests_impl
+
+    root = resolve_project(manifest)
+    viewport_list = [v.strip() for v in viewports.split(",")] if viewports else None
+    raw = run_viewport_tests_impl(
+        project_path=root,
+        headless=headless,
+        viewports=viewport_list,
+        persona_id=persona_id,
+        capture_screenshots=capture_screenshots,
+        update_baselines=update_baselines,
+    )
+    result: dict = json.loads(raw)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@e2e_app.command("list-viewport-specs")
+def e2e_list_viewport_specs(
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """List custom viewport specs for the project.
+
+    Examples:
+        dazzle e2e list-viewport-specs
+        dazzle e2e list-viewport-specs --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.cli.common import resolve_project
+    from dazzle.mcp.server.handlers.viewport_testing import list_viewport_specs_impl
+
+    root = resolve_project(manifest)
+    result = list_viewport_specs_impl(root)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@e2e_app.command("save-viewport-specs")
+def e2e_save_viewport_specs(
+    specs_file: Path = typer.Argument(..., help="Path to JSON file containing viewport specs"),
+    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
+    to_dsl: bool = typer.Option(False, "--to-dsl", help="Save specs as DSL instead of JSON"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Save custom viewport specs from a JSON file.
+
+    The JSON file should contain an array of viewport spec objects.
+
+    Examples:
+        dazzle e2e save-viewport-specs specs.json
+        dazzle e2e save-viewport-specs specs.json --to-dsl
+        dazzle e2e save-viewport-specs specs.json --json
+    """
+    from dazzle.cli._output import format_output
+    from dazzle.cli.common import resolve_project
+    from dazzle.mcp.server.handlers.viewport_testing import save_viewport_specs_impl
+
+    root = resolve_project(manifest)
+
+    if not specs_file.exists():
+        typer.echo(f"Specs file not found: {specs_file}", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        specs = json.loads(specs_file.read_text())
+    except json.JSONDecodeError as e:
+        typer.echo(f"Invalid JSON in specs file: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    if not isinstance(specs, list):
+        typer.echo("Specs file must contain a JSON array", err=True)
+        raise typer.Exit(code=1)
+
+    result = save_viewport_specs_impl(root, specs=specs, to_dsl=to_dsl)
+    typer.echo(format_output(result, as_json=json_output))
