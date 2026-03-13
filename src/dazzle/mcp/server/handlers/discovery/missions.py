@@ -20,6 +20,215 @@ from ._helpers import (
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
+async def discovery_run_impl(
+    project_path: Path,
+    mode: str = "persona",
+    persona: str = "admin",
+    base_url: str = "http://localhost:3000",
+    max_steps: int = 50,
+    token_budget: int = 200_000,
+    api_key: str | None = None,
+    mcp_session: Any = None,
+    on_step: Any = None,
+) -> dict[str, Any]:
+    """Execute a discovery mission and return a plain result dict.
+
+    Pure business logic — no MCP types. Builds the mission for the requested
+    mode, runs the agent loop, saves the report, and returns the result dict.
+
+    The ``headless`` mode is handled by :func:`discovery_run_headless_impl`
+    and must NOT be passed here.
+
+    Args:
+        project_path: Root directory of the Dazzle project.
+        mode: One of ``persona``, ``entity_completeness``, ``workflow_coherence``.
+        persona: Persona ID used when ``mode == "persona"``.
+        base_url: Running app URL.
+        max_steps: Agent step limit.
+        token_budget: Token budget for the agent.
+        api_key: Anthropic API key (``None`` falls back to MCP sampling).
+        mcp_session: Active MCP session for sampling fallback.
+        on_step: Optional callback ``(step_num, step) -> None`` for progress.
+    """
+    import httpx
+
+    from dazzle.agent.core import DazzleAgent
+    from dazzle.agent.executor import HttpExecutor
+    from dazzle.agent.observer import HttpObserver
+
+    appspec = load_project_appspec(project_path)
+    kg_store = _populate_kg_for_discovery(project_path)
+
+    if mode == "persona":
+        from dazzle.agent.missions.discovery import build_discovery_mission
+
+        mission = build_discovery_mission(
+            appspec=appspec,
+            persona_name=persona,
+            base_url=base_url,
+            kg_store=kg_store,
+            max_steps=max_steps,
+            token_budget=token_budget,
+        )
+    elif mode == "entity_completeness":
+        from dazzle.agent.missions.entity_completeness import build_entity_completeness_mission
+
+        mission = build_entity_completeness_mission(
+            appspec=appspec,
+            base_url=base_url,
+            kg_store=kg_store,
+            max_steps=max_steps,
+            token_budget=token_budget,
+        )
+    elif mode == "workflow_coherence":
+        from dazzle.agent.missions.workflow_coherence import build_workflow_coherence_mission
+
+        mission = build_workflow_coherence_mission(
+            appspec=appspec,
+            base_url=base_url,
+            kg_store=kg_store,
+            max_steps=max_steps,
+            token_budget=token_budget,
+        )
+    else:
+        raise ValueError(f"Unsupported mode for discovery_run_impl: {mode!r}")
+
+    # Set up auth cookies for persona mode
+    cookies: dict[str, str] = {}
+    if mode == "persona":
+        session_info = await _get_persona_session_info(project_path, persona, base_url)
+        cookies = session_info.get("cookie", {})
+
+    t0 = time.monotonic()
+
+    async with httpx.AsyncClient(
+        base_url=base_url,
+        cookies=cookies,
+        follow_redirects=True,
+        timeout=30.0,
+    ) as client:
+        observer = HttpObserver(client, base_url)
+        executor = HttpExecutor(client, base_url, observer=observer)
+        agent = DazzleAgent(observer, executor, api_key=api_key, mcp_session=mcp_session)
+        transcript = await agent.run(mission, on_step=on_step)
+
+    wall_ms = (time.monotonic() - t0) * 1000
+
+    # Save report
+    transcript_json = transcript.to_json()
+    transcript_json["mode"] = mode
+    if mode == "persona":
+        transcript_json["persona"] = persona
+
+    report_file = save_discovery_report(project_path, transcript_json)
+    session_id = report_file.stem
+
+    result: dict[str, Any] = {
+        "status": transcript.outcome,
+        "mode": mode,
+        "session_id": session_id,
+        "outcome": transcript.outcome,
+        "steps": len(transcript.steps),
+        "observations": len(transcript.observations),
+        "tokens_used": transcript.tokens_used,
+        "summary": transcript.summary(),
+        "instructions": (
+            f"Discovery complete. Use session_id '{session_id}' with:\n"
+            f"  discovery(operation='compile', session_id='{session_id}')  → proposals\n"
+            f"  discovery(operation='emit', session_id='{session_id}')     → DSL code"
+        ),
+        "_meta": {
+            "wall_time_ms": round(wall_ms, 1),
+            "steps_executed": len(transcript.steps),
+            "observations_found": len(transcript.observations),
+            "tokens_used": transcript.tokens_used,
+        },
+    }
+
+    if transcript.error:
+        result["error"] = transcript.error
+
+    return result
+
+
+def discovery_run_headless_impl(
+    project_path: Path,
+    persona_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Run headless persona journey analysis and return a plain result dict.
+
+    Pure static analysis — no running app needed. Analyzes whether each persona
+    can accomplish their stories through the surfaces and workspaces in the DSL.
+
+    Args:
+        project_path: Root directory of the Dazzle project.
+        persona_ids: Optional list of persona IDs to restrict analysis to.
+    """
+    from dazzle.agent.missions.persona_journey import run_headless_discovery
+
+    t0 = time.monotonic()
+
+    appspec = load_project_appspec(project_path)
+    kg_store = _populate_kg_for_discovery(project_path)
+
+    report = run_headless_discovery(
+        appspec=appspec,
+        persona_ids=persona_ids,
+        kg_store=kg_store,
+    )
+
+    # Convert to observations for pipeline compatibility
+    observations = report.to_observations()
+
+    # Save as standard discovery report for compile/emit reuse
+    transcript_json: dict[str, Any] = {
+        "mission_name": "headless_discovery",
+        "outcome": "completed",
+        "step_count": 0,
+        "observations": [
+            {
+                "category": obs.category,
+                "severity": obs.severity,
+                "title": obs.title,
+                "description": obs.description,
+                "location": obs.location,
+                "related_artefacts": obs.related_artefacts,
+                "metadata": obs.metadata,
+                "step_number": obs.step_number,
+            }
+            for obs in observations
+        ],
+        "started_at": "",
+        "mode": "headless",
+        "headless_report": report.to_json(),
+    }
+
+    report_file = save_discovery_report(project_path, transcript_json)
+    session_id = report_file.stem
+
+    wall_ms = (time.monotonic() - t0) * 1000
+    return {
+        "status": "completed",
+        "mode": "headless",
+        "session_id": session_id,
+        "personas_analyzed": len(report.persona_reports),
+        "total_gaps": sum(len(pr.gaps) for pr in report.persona_reports),
+        "observation_count": len(observations),
+        "report": report.to_json(),
+        "summary": report.to_summary(),
+        "instructions": (
+            f"Headless analysis complete. Use session_id '{session_id}' with:\n"
+            f"  discovery(operation='compile', session_id='{session_id}')  → proposals\n"
+            f"  discovery(operation='emit', session_id='{session_id}')     → DSL code"
+        ),
+        "_meta": {
+            "wall_time_ms": round(wall_ms, 1),
+            "personas_analyzed": len(report.persona_reports),
+            "observations_generated": len(observations),
+        },
+    }
+
+
 @wrap_async_handler_errors
 async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
     """
@@ -71,61 +280,7 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
     if server_error is not None:
         return server_error
 
-    # --- Build mission ---
-
-    appspec = load_project_appspec(project_path)
-
-    kg_store = _populate_kg_for_discovery(project_path)
-
-    if mode == "persona":
-        from dazzle.agent.missions.discovery import build_discovery_mission
-
-        mission = build_discovery_mission(
-            appspec=appspec,
-            persona_name=persona,
-            base_url=base_url,
-            kg_store=kg_store,
-            max_steps=max_steps,
-            token_budget=token_budget,
-        )
-    elif mode == "entity_completeness":
-        from dazzle.agent.missions.entity_completeness import build_entity_completeness_mission
-
-        mission = build_entity_completeness_mission(
-            appspec=appspec,
-            base_url=base_url,
-            kg_store=kg_store,
-            max_steps=max_steps,
-            token_budget=token_budget,
-        )
-    elif mode == "workflow_coherence":
-        from dazzle.agent.missions.workflow_coherence import build_workflow_coherence_mission
-
-        mission = build_workflow_coherence_mission(
-            appspec=appspec,
-            base_url=base_url,
-            kg_store=kg_store,
-            max_steps=max_steps,
-            token_budget=token_budget,
-        )
-
-    # --- Execute agent loop ---
-
     progress = args.get("_progress")
-
-    import httpx
-
-    from dazzle.agent.core import DazzleAgent
-    from dazzle.agent.executor import HttpExecutor
-    from dazzle.agent.observer import HttpObserver
-
-    # Set up auth cookies for persona mode
-    cookies: dict[str, str] = {}
-    if mode == "persona":
-        session_info = await _get_persona_session_info(project_path, persona, base_url)
-        cookies = session_info.get("cookie", {})
-
-    t0 = time.monotonic()
 
     def _on_step(step_num: int, step: Any) -> None:
         """Report step progress to the activity log."""
@@ -133,69 +288,33 @@ async def run_discovery_handler(project_path: Path, args: dict[str, Any]) -> str
             try:
                 action_type = step.action.type.value if step.action else "unknown"
                 progress.log_sync(
-                    f"Step {step_num}/{mission.max_steps}: {action_type}"
+                    f"Step {step_num}/{max_steps}: {action_type}"
                     + (f" → {step.action.target[:40]}" if step.action.target else "")
                 )
             except Exception:
                 logger.debug("Failed to log discovery step progress", exc_info=True)
 
-    async with httpx.AsyncClient(
+    if progress is not None:
+        progress.log_sync(f"Starting {mode} discovery against {base_url}")
+
+    result = await discovery_run_impl(
+        project_path=project_path,
+        mode=mode,
+        persona=persona,
         base_url=base_url,
-        cookies=cookies,
-        follow_redirects=True,
-        timeout=30.0,
-    ) as client:
-        observer = HttpObserver(client, base_url)
-        executor = HttpExecutor(client, base_url, observer=observer)
-        agent = DazzleAgent(observer, executor, api_key=api_key, mcp_session=mcp_session)
+        max_steps=max_steps,
+        token_budget=token_budget,
+        api_key=api_key,
+        mcp_session=mcp_session,
+        on_step=_on_step,
+    )
 
-        if progress is not None:
-            progress.log_sync(f"Starting {mode} discovery against {base_url}")
-
-        transcript = await agent.run(mission, on_step=_on_step)
-
-    wall_ms = (time.monotonic() - t0) * 1000
-
-    # --- Save report ---
-
-    transcript_json = transcript.to_json()
-    transcript_json["mode"] = mode
-    if mode == "persona":
-        transcript_json["persona"] = persona
-
-    report_file = save_discovery_report(project_path, transcript_json)
-    session_id = report_file.stem
-
+    session_id = result.get("session_id", "")
     if progress is not None:
         progress.log_sync(
-            f"Discovery {transcript.outcome}: {len(transcript.steps)} steps, "
-            f"{len(transcript.observations)} observations → {session_id}"
+            f"Discovery {result.get('outcome')}: {result.get('steps')} steps, "
+            f"{result.get('observations')} observations → {session_id}"
         )
-
-    result: dict[str, Any] = {
-        "status": transcript.outcome,
-        "mode": mode,
-        "session_id": session_id,
-        "outcome": transcript.outcome,
-        "steps": len(transcript.steps),
-        "observations": len(transcript.observations),
-        "tokens_used": transcript.tokens_used,
-        "summary": transcript.summary(),
-        "instructions": (
-            f"Discovery complete. Use session_id '{session_id}' with:\n"
-            f"  discovery(operation='compile', session_id='{session_id}')  → proposals\n"
-            f"  discovery(operation='emit', session_id='{session_id}')     → DSL code"
-        ),
-        "_meta": {
-            "wall_time_ms": round(wall_ms, 1),
-            "steps_executed": len(transcript.steps),
-            "observations_found": len(transcript.observations),
-            "tokens_used": transcript.tokens_used,
-        },
-    }
-
-    if transcript.error:
-        result["error"] = transcript.error
 
     return json.dumps(result, indent=2)
 
@@ -211,8 +330,6 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
     Returns a complete result immediately (no mission spec to run externally).
     The saved report enables compile and emit operations via the same session_id workflow.
     """
-    from dazzle.agent.missions.persona_journey import run_headless_discovery
-
     progress = extract_progress(args)
     progress.log_sync("Running headless persona journey analysis...")
     persona_ids = args.get("persona_ids")
@@ -223,71 +340,13 @@ def run_headless_discovery_handler(project_path: Path, args: dict[str, Any]) -> 
     if persona_arg and not persona_ids:
         persona_ids = [persona_arg]
 
-    t0 = time.monotonic()
-
-    appspec = load_project_appspec(project_path)
-    kg_store = _populate_kg_for_discovery(project_path)
-
-    report = run_headless_discovery(
-        appspec=appspec,
+    result = discovery_run_headless_impl(
+        project_path=project_path,
         persona_ids=persona_ids,
-        kg_store=kg_store,
     )
 
     progress.log_sync(
-        f"Analysis complete: {len(report.persona_reports)} personas, "
-        f"{sum(len(pr.gaps) for pr in report.persona_reports)} gaps"
+        f"Analysis complete: {result['personas_analyzed']} personas, {result['total_gaps']} gaps"
     )
-
-    # Convert to observations for pipeline compatibility
-    observations = report.to_observations()
-
-    # Save as standard discovery report for compile/emit reuse
-    transcript_json: dict[str, Any] = {
-        "mission_name": "headless_discovery",
-        "outcome": "completed",
-        "step_count": 0,
-        "observations": [
-            {
-                "category": obs.category,
-                "severity": obs.severity,
-                "title": obs.title,
-                "description": obs.description,
-                "location": obs.location,
-                "related_artefacts": obs.related_artefacts,
-                "metadata": obs.metadata,
-                "step_number": obs.step_number,
-            }
-            for obs in observations
-        ],
-        "started_at": "",
-        "mode": "headless",
-        "headless_report": report.to_json(),
-    }
-
-    report_file = save_discovery_report(project_path, transcript_json)
-    session_id = report_file.stem
-
-    wall_ms = (time.monotonic() - t0) * 1000
-    result: dict[str, Any] = {
-        "status": "completed",
-        "mode": "headless",
-        "session_id": session_id,
-        "personas_analyzed": len(report.persona_reports),
-        "total_gaps": sum(len(pr.gaps) for pr in report.persona_reports),
-        "observation_count": len(observations),
-        "report": report.to_json(),
-        "summary": report.to_summary(),
-        "instructions": (
-            f"Headless analysis complete. Use session_id '{session_id}' with:\n"
-            f"  discovery(operation='compile', session_id='{session_id}')  → proposals\n"
-            f"  discovery(operation='emit', session_id='{session_id}')     → DSL code"
-        ),
-        "_meta": {
-            "wall_time_ms": round(wall_ms, 1),
-            "personas_analyzed": len(report.persona_reports),
-            "observations_generated": len(observations),
-        },
-    }
 
     return json.dumps(result, indent=2)

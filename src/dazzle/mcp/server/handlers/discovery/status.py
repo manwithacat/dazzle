@@ -14,65 +14,20 @@ from ..common import load_project_appspec, wrap_handler_errors
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
-@wrap_handler_errors
-def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """
-    Batch verify all accepted stories against API tests.
+def discovery_status_impl(project_path: Path) -> dict[str, Any]:
+    """Check discovery infrastructure status and return a plain dict.
 
-    Loads all accepted stories, maps each to its entity tests via scope,
-    runs them, and returns a structured pass/fail report — the automated UAT.
-    """
-    from dazzle.core.ir.stories import StoryStatus
+    Pure function — no MCP types. Inspects the DSL, knowledge graph database,
+    and saved discovery reports for the given project.
 
-    from ..dsl_test import verify_story_handler
+    Args:
+        project_path: Root directory of the Dazzle project.
 
-    base_url = args.get("base_url")
-
-    # Load accepted stories from appspec
-    app_spec = load_project_appspec(project_path)
-    stories = [s for s in app_spec.stories if s.status == StoryStatus.ACCEPTED]
-    if not stories:
-        return json.dumps(
-            {
-                "status": "no_stories",
-                "message": "No accepted stories found. Use story(operation='propose') and accept them first.",
-            },
-            indent=2,
-        )
-
-    # Run verify_story for all stories at once (the handler handles batching)
-    all_ids = [s.story_id for s in stories]
-    verify_args: dict[str, Any] = {
-        "story_ids": all_ids,
-    }
-    if base_url:
-        verify_args["base_url"] = base_url
-
-    raw_result = verify_story_handler(project_path, verify_args)
-    result_data = json.loads(raw_result)
-
-    # Wrap with discovery-specific metadata
-    if "error" in result_data:
-        return raw_result
-
-    response: dict[str, Any] = {
-        "operation": "verify_all_stories",
-        "total_accepted_stories": len(stories),
-        **result_data,
-        "summary": (
-            f"{result_data.get('stories_passed', 0)}/{len(stories)} stories verified successfully"
-        ),
-    }
-
-    return json.dumps(response, indent=2)
-
-
-@wrap_handler_errors
-def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """
-    Check discovery infrastructure status.
-
-    Reports whether the project has valid DSL, KG availability, etc.
+    Returns:
+        Plain dict with keys ``project_path``, ``dsl_valid``, ``kg_available``,
+        ``reports_count``, and (when DSL loads successfully) ``entities``,
+        ``surfaces``, ``personas``.  On DSL load failure the key ``dsl_error``
+        contains the error message.
     """
     result: dict[str, Any] = {
         "project_path": str(project_path),
@@ -102,6 +57,93 @@ def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
     if report_dir.exists():
         result["reports_count"] = len(list(report_dir.glob("*.json")))
 
+    return result
+
+
+def discovery_verify_all_stories_impl(
+    project_path: Path,
+    base_url: str | None = None,
+) -> dict[str, Any]:
+    """Batch verify all accepted stories against API tests.
+
+    Pure function — no MCP types. Loads all accepted stories, runs
+    :func:`~dazzle.mcp.server.handlers.dsl_test.verify_story_handler` for
+    the full batch, and returns a plain result dict with discovery-specific
+    metadata merged in.
+
+    Args:
+        project_path: Root directory of the Dazzle project.
+        base_url: Optional override for the running app URL.
+
+    Returns:
+        Plain dict. Contains ``status: "no_stories"`` when no accepted stories
+        are found, or the merged verification result with ``operation``,
+        ``total_accepted_stories``, and ``summary`` keys added.
+
+    Raises:
+        ValueError: When ``verify_story_handler`` returns an error payload.
+    """
+    from dazzle.core.ir.stories import StoryStatus
+
+    from ..dsl_test import verify_story_handler
+
+    # Load accepted stories from appspec
+    app_spec = load_project_appspec(project_path)
+    stories = [s for s in app_spec.stories if s.status == StoryStatus.ACCEPTED]
+    if not stories:
+        return {
+            "status": "no_stories",
+            "message": "No accepted stories found. Use story(operation='propose') and accept them first.",
+        }
+
+    # Run verify_story for all stories at once (the handler handles batching)
+    all_ids = [s.story_id for s in stories]
+    verify_args: dict[str, Any] = {"story_ids": all_ids}
+    if base_url:
+        verify_args["base_url"] = base_url
+
+    raw_result = verify_story_handler(project_path, verify_args)
+    result_data = json.loads(raw_result)
+
+    if "error" in result_data:
+        raise ValueError(result_data["error"])
+
+    return {
+        "operation": "verify_all_stories",
+        "total_accepted_stories": len(stories),
+        **result_data,
+        "summary": (
+            f"{result_data.get('stories_passed', 0)}/{len(stories)} stories verified successfully"
+        ),
+    }
+
+
+@wrap_handler_errors
+def verify_all_stories_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Batch verify all accepted stories against API tests.
+
+    Loads all accepted stories, maps each to its entity tests via scope,
+    runs them, and returns a structured pass/fail report — the automated UAT.
+    """
+    base_url = args.get("base_url")
+
+    try:
+        response = discovery_verify_all_stories_impl(project_path, base_url=base_url)
+    except ValueError as exc:
+        return json.dumps({"error": str(exc)}, indent=2)
+
+    return json.dumps(response, indent=2)
+
+
+@wrap_handler_errors
+def discovery_status_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Check discovery infrastructure status.
+
+    Reports whether the project has valid DSL, KG availability, etc.
+    """
+    result = discovery_status_impl(project_path)
     return json.dumps(result, indent=2)
 
 

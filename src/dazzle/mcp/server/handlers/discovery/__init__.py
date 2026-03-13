@@ -10,26 +10,43 @@ Operations:
 """
 
 from ._helpers import save_discovery_report
-from .compiler import compile_discovery_handler, get_discovery_report_handler
-from .emitter import emit_discovery_handler
-from .missions import run_discovery_handler, run_headless_discovery_handler
+from .compiler import (
+    compile_discovery_handler,
+    discovery_compile_impl,
+    discovery_report_impl,
+    get_discovery_report_handler,
+)
+from .emitter import discovery_emit_impl, emit_discovery_handler
+from .missions import (
+    discovery_run_headless_impl,
+    discovery_run_impl,
+    run_discovery_handler,
+    run_headless_discovery_handler,
+)
 from .status import (
     _compute_coherence_score,
     app_coherence_handler,
     discovery_status_handler,
+    discovery_status_impl,
+    discovery_verify_all_stories_impl,
     verify_all_stories_handler,
 )
 
 __all__ = [
-    # Missions
+    # Impl functions (pure, no MCP types)
+    "discovery_run_impl",
+    "discovery_run_headless_impl",
+    "discovery_report_impl",
+    "discovery_compile_impl",
+    "discovery_emit_impl",
+    "discovery_status_impl",
+    "discovery_verify_all_stories_impl",
+    # MCP handler wrappers
     "run_discovery_handler",
     "run_headless_discovery_handler",
-    # Compiler / report
     "get_discovery_report_handler",
     "compile_discovery_handler",
-    # Emitter
     "emit_discovery_handler",
-    # Status / verification / coherence
     "discovery_status_handler",
     "verify_all_stories_handler",
     "app_coherence_handler",

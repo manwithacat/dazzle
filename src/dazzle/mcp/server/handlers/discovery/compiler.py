@@ -16,36 +16,43 @@ from ._helpers import deserialize_observations, load_report_data
 logger = logging.getLogger("dazzle.mcp.handlers.discovery")
 
 
-@wrap_handler_errors
-def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """
-    Get the latest discovery report from a project.
+def discovery_report_impl(
+    project_path: Path,
+    session_id: str | None = None,
+) -> dict[str, Any]:
+    """Return discovery report data as a plain dict.
 
-    Reports are stored in .dazzle/discovery/ as JSON files.
+    When *session_id* is provided, returns the full JSON content of that
+    report. When omitted, returns a summary list of the ten most recent
+    reports stored under the project's discovery directory.
+
+    Args:
+        project_path: Root directory of the Dazzle project.
+        session_id: Optional session ID to retrieve a specific report.
+
+    Returns:
+        Plain dict — either the report content or a summaries dict with
+        ``{"reports": [...], "latest": str | None, "hint": str}``.
+
+    Raises:
+        FileNotFoundError: If the requested session_id does not exist.
+        ValueError: If no reports exist at all.
     """
     report_dir = project_discovery_dir(project_path)
-    session_id = args.get("session_id")
 
     if session_id:
         report_file = report_dir / f"{session_id}.json"
         if not report_file.exists():
-            return error_response(f"Report not found: {session_id}")
-        return report_file.read_text()
+            raise FileNotFoundError(f"Report not found: {session_id}")
+        return json.loads(report_file.read_text())
 
-    # Get the most recent report
     if not report_dir.exists():
-        return json.dumps(
-            {
-                "error": "No discovery reports found",
-                "hint": "Run a discovery session first with operation: run",
-            }
-        )
+        raise ValueError("No discovery reports found. Run a discovery session first.")
 
     reports = sorted(report_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not reports:
-        return error_response("No discovery reports found")
+        raise ValueError("No discovery reports found")
 
-    # Return summary of available reports
     report_summaries = []
     for report_file in reports[:10]:
         try:
@@ -63,45 +70,55 @@ def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> st
         except (json.JSONDecodeError, OSError):
             continue
 
-    return json.dumps(
-        {
-            "reports": report_summaries,
-            "latest": reports[0].stem if reports else None,
-            "hint": "Use session_id parameter to get full report details",
-        },
-        indent=2,
-    )
+    return {
+        "reports": report_summaries,
+        "latest": reports[0].stem if reports else None,
+        "hint": "Use session_id parameter to get full report details",
+    }
 
 
-@wrap_handler_errors
-def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """
-    Compile observations from a discovery report into prioritized proposals.
+def discovery_compile_impl(
+    project_path: Path,
+    session_id: str | None = None,
+    persona: str = "user",
+) -> dict[str, Any]:
+    """Compile discovery observations into prioritized proposals.
 
-    Requires a session_id pointing to a saved discovery report that contains
-    observations. Returns the compiled proposals as JSON.
+    Pure function — no MCP types. Loads the saved discovery report identified
+    by *session_id* (or the latest report when omitted), deserialises
+    observations, runs :class:`~dazzle.agent.compiler.NarrativeCompiler`, and
+    returns a plain result dict.
+
+    Args:
+        project_path: Root directory of the Dazzle project.
+        session_id: Discovery session to compile (``None`` → latest report).
+        persona: Persona name used for narrative framing.
+
+    Returns:
+        Plain dict with keys ``session_id``, ``proposals``, ``report_markdown``,
+        and ``_meta``.
+
+    Raises:
+        FileNotFoundError / ValueError: Propagated from :func:`load_report_data`
+            when the report cannot be located.
     """
     from dazzle.agent.compiler import NarrativeCompiler
 
-    progress = extract_progress(args)
-    persona = args.get("persona", "user")
     t0 = time.monotonic()
 
-    progress.log_sync("Compiling discovery observations...")
-    loaded = load_report_data(project_path, args.get("session_id"))
+    loaded = load_report_data(project_path, session_id)
     if isinstance(loaded, str):
-        return loaded
-    data, session_id = loaded
+        # load_report_data returns a JSON error string on failure; surface it
+        raise ValueError(json.loads(loaded).get("error", "Could not load report"))
+    data, resolved_session_id = loaded
 
     raw_observations = data.get("observations", [])
     if not raw_observations:
-        return json.dumps(
-            {
-                "session_id": session_id,
-                "proposals": [],
-                "message": "No observations to compile",
-            }
-        )
+        return {
+            "session_id": resolved_session_id,
+            "proposals": [],
+            "message": "No observations to compile",
+        }
 
     observations = deserialize_observations(raw_observations)
 
@@ -116,19 +133,76 @@ def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
         except Exception:
             logger.debug("Knowledge graph not available for compile", exc_info=True)
 
-    # Compile
-    progress.log_sync(f"Compiling {len(observations)} observations...")
     compiler = NarrativeCompiler(persona=persona, kg_store=kg_store)
     proposals = compiler.compile(observations)
-    progress.log_sync(f"Compiled into {len(proposals)} proposals")
 
     result: dict[str, Any] = compiler.to_json(proposals)
-    result["session_id"] = session_id
+    result["session_id"] = resolved_session_id
     result["report_markdown"] = compiler.report(proposals)
     wall_ms = (time.monotonic() - t0) * 1000
     result["_meta"] = {
         "wall_time_ms": round(wall_ms, 1),
         "proposals_generated": len(proposals),
     }
+
+    return result
+
+
+@wrap_handler_errors
+def get_discovery_report_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Get the latest discovery report from a project.
+
+    Reports are stored in .dazzle/discovery/ as JSON files.
+    """
+    session_id = args.get("session_id")
+
+    try:
+        result = discovery_report_impl(project_path, session_id=session_id)
+    except FileNotFoundError as exc:
+        return error_response(str(exc))
+    except ValueError as exc:
+        hint_suffix = (
+            "\nRun a discovery session first with operation: run"
+            if "No discovery reports" in str(exc)
+            else ""
+        )
+        return json.dumps({"error": str(exc) + hint_suffix})
+
+    # When retrieving a specific session the impl returns the raw report dict;
+    # serialise it back to a string as the MCP layer expects.
+    return json.dumps(result, indent=2)
+
+
+@wrap_handler_errors
+def compile_discovery_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """
+    Compile observations from a discovery report into prioritized proposals.
+
+    Requires a session_id pointing to a saved discovery report that contains
+    observations. Returns the compiled proposals as JSON.
+    """
+    progress = extract_progress(args)
+    persona = args.get("persona", "user")
+    session_id = args.get("session_id")
+
+    progress.log_sync("Compiling discovery observations...")
+
+    loaded = load_report_data(project_path, session_id)
+    if isinstance(loaded, str):
+        return loaded
+    _data, _sid = loaded
+    raw_count = len(_data.get("observations", []))
+
+    progress.log_sync(f"Compiling {raw_count} observations...")
+
+    result = discovery_compile_impl(
+        project_path=project_path,
+        session_id=session_id,
+        persona=persona,
+    )
+
+    proposals_count = result.get("_meta", {}).get("proposals_generated", 0)
+    progress.log_sync(f"Compiled into {proposals_count} proposals")
 
     return json.dumps(result, indent=2)
