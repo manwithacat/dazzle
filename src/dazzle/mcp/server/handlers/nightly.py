@@ -144,29 +144,48 @@ def _build_steps(project_path: Path, base_url: str | None = None) -> list[Qualit
 
 
 # ---------------------------------------------------------------------------
-# Main handler — topological parallel scheduler
+# Impl function — topological parallel scheduler (no MCP types)
 # ---------------------------------------------------------------------------
 
 
-@wrap_handler_errors
-def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """Run quality steps in parallel with topological scheduling."""
-    progress = extract_progress(args)
-    progress.log_sync("Starting nightly pipeline (parallel)...")
-    stop_on_error = args.get("stop_on_error", False)
-    base_url = args.get("base_url")
-    detail = args.get("detail", "issues")
-    workers = args.get("workers", 4)
+def nightly_run_impl(
+    project_root: Path,
+    *,
+    stop_on_error: bool = False,
+    base_url: str | None = None,
+    detail: str = "issues",
+    workers: int = 4,
+    activity_store: Any = None,
+    on_step_complete: Any = None,
+) -> dict[str, Any]:
+    """Run quality steps in parallel with topological scheduling.
 
-    # Backward compatibility with pipeline 'summary' param
-    if "summary" in args and "detail" not in args:
-        detail = "metrics" if args["summary"] else "full"
+    Parameters
+    ----------
+    project_root:
+        Root path of the Dazzle project to audit.
+    stop_on_error:
+        Abort remaining steps when any step fails.
+    base_url:
+        Optional live server URL; enables the ``dsl_test(run_all)`` step.
+    detail:
+        Level of detail in the output — ``"issues"``, ``"metrics"``, or ``"full"``.
+    workers:
+        Maximum number of parallel worker threads.
+    activity_store:
+        Optional activity store passed through to ``run_step``.
+    on_step_complete:
+        Optional callable ``(completed_count: int, total: int, name: str) -> None``
+        invoked after each step finishes.
 
-    activity_store = args.get("_activity_store")
-
+    Returns
+    -------
+    dict
+        Aggregated results with ``_meta.parallel`` and ``_meta.workers`` set.
+    """
     pipeline_start = time.monotonic()
 
-    all_steps = _build_steps(project_path, base_url)
+    all_steps = _build_steps(project_root, base_url)
 
     # Track completed/failed/skipped
     completed: dict[str, dict[str, Any]] = {}
@@ -248,7 +267,8 @@ def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
             step_name = futures.pop(done_fut)
             step_result = done_fut.result()
             completed[step_name] = step_result
-            progress.advance_sync(len(completed), len(all_steps), f"Completed {step_name}")
+            if on_step_complete is not None:
+                on_step_complete(len(completed), len(all_steps), step_name)
 
             if step_result.get("status") == "error":
                 failed_names.add(step_name)
@@ -292,5 +312,42 @@ def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
     data = json.loads(response_json)
     data["_meta"]["parallel"] = True
     data["_meta"]["workers"] = workers
+
+    return data
+
+
+# ---------------------------------------------------------------------------
+# Main handler — thin MCP wrapper
+# ---------------------------------------------------------------------------
+
+
+@wrap_handler_errors
+def run_nightly_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Run quality steps in parallel with topological scheduling."""
+    progress = extract_progress(args)
+    progress.log_sync("Starting nightly pipeline (parallel)...")
+    stop_on_error: bool = args.get("stop_on_error", False)
+    base_url: str | None = args.get("base_url")
+    detail: str = args.get("detail", "issues")
+    workers: int = args.get("workers", 4)
+
+    # Backward compatibility with pipeline 'summary' param
+    if "summary" in args and "detail" not in args:
+        detail = "metrics" if args["summary"] else "full"
+
+    activity_store = args.get("_activity_store")
+
+    def _on_step_complete(done: int, total: int, name: str) -> None:
+        progress.advance_sync(done, total, f"Completed {name}")
+
+    data = nightly_run_impl(
+        project_path,
+        stop_on_error=stop_on_error,
+        base_url=base_url,
+        detail=detail,
+        workers=workers,
+        activity_store=activity_store,
+        on_step_complete=_on_step_complete,
+    )
 
     return json.dumps(data, indent=2)
