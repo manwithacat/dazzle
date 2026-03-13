@@ -21,6 +21,196 @@ def _get_orchestrator() -> Any:
     return get_mock_orchestrator()
 
 
+# ---------------------------------------------------------------------------
+# Impl functions (no MCP types, explicit params, return plain dicts)
+# ---------------------------------------------------------------------------
+
+
+def mock_scenarios_impl(
+    *,
+    action: str = "list",
+    vendor: str | None = None,
+    scenario_name: str | None = None,
+) -> dict[str, Any]:
+    """List, activate, or deactivate test scenarios."""
+    orch = _get_orchestrator()
+
+    if action == "list":
+        from dazzle.testing.vendor_mock.scenarios import ScenarioEngine
+
+        if orch is not None and vendor:
+            app = orch.get_app(vendor)
+            engine = getattr(app.state, "scenario_engine", None) or ScenarioEngine(
+                project_root=orch.project_root
+            )
+        else:
+            engine = ScenarioEngine(project_root=orch.project_root if orch else None)
+
+        scenarios = engine.list_scenarios(vendor)
+        active = engine.active_scenarios if hasattr(engine, "active_scenarios") else {}
+
+        return {
+            "scenarios": scenarios,
+            "active": active,
+            "count": len(scenarios),
+        }
+
+    if orch is None:
+        return {"error": "No mock servers running. Start with 'dazzle serve --local'."}
+
+    if not vendor:
+        return {"error": "vendor parameter required for activate/deactivate"}
+
+    if vendor not in orch.vendors:
+        return {
+            "error": f"Vendor '{vendor}' not found",
+            "available": list(orch.vendors.keys()),
+        }
+
+    app = orch.get_app(vendor)
+    engine = getattr(app.state, "scenario_engine", None)
+    if engine is None:
+        return {"error": f"No scenario engine for vendor '{vendor}'"}
+
+    if action == "activate":
+        if not scenario_name:
+            return {"error": "scenario_name required for activate"}
+        try:
+            scenario = engine.load_scenario(vendor, scenario_name)
+            return {
+                "status": "activated",
+                "vendor": vendor,
+                "scenario": scenario.name,
+                "description": scenario.description,
+                "steps": len(scenario.steps),
+            }
+        except FileNotFoundError as e:
+            return {"error": str(e)}
+
+    elif action == "deactivate":
+        engine.reset(vendor)
+        return {"status": "deactivated", "vendor": vendor}
+
+    return {"error": f"Unknown action: {action}. Use list, activate, or deactivate."}
+
+
+def mock_fire_webhook_impl(
+    *,
+    vendor: str,
+    event: str,
+    overrides: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Fire a webhook event to the running app."""
+    from dazzle.testing.vendor_mock.webhooks import WebhookDispatcher
+
+    dispatcher = WebhookDispatcher()
+
+    try:
+        events = dispatcher.list_events(vendor)
+        if not events:
+            return {
+                "error": f"No webhook events defined for vendor '{vendor}'",
+                "hint": "Add [webhooks] section to the pack TOML",
+            }
+
+        attempt = dispatcher.fire_sync(
+            vendor,
+            event,
+            overrides=overrides,
+        )
+
+        return {
+            "status": "delivered" if attempt.status_code else "failed",
+            "vendor": vendor,
+            "event": event,
+            "target_url": attempt.target_url,
+            "status_code": attempt.status_code,
+            "elapsed_ms": round(attempt.elapsed_ms, 1),
+            "error": attempt.error,
+        }
+    except ValueError as e:
+        return {"error": str(e)}
+
+
+def mock_inject_error_impl(
+    *,
+    vendor: str,
+    operation: str,
+    status: int = 500,
+    body: Any = None,
+    after_n: int | None = None,
+) -> dict[str, Any]:
+    """Inject an error response for a vendor operation."""
+    orch = _get_orchestrator()
+    if orch is None:
+        return {"error": "No mock servers running"}
+
+    if vendor not in orch.vendors:
+        return {
+            "error": f"Vendor '{vendor}' not found",
+            "available": list(orch.vendors.keys()),
+        }
+
+    app = orch.get_app(vendor)
+    engine = getattr(app.state, "scenario_engine", None)
+    if engine is None:
+        return {"error": f"No scenario engine for vendor '{vendor}'"}
+
+    engine.inject_error(
+        vendor,
+        operation,
+        status=status,
+        body=body,
+        after_n=after_n,
+    )
+
+    return {
+        "status": "injected",
+        "vendor": vendor,
+        "operation": operation,
+        "error_status": status,
+        "after_n": after_n,
+    }
+
+
+def mock_scaffold_scenario_impl(
+    *,
+    vendor: str = "my_vendor",
+    name: str = "custom_scenario",
+) -> dict[str, Any]:
+    """Generate a scenario TOML template."""
+    toml_content = f'''# Scenario: {name}
+# Vendor: {vendor}
+
+[scenario]
+name = "{name}"
+description = ""
+vendor = "{vendor}"
+
+# Steps override default mock responses for specific operations.
+# Each step targets an operation from the API pack.
+
+[[steps]]
+operation = "example_operation"
+
+[steps.response_override]
+status = "error"
+message = "Simulated failure"
+
+# status_override = 500    # Override HTTP status code
+# delay_ms = 2000          # Add artificial delay
+# call_index = 0           # Only apply to Nth call (0-indexed)
+'''
+
+    save_path = f".dazzle/scenarios/{vendor}/{name}.toml"
+
+    return {
+        "toml": toml_content,
+        "save_path": save_path,
+        "hint": f"Save to {save_path} in your project directory",
+    }
+
+
 @wrap_handler_errors
 def mock_status_handler(project_path: Path, args: dict[str, Any]) -> str:
     """List mock servers with ports, URLs, and health."""
@@ -67,82 +257,15 @@ def mock_scenarios_handler(project_path: Path, args: dict[str, Any]) -> str:
     """List, activate, or deactivate test scenarios."""
     progress = extract_progress(args)
     action = args.get("action", "list")
-    vendor = args.get("vendor")
-    scenario_name = args.get("scenario_name")
-
     progress.log_sync(f"Mock scenarios: {action}...")
-
-    orch = _get_orchestrator()
-
-    if action == "list":
-        # List works even without running server — checks built-in scenarios
-        from dazzle.testing.vendor_mock.scenarios import ScenarioEngine
-
-        if orch is not None and vendor:
-            app = orch.get_app(vendor)
-            engine = getattr(app.state, "scenario_engine", None) or ScenarioEngine(
-                project_root=orch.project_root
-            )
-        else:
-            engine = ScenarioEngine(project_root=orch.project_root if orch else None)
-
-        scenarios = engine.list_scenarios(vendor)
-        active = engine.active_scenarios if hasattr(engine, "active_scenarios") else {}
-
-        return json.dumps(
-            {
-                "scenarios": scenarios,
-                "active": active,
-                "count": len(scenarios),
-            },
-            indent=2,
-        )
-
-    if orch is None:
-        return error_response("No mock servers running. Start with 'dazzle serve --local'.")
-
-    if not vendor:
-        return error_response("vendor parameter required for activate/deactivate")
-
-    if vendor not in orch.vendors:
-        return json.dumps(
-            {
-                "error": f"Vendor '{vendor}' not found",
-                "available": list(orch.vendors.keys()),
-            }
-        )
-
-    app = orch.get_app(vendor)
-    engine = getattr(app.state, "scenario_engine", None)
-    if engine is None:
-        return error_response(f"No scenario engine for vendor '{vendor}'")
-
-    if action == "activate":
-        if not scenario_name:
-            return error_response("scenario_name required for activate")
-        try:
-            scenario = engine.load_scenario(vendor, scenario_name)
-            return json.dumps(
-                {
-                    "status": "activated",
-                    "vendor": vendor,
-                    "scenario": scenario.name,
-                    "description": scenario.description,
-                    "steps": len(scenario.steps),
-                },
-                indent=2,
-            )
-        except FileNotFoundError as e:
-            return error_response(str(e))
-
-    elif action == "deactivate":
-        engine.reset(vendor)
-        return json.dumps(
-            {"status": "deactivated", "vendor": vendor},
-            indent=2,
-        )
-
-    return error_response(f"Unknown action: {action}. Use list, activate, or deactivate.")
+    result = mock_scenarios_impl(
+        action=action,
+        vendor=args.get("vendor"),
+        scenario_name=args.get("scenario_name"),
+    )
+    if "error" in result and action != "list":
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors
@@ -151,7 +274,6 @@ def mock_fire_webhook_handler(project_path: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     vendor = args.get("vendor")
     event = args.get("event")
-    overrides = args.get("overrides")
 
     if not vendor:
         return error_response("vendor parameter required")
@@ -159,41 +281,14 @@ def mock_fire_webhook_handler(project_path: Path, args: dict[str, Any]) -> str:
         return error_response("event parameter required")
 
     progress.log_sync(f"Firing webhook {vendor}/{event}...")
-
-    from dazzle.testing.vendor_mock.webhooks import WebhookDispatcher
-
-    dispatcher = WebhookDispatcher()
-
-    try:
-        events = dispatcher.list_events(vendor)
-        if not events:
-            return json.dumps(
-                {
-                    "error": f"No webhook events defined for vendor '{vendor}'",
-                    "hint": "Add [webhooks] section to the pack TOML",
-                }
-            )
-
-        attempt = dispatcher.fire_sync(
-            vendor,
-            event,
-            overrides=overrides,
-        )
-
-        return json.dumps(
-            {
-                "status": "delivered" if attempt.status_code else "failed",
-                "vendor": vendor,
-                "event": event,
-                "target_url": attempt.target_url,
-                "status_code": attempt.status_code,
-                "elapsed_ms": round(attempt.elapsed_ms, 1),
-                "error": attempt.error,
-            },
-            indent=2,
-        )
-    except ValueError as e:
-        return error_response(str(e))
+    result = mock_fire_webhook_impl(
+        vendor=vendor,
+        event=event,
+        overrides=args.get("overrides"),
+    )
+    if "error" in result and "hint" not in result:
+        return error_response(result["error"])
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors
@@ -254,9 +349,6 @@ def mock_inject_error_handler(project_path: Path, args: dict[str, Any]) -> str:
     progress = extract_progress(args)
     vendor = args.get("vendor")
     operation = args.get("operation_name")
-    status = args.get("status_code", 500)
-    body = args.get("body")
-    after_n = args.get("after_n")
 
     if not vendor:
         return error_response("vendor parameter required")
@@ -264,42 +356,16 @@ def mock_inject_error_handler(project_path: Path, args: dict[str, Any]) -> str:
         return error_response("operation_name parameter required")
 
     progress.log_sync(f"Injecting error for {vendor}/{operation}...")
-
-    orch = _get_orchestrator()
-    if orch is None:
-        return error_response("No mock servers running")
-
-    if vendor not in orch.vendors:
-        return json.dumps(
-            {
-                "error": f"Vendor '{vendor}' not found",
-                "available": list(orch.vendors.keys()),
-            }
-        )
-
-    app = orch.get_app(vendor)
-    engine = getattr(app.state, "scenario_engine", None)
-    if engine is None:
-        return error_response(f"No scenario engine for vendor '{vendor}'")
-
-    engine.inject_error(
-        vendor,
-        operation,
-        status=status,
-        body=body,
-        after_n=after_n,
+    result = mock_inject_error_impl(
+        vendor=vendor,
+        operation=operation,
+        status=args.get("status_code", 500),
+        body=args.get("body"),
+        after_n=args.get("after_n"),
     )
-
-    return json.dumps(
-        {
-            "status": "injected",
-            "vendor": vendor,
-            "operation": operation,
-            "error_status": status,
-            "after_n": after_n,
-        },
-        indent=2,
-    )
+    if "error" in result:
+        return error_response(result["error"]) if "available" not in result else json.dumps(result)
+    return json.dumps(result, indent=2)
 
 
 @wrap_handler_errors
@@ -310,37 +376,5 @@ def mock_scaffold_scenario_handler(project_path: Path, args: dict[str, Any]) -> 
     name = args.get("scenario_name", "custom_scenario")
 
     progress.log_sync(f"Scaffolding scenario {vendor}/{name}...")
-
-    toml_content = f'''# Scenario: {name}
-# Vendor: {vendor}
-
-[scenario]
-name = "{name}"
-description = ""
-vendor = "{vendor}"
-
-# Steps override default mock responses for specific operations.
-# Each step targets an operation from the API pack.
-
-[[steps]]
-operation = "example_operation"
-
-[steps.response_override]
-status = "error"
-message = "Simulated failure"
-
-# status_override = 500    # Override HTTP status code
-# delay_ms = 2000          # Add artificial delay
-# call_index = 0           # Only apply to Nth call (0-indexed)
-'''
-
-    save_path = f".dazzle/scenarios/{vendor}/{name}.toml"
-
-    return json.dumps(
-        {
-            "toml": toml_content,
-            "save_path": save_path,
-            "hint": f"Save to {save_path} in your project directory",
-        },
-        indent=2,
-    )
+    result = mock_scaffold_scenario_impl(vendor=vendor, name=name)
+    return json.dumps(result, indent=2)
