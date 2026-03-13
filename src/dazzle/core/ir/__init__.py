@@ -44,6 +44,7 @@ from .conditions import (
     ConditionExpr,
     ConditionValue,
     FunctionCall,
+    GrantCheck,
     LogicalOperator,
     RoleCheck,
 )
@@ -705,6 +706,7 @@ __all__ = [
     "LogicalOperator",
     "ConditionValue",
     "FunctionCall",
+    "GrantCheck",
     "RoleCheck",
     "Comparison",
     "ConditionExpr",

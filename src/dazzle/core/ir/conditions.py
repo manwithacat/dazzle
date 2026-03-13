@@ -99,6 +99,24 @@ class RoleCheck(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class GrantCheck(BaseModel):
+    """
+    A grant check in a condition expression.
+
+    Examples:
+        - has_grant("acting_hod", department)
+        - has_grant("observer", department)
+
+    Used in access rules to check if user has an active grant
+    for a specific relation scoped to a field on the entity.
+    """
+
+    relation: str
+    scope_field: str
+
+    model_config = ConfigDict(frozen=True)
+
+
 class Comparison(BaseModel):
     """
     A single comparison in a condition expression.
@@ -136,6 +154,7 @@ class ConditionExpr(BaseModel):
 
     comparison: Comparison | None = None  # Simple comparison condition
     role_check: RoleCheck | None = None  # Role-based condition (v0.7.0)
+    grant_check: GrantCheck | None = None  # Grant-based condition
     left: ConditionExpr | None = None  # For compound conditions
     operator: LogicalOperator | None = None  # AND/OR
     right: ConditionExpr | None = None  # For compound conditions
@@ -151,6 +170,11 @@ class ConditionExpr(BaseModel):
     def is_role_check(self) -> bool:
         """Check if this is a role check condition."""
         return self.role_check is not None
+
+    @property
+    def is_grant_check(self) -> bool:
+        """Check if this is a grant check condition."""
+        return self.grant_check is not None
 
 
 def _rebuild_condition_value() -> None:
