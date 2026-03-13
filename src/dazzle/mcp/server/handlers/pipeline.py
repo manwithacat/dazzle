@@ -24,9 +24,14 @@ from .orchestration import (
 )
 
 
-@wrap_handler_errors
-def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
-    """Run the full deterministic quality pipeline.
+def pipeline_run_impl(
+    project_path: Path,
+    stop_on_error: bool = False,
+    base_url: str | None = None,
+    detail: str = "issues",
+    progress: Any = None,
+) -> str:
+    """Core logic for the pipeline run operation.
 
     Chains these operations in order, collecting results:
       1. dsl(validate)
@@ -44,18 +49,8 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
      13. semantics(validate_events)
 
     Each step runs regardless of prior failures (unless stop_on_error=True).
-    Returns a structured JSON report with per-step results and overall summary.
+    Returns a structured JSON string with per-step results and overall summary.
     """
-    progress = extract_progress(args)
-
-    stop_on_error = args.get("stop_on_error", False)
-    base_url = args.get("base_url")
-    # Adaptive detail levels: metrics (compact), issues (smart default), full
-    detail = args.get("detail", "issues")
-    # Backward compatibility: old summary param
-    if "summary" in args and "detail" not in args:
-        detail = "metrics" if args["summary"] else "full"
-
     pipeline_start = time.monotonic()
 
     steps, synthetic = _build_quality_steps(project_path, base_url)
@@ -76,6 +71,32 @@ def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
         next_step_num += 1
 
     return aggregate_results(step_results, errors, pipeline_start, detail=detail)
+
+
+@wrap_handler_errors
+def run_pipeline_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Run the full deterministic quality pipeline.
+
+    Thin MCP wrapper around pipeline_run_impl. See that function for full
+    documentation of the pipeline steps.
+    """
+    progress = extract_progress(args)
+
+    stop_on_error = args.get("stop_on_error", False)
+    base_url = args.get("base_url")
+    # Adaptive detail levels: metrics (compact), issues (smart default), full
+    detail = args.get("detail", "issues")
+    # Backward compatibility: old summary param
+    if "summary" in args and "detail" not in args:
+        detail = "metrics" if args["summary"] else "full"
+
+    return pipeline_run_impl(
+        project_path=project_path,
+        stop_on_error=stop_on_error,
+        base_url=base_url,
+        detail=detail,
+        progress=progress,
+    )
 
 
 def _build_quality_steps(
