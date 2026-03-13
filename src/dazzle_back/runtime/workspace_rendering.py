@@ -281,11 +281,17 @@ async def _workspace_region_handler(
                                 filters={"email": _email}, page_size=1
                             )
                             _user_items = (
-                                _user_result.items if hasattr(_user_result, "items") else []
+                                _user_result.get("items", [])
+                                if isinstance(_user_result, dict)
+                                else getattr(_user_result, "items", [])
                             )
                             if _user_items:
                                 _entity_user = _user_items[0]
-                                _uid = getattr(_entity_user, "id", None)
+                                _uid = (
+                                    _entity_user.get("id")
+                                    if isinstance(_entity_user, dict)
+                                    else getattr(_entity_user, "id", None)
+                                )
                                 if _uid:
                                     _current_user_id = str(_uid)
                                     _resolved = True

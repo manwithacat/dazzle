@@ -894,3 +894,27 @@ class TestCurrentUserTestMode:
         assert found_guard, (
             "Could not find `if ctx.auth_middleware:` guard in _workspace_region_handler"
         )
+
+    def test_user_entity_lookup_handles_dict_result(self) -> None:
+        """Repository.list() returns a dict, not an object — ensure dict access works (#484).
+
+        The code must use dict-style access (result.get("items")) rather than
+        attribute access (result.items) since Repository.list() returns a plain dict.
+        """
+        import inspect
+        import textwrap
+
+        from dazzle_back.runtime.workspace_rendering import _workspace_region_handler
+
+        source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
+
+        # The old buggy pattern: `_user_result.items if hasattr(...)` confuses
+        # dict.items (the method) with the "items" key in the result dict.
+        assert "_user_result.items if hasattr" not in source, (
+            "Still using attribute-style access on dict return from repository.list() — "
+            "use _user_result.get('items', []) instead"
+        )
+        # Verify the fix is present
+        assert '_user_result.get("items"' in source or "_user_result.get('items'" in source, (
+            "Expected dict-style access _user_result.get('items') for repository.list() result"
+        )
