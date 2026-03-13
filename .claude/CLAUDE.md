@@ -56,6 +56,11 @@ This is an LLM-first codebase. Optimize for clarity and predictability over clev
 
 ## Commands
 
+### Dev Setup
+```bash
+pip install -e ".[dev,llm,mcp]"    # Editable install with all extras
+```
+
 ```bash
 # Run app
 dazzle serve              # Docker (default)
@@ -151,43 +156,9 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 
 ## MCP Server
 
-The DAZZLE MCP server (`dazzle mcp`) provides 32 tools:
+The DAZZLE MCP server (`dazzle mcp`) provides 32+ tools covering: project management, DSL validation/linting, stories, rhythms, processes, test design, E2E testing, discovery, pipeline/nightly audits, sentinel scanning, knowledge graph, sitespec, semantics, composition, policy, pulse, pitch, bootstrap, spec analysis, demo data, API packs, mocking, contributions, and user management.
 
-| Tool | Operations |
-|------|-----------|
-| `list_projects` | List available projects |
-| `select_project` | Set active project |
-| `get_active_project` | Show current project |
-| `validate_all_projects` | Validate all projects |
-| `dsl` | validate, inspect_entity, inspect_surface, lint, analyze, fidelity, export_frontend_spec |
-| `story` | propose, save, get, wall, generate_tests, coverage |
-| `rhythm` | propose, evaluate, gaps, lifecycle, coverage, get, list |
-| `process` | propose, save, list, inspect, diagram, coverage |
-| `test_design` | propose_persona, gaps, save, get, auto_populate, improve_coverage |
-| `dsl_test` | generate, run, run_all, coverage, verify_story, diff_personas |
-| `e2e_test` | check_infra, run, run_agent, coverage, run_viewport |
-| `discovery` | run, report, compile, emit, status, verify_all_stories, coherence |
-| `pipeline` | run (full deterministic quality audit in one call) |
-| `nightly` | run (parallel pipeline with dependency-aware fan-out) |
-| `sentinel` | scan, findings, suppress, status, history |
-| `test_intelligence` | summary, failures, regression, coverage, context |
-| `graph` | query, dependencies, neighbourhood, concept, inference, export, import |
-| `status` | mcp, logs, telemetry, activity |
-| `knowledge` | concept, examples, workflow, inference |
-| `sitespec` | get, validate, scaffold, coherence, review, advise, get_copy, scaffold_copy, review_copy, get_theme, scaffold_theme, validate_theme, generate_tokens, generate_imagery_prompts |
-| `semantics` | extract, validate_events, tenancy, compliance, analytics |
-| `composition` | audit, capture, analyze, report, inspect_styles |
-| `policy` | analyze, conflicts, coverage, simulate |
-| `pulse` | run, radar, persona, timeline, decisions |
-| `pitch` | scaffold, generate, validate, review, enrich |
-| `bootstrap` | entry point for "build me an app" requests |
-| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas |
-| `demo_data` | propose, save, get, generate |
-| `api_pack` | list, search, get, generate_dsl, env_vars, infrastructure, scaffold |
-| `mock` | status, scenarios, fire_webhook, request_log, inject_error, scaffold_scenario |
-| `contribution` | templates, create, validate, examples |
-| `user_management` | list, create, get, update, deactivate |
-| `user_profile` | observe, observe_message, get, reset |
+Run `dazzle mcp` or use `status mcp` for the full tool/operation listing.
 
 Use MCP tools for DSL semantics; this file for codebase conventions.
 
@@ -233,6 +204,13 @@ The `status activity` MCP operation provides the same data for programmatic poll
 - **Package name**: `dazzle-dsl` (the name `dazzle` is taken on PyPI)
 - **Import name**: `dazzle` (unchanged — PEP 503 normalises the package name)
 - `pip install dazzle-dsl` provides the `dazzle` console command
+
+## Gotchas
+
+- **MCP test isolation**: Tests that mock `mcp.*` modules pollute `sys.modules`. The `tests/unit/conftest.py` 3-phase fixture handles this — don't bypass it.
+- **PersonaSpec identity**: Use `.id`, not `.name` — `getattr(p, "name", None) or getattr(p, "id", "unknown")`.
+- **State machine states**: Plain strings, not objects — use `s if isinstance(s, str) else s.name`.
+- **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
 **Version**: 0.41.1 | **Python**: 3.12+ | **Status**: Production Ready
