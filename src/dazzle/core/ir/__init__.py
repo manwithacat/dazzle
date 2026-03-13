@@ -228,6 +228,14 @@ from .governance import (
     TopicNamespaceMode,
 )
 
+# Grants (v0.42.0 Runtime RBAC)
+from .grants import (
+    GrantApprovalMode,
+    GrantExpiryMode,
+    GrantRelationSpec,
+    GrantSchemaSpec,
+)
+
 # HLESS - High-Level Event Semantics (v0.19.0)
 from .hless import (
     DerivationLineage,
@@ -910,6 +918,11 @@ __all__ = [
     "RuleOrigin",
     "RuleSpec",
     "RuleStatus",
+    # Grants (v0.42.0 Runtime RBAC)
+    "GrantApprovalMode",
+    "GrantExpiryMode",
+    "GrantRelationSpec",
+    "GrantSchemaSpec",
     # Questions (v0.41.0 Convergent BDD)
     "QuestionSpec",
     "QuestionStatus",
