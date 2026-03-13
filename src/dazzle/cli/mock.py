@@ -203,3 +203,117 @@ def webhook_cmd(
         typer.echo(f"Webhook delivered: {attempt.status_code} ({attempt.elapsed_ms:.0f}ms)")
         typer.echo(f"  Target: {attempt.target_url}")
         typer.echo(f"  Event: {event}")
+
+
+@mock_app.command(name="scenarios")
+def scenarios_cmd(
+    action: str = typer.Argument("list", help="Action: list, activate, deactivate"),
+    vendor: str | None = typer.Option(None, "--vendor", "-v", help="Vendor name"),
+    scenario_name: str | None = typer.Option(None, "--name", "-n", help="Scenario name"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """List, activate, or deactivate test scenarios."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.mock import mock_scenarios_impl
+
+    result = mock_scenarios_impl(
+        action=action,
+        vendor=vendor,
+        scenario_name=scenario_name,
+    )
+
+    if "error" in result:
+        typer.echo(result["error"], err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=as_json))
+
+
+@mock_app.command(name="fire-webhook")
+def fire_webhook_cmd(
+    vendor: str = typer.Argument(..., help="Vendor name (e.g. sumsub_kyc)"),
+    event: str = typer.Argument(..., help="Event name (e.g. applicant_reviewed)"),
+    overrides: str | None = typer.Option(
+        None, "--overrides", "-o", help="JSON string of payload overrides"
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Fire a webhook event to the running app."""
+    import json as json_mod
+
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.mock import mock_fire_webhook_impl
+
+    parsed_overrides: dict[str, Any] | None = None
+    if overrides:
+        try:
+            parsed_overrides = json_mod.loads(overrides)
+        except json_mod.JSONDecodeError as e:
+            typer.echo(f"Invalid JSON overrides: {e}", err=True)
+            raise typer.Exit(code=1)
+
+    result = mock_fire_webhook_impl(
+        vendor=vendor,
+        event=event,
+        overrides=parsed_overrides,
+    )
+
+    if "error" in result and "hint" not in result:
+        typer.echo(result["error"], err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=as_json))
+
+
+@mock_app.command(name="inject-error")
+def inject_error_cmd(
+    vendor: str = typer.Argument(..., help="Vendor name (e.g. sumsub_kyc)"),
+    operation: str = typer.Argument(..., help="Operation name to inject error for"),
+    status: int = typer.Option(500, "--status", "-s", help="HTTP status code"),
+    body: str | None = typer.Option(None, "--body", "-b", help="JSON response body"),
+    after_n: int | None = typer.Option(
+        None, "--after-n", help="Inject error after N successful calls"
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Inject an error response for a vendor operation."""
+    import json as json_mod
+
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.mock import mock_inject_error_impl
+
+    parsed_body: Any = None
+    if body:
+        try:
+            parsed_body = json_mod.loads(body)
+        except json_mod.JSONDecodeError as e:
+            typer.echo(f"Invalid JSON body: {e}", err=True)
+            raise typer.Exit(code=1)
+
+    result = mock_inject_error_impl(
+        vendor=vendor,
+        operation=operation,
+        status=status,
+        body=parsed_body,
+        after_n=after_n,
+    )
+
+    if "error" in result:
+        typer.echo(result["error"], err=True)
+        raise typer.Exit(code=1)
+
+    typer.echo(format_output(result, as_json=as_json))
+
+
+@mock_app.command(name="scaffold-scenario")
+def scaffold_scenario_cmd(
+    vendor: str = typer.Option("my_vendor", "--vendor", "-v", help="Vendor name"),
+    name: str = typer.Option("custom_scenario", "--name", "-n", help="Scenario name"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Generate a scenario TOML template."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.mock import mock_scaffold_scenario_impl
+
+    result = mock_scaffold_scenario_impl(vendor=vendor, name=name)
+    typer.echo(format_output(result, as_json=as_json))
