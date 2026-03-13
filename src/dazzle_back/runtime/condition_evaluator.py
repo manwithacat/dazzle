@@ -324,6 +324,20 @@ def condition_to_sql_filter(
             return {}  # Role satisfied, no additional SQL filter needed
         return {"_role_denied": True}  # Sentinel that repository interprets as deny-all
 
+    # Handle grant check — generate subquery metadata for repository layer
+    if "grant_check" in condition and condition["grant_check"]:
+        gc = condition["grant_check"]
+        principal_id = context.get("current_user_id")
+        if not principal_id:
+            return {"_grant_denied": True}
+        return {
+            "_grant_subquery": {
+                "field": gc["scope_field"],
+                "relation": gc["relation"],
+                "principal_id": principal_id,
+            }
+        }
+
     # For simple AND conditions, we can build filters
     if "comparison" in condition and condition["comparison"]:
         comp = condition["comparison"]
