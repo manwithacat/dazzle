@@ -23,19 +23,16 @@ from .common import (
 logger = logging.getLogger("dazzle.mcp.testing")
 
 
-@wrap_handler_errors
-def check_test_infrastructure_handler() -> str:
-    """
-    Check test infrastructure requirements.
+# ---------------------------------------------------------------------------
+# check_infra
+# ---------------------------------------------------------------------------
 
-    Returns status of required dependencies and install instructions.
-    Use this BEFORE running E2E tests to ensure all dependencies are set up.
 
-    Returns:
-        JSON with infrastructure status and setup instructions
+def check_test_infrastructure_impl() -> dict[str, Any]:
+    """Check test infrastructure requirements.
+
+    Returns a dict with ready status, component details, and setup instructions.
     """
-    progress = extract_progress(None)
-    progress.log_sync("Checking test infrastructure...")
     result: dict[str, Any] = {
         "ready": True,
         "components": {},
@@ -162,7 +159,82 @@ def check_test_infrastructure_handler() -> str:
             "Follow the setup_instructions to install missing components."
         )
 
+    return result
+
+
+@wrap_handler_errors
+def check_test_infrastructure_handler() -> str:
+    """
+    Check test infrastructure requirements.
+
+    Returns status of required dependencies and install instructions.
+    Use this BEFORE running E2E tests to ensure all dependencies are set up.
+
+    Returns:
+        JSON with infrastructure status and setup instructions
+    """
+    progress = extract_progress(None)
+    progress.log_sync("Checking test infrastructure...")
+    result = check_test_infrastructure_impl()
     return json.dumps(result, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# run
+# ---------------------------------------------------------------------------
+
+
+def run_e2e_tests_impl(
+    project_path: Path,
+    priority: str | None,
+    tag: str | None,
+    headless: bool,
+) -> dict[str, Any]:
+    """Run E2E tests for the project. Returns result dict."""
+    from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
+
+    runner = E2ERunner(project_path)
+
+    # Check Playwright
+    playwright_ok, playwright_msg = runner.ensure_playwright()
+    if not playwright_ok:
+        return {
+            "error": playwright_msg,
+            "status": "error",
+            "hint": "pip install playwright && playwright install chromium",
+        }
+
+    options = E2ERunOptions(
+        headless=headless,
+        priority=priority,
+        tag=tag,
+    )
+
+    result = runner.run_all(options)
+
+    if result.error:
+        return {
+            "status": "error",
+            "error": result.error,
+            "project": result.project_name,
+        }
+
+    failures = [
+        {"flow_id": f.flow_id, "error": f.error} for f in result.flows if f.status == "failed"
+    ]
+
+    return {
+        "status": "passed" if result.failed == 0 else "failed",
+        "project": result.project_name,
+        "total": result.total,
+        "passed": result.passed,
+        "failed": result.failed,
+        "success_rate": result.success_rate,
+        "failures": failures,
+        "duration_seconds": (result.completed_at - result.started_at).total_seconds()
+        if result.completed_at
+        else None,
+    }
 
 
 @wrap_handler_errors
@@ -209,61 +281,75 @@ def run_e2e_tests_handler(
                     }
                 )
 
-    # Import E2E runner
-    from dazzle.testing.e2e_runner import E2ERunner, E2ERunOptions
-
-    runner = E2ERunner(root)
-
-    # Check Playwright
-    playwright_ok, playwright_msg = runner.ensure_playwright()
-    if not playwright_ok:
-        return json.dumps(
-            {
-                "error": playwright_msg,
-                "status": "error",
-                "hint": "pip install playwright && playwright install chromium",
-            }
-        )
-
-    # Run tests
-    options = E2ERunOptions(
-        headless=headless,
+    result = run_e2e_tests_impl(
+        project_path=root,
         priority=priority,
         tag=tag,
+        headless=headless,
     )
+    passed = result.get("passed", 0)
+    failed = result.get("failed", 0)
+    progress.log_sync(f"E2E tests done: {passed} passed, {failed} failed")
+    return json.dumps(result, indent=2)
 
-    result = runner.run_all(options)
-    progress.log_sync(f"E2E tests done: {result.passed} passed, {result.failed} failed")
 
-    # Format response
-    if result.error:
-        return json.dumps(
-            {
-                "status": "error",
-                "error": result.error,
-                "project": result.project_name,
-            }
-        )
+# ---------------------------------------------------------------------------
+# coverage
+# ---------------------------------------------------------------------------
 
-    failures = [
-        {"flow_id": f.flow_id, "error": f.error} for f in result.flows if f.status == "failed"
-    ]
 
-    return json.dumps(
-        {
-            "status": "passed" if result.failed == 0 else "failed",
-            "project": result.project_name,
-            "total": result.total,
-            "passed": result.passed,
-            "failed": result.failed,
-            "success_rate": result.success_rate,
-            "failures": failures,
-            "duration_seconds": (result.completed_at - result.started_at).total_seconds()
-            if result.completed_at
-            else None,
+def get_e2e_test_coverage_impl(project_path: Path) -> dict[str, Any]:
+    """Analyze E2E test coverage for the project. Returns coverage dict."""
+    from dazzle.core.manifest import load_manifest
+    from dazzle.testing.testspec_generator import generate_e2e_testspec
+
+    appspec = load_project_appspec(project_path)
+    manifest_path = project_path / "dazzle.toml"
+    manifest = load_manifest(manifest_path)
+    testspec = generate_e2e_testspec(appspec, manifest)
+
+    entities_in_spec = {e.name for e in appspec.domain.entities}
+    surfaces_in_spec = {s.name for s in appspec.surfaces}
+
+    entities_covered: set[str] = set()
+    surfaces_covered: set[str] = set()
+    priority_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
+    tag_counts: dict[str, int] = {}
+
+    for flow in testspec.flows:
+        if flow.entity:
+            entities_covered.add(flow.entity)
+        for tag in flow.tags:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+            if tag in surfaces_in_spec:
+                surfaces_covered.add(tag)
+        priority_counts[flow.priority.value] = priority_counts.get(flow.priority.value, 0) + 1
+
+    return {
+        "project": appspec.name,
+        "total_flows": len(testspec.flows),
+        "total_fixtures": len(testspec.fixtures),
+        "entities": {
+            "total": len(entities_in_spec),
+            "covered": len(entities_covered),
+            "coverage_pct": round(len(entities_covered) / len(entities_in_spec) * 100, 1)
+            if entities_in_spec
+            else 0,
+            "covered_list": sorted(entities_covered),
+            "uncovered_list": sorted(entities_in_spec - entities_covered),
         },
-        indent=2,
-    )
+        "surfaces": {
+            "total": len(surfaces_in_spec),
+            "covered": len(surfaces_covered),
+            "coverage_pct": round(len(surfaces_covered) / len(surfaces_in_spec) * 100, 1)
+            if surfaces_in_spec
+            else 0,
+            "covered_list": sorted(surfaces_covered),
+            "uncovered_list": sorted(surfaces_in_spec - surfaces_covered),
+        },
+        "by_priority": priority_counts,
+        "by_tag": dict(sorted(tag_counts.items(), key=lambda x: -x[1])[:10]),
+    }
 
 
 @wrap_handler_errors
@@ -302,63 +388,63 @@ def get_e2e_test_coverage_handler(
                     }
                 )
 
-    # Load and generate testspec
+    coverage = get_e2e_test_coverage_impl(root)
+    return json.dumps(coverage, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# list_flows
+# ---------------------------------------------------------------------------
+
+
+def list_e2e_flows_impl(
+    project_path: Path,
+    priority: str | None,
+    tag: str | None,
+    limit: int,
+) -> dict[str, Any]:
+    """List available E2E test flows. Returns flow list dict."""
+    from dazzle.core.manifest import load_manifest
     from dazzle.testing.testspec_generator import generate_e2e_testspec
 
-    appspec = load_project_appspec(root)
-    manifest_path = root / "dazzle.toml"
-    from dazzle.core.manifest import load_manifest
-
+    appspec = load_project_appspec(project_path)
+    manifest_path = project_path / "dazzle.toml"
     manifest = load_manifest(manifest_path)
     testspec = generate_e2e_testspec(appspec, manifest)
 
-    # Analyze coverage
-    entities_in_spec = {e.name for e in appspec.domain.entities}
-    surfaces_in_spec = {s.name for s in appspec.surfaces}
+    flows = testspec.flows
 
-    entities_covered = set()
-    surfaces_covered = set()
-    priority_counts: dict[str, int] = {"high": 0, "medium": 0, "low": 0}
-    tag_counts: dict[str, int] = {}
+    if priority:
+        from dazzle.core.ir import FlowPriority
 
-    for flow in testspec.flows:
-        if flow.entity:
-            entities_covered.add(flow.entity)
-        for tag in flow.tags:
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
-            # Check if tag is a surface name
-            if tag in surfaces_in_spec:
-                surfaces_covered.add(tag)
-        priority_counts[flow.priority.value] = priority_counts.get(flow.priority.value, 0) + 1
+        try:
+            priority_enum = FlowPriority(priority)
+            flows = [f for f in flows if f.priority == priority_enum]
+        except ValueError:
+            pass
 
-    # Build coverage report
-    coverage = {
+    if tag:
+        flows = [f for f in flows if tag in f.tags]
+
+    flow_list = [
+        {
+            "id": f.id,
+            "description": f.description,
+            "priority": f.priority.value,
+            "tags": f.tags[:5],
+            "steps": len(f.steps),
+            "entity": f.entity,
+        }
+        for f in flows[:limit]
+    ]
+
+    return {
         "project": appspec.name,
-        "total_flows": len(testspec.flows),
-        "total_fixtures": len(testspec.fixtures),
-        "entities": {
-            "total": len(entities_in_spec),
-            "covered": len(entities_covered),
-            "coverage_pct": round(len(entities_covered) / len(entities_in_spec) * 100, 1)
-            if entities_in_spec
-            else 0,
-            "covered_list": sorted(entities_covered),
-            "uncovered_list": sorted(entities_in_spec - entities_covered),
-        },
-        "surfaces": {
-            "total": len(surfaces_in_spec),
-            "covered": len(surfaces_covered),
-            "coverage_pct": round(len(surfaces_covered) / len(surfaces_in_spec) * 100, 1)
-            if surfaces_in_spec
-            else 0,
-            "covered_list": sorted(surfaces_covered),
-            "uncovered_list": sorted(surfaces_in_spec - surfaces_covered),
-        },
-        "by_priority": priority_counts,
-        "by_tag": dict(sorted(tag_counts.items(), key=lambda x: -x[1])[:10]),
+        "total": len(testspec.flows),
+        "filtered": len(flows),
+        "shown": len(flow_list),
+        "flows": flow_list,
     }
-
-    return json.dumps(coverage, indent=2)
 
 
 @wrap_handler_errors
@@ -401,54 +487,67 @@ def list_e2e_flows_handler(
                     }
                 )
 
-    # Generate testspec
-    from dazzle.testing.testspec_generator import generate_e2e_testspec
+    result = list_e2e_flows_impl(
+        project_path=root,
+        priority=priority,
+        tag=tag,
+        limit=limit,
+    )
+    return json.dumps(result, indent=2)
 
-    appspec = load_project_appspec(root)
-    manifest_path = root / "dazzle.toml"
-    from dazzle.core.manifest import load_manifest
 
-    manifest = load_manifest(manifest_path)
-    testspec = generate_e2e_testspec(appspec, manifest)
+# ---------------------------------------------------------------------------
+# run_agent
+# ---------------------------------------------------------------------------
 
-    # Filter flows
-    flows = testspec.flows
 
-    if priority:
-        from dazzle.core.ir import FlowPriority
+async def run_agent_e2e_tests_impl(
+    project_path: Path,
+    test_ids: list[str] | None,
+    headless: bool,
+    model: str | None,
+) -> dict[str, Any]:
+    """Run E2E tests using an LLM agent. Returns result dict."""
+    from dazzle.testing.agent_e2e import run_agent_tests
 
-        try:
-            priority_enum = FlowPriority(priority)
-            flows = [f for f in flows if f.priority == priority_enum]
-        except ValueError:
-            pass
+    results = await run_agent_tests(
+        project_path=project_path,
+        test_ids=test_ids,
+        headless=headless,
+        model=model,
+    )
 
-    if tag:
-        flows = [f for f in flows if tag in f.tags]
-
-    # Build response
-    flow_list = [
-        {
-            "id": f.id,
-            "description": f.description,
-            "priority": f.priority.value,
-            "tags": f.tags[:5],  # Limit tags for readability
-            "steps": len(f.steps),
-            "entity": f.entity,
+    if not results:
+        return {
+            "status": "skipped",
+            "message": "No E2E tests found to run",
+            "project": project_path.name,
         }
-        for f in flows[:limit]
+
+    passed = sum(1 for r in results if r.passed)
+    failed = len(results) - passed
+
+    result_list = [
+        {
+            "test_id": r.test_id,
+            "passed": r.passed,
+            "steps": len(r.steps),
+            "duration_ms": r.duration_ms,
+            "reasoning": r.reasoning,
+            "error": r.error,
+        }
+        for r in results
     ]
 
-    return json.dumps(
-        {
-            "project": appspec.name,
-            "total": len(testspec.flows),
-            "filtered": len(flows),
-            "shown": len(flow_list),
-            "flows": flow_list,
-        },
-        indent=2,
-    )
+    return {
+        "status": "passed" if failed == 0 else "failed",
+        "project": project_path.name,
+        "total": len(results),
+        "passed": passed,
+        "failed": failed,
+        "success_rate": round(passed / len(results) * 100, 1) if results else 0,
+        "results": result_list,
+    }
 
 
 @wrap_async_handler_errors
@@ -499,57 +598,15 @@ async def run_agent_e2e_tests_handler(
                         }
                     )
 
-        # Import agent runner
-        from dazzle.testing.agent_e2e import run_agent_tests
-
         test_ids = [test_id] if test_id else None
 
-        # Run tests
-        results = await run_agent_tests(
+        result = await run_agent_e2e_tests_impl(
             project_path=root,
             test_ids=test_ids,
             headless=headless,
             model=model,
         )
-
-        if not results:
-            return json.dumps(
-                {
-                    "status": "skipped",
-                    "message": "No E2E tests found to run",
-                    "project": root.name,
-                }
-            )
-
-        # Format response
-        passed = sum(1 for r in results if r.passed)
-        failed = len(results) - passed
-
-        result_list = []
-        for r in results:
-            result_list.append(
-                {
-                    "test_id": r.test_id,
-                    "passed": r.passed,
-                    "steps": len(r.steps),
-                    "duration_ms": r.duration_ms,
-                    "reasoning": r.reasoning,
-                    "error": r.error,
-                }
-            )
-
-        return json.dumps(
-            {
-                "status": "passed" if failed == 0 else "failed",
-                "project": root.name,
-                "total": len(results),
-                "passed": passed,
-                "failed": failed,
-                "success_rate": round(passed / len(results) * 100, 1) if results else 0,
-                "results": result_list,
-            },
-            indent=2,
-        )
+        return json.dumps(result, indent=2)
 
     except ImportError as e:
         return json.dumps(
@@ -561,12 +618,14 @@ async def run_agent_e2e_tests_handler(
         )
 
 
-@wrap_handler_errors
-def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
-    """Provide guidance on which test tier to use for a scenario."""
-    progress = extract_progress(arguments)
-    progress.log_sync("Analyzing test tier...")
-    scenario = arguments.get("scenario", "").lower()
+# ---------------------------------------------------------------------------
+# tier_guidance
+# ---------------------------------------------------------------------------
+
+
+def get_test_tier_guidance_impl(scenario: str) -> dict[str, Any]:
+    """Provide guidance on which test tier to use for a scenario. Returns guidance dict."""
+    scenario_lower = scenario.lower()
 
     # Keywords that suggest Tier 3 (agent) testing
     tier3_keywords = [
@@ -621,17 +680,16 @@ def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
         "access",
     ]
 
-    # Score the scenario
-    tier1_score = sum(1 for kw in tier1_keywords if kw in scenario)
-    tier2_score = sum(1 for kw in tier2_keywords if kw in scenario)
-    tier3_score = sum(1 for kw in tier3_keywords if kw in scenario)
+    tier1_score = sum(1 for kw in tier1_keywords if kw in scenario_lower)
+    tier2_score = sum(1 for kw in tier2_keywords if kw in scenario_lower)
+    tier3_score = sum(1 for kw in tier3_keywords if kw in scenario_lower)
 
     if tier3_score > tier2_score and tier3_score > tier1_score:
         recommendation = "tier3"
         reason = (
             "This scenario requires visual judgment, adaptive behavior, or exploratory testing."
         )
-        tags = ["tier3", "agent"]
+        tags: list[str] = ["tier3", "agent"]
         run_command = "dazzle test agent"
         mcp_tool = "run_agent_e2e_tests"
     elif tier2_score > tier1_score:
@@ -647,46 +705,53 @@ def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
         run_command = "dazzle test dsl-run"
         mcp_tool = "run_dsl_tests"
 
-    return json.dumps(
-        {
-            "scenario": arguments.get("scenario", ""),
-            "recommendation": recommendation,
-            "reason": reason,
-            "tags_to_use": tags,
-            "run_command": run_command,
-            "mcp_tool": mcp_tool,
-            "tier_summary": {
-                "tier1": {
-                    "name": "API Tests",
-                    "characteristics": ["Fast", "No browser", "Free"],
-                    "best_for": [
-                        "CRUD operations",
-                        "Field validation",
-                        "API response checks",
-                        "State machine transitions",
-                    ],
-                },
-                "tier2": {
-                    "name": "Scripted E2E (Playwright)",
-                    "characteristics": ["Deterministic", "Uses semantic selectors", "Free"],
-                    "best_for": [
-                        "Navigation verification",
-                        "Form submission",
-                        "UI interaction flows",
-                        "Multi-step workflows",
-                    ],
-                },
-                "tier3": {
-                    "name": "Agent Tests (LLM-Driven)",
-                    "characteristics": ["Adaptive", "Visual understanding", "Costs money"],
-                    "best_for": [
-                        "Visual verification",
-                        "Exploratory testing",
-                        "Accessibility audits",
-                        "Testing after UI refactors",
-                    ],
-                },
+    return {
+        "scenario": scenario,
+        "recommendation": recommendation,
+        "reason": reason,
+        "tags_to_use": tags,
+        "run_command": run_command,
+        "mcp_tool": mcp_tool,
+        "tier_summary": {
+            "tier1": {
+                "name": "API Tests",
+                "characteristics": ["Fast", "No browser", "Free"],
+                "best_for": [
+                    "CRUD operations",
+                    "Field validation",
+                    "API response checks",
+                    "State machine transitions",
+                ],
+            },
+            "tier2": {
+                "name": "Scripted E2E (Playwright)",
+                "characteristics": ["Deterministic", "Uses semantic selectors", "Free"],
+                "best_for": [
+                    "Navigation verification",
+                    "Form submission",
+                    "UI interaction flows",
+                    "Multi-step workflows",
+                ],
+            },
+            "tier3": {
+                "name": "Agent Tests (LLM-Driven)",
+                "characteristics": ["Adaptive", "Visual understanding", "Costs money"],
+                "best_for": [
+                    "Visual verification",
+                    "Exploratory testing",
+                    "Accessibility audits",
+                    "Testing after UI refactors",
+                ],
             },
         },
-        indent=2,
-    )
+    }
+
+
+@wrap_handler_errors
+def get_test_tier_guidance_handler(arguments: dict[str, Any]) -> str:
+    """Provide guidance on which test tier to use for a scenario."""
+    progress = extract_progress(arguments)
+    progress.log_sync("Analyzing test tier...")
+    scenario = arguments.get("scenario", "")
+    result = get_test_tier_guidance_impl(scenario)
+    return json.dumps(result, indent=2)
