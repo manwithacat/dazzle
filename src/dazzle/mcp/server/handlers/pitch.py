@@ -149,67 +149,65 @@ def _section_quality_scores(spec: Any) -> dict[str, int]:
     return score_map
 
 
-@wrap_handler_errors
-def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+def scaffold_pitchspec_impl(
+    project_root: Path,
+    *,
+    overwrite: bool = False,
+) -> dict[str, Any]:
     """Scaffold a pitchspec.yaml file."""
     from dazzle.pitch.loader import scaffold_pitchspec
 
+    result = scaffold_pitchspec(project_root, overwrite=overwrite)
+
+    if result:
+        return {
+            "success": True,
+            "created": str(result),
+            "message": "Created pitchspec.yaml. Edit it and run pitch generate.",
+            "next_steps": [
+                "Edit pitchspec.yaml with your company details, problem, solution, and market data",
+                "Run pitch(operation='validate') to check completeness",
+                "Run pitch(operation='generate', format='all') to build the deck",
+            ],
+        }
+    else:
+        return {
+            "success": False,
+            "message": "pitchspec.yaml already exists. Use overwrite=true to replace.",
+            "next_steps": [
+                "Run pitch(operation='get') to see current pitchspec contents",
+                "Run pitch(operation='validate') to check for issues",
+            ],
+        }
+
+
+@wrap_handler_errors
+def scaffold_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Scaffold a pitchspec.yaml file."""
     progress = extract_progress(args)
     overwrite = args.get("overwrite", False)
 
     progress.log_sync("Scaffolding pitchspec...")
-    result = scaffold_pitchspec(project_root, overwrite=overwrite)
-
-    if result:
-        return json.dumps(
-            {
-                "success": True,
-                "created": str(result),
-                "message": "Created pitchspec.yaml. Edit it and run pitch generate.",
-                "next_steps": [
-                    "Edit pitchspec.yaml with your company details, problem, solution, and market data",
-                    "Run pitch(operation='validate') to check completeness",
-                    "Run pitch(operation='generate', format='all') to build the deck",
-                ],
-            },
-            indent=2,
-        )
-    else:
-        return json.dumps(
-            {
-                "success": False,
-                "message": "pitchspec.yaml already exists. Use overwrite=true to replace.",
-                "next_steps": [
-                    "Run pitch(operation='get') to see current pitchspec contents",
-                    "Run pitch(operation='validate') to check for issues",
-                ],
-            },
-            indent=2,
-        )
+    return json.dumps(scaffold_pitchspec_impl(project_root, overwrite=overwrite), indent=2)
 
 
-@wrap_handler_errors
-def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Generate pitch materials."""
+def generate_pitch_impl(
+    project_root: Path,
+    *,
+    fmt: str = "pptx",
+) -> dict[str, Any]:
+    """Generate pitch materials and return a result dict."""
     from dazzle.pitch.extractor import extract_pitch_context
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec
 
-    progress = extract_progress(args)
-    fmt = args.get("format", "pptx")
-
     try:
-        progress.log_sync("Loading pitchspec...")
         spec = load_pitchspec(project_root)
     except PitchSpecError as e:
-        return json.dumps(
-            {
-                "error": str(e),
-                "hint": "Run pitch(operation='scaffold') first to create pitchspec.yaml",
-            },
-            indent=2,
-        )
+        return {
+            "error": str(e),
+            "hint": "Run pitch(operation='scaffold') first to create pitchspec.yaml",
+        }
 
-    progress.log_sync("Generating pitch...")
     ctx = extract_pitch_context(project_root, spec)
     results: list[dict[str, Any]] = []
     all_warnings: list[str] = []
@@ -275,19 +273,25 @@ def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
         response["missing_sections"] = missing
     response["next_steps"] = next_steps
 
-    return json.dumps(response, indent=2)
+    return response
 
 
 @wrap_handler_errors
-def validate_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Validate the pitchspec.yaml."""
+def generate_pitch_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Generate pitch materials."""
+    progress = extract_progress(args)
+    fmt = args.get("format", "pptx")
+
+    progress.log_sync("Loading pitchspec...")
+    progress.log_sync("Generating pitch...")
+    return json.dumps(generate_pitch_impl(project_root, fmt=fmt), indent=2)
+
+
+def validate_pitchspec_impl(project_root: Path) -> dict[str, Any]:
+    """Validate the pitchspec.yaml and return a result dict."""
     from dazzle.pitch.loader import load_pitchspec, validate_pitchspec
 
-    progress = extract_progress(args)
-
-    progress.log_sync("Validating pitchspec...")
     spec = load_pitchspec(project_root)
-
     result = validate_pitchspec(spec)
 
     # Build context-aware next_steps
@@ -307,18 +311,23 @@ def validate_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     if missing:
         next_steps.append(f"Add {', '.join(missing)} sections to pitchspec.yaml for completeness")
 
-    return json.dumps(
-        {
-            "is_valid": result.is_valid,
-            "error_count": len(result.errors),
-            "warning_count": len(result.warnings),
-            "errors": result.errors,
-            "warnings": result.warnings,
-            "missing_sections": missing,
-            "next_steps": next_steps,
-        },
-        indent=2,
-    )
+    return {
+        "is_valid": result.is_valid,
+        "error_count": len(result.errors),
+        "warning_count": len(result.warnings),
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "missing_sections": missing,
+        "next_steps": next_steps,
+    }
+
+
+@wrap_handler_errors
+def validate_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Validate the pitchspec.yaml."""
+    progress = extract_progress(args)
+    progress.log_sync("Validating pitchspec...")
+    return json.dumps(validate_pitchspec_impl(project_root), indent=2)
 
 
 @wrap_handler_errors
@@ -362,24 +371,17 @@ def get_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         )
 
 
-@wrap_handler_errors
-def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Analyze pitch content quality and suggest improvements."""
+def review_pitchspec_impl(project_root: Path) -> dict[str, Any]:
+    """Analyze pitch content quality and return a result dict with suggestions."""
     from dazzle.pitch.loader import PitchSpecError, load_pitchspec
 
-    progress = extract_progress(args)
-
     try:
-        progress.log_sync("Reviewing pitch quality...")
         spec = load_pitchspec(project_root)
     except PitchSpecError as e:
-        return json.dumps(
-            {
-                "error": str(e),
-                "next_steps": ["Run pitch(operation='scaffold') to create pitchspec.yaml"],
-            },
-            indent=2,
-        )
+        return {
+            "error": str(e),
+            "next_steps": ["Run pitch(operation='scaffold') to create pitchspec.yaml"],
+        }
 
     section_scores: dict[str, str] = {}
     suggestions: list[str] = []
@@ -549,30 +551,32 @@ def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
         "Add speaker_notes to each section for a polished presenter experience",
     ]
 
-    return json.dumps(
-        {
-            "overall_assessment": overall,
-            "section_scores": section_scores,
-            "completeness": f"{_completeness_score(spec)}%",
-            "suggestions": suggestions,
-            "creative_suggestions": creative_suggestions,
-            "iteration_checklist": iteration_checklist,
-            "next_steps": next_steps,
-        },
-        indent=2,
-    )
+    return {
+        "overall_assessment": overall,
+        "section_scores": section_scores,
+        "completeness": f"{_completeness_score(spec)}%",
+        "suggestions": suggestions,
+        "creative_suggestions": creative_suggestions,
+        "iteration_checklist": iteration_checklist,
+        "next_steps": next_steps,
+    }
 
 
 @wrap_handler_errors
-def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
-    """Merge a patch into pitchspec.yaml."""
-    from dazzle.pitch.loader import merge_pitchspec
-
+def review_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyze pitch content quality and suggest improvements."""
     progress = extract_progress(args)
-    progress.log_sync("Updating pitchspec...")
-    patch = args.get("patch")
-    if not patch or not isinstance(patch, dict):
-        return error_response("patch parameter is required and must be a dict")
+    progress.log_sync("Reviewing pitch quality...")
+    return json.dumps(review_pitchspec_impl(project_root), indent=2)
+
+
+def update_pitchspec_impl(
+    project_root: Path,
+    *,
+    patch: dict[str, Any],
+) -> dict[str, Any]:
+    """Merge a patch into pitchspec.yaml and return a result dict."""
+    from dazzle.pitch.loader import merge_pitchspec
 
     spec = merge_pitchspec(project_root, patch)
     missing = _get_missing_sections(spec)
@@ -584,37 +588,37 @@ def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
     next_steps.append("Run pitch(operation='validate') to check for issues")
     next_steps.append("Run pitch(operation='generate', format='all') to build the deck")
 
-    return json.dumps(
-        {
-            "success": True,
-            "completeness": f"{completeness}%",
-            "missing_sections": missing,
-            "next_steps": next_steps,
-        },
-        indent=2,
-    )
+    return {
+        "success": True,
+        "completeness": f"{completeness}%",
+        "missing_sections": missing,
+        "next_steps": next_steps,
+    }
 
 
 @wrap_handler_errors
-def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+def update_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Merge a patch into pitchspec.yaml."""
+    progress = extract_progress(args)
+    progress.log_sync("Updating pitchspec...")
+    patch = args.get("patch")
+    if not patch or not isinstance(patch, dict):
+        return error_response("patch parameter is required and must be a dict")
+    return json.dumps(update_pitchspec_impl(project_root, patch=patch), indent=2)
+
+
+def enrich_pitchspec_impl(project_root: Path) -> dict[str, Any]:
     """Analyze pitchspec + DSL context and return structured enrichment tasks."""
     from dazzle.pitch.extractor import extract_pitch_context
     from dazzle.pitch.loader import load_pitchspec, pitchspec_exists
 
-    progress = extract_progress(args)
-    progress.log_sync("Enriching pitch...")
-
     if not pitchspec_exists(project_root):
-        return json.dumps(
-            {
-                "error": "No pitchspec.yaml found",
-                "next_steps": ["Run pitch(operation='scaffold') first"],
-            },
-            indent=2,
-        )
+        return {
+            "error": "No pitchspec.yaml found",
+            "next_steps": ["Run pitch(operation='scaffold') first"],
+        }
 
     spec = load_pitchspec(project_root)
-
     ctx = extract_pitch_context(project_root, spec)
     missing = _get_missing_sections(spec)
     completeness = _completeness_score(spec)
@@ -752,43 +756,47 @@ def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
             }
         )
 
-    next_steps: list[str] = [
-        "Use pitch(operation='update', patch={...}) to apply changes",
-        "Run pitch(operation='review') to check content quality",
-        "Run pitch(operation='generate', format='all') to build the deck",
-    ]
+    return {
+        "completeness": f"{completeness}%",
+        "dsl_stats": dsl_stats,
+        "enrichment_tasks": tasks,
+        "task_count": len(tasks),
+        "next_steps": [
+            "Use pitch(operation='update', patch={...}) to apply changes",
+            "Run pitch(operation='review') to check content quality",
+            "Run pitch(operation='generate', format='all') to build the deck",
+        ],
+    }
 
-    return json.dumps(
-        {
-            "completeness": f"{completeness}%",
-            "dsl_stats": dsl_stats,
-            "enrichment_tasks": tasks,
-            "task_count": len(tasks),
-            "next_steps": next_steps,
-        },
-        indent=2,
-    )
+
+@wrap_handler_errors
+def enrich_pitchspec_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Analyze pitchspec + DSL context and return structured enrichment tasks."""
+    progress = extract_progress(args)
+    progress.log_sync("Enriching pitch...")
+    return json.dumps(enrich_pitchspec_impl(project_root), indent=2)
+
+
+def init_assets_impl(project_root: Path) -> dict[str, Any]:
+    """Create pitch_assets/ directory structure and return a result dict."""
+    from dazzle.pitch.loader import ensure_pitch_assets
+
+    assets_dir = ensure_pitch_assets(project_root)
+    return {
+        "success": True,
+        "path": str(assets_dir),
+        "subdirectories": ["team", "research", "charts", "media"],
+        "next_steps": [
+            "Add team headshots to pitch_assets/team/",
+            "Add company logo to pitch_assets/media/logo.png",
+            "Run pitch(operation='enrich') to see what assets are needed",
+        ],
+    }
 
 
 @wrap_handler_errors
 def init_assets_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Create pitch_assets/ directory structure."""
-    from dazzle.pitch.loader import ensure_pitch_assets
-
     progress = extract_progress(args)
     progress.log_sync("Initializing pitch assets...")
-
-    assets_dir = ensure_pitch_assets(project_root)
-    return json.dumps(
-        {
-            "success": True,
-            "path": str(assets_dir),
-            "subdirectories": ["team", "research", "charts", "media"],
-            "next_steps": [
-                "Add team headshots to pitch_assets/team/",
-                "Add company logo to pitch_assets/media/logo.png",
-                "Run pitch(operation='enrich') to see what assets are needed",
-            ],
-        },
-        indent=2,
-    )
+    return json.dumps(init_assets_impl(project_root), indent=2)
