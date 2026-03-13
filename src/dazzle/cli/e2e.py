@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -422,7 +423,7 @@ def e2e_run_viewport(
         capture_screenshots=capture_screenshots,
         update_baselines=update_baselines,
     )
-    result: dict = json.loads(raw)
+    result: dict[str, Any] = json.loads(raw)
     typer.echo(format_output(result, as_json=json_output))
 
 
