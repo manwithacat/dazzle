@@ -266,6 +266,7 @@ async def _workspace_region_handler(
     # Always attempt resolution when middleware is available, even in test mode
     # where require_auth is False — the user may still be authenticated (#483).
     _current_user_id: str | None = None
+    _current_user_entity: dict[str, Any] | None = None
     if ctx.auth_middleware:
         try:
             _auth = ctx.auth_middleware.get_auth_context(request)
@@ -295,6 +296,13 @@ async def _workspace_region_handler(
                                 if _uid:
                                     _current_user_id = str(_uid)
                                     _resolved = True
+                                    _current_user_entity = (
+                                        _entity_user
+                                        if isinstance(_entity_user, dict)
+                                        else _entity_user.model_dump()
+                                        if hasattr(_entity_user, "model_dump")
+                                        else {}
+                                    )
                         except Exception:
                             logger.debug("Could not resolve User entity by email", exc_info=True)
                 if not _resolved:
@@ -304,6 +312,8 @@ async def _workspace_region_handler(
     _filter_context: dict[str, Any] = {}
     if _current_user_id:
         _filter_context["current_user_id"] = _current_user_id
+    if _current_user_entity:
+        _filter_context["current_user_entity"] = _current_user_entity
     # Context selector value (v0.38.0): from query param or user preferences
     _context_id = request.query_params.get("context_id")
     if _context_id:

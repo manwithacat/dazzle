@@ -83,6 +83,25 @@ def _evaluate_comparison(
     return _compare(record_value, operator, resolved_value)
 
 
+def _resolve_dotted_field(entity: dict[str, Any], field_path: str) -> Any:
+    """Resolve a dotted field path from an entity dict.
+
+    Handles nested dicts (e.g. department.id) and ref fields stored as
+    either a UUID string or a dict with an ``id`` key.
+    """
+    parts = field_path.split(".")
+    current: Any = entity
+    for part in parts:
+        if isinstance(current, dict):
+            current = current.get(part)
+        else:
+            return None
+    # Ref fields may be stored as {"id": "...", "name": "..."} — return the id
+    if isinstance(current, dict) and "id" in current:
+        return current["id"]
+    return current
+
+
 def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
     """
     Resolve a value, handling special identifiers like current_user.
@@ -103,6 +122,13 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
                 return context.get("current_user_id")
             if literal_val == "current_context":
                 return context.get("current_context")
+            # Handle current_user.<field> dot-notation (e.g. current_user.department)
+            if isinstance(literal_val, str) and literal_val.startswith("current_user."):
+                field_path = literal_val[len("current_user.") :]
+                user_entity = context.get("current_user_entity")
+                if user_entity and isinstance(user_entity, dict):
+                    return _resolve_dotted_field(user_entity, field_path)
+                return None
             # Return the literal value as-is
             return literal_val
 
@@ -117,6 +143,12 @@ def _resolve_value(value: Any, context: dict[str, Any]) -> Any:
                 return context.get("current_user_id")
             if ident == "current_context":
                 return context.get("current_context")
+            if isinstance(ident, str) and ident.startswith("current_user."):
+                field_path = ident[len("current_user.") :]
+                user_entity = context.get("current_user_entity")
+                if user_entity and isinstance(user_entity, dict):
+                    return _resolve_dotted_field(user_entity, field_path)
+                return None
             return None
 
         # Handle literal values (alternative format)

@@ -918,3 +918,121 @@ class TestCurrentUserTestMode:
         assert '_user_result.get("items"' in source or "_user_result.get('items'" in source, (
             "Expected dict-style access _user_result.get('items') for repository.list() result"
         )
+
+    def test_user_entity_stored_in_filter_context(self) -> None:
+        """Verify the resolved User entity record is stored in filter context (#486).
+
+        This is needed so that current_user.<field> dot-notation can resolve
+        fields from the User entity (e.g. current_user.department).
+        """
+        import inspect
+        import textwrap
+
+        from dazzle_back.runtime.workspace_rendering import _workspace_region_handler
+
+        source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
+
+        assert "current_user_entity" in source, (
+            "Must store user entity record in filter context as 'current_user_entity' "
+            "for current_user.<field> dot-notation resolution"
+        )
+
+
+class TestCurrentUserDotNotation:
+    """Tests for current_user.<field> dot-notation in condition evaluator (#486)."""
+
+    def test_resolve_current_user_department(self) -> None:
+        """current_user.department resolves to user entity's department field."""
+        from dazzle_back.runtime.condition_evaluator import _resolve_value
+
+        context = {
+            "current_user_id": "user-123",
+            "current_user_entity": {
+                "id": "user-123",
+                "department": "f6ac5054-79ff-5b1a-acd0-f1c832d3433b",
+            },
+        }
+        value = {"literal": "current_user.department"}
+        result = _resolve_value(value, context)
+        assert result == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
+
+    def test_resolve_current_user_department_ref_dict(self) -> None:
+        """current_user.department resolves ref stored as {id, name} dict."""
+        from dazzle_back.runtime.condition_evaluator import _resolve_value
+
+        context = {
+            "current_user_id": "user-123",
+            "current_user_entity": {
+                "id": "user-123",
+                "department": {
+                    "id": "f6ac5054-79ff-5b1a-acd0-f1c832d3433b",
+                    "name": "English",
+                },
+            },
+        }
+        value = {"literal": "current_user.department"}
+        result = _resolve_value(value, context)
+        assert result == "f6ac5054-79ff-5b1a-acd0-f1c832d3433b"
+
+    def test_resolve_current_user_plain_still_works(self) -> None:
+        """current_user (no dot) still resolves to user ID."""
+        from dazzle_back.runtime.condition_evaluator import _resolve_value
+
+        context = {"current_user_id": "user-123"}
+        value = {"literal": "current_user"}
+        result = _resolve_value(value, context)
+        assert result == "user-123"
+
+    def test_resolve_current_user_missing_entity(self) -> None:
+        """current_user.<field> returns None when entity not in context."""
+        from dazzle_back.runtime.condition_evaluator import _resolve_value
+
+        context = {"current_user_id": "user-123"}
+        value = {"literal": "current_user.department"}
+        result = _resolve_value(value, context)
+        assert result is None
+
+    def test_resolve_current_user_missing_field(self) -> None:
+        """current_user.<field> returns None for nonexistent field."""
+        from dazzle_back.runtime.condition_evaluator import _resolve_value
+
+        context = {
+            "current_user_id": "user-123",
+            "current_user_entity": {"id": "user-123", "name": "Alice"},
+        }
+        value = {"literal": "current_user.department"}
+        result = _resolve_value(value, context)
+        assert result is None
+
+    def test_condition_to_sql_filter_with_dot_notation(self) -> None:
+        """condition_to_sql_filter resolves current_user.department in filters."""
+        from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
+
+        condition = {
+            "comparison": {
+                "field": "department",
+                "operator": "eq",
+                "value": {"literal": "current_user.department"},
+            }
+        }
+        context = {
+            "current_user_id": "user-123",
+            "current_user_entity": {
+                "id": "user-123",
+                "department": "dept-456",
+            },
+        }
+        filters = condition_to_sql_filter(condition, context)
+        assert filters == {"department": "dept-456"}
+
+    def test_identifier_kind_dot_notation(self) -> None:
+        """Handle current_user.field via identifier kind value format."""
+        from dazzle_back.runtime.condition_evaluator import _resolve_value
+
+        context = {
+            "current_user_id": "user-123",
+            "current_user_entity": {"id": "user-123", "team_id": "team-789"},
+        }
+        value = {"kind": "identifier", "value": "current_user.team_id"}
+        result = _resolve_value(value, context)
+        assert result == "team-789"
