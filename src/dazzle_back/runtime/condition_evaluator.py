@@ -8,6 +8,7 @@ Evaluates ConditionExpr from IR AccessSpec at runtime for:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -42,12 +43,67 @@ def evaluate_condition(
         elif condition["operator"] == "or":
             return left_result or right_result
 
+    # Handle role check
+    if "role_check" in condition and condition["role_check"] is not None:
+        return _evaluate_role_check(condition["role_check"], context)
+
+    # Handle grant check
+    if "grant_check" in condition and condition["grant_check"]:
+        return _evaluate_grant_check(condition["grant_check"], record, context)
+
     # Handle simple comparison
     if "comparison" in condition and condition["comparison"]:
         return _evaluate_comparison(condition["comparison"], record, context)
 
     # Empty condition = always true
     return True
+
+
+def _evaluate_role_check(
+    role_check: dict[str, Any],
+    context: dict[str, Any],
+) -> bool:
+    role_name = role_check.get("role_name")
+    if not role_name:
+        return False
+    user_roles = context.get("user_roles", [])
+    return role_name in user_roles
+
+
+def _evaluate_grant_check(
+    grant_check: dict[str, Any],
+    record: dict[str, Any],
+    context: dict[str, Any],
+) -> bool:
+    """
+    Evaluate a grant check against pre-fetched active grants in context.
+
+    Args:
+        grant_check: Serialized GrantCheck dict with 'relation' and 'scope_field'
+        record: Entity record data
+        context: Runtime context containing 'active_grants' list
+
+    Returns:
+        True if user has an active, non-expired grant matching the check
+    """
+    relation = grant_check.get("relation")
+    scope_field = grant_check.get("scope_field")
+    if not relation or not scope_field:
+        return False
+
+    scope_value = record.get(scope_field)
+    if not scope_value:
+        return False
+
+    active_grants = context.get("active_grants", [])
+    now = datetime.now(UTC).isoformat()
+
+    return any(
+        g.get("relation") == relation
+        and str(g.get("scope_id", "")) == str(scope_value)
+        and (g.get("expires_at") is None or g.get("expires_at", "") > now)
+        for g in active_grants
+    )
 
 
 def _evaluate_comparison(
@@ -259,6 +315,28 @@ def condition_to_sql_filter(
         Dictionary of field filters for repository
     """
     filters: dict[str, Any] = {}
+
+    # Handle role check — evaluate immediately since roles are in context
+    if "role_check" in condition and condition["role_check"]:
+        role_name = condition["role_check"].get("role_name")
+        user_roles = context.get("user_roles", [])
+        if role_name and role_name in user_roles:
+            return {}  # Role satisfied, no additional SQL filter needed
+        return {"_role_denied": True}  # Sentinel that repository interprets as deny-all
+
+    # Handle grant check — generate subquery metadata for repository layer
+    if "grant_check" in condition and condition["grant_check"]:
+        gc = condition["grant_check"]
+        principal_id = context.get("current_user_id")
+        if not principal_id:
+            return {"_grant_denied": True}
+        return {
+            "_grant_subquery": {
+                "field": gc["scope_field"],
+                "relation": gc["relation"],
+                "principal_id": principal_id,
+            }
+        }
 
     # For simple AND conditions, we can build filters
     if "comparison" in condition and condition["comparison"]:

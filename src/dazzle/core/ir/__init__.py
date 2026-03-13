@@ -44,6 +44,7 @@ from .conditions import (
     ConditionExpr,
     ConditionValue,
     FunctionCall,
+    GrantCheck,
     LogicalOperator,
     RoleCheck,
 )
@@ -225,6 +226,14 @@ from .governance import (
     TenantIsolationSpec,
     TenantProvisioningSpec,
     TopicNamespaceMode,
+)
+
+# Grants (v0.42.0 Runtime RBAC)
+from .grants import (
+    GrantApprovalMode,
+    GrantExpiryMode,
+    GrantRelationSpec,
+    GrantSchemaSpec,
 )
 
 # HLESS - High-Level Event Semantics (v0.19.0)
@@ -705,6 +714,7 @@ __all__ = [
     "LogicalOperator",
     "ConditionValue",
     "FunctionCall",
+    "GrantCheck",
     "RoleCheck",
     "Comparison",
     "ConditionExpr",
@@ -908,6 +918,11 @@ __all__ = [
     "RuleOrigin",
     "RuleSpec",
     "RuleStatus",
+    # Grants (v0.42.0 Runtime RBAC)
+    "GrantApprovalMode",
+    "GrantExpiryMode",
+    "GrantRelationSpec",
+    "GrantSchemaSpec",
     # Questions (v0.41.0 Convergent BDD)
     "QuestionSpec",
     "QuestionStatus",

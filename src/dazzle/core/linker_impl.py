@@ -152,6 +152,7 @@ class SymbolTable:
     approvals: dict[str, ir.ApprovalSpec] = field(default_factory=dict)  # v0.25.0
     slas: dict[str, ir.SLASpec] = field(default_factory=dict)  # v0.25.0
     islands: dict[str, ir.IslandSpec] = field(default_factory=dict)  # UI Islands
+    grant_schemas: dict[str, ir.GrantSchemaSpec] = field(default_factory=dict)  # v0.42.0
 
     # Track which module each symbol came from (for error reporting)
     symbol_sources: dict[str, str] = field(default_factory=dict)
@@ -280,6 +281,17 @@ class SymbolTable:
     def add_rhythm(self, rhythm: ir.RhythmSpec, module_name: str) -> None:
         """Add rhythm to symbol table, checking for duplicates (v0.39.0)."""
         self._process.add_rhythm(rhythm, module_name, self.symbol_sources)
+
+    def add_grant_schema(self, grant_schema: ir.GrantSchemaSpec, module_name: str) -> None:
+        """Add grant schema to symbol table, checking for duplicates (v0.42.0)."""
+        _add_symbol(
+            self.grant_schemas,
+            grant_schema.name,
+            grant_schema,
+            "grant_schema",
+            module_name,
+            self.symbol_sources,
+        )
 
     def add_llm_model(self, llm_model: ir.LLMModelSpec, module_name: str) -> None:
         """Add LLM model to symbol table, checking for duplicates (v0.21.0)."""
@@ -555,6 +567,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Add rhythms (v0.39.0)
         for rhythm in module.fragment.rhythms:
             symbols.add_rhythm(rhythm, module.name)
+
+        # Add grant schemas (v0.42.0)
+        for grant_schema in module.fragment.grant_schemas:
+            symbols.add_grant_schema(grant_schema, module.name)
 
     return symbols
 
@@ -1203,4 +1219,5 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         approvals=list(symbols.approvals.values()),  # v0.25.0
         slas=list(symbols.slas.values()),  # v0.25.0
         islands=list(symbols.islands.values()),  # UI Islands
+        grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
     )

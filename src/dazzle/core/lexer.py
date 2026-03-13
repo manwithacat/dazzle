@@ -262,6 +262,9 @@ class TokenType(Enum):
     RULE = "rule"
     QUESTION_DECL = "question"
 
+    # v0.42.0 Grant Schema Keywords
+    GRANT_SCHEMA = "grant_schema"
+
     # v0.25.0 Top-Level Construct Keywords
     ENUM = "enum"
     WEBHOOK = "webhook"
