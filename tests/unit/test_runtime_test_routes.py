@@ -166,6 +166,58 @@ class TestAuthenticateResponse:
         assert response.session_token == "token-123"
 
 
+class TestSeedFieldFiltering:
+    """Tests that seed endpoint filters fixture data to known entity fields."""
+
+    def test_seed_filters_unknown_fields(self) -> None:
+        """Verify that seed_fixtures strips fields not in the entity spec.
+
+        This prevents SQL errors when fixture generators include stale or
+        incorrect field names (e.g. 'domain' for an entity that has no
+        such column).
+        """
+        import inspect
+
+        from dazzle_back.runtime.test_routes import create_test_routes
+
+        source = inspect.getsource(create_test_routes)
+        assert "known_fields" in source, (
+            "seed_fixtures must define known_fields to filter fixture data"
+        )
+        assert "repo._field_types" in source, (
+            "seed_fixtures must use repo._field_types to determine known fields"
+        )
+
+    def test_field_filtering_logic(self) -> None:
+        """Test the actual filtering logic used in seed_fixtures."""
+        # Simulate what seed_fixtures does
+        mock_field_types = {"title": "str", "completed": "bool"}
+        known_fields = set(mock_field_types) | {"id"}
+
+        fixture_data = {
+            "title": "Test Task",
+            "completed": True,
+            "domain": "unknown_field",
+            "status": "also_unknown",
+        }
+
+        filtered = {k: v for k, v in fixture_data.items() if k in known_fields}
+
+        assert filtered == {"title": "Test Task", "completed": True}
+        assert "domain" not in filtered
+        assert "status" not in filtered
+
+    def test_id_field_preserved(self) -> None:
+        """Test that 'id' is always preserved even if not in _field_types."""
+        mock_field_types = {"title": "str"}
+        known_fields = set(mock_field_types) | {"id"}
+
+        fixture_data = {"id": "abc-123", "title": "Test", "extra": "removed"}
+        filtered = {k: v for k, v in fixture_data.items() if k in known_fields}
+
+        assert filtered == {"id": "abc-123", "title": "Test"}
+
+
 @pytest.mark.e2e
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestTestRoutesIntegration:

@@ -197,8 +197,10 @@ def create_test_routes(
                     detail="Unknown entity: " + entity_name,
                 )
 
-            # Prepare data
-            data = dict(fixture.data)
+            # Prepare data — filter to known entity fields to avoid
+            # SQL errors from stale or incorrect fixture schemas
+            known_fields = set(repo._field_types) | {"id"}
+            data = {k: v for k, v in fixture.data.items() if k in known_fields}
 
             # Add ID if not present
             if "id" not in data:
