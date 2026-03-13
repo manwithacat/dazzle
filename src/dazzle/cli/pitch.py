@@ -5,6 +5,10 @@ Commands:
 - pitch scaffold: Create starter pitchspec.yaml
 - pitch generate: Generate pitch deck (PPTX, narrative, or all)
 - pitch validate: Validate pitchspec.yaml
+- pitch review: Review pitchspec quality and completeness
+- pitch update: Patch pitchspec.yaml fields from a JSON file
+- pitch enrich: Enrich pitchspec with DSL-derived insights
+- pitch init-assets: Initialise pitch asset directory structure
 """
 
 from __future__ import annotations
@@ -129,3 +133,70 @@ def pitch_validate(
     else:
         typer.echo("PitchSpec has errors.")
         raise typer.Exit(1)
+
+
+@pitch_app.command("review")
+def pitch_review(
+    project_dir: Path = typer.Option(".", "--project", "-p", help="Project directory"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Review pitchspec quality and completeness."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.pitch import review_pitchspec_impl
+
+    project_dir = project_dir.resolve()
+    result = review_pitchspec_impl(project_dir)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@pitch_app.command("update")
+def pitch_update(
+    project_dir: Path = typer.Option(".", "--project", "-p", help="Project directory"),
+    patch_file: Path = typer.Option(..., "--patch-file", help="Path to JSON file with patch data"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Patch pitchspec.yaml fields from a JSON file."""
+    import json
+
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.pitch import update_pitchspec_impl
+
+    project_dir = project_dir.resolve()
+    patch_file = patch_file.resolve()
+
+    try:
+        patch = json.loads(patch_file.read_text())
+    except (json.JSONDecodeError, OSError) as e:
+        typer.echo(f"Error reading patch file: {e}", err=True)
+        raise typer.Exit(1)
+
+    result = update_pitchspec_impl(project_dir, patch=patch)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@pitch_app.command("enrich")
+def pitch_enrich(
+    project_dir: Path = typer.Option(".", "--project", "-p", help="Project directory"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Enrich pitchspec with DSL-derived insights."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.pitch import enrich_pitchspec_impl
+
+    project_dir = project_dir.resolve()
+    result = enrich_pitchspec_impl(project_dir)
+    typer.echo(format_output(result, as_json=json_output))
+
+
+@pitch_app.command("init-assets")
+def pitch_init_assets(
+    project_dir: Path = typer.Option(".", "--project", "-p", help="Project directory"),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Initialise pitch asset directory structure."""
+    from dazzle.cli._output import format_output
+    from dazzle.mcp.server.handlers.pitch import init_assets_impl
+
+    project_dir = project_dir.resolve()
+    result = init_assets_impl(project_dir)
+    typer.echo(format_output(result, as_json=json_output))
