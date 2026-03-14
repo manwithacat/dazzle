@@ -427,6 +427,7 @@ if TEXTUAL_AVAILABLE:
 
         _active_ids: set[str] = set()
         _completed_count: int = 0
+        _next_widget_id: int = 0
 
         def update_display(self, data: WorkshopData) -> None:
             """Refresh the dashboard, diffing data to avoid full rebuilds."""
@@ -470,8 +471,10 @@ if TEXTUAL_AVAILABLE:
                 recent = data.completed[-data.max_done :]
                 if recent:
                     completed_panel.mount(Label(" History \u2500" * 4, classes="section-header"))
-                    for i, call in enumerate(reversed(recent)):
-                        completed_panel.mount(CompletedToolRow(call, id=f"completed-{i}"))
+                    for call in reversed(recent):
+                        wid = self._next_widget_id
+                        self._next_widget_id += 1
+                        completed_panel.mount(CompletedToolRow(call, id=f"completed-{wid}"))
                 else:
                     completed_panel.mount(Label(" No completed calls yet", classes="dim"))
             else:
@@ -488,9 +491,9 @@ if TEXTUAL_AVAILABLE:
                 header = completed_panel.query(".section-header")
                 after_widget = header.first() if header else None
                 for call in reversed(new_items):
-                    idx = new_count - 1  # unique enough id
-                    new_count -= 1
-                    row = CompletedToolRow(call, id=f"completed-{idx}")
+                    wid = self._next_widget_id
+                    self._next_widget_id += 1
+                    row = CompletedToolRow(call, id=f"completed-{wid}")
                     if after_widget is not None:
                         completed_panel.mount(row, after=after_widget)
                     else:
