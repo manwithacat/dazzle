@@ -343,6 +343,7 @@ def _relative_time(start_ts: str, event_ts: str) -> str:
 # ── Textual App ──────────────────────────────────────────────────────────────
 
 try:
+    from rich.markup import escape as _rich_escape
     from textual.app import App, ComposeResult
     from textual.binding import Binding
     from textual.containers import Container, Vertical, VerticalScroll
@@ -384,7 +385,7 @@ if TEXTUAL_AVAILABLE:
                 idx = int(time.monotonic() * 8) % len(frames)
                 progress = f" {frames[idx]}"
 
-            status = f"  \u2514 {c.status_message}" if c.status_message else ""
+            status = f"  \u2514 {_rich_escape(c.status_message)}" if c.status_message else ""
             return f"\u26cf {c.label}{progress}  {elapsed}\n{status}"
 
     class CompletedToolRow(Static):
@@ -401,7 +402,7 @@ if TEXTUAL_AVAILABLE:
             ts = _format_ts(c.start_ts)
             icon = "\u2714" if c.success else "\u2718"
             dur = _format_duration(c.elapsed_s)
-            summary = f"  [{c.summary}]" if c.summary else ""
+            summary = f"  [{_rich_escape(c.summary)}]" if c.summary else ""
             return f" {ts}  {icon} {c.label:<28} {dur:>8}{summary}"
 
     class DashboardScreen(Screen):
