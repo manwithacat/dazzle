@@ -122,16 +122,18 @@ def _evaluate_comparison(
     right = evaluate_invariant_expr(expr.comparison_right, record)
     op = expr.comparison_op
 
-    # Handle None comparisons specially for equality operators
-    # This allows expressions like: field != null, field == null
+    # Handle None comparisons specially.
+    # For equality operators: allow explicit null checks (field != null).
+    # For ordered comparisons (>, <, >=, <=): null/absent optional fields
+    # should not trigger numeric invariants — follow SQL CHECK semantics
+    # where NULL yields UNKNOWN which satisfies the constraint (#491).
     if left is None or right is None:
         if op == InvariantComparisonKind.EQ:
             return left is None and right is None
         elif op == InvariantComparisonKind.NE:
             return not (left is None and right is None)
         else:
-            # For ordered comparisons (>, <, >=, <=), None makes no sense
-            return False
+            return True
 
     # Normalize values for comparison
     left = _normalize_for_comparison(left)

@@ -189,8 +189,11 @@ class TestComparisonEvaluation:
         assert evaluate_invariant_expr(expr, {"score": 90}) is True
         assert evaluate_invariant_expr(expr, {"score": 101}) is False
 
-    def test_comparison_with_none_left(self) -> None:
-        """Test comparison with None on left side."""
+    def test_comparison_with_none_left_ordered(self) -> None:
+        """Test ordered comparison with None on left side.
+
+        Null/absent fields satisfy ordered comparisons (SQL CHECK semantics) (#491).
+        """
         expr = InvariantExprSpec(
             kind="comparison",
             comparison_left=InvariantExprSpec(kind="field_ref", path=["missing"]),
@@ -198,7 +201,42 @@ class TestComparisonEvaluation:
             comparison_right=InvariantExprSpec(kind="literal", value=0),
         )
         result = evaluate_invariant_expr(expr, {})
-        assert result is False
+        assert result is True
+
+    def test_null_optional_field_satisfies_ge_invariant(self) -> None:
+        """Test that null optional int field does not violate >= 0 invariant (#491)."""
+        invariant = InvariantSpec(
+            expression=InvariantExprSpec(
+                kind="comparison",
+                comparison_left=InvariantExprSpec(kind="field_ref", path=["student_count"]),
+                comparison_op=InvariantComparisonKind.GE,
+                comparison_right=InvariantExprSpec(kind="literal", value=0),
+            ),
+            message="Student count cannot be negative",
+        )
+        # Null field — should pass (not violate)
+        assert validate_invariant(invariant, {"student_count": None}) is True
+        assert validate_invariant(invariant, {}) is True
+        # Explicit values still validated
+        assert validate_invariant(invariant, {"student_count": 5}) is True
+        assert validate_invariant(invariant, {"student_count": 0}) is True
+        assert validate_invariant(invariant, {"student_count": -1}) is False
+
+    def test_null_field_create_does_not_raise(self) -> None:
+        """Test that creating with null optional field does not raise (#491)."""
+        invariants = [
+            InvariantSpec(
+                expression=InvariantExprSpec(
+                    kind="comparison",
+                    comparison_left=InvariantExprSpec(kind="field_ref", path=["student_count"]),
+                    comparison_op=InvariantComparisonKind.GE,
+                    comparison_right=InvariantExprSpec(kind="literal", value=0),
+                ),
+                message="Student count cannot be negative",
+            ),
+        ]
+        # Should not raise
+        check_invariants_for_create(invariants, {"name": "Test School"})
 
     def test_field_comparison(self) -> None:
         """Test comparing two fields."""

@@ -170,9 +170,10 @@ class TestComparison:
         expr = _comparison(_field_ref("x"), InvariantComparisonKind.NE, _literal(None))
         assert evaluate_invariant_expr(expr, {"x": 5}) is True
 
-    def test_none_gt_returns_false(self) -> None:
+    def test_none_ordered_comparison_returns_true(self) -> None:
+        """Null fields satisfy ordered comparisons (SQL CHECK semantics, #491)."""
         expr = _comparison(_field_ref("x"), InvariantComparisonKind.GT, _literal(0))
-        assert evaluate_invariant_expr(expr, {}) is False
+        assert evaluate_invariant_expr(expr, {}) is True
 
     def test_incompatible_types(self) -> None:
         expr = _comparison(_literal("text"), InvariantComparisonKind.GT, _literal(5))
