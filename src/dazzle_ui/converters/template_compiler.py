@@ -405,12 +405,14 @@ def _build_form_fields(
     if surface.sections:
         for section in surface.sections:
             # Merge section-level visible with element-level visible
-            section_vis = section.visible.model_dump() if section.visible else None
+            _sec_vis = getattr(section, "visible", None)
+            section_vis = _sec_vis.model_dump() if _sec_vis is not None else None
             for element in section.elements:
                 field_spec = _get_field_spec(entity, element.field_name)
                 when_str = str(element.when_expr) if element.when_expr else ""
                 # Element visible takes precedence; fall back to section visible
-                vis = element.visible.model_dump() if element.visible else section_vis
+                _el_vis = getattr(element, "visible", None)
+                vis = _el_vis.model_dump() if _el_vis else section_vis
                 fields_to_process.append(
                     (element.field_name, element.label, field_spec, element.options, when_str, vis)
                 )
@@ -495,7 +497,8 @@ def _build_form_sections(
 
     sections: list[FormSectionContext] = []
     for section in surface.sections:
-        section_vis = section.visible.model_dump() if section.visible else None
+        _sec_vis = getattr(section, "visible", None)
+        section_vis = _sec_vis.model_dump() if _sec_vis is not None else None
         section_fields: list[FieldContext] = []
         for element in section.elements:
             field_spec = _get_field_spec(entity, element.field_name)

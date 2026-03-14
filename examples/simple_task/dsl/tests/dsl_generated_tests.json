@@ -1,15 +1,16 @@
 {
   "version": "2.0",
-  "dsl_hash": "873a93063093ae0d",
-  "generated_at": "2026-02-11T19:30:59.898108",
+  "dsl_hash": "58a1854c44b6b630",
+  "generated_at": "2026-03-14T16:29:51.061525",
   "project_name": "simple_task",
   "coverage": {
     "entities": [
+      "AIJob",
       "Task",
       "TaskComment",
       "User"
     ],
-    "entities_total": 3,
+    "entities_total": 4,
     "state_machines": [
       "Task"
     ],
@@ -34,7 +35,13 @@
       "task_escalation",
       "urgent_task_approval"
     ],
-    "processes_total": 3
+    "processes_total": 3,
+    "auth_personas": [
+      "admin",
+      "manager",
+      "member"
+    ],
+    "auth_personas_total": 3
   },
   "designs": [
     {
@@ -49,7 +56,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_59897@example.com",
+            "email": "test_6529bb83@example.com",
             "name": "Test name"
           },
           "rationale": "Create valid Team Member"
@@ -78,7 +85,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897833"
+      "created_at": "2026-03-14T16:29:51.061201"
     },
     {
       "test_id": "CRUD_USER_READ",
@@ -92,7 +99,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_59897@example.com",
+            "email": "test_a683a395@example.com",
             "name": "Test name"
           },
           "rationale": "Seed test data"
@@ -126,7 +133,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897838"
+      "created_at": "2026-03-14T16:29:51.061216"
     },
     {
       "test_id": "VAL_USER_REQUIRED",
@@ -166,7 +173,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897841"
+      "created_at": "2026-03-14T16:29:51.061220"
     },
     {
       "test_id": "VAL_USER_EMAIL_UNIQUE",
@@ -180,7 +187,7 @@
           "action": "create",
           "target": "entity:User",
           "data": {
-            "email": "test_59897@example.com",
+            "email": "test_bcd97a64@example.com",
             "name": "Test name"
           },
           "rationale": "Create first entity"
@@ -189,7 +196,7 @@
           "action": "create_expect_error",
           "target": "entity:User",
           "data": {
-            "email": "test_59897@example.com",
+            "email": "test_bcd97a64@example.com",
             "name": "Test name"
           },
           "rationale": "Attempt duplicate email"
@@ -218,7 +225,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897852"
+      "created_at": "2026-03-14T16:29:51.061232"
     },
     {
       "test_id": "CRUD_TASK_CREATE",
@@ -260,7 +267,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897858"
+      "created_at": "2026-03-14T16:29:51.061249"
     },
     {
       "test_id": "CRUD_TASK_READ",
@@ -307,7 +314,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897860"
+      "created_at": "2026-03-14T16:29:51.061256"
     },
     {
       "test_id": "VAL_TASK_REQUIRED",
@@ -347,182 +354,87 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897863"
-    },
-    {
-      "test_id": "CRUD_TASKCOMMENT_CREATE",
-      "title": "Create Task Comment",
-      "description": "Test creating a new Task Comment",
-      "trigger": "api_call",
-      "persona": null,
-      "scenario": null,
-      "steps": [
-        {
-          "action": "create",
-          "target": "entity:Task",
-          "data": {
-            "title": "Test title"
-          },
-          "store_result": "parent_task",
-          "rationale": "Create parent Task for ref field 'task'"
-        },
-        {
-          "action": "create",
-          "target": "entity:User",
-          "data": {
-            "email": "test_59897@example.com",
-            "name": "Test name"
-          },
-          "store_result": "parent_user",
-          "rationale": "Create parent Team Member for ref field 'author'"
-        },
-        {
-          "action": "create",
-          "target": "entity:TaskComment",
-          "data": {
-            "content": "Test description for content",
-            "task": "$ref:parent_task.id",
-            "author": "$ref:parent_user.id"
-          },
-          "rationale": "Create valid Task Comment"
-        },
-        {
-          "action": "assert_count",
-          "target": "entity:TaskComment",
-          "data": {
-            "min": 1
-          },
-          "rationale": "Verify entity was created"
-        }
-      ],
-      "expected_outcomes": [
-        "Create Task Comment succeeds"
-      ],
-      "entities": [
-        "TaskComment",
-        "Task",
-        "User"
-      ],
-      "surfaces": [],
-      "tags": [
-        "crud",
-        "create",
-        "generated",
-        "dsl-derived"
-      ],
-      "status": "accepted",
-      "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897878"
+      "created_at": "2026-03-14T16:29:51.061258"
     },
     {
       "test_id": "CRUD_TASKCOMMENT_READ",
       "title": "Read Task Comment list",
-      "description": "Test reading Task Comment list",
+      "description": "Test reading Task Comment list (read-only entity)",
       "trigger": "api_call",
       "persona": null,
       "scenario": null,
       "steps": [
-        {
-          "action": "create",
-          "target": "entity:Task",
-          "data": {
-            "title": "Test title"
-          },
-          "store_result": "parent_task",
-          "rationale": "Create parent Task for ref field 'task'"
-        },
-        {
-          "action": "create",
-          "target": "entity:User",
-          "data": {
-            "email": "test_59897@example.com",
-            "name": "Test name"
-          },
-          "store_result": "parent_user",
-          "rationale": "Create parent Team Member for ref field 'author'"
-        },
-        {
-          "action": "create",
-          "target": "entity:TaskComment",
-          "data": {
-            "content": "Test description for content",
-            "task": "$ref:parent_task.id",
-            "author": "$ref:parent_user.id"
-          },
-          "rationale": "Seed test data"
-        },
         {
           "action": "read_list",
           "target": "entity:TaskComment",
           "rationale": "Fetch Task Comment list"
         },
         {
-          "action": "assert_count",
-          "target": "entity:TaskComment",
+          "action": "assert_status",
+          "target": "last_response",
           "data": {
-            "min": 1
+            "status": 200
           },
-          "rationale": "Verify list has data"
+          "rationale": "Verify list endpoint exists"
         }
       ],
       "expected_outcomes": [
         "Read Task Comment list succeeds"
       ],
       "entities": [
-        "TaskComment",
-        "Task",
-        "User"
+        "TaskComment"
       ],
       "surfaces": [],
       "tags": [
         "crud",
         "read",
+        "read_only",
         "generated",
         "dsl-derived"
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897880"
+      "created_at": "2026-03-14T16:29:51.061283"
     },
     {
-      "test_id": "VAL_TASKCOMMENT_REQUIRED",
-      "title": "Validate required fields for Task Comment",
-      "description": "Test that missing required fields are rejected",
+      "test_id": "CRUD_AIJOB_READ",
+      "title": "Read AI Job list",
+      "description": "Test reading AI Job list (read-only entity)",
       "trigger": "api_call",
       "persona": null,
       "scenario": null,
       "steps": [
         {
-          "action": "create_expect_error",
-          "target": "entity:TaskComment",
-          "data": {},
-          "rationale": "Attempt create without required fields"
+          "action": "read_list",
+          "target": "entity:AIJob",
+          "rationale": "Fetch AI Job list"
         },
         {
-          "action": "assert_error",
+          "action": "assert_status",
           "target": "last_response",
           "data": {
-            "type": "validation_error"
+            "status": 200
           },
-          "rationale": "Verify validation error returned"
+          "rationale": "Verify list endpoint exists"
         }
       ],
       "expected_outcomes": [
-        "Validate required fields for Task Comment succeeds"
+        "Read AI Job list succeeds"
       ],
       "entities": [
-        "TaskComment"
+        "AIJob"
       ],
       "surfaces": [],
       "tags": [
-        "validation",
-        "required",
+        "crud",
+        "read",
+        "read_only",
         "generated",
         "dsl-derived"
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897883"
+      "created_at": "2026-03-14T16:29:51.061289"
     },
     {
       "test_id": "SM_TASK_TODO_IN_PROGRESS",
@@ -574,7 +486,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897890"
+      "created_at": "2026-03-14T16:29:51.061300"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_REVIEW",
@@ -626,7 +538,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897896"
+      "created_at": "2026-03-14T16:29:51.061303"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_TODO",
@@ -678,7 +590,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897900"
+      "created_at": "2026-03-14T16:29:51.061306"
     },
     {
       "test_id": "SM_TASK_REVIEW_DONE",
@@ -730,7 +642,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897905"
+      "created_at": "2026-03-14T16:29:51.061308"
     },
     {
       "test_id": "SM_TASK_REVIEW_IN_PROGRESS",
@@ -782,7 +694,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897910"
+      "created_at": "2026-03-14T16:29:51.061311"
     },
     {
       "test_id": "SM_TASK_DONE_TODO",
@@ -834,12 +746,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897914"
+      "created_at": "2026-03-14T16:29:51.061313"
     },
     {
-      "test_id": "SM_TASK_TODO_REVIEW_INVALID",
-      "title": "Task: todo \u2192 review (invalid)",
-      "description": "Test that invalid transition from todo to review is rejected",
+      "test_id": "SM_TASK_TODO_DONE_INVALID",
+      "title": "Task: todo \u2192 done (invalid)",
+      "description": "Test that invalid transition from todo to done is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -857,9 +769,9 @@
           "action": "transition_expect_error",
           "target": "entity:Task",
           "data": {
-            "to_state": "review"
+            "to_state": "done"
           },
-          "rationale": "Attempt invalid transition to review"
+          "rationale": "Attempt invalid transition to done"
         },
         {
           "action": "assert_state",
@@ -872,7 +784,7 @@
         }
       ],
       "expected_outcomes": [
-        "Task: todo \u2192 review (invalid) succeeds"
+        "Task: todo \u2192 done (invalid) succeeds"
       ],
       "entities": [
         "Task"
@@ -886,7 +798,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897921"
+      "created_at": "2026-03-14T16:29:51.061319"
     },
     {
       "test_id": "SM_TASK_IN_PROGRESS_DONE_INVALID",
@@ -938,7 +850,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897928"
+      "created_at": "2026-03-14T16:29:51.061323"
     },
     {
       "test_id": "SM_TASK_REVIEW_TODO_INVALID",
@@ -990,12 +902,12 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897933"
+      "created_at": "2026-03-14T16:29:51.061326"
     },
     {
-      "test_id": "SM_TASK_DONE_REVIEW_INVALID",
-      "title": "Task: done \u2192 review (invalid)",
-      "description": "Test that invalid transition from done to review is rejected",
+      "test_id": "SM_TASK_DONE_IN_PROGRESS_INVALID",
+      "title": "Task: done \u2192 in_progress (invalid)",
+      "description": "Test that invalid transition from done to in_progress is rejected",
       "trigger": "state_change",
       "persona": null,
       "scenario": null,
@@ -1013,9 +925,9 @@
           "action": "transition_expect_error",
           "target": "entity:Task",
           "data": {
-            "to_state": "review"
+            "to_state": "in_progress"
           },
-          "rationale": "Attempt invalid transition to review"
+          "rationale": "Attempt invalid transition to in_progress"
         },
         {
           "action": "assert_state",
@@ -1028,7 +940,7 @@
         }
       ],
       "expected_outcomes": [
-        "Task: done \u2192 review (invalid) succeeds"
+        "Task: done \u2192 in_progress (invalid) succeeds"
       ],
       "entities": [
         "Task"
@@ -1042,7 +954,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897939"
+      "created_at": "2026-03-14T16:29:51.061329"
     },
     {
       "test_id": "ACL_ADMIN_ACCESS",
@@ -1076,7 +988,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897942"
+      "created_at": "2026-03-14T16:29:51.061334"
     },
     {
       "test_id": "GOAL_ADMIN_MANAGE_ALL_TASKS",
@@ -1110,7 +1022,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897948"
+      "created_at": "2026-03-14T16:29:51.061340"
     },
     {
       "test_id": "GOAL_ADMIN_CONFIGURE_TEAM_SETTI",
@@ -1144,7 +1056,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897951"
+      "created_at": "2026-03-14T16:29:51.061344"
     },
     {
       "test_id": "GOAL_ADMIN_VIEW_ANALYTICS",
@@ -1178,7 +1090,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897954"
+      "created_at": "2026-03-14T16:29:51.061347"
     },
     {
       "test_id": "ACL_MANAGER_ACCESS",
@@ -1212,7 +1124,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897956"
+      "created_at": "2026-03-14T16:29:51.061349"
     },
     {
       "test_id": "GOAL_MANAGER_ASSIGN_TASKS_TO_TEAM",
@@ -1246,7 +1158,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897959"
+      "created_at": "2026-03-14T16:29:51.061352"
     },
     {
       "test_id": "GOAL_MANAGER_TRACK_TEAM_PROGRESS",
@@ -1280,7 +1192,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897962"
+      "created_at": "2026-03-14T16:29:51.061355"
     },
     {
       "test_id": "GOAL_MANAGER_REVIEW_COMPLETED_WOR",
@@ -1314,7 +1226,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897964"
+      "created_at": "2026-03-14T16:29:51.061358"
     },
     {
       "test_id": "ACL_MEMBER_ACCESS",
@@ -1348,7 +1260,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897966"
+      "created_at": "2026-03-14T16:29:51.061360"
     },
     {
       "test_id": "GOAL_MEMBER_COMPLETE_ASSIGNED_TA",
@@ -1382,7 +1294,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897969"
+      "created_at": "2026-03-14T16:29:51.061363"
     },
     {
       "test_id": "GOAL_MEMBER_UPDATE_TASK_STATUS",
@@ -1416,7 +1328,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897971"
+      "created_at": "2026-03-14T16:29:51.061366"
     },
     {
       "test_id": "GOAL_MEMBER_REQUEST_HELP",
@@ -1450,7 +1362,919 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897974"
+      "created_at": "2026-03-14T16:29:51.061369"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_ADMIN",
+      "title": "Login as Administrator with valid credentials",
+      "description": "Test that Administrator can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Administrator with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061372"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_ADMIN",
+      "title": "Reject invalid password for Administrator",
+      "description": "Test that Administrator cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Administrator with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061374"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_ADMIN",
+      "title": "Administrator redirects to /admin after login",
+      "description": "Test that Administrator is directed to /admin after successful login",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Administrator"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/admin"
+          },
+          "rationale": "Verify redirect to /admin"
+        }
+      ],
+      "expected_outcomes": [
+        "Administrator redirects to /admin after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061377"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_ADMIN",
+      "title": "Authenticated request succeeds for Administrator",
+      "description": "Test that requests with a valid session cookie succeed for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "get",
+          "target": "/admin",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /admin with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061380"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_ADMIN",
+      "title": "Expired session rejected for Administrator",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/admin",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061382"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_ADMIN",
+      "title": "Logout clears session for Administrator",
+      "description": "Test that logout invalidates the session for Administrator",
+      "trigger": "api_call",
+      "persona": "admin",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as Administrator"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/admin",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Administrator succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061385"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_MANAGER",
+      "title": "Login as Team Manager with valid credentials",
+      "description": "Test that Team Manager can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Team Manager"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Team Manager with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061388"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_MANAGER",
+      "title": "Reject invalid password for Team Manager",
+      "description": "Test that Team Manager cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Team Manager with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Team Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061390"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_MANAGER",
+      "title": "Team Manager redirects to /team after login",
+      "description": "Test that Team Manager is directed to /team after successful login",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Team Manager"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/team"
+          },
+          "rationale": "Verify redirect to /team"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Manager redirects to /team after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061392"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_MANAGER",
+      "title": "Authenticated request succeeds for Team Manager",
+      "description": "Test that requests with a valid session cookie succeed for Team Manager",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Team Manager"
+        },
+        {
+          "action": "get",
+          "target": "/team",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /team with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Team Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061394"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_MANAGER",
+      "title": "Expired session rejected for Team Manager",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/team",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Team Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061396"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_MANAGER",
+      "title": "Logout clears session for Team Manager",
+      "description": "Test that logout invalidates the session for Team Manager",
+      "trigger": "api_call",
+      "persona": "manager",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "manager",
+          "rationale": "Authenticate as Team Manager"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/team",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Team Manager succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061399"
+    },
+    {
+      "test_id": "AUTH_LOGIN_VALID_MEMBER",
+      "title": "Login as Team Member with valid credentials",
+      "description": "Test that Team Member can log in with correct credentials",
+      "trigger": "api_call",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Team Member"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify login succeeded"
+        },
+        {
+          "action": "assert_cookie_set",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Login as Team Member with valid credentials succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061401"
+    },
+    {
+      "test_id": "AUTH_LOGIN_INVALID_MEMBER",
+      "title": "Reject invalid password for Team Member",
+      "description": "Test that Team Member cannot log in with wrong password",
+      "trigger": "api_call",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "deliberately_wrong_password_for_test"
+          },
+          "rationale": "Attempt login as Team Member with wrong password"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 401
+          },
+          "rationale": "Verify login rejected"
+        },
+        {
+          "action": "assert_no_cookie",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify no session cookie is set"
+        }
+      ],
+      "expected_outcomes": [
+        "Reject invalid password for Team Member succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "login",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061403"
+    },
+    {
+      "test_id": "AUTH_REDIRECT_MEMBER",
+      "title": "Team Member redirects to /my-work after login",
+      "description": "Test that Team Member is directed to /my-work after successful login",
+      "trigger": "api_call",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "post_json",
+          "target": "/auth/login",
+          "data": {
+            "email": "__PERSONA_EMAIL__",
+            "password": "__PERSONA_PASSWORD__"
+          },
+          "rationale": "Login as Team Member"
+        },
+        {
+          "action": "assert_redirect_url",
+          "target": "last_response",
+          "data": {
+            "redirect_url": "/my-work"
+          },
+          "rationale": "Verify redirect to /my-work"
+        }
+      ],
+      "expected_outcomes": [
+        "Team Member redirects to /my-work after login succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "redirect",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061405"
+    },
+    {
+      "test_id": "AUTH_SESSION_VALID_MEMBER",
+      "title": "Authenticated request succeeds for Team Member",
+      "description": "Test that requests with a valid session cookie succeed for Team Member",
+      "trigger": "api_call",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "get",
+          "target": "/my-work",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Access /my-work with session (follows redirects)"
+        },
+        {
+          "action": "assert_status",
+          "target": "last_response",
+          "data": {
+            "status": 200
+          },
+          "rationale": "Verify access granted"
+        }
+      ],
+      "expected_outcomes": [
+        "Authenticated request succeeds for Team Member succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061407"
+    },
+    {
+      "test_id": "AUTH_SESSION_EXPIRED_MEMBER",
+      "title": "Expired session rejected for Team Member",
+      "description": "Test that an expired or invalid session cookie is rejected",
+      "trigger": "api_call",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear any session cookies from prior tests"
+        },
+        {
+          "action": "get_with_cookie",
+          "target": "/my-work",
+          "data": {
+            "cookie": "dazzle_session",
+            "value": "invalid-token",
+            "follow_redirects": true
+          },
+          "rationale": "Access page with invalid session (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify 401, redirect to login, or 403 forbidden"
+        }
+      ],
+      "expected_outcomes": [
+        "Expired session rejected for Team Member succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "session",
+        "negative",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061409"
+    },
+    {
+      "test_id": "AUTH_LOGOUT_MEMBER",
+      "title": "Logout clears session for Team Member",
+      "description": "Test that logout invalidates the session for Team Member",
+      "trigger": "api_call",
+      "persona": "member",
+      "scenario": null,
+      "steps": [
+        {
+          "action": "login_as",
+          "target": "member",
+          "rationale": "Authenticate as Team Member"
+        },
+        {
+          "action": "post",
+          "target": "/auth/logout",
+          "rationale": "Logout"
+        },
+        {
+          "action": "assert_cookie_cleared",
+          "target": "last_response",
+          "data": {
+            "cookie": "dazzle_session"
+          },
+          "rationale": "Verify session cookie is cleared"
+        },
+        {
+          "action": "clear_cookies",
+          "target": "",
+          "rationale": "Clear httpx cookie jar after logout"
+        },
+        {
+          "action": "get",
+          "target": "/my-work",
+          "data": {
+            "follow_redirects": true
+          },
+          "rationale": "Attempt access after logout (follows redirects)"
+        },
+        {
+          "action": "assert_unauthenticated",
+          "target": "last_response",
+          "data": {
+            "expect": [
+              401,
+              302,
+              403
+            ]
+          },
+          "rationale": "Verify session is invalid after logout"
+        }
+      ],
+      "expected_outcomes": [
+        "Logout clears session for Team Member succeeds"
+      ],
+      "entities": [],
+      "surfaces": [],
+      "tags": [
+        "auth",
+        "logout",
+        "generated",
+        "dsl-derived"
+      ],
+      "status": "accepted",
+      "source": "dsl-derived",
+      "created_at": "2026-03-14T16:29:51.061411"
     },
     {
       "test_id": "WS_TASK_BOARD_NAV",
@@ -1464,7 +2288,7 @@
           "action": "navigate_to",
           "target": "workspace:task_board",
           "data": {
-            "route": "/task-board"
+            "route": "/app/workspaces/task_board"
           },
           "rationale": "Navigate to Task Board workspace"
         },
@@ -1499,7 +2323,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897978"
+      "created_at": "2026-03-14T16:29:51.061415"
     },
     {
       "test_id": "WS_TASK_BOARD_ROUTE",
@@ -1513,7 +2337,7 @@
           "action": "check_route",
           "target": "workspace:task_board",
           "data": {
-            "route": "/task-board"
+            "route": "/app/workspaces/task_board"
           },
           "rationale": "Verify route for Task Board is defined"
         }
@@ -1531,21 +2355,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897980"
+      "created_at": "2026-03-14T16:29:51.061418"
     },
     {
       "test_id": "WS_ADMIN_DASHBOARD_NAV",
       "title": "Navigate to Admin Dashboard",
       "description": "Verify Admin Dashboard workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "admin",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:admin_dashboard",
           "data": {
-            "route": "/admin-dashboard"
+            "route": "/app/workspaces/admin_dashboard"
           },
           "rationale": "Navigate to Admin Dashboard workspace"
         },
@@ -1580,21 +2409,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897982"
+      "created_at": "2026-03-14T16:29:51.061421"
     },
     {
       "test_id": "WS_ADMIN_DASHBOARD_ROUTE",
       "title": "Workspace Admin Dashboard route exists",
       "description": "Verify Admin Dashboard workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "admin",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
         {
           "action": "check_route",
           "target": "workspace:admin_dashboard",
           "data": {
-            "route": "/admin-dashboard"
+            "route": "/app/workspaces/admin_dashboard"
           },
           "rationale": "Verify route for Admin Dashboard is defined"
         }
@@ -1612,21 +2446,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897984"
+      "created_at": "2026-03-14T16:29:51.061423"
     },
     {
       "test_id": "WS_TEAM_OVERVIEW_NAV",
       "title": "Navigate to Team Overview",
       "description": "Verify Team Overview workspace loads and displays correctly",
       "trigger": "playwright",
-      "persona": null,
+      "persona": "admin",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
         {
           "action": "navigate_to",
           "target": "workspace:team_overview",
           "data": {
-            "route": "/team-overview"
+            "route": "/app/workspaces/team_overview"
           },
           "rationale": "Navigate to Team Overview workspace"
         },
@@ -1661,21 +2500,26 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897986"
+      "created_at": "2026-03-14T16:29:51.061426"
     },
     {
       "test_id": "WS_TEAM_OVERVIEW_ROUTE",
       "title": "Workspace Team Overview route exists",
       "description": "Verify Team Overview workspace route is configured",
       "trigger": "api_call",
-      "persona": null,
+      "persona": "admin",
       "scenario": null,
       "steps": [
+        {
+          "action": "login_as",
+          "target": "admin",
+          "rationale": "Authenticate as admin"
+        },
         {
           "action": "check_route",
           "target": "workspace:team_overview",
           "data": {
-            "route": "/team-overview"
+            "route": "/app/workspaces/team_overview"
           },
           "rationale": "Verify route for Team Overview is defined"
         }
@@ -1693,7 +2537,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897988"
+      "created_at": "2026-03-14T16:29:51.061428"
     },
     {
       "test_id": "WS_MY_WORK_NAV",
@@ -1707,7 +2551,7 @@
           "action": "navigate_to",
           "target": "workspace:my_work",
           "data": {
-            "route": "/my-work"
+            "route": "/app/workspaces/my_work"
           },
           "rationale": "Navigate to My Work workspace"
         },
@@ -1742,7 +2586,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897990"
+      "created_at": "2026-03-14T16:29:51.061430"
     },
     {
       "test_id": "WS_MY_WORK_ROUTE",
@@ -1756,7 +2600,7 @@
           "action": "check_route",
           "target": "workspace:my_work",
           "data": {
-            "route": "/my-work"
+            "route": "/app/workspaces/my_work"
           },
           "rationale": "Verify route for My Work is defined"
         }
@@ -1774,7 +2618,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.897992"
+      "created_at": "2026-03-14T16:29:51.061432"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_TRIGGER",
@@ -1788,7 +2632,7 @@
           "action": "trigger_process",
           "target": "process:task_auto_assignment",
           "data": {
-            "task_id": "93d5d4e0-5a70-4b67-8c97-41534f8ada5a"
+            "task_id": "27cb18c7-73a0-46ec-8879-b065be8e2145"
           },
           "rationale": "Start task_auto_assignment process"
         },
@@ -1811,7 +2655,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898023"
+      "created_at": "2026-03-14T16:29:51.061451"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_COMPLETE",
@@ -1825,7 +2669,7 @@
           "action": "trigger_process",
           "target": "process:task_auto_assignment",
           "data": {
-            "task_id": "a7a74c79-2f55-4114-b4f7-3f3ccc9a0ea2"
+            "task_id": "72e6b033-b3f6-4393-bd30-43a11542fd4c"
           },
           "rationale": "Start task_auto_assignment process"
         },
@@ -1856,7 +2700,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898032"
+      "created_at": "2026-03-14T16:29:51.061459"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_FIND_CANDIDATE",
@@ -1893,7 +2737,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898034"
+      "created_at": "2026-03-14T16:29:51.061462"
     },
     {
       "test_id": "PROC_TASK_AUTO_ASSIGNMENT_STEP_NOTIFY_ASSIGNEE",
@@ -1930,7 +2774,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898036"
+      "created_at": "2026-03-14T16:29:51.061465"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_TRIGGER",
@@ -1944,7 +2788,7 @@
           "action": "trigger_process",
           "target": "process:task_escalation",
           "data": {
-            "task_id": "b69b3e25-f97b-4bf2-8629-1e4a73bf7fa7"
+            "task_id": "24e4846d-7afe-4cc4-8b0f-014bcd014c3b"
           },
           "rationale": "Start task_escalation process"
         },
@@ -1967,7 +2811,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898043"
+      "created_at": "2026-03-14T16:29:51.061472"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_COMPLETE",
@@ -1981,7 +2825,7 @@
           "action": "trigger_process",
           "target": "process:task_escalation",
           "data": {
-            "task_id": "3f204b73-05b0-40a2-92a1-978a8e335f4c"
+            "task_id": "a447fe6b-bf39-4faf-bdb0-da8e2db41f4f"
           },
           "rationale": "Start task_escalation process"
         },
@@ -2012,7 +2856,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898050"
+      "created_at": "2026-03-14T16:29:51.061479"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_1_NOTIFY",
@@ -2049,7 +2893,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898052"
+      "created_at": "2026-03-14T16:29:51.061481"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_WAIT_FOR_ACTION",
@@ -2086,7 +2930,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898054"
+      "created_at": "2026-03-14T16:29:51.061483"
     },
     {
       "test_id": "PROC_TASK_ESCALATION_STEP_LEVEL_2_ESCALATE",
@@ -2123,7 +2967,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898055"
+      "created_at": "2026-03-14T16:29:51.061485"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_TRIGGER",
@@ -2137,7 +2981,7 @@
           "action": "trigger_process",
           "target": "process:urgent_task_approval",
           "data": {
-            "task_id": "0edede26-70f5-4495-b92c-9c9e1d079c4d"
+            "task_id": "70317b3f-36e0-4150-9ef7-60884dbb23d9"
           },
           "rationale": "Start urgent_task_approval process"
         },
@@ -2160,7 +3004,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898063"
+      "created_at": "2026-03-14T16:29:51.061492"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_COMPLETE",
@@ -2174,7 +3018,7 @@
           "action": "trigger_process",
           "target": "process:urgent_task_approval",
           "data": {
-            "task_id": "e08babb9-7310-47fc-8954-097aaab31b18"
+            "task_id": "b40c2757-3677-4541-9496-51e928f89877"
           },
           "rationale": "Start urgent_task_approval process"
         },
@@ -2205,7 +3049,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898069"
+      "created_at": "2026-03-14T16:29:51.061499"
     },
     {
       "test_id": "PROC_URGENT_TASK_APPROVAL_STEP_REQUEST_APPROVAL",
@@ -2242,7 +3086,7 @@
       ],
       "status": "accepted",
       "source": "dsl-derived",
-      "created_at": "2026-02-11T19:30:59.898071"
+      "created_at": "2026-03-14T16:29:51.061500"
     }
   ]
 }

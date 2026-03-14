@@ -137,16 +137,14 @@ def get_active_project_path() -> Path | None:
     """Get the path to the active project, or None if not set."""
     if not _state.is_dev_mode:
         return _state.project_root
-    # In dev mode, prefer CWD if it has a dazzle.toml
+    # In dev mode, prefer explicitly selected project over CWD.
+    # select_project() sets active_project — honour that choice so
+    # sentinel/pulse/fidelity analyse the right project.
+    if _state.active_project and _state.active_project in _state.available_projects:
+        return _state.available_projects[_state.active_project]
+    # Fall back to CWD if it has a dazzle.toml
     if project_manifest(_state.project_root).exists():
         return _state.project_root
-    if _state.active_project and _state.active_project in _state.available_projects:
-        logger.debug(
-            "Dev mode: falling back to active project '%s' — "
-            "pass project_path to avoid cross-project pollution",
-            _state.active_project,
-        )
-        return _state.available_projects[_state.active_project]
     # No active project selected in dev mode — return None so callers
     # know they must ask the user to select_project first.
     return None

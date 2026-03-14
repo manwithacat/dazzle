@@ -258,6 +258,9 @@ llm_intent summarize_text "Summarize Text":
   model: claude_haiku
   prompt: "Summarize the following text concisely:\n\n{{ input.text }}"
   timeout: 30
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: WITHOUT TITLE
@@ -267,6 +270,9 @@ llm_intent translate:
   model: claude_haiku
   prompt: "Translate the following text to {{ input.target_language }}:\n\n{{ input.text }}"
   timeout: 45
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: WITH OUTPUT SCHEMA
@@ -277,12 +283,18 @@ llm_intent extract_entities "Extract Entities":
   prompt: "Extract all named entities from the following text:\n\n{{ input.text }}\n\nReturn a structured list of entities with their types."
   output_schema: ExtractedEntity
   timeout: 60
+  pii:
+    scan: true
+    action: redact
 
 llm_intent classify_priority "Classify Task Priority":
   model: claude_haiku
   prompt: "Analyze this task and classify its priority:\n\nTitle: {{ input.title }}\nDescription: {{ input.description }}\n\nReturn the priority level (low, medium, high, urgent) with reasoning."
   output_schema: PriorityClassification
   timeout: 20
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: WITH RETRY (LINEAR)
@@ -298,6 +310,9 @@ llm_intent analyze_sentiment "Analyze Sentiment":
     backoff: linear
     initial_delay_ms: 1000
     max_delay_ms: 10000
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: WITH RETRY (EXPONENTIAL)
@@ -312,6 +327,9 @@ llm_intent generate_code "Generate Code":
     backoff: exponential
     initial_delay_ms: 500
     max_delay_ms: 30000
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: WITH PII WARN
@@ -383,6 +401,9 @@ llm_intent generate_report "Generate Report":
   retry:
     max_attempts: 2
     backoff: linear
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: CHAT COMPLETION
@@ -397,6 +418,9 @@ llm_intent chat_response "Chat Response":
     backoff: exponential
     initial_delay_ms: 1000
     max_delay_ms: 15000
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: USING DIFFERENT PROVIDERS
@@ -406,6 +430,9 @@ llm_intent fast_classification "Fast Classification":
   model: gpt4o_mini
   prompt: "Classify the following text into one of these categories: {{ input.categories }}\n\nText: {{ input.text }}"
   timeout: 15
+  pii:
+    scan: true
+    action: redact
 
 llm_intent quality_reasoning "Quality Reasoning":
   model: claude_opus
@@ -414,11 +441,17 @@ llm_intent quality_reasoning "Quality Reasoning":
   retry:
     max_attempts: 2
     backoff: exponential
+  pii:
+    scan: true
+    action: redact
 
 llm_intent local_embedding "Local Embedding":
   model: local_llama
   prompt: "Generate a summary embedding for:\n\n{{ input.text }}"
   timeout: 30
+  pii:
+    scan: true
+    action: redact
 
 # =============================================================================
 # LLM_INTENT: CODE REVIEW

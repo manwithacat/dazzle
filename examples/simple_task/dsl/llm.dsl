@@ -54,12 +54,18 @@ llm_intent classify_task_priority "Auto-classify Task Priority":
   retry:
     max_attempts: 2
     backoff: exponential
+  pii:
+    scan: true
+    action: redact
 
 llm_intent suggest_task_tags "Suggest Tags for Task":
   description: "Analyze task to suggest relevant tags/labels"
   model: claude_haiku
   prompt: "Suggest relevant tags for task '{{ input.title }}' with description '{{ input.description }}'. Available tags: backend, frontend, api, database, ui, testing, documentation, infrastructure, security, performance. Respond with JSON containing tags array and reasoning."
   timeout: 10
+  pii:
+    scan: true
+    action: redact
 
 llm_intent summarize_task_comments "Summarize Task Discussion":
   description: "Summarize the comment thread on a task"
@@ -69,6 +75,9 @@ llm_intent summarize_task_comments "Summarize Task Discussion":
   retry:
     max_attempts: 2
     backoff: linear
+  pii:
+    scan: true
+    action: redact
 
 llm_intent estimate_task_effort "Estimate Task Effort":
   description: "Estimate effort required for a task"

@@ -32,6 +32,10 @@ entity User "Team Member":
   is_active: bool=true
   created_at: datetime auto_add
 
+  access:
+    read: role(admin) or role(manager) or role(member)
+    write: role(admin)
+
 # =============================================================================
 # Task Entity - with proper user relationships
 # =============================================================================
@@ -239,6 +243,21 @@ surface task_detail "Task Detail":
   ux:
     purpose: "View complete task information"
 
+# Task Comment List - embedded in task detail
+surface task_comments "Task Comments":
+  uses entity TaskComment
+  mode: list
+
+  section main "Comments":
+    field author "Author"
+    field content "Comment"
+    field created_at "Posted"
+
+  ux:
+    purpose: "View and add comments on a task"
+    sort: created_at desc
+    empty: "No comments yet. Start the discussion!"
+
 # Task Create Form
 surface task_create "Create Task":
   uses entity Task
@@ -285,6 +304,8 @@ surface user_list "Team Members":
   uses entity User
   mode: list
 
+  access: persona(admin, manager)
+
   section main "Team":
     field name "Name"
     field email "Email"
@@ -313,6 +334,8 @@ surface user_list "Team Members":
 surface user_create "Add Team Member":
   uses entity User
   mode: create
+
+  access: persona(admin)
 
   section main "New Team Member":
     field name "Name"

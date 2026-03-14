@@ -72,6 +72,9 @@ llm_intent classify_ticket "Classify Support Ticket":
     on_event: created
     input_map:
       description: entity.description
+  pii:
+    scan: true
+    action: redact
 
 # Priority assessment with structured output
 llm_intent assess_priority "Assess Ticket Priority":
@@ -91,6 +94,9 @@ llm_intent analyze_sentiment "Analyze Customer Sentiment":
   model: claude_haiku
   prompt: "Analyze the customer sentiment in this support ticket.\n\nTicket:\n{{ input.description }}\n\nRespond with JSON: {\"sentiment\": \"positive|neutral|negative|frustrated\", \"confidence\": 0.0-1.0}"
   timeout: 10
+  pii:
+    scan: true
+    action: redact
 
 # Generate response suggestion
 llm_intent suggest_response "Suggest Response":
