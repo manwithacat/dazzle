@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-03-14
+
+### Added
+- **Surface field visibility by role** (`visible:` condition on sections and fields) — role-based RBAC for hiding sensitive fields/sections without duplicating surfaces (#487)
+- `visible:` supports `role()`, `has_grant()`, compound `and`/`or` via existing ConditionExpr system
+- `visible:` and `when:` can coexist on the same field (role-based vs data-driven visibility)
+- **Grant schema infrastructure** — `grant_schema` DSL construct with `relation` sub-blocks, `has_grant()` condition function, `GrantStore` runtime with SQLite-backed CRUD and audit events
+- Grant pre-fetching in workspace rendering for synchronous condition evaluation
+
+### Fixed
+- Pulse compliance scoring now reads DSL `classify` directives (confidence=1.0) before pattern matching (#488)
+- Pulse security scoring counts default-deny as deliberate secure posture instead of penalising it (#488)
+- `when_expr` silently dropped in multi-section (wizard) surface forms — now correctly propagated
+- Auto-generate READ endpoints for entities with LIST surfaces (#482)
+- Resolve `current_user` in workspace filters in test mode (#483)
+- Cross-entity navigation resolved by shared workspace nav_groups (#477)
+- Infer experience reachability from access spec (#476)
+
 ## [0.41.1] - 2026-03-12
 
 ### Changed
