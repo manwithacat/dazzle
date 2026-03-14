@@ -402,7 +402,7 @@ if TEXTUAL_AVAILABLE:
             ts = _format_ts(c.start_ts)
             icon = "\u2714" if c.success else "\u2718"
             dur = _format_duration(c.elapsed_s)
-            summary = f"  [{_rich_escape(c.summary)}]" if c.summary else ""
+            summary = f"  \\[{_rich_escape(c.summary)}]" if c.summary else ""
             return f" {ts}  {icon} {c.label:<28} {dur:>8}{summary}"
 
     class DashboardScreen(Screen):
