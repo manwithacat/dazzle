@@ -1643,6 +1643,11 @@ class RouteGenerator:
         """
         Generate routes for all endpoints.
 
+        Endpoints are sorted so that static paths are registered before
+        parameterized paths at the same depth.  This prevents FastAPI from
+        matching a path parameter (e.g. ``{id}``) against a literal segment
+        like ``create`` — the same strategy used by the UI page router.
+
         Args:
             endpoints: List of endpoint specifications
             service_specs: Optional dictionary mapping service names to specs
@@ -1652,7 +1657,11 @@ class RouteGenerator:
         """
         service_specs = service_specs or {}
 
-        for endpoint in endpoints:
+        def _route_sort_key(ep: EndpointSpec) -> tuple[int, int]:
+            # More segments first, then static before dynamic at same depth.
+            return (-ep.path.count("/"), 0 if "{" not in ep.path else 1)
+
+        for endpoint in sorted(endpoints, key=_route_sort_key):
             service_spec = service_specs.get(endpoint.service)
             self.generate_route(endpoint, service_spec)
 
