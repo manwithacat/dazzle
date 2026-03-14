@@ -11,6 +11,7 @@ import json
 import sqlite3
 from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 from uuid import uuid4
 
 
@@ -72,7 +73,7 @@ class GrantStore:
         grant_id: str,
         event_type: str,
         actor_id: str,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         self._conn.execute(
             """INSERT INTO _grant_events (id, grant_id, event_type, actor_id, timestamp, metadata)
@@ -87,7 +88,7 @@ class GrantStore:
             ),
         )
 
-    def _get_grant(self, grant_id: str) -> dict:
+    def _get_grant(self, grant_id: str) -> dict[str, Any]:
         row = self._conn.execute("SELECT * FROM _grants WHERE id = ?", (grant_id,)).fetchone()
         if row is None:
             raise ValueError(f"Grant {grant_id} not found")
@@ -103,7 +104,7 @@ class GrantStore:
         granted_by_id: str,
         approval_mode: str = "required",
         expires_at: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         grant_id = str(uuid4())
         now = datetime.now(UTC).isoformat()
 
@@ -134,7 +135,7 @@ class GrantStore:
         self._conn.commit()
         return self._get_grant(grant_id)
 
-    def approve_grant(self, grant_id: str, approved_by_id: str) -> dict:
+    def approve_grant(self, grant_id: str, approved_by_id: str) -> dict[str, Any]:
         grant = self._get_grant(grant_id)
         if grant["status"] != GrantStatus.PENDING_APPROVAL:
             raise ValueError(f"Cannot approve grant in status '{grant['status']}'")
@@ -149,7 +150,9 @@ class GrantStore:
         self._conn.commit()
         return self._get_grant(grant_id)
 
-    def reject_grant(self, grant_id: str, rejected_by_id: str, reason: str | None = None) -> dict:
+    def reject_grant(
+        self, grant_id: str, rejected_by_id: str, reason: str | None = None
+    ) -> dict[str, Any]:
         grant = self._get_grant(grant_id)
         if grant["status"] != GrantStatus.PENDING_APPROVAL:
             raise ValueError(f"Cannot reject grant in status '{grant['status']}'")
@@ -162,7 +165,7 @@ class GrantStore:
         self._conn.commit()
         return self._get_grant(grant_id)
 
-    def revoke_grant(self, grant_id: str, revoked_by_id: str) -> dict:
+    def revoke_grant(self, grant_id: str, revoked_by_id: str) -> dict[str, Any]:
         grant = self._get_grant(grant_id)
         if grant["status"] != GrantStatus.ACTIVE:
             raise ValueError(f"Cannot revoke grant in status '{grant['status']}'")
@@ -195,7 +198,7 @@ class GrantStore:
         scope_id: str | None = None,
         principal_id: str | None = None,
         status: str | None = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         # Fully static SQL — no string concatenation anywhere.
         # Each optional filter uses (? IS NULL OR col = ?) so the query text
         # never varies; passing NULL for a parameter means "no filter" for that

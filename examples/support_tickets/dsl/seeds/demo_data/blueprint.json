@@ -171,7 +171,7 @@
               "enum_values": [
                 "bug",
                 "feature",
-                "question",
+                "inquiry",
                 "other"
               ],
               "weights": [

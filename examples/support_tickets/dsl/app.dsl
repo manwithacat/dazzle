@@ -59,7 +59,7 @@ entity Ticket "Support Ticket":
   description: text required
   status: enum[open,in_progress,resolved,closed]=open
   priority: enum[low,medium,high,critical]=medium
-  category: enum[bug,feature,question,other]=other
+  category: enum[bug,feature,inquiry,other]=other
   created_by: ref User required
   assigned_to: ref User
   resolution: text

@@ -20,10 +20,10 @@ try:
     FASTAPI_AVAILABLE = True
 except ImportError:
     FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore[misc, assignment]
-    Depends = None  # type: ignore[misc, assignment]
-    HTTPException = None  # type: ignore[misc, assignment]
-    Request = None  # type: ignore[misc, assignment]
+    APIRouter = None  # type: ignore[misc,assignment,unused-ignore]
+    Depends = None  # type: ignore[misc,assignment,unused-ignore]
+    HTTPException = None  # type: ignore[misc,assignment,unused-ignore]
+    Request = None  # type: ignore[misc,assignment,unused-ignore]
 
 from pydantic import BaseModel
 
@@ -149,7 +149,7 @@ def create_test_routes(
     # When unset, test routes are open (backward compat for local dev).
     test_secret = os.environ.get("DAZZLE_TEST_SECRET", "")
 
-    async def _verify_test_secret(request: Request) -> None:  # type: ignore[valid-type]
+    async def _verify_test_secret(request: Request) -> None:
         if not test_secret:
             return
         header_val = request.headers.get("X-Test-Secret", "")
