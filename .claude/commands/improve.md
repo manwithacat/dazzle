@@ -1,5 +1,7 @@
 Proactively discover bugs and quality issues across Dazzle's example apps by orchestrating existing analysis tools. Read-only — no commits, no issues filed.
 
+**This command uses parallel subagents** — one per app — for ~Nx faster scanning.
+
 ARGUMENTS: $ARGUMENTS
 
 ## 1. Discover apps
@@ -12,71 +14,51 @@ ls examples/*/dazzle.toml
 
 If `$ARGUMENTS` is provided, filter to only that app name (e.g. `support_tickets`). If the app doesn't exist or lacks `dazzle.toml`, report the error and stop.
 
-## 2. Scan each app
+## 2. Scan apps in parallel
 
-For each app, print a progress line: `Scanning <app_name>... (N/M)`
+For each app, **dispatch a background subagent** using the Agent tool with `run_in_background: true`. Each subagent scans one app independently.
 
-Run these 6 steps **sequentially**. Collect findings from each step.
+**Dispatch ALL app subagents in a single message** (multiple Agent tool calls) so they run concurrently. Use `model: "haiku"` for each subagent to keep cost low — these are mechanical checks, not judgment calls.
 
-### Step 1: Parse & Validate
+Each subagent prompt should be:
 
-Run from the app directory:
+```
+Scan Dazzle example app "<app_name>" for quality issues. Return findings as a JSON object.
 
-```bash
-cd examples/<app_name> && dazzle validate
+Steps (run sequentially within this app):
+
+1. **Validate**: Run `cd examples/<app_name> && dazzle validate`. If this fails, return: {"app": "<app_name>", "critical": true, "findings": [{"severity": "critical", "source": "validate", "detail": "<error>"}]}
+
+2. **Lint**: Run `cd examples/<app_name> && dazzle lint`. Record any violations as severity "warning", source "lint".
+
+3. **Fidelity**: Call mcp__dazzle__select_project with project_name "examples/<app_name>", then call mcp__dazzle__dsl with operation "fidelity". Record gaps as severity "warning", source "fidelity". On error, record as severity "info".
+
+4. **Sentinel**: Call mcp__dazzle__sentinel with operation "scan". Map high/critical → "warning", medium/low → "info", source "sentinel". On error, record as severity "info".
+
+5. **Pulse**: Call mcp__dazzle__pulse with operation "run". Extract health score and per-axis scores. Axis below 60 → "warning". Axis 60-79 → "info". Source "pulse". Record the overall health score. On error, record as severity "info".
+
+6. **Coherence**: Call mcp__dazzle__discovery with operation "coherence". Record gaps as severity "warning", source "coherence". On error, record as severity "info".
+
+Return your results as a structured summary in this exact format:
+APP: <app_name>
+HEALTH: <score>/100 (axis1: X, axis2: Y, ...)
+FINDINGS:
+- [severity] [source] description
+- [severity] [source] description
+(or "FINDINGS: none" if clean)
+
+Do NOT make any changes. Read-only analysis.
 ```
 
-If this fails → record a **critical** finding and **skip remaining steps** for this app.
+**While waiting** for subagents, print: `Dispatched N parallel scans...`
 
-### Step 2: Lint
+## 3. Collect and report
 
-Run from the app directory:
-
-```bash
-cd examples/<app_name> && dazzle lint
-```
-
-Collect any violations as **warning** findings. Continue regardless.
-
-### Step 3: Fidelity
-
-Call MCP tool `mcp__dazzle__select_project` with `project_name` set to the app directory path. Then call `mcp__dazzle__dsl` with `operation: "fidelity"`.
-
-Collect any gaps or issues as **warning** findings. If the tool returns an error, log it as an **info** finding and continue.
-
-### Step 4: Sentinel
-
-Call `mcp__dazzle__sentinel` with `operation: "scan"`.
-
-Collect findings. Map sentinel severity to report severity:
-- sentinel high/critical → **warning**
-- sentinel medium/low → **info**
-
-If the tool returns an error, log it as an **info** finding and continue.
-
-### Step 5: Pulse
-
-Call `mcp__dazzle__pulse` with `operation: "run"`.
-
-Extract the health score and per-axis scores. Map to findings:
-- Any axis below 60 → **warning** finding
-- Any axis below 80 (but ≥ 60) → **info** finding
-
-If the tool returns an error, log it as an **info** finding and continue.
-
-### Step 6: Coherence
-
-Call `mcp__dazzle__discovery` with `operation: "coherence"`.
-
-Collect any coherence gaps as **warning** findings. If the tool returns an error, log it as an **info** finding and continue.
-
-## 3. Report
-
-After scanning all apps, present results in this format:
+As each subagent completes, collect its findings. Once ALL are done, compile the report.
 
 ### Per-app sections
 
-For each app:
+For each app (ordered by finding count, descending):
 
 ```
 ### N. app_name (K findings)

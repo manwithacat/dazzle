@@ -1,5 +1,7 @@
 Iterative GitHub issue resolver. Run continuously: triage, implement, ship, repeat — until all open issues are resolved or the user stops you.
 
+**This command uses parallel subagents** for investigation — dispatching one per issue to analyze root causes concurrently before picking which to implement.
+
 ## Backward Compatibility Policy
 
 **Backward compatibility is NOT a requirement at this stage.** The project has one major user who is fully engaged with the dev process. When implementing fixes and features:
@@ -8,7 +10,7 @@ Iterative GitHub issue resolver. Run continuously: triage, implement, ship, repe
 - **Update all callers** in the same commit rather than preserving old APIs.
 - **Communicate breaking changes** by noting them in CHANGELOG.md (under `### Changed` or `### Removed`) and in the GitHub issue comment when closing. That is sufficient notice.
 
-## Loop: Triage → Implement → Ship → Repeat
+## Loop: Triage → Investigate → Implement → Ship → Repeat
 
 ### Step 1: Triage
 
@@ -34,22 +36,43 @@ Issues are handled differently based on who filed them:
   3. Post a comment with your analysis: root cause (bugs), feasibility assessment (features), relevant code paths, and suggested approach. Do NOT implement, commit, or close.
   4. Skip to the next issue.
 
-### Step 2: Prioritise and pick
+### Step 2: Parallel investigation (when 2+ issues open)
 
-- From remaining open **`manwithacat`** issues, choose the best next issue based on:
+When there are **2 or more open `manwithacat` issues**, dispatch investigation subagents **in parallel** (one per issue, all in a single message). Use `run_in_background: true` and `model: "sonnet"` for each.
+
+Each investigation subagent prompt:
+
+```
+Investigate GitHub issue #<number> in the Dazzle project (/Volumes/SSD/Dazzle).
+
+Issue title: <title>
+
+1. Read the full issue: run `gh issue view <number>`
+2. Search the codebase for relevant files using Grep/Glob
+3. Read the key files that would need to change
+4. Determine: root cause (bugs) or design approach (features), files to modify, scope (small/medium/large)
+
+Return your analysis in this format:
+ISSUE: #<number> — <title>
+SCOPE: small|medium|large
+ROOT_CAUSE: <one-line summary>
+FILES: <comma-separated list of files to modify>
+APPROACH: <2-3 sentence fix description>
+COMPLEXITY: <estimated lines changed>
+DEPENDENCIES: <any issues this depends on or blocks>
+```
+
+When there is only **1 issue**, skip parallel dispatch and investigate directly.
+
+### Step 3: Prioritise and pick
+
+- From investigation results, choose the best next issue based on:
   - **Priority labels** (bug > enhancement > feature)
   - **Dependencies** (issues that unblock others first)
   - **Complexity** (prefer smaller, well-scoped issues completable in one session)
   - **Momentum** (issues related to recently completed work)
 - Display your reasoning briefly.
-
-### Step 3: Investigate
-
-- Read the full issue with `gh issue view <number>`.
-- Remove the `needs-triage` label now that the issue is being investigated: `gh issue edit <number> --remove-label "needs-triage"`.
-- Search the codebase for relevant files using Grep/Glob.
-- Read the key files that would need to change.
-- Determine: root cause (bugs) or design approach (features), files to modify, scope (small/medium/large).
+- Remove the `needs-triage` label: `gh issue edit <number> --remove-label "needs-triage"`.
 
 **Decision gate**: If the issue has genuine ambiguity — multiple valid approaches with real trade-offs, unclear requirements, or would benefit from user input — ask the user before proceeding. Otherwise, pick the most sensible approach following existing codebase patterns and continue.
 

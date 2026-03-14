@@ -1,5 +1,7 @@
 Run a two-phase code smells analysis: regression checks against established rules, then a scan for new systemic patterns. This is a read-only analysis — do NOT make any code changes.
 
+**This command uses parallel subagents** — Phase 1 regression checks and Phase 2 pattern scans run concurrently across categories.
+
 ## Backward Compatibility Policy
 
 **Backward compatibility is NOT a requirement at this stage.** The project has one major user who is fully engaged with the dev process. When recommending fixes:
@@ -14,104 +16,129 @@ Focus on `src/dazzle/`, `src/dazzle_back/`, and `src/dazzle_ui/`. Ignore `tests/
 
 ---
 
-## Phase 1 — Regression Checks
+## Dispatch parallel analysis
 
-Run each grep-able check and report **PASS** or **FAIL** with counts. These are rules established by previous smells rounds — regressions here mean a fix was undone.
+**Dispatch ALL of these subagents in a single message** using `run_in_background: true`. Use `model: "sonnet"` — these need judgment for pattern recognition.
 
-### 1.1 No swallowed exceptions
-```bash
-grep -rn "except Exception: pass" src/ --include="*.py"
-grep -rn "except Exception:$" src/ --include="*.py"  # (check next line is just pass)
+### Subagent 1: Regression checks (Phase 1)
+
 ```
-**PASS** = 0 bare `except Exception: pass` patterns. Note: `except Exception:` followed by logging is fine.
+Run regression checks on the Dazzle codebase at /Volumes/SSD/Dazzle. Report PASS or FAIL for each:
 
-### 1.2 No redundant except tuples
-```bash
-grep -rn "except (ImportError, Exception)" src/ --include="*.py"
-grep -rn "except (json.JSONDecodeError, Exception)" src/ --include="*.py"
-grep -rn "except (JSONDecodeError, Exception)" src/ --include="*.py"
+1.1 No swallowed exceptions:
+  grep -rn "except Exception: pass" src/ --include="*.py"
+  grep -rn "except Exception:$" src/ --include="*.py" (check next line is just pass)
+  PASS = 0 bare except-pass patterns. Note: except Exception followed by logging is fine.
+
+1.2 No redundant except tuples:
+  grep -rn "except (ImportError, Exception)" src/ --include="*.py"
+  grep -rn "except (json.JSONDecodeError, Exception)" src/ --include="*.py"
+  grep -rn "except (JSONDecodeError, Exception)" src/ --include="*.py"
+  PASS = 0 results across all three.
+
+1.3 Core→MCP isolation:
+  grep -rn "from dazzle\.mcp" src/dazzle/core/
+  PASS = 0 results.
+
+1.4 No project_path: Any in handlers:
+  grep -rn "project_path: Any" src/dazzle/mcp/server/handlers/
+  PASS = 0 results.
+
+1.5 All fallback paths log at WARNING or above:
+  Spot-check patterns from 1.1 and 1.2.
+
+1.5a No silent handlers in event delivery path:
+  grep -rn "except" src/dazzle_back/events/ src/dazzle_back/channels/ --include="*.py" -A2 | grep -E "pass$|return$"
+  PASS = 0 silent handlers.
+
+1.5b getattr() with string literals:
+  grep -rn "getattr(" src/ --include="*.py" | wc -l
+  PASS = count < 200. TRACK = report count if >=200.
+
+1.6 Function length (aspirational):
+  Count functions >150 lines in src/. Report count and top 5 longest.
+
+1.7 Class length (aspirational):
+  Count classes >800 lines in src/. Report count and any offenders.
+
+Return results as:
+REGRESSION_RESULTS:
+| # | Check | Status | Details |
+(one row per check)
 ```
-**PASS** = 0 results across all three.
 
-### 1.3 Core→MCP isolation
-```bash
-grep -rn "from dazzle\.mcp" src/dazzle/core/
+### Subagent 2: Error handling & coupling patterns
+
 ```
-**PASS** = 0 results. Core modules must not import from the MCP layer.
+Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/, src/dazzle_back/, src/dazzle_ui/. Ignore tests/, examples/, auto-generated files.
 
-### 1.4 No `project_path: Any` in handlers
-```bash
-grep -rn "project_path: Any" src/dazzle/mcp/server/handlers/
+Categories:
+1. Error handling — silent failures, inconsistent exception strategy, missing retries on I/O
+2. Coupling — layer violations, circular imports, inappropriate intimacy, fan-in >8
+
+For each pattern found (must have >=2 instances), report:
+PATTERN: <name>
+CATEGORY: error_handling|coupling
+INSTANCES: <count>
+ROOT_CAUSE: <why this keeps appearing>
+CANONICAL_FIX: <the one correct way to fix>
+DONE_CRITERIA: <a grep command to verify the fix>
+ENFORCEMENT: <how to prevent recurrence>
 ```
-**PASS** = 0 results. Handler signatures should use `Path | None`.
 
-### 1.5 All fallback paths log at WARNING or above
-Spot-check the patterns from 1.1 and 1.2. If a fallback catches a connection/runtime error, it must log at WARNING+ (not debug or silent). INFO is acceptable only for expected conditions like ImportError for optional dependencies.
+### Subagent 3: Duplication & type safety patterns
 
-### 1.5a No silent handlers in event delivery path (#365)
-```bash
-# Count silent except blocks (pass or bare return, no logging) in event/channel files
-grep -rn "except" src/dazzle_back/events/ src/dazzle_back/channels/ --include="*.py" -A2 | grep -E "pass$|return$"
 ```
-**PASS** = 0 silent handlers in `events/` and `channels/` directories. Event delivery failures MUST log at WARNING+.
+Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/, src/dazzle_back/, src/dazzle_ui/. Ignore tests/, examples/, auto-generated files.
 
-### 1.5b getattr() with string literals (#367)
-```bash
-grep -rn "getattr(" src/ --include="*.py" | wc -l
-```
-**PASS** = count < 200. **TRACK** = report count if ≥200. Target: replace with typed attribute access on IR models.
+Categories:
+1. Duplication — near-duplicate blocks >10 lines, copy-paste across handlers
+2. Type safety — Any where concrete types are known, # type: ignore masking real issues
 
-### 1.6 Function length (aspirational)
-```bash
-# Count functions >150 lines in src/
-```
-Use AST-aware analysis or line counting between `def` statements. Report the count and list the top 5 longest functions. **Track** = report count (no pass/fail yet).
+Approach:
+- Compare structurally similar files (e.g. MCP handlers, CLI commands) for duplication
+- Use Grep to find `Any` annotations and `# type: ignore` comments
+- Focus on patterns with >=2 instances
 
-### 1.7 Class length (aspirational)
-```bash
-# Count classes >800 lines in src/
+For each pattern found, report:
+PATTERN: <name>
+CATEGORY: duplication|type_safety
+INSTANCES: <count>
+ROOT_CAUSE: <why>
+CANONICAL_FIX: <fix>
+DONE_CRITERIA: <verification command>
+ENFORCEMENT: <prevention>
 ```
-Report the count and list any offenders. **Track** = report count.
+
+### Subagent 4: Complexity & mutable globals
+
+```
+Scan the Dazzle codebase at /Volumes/SSD/Dazzle for code smell patterns in these categories. Focus on src/dazzle/, src/dazzle_back/, src/dazzle_ui/. Ignore tests/, examples/, auto-generated files.
+
+Categories:
+1. Complexity — functions >80 lines, deeply nested conditionals (3+ levels), god classes
+2. Mutable globals — hidden singletons, module-level mutable state, thread-unsafe patterns
+
+Approach:
+- Use wc -l on source files to find the largest files (complexity hotspots)
+- Look for deeply nested if/for/while blocks
+- Search for module-level mutable dicts/lists/sets
+
+For each pattern found (>=2 instances), report:
+PATTERN: <name>
+CATEGORY: complexity|mutable_globals
+INSTANCES: <count>
+ROOT_CAUSE: <why>
+CANONICAL_FIX: <fix>
+DONE_CRITERIA: <verification command>
+ENFORCEMENT: <prevention>
+```
 
 ---
 
-## Phase 2 — New Pattern Scan
+## Collect and compile report
 
-Scan for **new systemic patterns** across the same categories below. Do NOT re-report issues already covered by Phase 1 regression checks.
-
-Group findings into **patterns** (a pattern is a recurring structural issue with ≥2 instances), not individual instances. For each pattern found, provide:
-
-| Field | Description |
-|-------|-------------|
-| **Pattern name** | Short descriptive name |
-| **Category** | One of the categories below |
-| **Instance count** | How many occurrences |
-| **Root cause** | Why this pattern keeps appearing |
-| **Canonical fix** | The one correct way to fix all instances |
-| **Done criteria** | A grep command or check that verifies the fix |
-| **Enforcement** | How to prevent recurrence (lint rule, CI check, convention) |
-
-### Categories to scan
-
-1. **Error handling** — silent failures, inconsistent exception strategy, missing retries on I/O
-2. **Coupling** — layer violations, circular imports, inappropriate intimacy, fan-in >8
-3. **Duplication** — near-duplicate blocks >10 lines, copy-paste across handlers
-4. **Type safety** — `Any` where concrete types are known, `# type: ignore` masking real issues
-5. **Complexity** — functions >80 lines, deeply nested conditionals (3+ levels), god classes
-6. **Mutable globals** — hidden singletons, module-level mutable state, thread-unsafe patterns
-
-### Approach
-
-1. Use `wc -l` on source files to find the largest files (complexity hotspots).
-2. Use Grep/Glob to scan systematically — don't read every file line by line.
-3. Compare structurally similar files (e.g. MCP handlers, CLI commands) for duplication.
-4. Focus on patterns with ≥2 instances. One-off issues are not patterns.
-
----
-
-## Phase 3 — Summary Report
-
-Produce a structured report:
+Once ALL subagents complete, compile the results into:
 
 ```
 ## Code Smells Report — [date]
@@ -119,18 +146,12 @@ Produce a structured report:
 ### Regression Check Results
 | # | Check | Status | Details |
 |---|-------|--------|---------|
-| 1.1 | Swallowed exceptions | PASS/FAIL | count |
-| 1.2 | Redundant except tuples | PASS/FAIL | count |
-| 1.3 | Core→MCP isolation | PASS/FAIL | count |
-| 1.4 | project_path: Any | PASS/FAIL | count |
-| 1.5 | Fallback logging | PASS/FAIL | notes |
-| 1.5a | Silent handlers in event path | PASS/FAIL | count |
-| 1.5b | getattr() string literals | PASS/TRACK | count (target <200) |
-| 1.6 | Functions >150 lines | TRACK | count, top 5 |
-| 1.7 | Classes >800 lines | TRACK | count, top offenders |
+(from Subagent 1)
 
 ### New Patterns Found
-[Table of patterns from Phase 2, ordered by severity × instance count]
+| Pattern | Category | Instances | Root Cause | Fix |
+|---------|----------|-----------|------------|-----|
+(merged from Subagents 2-4, ordered by severity × instance count)
 
 ### Recommended Next Actions
 1. [Highest priority pattern to fix]
