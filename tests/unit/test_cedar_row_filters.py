@@ -7,6 +7,8 @@ that convert Cedar permission rules to SQL-compatible row filters.
 
 from __future__ import annotations
 
+from typing import Any
+
 from dazzle_back.runtime.route_generator import (
     _extract_cedar_row_filters,
     _extract_condition_filters,
@@ -332,3 +334,134 @@ class TestExtractConditionFilters:
         filters: dict[str, object] = {}
         _extract_condition_filters(cond, "u1", filters, None)
         assert filters == {}
+
+
+class TestExtractConditionFiltersIR:
+    """Tests for _extract_condition_filters with IR ConditionExpr objects.
+
+    These represent the actual condition type used at runtime (entity.access
+    contains PermissionRule with ConditionExpr conditions, not AccessConditionSpec).
+    """
+
+    def _make_ir_condition(
+        self,
+        field: str,
+        value: str | int | float | bool,
+        op: str = "=",
+    ) -> Any:
+        from dazzle.core.ir.conditions import (
+            Comparison,
+            ComparisonOperator,
+            ConditionExpr,
+            ConditionValue,
+        )
+
+        return ConditionExpr(
+            comparison=Comparison(
+                field=field,
+                operator=ComparisonOperator(op),
+                value=ConditionValue(literal=value),
+            )
+        )
+
+    def _make_ir_and(self, left: Any, right: Any) -> Any:
+        from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator
+
+        return ConditionExpr(left=left, operator=LogicalOperator.AND, right=right)
+
+    def _make_ir_or(self, left: Any, right: Any) -> Any:
+        from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator
+
+        return ConditionExpr(left=left, operator=LogicalOperator.OR, right=right)
+
+    def test_ir_current_user_equals(self) -> None:
+        """IR ConditionExpr: student = current_user produces row filter."""
+        cond = self._make_ir_condition("student", "current_user")
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {"student": "user-abc"}
+
+    def test_ir_literal_value(self) -> None:
+        """IR ConditionExpr: status = 'active' produces literal filter."""
+        cond = self._make_ir_condition("status", "active")
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {"status": "active"}
+
+    def test_ir_boolean_value(self) -> None:
+        """IR ConditionExpr: is_public = true produces boolean filter."""
+        cond = self._make_ir_condition("is_public", True)
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {"is_public": True}
+
+    def test_ir_not_equals(self) -> None:
+        """IR ConditionExpr: status != 'archived' produces __ne filter."""
+        cond = self._make_ir_condition("status", "archived", "!=")
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {"status__ne": "archived"}
+
+    def test_ir_and_compound(self) -> None:
+        """IR ConditionExpr: AND compound extracts both sides."""
+        cond = self._make_ir_and(
+            self._make_ir_condition("student", "current_user"),
+            self._make_ir_condition("active", True),
+        )
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {"student": "user-abc", "active": True}
+
+    def test_ir_or_not_pushed(self) -> None:
+        """IR ConditionExpr: OR compound is not pushed to SQL."""
+        cond = self._make_ir_or(
+            self._make_ir_condition("owner_id", "current_user"),
+            self._make_ir_condition("is_public", True),
+        )
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {}
+
+    def test_ir_nested_and(self) -> None:
+        """IR ConditionExpr: nested AND extracts all conditions."""
+        cond = self._make_ir_and(
+            self._make_ir_condition("student", "current_user"),
+            self._make_ir_and(
+                self._make_ir_condition("status", "active"),
+                self._make_ir_condition("visible", True),
+            ),
+        )
+        filters: dict[str, object] = {}
+        _extract_condition_filters(cond, "user-abc", filters, None)
+        assert filters == {"student": "user-abc", "status": "active", "visible": True}
+
+    def test_ir_full_cedar_pipeline(self) -> None:
+        """End-to-end: IR AccessSpec with PermissionRule + ConditionExpr."""
+        from dazzle.core.ir.conditions import (
+            Comparison,
+            ComparisonOperator,
+            ConditionExpr,
+            ConditionValue,
+        )
+        from dazzle.core.ir.domain import (
+            AccessSpec,
+            PermissionKind,
+            PermissionRule,
+        )
+
+        access = AccessSpec(
+            permissions=[
+                PermissionRule(
+                    operation=PermissionKind.LIST,
+                    condition=ConditionExpr(
+                        comparison=Comparison(
+                            field="student",
+                            operator=ComparisonOperator.EQUALS,
+                            value=ConditionValue(literal="current_user"),
+                        )
+                    ),
+                ),
+            ]
+        )
+        filters = _extract_cedar_row_filters(access, "student-001")
+        assert filters == {"student": "student-001"}

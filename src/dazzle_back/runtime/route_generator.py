@@ -226,14 +226,19 @@ def _extract_condition_filters(
     filters: dict[str, Any],
     _logger: Any,
 ) -> None:
-    """Recursively extract SQL filters from an AccessConditionSpec tree.
+    """Recursively extract SQL filters from a condition tree.
 
-    Only handles simple comparison conditions with ``current_user`` as the value.
-    Complex logical trees with OR are not pushed to SQL (they'd require post-fetch
-    filtering which is already handled by the visibility system).
+    Handles two condition formats:
+    - **IR ConditionExpr**: ``.comparison`` (Comparison), ``.operator``, ``.left``/``.right``
+    - **AccessConditionSpec**: ``.kind``, ``.field``, ``.value``, ``.comparison_op``,
+      ``.logical_op``, ``.logical_left``/``.logical_right``
+
+    Only simple equality conditions with ``current_user`` are pushed to SQL.
+    OR trees require post-fetch filtering (handled by the visibility system).
     """
     kind = getattr(condition, "kind", "")
 
+    # ---- AccessConditionSpec path (has explicit .kind) --------------------
     if kind == "comparison":
         field = getattr(condition, "field", None)
         value = getattr(condition, "value", None)
@@ -245,22 +250,66 @@ def _extract_condition_filters(
 
         if field and value == "current_user" and op_val in ("=", "eq", "equals"):
             filters[field] = user_id
-        elif field and isinstance(value, (str, int, float, bool)) and value != "current_user":
+        elif field and isinstance(value, str | int | float | bool) and value != "current_user":
             if op_val in ("=", "eq", "equals"):
                 filters[field] = value
             elif op_val in ("!=", "ne", "not_equals"):
                 filters[f"{field}__ne"] = value
+        return
 
-    elif kind == "logical":
+    if kind == "logical":
         logical_op = getattr(condition, "logical_op", None)
         if logical_op is None:
             return
         logical_op_val = logical_op.value if hasattr(logical_op, "value") else str(logical_op)
-
-        # Only push AND conditions to SQL; OR needs post-fetch filtering
         if logical_op_val == "and":
             left = getattr(condition, "logical_left", None)
             right = getattr(condition, "logical_right", None)
+            if left:
+                _extract_condition_filters(left, user_id, filters, _logger)
+            if right:
+                _extract_condition_filters(right, user_id, filters, _logger)
+        return
+
+    # ---- IR ConditionExpr path (no .kind, uses .comparison/.operator) -----
+    comp = getattr(condition, "comparison", None)
+    if comp is not None:
+        field = getattr(comp, "field", None)
+        cond_value = getattr(comp, "value", None)
+        op = getattr(comp, "operator", None)
+        op_val = op.value if hasattr(op, "value") else str(op) if op else "="
+
+        # Resolve the raw value from ConditionValue or plain string
+        raw_value: Any = None
+        if hasattr(cond_value, "literal"):
+            raw_value = cond_value.literal
+        elif isinstance(cond_value, str):
+            raw_value = cond_value
+        else:
+            raw_value = cond_value
+
+        if field and raw_value == "current_user" and op_val in ("=", "eq", "equals"):
+            filters[field] = user_id
+        elif (
+            field
+            and isinstance(raw_value, str | int | float | bool)
+            and raw_value != "current_user"
+        ):
+            if op_val in ("=", "eq", "equals"):
+                filters[field] = raw_value
+            elif op_val in ("!=", "ne", "not_equals"):
+                filters[f"{field}__ne"] = raw_value
+        return
+
+    # Compound ConditionExpr: .operator (AND/OR) with .left / .right
+    logical_op = getattr(condition, "operator", None)
+    if logical_op is not None:
+        logical_op_val = logical_op.value if hasattr(logical_op, "value") else str(logical_op)
+
+        # Only push AND conditions to SQL; OR needs post-fetch filtering
+        if logical_op_val == "and":
+            left = getattr(condition, "left", None)
+            right = getattr(condition, "right", None)
             if left:
                 _extract_condition_filters(left, user_id, filters, _logger)
             if right:
