@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -77,6 +78,69 @@ class TestToolCall:
         )
         assert "passed=5" in call.summary
         assert "failed=1" in call.summary
+
+
+class TestWidgetRendering:
+    """Verify render() output doesn't crash Rich/Textual markup parsing."""
+
+    def _make_call(self, **overrides: Any) -> ToolCall:
+        defaults: dict[str, Any] = {
+            "call_id": "test.run.t1",
+            "tool": "test",
+            "operation": "run",
+            "start_ts": "2026-03-12T10:00:00",
+            "start_mono": 0.0,
+            "finished": True,
+            "success": True,
+            "duration_ms": 500.0,
+        }
+        defaults.update(overrides)
+        return ToolCall(**defaults)
+
+    def test_completed_row_plain_summary(self) -> None:
+        """Basic render works."""
+        call = self._make_call(context_json='{"summary": "all good"}')
+        from dazzle.mcp.server.workshop import CompletedToolRow
+
+        row = CompletedToolRow(call, id="test-1")
+        text = row.render()
+        assert "all good" in text
+
+    def test_completed_row_bracket_summary(self) -> None:
+        """Brackets in summary must not be parsed as Rich markup."""
+        call = self._make_call(context_json='{"passed": 0, "total": 438, "skipped": 0}')
+        from dazzle.mcp.server.workshop import CompletedToolRow
+
+        row = CompletedToolRow(call, id="test-2")
+        text = row.render()
+        assert "passed=0" in text
+        # Verify markup=False is set so Rich won't parse brackets
+        assert row._render_markup is False
+
+    def test_completed_row_message_with_brackets(self) -> None:
+        """Event messages like '[44/330] CRUD_...' must not crash."""
+        call = self._make_call(
+            events=[
+                {"type": "log", "message": "\u2717 [44/330] CRUD_OWNER_CREATE: Create Owner"},
+            ]
+        )
+        from dazzle.mcp.server.workshop import CompletedToolRow
+
+        row = CompletedToolRow(call, id="test-3")
+        text = row.render()
+        assert "[44/330]" in text
+
+    def test_active_widget_passes_markup_false(self) -> None:
+        """ActiveToolWidget.__init__ passes markup=False to Static."""
+        # Can't instantiate outside Textual (auto_refresh needs event loop),
+        # so verify the constructor signature passes markup=False by
+        # inspecting the source.
+        import inspect
+
+        from dazzle.mcp.server.workshop import ActiveToolWidget
+
+        src = inspect.getsource(ActiveToolWidget.__init__)
+        assert "markup=False" in src
 
 
 class TestWorkshopData:

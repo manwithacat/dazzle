@@ -364,10 +364,8 @@ if TEXTUAL_AVAILABLE:
         updates even when no new events arrive.
         """
 
-        _render_markup = False
-
         def __init__(self, call: ToolCall, **kwargs: Any) -> None:
-            super().__init__(**kwargs)
+            super().__init__(markup=False, **kwargs)
             self._call = call
             self.auto_refresh = 1 / 4
 
@@ -392,11 +390,10 @@ if TEXTUAL_AVAILABLE:
     class CompletedToolRow(Static):
         """Renders a single completed tool call row."""
 
-        _render_markup = False
         can_focus = True
 
         def __init__(self, call: ToolCall, **kwargs: Any) -> None:
-            super().__init__(**kwargs)
+            super().__init__(markup=False, **kwargs)
             self._call = call
 
         def render(self) -> str:
