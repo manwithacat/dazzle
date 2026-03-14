@@ -1,5 +1,5 @@
 story ST-001 "User creates a new User":
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [User]
   given:
@@ -9,7 +9,7 @@ story ST-001 "User creates a new User":
     - "User sees confirmation message"
 
 story ST-002 "User creates a new Support Ticket":
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [Ticket]
   given:
@@ -19,7 +19,7 @@ story ST-002 "User creates a new Support Ticket":
     - "User sees confirmation message"
 
 story ST-003 "User changes Ticket from open to in_progress":
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -29,7 +29,7 @@ story ST-003 "User changes Ticket from open to in_progress":
     - "Timestamp is recorded"
 
 story ST-004 "User changes Ticket from in_progress to resolved":
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -39,7 +39,7 @@ story ST-004 "User changes Ticket from in_progress to resolved":
     - "Timestamp is recorded"
 
 story ST-005 "User changes Ticket from in_progress to open":
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -49,7 +49,7 @@ story ST-005 "User changes Ticket from in_progress to open":
     - "Timestamp is recorded"
 
 story ST-006 "User creates a new Comment":
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [Comment]
   given:
@@ -59,7 +59,7 @@ story ST-006 "User creates a new Comment":
     - "User sees confirmation message"
 
 story ST-007 "User creates a new User":
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [User]
   given:
@@ -69,7 +69,7 @@ story ST-007 "User creates a new User":
     - "User sees confirmation message"
 
 story ST-008 "User creates a new Support Ticket":
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [Ticket]
   given:
@@ -79,7 +79,7 @@ story ST-008 "User creates a new Support Ticket":
     - "User sees confirmation message"
 
 story ST-009 "User changes Ticket from open to in_progress":
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -89,7 +89,7 @@ story ST-009 "User changes Ticket from open to in_progress":
     - "Timestamp is recorded"
 
 story ST-010 "User changes Ticket from in_progress to resolved":
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -99,7 +99,7 @@ story ST-010 "User changes Ticket from in_progress to resolved":
     - "Timestamp is recorded"
 
 story ST-011 "User changes Ticket from in_progress to open":
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -109,7 +109,7 @@ story ST-011 "User changes Ticket from in_progress to open":
     - "Timestamp is recorded"
 
 story ST-012 "User creates a new Comment":
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [Comment]
   given:
@@ -120,7 +120,7 @@ story ST-012 "User creates a new Comment":
 
 story ST-013 "User creates a new User":
   status: accepted
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [User]
   given:
@@ -131,7 +131,7 @@ story ST-013 "User creates a new User":
 
 story ST-014 "User creates a new Support Ticket":
   status: accepted
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [Ticket]
   given:
@@ -142,7 +142,7 @@ story ST-014 "User creates a new Support Ticket":
 
 story ST-015 "User changes Ticket from open to in_progress":
   status: accepted
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -152,7 +152,7 @@ story ST-015 "User changes Ticket from open to in_progress":
 
 story ST-016 "User changes Ticket from in_progress to resolved":
   status: accepted
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -162,7 +162,7 @@ story ST-016 "User changes Ticket from in_progress to resolved":
 
 story ST-017 "User changes Ticket from in_progress to open":
   status: accepted
-  actor: User
+  actor: customer
   trigger: status_changed
   scope: [Ticket]
   given:
@@ -172,7 +172,7 @@ story ST-017 "User changes Ticket from in_progress to open":
 
 story ST-018 "User creates a new Comment":
   status: accepted
-  actor: User
+  actor: customer
   trigger: form_submitted
   scope: [Comment]
   given:
