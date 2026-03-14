@@ -139,7 +139,7 @@ class TestLazyActivityStoreInit:
         ):
             await dispatch_consolidated_tool(
                 "status",
-                {"operation": "mcp"},
+                {"operation": "mcp", "_resolved_project_path": project_root},
             )
 
         # init_activity_store should have been called as fallback

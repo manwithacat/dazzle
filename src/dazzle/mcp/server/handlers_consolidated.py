@@ -1123,17 +1123,16 @@ async def dispatch_consolidated_tool(
 
     handler = CONSOLIDATED_TOOL_HANDLERS.get(name)
     if handler:
-        # Pre-resolve project path from MCP roots if session available
-        if session is not None and "_resolved_project_path" not in arguments:
+        # Pre-resolve project path synchronously (MCP roots/list is unreliable
+        # in practice — clients may not respond, causing hangs. See #498.)
+        if "_resolved_project_path" not in arguments:
             try:
-                from .state import resolve_project_path_from_roots
+                from .state import resolve_project_path
 
-                resolved = await resolve_project_path_from_roots(
-                    session, arguments.get("project_path")
-                )
+                resolved = resolve_project_path(arguments.get("project_path"))
                 arguments = {**arguments, "_resolved_project_path": resolved}
             except Exception:
-                pass  # Fall through to sync resolution
+                pass  # Fall through to per-handler resolution
 
         from .state import get_activity_store
 

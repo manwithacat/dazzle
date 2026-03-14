@@ -7,13 +7,11 @@ for project root, dev mode, active project management, and knowledge graph.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import sys
 import types
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from urllib.parse import unquote, urlparse
 
 from dazzle.core.paths import (
     project_activity_log,
@@ -22,8 +20,6 @@ from dazzle.core.paths import (
 )
 
 if TYPE_CHECKING:
-    from mcp.server.session import ServerSession
-
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
     from dazzle.mcp.server.activity_log import ActivityLog, ActivityStore
 
@@ -44,8 +40,6 @@ class ServerState:
     so callers are unaffected.
     """
 
-    _ROOTS_CACHE_MAX = 128
-
     def __init__(self) -> None:
         self.project_root: Path = Path.cwd()
         self.is_dev_mode: bool = False
@@ -56,7 +50,6 @@ class ServerState:
         self.activity_log: ActivityLog | None = None
         self.activity_store: ActivityStore | None = None
         self.mock_orchestrator: Any = None
-        self._roots_cache: dict[frozenset[str], Path] = {}
 
     def reset(self) -> None:
         """Reset all state to defaults."""
@@ -69,21 +62,6 @@ class ServerState:
         self.activity_log = None
         self.activity_store = None
         self.mock_orchestrator = None
-        self._roots_cache.clear()
-
-    # -- roots cache with bounded size ------------------------------------
-
-    def roots_cache_get(self, key: frozenset[str]) -> Path | None:
-        """Look up a cached root resolution."""
-        return self._roots_cache.get(key)
-
-    def roots_cache_set(self, key: frozenset[str], value: Path) -> None:
-        """Store a root resolution, evicting oldest if cache is full."""
-        if len(self._roots_cache) >= self._ROOTS_CACHE_MAX:
-            # Evict the first (oldest-inserted) entry
-            oldest = next(iter(self._roots_cache))
-            del self._roots_cache[oldest]
-        self._roots_cache[key] = value
 
 
 # Module-level singleton holding all mutable MCP server state.
@@ -188,71 +166,6 @@ def resolve_project_path(project_path: str | None = None) -> Path:
 
     # Fall back to project root
     return _state.project_root
-
-
-def _path_from_file_uri(uri: str) -> Path | None:
-    """Convert a file:// URI to a Path, or return None for non-file URIs."""
-    parsed = urlparse(uri)
-    if parsed.scheme != "file":
-        return None
-    return Path(unquote(parsed.path))
-
-
-async def resolve_project_path_from_roots(
-    session: ServerSession | None,
-    explicit_path: str | None = None,
-) -> Path:
-    """Resolve project path using MCP client roots.
-
-    Priority:
-    1. Explicit project_path parameter (validated)
-    2. Client workspace roots containing dazzle.toml (cached per root set)
-    3. Active project path / server project root (existing fallback)
-
-    Args:
-        session: The MCP server session to query for roots.
-        explicit_path: Optional explicit path from tool arguments.
-
-    Returns:
-        Resolved Path to the project directory.
-
-    Raises:
-        ValueError: If explicit_path is invalid.
-    """
-    # Explicit path takes priority — delegate to sync resolver
-    if explicit_path:
-        return resolve_project_path(explicit_path)
-
-    # No session available — fall back to sync resolver
-    if session is None:
-        return resolve_project_path(None)
-
-    # Try to get roots from the client (timeout prevents indefinite hang
-    # when the MCP client never responds to roots/list — see #498)
-    try:
-        roots_result = await asyncio.wait_for(session.list_roots(), timeout=5.0)
-        root_uris = frozenset(str(r.uri) for r in roots_result.roots)
-    except Exception:
-        logger.debug("list_roots() unavailable or timed out, falling back to default resolution")
-        return resolve_project_path(None)
-
-    # Check cache
-    cached = _state.roots_cache_get(root_uris)
-    if cached is not None:
-        return cached
-
-    # Search roots for a dazzle.toml
-    for root in roots_result.roots:
-        path = _path_from_file_uri(str(root.uri))
-        if path and path.is_dir() and project_manifest(path).exists():
-            _state.roots_cache_set(root_uris, path)
-            logger.info("Resolved project from MCP root: %s", path)
-            return path
-
-    # No root had dazzle.toml — fall back
-    fallback = resolve_project_path(None)
-    _state.roots_cache_set(root_uris, fallback)
-    return fallback
 
 
 # ============================================================================
@@ -593,7 +506,6 @@ _LEGACY_ATTR_MAP: dict[str, str] = {
     "_activity_log": "activity_log",
     "_activity_store": "activity_store",
     "_mock_orchestrator": "mock_orchestrator",
-    "_roots_cache": "_roots_cache",
 }
 
 
