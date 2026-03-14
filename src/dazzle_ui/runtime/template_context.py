@@ -74,6 +74,7 @@ class FieldContext(BaseModel):
     extra: dict[str, Any] = Field(default_factory=dict)  # Extra metadata (e.g. money field config)
     when_expr: str = ""  # Serialized when: condition from surface element
     visible: bool = True  # Evaluated at render time against record data
+    visible_condition: dict[str, Any] | None = None  # Role-based visibility (v0.42.0)
 
 
 class TableContext(BaseModel):
@@ -111,6 +112,8 @@ class FormSectionContext(BaseModel):
     name: str
     title: str
     fields: list[FieldContext]
+    visible: bool = True  # Evaluated at render time for role-based visibility
+    visible_condition: dict[str, Any] | None = None  # Role-based visibility (v0.42.0)
 
 
 class FormContext(BaseModel):

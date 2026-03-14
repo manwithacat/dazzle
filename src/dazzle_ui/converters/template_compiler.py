@@ -398,22 +398,35 @@ def _build_form_fields(
     """Build form field definitions from surface sections or entity fields."""
     fields: list[FieldContext] = []
 
-    fields_to_process: list[tuple[str, str | None, ir.FieldSpec | None, dict[str, Any], str]] = []
+    fields_to_process: list[
+        tuple[str, str | None, ir.FieldSpec | None, dict[str, Any], str, dict[str, Any] | None]
+    ] = []
 
     if surface.sections:
         for section in surface.sections:
+            # Merge section-level visible with element-level visible
+            section_vis = section.visible.model_dump() if section.visible else None
             for element in section.elements:
                 field_spec = _get_field_spec(entity, element.field_name)
                 when_str = str(element.when_expr) if element.when_expr else ""
+                # Element visible takes precedence; fall back to section visible
+                vis = element.visible.model_dump() if element.visible else section_vis
                 fields_to_process.append(
-                    (element.field_name, element.label, field_spec, element.options, when_str)
+                    (element.field_name, element.label, field_spec, element.options, when_str, vis)
                 )
     elif entity and entity.fields:
         for field in entity.fields:
             if not field.is_primary_key:
-                fields_to_process.append((field.name, None, field, {}, ""))
+                fields_to_process.append((field.name, None, field, {}, "", None))
 
-    for field_name, label, field_spec, element_options, when_expr_str in fields_to_process:
+    for (
+        field_name,
+        label,
+        field_spec,
+        element_options,
+        when_expr_str,
+        vis_cond,
+    ) in fields_to_process:
         # Money fields: single widget with major-unit display + hidden minor-unit value
         if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
             fields.append(_build_money_field(field_name, label, field_spec))
@@ -460,6 +473,7 @@ def _build_form_fields(
                 source=source_ctx,
                 extra=extra,
                 when_expr=when_expr_str,
+                visible_condition=vis_cond,
             )
         )
 
@@ -481,6 +495,7 @@ def _build_form_sections(
 
     sections: list[FormSectionContext] = []
     for section in surface.sections:
+        section_vis = section.visible.model_dump() if section.visible else None
         section_fields: list[FieldContext] = []
         for element in section.elements:
             field_spec = _get_field_spec(entity, element.field_name)
@@ -520,6 +535,9 @@ def _build_form_sections(
                 if capture:
                     extra["capture"] = capture
 
+            when_str = str(element.when_expr) if element.when_expr else ""
+            vis = element.visible.model_dump() if element.visible else None
+
             section_fields.append(
                 FieldContext(
                     name=element.field_name,
@@ -532,6 +550,8 @@ def _build_form_sections(
                     options=options,
                     source=source_ctx,
                     extra=extra,
+                    when_expr=when_str,
+                    visible_condition=vis,
                 )
             )
 
@@ -540,6 +560,7 @@ def _build_form_sections(
                 name=section.name,
                 title=section.title or section.name.replace("_", " ").title(),
                 fields=section_fields,
+                visible_condition=section_vis,
             )
         )
 

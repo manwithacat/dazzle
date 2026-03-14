@@ -285,6 +285,18 @@ def create_page_routes(
                         if _field.when_expr:
                             _field.visible = evaluate_when_expr(_field.when_expr, req_detail.item)
 
+                # Evaluate role-based visible conditions (#487)
+                if ctx.user_roles is not None:
+                    from dazzle_back.runtime.condition_evaluator import evaluate_condition
+
+                    _role_ctx = {
+                        "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
+                    }
+                    for _field in req_detail.fields:
+                        if _field.visible_condition:
+                            if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
+                                _field.visible = False
+
                 # Substitute {id} in the per-request copy only
                 if req_detail.edit_url:
                     req_detail.edit_url = req_detail.edit_url.replace("{id}", str(path_id))
@@ -361,6 +373,18 @@ def create_page_routes(
                     for _field in req_review.fields:
                         if _field.when_expr:
                             _field.visible = evaluate_when_expr(_field.when_expr, req_review.item)
+
+                # Evaluate role-based visible conditions (#487)
+                if ctx.user_roles is not None:
+                    from dazzle_back.runtime.condition_evaluator import evaluate_condition
+
+                    _role_ctx = {
+                        "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
+                    }
+                    for _field in req_review.fields:
+                        if _field.visible_condition:
+                            if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
+                                _field.visible = False
 
                 # Substitute {id} in action transition URLs
                 for action in req_review.actions:

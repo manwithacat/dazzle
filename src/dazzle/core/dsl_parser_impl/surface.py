@@ -30,6 +30,7 @@ class SurfaceParserMixin:
         parse_persona_variant: Any  # From UXParserMixin
         _parse_workspace_access: Any  # From WorkspaceParserMixin
         collect_line_as_expr: Any  # From BaseParser
+        parse_condition_expr: Any  # From ConditionParserMixin
         _source_location: Any  # v0.31.0: Source location helper from BaseParser
         _parse_construct_header: Any
 
@@ -214,6 +215,14 @@ class SurfaceParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
+        # v0.42.0: Optional section-level visible: condition
+        visible_condition = None
+        if self.match(TokenType.VISIBLE):
+            self.advance()
+            self.expect(TokenType.COLON)
+            visible_condition = self.parse_condition_expr()
+            self.skip_newlines()
+
         elements = []
 
         while not self.match(TokenType.DEDENT):
@@ -221,7 +230,7 @@ class SurfaceParserMixin:
             if self.match(TokenType.DEDENT):
                 break
 
-            # field field_name ["label"] [key=value ...]
+            # field field_name ["label"] [key=value ...] [visible: cond] [when: expr]
             if self.match(TokenType.FIELD):
                 self.advance()
                 field_name = self.expect_identifier_or_keyword().value
@@ -246,6 +255,13 @@ class SurfaceParserMixin:
                             opt_val += "." + self.expect_identifier_or_keyword().value
                     options[opt_key] = opt_val
 
+                # v0.42.0: Parse optional visible: role condition
+                field_visible = None
+                if self.match(TokenType.VISIBLE):
+                    self.advance()
+                    self.expect(TokenType.COLON)
+                    field_visible = self.parse_condition_expr()
+
                 # v0.30.0: Parse optional when: condition
                 when_expr = None
                 if self.match(TokenType.WHEN):
@@ -259,6 +275,7 @@ class SurfaceParserMixin:
                         label=label,
                         options=options,
                         when_expr=when_expr,
+                        visible=field_visible,
                     )
                 )
 
@@ -270,6 +287,7 @@ class SurfaceParserMixin:
             name=name,
             title=title,
             elements=elements,
+            visible=visible_condition,
         )
 
     def parse_surface_action(self) -> ir.SurfaceAction:

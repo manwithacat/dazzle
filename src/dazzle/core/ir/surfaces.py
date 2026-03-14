@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from .conditions import ConditionExpr
 from .location import SourceLocation
 from .ux import UXSpec
 
@@ -81,12 +82,16 @@ class SurfaceElement(BaseModel):
         when_expr: Conditional visibility expression (v0.30.0).
             When present, the field is only shown if the expression
             evaluates to true for the current record.
+        visible: Role-based visibility condition (v0.42.0).
+            When present, the field is only shown to users matching the
+            condition (e.g. ``visible: role(admin) or role(manager)``).
     """
 
     field_name: str
     label: str | None = None
     options: dict[str, Any] = Field(default_factory=dict)
     when_expr: Expr | None = None
+    visible: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 
@@ -99,11 +104,15 @@ class SurfaceSection(BaseModel):
         name: Section identifier
         title: Human-readable title
         elements: List of elements in this section
+        visible: Role-based visibility condition (v0.42.0).
+            When present, the entire section is only shown to users
+            matching the condition (e.g. ``visible: role(admin)``).
     """
 
     name: str
     title: str | None = None
     elements: list[SurfaceElement] = Field(default_factory=list)
+    visible: ConditionExpr | None = None
 
     model_config = ConfigDict(frozen=True)
 

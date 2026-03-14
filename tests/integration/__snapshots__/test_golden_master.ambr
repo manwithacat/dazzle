@@ -250,6 +250,7 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
               dict({
@@ -257,11 +258,13 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
             ]),
             'name': 'main',
             'title': 'Tasks',
+            'visible': None,
           }),
         ]),
         'source': dict({
@@ -291,6 +294,7 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
               dict({
@@ -298,6 +302,7 @@
                 'label': 'Description',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
               dict({
@@ -305,11 +310,13 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
             ]),
             'name': 'main',
             'title': 'Task',
+            'visible': None,
           }),
         ]),
         'source': dict({
@@ -339,6 +346,7 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
               dict({
@@ -346,11 +354,13 @@
                 'label': 'Description',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
             ]),
             'name': 'main',
             'title': 'New Task',
+            'visible': None,
           }),
         ]),
         'source': dict({
@@ -380,6 +390,7 @@
                 'label': 'Title',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
               dict({
@@ -387,6 +398,7 @@
                 'label': 'Description',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
               dict({
@@ -394,11 +406,13 @@
                 'label': 'Status',
                 'options': dict({
                 }),
+                'visible': None,
                 'when_expr': None,
               }),
             ]),
             'name': 'main',
             'title': 'Edit Task',
+            'visible': None,
           }),
         ]),
         'source': dict({
