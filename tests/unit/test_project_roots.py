@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
@@ -129,3 +130,21 @@ async def test_first_matching_root_wins(tmp_path: Path):
 
     result = await resolve_project_path_from_roots(session)
     assert result == proj_a
+
+
+@pytest.mark.asyncio
+async def test_list_roots_timeout_falls_back():
+    """If list_roots() hangs indefinitely, timeout triggers fallback (#498)."""
+    session = AsyncMock()
+
+    async def hang_forever():
+        await asyncio.sleep(3600)
+
+    session.list_roots.side_effect = hang_forever
+
+    # Should resolve within ~5s timeout, not hang forever
+    result = await asyncio.wait_for(
+        resolve_project_path_from_roots(session),
+        timeout=10.0,
+    )
+    assert result is not None  # falls back to project root

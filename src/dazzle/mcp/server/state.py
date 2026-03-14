@@ -7,6 +7,7 @@ for project root, dev mode, active project management, and knowledge graph.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 import types
@@ -226,12 +227,13 @@ async def resolve_project_path_from_roots(
     if session is None:
         return resolve_project_path(None)
 
-    # Try to get roots from the client
+    # Try to get roots from the client (timeout prevents indefinite hang
+    # when the MCP client never responds to roots/list — see #498)
     try:
-        roots_result = await session.list_roots()
+        roots_result = await asyncio.wait_for(session.list_roots(), timeout=5.0)
         root_uris = frozenset(str(r.uri) for r in roots_result.roots)
     except Exception:
-        logger.debug("list_roots() unavailable, falling back to default resolution")
+        logger.debug("list_roots() unavailable or timed out, falling back to default resolution")
         return resolve_project_path(None)
 
     # Check cache
