@@ -18,10 +18,11 @@ from __future__ import annotations
 import json
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
-from .common import error_response, extract_progress, wrap_handler_errors
+from .common import DEFAULT_STEP_TIMEOUT, error_response, extract_progress, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp.handlers.pulse")
 
@@ -49,11 +50,11 @@ def pulse_run_impl(
     """
     t0 = time.monotonic()
 
-    pipeline_data = _collect_pipeline(project_path)
-    stories_data = _collect_stories(project_path)
-    coherence_data = _collect_coherence(project_path, business_context)
-    policy_data = _collect_policy(project_path)
-    compliance_data = _collect_compliance(project_path)
+    # Run collectors in parallel with per-collector timeout to prevent
+    # any single slow handler from stalling the entire pulse report.
+    pipeline_data, stories_data, coherence_data, policy_data, compliance_data = (
+        _collect_all_parallel(project_path, business_context)
+    )
 
     project_name = _extract_project_name(pipeline_data, project_path)
 
@@ -121,11 +122,9 @@ def pulse_radar_impl(
     """
     t0 = time.monotonic()
 
-    pipeline_data = _collect_pipeline(project_path)
-    stories_data = _collect_stories(project_path)
-    coherence_data = _collect_coherence(project_path, business_context)
-    policy_data = _collect_policy(project_path)
-    compliance_data = _collect_compliance(project_path)
+    pipeline_data, stories_data, coherence_data, policy_data, compliance_data = (
+        _collect_all_parallel(project_path, business_context)
+    )
 
     radar = _compute_radar(
         pipeline_data, stories_data, coherence_data, policy_data, compliance_data
@@ -174,8 +173,12 @@ def pulse_persona_impl(
     """
     t0 = time.monotonic()
 
-    story_list_data = _collect_story_list(project_path)
-    coverage_data = _collect_stories(project_path)
+    with ThreadPoolExecutor(max_workers=2, thread_name_prefix="pulse-per") as pool:
+        fut_list = pool.submit(_collect_story_list, project_path)
+        fut_cov = pool.submit(_collect_stories, project_path)
+
+    story_list_data = _safe_result(fut_list, "story_list")
+    coverage_data = _safe_result(fut_cov, "stories")
 
     all_stories: list[dict[str, Any]] = story_list_data.get("stories", [])
     persona_stories = [s for s in all_stories if s.get("actor", "").lower() == persona_name.lower()]
@@ -258,11 +261,19 @@ def pulse_timeline_impl(
     """
     t0 = time.monotonic()
 
-    pipeline_data = _collect_pipeline(project_path)
-    stories_data = _collect_stories(project_path)
-    story_list_data = _collect_story_list(project_path)
-    policy_data = _collect_policy(project_path)
-    coherence_data = _collect_coherence(project_path, business_context)
+    # Run collectors in parallel
+    with ThreadPoolExecutor(max_workers=5, thread_name_prefix="pulse-tl") as pool:
+        fut_pipeline = pool.submit(_collect_pipeline, project_path)
+        fut_stories = pool.submit(_collect_stories, project_path)
+        fut_story_list = pool.submit(_collect_story_list, project_path)
+        fut_policy = pool.submit(_collect_policy, project_path)
+        fut_coherence = pool.submit(_collect_coherence, project_path, business_context)
+
+    pipeline_data = _safe_result(fut_pipeline, "pipeline")
+    stories_data = _safe_result(fut_stories, "stories")
+    story_list_data = _safe_result(fut_story_list, "story_list")
+    policy_data = _safe_result(fut_policy, "policy")
+    coherence_data = _safe_result(fut_coherence, "coherence")
 
     milestones = _derive_milestones(
         pipeline_data, stories_data, story_list_data, policy_data, coherence_data
@@ -315,10 +326,17 @@ def pulse_decisions_impl(
     """
     t0 = time.monotonic()
 
-    stories_data = _collect_stories(project_path)
-    coherence_data = _collect_coherence(project_path, business_context)
-    policy_data = _collect_policy(project_path)
-    pipeline_data = _collect_pipeline(project_path)
+    # Run collectors in parallel
+    with ThreadPoolExecutor(max_workers=4, thread_name_prefix="pulse-dec") as pool:
+        fut_stories = pool.submit(_collect_stories, project_path)
+        fut_coherence = pool.submit(_collect_coherence, project_path, business_context)
+        fut_policy = pool.submit(_collect_policy, project_path)
+        fut_pipeline = pool.submit(_collect_pipeline, project_path)
+
+    stories_data = _safe_result(fut_stories, "stories")
+    coherence_data = _safe_result(fut_coherence, "coherence")
+    policy_data = _safe_result(fut_policy, "policy")
+    pipeline_data = _safe_result(fut_pipeline, "pipeline")
 
     decisions = _decision_queue(stories_data, coherence_data, policy_data, pipeline_data)
 
@@ -634,6 +652,68 @@ def _render_wfs_markdown(results: dict[str, Any]) -> list[str]:
 # ---------------------------------------------------------------------------
 # Data collectors — each calls one handler and returns a parsed dict.
 # ---------------------------------------------------------------------------
+
+
+_COLLECTOR_TIMEOUT: float = DEFAULT_STEP_TIMEOUT
+
+
+def _safe_result(fut: Any, name: str) -> dict[str, Any]:
+    """Extract a future's result with timeout protection."""
+    try:
+        result: dict[str, Any] = fut.result(timeout=_COLLECTOR_TIMEOUT)
+        return result
+    except TimeoutError:
+        logger.warning("Pulse collector '%s' timed out", name)
+        return {"error": f"{name} timed out after {_COLLECTOR_TIMEOUT:.0f}s"}
+    except Exception as e:
+        logger.warning("Pulse collector '%s' failed: %s", name, e)
+        return {"error": str(e)}
+
+
+def _collect_all_parallel(
+    project_path: Path,
+    business_context: str | None = None,
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any], dict[str, Any]]:
+    """Run all five pulse collectors in parallel with per-collector timeout.
+
+    Returns (pipeline, stories, coherence, policy, compliance) dicts.
+    Any collector that times out or errors returns {"error": "<message>"}.
+    """
+    collectors: dict[str, tuple[Any, tuple[Any, ...]]] = {
+        "pipeline": (_collect_pipeline, (project_path,)),
+        "stories": (_collect_stories, (project_path,)),
+        "coherence": (_collect_coherence, (project_path, business_context)),
+        "policy": (_collect_policy, (project_path,)),
+        "compliance": (_collect_compliance, (project_path,)),
+    }
+
+    results: dict[str, dict[str, Any]] = {}
+
+    with ThreadPoolExecutor(max_workers=5, thread_name_prefix="pulse") as pool:
+        futures = {pool.submit(fn, *args): name for name, (fn, args) in collectors.items()}
+        for fut in as_completed(futures, timeout=_COLLECTOR_TIMEOUT * 2):
+            name = futures[fut]
+            try:
+                results[name] = fut.result(timeout=_COLLECTOR_TIMEOUT)
+            except TimeoutError:
+                logger.warning("Pulse collector '%s' timed out", name)
+                results[name] = {"error": f"{name} timed out after {_COLLECTOR_TIMEOUT:.0f}s"}
+            except Exception as e:
+                logger.warning("Pulse collector '%s' failed: %s", name, e)
+                results[name] = {"error": str(e)}
+
+    # Fill any missing collectors (shouldn't happen, but be safe)
+    for name in collectors:
+        if name not in results:
+            results[name] = {"error": f"{name} did not complete"}
+
+    return (
+        results["pipeline"],
+        results["stories"],
+        results["coherence"],
+        results["policy"],
+        results["compliance"],
+    )
 
 
 def _collect_pipeline(project_path: Path) -> dict[str, Any]:

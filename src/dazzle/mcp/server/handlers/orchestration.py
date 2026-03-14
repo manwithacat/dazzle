@@ -14,6 +14,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from .common import DEFAULT_STEP_TIMEOUT
+
 logger = logging.getLogger("dazzle.mcp.handlers.orchestration")
 
 
@@ -44,6 +46,7 @@ def run_step(
     *,
     activity_store: Any | None = None,
     activity_prefix: str = "",
+    timeout: float = DEFAULT_STEP_TIMEOUT,
 ) -> dict[str, Any]:
     """Execute a single quality step and return a structured result dict.
 
@@ -51,6 +54,7 @@ def run_step(
         step: The step to execute.
         activity_store: Optional activity store for logging start/end events.
         activity_prefix: Prefix for activity event names (e.g. "nightly:").
+        timeout: Maximum wall-clock seconds for the step (0 = no limit).
 
     Returns:
         dict with keys: operation, status, duration_ms, and either result or error.
@@ -69,7 +73,18 @@ def run_step(
     error_msg: str | None = None
 
     try:
-        raw = step.handler(*step.handler_args, **step.handler_kwargs)
+        if timeout > 0:
+            from .common import run_with_timeout
+
+            raw = run_with_timeout(
+                step.handler,
+                step.handler_args,
+                step.handler_kwargs,
+                timeout=timeout,
+                label=step.name,
+            )
+        else:
+            raw = step.handler(*step.handler_args, **step.handler_kwargs)
         duration_ms = (time.monotonic() - t0) * 1000
         result["duration_ms"] = round(duration_ms, 1)
 
@@ -86,6 +101,15 @@ def run_step(
         except (json.JSONDecodeError, TypeError):
             result["status"] = "passed"
             result["result"] = str(raw)[:500]
+
+    except TimeoutError as e:
+        duration_ms = (time.monotonic() - t0) * 1000
+        result["duration_ms"] = round(duration_ms, 1)
+        result["status"] = "error"
+        result["error"] = str(e)
+        ok = False
+        error_msg = str(e)
+        logger.warning("Quality step %s timed out after %.0fs", step.name, timeout)
 
     except Exception as e:
         duration_ms = (time.monotonic() - t0) * 1000
@@ -130,6 +154,7 @@ def run_steps_sequential(
     *,
     stop_on_error: bool = False,
     progress: Any | None = None,
+    per_step_timeout: float = DEFAULT_STEP_TIMEOUT,
 ) -> tuple[list[dict[str, Any]], list[str]]:
     """Run quality steps sequentially, collecting results and errors.
 
@@ -137,6 +162,7 @@ def run_steps_sequential(
         steps: Ordered list of steps to execute.
         stop_on_error: If True, stop after the first error.
         progress: Optional progress reporter with advance_sync(step, total, name).
+        per_step_timeout: Maximum wall-clock seconds per step (0 = no limit).
 
     Returns:
         (step_results, error_messages)
@@ -149,7 +175,7 @@ def run_steps_sequential(
         if progress is not None:
             progress.advance_sync(idx, total, step.name)
 
-        step_result = run_step(step)
+        step_result = run_step(step, timeout=per_step_timeout)
         step_result["step"] = idx
         results.append(step_result)
 
