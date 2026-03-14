@@ -579,6 +579,14 @@ def _convert_access_condition(cond: ir.ConditionExpr) -> AccessConditionSpec:
             role_name=cond.role_check.role_name,
         )
 
+    # Grant check condition: has_grant("relation", scope_field)
+    if cond.grant_check is not None:
+        return AccessConditionSpec(
+            kind="grant_check",
+            grant_relation=cond.grant_check.relation,
+            grant_scope_field=cond.grant_check.scope_field,
+        )
+
     # Simple comparison condition
     if cond.comparison is not None:
         comp = cond.comparison

@@ -205,7 +205,9 @@ class AccessConditionSpec(BaseModel):
         - owner.team_id = current_team and status = active
     """
 
-    kind: Literal["comparison", "role_check", "logical"] = Field(description="Condition type")
+    kind: Literal["comparison", "role_check", "logical", "grant_check"] = Field(
+        description="Condition type"
+    )
     # For comparison: field, operator, value
     field: str | None = Field(
         default=None,
@@ -222,6 +224,13 @@ class AccessConditionSpec(BaseModel):
     )
     # For role_check: role name
     role_name: str | None = Field(default=None, description="Role name for role() check")
+    # For grant_check: has_grant(relation, scope_field)
+    grant_relation: str | None = Field(
+        default=None, description="Grant relation name for has_grant() check"
+    )
+    grant_scope_field: str | None = Field(
+        default=None, description="Scope field for has_grant() check"
+    )
     # For logical: left, operator, right
     logical_op: AccessLogicalKind | None = Field(
         default=None, description="Logical operator (AND/OR)"

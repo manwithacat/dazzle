@@ -265,6 +265,23 @@ def evaluate_access_condition(
             return context.has_role(role_name)
         return False
 
+    elif condition.kind == "grant_check":
+        # Grant checks require runtime grant resolution.
+        # When active_grants are available on the context, evaluate them;
+        # otherwise fall through to False (deny) — the grant isn't proven.
+        active_grants: list[dict[str, Any]] = getattr(context, "active_grants", [])
+        if not active_grants:
+            return False
+        scope_value = record.get(condition.grant_scope_field or "")
+        if not scope_value:
+            return False
+        for grant in active_grants:
+            if grant.get("relation") == condition.grant_relation and grant.get(
+                "scope_value"
+            ) == str(scope_value):
+                return True
+        return False
+
     elif condition.kind == "logical":
         left_result = True
         right_result = True
