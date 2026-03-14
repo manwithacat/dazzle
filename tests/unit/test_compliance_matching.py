@@ -167,15 +167,16 @@ class TestConfidenceThreshold:
         assert result is None
 
 
-class TestInferComplianceUKFields:
-    """End-to-end: infer_compliance_requirements detects UK identifiers."""
+class _AppSpecHelper:
+    """Shared helpers for building mock AppSpec objects."""
 
     @staticmethod
-    def _make_appspec(entities):
+    def _make_appspec(entities, policies=None):
         from unittest.mock import MagicMock
 
         spec = MagicMock()
         spec.domain.entities = entities
+        spec.policies = policies
         return spec
 
     @staticmethod
@@ -192,6 +193,10 @@ class TestInferComplianceUKFields:
         entity.fields = fields
         entity.access = None
         return entity
+
+
+class TestInferComplianceUKFields(_AppSpecHelper):
+    """End-to-end: infer_compliance_requirements detects UK identifiers."""
 
     def test_nino_and_utr_detected_as_pii(self):
         entity = self._make_entity("Contact", ["id", "name", "ni_number", "personal_utr", "email"])
@@ -217,3 +222,82 @@ class TestInferComplianceUKFields:
         result = infer_compliance_requirements(appspec)
 
         assert "GDPR" in result["recommended_frameworks"]
+
+
+class TestDslClassifyDirectives(_AppSpecHelper):
+    """DSL classify directives should be used with confidence=1.0 and skip pattern matching."""
+
+    @staticmethod
+    def _make_policies(classifications):
+        from unittest.mock import MagicMock
+
+        policies = MagicMock()
+        policies.classifications = classifications
+        return policies
+
+    @staticmethod
+    def _make_classification(entity, field, classification_value):
+        from unittest.mock import MagicMock
+
+        cls = MagicMock()
+        cls.entity = entity
+        cls.field = field
+        cls.classification.value = classification_value
+        return cls
+
+    def test_pii_direct_from_classify(self):
+        """classify Customer.email as PII_DIRECT → pii_fields with confidence 1.0."""
+        entity = self._make_entity("Customer", ["id", "email"])
+        cls = self._make_classification("Customer", "email", "pii_direct")
+        policies = self._make_policies([cls])
+        appspec = self._make_appspec([entity], policies=policies)
+
+        result = infer_compliance_requirements(appspec)
+        pii = result["pii_fields"]
+        # Should have exactly one entry from classify, none from pattern matching
+        email_entries = [e for e in pii if e["field"] == "email"]
+        assert len(email_entries) == 1
+        assert email_entries[0]["confidence"] == 1.0
+        assert email_entries[0]["pattern"] == "classify:pii_direct"
+
+    def test_financial_from_classify(self):
+        """classify Order.total as FINANCIAL_TXN → financial_fields."""
+        entity = self._make_entity("Order", ["id", "total"])
+        cls = self._make_classification("Order", "total", "financial_txn")
+        policies = self._make_policies([cls])
+        appspec = self._make_appspec([entity], policies=policies)
+
+        result = infer_compliance_requirements(appspec)
+        fin = result["financial_fields"]
+        total_entries = [e for e in fin if e["field"] == "total"]
+        assert len(total_entries) == 1
+        assert total_entries[0]["confidence"] == 1.0
+
+    def test_classified_field_skips_pattern_matching(self):
+        """A field classified via DSL should not also appear from pattern matching."""
+        entity = self._make_entity("Customer", ["id", "email", "phone"])
+        cls = self._make_classification("Customer", "email", "pii_direct")
+        policies = self._make_policies([cls])
+        appspec = self._make_appspec([entity], policies=policies)
+
+        result = infer_compliance_requirements(appspec)
+        pii = result["pii_fields"]
+        email_entries = [e for e in pii if e["field"] == "email"]
+        # Only the classify entry, no pattern-match duplicate
+        assert len(email_entries) == 1
+        assert email_entries[0]["pattern"] == "classify:pii_direct"
+        # phone should still be detected by pattern matching
+        phone_entries = [e for e in pii if e["field"] == "phone"]
+        assert len(phone_entries) >= 1
+        assert phone_entries[0]["confidence"] < 1.0
+
+    def test_no_policies_still_works(self):
+        """When appspec.policies is None, pattern matching runs normally."""
+        entity = self._make_entity("Customer", ["id", "email"])
+        appspec = self._make_appspec([entity], policies=None)
+
+        result = infer_compliance_requirements(appspec)
+        pii = result["pii_fields"]
+        email_entries = [e for e in pii if e["field"] == "email"]
+        assert len(email_entries) >= 1
+        assert email_entries[0]["confidence"] < 1.0  # From pattern matching

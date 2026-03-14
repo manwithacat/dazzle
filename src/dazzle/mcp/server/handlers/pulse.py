@@ -747,13 +747,20 @@ def _content_score(coherence: dict[str, Any]) -> float:
 
 
 def _security_score(policy: dict[str, Any]) -> float:
-    """Security axis: proportion of entity/persona combos with explicit rules."""
+    """Security axis: proportion of entity/persona combos with a deliberate posture.
+
+    Default-deny is a *secure* posture — it means the app blocks access unless
+    explicitly granted.  We therefore count explicit allow + explicit deny +
+    default deny as "covered".  Only combinations with *no* rule at all are gaps.
+    """
     summary = policy.get("summary", {})
     total = int(summary.get("total_combinations", 0))
     if total == 0:
         return 0.0
-    # "covered" = explicit allow + explicit deny (not default-deny)
-    covered = int(summary.get("allow", 0)) + int(summary.get("explicit_deny", 0))
+    allow = int(summary.get("allow", 0))
+    explicit_deny = int(summary.get("explicit_deny", 0))
+    default_deny = int(summary.get("default_deny", 0))
+    covered = allow + explicit_deny + default_deny
     return float(round((covered / total) * 100, 1))
 
 

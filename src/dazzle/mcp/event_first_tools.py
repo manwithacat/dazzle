@@ -762,16 +762,35 @@ def infer_multi_tenancy(appspec: ir.AppSpec) -> dict[str, Any]:
 def infer_compliance_requirements(appspec: ir.AppSpec) -> dict[str, Any]:
     """Infer compliance requirements from AppSpec.
 
-    Looks for:
-    - PII fields (name, email, phone, address)
-    - Financial fields (amount, price, payment)
-    - Health data indicators
-    - Geographic data
+    Reads DSL classify directives first (confidence=1.0), then uses
+    pattern matching as a fallback for unclassified fields.
     """
     pii_fields: list[dict[str, Any]] = []
     financial_fields: list[dict[str, Any]] = []
     health_fields: list[dict[str, Any]] = []
 
+    # Phase 1: Read explicit DSL classify directives (confidence=1.0)
+    classified_fields: set[tuple[str, str]] = set()  # (entity, field)
+    if appspec.policies:
+        for cls in appspec.policies.classifications:
+            entry = {
+                "entity": cls.entity,
+                "field": cls.field,
+                "pattern": f"classify:{cls.classification.value}",
+                "confidence": 1.0,
+            }
+            classified_fields.add((cls.entity, cls.field))
+            cv = cls.classification.value
+            if cv.startswith("pii_"):
+                pii_fields.append(entry)
+            elif cv.startswith("financial_"):
+                financial_fields.append(entry)
+            elif cv == "pii_sensitive":
+                # PII_SENSITIVE could be health — add to both
+                pii_fields.append(entry)
+                health_fields.append(entry)
+
+    # Phase 2: Pattern-match unclassified fields
     pii_patterns = {
         "name": 0.7,
         "email": 0.95,
@@ -817,6 +836,8 @@ def infer_compliance_requirements(appspec: ir.AppSpec) -> dict[str, Any]:
 
     for entity in appspec.domain.entities:
         for f in entity.fields:
+            if (entity.name, f.name) in classified_fields:
+                continue
             for pattern, base_conf in pii_patterns.items():
                 conf = _match_compliance_pattern(f.name, entity.name, pattern, base_conf)
                 if conf is not None:
