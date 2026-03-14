@@ -39,6 +39,7 @@ FIELD_TYPE_TO_INPUT: dict[FieldTypeKind, str] = {
     FieldTypeKind.EMAIL: "email",
     FieldTypeKind.URL: "url",
     FieldTypeKind.ENUM: "select",
+    FieldTypeKind.FILE: "file",
 }
 
 DEFAULT_INPUT_TYPE = "text"

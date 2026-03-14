@@ -534,3 +534,48 @@ class TestMoneyFieldExpansion:
             g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
         ]
         assert type_gaps == []
+
+    def test_file_field_input_type_no_false_positive(self) -> None:
+        """File fields with type='file' should not be flagged as incorrect."""
+        surface = _make_surface(
+            name="manuscript_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["file_url"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="file_url", type=FieldType(kind=FieldTypeKind.FILE))],
+        )
+        html = """
+        <form hx-post="/manuscripts">
+            <input type="file" name="file_url">
+            <button type="submit">Upload</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert type_gaps == []
+
+    def test_file_field_text_input_flagged(self) -> None:
+        """File fields rendered as text inputs should be flagged."""
+        surface = _make_surface(
+            name="manuscript_create",
+            mode=SurfaceMode.CREATE,
+            field_names=["file_url"],
+        )
+        entity = _make_entity(
+            [FieldSpec(name="file_url", type=FieldType(kind=FieldTypeKind.FILE))],
+        )
+        html = """
+        <form hx-post="/manuscripts">
+            <input type="text" name="file_url">
+            <button type="submit">Upload</button>
+        </form>
+        """
+        score = score_surface_fidelity(surface, entity, html)
+        type_gaps = [
+            g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
+        ]
+        assert len(type_gaps) == 1
+        assert "file" in type_gaps[0].expected
