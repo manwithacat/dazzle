@@ -142,6 +142,27 @@ class TestWidgetRendering:
         src = inspect.getsource(ActiveToolWidget.__init__)
         assert "markup=False" in src
 
+    def test_tool_call_row_passes_markup_false(self) -> None:
+        """ToolCallRow in workshop_screens passes markup=False to Static."""
+        import inspect
+
+        from dazzle.mcp.server.workshop_screens import ToolCallRow
+
+        src = inspect.getsource(ToolCallRow.__init__)
+        assert "markup=False" in src
+
+    def test_tool_call_row_bracket_summary_safe(self) -> None:
+        """ToolCallRow renders bracket-rich summaries without markup errors."""
+        from dazzle.mcp.server.workshop_screens import ToolCallRow
+
+        call = self._make_call(
+            context_json='{"passed": 0, "total": 438, "skipped": 0}',
+        )
+        row = ToolCallRow(call, id="test-bracket")
+        text = row.render()
+        assert "passed=0" in text
+        assert row._render_markup is False
+
 
 class TestWorkshopData:
     def test_ingest_tool_start(self):

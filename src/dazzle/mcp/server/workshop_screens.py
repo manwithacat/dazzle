@@ -46,7 +46,7 @@ if TEXTUAL_AVAILABLE:
         can_focus = True
 
         def __init__(self, call: ToolCall, **kwargs: Any) -> None:
-            super().__init__(**kwargs)
+            super().__init__(markup=False, **kwargs)
             self._call = call
 
         def render(self) -> str:
@@ -141,13 +141,14 @@ if TEXTUAL_AVAILABLE:
             body.mount(
                 Label(
                     f" {c.label}  \u2500  {ts}  \u2500  {dur}  \u2500  {icon}",
+                    markup=False,
                     classes="detail-header",
                 )
             )
 
             # Purpose
             body.mount(Label("\n Purpose", classes="section-header"))
-            body.mount(Label(f"   {c.purpose}"))
+            body.mount(Label(f"   {c.purpose}", markup=False))
 
             # DSL Context
             self._mount_dsl_context(body, c)
@@ -170,17 +171,17 @@ if TEXTUAL_AVAILABLE:
                     if etype == "tool_end":
                         icon = "\u2714 " if evt.get("success", True) else "\u2718 "
 
-                    body.mount(Label(f"   {rel}  {icon}{progress}{msg}"))
+                    body.mount(Label(f"   {rel}  {icon}{progress}{msg}", markup=False))
 
             # Summary
             if c.summary:
                 body.mount(Label("\n Summary", classes="section-header"))
-                body.mount(Label(f"   {c.summary}"))
+                body.mount(Label(f"   {c.summary}", markup=False))
 
             # Error
             if c.error:
                 body.mount(Label("\n Error", classes="section-header"))
-                body.mount(Label(f"   {c.error}", classes="error-text"))
+                body.mount(Label(f"   {c.error}", markup=False, classes="error-text"))
 
         def _mount_dsl_context(self, body: VerticalScroll, c: ToolCall) -> None:
             """Extract and display DSL context from context_json."""
@@ -206,4 +207,4 @@ if TEXTUAL_AVAILABLE:
 
             body.mount(Label("\n DSL Context", classes="section-header"))
             for item in items:
-                body.mount(Label(item))
+                body.mount(Label(item, markup=False))
