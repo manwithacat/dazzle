@@ -189,27 +189,11 @@ def build_entity_list_projections(
                 # Required fields not in view (Pydantic needs them)
                 for fname, (fkind, freq) in fields_meta.items():
                     if freq and fname not in view_field_names and fname != "id":
-                        columns.extend(
-                            _expand_money_field(fname)
-                            if fkind == "money"
-                            else [
-                                f"{fname}_id"
-                                if fkind == "ref" and not fname.endswith("_id")
-                                else fname
-                            ]
-                        )
+                        columns.extend(_expand_money_field(fname) if fkind == "money" else [fname])
                 # View's explicit fields
                 for f in view.fields:
                     kind = fields_meta.get(f.name, ("scalar", False))[0]
-                    columns.extend(
-                        _expand_money_field(f.name)
-                        if kind == "money"
-                        else [
-                            f"{f.name}_id"
-                            if kind == "ref" and not f.name.endswith("_id")
-                            else f.name
-                        ]
-                    )
+                    columns.extend(_expand_money_field(f.name) if kind == "money" else [f.name])
                 if "id" not in columns:
                     columns.insert(0, "id")
                 projections[entity_ref] = columns
@@ -226,25 +210,11 @@ def build_entity_list_projections(
                 # Required fields not explicitly listed
                 for fname, (fkind, freq) in fields_meta.items():
                     if freq and fname not in surface_field_names and fname != "id":
-                        columns.extend(
-                            _expand_money_field(fname)
-                            if fkind == "money"
-                            else [
-                                f"{fname}_id"
-                                if fkind == "ref" and not fname.endswith("_id")
-                                else fname
-                            ]
-                        )
+                        columns.extend(_expand_money_field(fname) if fkind == "money" else [fname])
                 # Surface's declared fields
                 for fname in surface_field_names:
                     kind = fields_meta.get(fname, ("scalar", False))[0]
-                    columns.extend(
-                        _expand_money_field(fname)
-                        if kind == "money"
-                        else [
-                            f"{fname}_id" if kind == "ref" and not fname.endswith("_id") else fname
-                        ]
-                    )
+                    columns.extend(_expand_money_field(fname) if kind == "money" else [fname])
                 if "id" not in columns:
                     columns.insert(0, "id")
                 projections[entity_ref] = columns

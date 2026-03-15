@@ -322,14 +322,14 @@ class TestSurfaceSectionProjection:
         assert result == {}
 
 
-# ── Ref field → _id column translation ──────────────────────────────
+# ── Ref field projection (uses field name as-is, matching DB column) ─
 
 
 class TestRefFieldProjection:
-    """Ref fields must project to their _id storage column (#496)."""
+    """Ref fields use their field name directly as the DB column (#499)."""
 
-    def test_view_ref_field_becomes_id_column(self) -> None:
-        """View field 'assigned_agent' (ref) → 'assigned_agent_id' in SQL."""
+    def test_view_ref_field_uses_field_name(self) -> None:
+        """View field 'assigned_agent' (ref) stays 'assigned_agent' in SQL."""
         entity = _entity(
             "Contact",
             [
@@ -343,11 +343,10 @@ class TestRefFieldProjection:
 
         result = build_entity_list_projections([entity], [surface], [view])
 
-        assert "assigned_agent_id" in result["Contact"]
-        assert "assigned_agent" not in result["Contact"]
+        assert "assigned_agent" in result["Contact"]
 
-    def test_surface_section_ref_field_becomes_id_column(self) -> None:
-        """Surface section ref field also translated to _id column."""
+    def test_surface_section_ref_field_uses_field_name(self) -> None:
+        """Surface section ref field uses field name directly."""
         entity = _entity(
             "Task",
             [
@@ -360,11 +359,10 @@ class TestRefFieldProjection:
 
         result = build_entity_list_projections([entity], [surface], [])
 
-        assert "assignee_id" in result["Task"]
-        assert "assignee" not in result["Task"]
+        assert "assignee" in result["Task"]
 
-    def test_required_ref_field_not_in_view_becomes_id_column(self) -> None:
-        """Required ref field auto-included also gets _id translation."""
+    def test_required_ref_field_not_in_view_uses_field_name(self) -> None:
+        """Required ref field auto-included uses field name directly."""
         entity = _entity(
             "Order",
             [
@@ -378,22 +376,4 @@ class TestRefFieldProjection:
 
         result = build_entity_list_projections([entity], [surface], [view])
 
-        assert "customer_id" in result["Order"]
-        assert "customer" not in result["Order"]
-
-    def test_field_already_ending_in_id_not_doubled(self) -> None:
-        """A ref field named 'owner_id' should not become 'owner_id_id'."""
-        entity = _entity(
-            "Task",
-            [
-                _pk(),
-                _field("owner_id", ir.FieldTypeKind.REF),
-            ],
-        )
-        surface = _surface("task_list", "Task", "task_view")
-        view = _view("task_view", ["owner_id"])
-
-        result = build_entity_list_projections([entity], [surface], [view])
-
-        assert "owner_id" in result["Task"]
-        assert "owner_id_id" not in result["Task"]
+        assert "customer" in result["Order"]
