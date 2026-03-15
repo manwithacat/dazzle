@@ -376,3 +376,74 @@ class TestJsonProjection:
             json_projection=["id", "name"],
         )
         assert result["items"] == []
+
+
+class TestHtmxErrorRecovery:
+    """HTMX render errors should return a visible error row, not a 500 (#496)."""
+
+    @pytest.mark.asyncio
+    async def test_htmx_render_error_returns_error_row(self) -> None:
+        """Template rendering failure should produce an error row, not hang."""
+        from unittest.mock import patch
+
+        from starlette.responses import HTMLResponse
+
+        req = _mock_request(accept="text/html", hx_request=True)
+        # Set htmx_columns on request.state so the handler enters the HTMX path
+        req.state.htmx_columns = [{"key": "name", "label": "Name", "type": "text"}]
+        req.state.htmx_detail_url = "/app/item/{id}"
+        req.state.htmx_entity_name = "Item"
+        req.state.htmx_empty_message = "No items."
+
+        # Make render_fragment raise a non-ImportError exception
+        with patch(
+            "dazzle_ui.runtime.template_renderer.render_fragment",
+            side_effect=RuntimeError("template boom"),
+        ):
+            result = await _list_handler_body(
+                service=_mock_service(items=[{"id": "1", "name": "A"}]),
+                access_spec=None,
+                is_authenticated=False,
+                user_id=None,
+                request=req,
+                page=1,
+                page_size=20,
+                sort=None,
+                dir="asc",
+                search=None,
+                entity_name="Item",
+            )
+
+        assert isinstance(result, HTMLResponse)
+        body = result.body.decode()
+        assert "Something went wrong" in body
+        assert result.status_code == 200  # 200 so HTMX swaps the content
+
+    @pytest.mark.asyncio
+    async def test_htmx_successful_render_returns_html(self) -> None:
+        """HTMX path renders HTML when template renderer is available."""
+        from starlette.responses import HTMLResponse
+
+        req = _mock_request(accept="text/html", hx_request=True)
+        req.state.htmx_columns = [{"key": "name", "label": "Name", "type": "text"}]
+        req.state.htmx_detail_url = "/app/item/{id}"
+        req.state.htmx_entity_name = "Item"
+        req.state.htmx_empty_message = "No items."
+
+        result = await _list_handler_body(
+            service=_mock_service(items=[{"id": "1", "name": "Alice"}]),
+            access_spec=None,
+            is_authenticated=False,
+            user_id=None,
+            request=req,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            entity_name="Item",
+        )
+        assert isinstance(result, HTMLResponse)
+        body = result.body.decode()
+        assert "Alice" in body
+        assert "Something went wrong" not in body

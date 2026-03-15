@@ -1033,6 +1033,21 @@ async def _list_handler_body(
             return HTMLResponse(content=html)
         except ImportError:
             pass  # Template renderer not available, fall through to JSON
+        except Exception:
+            import logging as _logging
+
+            _logging.getLogger("dazzle.runtime").exception(
+                "HTMX fragment render failed for %s", entity_name
+            )
+            # Return an error row so the skeleton resolves with a visible message
+            # instead of hanging indefinitely (#496).
+            return HTMLResponse(
+                content=(
+                    '<tr><td colspan="99" class="text-center py-8 text-error">'
+                    "Something went wrong loading this list.</td></tr>"
+                ),
+                status_code=200,
+            )
 
     # Apply field projection to JSON responses (#360)
     if json_projection and result and isinstance(result, dict) and "items" in result:
