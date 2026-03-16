@@ -277,12 +277,12 @@ def _extract_condition_filters(
         field = getattr(comp, "field", None)
         cond_value = getattr(comp, "value", None)
         op = getattr(comp, "operator", None)
-        op_val = op.value if hasattr(op, "value") else str(op) if op else "="
+        op_val = getattr(op, "value", None) or (str(op) if op else "=")
 
         # Resolve the raw value from ConditionValue or plain string
         raw_value: Any = None
-        if hasattr(cond_value, "literal"):
-            raw_value = cond_value.literal
+        if cond_value is not None and hasattr(cond_value, "literal"):
+            raw_value = getattr(cond_value, "literal", cond_value)
         elif isinstance(cond_value, str):
             raw_value = cond_value
         else:
