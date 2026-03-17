@@ -297,6 +297,12 @@ def create_page_routes(
                             if not evaluate_condition(_field.visible_condition, {}, _role_ctx):
                                 _field.visible = False
 
+                    # Hide related tabs whose visible_condition doesn't match (#501)
+                    for _tab in req_detail.related_tabs:
+                        if _tab.visible_condition:
+                            if not evaluate_condition(_tab.visible_condition, {}, _role_ctx):
+                                _tab.visible = False
+
                 # Substitute {id} in the per-request copy only
                 if req_detail.edit_url:
                     req_detail.edit_url = req_detail.edit_url.replace("{id}", str(path_id))

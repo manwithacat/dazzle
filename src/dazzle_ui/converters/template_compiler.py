@@ -714,6 +714,15 @@ def _compile_view_surface(
                     )
                 )
 
+    # Build section-to-visible-condition map for propagating to related tabs (#501)
+    _section_vis_map: dict[str, dict[str, Any]] = {}
+    if surface.sections:
+        for _sec in surface.sections:
+            _sec_vis = getattr(_sec, "visible", None)
+            if _sec_vis is not None:
+                # Index by section name (lowercase) for fuzzy matching
+                _section_vis_map[_sec.name.lower()] = _sec_vis.model_dump()
+
     # Build related entity tabs from reverse references
     related_tabs: list[RelatedTabContext] = []
     for ref_entity_name, fk_field, ref_entity in reverse_refs or []:
@@ -722,6 +731,13 @@ def _compile_view_surface(
         tab_label = (ref_entity.title or ref_entity_name).replace("_", " ")
         # Build columns from the related entity's fields (exclude FK to parent)
         tab_columns = [c for c in _build_entity_columns(ref_entity) if c.key != fk_field]
+        # Match section visible condition to tab (#501)
+        _ref_lower = ref_entity_name.lower()
+        _tab_vis = (
+            _section_vis_map.get(_ref_lower)
+            or _section_vis_map.get(_ref_lower.replace("_", ""))
+            or _section_vis_map.get(ref_slug.replace("-", "_"))
+        )
         related_tabs.append(
             RelatedTabContext(
                 tab_id=f"tab-{ref_slug}",
@@ -732,6 +748,7 @@ def _compile_view_surface(
                 columns=tab_columns,
                 detail_url_template=f"{app_prefix}/{ref_slug}/{{id}}",
                 create_url=f"{app_prefix}/{ref_slug}/create",
+                visible_condition=_tab_vis,
             )
         )
 
@@ -743,6 +760,11 @@ def _compile_view_surface(
         # Exclude both the type and id fields from displayed columns
         exclude = {type_field, id_field}
         tab_columns = [c for c in _build_entity_columns(src_entity) if c.key not in exclude]
+        # Match section visible condition to tab (#501)
+        _src_lower = src_name.lower()
+        _poly_vis = _section_vis_map.get(_src_lower) or _section_vis_map.get(
+            _src_lower.replace("_", "")
+        )
         related_tabs.append(
             RelatedTabContext(
                 tab_id=f"tab-{ref_slug}-{type_val}",
@@ -755,6 +777,7 @@ def _compile_view_surface(
                 create_url=f"{app_prefix}/{ref_slug}/create",
                 filter_type_field=type_field,
                 filter_type_value=type_val,
+                visible_condition=_poly_vis,
             )
         )
 

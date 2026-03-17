@@ -112,6 +112,7 @@
     {# Tab navigation with count badges #}
     <div class="tabs tabs-bordered" role="tablist">
       {% for tab in detail.related_tabs %}
+      {% if tab.visible | default(true) %}
       <button class="tab{% if loop.first %} tab-active{% endif %}"
               role="tab"
               aria-selected="{{ 'true' if loop.first else 'false' }}"
@@ -120,11 +121,13 @@
         {{ tab.label }}
         <span class="badge badge-sm ml-1">{{ tab.total }}</span>
       </button>
+      {% endif %}
       {% endfor %}
     </div>
 
     {# Tab panels #}
     {% for tab in detail.related_tabs %}
+    {% if tab.visible | default(true) %}
     <div data-dz-tab-panel="{{ tab.tab_id }}" {% if not loop.first %}hidden{% endif %} role="tabpanel">
       <div class="card bg-base-100 shadow-sm mt-2">
         <div class="card-body p-0">
@@ -187,6 +190,7 @@
         </div>
       </div>
     </div>
+    {% endif %}
     {% endfor %}
   </div>
   {% endblock detail_related_tabs %}

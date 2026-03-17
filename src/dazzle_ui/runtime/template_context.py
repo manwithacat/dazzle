@@ -154,6 +154,9 @@ class RelatedTabContext(BaseModel):
     # Polymorphic FK support (#321): when set, filter by both type + id
     filter_type_field: str | None = None  # e.g. "entity_type"
     filter_type_value: str | None = None  # e.g. "company"
+    # Role-based tab visibility (#501): hide tab entirely for unauthorized roles
+    visible: bool = True
+    visible_condition: dict[str, Any] | None = None
 
 
 class IntegrationActionContext(BaseModel):

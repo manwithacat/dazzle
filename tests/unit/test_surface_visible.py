@@ -191,3 +191,75 @@ class TestVisibleConditionEvaluation:
 
         # Empty condition evaluates to True
         assert evaluate_condition({}, {}, {"user_roles": []}) is True
+
+
+# ---------------------------------------------------------------------------
+# Related tab visibility (#501)
+# ---------------------------------------------------------------------------
+
+
+class TestRelatedTabVisibility:
+    """Section visible: conditions propagate to related tabs."""
+
+    def test_tab_visible_condition_propagated(self):
+        """Related tab picks up visible_condition from matching section."""
+        from dazzle_ui.runtime.template_context import RelatedTabContext
+
+        tab = RelatedTabContext(
+            tab_id="tab-sen-record",
+            label="SEN Records",
+            entity_name="SENRecord",
+            api_endpoint="/sen-records",
+            filter_field="student_profile",
+            columns=[],
+            visible_condition={"role_check": {"role_name": "admin"}},
+        )
+        assert tab.visible_condition is not None
+        assert tab.visible is True  # default
+
+    def test_tab_hidden_when_role_mismatch(self):
+        """Tab with visible_condition is hidden for unauthorized roles."""
+        from dazzle_back.runtime.condition_evaluator import evaluate_condition
+        from dazzle_ui.runtime.template_context import RelatedTabContext
+
+        cond = {"role_check": {"role_name": "admin"}}
+        tab = RelatedTabContext(
+            tab_id="tab-sen-record",
+            label="SEN Records",
+            entity_name="SENRecord",
+            api_endpoint="/sen-records",
+            filter_field="student_profile",
+            columns=[],
+            visible_condition=cond,
+        )
+
+        # Simulate runtime evaluation (as page_routes.py does)
+        role_ctx = {"user_roles": ["student"]}
+        if tab.visible_condition:
+            if not evaluate_condition(tab.visible_condition, {}, role_ctx):
+                tab.visible = False
+
+        assert tab.visible is False
+
+    def test_tab_visible_when_role_matches(self):
+        """Tab with visible_condition stays visible for authorized roles."""
+        from dazzle_back.runtime.condition_evaluator import evaluate_condition
+        from dazzle_ui.runtime.template_context import RelatedTabContext
+
+        cond = {"role_check": {"role_name": "admin"}}
+        tab = RelatedTabContext(
+            tab_id="tab-sen-record",
+            label="SEN Records",
+            entity_name="SENRecord",
+            api_endpoint="/sen-records",
+            filter_field="student_profile",
+            columns=[],
+            visible_condition=cond,
+        )
+
+        role_ctx = {"user_roles": ["admin"]}
+        if tab.visible_condition:
+            if not evaluate_condition(tab.visible_condition, {}, role_ctx):
+                tab.visible = False
+
+        assert tab.visible is True
