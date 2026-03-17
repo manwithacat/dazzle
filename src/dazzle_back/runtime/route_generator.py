@@ -902,15 +902,26 @@ async def _list_handler_body(
         filter_records_by_condition,
     )
 
-    # Gate: Cedar LIST permission check (entity-level, before row filters)
+    # Gate: Cedar LIST permission check (entity-level, before row filters).
+    # Only enforced when ALL list rules are pure role checks. Rules with
+    # field conditions (e.g. school = current_user.school) are row-level
+    # filters that can't be evaluated without a record — those pass the gate
+    # and are enforced at query time by _extract_cedar_row_filters. (#502, #503)
     if cedar_access_spec and is_authenticated and auth_context:
-        from dazzle_back.runtime.access_evaluator import evaluate_permission
         from dazzle_back.specs.auth import AccessOperationKind
 
-        _user, _ctx = _build_access_context(auth_context)
-        decision = evaluate_permission(cedar_access_spec, AccessOperationKind.LIST, None, _ctx)
-        if not decision.allowed:
-            raise HTTPException(status_code=403, detail="Forbidden")
+        list_rules = [
+            r for r in cedar_access_spec.permissions if r.operation == AccessOperationKind.LIST
+        ]
+        # Only gate when all list rules are pure role checks (no field conditions)
+        has_field_conditions = any(r.condition is not None for r in list_rules)
+        if list_rules and not has_field_conditions:
+            from dazzle_back.runtime.access_evaluator import evaluate_permission
+
+            _user, _ctx = _build_access_context(auth_context)
+            decision = evaluate_permission(cedar_access_spec, AccessOperationKind.LIST, None, _ctx)
+            if not decision.allowed:
+                raise HTTPException(status_code=403, detail="Forbidden")
 
     # Build visibility filters
     sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)

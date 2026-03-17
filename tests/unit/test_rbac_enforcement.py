@@ -705,3 +705,65 @@ class TestListPermissionGate:
             entity_name="Task",
         )
         assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_list_passes_gate_for_field_condition_rules(self) -> None:
+        """Rules with field conditions (e.g. current_user.school) bypass the
+        gate and are enforced as row-level filters at query time (#503)."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle_back.runtime.route_generator import _list_handler_body
+        from dazzle_back.specs.auth import (
+            AccessComparisonKind,
+            AccessConditionSpec,
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        # Rule: list: school = current_user.school (field condition, not pure role)
+        cedar_spec = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=AccessConditionSpec(
+                        kind="comparison",
+                        field="school",
+                        comparison_op=AccessComparisonKind.EQUALS,
+                        value="current_user.school",
+                    ),
+                ),
+            ],
+        )
+
+        mock_service = AsyncMock()
+        mock_service.execute.return_value = {"items": [], "total": 0, "page": 1, "page_size": 20}
+
+        mock_request = MagicMock()
+        mock_request.query_params = {}
+
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = True
+        user = MagicMock()
+        user.id = "user-1"
+        user.roles = ["teacher"]
+        user.is_superuser = False
+        auth_ctx.user = user
+
+        # Should NOT raise 403 — field conditions pass the gate
+        result = await _list_handler_body(
+            service=mock_service,
+            access_spec=None,
+            is_authenticated=True,
+            user_id="user-1",
+            request=mock_request,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            cedar_access_spec=cedar_spec,
+            auth_context=auth_ctx,
+            entity_name="Manuscript",
+        )
+        assert result is not None
