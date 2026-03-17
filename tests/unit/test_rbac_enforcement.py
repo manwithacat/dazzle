@@ -589,3 +589,119 @@ class TestBuildAccessContext:
         _user, runtime_ctx = _build_access_context(auth_ctx)
         assert len(runtime_ctx.roles) == 0
         assert runtime_ctx.user_id is None
+
+
+# =============================================================================
+# LIST permission gate in _list_handler_body
+# =============================================================================
+
+
+class TestListPermissionGate:
+    """Tests for Cedar LIST permission check in _list_handler_body."""
+
+    @pytest.mark.asyncio
+    async def test_list_returns_403_when_role_denied(self) -> None:
+        """User without required role gets 403 on list endpoint."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from fastapi import HTTPException
+
+        from dazzle_back.runtime.route_generator import _list_handler_body
+        from dazzle_back.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        # Cedar spec: only school_admin can LIST
+        cedar_spec = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["school_admin"],
+                ),
+            ],
+        )
+
+        mock_service = AsyncMock()
+        mock_request = MagicMock()
+        mock_request.query_params = {}
+
+        # Auth context: user has role "student" (not school_admin)
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = True
+        user = MagicMock()
+        user.id = "user-1"
+        user.roles = ["student"]
+        user.is_superuser = False
+        auth_ctx.user = user
+
+        with pytest.raises(HTTPException) as exc_info:
+            await _list_handler_body(
+                service=mock_service,
+                access_spec=None,
+                is_authenticated=True,
+                user_id="user-1",
+                request=mock_request,
+                page=1,
+                page_size=20,
+                sort=None,
+                dir="asc",
+                search=None,
+                cedar_access_spec=cedar_spec,
+                auth_context=auth_ctx,
+                entity_name="Task",
+            )
+        assert exc_info.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_list_allowed_when_role_matches(self) -> None:
+        """User with required role gets a successful list response."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle_back.runtime.route_generator import _list_handler_body
+        from dazzle_back.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+        )
+
+        cedar_spec = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["school_admin"],
+                ),
+            ],
+        )
+
+        mock_service = AsyncMock()
+        mock_service.execute.return_value = {"items": [], "total": 0, "page": 1, "page_size": 20}
+
+        mock_request = MagicMock()
+        mock_request.query_params = {}
+
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = True
+        user = MagicMock()
+        user.id = "user-1"
+        user.roles = ["school_admin"]
+        user.is_superuser = False
+        auth_ctx.user = user
+
+        result = await _list_handler_body(
+            service=mock_service,
+            access_spec=None,
+            is_authenticated=True,
+            user_id="user-1",
+            request=mock_request,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            cedar_access_spec=cedar_spec,
+            auth_context=auth_ctx,
+            entity_name="Task",
+        )
+        assert result is not None

@@ -902,6 +902,16 @@ async def _list_handler_body(
         filter_records_by_condition,
     )
 
+    # Gate: Cedar LIST permission check (entity-level, before row filters)
+    if cedar_access_spec and is_authenticated and auth_context:
+        from dazzle_back.runtime.access_evaluator import evaluate_permission
+        from dazzle_back.specs.auth import AccessOperationKind
+
+        _user, _ctx = _build_access_context(auth_context)
+        decision = evaluate_permission(cedar_access_spec, AccessOperationKind.LIST, None, _ctx)
+        if not decision.allowed:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
     # Build visibility filters
     sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
 
