@@ -182,6 +182,66 @@ entity Prescription "Prescription":
 
 ---
 
+## Multi-Tenant Rbac
+
+Field-condition RBAC for multi-tenant or ownership-scoped access. Combines role gates with row-level filters. See [Runtime Evaluation Model](access-control.md#runtime-evaluation-model) for how these rules are enforced at each tier.
+
+### Example
+
+```dsl
+# Multi-tenant school management — teachers see only their school's data
+entity Student "Student":
+  id: uuid pk
+  name: str(200) required
+  school: ref School required
+  grade: int required
+
+  # Pure role gate: admins see everything (Tier 1 — fast rejection)
+  permit:
+    list: role(admin)
+    read: role(admin)
+
+  # Field-condition filter: teachers see only their school (Tier 2 — row filter)
+  permit:
+    list: school = current_user.school
+    read: school = current_user.school
+
+  # Write access: teachers can update their school's students
+  permit:
+    update: school = current_user.school
+    create: role(teacher) or role(admin)
+
+  # Nobody outside admin can delete
+  forbid:
+    delete: role(teacher)
+
+# Ownership-scoped: users see only their own records
+entity Timesheet "Timesheet":
+  id: uuid pk
+  employee: ref User required
+  hours: decimal required
+  submitted: bool = false
+
+  # Owner sees their own timesheets
+  permit:
+    list: employee = current_user
+    read: employee = current_user
+    update: employee = current_user
+
+  # Managers see all (pure role gate)
+  permit:
+    list: role(manager)
+    read: role(manager)
+
+  # Only managers can delete
+  permit:
+    delete: role(manager)
+```
+
+**Related:** [Cedar Rbac](patterns.md#cedar-rbac), [Runtime Evaluation Model](access-control.md#runtime-evaluation-model), [Access Rules](access-control.md#access-rules)
+
+---
+
 ## Crud
 
 Complete create-read-update-delete interface for an entity

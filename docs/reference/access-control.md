@@ -254,6 +254,77 @@ workspace team_board "Team Board":
 
 ---
 
+## Runtime Evaluation Model
+
+Access rules evaluate in two tiers at runtime. Understanding this distinction is critical when writing rules that mix role checks with field conditions.
+
+### Tier 1: Entity-Level Gate
+
+Before any database query runs, the route handler performs a **gate check**: "Does this user have permission to access this endpoint at all?" This check calls `evaluate_permission(operation, record=None, context)` — note `record=None`, meaning no row data is available.
+
+**Only pure role-check rules can be evaluated at the gate.** A rule like `list: role(teacher)` can be resolved with just the user's roles. A rule like `list: school = current_user.school` cannot — it references a field on the record, and there is no record yet.
+
+The gate therefore **skips rules that contain field conditions** and only enforces rules where every condition is a role check. If all LIST rules have field conditions, the gate passes everyone through and lets Tier 2 handle enforcement.
+
+### Tier 2: Row-Level Filters
+
+After the gate, the handler builds SQL filters from two sources:
+
+1. **Visibility rules** (`visible:` blocks) — converted to SQL WHERE clauses based on auth state
+2. **Cedar row filters** — field conditions from `permit:` rules (e.g., `school = current_user.school`) are extracted and merged into the query
+
+These filters ensure only authorized rows are returned. They run at query time, when record data is available.
+
+### Evaluation Flow
+
+```
+Request arrives
+  │
+  ├─ Tier 1: Gate check (no record)
+  │   ├─ Collect LIST/READ rules
+  │   ├─ Any field conditions? → skip gate, pass through
+  │   └─ All pure role checks? → evaluate_permission(LIST, None, ctx)
+  │       ├─ FORBID match → 403
+  │       ├─ PERMIT match → continue
+  │       └─ No match → 403 (default-deny)
+  │
+  ├─ Build SQL filters
+  │   ├─ Visibility filters (visible: blocks)
+  │   └─ Cedar row filters (field conditions from permit: rules)
+  │
+  ├─ Execute query with merged filters
+  │
+  └─ Tier 2: Post-fetch check (per record, for detail/update/delete)
+      └─ evaluate_permission(op, record, ctx) — full condition evaluation
+```
+
+### Why This Matters
+
+A rule like `permit: list: school = current_user.school` grants LIST access, but **only to rows matching the condition**. If the gate tried to evaluate this rule with `record=None`, it would fail (the field lookup returns `None`), and the user would get a 403 even though they should see a filtered result set.
+
+This is why #503 was a regression: #502 added a LIST gate that evaluated *all* rules — including field-condition rules — against `record=None`. Field-condition rules always failed at the gate, blocking legitimate access. The fix was to make the gate skip any rule with field conditions, deferring enforcement to the row-level filter stage.
+
+### Rule Type Summary
+
+| Rule Pattern | Gate Evaluable? | Enforcement Point |
+|---|---|---|
+| `list: role(admin)` | Yes | Tier 1 gate |
+| `list: school = current_user.school` | No | Tier 2 row filter |
+| `list: role(teacher) or school = current_user.school` | No (has field condition) | Tier 2 row filter |
+| `read: role(doctor)` | Yes | Tier 1 gate (detail) |
+| `read: patient = current_user` | No | Tier 2 per-record check |
+
+### Best Practices
+
+- **Pure role gates are fast** — they reject unauthorized users before touching the DB. Prefer `list: role(X)` when the role alone determines access.
+- **Field-condition rules are filters** — they allow the endpoint but restrict which rows are returned. Use these for multi-tenant or ownership-scoped access.
+- **Mixing both** — if you need both a gate and a filter, write separate rules: one pure role rule for the gate, and a field-condition rule for row filtering. They compose via Cedar's FORBID > PERMIT > default-deny semantics.
+- **OR conditions with mixed types** — `list: role(admin) or owner = current_user` has a field condition, so the gate skips it entirely. The admin gets through via the row filter (which sees the unconditional role match and returns all rows). This works but is less efficient than separate rules.
+
+**Related:** [Access Rules](access-control.md#access-rules), [Cedar Rbac](patterns.md#cedar-rbac), [Visibility Rules](access-control.md#visibility-rules)
+
+---
+
 ## Authentication
 
 Session-based authentication system in Dazzle. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project.
