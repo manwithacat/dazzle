@@ -273,7 +273,7 @@ def convert_surfaces_to_services(
     # Track entities that have list surfaces (for adding READ/DELETE endpoints)
     # Maps entity_name -> list of require_roles from surfaces
     entities_with_list: dict[str, list[str]] = {}
-    # Track entities that already have a READ endpoint (VIEW/EDIT surface)
+    # Track entities that already have a READ endpoint (VIEW surface)
     entities_with_read: set[str] = set()
 
     for surface in surfaces:
@@ -297,8 +297,9 @@ def convert_surfaces_to_services(
                 require_roles = list(surface.access.allow_personas)
             entities_with_list[surface.entity_ref] = require_roles
 
-        # Track entities that already have a VIEW/EDIT surface (= READ endpoint)
-        if surface.mode in (ir.SurfaceMode.VIEW, ir.SurfaceMode.EDIT) and surface.entity_ref:
+        # Track entities that already have a VIEW surface (= GET read endpoint).
+        # EDIT surfaces produce PUT, not GET, so they don't count.
+        if surface.mode == ir.SurfaceMode.VIEW and surface.entity_ref:
             entities_with_read.add(surface.entity_ref)
 
     # Add READ and DELETE endpoints for entities that have list surfaces
@@ -306,7 +307,7 @@ def convert_surfaces_to_services(
         entity_lower = entity_name.lower()
         entity_plural = to_api_plural(entity_name)
 
-        # Add READ endpoint if no VIEW/EDIT surface already provides one
+        # Add READ endpoint if no VIEW surface already provides one
         if entity_name not in entities_with_read:
             read_service = ServiceSpec(
                 name=f"read_{entity_lower}",

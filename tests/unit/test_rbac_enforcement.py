@@ -138,6 +138,28 @@ class TestSurfaceConverterRBAC:
         # Only the VIEW-generated one, no auto-generated duplicate
         assert len(read_eps) == 1
 
+    def test_read_endpoint_generated_when_only_edit_surface_exists(self) -> None:
+        """EDIT surfaces produce PUT, not GET — a GET read endpoint must still be auto-generated."""
+        surfaces = [
+            SurfaceSpec(
+                name="task_list",
+                entity_ref="Task",
+                mode=SurfaceMode.LIST,
+                sections=[],
+            ),
+            SurfaceSpec(
+                name="task_edit",
+                entity_ref="Task",
+                mode=SurfaceMode.EDIT,
+                sections=[],
+            ),
+        ]
+        _services, endpoints = convert_surfaces_to_services(surfaces)
+        read_eps = [ep for ep in endpoints if ep.method == HttpMethod.GET and "{id}" in ep.path]
+        assert len(read_eps) == 1, (
+            "GET read endpoint should be auto-generated when only EDIT surface exists"
+        )
+
 
 # =============================================================================
 # EndpointSpec: require_roles field
