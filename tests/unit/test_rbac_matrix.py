@@ -18,6 +18,7 @@ from dazzle.core.ir.domain import (
     PermissionKind,
     PermissionRule,
     PolicyEffect,
+    ScopeRule,
 )
 from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.personas import PersonaSpec
@@ -502,3 +503,116 @@ class TestWarnings:
 
         orphan_warns = [w for w in matrix.warnings if w.kind == "orphan_role"]
         assert len(orphan_warns) == 0
+
+
+# ---------------------------------------------------------------------------
+# Test: scope rules → PERMIT, PERMIT_SCOPED, PERMIT_NO_SCOPE
+# ---------------------------------------------------------------------------
+
+
+def _scope_rule(
+    operation: PermissionKind,
+    personas: list[str],
+    condition: ConditionExpr | None = None,
+) -> ScopeRule:
+    return ScopeRule(operation=operation, personas=personas, condition=condition)
+
+
+class TestScopeRules:
+    def test_permit_scope_all_gives_permit(self) -> None:
+        """Permit + scope rule with condition=None (scope: all) → PERMIT."""
+        access = AccessSpec(
+            permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
+            scopes=[_scope_rule(PermissionKind.READ, personas=["admin"], condition=None)],
+        )
+        entity = _make_entity("Task", access=access)
+        appspec = _make_appspec([entity], [_make_persona("admin")])
+        matrix = generate_access_matrix(appspec)
+
+        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT
+
+    def test_permit_scope_with_condition_gives_permit_scoped(self) -> None:
+        """Permit + scope rule with a field condition → PERMIT_SCOPED."""
+        cond = _field_cond("owner_id")
+        access = AccessSpec(
+            permissions=[_permit_rule(PermissionKind.READ, personas=["user"])],
+            scopes=[_scope_rule(PermissionKind.READ, personas=["user"], condition=cond)],
+        )
+        entity = _make_entity("Task", access=access)
+        appspec = _make_appspec([entity], [_make_persona("user")])
+        matrix = generate_access_matrix(appspec)
+
+        assert matrix.get("user", "Task", "read") == PolicyDecision.PERMIT_SCOPED
+
+    def test_permit_no_matching_scope_gives_permit_no_scope(self) -> None:
+        """Permit + no matching scope rule → PERMIT_NO_SCOPE + no_scope_rule warning."""
+        access = AccessSpec(
+            permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
+            scopes=[_scope_rule(PermissionKind.READ, personas=["editor"], condition=None)],
+        )
+        entity = _make_entity("Task", access=access)
+        appspec = _make_appspec([entity], [_make_persona("admin")])
+        matrix = generate_access_matrix(appspec)
+
+        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT_NO_SCOPE
+        warn_kinds = [w.kind for w in matrix.warnings]
+        assert "no_scope_rule" in warn_kinds
+
+    def test_no_scope_rule_warning_has_correct_fields(self) -> None:
+        """no_scope_rule warning has the correct entity, role, and operation."""
+        # Scope rules present but none match admin on LIST — triggers PERMIT_NO_SCOPE.
+        access = AccessSpec(
+            permissions=[_permit_rule(PermissionKind.LIST, personas=["admin"])],
+            scopes=[_scope_rule(PermissionKind.LIST, personas=["editor"], condition=None)],
+        )
+        entity = _make_entity("Task", access=access)
+        appspec = _make_appspec([entity], [_make_persona("admin")])
+        matrix = generate_access_matrix(appspec)
+
+        no_scope_warns = [w for w in matrix.warnings if w.kind == "no_scope_rule"]
+        assert any(
+            w.entity == "Task" and w.role == "admin" and w.operation == "list"
+            for w in no_scope_warns
+        )
+
+    def test_deny_unchanged_with_scope_rules(self) -> None:
+        """A role that has no PERMIT rule stays DENY even when scope rules exist."""
+        access = AccessSpec(
+            permissions=[_permit_rule(PermissionKind.READ, personas=["admin"])],
+            scopes=[_scope_rule(PermissionKind.READ, personas=["*"], condition=None)],
+        )
+        entity = _make_entity("Task", access=access)
+        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("guest")])
+        matrix = generate_access_matrix(appspec)
+
+        assert matrix.get("guest", "Task", "read") == PolicyDecision.DENY
+
+    def test_scope_wildcard_persona_matches_any_role(self) -> None:
+        """A scope rule with personas=['*'] matches any permitted role."""
+        cond = _field_cond("owner_id")
+        access = AccessSpec(
+            permissions=[
+                _permit_rule(PermissionKind.READ, personas=["admin"]),
+                _permit_rule(PermissionKind.READ, personas=["editor"]),
+            ],
+            scopes=[_scope_rule(PermissionKind.READ, personas=["*"], condition=cond)],
+        )
+        entity = _make_entity("Task", access=access)
+        appspec = _make_appspec([entity], [_make_persona("admin"), _make_persona("editor")])
+        matrix = generate_access_matrix(appspec)
+
+        assert matrix.get("admin", "Task", "read") == PolicyDecision.PERMIT_SCOPED
+        assert matrix.get("editor", "Task", "read") == PolicyDecision.PERMIT_SCOPED
+
+    def test_legacy_no_scopes_still_gives_permit_filtered(self) -> None:
+        """Legacy path: no scopes on entity, field condition → PERMIT_FILTERED (unchanged)."""
+        cond = _field_cond("owner_id")
+        access = AccessSpec(
+            permissions=[_permit_rule(PermissionKind.READ, personas=["user"], condition=cond)],
+            # scopes intentionally empty — legacy entity
+        )
+        entity = _make_entity("Task", access=access)
+        appspec = _make_appspec([entity], [_make_persona("user")])
+        matrix = generate_access_matrix(appspec)
+
+        assert matrix.get("user", "Task", "read") == PolicyDecision.PERMIT_FILTERED

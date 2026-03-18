@@ -19,7 +19,13 @@ from enum import StrEnum
 
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.conditions import ConditionExpr
-from dazzle.core.ir.domain import AccessSpec, PermissionKind, PermissionRule, PolicyEffect
+from dazzle.core.ir.domain import (
+    AccessSpec,
+    PermissionKind,
+    PermissionRule,
+    PolicyEffect,
+    ScopeRule,
+)
 
 
 class PolicyDecision(StrEnum):
@@ -28,11 +34,17 @@ class PolicyDecision(StrEnum):
     PERMIT = "PERMIT"
     """Access granted via a pure role gate — no row-level filter."""
 
+    PERMIT_SCOPED = "PERMIT_SCOPED"
+    """Access granted and a scope rule with a field condition applies — rows are filtered."""
+
+    PERMIT_NO_SCOPE = "PERMIT_NO_SCOPE"
+    """Access granted but no matching scope rule found — role will see 0 records (warning)."""
+
     DENY = "DENY"
     """Access denied — either no matching permit rule or an explicit forbid."""
 
     PERMIT_FILTERED = "PERMIT_FILTERED"
-    """Access granted but rows are filtered by a field-level condition."""
+    """Access granted but rows are filtered by a field-level condition (legacy — no scope: blocks)."""
 
     PERMIT_UNPROTECTED = "PERMIT_UNPROTECTED"
     """No access rules defined at all — backward-compat open access."""
@@ -173,6 +185,54 @@ def _rule_matches_role(rule: PermissionRule, role: str) -> bool:
     return False
 
 
+def _find_scope_for_role(
+    scopes: list[ScopeRule],
+    operation: PermissionKind,
+    role: str,
+) -> ScopeRule | None:
+    """Return the first scope rule matching (operation, role), or None.
+
+    A rule matches when its operation equals *operation* and either '*' is in
+    its personas list or *role* is explicitly listed.
+    """
+    for scope in scopes:
+        if scope.operation != operation:
+            continue
+        if "*" in scope.personas or role in scope.personas:
+            return scope
+    return None
+
+
+def _resolve_permit_decision(
+    access: AccessSpec,
+    role: str,
+    op_kind: PermissionKind,
+    permit_rule: PermissionRule,
+) -> PolicyDecision:
+    """Resolve the final decision for a confirmed permit, considering scope rules.
+
+    If *access* has scope rules (new model):
+      - Matching scope with condition=None → PERMIT (scope: all)
+      - Matching scope with condition → PERMIT_SCOPED
+      - No matching scope rule → PERMIT_NO_SCOPE (warning emitted by caller)
+
+    Legacy path (no scopes on entity): use field-condition filtering.
+    """
+    if access.scopes:
+        scope_match = _find_scope_for_role(access.scopes, op_kind, role)
+        if scope_match is None:
+            return PolicyDecision.PERMIT_NO_SCOPE
+        if scope_match.condition is None:
+            return PolicyDecision.PERMIT
+        return PolicyDecision.PERMIT_SCOPED
+
+    # Legacy path — use PERMIT_FILTERED for field-condition rules.
+    if _condition_has_field_filter(permit_rule.condition):
+        return PolicyDecision.PERMIT_FILTERED
+
+    return PolicyDecision.PERMIT
+
+
 def _resolve_decision(
     access: AccessSpec,
     role: str,
@@ -205,11 +265,7 @@ def _resolve_decision(
     if permit_rule is None:
         return PolicyDecision.DENY
 
-    # We have a permit.  Decide whether it's filtered.
-    if _condition_has_field_filter(permit_rule.condition):
-        return PolicyDecision.PERMIT_FILTERED
-
-    return PolicyDecision.PERMIT
+    return _resolve_permit_decision(access, role, op_kind, permit_rule)
 
 
 class AccessMatrix:
@@ -376,6 +432,19 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
             for op in operations:
                 decision = _resolve_decision(access, role, op)
                 cells[(role, entity_name, op)] = decision
+                if decision == PolicyDecision.PERMIT_NO_SCOPE:
+                    warnings.append(
+                        PolicyWarning(
+                            kind="no_scope_rule",
+                            entity=entity_name,
+                            role=role,
+                            operation=op,
+                            message=(
+                                f"Role '{role}' passes permit for {entity_name}.{op} "
+                                "but has no matching scope rule — will see 0 records"
+                            ),
+                        )
+                    )
 
         # Warn about redundant FORBID (FORBID on a role that has no PERMIT).
         perms = access.permissions
