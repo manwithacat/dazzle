@@ -192,6 +192,29 @@ def create_page_routes(
         if surface.access is not None:
             access_configs[surface.name] = SurfaceAccessConfig.from_spec(surface.access)
 
+    # Build entity_name -> EntityAccessSpec mapping for Cedar policy evaluation (#527).
+    # Deferred import to avoid circular imports at module load time.
+    _entity_cedar_specs: dict[str, Any] = {}
+    try:
+        from dazzle_back.converters.entity_converter import convert_entity
+
+        for _entity in appspec.domain.entities:
+            if _entity.access:
+                _converted = convert_entity(_entity)
+                if _converted.access is not None:
+                    _entity_cedar_specs[_entity.name] = _converted.access
+    except ImportError:
+        pass  # dazzle_back not available (e.g. in tests without backend)
+
+    # Build surface_name -> entity_name and surface_name -> mode mappings for
+    # Cedar gate lookup in the page handler.
+    _surface_entity: dict[str, str] = {}
+    _surface_mode: dict[str, str] = {}
+    for _surface in appspec.surfaces:
+        if _surface.entity_ref:
+            _surface_entity[_surface.name] = _surface.entity_ref
+        _surface_mode[_surface.name] = _surface.mode.value if _surface.mode else "list"
+
     # Inject integration manual trigger actions into detail contexts
     _inject_integration_actions(appspec, page_contexts)
 
@@ -246,6 +269,75 @@ def create_page_routes(
                         status_code=403,
                         content={"detail": e.reason},
                     )
+
+            # Enforce entity-level Cedar access rules on page routes (#527).
+            # Mirrors the LIST gate in route_generator.py: only enforce when all
+            # permission rules for the operation are pure role checks (no field
+            # conditions). Field-condition rules need a record to evaluate — those
+            # are handled at query time by the API layer's row filters.
+            if surface_name and _entity_cedar_specs and auth_ctx is not None:
+                _entity_name = _surface_entity.get(surface_name)
+                _cedar_spec = _entity_cedar_specs.get(_entity_name) if _entity_name else None
+                if _cedar_spec is not None:
+                    try:
+                        from dazzle_back.runtime.access_evaluator import (
+                            AccessRuntimeContext,
+                            evaluate_permission,
+                        )
+                        from dazzle_back.specs.auth import AccessOperationKind
+
+                        # Determine operation: list surfaces use LIST, others use READ
+                        _mode = _surface_mode.get(surface_name, "list")
+                        _op = (
+                            AccessOperationKind.LIST
+                            if _mode == "list"
+                            else AccessOperationKind.READ
+                        )
+
+                        # Only gate when all rules for this operation are pure role checks
+                        _op_rules = [r for r in _cedar_spec.permissions if r.operation == _op]
+
+                        def _is_field_cond(cond: Any) -> bool:
+                            """Return True if condition needs record data to evaluate."""
+                            if cond is None:
+                                return False
+                            kind = getattr(cond, "kind", None)
+                            if kind == "role_check":
+                                return False
+                            if kind in ("comparison", "grant_check"):
+                                return True
+                            if kind == "logical":
+                                return _is_field_cond(
+                                    getattr(cond, "logical_left", None)
+                                ) or _is_field_cond(getattr(cond, "logical_right", None))
+                            return False
+
+                        _has_field_conditions = any(_is_field_cond(r.condition) for r in _op_rules)
+                        if _op_rules and not _has_field_conditions:
+                            # Build AccessRuntimeContext from auth context
+                            _user = auth_ctx.user if auth_ctx.is_authenticated else None
+                            _raw_roles = list(getattr(_user, "roles", [])) if _user else []
+                            _runtime_ctx = AccessRuntimeContext(
+                                user_id=str(_user.id) if _user else None,
+                                roles=[r.removeprefix("role_") for r in _raw_roles],
+                                is_superuser=getattr(_user, "is_superuser", False)
+                                if _user
+                                else False,
+                            )
+                            _decision = evaluate_permission(
+                                _cedar_spec,
+                                _op,
+                                None,
+                                _runtime_ctx,
+                                entity_name=_entity_name or "",
+                            )
+                            if not _decision.allowed:
+                                return JSONResponse(
+                                    status_code=403,
+                                    content={"detail": "Forbidden"},
+                                )
+                    except ImportError:
+                        pass  # dazzle_back not available
 
             # Derive backend URL from request so it works on dynamic-port
             # platforms (Heroku, Railway, etc.) where the default 8000 is wrong.
