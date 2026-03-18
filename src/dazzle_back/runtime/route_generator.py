@@ -527,7 +527,9 @@ def _build_cedar_handler(
         record_dict = _record_to_dict(existing) if existing is not None else None
         decision: AccessDecision
         decision, eval_us = measure_evaluation_time(
-            lambda: evaluate_permission(cedar_access_spec, _op_kind, record_dict, ctx)
+            lambda: evaluate_permission(
+                cedar_access_spec, _op_kind, record_dict, ctx, entity_name=entity_name
+            )
         )
 
         # Create logs both allow+deny before checking; update/delete only log deny on denial
@@ -940,7 +942,9 @@ async def _list_handler_body(
             from dazzle_back.runtime.access_evaluator import evaluate_permission
 
             _user, _ctx = _build_access_context(auth_context)
-            decision = evaluate_permission(cedar_access_spec, AccessOperationKind.LIST, None, _ctx)
+            decision = evaluate_permission(
+                cedar_access_spec, AccessOperationKind.LIST, None, _ctx, entity_name=entity_name
+            )
             if not decision.allowed:
                 raise HTTPException(status_code=403, detail="Forbidden")
 
@@ -1208,7 +1212,11 @@ def create_read_handler(
             decision: AccessDecision
             decision, eval_us = measure_evaluation_time(
                 lambda: evaluate_permission(
-                    cedar_access_spec, AccessOperationKind.READ, _record_to_dict(result), ctx
+                    cedar_access_spec,
+                    AccessOperationKind.READ,
+                    _record_to_dict(result),
+                    ctx,
+                    entity_name=entity_name,
                 )
             )
 

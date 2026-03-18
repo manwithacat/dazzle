@@ -380,11 +380,42 @@ def evaluate_visibility(
 # =============================================================================
 
 
+def _emit_audit(
+    decision: AccessDecision,
+    operation: AccessOperationKind,
+    record: dict[str, Any] | None,
+    context: AccessRuntimeContext,
+    entity: str = "",
+) -> None:
+    """Emit an access decision to the audit sink."""
+    import uuid as _uuid
+    from datetime import UTC, datetime
+
+    from dazzle.rbac.audit import AccessDecisionRecord, get_audit_sink
+
+    audit_record = AccessDecisionRecord(
+        timestamp=datetime.now(UTC).isoformat(),
+        request_id=str(_uuid.uuid4()),
+        user_id=context.user_id or "",
+        roles=sorted(context.roles),
+        entity=entity,
+        operation=operation.value if hasattr(operation, "value") else str(operation),
+        allowed=decision.allowed,
+        effect=decision.effect,
+        matched_rule=decision.matched_policy,
+        record_id=record.get("id", "") if record else None,
+        tier="gate" if record is None else "row_filter",
+    )
+    get_audit_sink().emit(audit_record)
+
+
 def evaluate_permission(
     access_spec: EntityAccessSpec,
     operation: AccessOperationKind,
     record: dict[str, Any] | None,
     context: AccessRuntimeContext,
+    *,
+    entity_name: str = "",
 ) -> AccessDecision:
     """
     Cedar-style three-rule permission evaluation.
@@ -406,11 +437,13 @@ def evaluate_permission(
     """
     # Superusers bypass all checks
     if context.is_superuser:
-        return AccessDecision(
+        _result = AccessDecision(
             allowed=True,
             matched_policy="superuser_bypass",
             effect="permit",
         )
+        _emit_audit(_result, operation, record, context, entity=entity_name)
+        return _result
 
     # Collect matching rules
     matching_forbids: list[PermissionRuleSpec] = []
@@ -426,29 +459,35 @@ def evaluate_permission(
     # Rule 1: Any FORBID match -> DENY
     if matching_forbids:
         rule = matching_forbids[0]
-        return AccessDecision(
+        _result = AccessDecision(
             allowed=False,
             matched_policy=_describe_rule(rule),
             effect="forbid",
         )
+        _emit_audit(_result, operation, record, context, entity=entity_name)
+        return _result
 
     # Rule 2: Any PERMIT match -> ALLOW
     if matching_permits:
         rule = matching_permits[0]
-        return AccessDecision(
+        _result = AccessDecision(
             allowed=True,
             matched_policy=_describe_rule(rule),
             effect="permit",
         )
+        _emit_audit(_result, operation, record, context, entity=entity_name)
+        return _result
 
     # Rule 3: No matching rules -> default behavior
     # If there are any rules defined for this entity, default-deny
     if access_spec.permissions:
-        return AccessDecision(
+        _result = AccessDecision(
             allowed=False,
             matched_policy="default_deny",
             effect="default",
         )
+        _emit_audit(_result, operation, record, context, entity=entity_name)
+        return _result
 
     # No permission rules at all = allow if authenticated (backward compat)
     if operation in (
@@ -457,22 +496,28 @@ def evaluate_permission(
         AccessOperationKind.DELETE,
     ):
         if context.is_authenticated:
-            return AccessDecision(
+            _result = AccessDecision(
                 allowed=True,
                 matched_policy="no_rules_authenticated",
                 effect="permit",
             )
-        return AccessDecision(
+            _emit_audit(_result, operation, record, context, entity=entity_name)
+            return _result
+        _result = AccessDecision(
             allowed=False,
             matched_policy="no_rules_unauthenticated",
             effect="default",
         )
+        _emit_audit(_result, operation, record, context, entity=entity_name)
+        return _result
 
-    return AccessDecision(
+    _result = AccessDecision(
         allowed=True,
         matched_policy="no_rules_default_allow",
         effect="permit",
     )
+    _emit_audit(_result, operation, record, context, entity=entity_name)
+    return _result
 
 
 def evaluate_permission_bool(
