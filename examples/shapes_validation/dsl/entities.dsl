@@ -58,8 +58,18 @@ entity Shape "Shape":
     list: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness) or role(outsider)
     read: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness) or role(outsider)
 
-  # Row-level filters: realm-scoped and colour-scoped access
+  # Row-level filters: oracle sees all, others are realm/colour-scoped
   scope:
+    list: all
+      for: oracle
+    read: all
+      for: oracle
+    create: all
+      for: oracle, sovereign
+    update: all
+      for: oracle
+    delete: all
+      for: oracle
     list: realm = current_user.realm
       for: sovereign, architect
     read: realm = current_user.realm

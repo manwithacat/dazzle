@@ -9,43 +9,82 @@ concept_count = 7
 category = "Business Logic (v0.7)"
 doc_page = "access-control"
 doc_order = 1
-definition = "Inline access control rules on entities. Legacy syntax uses access: blocks with read/write permissions. Cedar-style syntax (v0.21+) uses permit:/forbid:/audit: blocks for fine-grained RBAC with NIST SP 800-162 alignment. Evaluation order: FORBID > PERMIT > default-deny."
+definition = "Inline access control rules on entities. Cedar-style syntax uses two separate blocks: permit: (WHO may access — role checks only) and scope: (WHAT they can see — row-level field conditions with for: clauses). Legacy access: blocks are still supported. Evaluation order: FORBID > PERMIT > default-deny. Field conditions in permit: are a parser error — they must live in scope: blocks."
 syntax = '''
-# Legacy access: block (read/write permissions)
-access:
-  read: <condition>
-  write: <condition>
-
-# Cedar-style blocks (v0.21+)
+# Two-block pattern (recommended): separate WHO from WHAT
 permit:
-  <action>: <condition>
+  <action>: role(<name>)        # WHO — pure role checks only
 
+scope:
+  <action>: <field-condition>   # WHAT — row-level filter
+    for: <role>, <role>         # which roles this filter applies to
+  <action>: all                 # 'all' means no filter (full table access)
+    for: <role>
+
+# forbid: and audit: blocks
 forbid:
-  <action>: <condition>
+  <action>: role(<name>)        # separation-of-duty constraints
 
 audit:
-  <action>: <condition>
+  <action>: role(<name>)        # compliance logging
 
-# Expressions:
-# field = current_user - Field matches logged-in user
+# permit: expressions — role checks only (field conditions are a parser error here):
 # role(<name>) - User has the specified role
+# role(a) or role(b) - Either role
+
+# scope: expressions — field conditions only:
+# field = current_user - Field matches logged-in user
+# field = current_user.field - Field matches a property of the logged-in user
 # field = value - Field equals literal value
 # Combine with: and, or
 
-# Cedar-style actions: read, write, create, update, delete, approve, prescribe, etc.
+# Cedar-style actions: list, read, create, update, delete, approve, prescribe, etc.
 # Cedar evaluation: FORBID rules override PERMIT; default is deny
+
+# Legacy access: block (read/write permissions — still supported)
+access:
+  read: <condition>
+  write: <condition>
 '''
 example = '''
-# Legacy style
-entity Document "Document":
-  owner: ref User required
-  is_public: bool = false
+# Two-block pattern: permit: gates WHO, scope: gates WHAT
+entity Shape "Shape":
+  realm: ref Realm required
+  creator: ref User required
+  colour: enum[red,blue,green] required
 
-  access:
-    read: owner = current_user or is_public = true or role(admin)
-    write: owner = current_user or role(admin)
+  # WHO may access — role checks only
+  permit:
+    list: role(oracle)
+    read: role(oracle)
+    create: role(oracle) or role(forgemaster)
+    update: role(oracle)
+    delete: role(oracle)
 
-# Cedar-style (v0.21+) - fine-grained RBAC
+  # Separation of duty
+  forbid:
+    delete: role(forgemaster)
+
+  # WHAT they can see — row-level filters with for: clauses
+  scope:
+    list: all                              # oracle sees everything
+      for: oracle
+    read: all
+      for: oracle
+    create: all
+      for: oracle
+    create: realm = current_user.realm     # forgemaster scoped to their realm
+      for: forgemaster
+    update: all
+      for: oracle
+    delete: all
+      for: oracle
+    list: realm = current_user.realm or creator = current_user
+      for: forgemaster
+    read: realm = current_user.realm or creator = current_user
+      for: forgemaster
+
+# Cedar-style fine-grained RBAC with forbid: and audit:
 entity Prescription "Prescription":
   patient: ref Patient required
   prescriber: ref Doctor required
@@ -64,11 +103,21 @@ entity Prescription "Prescription":
     read: role(admin)
     prescribe: role(compliance_officer)
     dispense: role(compliance_officer)
+
+# Legacy style (still supported)
+entity Document "Document":
+  owner: ref User required
+  is_public: bool = false
+
+  access:
+    read: owner = current_user or is_public = true or role(admin)
+    write: owner = current_user or role(admin)
 '''
 related = ["entity", "persona", "invariant", "cedar_rbac"]
 v0_7_changes = "Enhanced in v0.7 with refined syntax"
 v0_21_changes = "Cedar-style permit:/forbid:/audit: blocks for fine-grained RBAC with NIST SP 800-162 alignment"
-best_practices = ["Use = for equality (not ==)", "Start with restrictive rules, expand as needed", "Use role() for administrative access", "Combine with persona scopes for UI filtering", "Cedar evaluation order: FORBID > PERMIT > default-deny", "Use audit: blocks for compliance logging of sensitive actions", "Use forbid: for separation-of-duty constraints (e.g., prescriber cannot dispense)"]
+v0_42_changes = "Two-block pattern: permit: for WHO (role checks only), scope: for WHAT (field conditions with for: clauses). Field conditions in permit: are now a parser error."
+best_practices = ["Use = for equality (not ==)", "Start with restrictive rules, expand as needed", "permit: contains role checks only — field conditions belong in scope:", "scope: rules use for: clauses to bind row-level filters to specific roles", "Use 'all' in scope: for roles that should see the full table (e.g., admins)", "Use for: * in scope: to apply a filter to all permitted roles", "Cedar evaluation order: FORBID > PERMIT > default-deny", "Use audit: blocks for compliance logging of sensitive actions", "Use forbid: for separation-of-duty constraints (e.g., prescriber cannot dispense)"]
 
 [concepts.computed_field]
 category = "Business Logic (v0.7)"
