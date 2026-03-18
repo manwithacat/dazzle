@@ -230,6 +230,16 @@ def _build_ai_job_entity() -> ir.EntitySpec:
         mods = [_MODIFIER_MAP[m] for m in modifiers]
         fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
 
+    # Default access: any authenticated user can perform all operations.
+    # AIJob records are internal system audit data — no role gating needed,
+    # but unauthenticated access is denied.
+    access = ir.AccessSpec(
+        permissions=[
+            ir.PermissionRule(operation=op, require_auth=True, effect=ir.PolicyEffect.PERMIT)
+            for op in ir.PermissionKind
+        ]
+    )
+
     return ir.EntitySpec(
         name="AIJob",
         title="AI Job",
@@ -237,4 +247,5 @@ def _build_ai_job_entity() -> ir.EntitySpec:
         domain="platform",
         patterns=["system", "audit"],
         fields=fields,
+        access=access,
     )
