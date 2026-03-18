@@ -296,6 +296,19 @@ class DevConfig:
 
 
 @dataclass
+class TenantConfig:
+    """Multi-tenant configuration.
+
+    isolation = "none" (default): single-schema, no tenant awareness.
+    isolation = "schema": each tenant gets a PostgreSQL schema.
+    """
+
+    isolation: str = "none"  # "none" | "schema"
+    resolver: str = "subdomain"  # "subdomain" | "header" | "session"
+    header_name: str = "X-Tenant-ID"  # only used when resolver = "header"
+
+
+@dataclass
 class ProjectManifest:
     """
     Project manifest loaded from dazzle.toml.
@@ -322,6 +335,7 @@ class ProjectManifest:
     auth: AuthConfig = field(default_factory=AuthConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     dev: DevConfig = field(default_factory=DevConfig)
+    tenant: TenantConfig = field(default_factory=TenantConfig)
     framework_version: str | None = None
     cdn: bool = True  # Serve assets from jsDelivr CDN; set [ui] cdn = false for air-gapped
 
@@ -510,6 +524,14 @@ def load_manifest(path: Path) -> ProjectManifest:
         test_endpoints=dev_data.get("test_endpoints"),  # None if not set
     )
 
+    # Parse tenant config
+    tenant_data = data.get("tenant", {})
+    tenant_config = TenantConfig(
+        isolation=tenant_data.get("isolation", "none"),
+        resolver=tenant_data.get("resolver", "subdomain"),
+        header_name=tenant_data.get("header_name", "X-Tenant-ID"),
+    )
+
     # Parse [ui] config
     ui_data = data.get("ui", {})
     cdn_enabled = ui_data.get("cdn", True)
@@ -527,6 +549,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         auth=auth_config,
         database=database_config,
         dev=dev_config,
+        tenant=tenant_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
     )
