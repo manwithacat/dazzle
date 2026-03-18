@@ -304,3 +304,103 @@ class TestConvertViaCondition:
         assert bindings[0]["target"] == "current_user"
         assert bindings[1]["junction_field"] == "team"
         assert bindings[1]["target"] == "team"
+
+
+# ---------------------------------------------------------------------------
+# Route generator tests
+# ---------------------------------------------------------------------------
+
+from unittest.mock import MagicMock  # noqa: E402
+
+
+class TestBuildViaSubquery:
+    def test_basic_subquery(self) -> None:
+        from dazzle_back.runtime.route_generator import _build_via_subquery
+
+        bindings = [
+            {"junction_field": "agent", "target": "current_user.contact", "operator": "="},
+            {"junction_field": "contact", "target": "id", "operator": "="},
+        ]
+        auth_context = MagicMock()
+        auth_context.user = MagicMock()
+        auth_context.user.contact = "user-contact-123"
+
+        entity_field, sql, params = _build_via_subquery(
+            junction_entity="AgentAssignment",
+            bindings=bindings,
+            user_id="user-456",
+            auth_context=auth_context,
+        )
+
+        assert entity_field == "id"
+        assert '"AgentAssignment"' in sql
+        assert '"contact"' in sql
+        assert '"agent"' in sql
+        assert len(params) >= 1
+
+    def test_subquery_with_null_filter(self) -> None:
+        from dazzle_back.runtime.route_generator import _build_via_subquery
+
+        bindings = [
+            {"junction_field": "agent", "target": "current_user", "operator": "="},
+            {"junction_field": "contact", "target": "id", "operator": "="},
+            {"junction_field": "revoked_at", "target": "null", "operator": "="},
+        ]
+        auth_context = MagicMock()
+
+        entity_field, sql, params = _build_via_subquery(
+            junction_entity="AgentAssignment",
+            bindings=bindings,
+            user_id="user-456",
+            auth_context=auth_context,
+        )
+
+        assert "IS NULL" in sql
+        assert entity_field == "id"
+
+    def test_subquery_with_not_null_filter(self) -> None:
+        from dazzle_back.runtime.route_generator import _build_via_subquery
+
+        bindings = [
+            {"junction_field": "user", "target": "current_user", "operator": "="},
+            {"junction_field": "team", "target": "team", "operator": "="},
+            {"junction_field": "active", "target": "null", "operator": "!="},
+        ]
+        auth_context = MagicMock()
+
+        entity_field, sql, params = _build_via_subquery(
+            junction_entity="TeamMembership",
+            bindings=bindings,
+            user_id="user-789",
+            auth_context=auth_context,
+        )
+
+        assert "IS NOT NULL" in sql
+        assert entity_field == "team"
+
+
+class TestExtractViaCheckFilters:
+    def test_via_check_produces_in_subquery_filter(self) -> None:
+        from dazzle_back.runtime.route_generator import _extract_condition_filters
+
+        condition = MagicMock()
+        condition.kind = "via_check"
+        condition.via_junction_entity = "AgentAssignment"
+        condition.via_bindings = [
+            {"junction_field": "agent", "target": "current_user.contact", "operator": "="},
+            {"junction_field": "contact", "target": "id", "operator": "="},
+        ]
+
+        auth_context = MagicMock()
+        auth_context.user = MagicMock()
+        auth_context.user.contact = "user-contact-123"
+
+        import logging
+
+        filters: dict = {}
+        _extract_condition_filters(
+            condition, "user-456", filters, logging.getLogger(), auth_context
+        )
+
+        subquery_keys = [k for k in filters if k.endswith("__in_subquery")]
+        assert len(subquery_keys) == 1

@@ -214,6 +214,57 @@ def _extract_cedar_row_filters(
     return filters
 
 
+def _build_via_subquery(
+    *,
+    junction_entity: str,
+    bindings: list[dict[str, str]],
+    user_id: str,
+    auth_context: Any = None,
+) -> tuple[str, str, list[Any]]:
+    """Build a SQL subquery for a via-check scope condition.
+
+    Returns (entity_field, subquery_sql, params).
+    """
+    from dazzle_back.runtime.query_builder import quote_identifier
+
+    junction_table = quote_identifier(junction_entity)
+    select_field = None
+    entity_field = None
+    where_clauses: list[str] = []
+    params: list[Any] = []
+
+    for binding in bindings:
+        jf = quote_identifier(binding["junction_field"])
+        target = binding["target"]
+        op = binding.get("operator", "=")
+
+        if target == "null":
+            if op == "=":
+                where_clauses.append(f"{jf} IS NULL")  # nosemgrep
+            else:
+                where_clauses.append(f"{jf} IS NOT NULL")  # nosemgrep
+        elif target.startswith("current_user"):
+            if target == "current_user":
+                resolved = user_id
+            else:
+                attr_name = target[len("current_user.") :]
+                resolved = _resolve_user_attribute(attr_name, auth_context)
+            where_clauses.append(f"{jf} = %s")  # nosemgrep
+            params.append(resolved)
+        else:
+            # Entity binding: target is a field name on the scoped entity
+            select_field = jf
+            entity_field = target
+
+    if select_field is None or entity_field is None:
+        raise ValueError("via condition must have at least one entity binding")
+
+    where_sql = " AND ".join(where_clauses) if where_clauses else "TRUE"
+    subquery_sql = f"SELECT {select_field} FROM {junction_table} WHERE {where_sql}"  # nosemgrep
+
+    return entity_field, subquery_sql, params
+
+
 def _resolve_user_attribute(attr_name: str, auth_context: Any) -> Any:
     """Resolve a ``current_user.<attr_name>`` dotted reference to a concrete value.
 
@@ -323,6 +374,19 @@ def _extract_condition_filters(
                 _extract_condition_filters(right, user_id, filters, _logger, auth_context)
         return
 
+    if kind == "via_check":
+        junction_entity = getattr(condition, "via_junction_entity", None)
+        bindings = getattr(condition, "via_bindings", None)
+        if junction_entity and bindings:
+            entity_field, subquery_sql, subquery_params = _build_via_subquery(
+                junction_entity=junction_entity,
+                bindings=bindings,
+                user_id=user_id,
+                auth_context=auth_context,
+            )
+            filters[f"{entity_field}__in_subquery"] = (subquery_sql, subquery_params)
+        return
+
     # ---- IR ConditionExpr path (no .kind, uses .comparison/.operator) -----
     comp = getattr(condition, "comparison", None)
     if comp is not None:
@@ -376,6 +440,23 @@ def _extract_condition_filters(
                 _extract_condition_filters(right, user_id, filters, _logger, auth_context)
         # OR and other logical operators require post-fetch filtering
         # which is handled by the visibility system already
+        return
+
+    # Via-check condition (IR path)
+    via_cond = getattr(condition, "via_condition", None)
+    if via_cond is not None:
+        bindings_dicts = [
+            {"junction_field": b.junction_field, "target": b.target, "operator": b.operator}
+            for b in via_cond.bindings
+        ]
+        entity_field, subquery_sql, subquery_params = _build_via_subquery(
+            junction_entity=via_cond.junction_entity,
+            bindings=bindings_dicts,
+            user_id=user_id,
+            auth_context=auth_context,
+        )
+        filters[f"{entity_field}__in_subquery"] = (subquery_sql, subquery_params)
+        return
 
 
 # =============================================================================
@@ -1001,7 +1082,7 @@ def _is_field_condition(condition: Any) -> bool:
     kind = getattr(condition, "kind", None)
     if kind == "role_check":
         return False
-    if kind in ("comparison", "grant_check"):
+    if kind in ("comparison", "grant_check", "via_check"):
         return True
     if kind == "logical":
         return _is_field_condition(getattr(condition, "logical_left", None)) or _is_field_condition(
