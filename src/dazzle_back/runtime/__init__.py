@@ -23,6 +23,7 @@ Example usage:
     >>> run_app(spec, port=8000)
 """
 
+from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE
 from dazzle_back.runtime.access_evaluator import (
     AccessRuntimeContext,
     can_create,
@@ -59,7 +60,6 @@ from dazzle_back.runtime.repository import (
     SQLiteRepository,
 )
 from dazzle_back.runtime.route_generator import (
-    FASTAPI_AVAILABLE,
     RouteGenerator,
     generate_crud_routes,
 )

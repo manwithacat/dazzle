@@ -11,11 +11,29 @@ When FastAPI is not installed every symbol is set to ``None`` so that
 
 from __future__ import annotations
 
+from typing import Any
+
 # ---------------------------------------------------------------------------
 # Core FastAPI symbols
 # ---------------------------------------------------------------------------
+FASTAPI_AVAILABLE: bool
+APIRouter: Any
+Cookie: Any
+CORSMiddleware: Any
+Depends: Any
+FastAPIRequest: Any
+HTMLResponse: Any
+HTTPException: Any
+JSONResponse: Any
+Query: Any
+RedirectResponse: Any
+Request: Any
+Response: Any
+StarletteResponse: Any
+_FastAPI: Any
+
 try:
-    from fastapi import (  # type: ignore[assignment]
+    from fastapi import (
         APIRouter,
         Cookie,
         Depends,
@@ -24,34 +42,34 @@ try:
         Request,
         Response,
     )
-    from fastapi import FastAPI as _FastAPI  # type: ignore[assignment]
-    from fastapi import Request as FastAPIRequest  # type: ignore[assignment]
-    from fastapi.middleware.cors import CORSMiddleware  # type: ignore[assignment]
-    from fastapi.responses import (  # type: ignore[assignment]
+    from fastapi import FastAPI as _FastAPI
+    from fastapi import Request as FastAPIRequest
+    from fastapi.middleware.cors import CORSMiddleware
+    from fastapi.responses import (
         HTMLResponse,
         JSONResponse,
         RedirectResponse,
     )
-    from starlette.responses import Response as StarletteResponse  # type: ignore[assignment]
+    from starlette.responses import Response as StarletteResponse
 
     FASTAPI_AVAILABLE = True
 
 except ImportError:
     FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore[assignment,misc]
-    Cookie = None  # type: ignore[assignment,misc]
-    CORSMiddleware = None  # type: ignore[assignment,misc]
-    Depends = None  # type: ignore[assignment,misc]
-    _FastAPI = None  # type: ignore[assignment,misc]
-    FastAPIRequest = None  # type: ignore[assignment,misc]
-    HTMLResponse = None  # type: ignore[assignment,misc]
-    HTTPException = None  # type: ignore[assignment,misc]
-    JSONResponse = None  # type: ignore[assignment,misc]
-    Query = None  # type: ignore[assignment,misc]
-    RedirectResponse = None  # type: ignore[assignment,misc]
-    Request = None  # type: ignore[assignment,misc]
-    Response = None  # type: ignore[assignment,misc]
-    StarletteResponse = None  # type: ignore[assignment,misc]
+    APIRouter = None
+    Cookie = None
+    CORSMiddleware = None
+    Depends = None
+    _FastAPI = None
+    FastAPIRequest = None
+    HTMLResponse = None
+    HTTPException = None
+    JSONResponse = None
+    Query = None
+    RedirectResponse = None
+    Request = None
+    Response = None
+    StarletteResponse = None
 
 # Expose FastAPI under its canonical name for callers that reference it.
 FastAPI = _FastAPI

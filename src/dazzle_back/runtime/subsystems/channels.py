@@ -79,7 +79,7 @@ class ChannelsSubsystem:
     def _add_channel_routes(self, ctx: SubsystemContext) -> None:
         from fastapi import HTTPException
 
-        channel_manager = ctx.channel_manager
+        channel_manager: Any = ctx.channel_manager
         app = ctx.app
 
         @app.get("/_dazzle/channels", tags=["Channels"])

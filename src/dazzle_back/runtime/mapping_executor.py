@@ -24,6 +24,7 @@ Cache layer (optional, requires ``redis`` package and ``REDIS_URL``)::
 
 from __future__ import annotations
 
+import asyncio  # noqa: F401 — required by tests that mock asyncio.sleep on this module
 import logging
 import os
 import re
