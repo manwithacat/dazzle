@@ -16,6 +16,7 @@ from dazzle_back.specs.auth import (
     PermissionRuleSpec,
     PermissionSpec,
     RoleSpec,
+    ScopeRuleSpec,
     TenancyRuleSpec,
     VisibilityRuleSpec,
 )
@@ -127,6 +128,7 @@ __all__ = [
     "AccessPolicyEffect",
     "VisibilityRuleSpec",
     "PermissionRuleSpec",
+    "ScopeRuleSpec",
     "EntityAccessSpec",
     # Channel/Messaging types (v0.9)
     "ChannelSpec",

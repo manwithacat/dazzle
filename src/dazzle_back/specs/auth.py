@@ -293,11 +293,33 @@ class PermissionRuleSpec(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ScopeRuleSpec(BaseModel):
+    """Row-filtering scope rule — converted from IR ScopeRule.
+
+    Defines which records a role can see after passing the permit gate.
+    condition=None means 'all' (no filter). personas=["*"] means all
+    authorized roles.
+    """
+
+    operation: AccessOperationKind = Field(description="Operation type")
+    condition: AccessConditionSpec | None = Field(
+        default=None,
+        description="Row-filter condition (None means 'all records')",
+    )
+    personas: list[str] = Field(
+        default_factory=list,
+        description="Persona scope (['*'] means all authorized roles)",
+    )
+
+    model_config = ConfigDict(frozen=True)
+
+
 class EntityAccessSpec(BaseModel):
     """
     Entity-level access control specification.
 
-    Combines visibility rules (read access) and permission rules (write access).
+    Combines visibility rules (read access), permission rules (write access),
+    and scope rules (row-level filtering after permit gate).
 
     Example:
         EntityAccessSpec(
@@ -317,6 +339,13 @@ class EntityAccessSpec(BaseModel):
                     operation=AccessOperationKind.UPDATE,
                     condition=AccessConditionSpec(...)
                 )
+            ],
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=AccessConditionSpec(...),
+                    personas=["manager"]
+                )
             ]
         )
     """
@@ -326,6 +355,9 @@ class EntityAccessSpec(BaseModel):
     )
     permissions: list[PermissionRuleSpec] = Field(
         default_factory=list, description="Permission rules (create/update/delete access)"
+    )
+    scopes: list[ScopeRuleSpec] = Field(
+        default_factory=list, description="Row-filtering scope rules (post-permit gate)"
     )
 
     model_config = ConfigDict(frozen=True)

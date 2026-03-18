@@ -33,6 +33,7 @@ from dazzle_back.specs import (
     RelationKind,
     RelationSpec,
     ScalarType,
+    ScopeRuleSpec,
     StateMachineSpec,
     StateTransitionSpec,
     TimeUnit,
@@ -667,11 +668,28 @@ def _convert_permission_rule(rule: ir.PermissionRule) -> PermissionRuleSpec:
     )
 
 
+def _convert_scope_rule(rule: ir.ScopeRule) -> ScopeRuleSpec:
+    """Convert IR ScopeRule to BackendSpec ScopeRuleSpec."""
+    op_map = {
+        ir.PermissionKind.CREATE: AccessOperationKind.CREATE,
+        ir.PermissionKind.READ: AccessOperationKind.READ,
+        ir.PermissionKind.UPDATE: AccessOperationKind.UPDATE,
+        ir.PermissionKind.DELETE: AccessOperationKind.DELETE,
+        ir.PermissionKind.LIST: AccessOperationKind.LIST,
+    }
+    return ScopeRuleSpec(
+        operation=op_map[rule.operation],
+        condition=_convert_access_condition(rule.condition) if rule.condition else None,
+        personas=list(rule.personas),
+    )
+
+
 def _convert_access_spec(access: ir.AccessSpec) -> EntityAccessSpec:
     """Convert IR AccessSpec to BackendSpec EntityAccessSpec."""
     return EntityAccessSpec(
         visibility=[_convert_visibility_rule(v) for v in access.visibility],
         permissions=[_convert_permission_rule(p) for p in access.permissions],
+        scopes=[_convert_scope_rule(s) for s in access.scopes],
     )
 
 

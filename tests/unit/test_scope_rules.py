@@ -1,6 +1,7 @@
 """
 Unit tests for ScopeRule IR type and AccessSpec.scopes field,
 plus parser tests for scope: blocks and permit: field-condition rejection.
+Includes converter tests for _convert_scope_rule (Task 3).
 """
 
 from pathlib import Path
@@ -16,6 +17,8 @@ from dazzle.core.ir.conditions import (
     ConditionValue,
 )
 from dazzle.core.ir.domain import AccessSpec, PermissionKind, ScopeRule
+from dazzle_back.converters.entity_converter import _convert_scope_rule
+from dazzle_back.specs.auth import AccessOperationKind, ScopeRuleSpec
 
 
 def _make_condition() -> ConditionExpr:
@@ -375,3 +378,79 @@ entity Record "Record":
         entity = fragment.entities[0]
         assert entity.access is not None
         assert len(entity.access.permissions) == 1
+
+
+# =============================================================================
+# Task 3: Converter tests — _convert_scope_rule
+# =============================================================================
+
+
+class TestConvertScopeRule:
+    """Tests for the _convert_scope_rule converter function."""
+
+    def test_convert_scope_rule_with_field_condition(self):
+        """_convert_scope_rule converts a ScopeRule with a field condition."""
+        condition = _make_condition()
+        ir_rule = ScopeRule(
+            operation=PermissionKind.READ,
+            condition=condition,
+            personas=["manager"],
+        )
+
+        result = _convert_scope_rule(ir_rule)
+
+        assert isinstance(result, ScopeRuleSpec)
+        assert result.operation == AccessOperationKind.READ
+        assert result.condition is not None
+        assert result.condition.kind == "comparison"
+        assert result.condition.field == "owner_id"
+        assert result.condition.value == "current_user"
+        assert result.personas == ["manager"]
+
+    def test_convert_scope_rule_condition_none(self):
+        """_convert_scope_rule with condition=None produces condition=None in spec."""
+        ir_rule = ScopeRule(
+            operation=PermissionKind.LIST,
+            condition=None,
+            personas=["admin"],
+        )
+
+        result = _convert_scope_rule(ir_rule)
+
+        assert isinstance(result, ScopeRuleSpec)
+        assert result.operation == AccessOperationKind.LIST
+        assert result.condition is None
+        assert result.personas == ["admin"]
+
+    def test_convert_scope_rule_all_operations(self):
+        """_convert_scope_rule maps every PermissionKind to the correct AccessOperationKind."""
+        expected = {
+            PermissionKind.CREATE: AccessOperationKind.CREATE,
+            PermissionKind.READ: AccessOperationKind.READ,
+            PermissionKind.UPDATE: AccessOperationKind.UPDATE,
+            PermissionKind.DELETE: AccessOperationKind.DELETE,
+            PermissionKind.LIST: AccessOperationKind.LIST,
+        }
+        for ir_kind, expected_kind in expected.items():
+            result = _convert_scope_rule(ScopeRule(operation=ir_kind))
+            assert result.operation == expected_kind
+
+    def test_convert_scope_rule_wildcard_personas(self):
+        """_convert_scope_rule preserves ['*'] persona list."""
+        ir_rule = ScopeRule(
+            operation=PermissionKind.READ,
+            condition=_make_condition(),
+            personas=["*"],
+        )
+
+        result = _convert_scope_rule(ir_rule)
+
+        assert result.personas == ["*"]
+
+    def test_convert_scope_rule_empty_personas(self):
+        """_convert_scope_rule preserves empty personas list."""
+        ir_rule = ScopeRule(operation=PermissionKind.DELETE)
+
+        result = _convert_scope_rule(ir_rule)
+
+        assert result.personas == []
