@@ -294,8 +294,14 @@ def create_page_routes(
                             else AccessOperationKind.READ
                         )
 
-                        # Only gate when all rules for this operation are pure role checks
+                        # Only gate when all rules for this operation are pure role checks.
+                        # When scopes are present, permit rules are guaranteed role-only
+                        # (scope: blocks hold all field-condition logic), so always fire
+                        # the gate. When scopes are absent (backward compat), skip if any
+                        # rule carries a field condition — those require a record to evaluate
+                        # and are handled at query time by the API layer's row filters.
                         _op_rules = [r for r in _cedar_spec.permissions if r.operation == _op]
+                        _has_scopes = bool(getattr(_cedar_spec, "scopes", None))
 
                         def _is_field_cond(cond: Any) -> bool:
                             """Return True if condition needs record data to evaluate."""
@@ -312,7 +318,11 @@ def create_page_routes(
                                 ) or _is_field_cond(getattr(cond, "logical_right", None))
                             return False
 
-                        _has_field_conditions = any(_is_field_cond(r.condition) for r in _op_rules)
+                        _has_field_conditions = (
+                            False
+                            if _has_scopes
+                            else any(_is_field_cond(r.condition) for r in _op_rules)
+                        )
                         if _op_rules and not _has_field_conditions:
                             # Build AccessRuntimeContext from auth context
                             _user = auth_ctx.user if auth_ctx.is_authenticated else None
