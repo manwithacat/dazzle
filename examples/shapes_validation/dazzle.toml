@@ -1,0 +1,18 @@
+[project]
+name = "shapes_validation"
+title = "Shapes RBAC Validation"
+description = "Abstract domain for RBAC verification — exercises every access pattern"
+root = "shapes_validation"
+version = "0.1.0"
+type = "benchmark"
+
+[modules]
+paths = ["./dsl"]
+
+[stack]
+name = "dnr"
+
+[auth]
+enabled = true
+provider = "session"
+allow_registration = false
