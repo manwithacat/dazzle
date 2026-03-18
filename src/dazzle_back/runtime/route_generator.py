@@ -205,7 +205,7 @@ def _extract_cedar_row_filters(
             continue
 
         # Extract field comparison conditions
-        _extract_condition_filters(condition, user_id, filters, _logger)
+        _extract_condition_filters(condition, user_id, filters, _logger, auth_context)
 
     # If user has any unrestricted permit, don't apply row filters
     if has_unrestricted_permit:
@@ -214,11 +214,56 @@ def _extract_cedar_row_filters(
     return filters
 
 
+def _resolve_user_attribute(attr_name: str, auth_context: Any) -> Any:
+    """Resolve a ``current_user.<attr_name>`` dotted reference to a concrete value.
+
+    Resolution order:
+    1. Built-in ``UserRecord`` fields (``id``, ``email``, ``username``, etc.)
+    2. ``auth_context.preferences`` dict (domain-specific attributes like
+       ``school``, ``school_id``, etc.)
+
+    If the attribute is not found, returns ``"__RBAC_DENY__"`` so the caller
+    can inject an impossible filter — enforcing deny-by-default security.
+    """
+    _RBAC_DENY = "__RBAC_DENY__"
+
+    if auth_context is None:
+        return _RBAC_DENY
+
+    user = getattr(auth_context, "user", None)
+
+    # 1. Built-in UserRecord fields (id, email, username, ...).
+    # Only accept scalar primitives — avoids MagicMock/object auto-attribute
+    # hits in tests and rejects non-serialisable field values in production.
+    _SCALAR = str | int | float | bool
+    if user is not None:
+        # Try exact attribute name first
+        user_val = getattr(user, attr_name, None)
+        if isinstance(user_val, _SCALAR):
+            return str(user_val)
+        # Also try <attr>_id variant (e.g. "school" → try "school_id")
+        user_val_id = getattr(user, f"{attr_name}_id", None)
+        if isinstance(user_val_id, _SCALAR):
+            return str(user_val_id)
+
+    # 2. Preferences dict (stores domain-level attributes as strings)
+    prefs: dict[str, str] = getattr(auth_context, "preferences", {}) or {}
+    if attr_name in prefs:
+        return prefs[attr_name]
+    # Also try <attr>_id variant in preferences
+    attr_id_key = f"{attr_name}_id"
+    if attr_id_key in prefs:
+        return prefs[attr_id_key]
+
+    return _RBAC_DENY
+
+
 def _extract_condition_filters(
     condition: Any,
     user_id: str,
     filters: dict[str, Any],
     _logger: Any,
+    auth_context: Any = None,
 ) -> None:
     """Recursively extract SQL filters from a condition tree.
 
@@ -229,6 +274,11 @@ def _extract_condition_filters(
 
     Only simple equality conditions with ``current_user`` are pushed to SQL.
     OR trees require post-fetch filtering (handled by the visibility system).
+
+    Dotted ``current_user.<attr>`` values are resolved from the authenticated
+    user's built-in fields and preferences.  If the attribute cannot be
+    resolved the filter is set to ``__RBAC_DENY__`` to ensure no rows are
+    returned — secure by default (#526).
     """
     kind = getattr(condition, "kind", "")
 
@@ -244,6 +294,14 @@ def _extract_condition_filters(
 
         if field and value == "current_user" and op_val in ("=", "eq", "equals"):
             filters[field] = user_id
+        elif (
+            field
+            and isinstance(value, str)
+            and value.startswith("current_user.")
+            and op_val in ("=", "eq", "equals")
+        ):
+            attr_name = value[len("current_user.") :]
+            filters[field] = _resolve_user_attribute(attr_name, auth_context)
         elif field and isinstance(value, str | int | float | bool) and value != "current_user":
             if op_val in ("=", "eq", "equals"):
                 filters[field] = value
@@ -260,9 +318,9 @@ def _extract_condition_filters(
             left = getattr(condition, "logical_left", None)
             right = getattr(condition, "logical_right", None)
             if left:
-                _extract_condition_filters(left, user_id, filters, _logger)
+                _extract_condition_filters(left, user_id, filters, _logger, auth_context)
             if right:
-                _extract_condition_filters(right, user_id, filters, _logger)
+                _extract_condition_filters(right, user_id, filters, _logger, auth_context)
         return
 
     # ---- IR ConditionExpr path (no .kind, uses .comparison/.operator) -----
@@ -286,6 +344,14 @@ def _extract_condition_filters(
             filters[field] = user_id
         elif (
             field
+            and isinstance(raw_value, str)
+            and raw_value.startswith("current_user.")
+            and op_val in ("=", "eq", "equals")
+        ):
+            attr_name = raw_value[len("current_user.") :]
+            filters[field] = _resolve_user_attribute(attr_name, auth_context)
+        elif (
+            field
             and isinstance(raw_value, str | int | float | bool)
             and raw_value != "current_user"
         ):
@@ -305,9 +371,9 @@ def _extract_condition_filters(
             left = getattr(condition, "left", None)
             right = getattr(condition, "right", None)
             if left:
-                _extract_condition_filters(left, user_id, filters, _logger)
+                _extract_condition_filters(left, user_id, filters, _logger, auth_context)
             if right:
-                _extract_condition_filters(right, user_id, filters, _logger)
+                _extract_condition_filters(right, user_id, filters, _logger, auth_context)
         # OR and other logical operators require post-fetch filtering
         # which is handled by the visibility system already
 

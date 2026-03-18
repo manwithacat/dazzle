@@ -977,3 +977,178 @@ class TestListGateRoleCheckCondition:
             entity_name="Course",
         )
         assert result is not None
+
+
+# =============================================================================
+# _resolve_user_attribute: dotted current_user.<attr> resolution (#526)
+# =============================================================================
+
+
+class TestResolveUserAttribute:
+    """Tests for _resolve_user_attribute — the helper that resolves
+    ``current_user.<attr>`` dotted paths to a concrete filter value."""
+
+    def test_resolves_builtin_field(self) -> None:
+        """A built-in UserRecord field (e.g. email) is resolved directly."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _resolve_user_attribute
+
+        auth_ctx = MagicMock()
+        auth_ctx.user.email = "alice@school.edu"
+        auth_ctx.preferences = {}
+
+        assert _resolve_user_attribute("email", auth_ctx) == "alice@school.edu"
+
+    def test_resolves_from_preferences(self) -> None:
+        """Domain-specific attribute stored in preferences is resolved."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _resolve_user_attribute
+
+        auth_ctx = MagicMock()
+        auth_ctx.preferences = {"school": "school-uuid-42"}
+        # Ensure the user attribute returns None so resolution falls through to prefs
+        type(auth_ctx.user).school = property(lambda self: None)
+
+        result = _resolve_user_attribute("school", auth_ctx)
+        assert result == "school-uuid-42"
+
+    def test_resolves_id_variant_from_preferences(self) -> None:
+        """Preferences key ``school_id`` is returned when ``school`` is absent."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _resolve_user_attribute
+
+        auth_ctx = MagicMock()
+        auth_ctx.preferences = {"school_id": "school-uuid-99"}
+        type(auth_ctx.user).school = property(lambda self: None)
+
+        result = _resolve_user_attribute("school", auth_ctx)
+        assert result == "school-uuid-99"
+
+    def test_returns_deny_sentinel_when_attribute_missing(self) -> None:
+        """Missing attribute returns __RBAC_DENY__ to block all rows."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _resolve_user_attribute
+
+        auth_ctx = MagicMock()
+        auth_ctx.preferences = {}
+        type(auth_ctx.user).school = property(lambda self: None)
+
+        result = _resolve_user_attribute("school", auth_ctx)
+        assert result == "__RBAC_DENY__"
+
+    def test_returns_deny_sentinel_when_auth_context_is_none(self) -> None:
+        """None auth_context returns __RBAC_DENY__."""
+        from dazzle_back.runtime.route_generator import _resolve_user_attribute
+
+        assert _resolve_user_attribute("school", None) == "__RBAC_DENY__"
+
+
+# =============================================================================
+# _extract_condition_filters: dotted current_user.<attr> path (#526)
+# =============================================================================
+
+
+class TestExtractConditionFiltersDottedAttr:
+    """Tests that _extract_condition_filters resolves current_user.<attr>
+    dotted paths and injects them as SQL filters."""
+
+    def _make_auth_ctx(self, preferences: dict[str, str]) -> object:
+        from unittest.mock import MagicMock
+
+        auth_ctx = MagicMock()
+        auth_ctx.preferences = preferences
+        # Make school attribute return None on the user object so resolution
+        # falls through to the preferences dict.
+        type(auth_ctx.user).school = property(lambda self: None)
+        return auth_ctx
+
+    def test_comparison_condition_resolves_dotted_attr_from_preferences(self) -> None:
+        """AccessConditionSpec comparison with current_user.school is resolved."""
+        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle_back.specs.auth import AccessComparisonKind, AccessConditionSpec
+
+        condition = AccessConditionSpec(
+            kind="comparison",
+            field="school",
+            comparison_op=AccessComparisonKind.EQUALS,
+            value="current_user.school",
+        )
+
+        auth_ctx = self._make_auth_ctx({"school": "school-abc"})
+        filters: dict = {}
+        _extract_condition_filters(condition, "user-1", filters, None, auth_ctx)
+
+        assert filters == {"school": "school-abc"}
+
+    def test_comparison_condition_injects_deny_when_attr_missing(self) -> None:
+        """Missing user attribute produces __RBAC_DENY__ filter — secure by default."""
+        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle_back.specs.auth import AccessComparisonKind, AccessConditionSpec
+
+        condition = AccessConditionSpec(
+            kind="comparison",
+            field="school",
+            comparison_op=AccessComparisonKind.EQUALS,
+            value="current_user.school",
+        )
+
+        auth_ctx = self._make_auth_ctx({})  # no school in preferences
+        filters: dict = {}
+        _extract_condition_filters(condition, "user-1", filters, None, auth_ctx)
+
+        assert filters == {"school": "__RBAC_DENY__"}
+
+    def test_and_logical_condition_threads_auth_context(self) -> None:
+        """AND logical condition threads auth_context through to child comparisons."""
+        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle_back.specs.auth import (
+            AccessComparisonKind,
+            AccessConditionSpec,
+            AccessLogicalKind,
+        )
+
+        condition = AccessConditionSpec(
+            kind="logical",
+            logical_op=AccessLogicalKind.AND,
+            logical_left=AccessConditionSpec(
+                kind="comparison",
+                field="school",
+                comparison_op=AccessComparisonKind.EQUALS,
+                value="current_user.school",
+            ),
+            logical_right=AccessConditionSpec(
+                kind="comparison",
+                field="active",
+                comparison_op=AccessComparisonKind.EQUALS,
+                value="true",
+            ),
+        )
+
+        auth_ctx = self._make_auth_ctx({"school": "school-xyz"})
+        filters: dict = {}
+        _extract_condition_filters(condition, "user-1", filters, None, auth_ctx)
+
+        assert filters["school"] == "school-xyz"
+        assert filters["active"] == "true"
+
+    def test_no_filter_injected_for_non_dotted_current_user(self) -> None:
+        """Plain ``current_user`` (no dot) still maps to user_id as before."""
+        from dazzle_back.runtime.route_generator import _extract_condition_filters
+        from dazzle_back.specs.auth import AccessComparisonKind, AccessConditionSpec
+
+        condition = AccessConditionSpec(
+            kind="comparison",
+            field="owner",
+            comparison_op=AccessComparisonKind.EQUALS,
+            value="current_user",
+        )
+
+        auth_ctx = self._make_auth_ctx({})
+        filters: dict = {}
+        _extract_condition_filters(condition, "user-uuid-1", filters, None, auth_ctx)
+
+        assert filters == {"owner": "user-uuid-1"}
