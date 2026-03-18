@@ -180,6 +180,7 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 | `test_intelligence` | summary, failures, regression, coverage, context |
 | `api_pack` | list, search, get |
 | `mock` | status, request_log |
+| `db` | status, verify |
 | `demo_data` | get |
 | `pitch` | get |
 | `status` | mcp, logs, telemetry, activity |
@@ -209,6 +210,9 @@ dazzle test verify-story|generate|run|run-all|coverage|diff-personas
 dazzle pulse run|radar|persona|timeline|decisions|wfs
 dazzle pitch review|update|enrich|init-assets
 dazzle sentinel scan|suppress
+
+# Database operations
+dazzle db status|verify|reset|cleanup
 
 # Data & integration
 dazzle demo propose|save|generate
