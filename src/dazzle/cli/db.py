@@ -11,12 +11,15 @@ Wraps Alembic's programmatic API for managing PostgreSQL schema migrations:
 
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 from typing import Any
 
 import typer
 from rich.console import Console
+
+from dazzle.cli.utils import load_project_appspec
 
 db_app = typer.Typer(
     help="Database migration commands (Alembic)",
@@ -144,3 +147,234 @@ def history_command(
     except Exception as e:
         console.print(f"[red]Failed to get history: {e}[/red]")
         raise typer.Exit(1)
+
+
+async def _run_with_connection(
+    project_root: Path,
+    database_url: str,
+    coro_factory: Any,
+) -> Any:
+    """Connect to DB, run async operation, close connection."""
+    from dazzle.db.connection import get_connection
+
+    conn = await get_connection(explicit_url=database_url, project_root=project_root)
+    try:
+        return await coro_factory(conn)
+    finally:
+        await conn.close()
+
+
+def _resolve_url(database_url: str) -> str:
+    """Resolve database URL from flag, env, or manifest."""
+    from dazzle.db.connection import resolve_db_url
+
+    return resolve_db_url(explicit_url=database_url, project_root=Path.cwd().resolve())
+
+
+@db_app.command(name="status")
+def status_command(
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Show row counts per entity and database size."""
+    import json as json_mod
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    entities = appspec.domain.entities
+    url = _resolve_url(database_url)
+
+    from dazzle.db.status import db_status_impl
+
+    async def _run(conn: Any) -> Any:
+        return await db_status_impl(entities=entities, conn=conn)
+
+    result = asyncio.run(_run_with_connection(project_root, url, _run))
+
+    if as_json:
+        console.print(json_mod.dumps(result, indent=2))
+        return
+
+    console.print("\n[bold]Entity           Rows[/bold]")
+    console.print("─" * 30)
+    for entry in result["entities"]:
+        status = "[red]error[/red]" if entry.get("error") else str(entry["rows"])
+        console.print(f"  {entry['name']:<18} {status}")
+    console.print("─" * 30)
+    console.print(
+        f"Total: {result['total_entities']} entities, "
+        f"{result['total_rows']:,} rows, {result['database_size']}"
+    )
+
+
+@db_app.command(name="verify")
+def verify_command(
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Check FK integrity across all entity relationships."""
+    import json as json_mod
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    entities = appspec.domain.entities
+    url = _resolve_url(database_url)
+
+    from dazzle.db.verify import db_verify_impl
+
+    async def _run(conn: Any) -> Any:
+        return await db_verify_impl(entities=entities, conn=conn)
+
+    result = asyncio.run(_run_with_connection(project_root, url, _run))
+
+    if as_json:
+        console.print(json_mod.dumps(result, indent=2))
+        return
+
+    console.print("\n[bold]FK Integrity:[/bold]")
+    for check in result["checks"]:
+        if check["status"] == "ok":
+            console.print(f"  [green]✓[/green] {check['entity']}.{check['field']} → {check['ref']}")
+        elif check["status"] == "orphans":
+            console.print(
+                f"  [red]✗[/red] {check['entity']}.{check['field']} → {check['ref']}: "
+                f"{check['orphan_count']} orphans"
+            )
+        else:
+            console.print(
+                f"  [yellow]![/yellow] {check['entity']}.{check['field']} → {check['ref']}: "
+                f"{check.get('error', 'unknown error')}"
+            )
+
+    if result["total_issues"] == 0:
+        console.print("\n[green]All FK references valid.[/green]")
+    else:
+        console.print(f"\n[red]{result['total_issues']} issues found.[/red]")
+
+
+@db_app.command(name="reset")
+def reset_command(
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be truncated"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Truncate entity tables in dependency order (preserves auth)."""
+    import json as json_mod
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    entities = appspec.domain.entities
+    url = _resolve_url(database_url)
+
+    from dazzle.db.reset import db_reset_impl
+
+    if dry_run:
+
+        async def _run_dry(conn: Any) -> Any:
+            return await db_reset_impl(entities=entities, conn=conn, dry_run=True)
+
+        result = asyncio.run(_run_with_connection(project_root, url, _run_dry))
+
+        if as_json:
+            console.print(json_mod.dumps(result, indent=2))
+            return
+
+        console.print(
+            f"\n[bold]Would truncate {result['would_truncate']} tables ({result['total_rows']:,} rows):[/bold]"
+        )
+        for t in result["tables"]:
+            console.print(f"  {t['name']} ({t['rows']} rows)")
+        if result["preserved"]:
+            console.print(f"\nPreserved: {', '.join(result['preserved'])}")
+        return
+
+    if not yes:
+        console.print(f"\nThis will truncate {len(entities)} entity tables.")
+        confirm = typer.prompt("Type 'reset' to confirm", default="")
+        if confirm != "reset":
+            console.print("[yellow]Aborted.[/yellow]")
+            raise typer.Exit(0)
+
+    async def _run(conn: Any) -> Any:
+        return await db_reset_impl(entities=entities, conn=conn)
+
+    result = asyncio.run(_run_with_connection(project_root, url, _run))
+
+    if as_json:
+        console.print(json_mod.dumps(result, indent=2))
+        return
+
+    for t in result["tables"]:
+        err = f" [red]error: {t['error']}[/red]" if t.get("error") else " ✓"
+        console.print(f"  {t['name']} ({t['rows']} rows){err}")
+    console.print(
+        f"\n[green]Reset complete: {result['truncated']} tables, {result['total_rows']:,} rows removed.[/green]"
+    )
+
+
+@db_app.command(name="cleanup")
+def cleanup_command(
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deleted"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
+    as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
+) -> None:
+    """Find and remove FK orphan records."""
+    import json as json_mod
+
+    project_root = Path.cwd().resolve()
+    appspec = load_project_appspec(project_root)
+    entities = appspec.domain.entities
+    url = _resolve_url(database_url)
+
+    from dazzle.db.cleanup import db_cleanup_impl
+
+    if dry_run:
+
+        async def _run_dry(conn: Any) -> Any:
+            return await db_cleanup_impl(entities=entities, conn=conn, dry_run=True)
+
+        result = asyncio.run(_run_with_connection(project_root, url, _run_dry))
+
+        if as_json:
+            console.print(json_mod.dumps(result, indent=2))
+            return
+
+        if result["would_delete"] == 0:
+            console.print("[green]No orphan records found.[/green]")
+            return
+
+        console.print(f"\n[bold]Found {result['would_delete']} orphan records:[/bold]")
+        for f in result["findings"]:
+            console.print(
+                f"  {f['orphan_count']} × {f['entity']} ({f['field']} → {f['ref']}: missing)"
+            )
+        console.print("\nRun without --dry-run to delete.")
+        return
+
+    if not yes:
+        confirm = typer.prompt("Type 'cleanup' to confirm", default="")
+        if confirm != "cleanup":
+            console.print("[yellow]Aborted.[/yellow]")
+            raise typer.Exit(0)
+
+    async def _run(conn: Any) -> Any:
+        return await db_cleanup_impl(entities=entities, conn=conn)
+
+    result = asyncio.run(_run_with_connection(project_root, url, _run))
+
+    if as_json:
+        console.print(json_mod.dumps(result, indent=2))
+        return
+
+    if result["total_deleted"] == 0:
+        console.print("[green]No orphan records found.[/green]")
+        return
+
+    for d in result["deletions"]:
+        console.print(f"  {d['deleted']} × {d['entity']} ✓")
+    console.print(
+        f"\n[green]Cleanup complete: {result['total_deleted']} orphans removed "
+        f"in {result['iterations']} iteration(s).[/green]"
+    )
