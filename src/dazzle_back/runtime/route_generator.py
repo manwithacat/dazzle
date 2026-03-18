@@ -942,6 +942,52 @@ def create_list_handler(
     return _noauth_handler
 
 
+def _resolve_scope_filters(
+    cedar_access_spec: Any,
+    operation: str,
+    user_roles: set[str],
+    user_id: str,
+    auth_context: Any | None = None,
+) -> dict[str, Any] | None:
+    """Resolve scope rules to SQL filters for the user's matched role.
+
+    Returns:
+        dict of SQL filters — if a scope rule matches with a field condition
+        {} (empty dict) — if scope is 'all' (no filter needed)
+        None — if no scope rule matches (default-deny: empty result set)
+    """
+    import logging
+
+    scopes = getattr(cedar_access_spec, "scopes", None)
+    if not scopes:
+        return {}  # No scope rules defined — backward compat (no filtering)
+
+    op_val = operation if isinstance(operation, str) else operation.value
+
+    for scope_rule in scopes:
+        rule_op = getattr(scope_rule, "operation", None)
+        if rule_op is None:
+            continue
+        rule_op_val = rule_op.value if hasattr(rule_op, "value") else str(rule_op)
+        if rule_op_val != op_val:
+            continue
+
+        rule_personas = getattr(scope_rule, "personas", [])
+        # Check if this scope rule applies to the user's roles
+        if "*" in rule_personas or (user_roles & set(rule_personas)):
+            condition = getattr(scope_rule, "condition", None)
+            if condition is None:
+                return {}  # scope: all — no filter
+            # Extract SQL filters from the condition
+            filters: dict[str, Any] = {}
+            _extract_condition_filters(
+                condition, user_id, filters, logging.getLogger(__name__), auth_context
+            )
+            return filters
+
+    return None  # No scope rule matched — default-deny
+
+
 def _is_field_condition(condition: Any) -> bool:
     """Return True if condition requires record data to evaluate.
 
@@ -1017,11 +1063,39 @@ async def _list_handler_body(
     # Build visibility filters
     sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
 
-    # Apply row-level filters from Cedar permission rules (v0.33.0)
+    # Apply scope filters (v0.44 — scope: blocks take priority over old row filters).
+    # When scopes list is non-empty, use _resolve_scope_filters; otherwise fall back
+    # to legacy _extract_cedar_row_filters for backward compat.
     if cedar_access_spec and is_authenticated and user_id:
-        cedar_filters = _extract_cedar_row_filters(cedar_access_spec, user_id, auth_context)
-        if cedar_filters:
-            sql_filters = {**(sql_filters or {}), **cedar_filters}
+        # Collect normalized user roles for scope matching
+        _scope_user_roles: set[str] = set()
+        if auth_context is not None:
+            _scope_user_obj = getattr(auth_context, "user", None)
+            if _scope_user_obj:
+                for _r in getattr(_scope_user_obj, "roles", []):
+                    _rname = _r if isinstance(_r, str) else getattr(_r, "name", str(_r))
+                    _scope_user_roles.add(_normalize_role(_rname))
+
+        _has_scopes = bool(getattr(cedar_access_spec, "scopes", None))
+        if _has_scopes:
+            scope_result = _resolve_scope_filters(
+                cedar_access_spec, "list", _scope_user_roles, user_id, auth_context
+            )
+            if scope_result is None:
+                # No scope rule matched this role — default-deny at scope layer
+                return {
+                    "items": [],
+                    "total": 0,
+                    "page": page,
+                    "page_size": page_size,
+                }
+            if scope_result:
+                sql_filters = {**(sql_filters or {}), **scope_result}
+        else:
+            # Backward compat: old-style field conditions in permit: rules
+            cedar_filters = _extract_cedar_row_filters(cedar_access_spec, user_id, auth_context)
+            if cedar_filters:
+                sql_filters = {**(sql_filters or {}), **cedar_filters}
 
     # Extract filter[field] params from query string
     filters: dict[str, Any] = {}

@@ -1152,3 +1152,275 @@ class TestExtractConditionFiltersDottedAttr:
         _extract_condition_filters(condition, "user-uuid-1", filters, None, auth_ctx)
 
         assert filters == {"owner": "user-uuid-1"}
+
+
+# =============================================================================
+# _resolve_scope_filters: scope: block enforcement (v0.44)
+# =============================================================================
+
+
+class TestScopeEnforcement:
+    """Tests for scope: block enforcement via _resolve_scope_filters."""
+
+    def test_resolve_scope_filters_with_matching_role(self) -> None:
+        """Scope rule with matching role returns SQL filters."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.route_generator import _resolve_scope_filters
+        from dazzle_back.specs.auth import (
+            AccessComparisonKind,
+            AccessConditionSpec,
+            AccessOperationKind,
+            EntityAccessSpec,
+            ScopeRuleSpec,
+        )
+
+        cedar_spec = EntityAccessSpec(
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=AccessConditionSpec(
+                        kind="comparison",
+                        field="school",
+                        comparison_op=AccessComparisonKind.EQUALS,
+                        value="current_user.school",
+                    ),
+                    personas=["teacher"],
+                )
+            ]
+        )
+
+        auth_ctx = MagicMock()
+        auth_ctx.preferences = {"school": "school-42"}
+        type(auth_ctx.user).school = property(lambda self: None)
+
+        result = _resolve_scope_filters(cedar_spec, "list", {"teacher"}, "user-1", auth_ctx)
+
+        assert result == {"school": "school-42"}
+
+    def test_resolve_scope_filters_all(self) -> None:
+        """scope: all (condition=None) returns empty dict — no row filter."""
+        from dazzle_back.runtime.route_generator import _resolve_scope_filters
+        from dazzle_back.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            ScopeRuleSpec,
+        )
+
+        cedar_spec = EntityAccessSpec(
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=None,
+                    personas=["admin"],
+                )
+            ]
+        )
+
+        result = _resolve_scope_filters(cedar_spec, "list", {"admin"}, "user-1")
+
+        assert result == {}
+
+    def test_resolve_scope_filters_no_match(self) -> None:
+        """No matching scope rule returns None (default-deny)."""
+        from dazzle_back.runtime.route_generator import _resolve_scope_filters
+        from dazzle_back.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            ScopeRuleSpec,
+        )
+
+        cedar_spec = EntityAccessSpec(
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=None,
+                    personas=["teacher"],
+                )
+            ]
+        )
+
+        # student has no matching scope rule
+        result = _resolve_scope_filters(cedar_spec, "list", {"student"}, "user-1")
+
+        assert result is None
+
+    def test_resolve_scope_filters_wildcard(self) -> None:
+        """personas=['*'] matches any role."""
+        from dazzle_back.runtime.route_generator import _resolve_scope_filters
+        from dazzle_back.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            ScopeRuleSpec,
+        )
+
+        cedar_spec = EntityAccessSpec(
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=None,
+                    personas=["*"],
+                )
+            ]
+        )
+
+        result = _resolve_scope_filters(cedar_spec, "list", {"any_random_role"}, "user-1")
+
+        assert result == {}
+
+    def test_resolve_scope_filters_empty_scopes_is_backward_compat(self) -> None:
+        """Empty scopes list returns {} (no filtering, backward compat)."""
+        from dazzle_back.runtime.route_generator import _resolve_scope_filters
+        from dazzle_back.specs.auth import EntityAccessSpec
+
+        cedar_spec = EntityAccessSpec(scopes=[])
+
+        result = _resolve_scope_filters(cedar_spec, "list", {"admin"}, "user-1")
+
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_list_handler_returns_empty_when_no_scope_matches(self) -> None:
+        """_list_handler_body returns empty result when no scope rule matches the user's role.
+
+        The permit: block grants access to both 'teacher' and 'viewer' (via personas),
+        but the scope: block only defines a rule for 'teacher'. A 'viewer' user passes
+        the permit gate but gets default-deny from the scope layer.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle_back.runtime.route_generator import _list_handler_body
+        from dazzle_back.specs.auth import (
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+            ScopeRuleSpec,
+        )
+
+        # permit: list allows both teacher and viewer (no condition = any authenticated)
+        # scope: list only covers teacher → viewer gets default-deny
+        cedar_spec = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["teacher", "viewer"],
+                ),
+            ],
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=None,
+                    personas=["teacher"],
+                )
+            ],
+        )
+
+        mock_service = AsyncMock()
+        mock_request = MagicMock()
+        mock_request.query_params = {}
+
+        # viewer passes the permit gate but has no matching scope rule → default-deny
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = True
+        user = MagicMock()
+        user.id = "user-1"
+        user.roles = ["viewer"]
+        user.is_superuser = False
+        auth_ctx.user = user
+
+        result = await _list_handler_body(
+            service=mock_service,
+            access_spec=None,
+            is_authenticated=True,
+            user_id="user-1",
+            request=mock_request,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            cedar_access_spec=cedar_spec,
+            auth_context=auth_ctx,
+            entity_name="Resource",
+        )
+
+        # Scope default-deny: empty result, service.execute NOT called
+        assert result == {"items": [], "total": 0, "page": 1, "page_size": 20}
+        mock_service.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_list_handler_applies_scope_filter_for_matching_role(self) -> None:
+        """_list_handler_body applies SQL filter from scope rule for matching role."""
+        from unittest.mock import AsyncMock, MagicMock
+
+        from dazzle_back.runtime.route_generator import _list_handler_body
+        from dazzle_back.specs.auth import (
+            AccessComparisonKind,
+            AccessConditionSpec,
+            AccessOperationKind,
+            EntityAccessSpec,
+            PermissionRuleSpec,
+            ScopeRuleSpec,
+        )
+
+        cedar_spec = EntityAccessSpec(
+            permissions=[
+                PermissionRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    personas=["teacher"],
+                ),
+            ],
+            scopes=[
+                ScopeRuleSpec(
+                    operation=AccessOperationKind.LIST,
+                    condition=AccessConditionSpec(
+                        kind="comparison",
+                        field="school",
+                        comparison_op=AccessComparisonKind.EQUALS,
+                        value="current_user.school",
+                    ),
+                    personas=["teacher"],
+                )
+            ],
+        )
+
+        mock_service = AsyncMock()
+        mock_service.execute.return_value = {
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "page_size": 20,
+        }
+        mock_request = MagicMock()
+        mock_request.query_params = {}
+
+        auth_ctx = MagicMock()
+        auth_ctx.is_authenticated = True
+        auth_ctx.preferences = {"school": "school-99"}
+        user = MagicMock()
+        user.id = "user-2"
+        user.roles = ["teacher"]
+        user.is_superuser = False
+        type(user).school = property(lambda self: None)
+        auth_ctx.user = user
+
+        result = await _list_handler_body(
+            service=mock_service,
+            access_spec=None,
+            is_authenticated=True,
+            user_id="user-2",
+            request=mock_request,
+            page=1,
+            page_size=20,
+            sort=None,
+            dir="asc",
+            search=None,
+            cedar_access_spec=cedar_spec,
+            auth_context=auth_ctx,
+            entity_name="Resource",
+        )
+
+        assert result is not None
+        # The service should have been called with the school filter
+        call_kwargs = mock_service.execute.call_args.kwargs
+        assert call_kwargs["filters"] == {"school": "school-99"}
