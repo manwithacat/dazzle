@@ -32,6 +32,9 @@ except ImportError:
 
 def _sync_fetch(url: str, cookies: dict[str, str] | None = None, timeout: int = 5) -> bytes:
     """Synchronous HTTP GET — runs in a thread to avoid blocking the event loop."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Unsupported URL scheme: {parsed.scheme!r}")
     req = urllib.request.Request(url)
     if cookies:
         req.add_header("Cookie", "; ".join(f"{k}={v}" for k, v in cookies.items()))
@@ -170,12 +173,12 @@ def create_page_routes(
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is not installed")
 
-    from dazzle_back.runtime.surface_access import (
+    from dazzle_ui.converters.template_compiler import compile_appspec_to_templates
+    from dazzle_ui.runtime.surface_access import (
         SurfaceAccessConfig,
         SurfaceAccessDenied,
         check_surface_access,
     )
-    from dazzle_ui.converters.template_compiler import compile_appspec_to_templates
     from dazzle_ui.runtime.template_renderer import render_page
 
     router = APIRouter()
@@ -287,7 +290,7 @@ def create_page_routes(
 
                 # Evaluate role-based visible conditions (#487)
                 if ctx.user_roles is not None:
-                    from dazzle_back.runtime.condition_evaluator import evaluate_condition
+                    from dazzle_ui.utils.condition_eval import evaluate_condition
 
                     _role_ctx = {
                         "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
@@ -382,7 +385,7 @@ def create_page_routes(
 
                 # Evaluate role-based visible conditions (#487)
                 if ctx.user_roles is not None:
-                    from dazzle_back.runtime.condition_evaluator import evaluate_condition
+                    from dazzle_ui.utils.condition_eval import evaluate_condition
 
                     _role_ctx = {
                         "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],

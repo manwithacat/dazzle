@@ -7,6 +7,7 @@ Packs are TOML files containing pre-validated API configurations.
 from __future__ import annotations
 
 import logging
+import threading
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -348,6 +349,7 @@ class ApiPack:
 _pack_cache: dict[str, ApiPack] = {}
 _packs_loaded = False
 _project_root: Path | None = None
+_packs_lock = threading.Lock()
 
 
 def set_project_root(path: Path | None) -> None:
@@ -357,9 +359,10 @@ def set_project_root(path: Path | None) -> None:
     will re-discover packs from both project-local and built-in dirs.
     """
     global _project_root, _packs_loaded
-    _project_root = path
-    _packs_loaded = False
-    _pack_cache.clear()
+    with _packs_lock:
+        _project_root = path
+        _packs_loaded = False
+        _pack_cache.clear()
 
 
 def _get_packs_dir() -> Path:
@@ -516,20 +519,21 @@ def _discover_packs_from_dir(packs_dir: Path) -> None:
 
 def _discover_packs() -> None:
     """Discover all available packs (project-local first, then built-in)."""
-    global _packs_loaded, _pack_cache
+    global _packs_loaded
 
-    if _packs_loaded:
-        return
+    with _packs_lock:
+        if _packs_loaded:
+            return
 
-    # Project-local packs take priority
-    if _project_root is not None:
-        project_packs_dir = _project_root / ".dazzle" / "api_packs"
-        _discover_packs_from_dir(project_packs_dir)
+        # Project-local packs take priority
+        if _project_root is not None:
+            project_packs_dir = _project_root / ".dazzle" / "api_packs"
+            _discover_packs_from_dir(project_packs_dir)
 
-    # Built-in packs (won't overwrite project-local ones with same name)
-    _discover_packs_from_dir(_get_packs_dir())
+        # Built-in packs (won't overwrite project-local ones with same name)
+        _discover_packs_from_dir(_get_packs_dir())
 
-    _packs_loaded = True
+        _packs_loaded = True
 
 
 def load_pack(pack_name: str) -> ApiPack | None:

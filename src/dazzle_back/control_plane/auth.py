@@ -10,6 +10,7 @@ Supports:
 
 from __future__ import annotations
 
+import asyncio
 import hmac
 import logging
 import os
@@ -33,6 +34,7 @@ CONTROL_PLANE_TOKEN = os.environ.get("CONTROL_PLANE_TOKEN", "")
 
 # Session management (simple in-memory, ephemeral)
 _sessions: dict[str, float] = {}  # token -> expiry timestamp
+_sessions_lock: asyncio.Lock = asyncio.Lock()
 SESSION_DURATION = 86400  # 24 hours
 
 
@@ -45,27 +47,30 @@ class AuthContext:
     method: str = ""  # "basic", "bearer", "session", "dev"
 
 
-def create_session() -> str:
+async def create_session() -> str:
     """Create a new session token."""
     token = secrets.token_urlsafe(32)
-    _sessions[token] = time.time() + SESSION_DURATION
+    async with _sessions_lock:
+        _sessions[token] = time.time() + SESSION_DURATION
     return token
 
 
-def validate_session(token: str) -> bool:
+async def validate_session(token: str) -> bool:
     """Validate a session token."""
-    expiry = _sessions.get(token)
-    if not expiry:
-        return False
-    if time.time() > expiry:
-        del _sessions[token]
-        return False
+    async with _sessions_lock:
+        expiry = _sessions.get(token)
+        if not expiry:
+            return False
+        if time.time() > expiry:
+            del _sessions[token]
+            return False
     return True
 
 
-def invalidate_session(token: str) -> None:
+async def invalidate_session(token: str) -> None:
     """Invalidate a session token."""
-    _sessions.pop(token, None)
+    async with _sessions_lock:
+        _sessions.pop(token, None)
 
 
 # Security schemes
@@ -88,7 +93,7 @@ async def get_auth_context(
     """
     # 1. Check session cookie
     session_token = request.cookies.get("control_session")
-    if session_token and validate_session(session_token):
+    if session_token and await validate_session(session_token):
         return AuthContext(
             authenticated=True,
             username=CONTROL_PLANE_USERNAME,

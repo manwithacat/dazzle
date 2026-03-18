@@ -17,7 +17,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from collections.abc import Callable, Coroutine
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -353,55 +352,12 @@ class EventBusProcessAdapter(ProcessAdapter):
 
         Falls back to direct execution if the event bus is not available
         (e.g., in unit tests or when running without the full stack).
-
-        The event bus integration is loaded lazily to avoid a hard dependency
-        on ``dazzle_back`` from the ``dazzle.core`` layer.
         """
         try:
-            publish_fn = self._get_publish_fn()
-            if publish_fn is not None:
-                await publish_fn(event_type, key, payload, deliver_at)
-                logger.debug("Published %s for key=%s", event_type, key)
-                return
-        except Exception as e:
-            logger.warning("Event bus not available, falling back to direct execution: %s", e)
+            from dazzle_back.events.envelope import EventEnvelope
 
-        # Fallback: handle directly in the current async context
-        await self._handle_event_directly(event_type, payload)
-
-    @staticmethod
-    def _get_publish_fn() -> (
-        Callable[[str, str, dict[str, Any], datetime | None], Coroutine[Any, Any, None]] | None
-    ):
-        """Lazily resolve the event-bus publish callable.
-
-        Returns ``None`` when the event framework is not available (e.g.
-        in unit tests or CLI-only usage).  The import is deferred so that
-        ``dazzle.core`` never has a module-level dependency on ``dazzle_back``.
-        """
-        try:
-            # fmt: off
-            import dazzle_back.events.envelope as _env_mod  # noqa: PLC0415
-            import dazzle_back.events.framework as _fw_mod  # noqa: PLC0415
-            # fmt: on
-        except ImportError:
-            return None
-
-        framework = _fw_mod.get_framework()
-        if framework is None or framework._bus is None:
-            return None
-
-        bus = framework._bus
-        envelope_cls = _env_mod.EventEnvelope
-
-        async def _publish(
-            event_type: str,
-            key: str,
-            payload: dict[str, Any],
-            deliver_at: datetime | None,
-        ) -> None:
             if deliver_at:
-                envelope = envelope_cls.create_delayed(
+                envelope = EventEnvelope.create_delayed(
                     event_type=event_type,
                     key=key,
                     payload=payload,
@@ -409,15 +365,25 @@ class EventBusProcessAdapter(ProcessAdapter):
                     producer="dazzle-process",
                 )
             else:
-                envelope = envelope_cls.create(
+                envelope = EventEnvelope.create(
                     event_type=event_type,
                     key=key,
                     payload=payload,
                     producer="dazzle-process",
                 )
-            await bus.publish(envelope.topic, envelope)
 
-        return _publish
+            from dazzle_back.events.framework import get_framework
+
+            framework = get_framework()
+            if framework and framework._bus:
+                await framework._bus.publish(envelope.topic, envelope)
+                logger.debug("Published %s for key=%s", event_type, key)
+                return
+        except Exception as e:
+            logger.warning("Event bus not available, falling back to direct execution: %s", e)
+
+        # Fallback: handle directly in the current async context
+        await self._handle_event_directly(event_type, payload)
 
     async def _handle_event_directly(self, event_type: str, payload: dict[str, Any]) -> None:
         """Handle an event directly when the bus is not available."""
@@ -593,7 +559,7 @@ class EventBusProcessAdapter(ProcessAdapter):
 
     def _execute_process_sync(self, run_id: str) -> None:
         """Execute a process synchronously (called from thread pool)."""
-        from dazzle.core.process.step_executor import execute_process_steps, fail_run
+        from dazzle_back.runtime.process_step_executor import execute_process_steps, fail_run
 
         run = self._store.get_run(run_id)
         if not run:

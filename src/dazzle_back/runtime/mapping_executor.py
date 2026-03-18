@@ -24,7 +24,6 @@ Cache layer (optional, requires ``redis`` package and ``REDIS_URL``)::
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import re
@@ -39,6 +38,7 @@ from dazzle.core.ir.integrations import (
     MappingTriggerType,
 )
 from dazzle_back.runtime.event_bus import EntityEvent, EntityEventType
+from dazzle_back.runtime.http_utils import http_call_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -328,53 +328,59 @@ class MappingExecutor:
 
         # Execute HTTP request with optional retry
         try:
-            for attempt in range(max_attempts):
+            try:
+                request_kwargs: dict[str, Any] = {"headers": headers}
+                if method in ("POST", "PUT", "PATCH"):
+                    request_kwargs["json"] = body
+
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    resp = await http_call_with_retry(
+                        client,
+                        method,
+                        url,
+                        max_attempts=max_attempts,
+                        backoff_base=_RETRY_BACKOFF_BASE,
+                        **request_kwargs,
+                    )
+
+                result.status_code = resp.status_code
+
                 try:
-                    async with httpx.AsyncClient(timeout=30.0) as client:
-                        if method in ("POST", "PUT", "PATCH"):
-                            resp = await client.request(method, url, json=body, headers=headers)
-                        else:
-                            resp = await client.request(method, url, headers=headers)
+                    result.response_data = resp.json()
+                except Exception:
+                    result.response_data = {"raw": resp.text[:1000]}
 
-                    result.status_code = resp.status_code
+                if 200 <= resp.status_code < 300:
+                    result.success = True
 
-                    try:
-                        result.response_data = resp.json()
-                    except Exception:
-                        result.response_data = {"raw": resp.text[:1000]}
+                    # Cache successful GET responses
+                    if is_cacheable and cache is not None:
+                        cache_ttl = getattr(mapping, "cache_ttl", None)
+                        if cache_ttl is None:
+                            cache_ttl = self._lookup_pack_cache_ttl(integration, mapping)
+                        cache_ttl = cache_ttl or _DEFAULT_CACHE_TTL
+                        await cache.put(scope, url, result.response_data, ttl=cache_ttl)
 
-                    if 200 <= resp.status_code < 300:
-                        result.success = True
-
-                        # Cache successful GET responses
-                        if is_cacheable and cache is not None:
-                            cache_ttl = getattr(mapping, "cache_ttl", None)
-                            if cache_ttl is None:
-                                cache_ttl = self._lookup_pack_cache_ttl(integration, mapping)
-                            cache_ttl = cache_ttl or _DEFAULT_CACHE_TTL
-                            await cache.put(scope, url, result.response_data, ttl=cache_ttl)
-
-                        # Apply response mapping
-                        if mapping.response_mapping:
-                            mapped = self._apply_response_mapping(
-                                mapping.response_mapping, result.response_data
-                            )
-                            result.mapped_fields = mapped
-                            if mapped and self._update_entity and event:
-                                try:
-                                    await self._update_entity(
-                                        event.entity_name, event.entity_id, mapped
-                                    )
-                                except Exception as e:
-                                    logger.warning(
-                                        "Failed to update entity %s/%s: %s",
-                                        event.entity_name,
-                                        event.entity_id,
-                                        e,
-                                    )
-                        break  # Success, no retry needed
-
-                    # Non-2xx response
+                    # Apply response mapping
+                    if mapping.response_mapping:
+                        mapped = self._apply_response_mapping(
+                            mapping.response_mapping, result.response_data
+                        )
+                        result.mapped_fields = mapped
+                        if mapped and self._update_entity and event:
+                            try:
+                                await self._update_entity(
+                                    event.entity_name, event.entity_id, mapped
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    "Failed to update entity %s/%s: %s",
+                                    event.entity_name,
+                                    event.entity_id,
+                                    e,
+                                )
+                else:
+                    # Non-2xx response (non-transient, or transient after all retries)
                     logger.warning(
                         "Mapping '%s' returned %d: %s",
                         mapping.name,
@@ -382,16 +388,9 @@ class MappingExecutor:
                         resp.text[:200],
                     )
 
-                    if attempt < max_attempts - 1:
-                        await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
-                        continue
-
-                except Exception as e:
-                    result.error = str(e)
-                    logger.warning("Mapping '%s' failed: %s", mapping.name, e)
-                    if attempt < max_attempts - 1:
-                        await asyncio.sleep(_RETRY_BACKOFF_BASE * (2**attempt))
-                        continue
+            except Exception as e:
+                result.error = str(e)
+                logger.warning("Mapping '%s' failed: %s", mapping.name, e)
         finally:
             # Always release dedup lock after the request completes
             if is_cacheable and cache is not None:

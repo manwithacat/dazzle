@@ -289,6 +289,18 @@ def generate_all_entity_models(
 # =============================================================================
 
 
+def _auto_excluded_fields(entity: EntitySpec) -> frozenset[str]:
+    """Return the set of field names that should be excluded from create/update schemas.
+
+    Always excludes 'id', plus any fields marked auto_add or auto_update.
+    """
+    excluded = {"id"}
+    for field in entity.fields:
+        if field.auto_add or field.auto_update:
+            excluded.add(field.name)
+    return frozenset(excluded)
+
+
 def generate_create_schema(
     entity: EntitySpec,
     name_suffix: str = "Create",
@@ -306,10 +318,7 @@ def generate_create_schema(
         Pydantic model for create operations
     """
     # Fields to exclude from create schema: id + any auto_add/auto_update fields
-    auto_fields = {"id"}
-    for field in entity.fields:
-        if field.auto_add or field.auto_update:
-            auto_fields.add(field.name)
+    auto_fields = _auto_excluded_fields(entity)
 
     # Build field definitions
     field_definitions: dict[str, Any] = {}
@@ -347,10 +356,7 @@ def generate_update_schema(
         Pydantic model for update operations
     """
     # Fields to exclude from update schema: id + any auto_add/auto_update fields
-    auto_fields = {"id"}
-    for field in entity.fields:
-        if field.auto_add or field.auto_update:
-            auto_fields.add(field.name)
+    auto_fields = _auto_excluded_fields(entity)
 
     # Build field definitions - all optional for updates
     field_definitions: dict[str, Any] = {}

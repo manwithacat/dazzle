@@ -1,108 +1,80 @@
-"""Celery tasks for process execution.
+"""Standalone process step executor.
 
-These tasks handle:
-- Individual step execution within a process
-- Saga compensation on failure
-- Human task timeout checking
-- Scheduled process triggering
+Extracted from celery_tasks.py to decouple step execution logic from
+any specific task queue backend. Both CeleryProcessAdapter and
+EventBusProcessAdapter use this module for actual step execution.
 
-Configuration:
-    Set REDIS_URL environment variable for Redis connection.
-    Run worker with: celery -A dazzle.core.process.celery_tasks worker -l info --beat
+The executor is synchronous (uses psycopg sync connections) because
+step execution happens in a worker context where blocking is acceptable.
 """
 
 from __future__ import annotations
 
+import importlib
 import logging
 import os
-import ssl
-from datetime import UTC, datetime
-from typing import Any
-
-from celery import Celery
+import uuid as uuid_mod
+from datetime import UTC, date, datetime, timedelta
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir.process import StepKind
-from dazzle.core.process.adapter import ProcessRun, ProcessStatus, ProcessTask, TaskStatus
-from dazzle.core.process.celery_state import ProcessStateStore
+from dazzle.core.process.adapter import (
+    ProcessRun,
+    ProcessStatus,
+    ProcessTask,
+    TaskStatus,
+)
+
+if TYPE_CHECKING:
+    from dazzle.core.process.celery_state import ProcessStateStore
 
 logger = logging.getLogger(__name__)
 
-# Celery app configuration
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-
-broker_use_ssl = None
-if REDIS_URL.startswith("rediss://"):
-    broker_use_ssl = {"ssl_cert_reqs": ssl.CERT_NONE}
-
-celery_app = Celery(
-    "dazzle_processes",
-    broker=REDIS_URL,
-    backend=REDIS_URL,
-    include=["dazzle.core.process.celery_tasks"],
-)
-
-celery_app.conf.update(
-    broker_use_ssl=broker_use_ssl,
-    redis_backend_use_ssl=broker_use_ssl,
-    task_serializer="json",
-    accept_content=["json"],
-    result_serializer="json",
-    timezone="UTC",
-    enable_utc=True,
-    task_track_started=True,
-    task_time_limit=3600,
-    task_soft_time_limit=3300,
-    worker_prefetch_multiplier=1,
-    task_routes={
-        "dazzle.core.process.celery_tasks.*": {"queue": "process"},
-    },
-    task_default_queue="celery",
-)
+# Callback type for scheduling delayed work (timeout checks, process resumption).
+# Adapters provide their own implementation:
+#   - Celery: check_human_task_timeout.apply_async(args=[task_id], countdown=seconds)
+#   - EventBus: publish delayed event to process.task_timeout topic
+DelayedCallback = Any  # Callable[[str, float], None] — (task_id, delay_seconds)
 
 
-def _get_store() -> ProcessStateStore:
-    """Get state store instance."""
-    return ProcessStateStore()
+_BUILTIN_OPS = frozenset({"create", "read", "update", "delete", "transition"})
 
 
-@celery_app.task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60,
-    autoretry_for=(Exception,),
-    retry_backoff=True,
-    retry_backoff_max=600,
-)
-def execute_process(self: Any, run_id: str) -> dict[str, Any]:
-    """Execute a process from start to finish.
+def execute_process_steps(
+    store: ProcessStateStore,
+    run: ProcessRun,
+    *,
+    on_task_created: DelayedCallback | None = None,
+    max_retries: int = 3,
+) -> dict[str, Any]:
+    """Execute all steps of a process run sequentially.
 
-    This is the main entry point for process execution. It:
-    1. Loads the process run and spec
-    2. Executes each step in sequence
-    3. Handles failures with compensation
-    4. Updates run status throughout
+    Args:
+        store: State store for reading specs and saving state.
+        run: The process run to execute.
+        on_task_created: Callback invoked when a human task is created.
+            Signature: (task_id: str, timeout_seconds: float) -> None.
+            Used to schedule timeout checks via the adapter's mechanism.
+        max_retries: Not used directly here — caller handles retry logic.
+
+    Returns:
+        Dict with status and results. Possible shapes:
+        - {"status": "completed", "outputs": {...}}
+        - {"status": "waiting", "step": "...", "task_id": "..."}
+        - {"status": "failed", "error": "..."}
     """
-    from celery.exceptions import MaxRetriesExceededError
-
-    store = _get_store()
-    run = store.get_run(run_id)
-
-    if not run:
-        logger.error("Process run %s not found", run_id)
-        return {"error": f"Run {run_id} not found"}
-
     spec = store.get_process_spec(run.process_name)
     if not spec:
         logger.error("Process spec %s not found", run.process_name)
-        _fail_run(store, run, f"Process spec {run.process_name} not found")
-        return {"error": f"Spec {run.process_name} not found"}
+        fail_run(store, run, f"Process spec {run.process_name} not found")
+        return {"status": "failed", "error": f"Spec {run.process_name} not found"}
 
     # Update status to running
     run.status = ProcessStatus.RUNNING
     run.updated_at = datetime.now(UTC)
     store.save_run(run)
 
-    logger.info("Starting process %s run %s", run.process_name, run_id)
+    logger.info("Starting process %s run %s", run.process_name, run.run_id)
 
     # Execute steps sequentially
     completed_steps: list[str] = []
@@ -115,8 +87,8 @@ def execute_process(self: Any, run_id: str) -> dict[str, Any]:
             run.updated_at = datetime.now(UTC)
             store.save_run(run)
 
-            logger.info("Executing step %s in run %s", step_name, run_id)
-            step_result = _execute_step(store, run, spec, step)
+            logger.info("Executing step %s in run %s", step_name, run.run_id)
+            step_result = execute_step(store, run, spec, step, on_task_created=on_task_created)
 
             if step_result.get("wait"):
                 run.status = ProcessStatus.WAITING
@@ -140,25 +112,22 @@ def execute_process(self: Any, run_id: str) -> dict[str, Any]:
         run.updated_at = datetime.now(UTC)
         store.save_run(run)
 
-        logger.info("Process %s run %s completed", run.process_name, run_id)
+        logger.info("Process %s run %s completed", run.process_name, run.run_id)
         return {"status": "completed", "outputs": run.outputs}
 
     except Exception as e:
-        logger.exception("Process %s failed at step %s: %s", run_id, run.current_step, e)
-        _run_compensation(store, run, spec, completed_steps, str(e))
-
-        try:
-            raise self.retry(exc=e)
-        except MaxRetriesExceededError:
-            _fail_run(store, run, str(e))
-            return {"status": "failed", "error": str(e)}
+        logger.exception("Process %s failed at step %s: %s", run.run_id, run.current_step, e)
+        run_compensation(store, run, spec, completed_steps, str(e))
+        raise
 
 
-def _execute_step(
+def execute_step(
     store: ProcessStateStore,
     run: ProcessRun,
     spec: dict[str, Any],
     step: dict[str, Any],
+    *,
+    on_task_created: DelayedCallback | None = None,
 ) -> dict[str, Any]:
     """Execute a single process step."""
     kind = step.get("kind", "")
@@ -166,7 +135,7 @@ def _execute_step(
     if kind == StepKind.SERVICE.value or kind == "service":
         return _execute_service_step(run, step)
     elif kind == StepKind.HUMAN_TASK.value or kind == "human_task":
-        return _execute_human_task_step(store, run, step)
+        return _execute_human_task_step(store, run, step, on_task_created=on_task_created)
     elif kind == StepKind.WAIT.value or kind == "wait":
         return _execute_wait_step(run, step)
     elif kind == StepKind.SEND.value or kind == "send":
@@ -174,22 +143,19 @@ def _execute_step(
     elif kind == StepKind.QUERY.value or kind == "query":
         return _execute_query_step(store, run, step)
     elif kind == StepKind.FOREACH.value or kind == "foreach":
-        return _execute_foreach_step(store, run, spec, step)
+        return _execute_foreach_step(store, run, spec, step, on_task_created=on_task_created)
     else:
         logger.warning("Unknown step kind: %s", kind)
         return {}
 
 
-_BUILTIN_OPS = frozenset({"create", "read", "update", "delete", "transition"})
+# ---------------------------------------------------------------------------
+# Service step
+# ---------------------------------------------------------------------------
 
 
 def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
-    """Execute a service call step.
-
-    Supports two modes:
-    1. Built-in entity CRUD: ``Entity.create``, ``Entity.read``, etc.
-    2. Custom Python service: ``services/{module}_service.py``
-    """
+    """Execute a service call step."""
     service_name = step.get("service")
     if not service_name:
         return {}
@@ -203,15 +169,12 @@ def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, An
 
     entity_name, method_name = parts[0], parts[1]
 
-    # Check for built-in entity CRUD operation
     if method_name in _BUILTIN_OPS:
         return _execute_builtin_entity_op(entity_name, method_name, run)
 
-    # Fall back to custom Python service module
+    # Custom Python service module
     module_name = entity_name.lower()
     try:
-        import importlib
-
         module = importlib.import_module(f"services.{module_name}_service")
         method = getattr(module, method_name, None)
         if method and callable(method):
@@ -226,6 +189,11 @@ def _execute_service_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, An
     except Exception as e:
         logger.exception("Service %s failed: %s", service_name, e)
         raise
+
+
+# ---------------------------------------------------------------------------
+# Built-in entity CRUD
+# ---------------------------------------------------------------------------
 
 
 def _get_db_connection() -> Any:
@@ -243,16 +211,10 @@ def _execute_builtin_entity_op(
     operation: str,
     run: ProcessRun,
 ) -> dict[str, Any]:
-    """Execute a built-in entity CRUD operation.
+    """Execute a built-in entity CRUD operation."""
+    from dazzle.core.process.celery_state import ProcessStateStore
 
-    Reads entity metadata from Redis (stored by ProcessManager at startup)
-    and performs the operation directly against PostgreSQL.
-
-    Supported operations: create, read, update, delete, transition.
-    """
-    import uuid as uuid_mod
-
-    store = _get_store()
+    store = ProcessStateStore()
     meta = store.get_entity_meta(entity_name)
     if not meta:
         logger.error("No entity metadata for %s — cannot execute %s", entity_name, operation)
@@ -261,9 +223,7 @@ def _execute_builtin_entity_op(
     table_name = meta["table_name"]
     valid_fields = set(meta["fields"])
     merged = {**run.inputs, **run.context}
-
-    # Strip process-internal keys from merged data
-    _INTERNAL_KEYS = {"entity_id", "entity_name", "event_type", "old_status", "new_status"}
+    internal_keys = {"entity_id", "entity_name", "event_type", "old_status", "new_status"}
 
     try:
         conn = _get_db_connection()
@@ -273,11 +233,11 @@ def _execute_builtin_entity_op(
 
     try:
         if operation == "create":
-            return _builtin_create(conn, table_name, valid_fields, merged, _INTERNAL_KEYS, uuid_mod)
+            return _builtin_create(conn, table_name, valid_fields, merged, internal_keys)
         elif operation == "read":
             return _builtin_read(conn, table_name, merged)
         elif operation == "update":
-            return _builtin_update(conn, table_name, valid_fields, merged, _INTERNAL_KEYS)
+            return _builtin_update(conn, table_name, valid_fields, merged, internal_keys)
         elif operation == "delete":
             return _builtin_delete(conn, table_name, merged)
         elif operation == "transition":
@@ -297,7 +257,6 @@ def _builtin_create(
     valid_fields: set[str],
     merged: dict[str, Any],
     internal_keys: set[str],
-    uuid_mod: Any,
 ) -> dict[str, Any]:
     """INSERT a new entity row."""
     data = {k: v for k, v in merged.items() if k in valid_fields and k not in internal_keys}
@@ -320,11 +279,7 @@ def _builtin_create(
     return {"output": {"id": created_id, **data}}
 
 
-def _builtin_read(
-    conn: Any,
-    table_name: str,
-    merged: dict[str, Any],
-) -> dict[str, Any]:
+def _builtin_read(conn: Any, table_name: str, merged: dict[str, Any]) -> dict[str, Any]:
     """SELECT an entity row by ID."""
     entity_id = merged.get("entity_id") or merged.get("id")
     if not entity_id:
@@ -337,7 +292,6 @@ def _builtin_read(
         row = cur.fetchone()
         if not row:
             return {"output": None}
-        # psycopg3 returns tuples; convert via description
         columns = [desc.name for desc in cur.description]
         result = dict(zip(columns, row, strict=False))
     return {"output": {k: str(v) if hasattr(v, "hex") else v for k, v in result.items()}}
@@ -378,11 +332,7 @@ def _builtin_update(
     return {"output": {"id": str(entity_id), "updated": updated, **data}}
 
 
-def _builtin_delete(
-    conn: Any,
-    table_name: str,
-    merged: dict[str, Any],
-) -> dict[str, Any]:
+def _builtin_delete(conn: Any, table_name: str, merged: dict[str, Any]) -> dict[str, Any]:
     """DELETE an entity row by ID."""
     entity_id = merged.get("entity_id") or merged.get("id")
     if not entity_id:
@@ -398,10 +348,7 @@ def _builtin_delete(
 
 
 def _builtin_transition(
-    conn: Any,
-    table_name: str,
-    meta: dict[str, Any],
-    merged: dict[str, Any],
+    conn: Any, table_name: str, meta: dict[str, Any], merged: dict[str, Any]
 ) -> dict[str, Any]:
     """Update the entity's status field (state machine transition)."""
     entity_id = merged.get("entity_id") or merged.get("id")
@@ -429,16 +376,20 @@ def _builtin_transition(
     return {"output": {"id": str(entity_id), status_field: new_status, "transitioned": updated}}
 
 
+# ---------------------------------------------------------------------------
+# Human task step
+# ---------------------------------------------------------------------------
+
+
 def _execute_human_task_step(
     store: ProcessStateStore,
     run: ProcessRun,
     step: dict[str, Any],
+    *,
+    on_task_created: DelayedCallback | None = None,
 ) -> dict[str, Any]:
     """Create a human task and pause the process."""
-    import uuid
-    from datetime import timedelta
-
-    task_id = str(uuid.uuid4())
+    task_id = str(uuid_mod.uuid4())
     timeout_seconds = step.get("timeout_seconds", 86400 * 7)
     due_at = datetime.now(UTC) + timedelta(seconds=timeout_seconds)
 
@@ -457,9 +408,16 @@ def _execute_human_task_step(
     store.save_task(task)
     logger.info("Created human task %s", task_id)
 
-    check_human_task_timeout.apply_async(args=[task_id], countdown=timeout_seconds)
+    # Schedule timeout check via adapter-provided callback
+    if on_task_created:
+        on_task_created(task_id, timeout_seconds)
 
     return {"wait": True, "task_id": task_id}
+
+
+# ---------------------------------------------------------------------------
+# Wait / Send steps
+# ---------------------------------------------------------------------------
 
 
 def _execute_wait_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
@@ -475,60 +433,9 @@ def _execute_send_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     return {"output": {"sent": True, "channel": channel}}
 
 
-_PROCESS_QUERY_OPS: dict[str, str] = {
-    "gt": "{field} > %s",
-    "gte": "{field} >= %s",
-    "lt": "{field} < %s",
-    "lte": "{field} <= %s",
-    "ne": "{field} != %s",
-    "in": "{field} IN ({placeholders})",
-    "not_in": "{field} NOT IN ({placeholders})",
-    "contains": "{field} LIKE %s",
-    "icontains": "LOWER({field}) LIKE LOWER(%s)",
-    "isnull": "{field} IS NULL",
-    "eq": "{field} = %s",
-}
-
-
-def _build_process_where_clause(filters: dict[str, Any]) -> tuple[str, list[Any]]:
-    """Build a parameterised WHERE clause from Django-style filter dict."""
-    import re
-
-    _ident = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
-    clauses: list[str] = []
-    params: list[Any] = []
-
-    for key, value in filters.items():
-        parts = key.split("__", 1)
-        field = parts[0]
-        op = parts[1] if len(parts) == 2 else "eq"
-
-        if not _ident.match(field):
-            logger.warning("Skipping unsafe field name in query filter: %r", field)
-            continue
-
-        quoted = f'"{field}"'
-        template = _PROCESS_QUERY_OPS.get(op, "{field} = %s")
-
-        if op == "isnull":
-            is_null = bool(value)
-            clauses.append(f'"{field}" IS {"NULL" if is_null else "NOT NULL"}')
-        elif op in ("in", "not_in"):
-            items = list(value) if not isinstance(value, list) else value
-            if not items:
-                clauses.append("1 = 0" if op == "in" else "1 = 1")
-            else:
-                phs = ", ".join(["%s"] * len(items))
-                clauses.append(template.format(field=quoted, placeholders=phs))
-                params.extend(items)
-        elif op in ("contains", "icontains"):
-            clauses.append(template.format(field=quoted))
-            params.append(f"%{value}%")
-        else:
-            clauses.append(template.format(field=quoted))
-            params.append(value)
-
-    return (" AND ".join(clauses), params)
+# ---------------------------------------------------------------------------
+# Query step
+# ---------------------------------------------------------------------------
 
 
 def _execute_query_step(
@@ -536,19 +443,7 @@ def _execute_query_step(
     run: ProcessRun,
     step: dict[str, Any],
 ) -> dict[str, Any]:
-    """Execute a query step — SELECT entities matching a filter.
-
-    Step fields:
-        query_entity: Entity name (= table name)
-        query_filter: Django-style filter dict, e.g. {"due_date__lt": "today", "status__not_in": ["completed"]}
-        query_limit: Max rows (default 1000)
-
-    Special filter values:
-        "today" → current date
-        "now" → current datetime
-    """
-    from datetime import UTC, date, datetime
-
+    """Execute a query step — SELECT entities matching a filter."""
     entity_name = step.get("query_entity")
     if not entity_name:
         logger.error("Query step missing query_entity")
@@ -564,10 +459,8 @@ def _execute_query_step(
     raw_filter: dict[str, Any] = step.get("query_filter") or {}
     limit = step.get("query_limit", 1000)
 
-    # Resolve date literals and validate field names
     resolved: dict[str, Any] = {}
     for key, value in raw_filter.items():
-        # Extract base field name (strip __operator suffix)
         base_field = key.split("__")[0]
         if base_field not in valid_fields:
             logger.warning(
@@ -576,7 +469,6 @@ def _execute_query_step(
                 entity_name,
             )
             continue
-        # Resolve date literals
         if isinstance(value, str):
             if value == "today":
                 value = date.today().isoformat()
@@ -593,7 +485,13 @@ def _execute_query_step(
             ]
         resolved[key] = value
 
-    where_clause, params = _build_process_where_clause(resolved)
+    from dazzle_back.runtime.query_builder import QueryBuilder
+
+    builder = QueryBuilder(table_name=table_name)
+    builder.add_filters(resolved)
+    builder.set_pagination(page=1, page_size=limit)
+
+    where_clause, params = builder.build_where_clause()
     sql = f'SELECT * FROM "{table_name}"'  # noqa: S608
     if where_clause:
         sql += f" WHERE {where_clause}"
@@ -617,7 +515,6 @@ def _execute_query_step(
             results = []
             for row in rows:
                 record = dict(zip(columns, row, strict=False))
-                # Convert UUIDs to strings for JSON compatibility
                 results.append({k: str(v) if hasattr(v, "hex") else v for k, v in record.items()})
         logger.info("Query step returned %s rows from %s", len(results), entity_name)
         return {"output": results}
@@ -628,21 +525,20 @@ def _execute_query_step(
         conn.close()
 
 
+# ---------------------------------------------------------------------------
+# Foreach step
+# ---------------------------------------------------------------------------
+
+
 def _execute_foreach_step(
     store: ProcessStateStore,
     run: ProcessRun,
     spec: dict[str, Any],
     step: dict[str, Any],
+    *,
+    on_task_created: DelayedCallback | None = None,
 ) -> dict[str, Any]:
-    """Execute a foreach step — iterate over query results and run sub-steps.
-
-    Step fields:
-        foreach_source: Context key holding the list (e.g. "check_overdue" → run.context["check_overdue"])
-        foreach_steps: List of step dicts to execute for each item
-
-    Each iteration merges the current item into run.context as "item", so sub-steps
-    can reference item fields via run.context["item"]["field_name"].
-    """
+    """Execute a foreach step — iterate over query results and run sub-steps."""
     source_key = step.get("foreach_source")
     if not source_key:
         logger.error("Foreach step missing foreach_source")
@@ -665,7 +561,6 @@ def _execute_foreach_step(
     results: list[dict[str, Any]] = []
 
     for i, item in enumerate(items):
-        # Merge current item into context for sub-step access
         run.context["item"] = item
         run.context["item_index"] = i
         item_results: dict[str, Any] = {}
@@ -673,7 +568,7 @@ def _execute_foreach_step(
         for sub_step in sub_steps:
             sub_name = sub_step.get("name", f"sub_{i}")
             try:
-                result = _execute_step(store, run, spec, sub_step)
+                result = execute_step(store, run, spec, sub_step, on_task_created=on_task_created)
                 if result.get("output"):
                     item_results[sub_name] = result["output"]
                     run.context[sub_name] = result["output"]
@@ -684,7 +579,6 @@ def _execute_foreach_step(
         processed += 1
         results.append(item_results)
 
-    # Clean up iteration context
     run.context.pop("item", None)
     run.context.pop("item_index", None)
 
@@ -692,7 +586,12 @@ def _execute_foreach_step(
     return {"output": {"processed": processed, "errors": errors, "results": results}}
 
 
-def _run_compensation(
+# ---------------------------------------------------------------------------
+# Compensation & failure
+# ---------------------------------------------------------------------------
+
+
+def run_compensation(
     store: ProcessStateStore,
     run: ProcessRun,
     spec: dict[str, Any],
@@ -712,12 +611,12 @@ def _run_compensation(
         if step and step.get("on_failure"):
             try:
                 logger.info("Running compensation for step %s", step_name)
-                _execute_step(store, run, spec, step["on_failure"])
+                execute_step(store, run, spec, step["on_failure"])
             except Exception as e:
                 logger.exception("Compensation for %s failed: %s", step_name, e)
 
 
-def _fail_run(store: ProcessStateStore, run: ProcessRun, error: str) -> None:
+def fail_run(store: ProcessStateStore, run: ProcessRun, error: str) -> None:
     """Mark a run as failed."""
     run.status = ProcessStatus.FAILED
     run.error = error
@@ -726,10 +625,12 @@ def _fail_run(store: ProcessStateStore, run: ProcessRun, error: str) -> None:
     store.save_run(run)
 
 
-@celery_app.task
-def check_human_task_timeout(task_id: str) -> dict[str, Any]:
-    """Check if a human task has timed out."""
-    store = _get_store()
+def check_task_timeout(store: ProcessStateStore, task_id: str) -> dict[str, Any]:
+    """Check if a human task has timed out.
+
+    Returns a dict describing the action taken. The caller is responsible
+    for scheduling follow-up timeout checks if needed.
+    """
     task = store.get_task(task_id)
 
     if not task:
@@ -747,7 +648,7 @@ def check_human_task_timeout(task_id: str) -> dict[str, Any]:
 
             run = store.get_run(task.run_id)
             if run:
-                _fail_run(store, run, f"Human task {task_id} expired")
+                fail_run(store, run, f"Human task {task_id} expired")
 
             return {"status": "expired"}
         else:
@@ -755,64 +656,6 @@ def check_human_task_timeout(task_id: str) -> dict[str, Any]:
             task.escalated_at = datetime.now(UTC)
             store.save_task(task)
             logger.warning("Human task %s escalated", task_id)
-
-            check_human_task_timeout.apply_async(args=[task_id], countdown=86400)
-            return {"status": "escalated"}
+            return {"status": "escalated", "needs_followup": True, "followup_seconds": 86400}
 
     return {"status": task.status.value, "not_due": True}
-
-
-@celery_app.task
-def resume_process_after_task(
-    task_id: str, outcome: str, outcome_data: dict[str, Any] | None = None
-) -> dict[str, Any]:
-    """Resume a process after a human task is completed."""
-    store = _get_store()
-    task = store.get_task(task_id)
-
-    if not task:
-        return {"error": f"Task {task_id} not found"}
-
-    run = store.get_run(task.run_id)
-    if not run:
-        return {"error": f"Run {task.run_id} not found"}
-
-    run.context[f"{task.step_name}_outcome"] = outcome
-    if outcome_data:
-        run.context[f"{task.step_name}_data"] = outcome_data
-
-    execute_process.delay(run.run_id)
-    return {"status": "resumed", "run_id": run.run_id}
-
-
-@celery_app.task
-def trigger_scheduled_process(schedule_name: str) -> dict[str, Any]:
-    """Trigger a scheduled process."""
-    import uuid
-
-    store = _get_store()
-    schedule = store.get_schedule_spec(schedule_name)
-
-    if not schedule:
-        return {"error": f"Schedule {schedule_name} not found"}
-
-    process_name = schedule.get("process_name", schedule_name)
-    spec = store.get_process_spec(process_name)
-
-    if not spec:
-        return {"error": f"Process {process_name} not found"}
-
-    run_id = str(uuid.uuid4())
-    run = ProcessRun(
-        run_id=run_id,
-        process_name=process_name,
-        status=ProcessStatus.PENDING,
-        inputs={"triggered_by": "schedule", "schedule_name": schedule_name},
-    )
-    store.save_run(run)
-    store.set_schedule_last_run(schedule_name, datetime.now(UTC))
-
-    execute_process.delay(run_id)
-
-    logger.info("Triggered scheduled process %s run %s", process_name, run_id)
-    return {"status": "triggered", "run_id": run_id}

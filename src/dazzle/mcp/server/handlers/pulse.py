@@ -20,7 +20,10 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 
 from .common import DEFAULT_STEP_TIMEOUT, error_response, extract_progress, wrap_handler_errors
 
@@ -433,7 +436,7 @@ def wfs_pulse_handler(project_path: Path, args: dict[str, Any]) -> str:
 
 
 def compute_wfs(
-    appspec: Any,
+    appspec: AppSpec,
     *,
     persona_filter: str | None = None,
 ) -> dict[str, Any]:

@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import sys
+import threading
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -156,6 +157,7 @@ class ConsoleFormatter(logging.Formatter):
 
 
 _loggers: dict[str, logging.Logger] = {}
+_loggers_lock = threading.Lock()
 _log_dir: Path | None = None
 _file_handler: RotatingFileHandler | None = None
 
@@ -241,24 +243,25 @@ def get_logger(component: str, color: str = Colors.DAZZLE) -> logging.Logger:
     Returns:
         Configured logger instance
     """
-    if component in _loggers:
-        return _loggers[component]
+    with _loggers_lock:
+        if component in _loggers:
+            return _loggers[component]
 
-    logger = logging.getLogger(f"dazzle.{component.lower().replace(' ', '_')}")
+        logger = logging.getLogger(f"dazzle.{component.lower().replace(' ', '_')}")
 
-    # Add component info to all records via a filter
-    class ComponentFilter(logging.Filter):
-        def filter(self, record: logging.LogRecord) -> bool:
-            if not hasattr(record, "component"):
-                record.component = component
-            if not hasattr(record, "component_color"):
-                record.component_color = color
-            return True
+        # Add component info to all records via a filter
+        class ComponentFilter(logging.Filter):
+            def filter(self, record: logging.LogRecord) -> bool:
+                if not hasattr(record, "component"):
+                    record.component = component
+                if not hasattr(record, "component_color"):
+                    record.component_color = color
+                return True
 
-    logger.addFilter(ComponentFilter())
-    _loggers[component] = logger
+        logger.addFilter(ComponentFilter())
+        _loggers[component] = logger
 
-    return logger
+        return logger
 
 
 # =============================================================================

@@ -11,12 +11,12 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-try:
-    from fastapi import APIRouter, Depends, HTTPException, Query
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
+from dazzle_back.runtime._fastapi_compat import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+)
 
 if TYPE_CHECKING:
     from dazzle.core.ir.islands import IslandSpec

@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from dazzle_back.runtime._comparison import eval_comparison_op, normalize_for_comparison
 from dazzle_back.specs import (
     AccessComparisonKind,
     AccessConditionSpec,
@@ -104,17 +105,6 @@ class AccessRuntimeContext:
 # =============================================================================
 
 
-def _normalize_for_comparison(value: Any) -> str:
-    """Normalize a value for comparison (handles UUID, bool, etc.)."""
-    if value is None:
-        return "None"
-    if isinstance(value, UUID):
-        return str(value)
-    if isinstance(value, bool):
-        return str(value).lower()
-    return str(value)
-
-
 def _resolve_dotted_path(
     record: dict[str, Any],
     path: str,
@@ -186,59 +176,57 @@ def _evaluate_comparison_condition(
     elif value == "current_team":
         resolved_value = None
 
-    record_val_str = _normalize_for_comparison(record_value)
-    resolved_val_str = _normalize_for_comparison(resolved_value)
+    # For ordered comparisons, use float coercion with explicit None guard
+    if op in (
+        AccessComparisonKind.GREATER_THAN,
+        AccessComparisonKind.LESS_THAN,
+        AccessComparisonKind.GREATER_EQUAL,
+        AccessComparisonKind.LESS_EQUAL,
+    ):
+        try:
+            if record_value is None or resolved_value is None:
+                return False
+            lf = float(record_value)
+            rf = float(resolved_value)
+        except (TypeError, ValueError):
+            return False
+        if op == AccessComparisonKind.GREATER_THAN:
+            return lf > rf
+        if op == AccessComparisonKind.LESS_THAN:
+            return lf < rf
+        if op == AccessComparisonKind.GREATER_EQUAL:
+            return lf >= rf
+        if op == AccessComparisonKind.LESS_EQUAL:
+            return lf <= rf
 
-    if op == AccessComparisonKind.EQUALS:
-        return record_val_str == resolved_val_str
-    elif op == AccessComparisonKind.NOT_EQUALS:
-        return record_val_str != resolved_val_str
-    elif op == AccessComparisonKind.GREATER_THAN:
-        try:
-            if record_value is None or resolved_value is None:
-                return False
-            return float(record_value) > float(resolved_value)
-        except (TypeError, ValueError):
-            return False
-    elif op == AccessComparisonKind.LESS_THAN:
-        try:
-            if record_value is None or resolved_value is None:
-                return False
-            return float(record_value) < float(resolved_value)
-        except (TypeError, ValueError):
-            return False
-    elif op == AccessComparisonKind.GREATER_EQUAL:
-        try:
-            if record_value is None or resolved_value is None:
-                return False
-            return float(record_value) >= float(resolved_value)
-        except (TypeError, ValueError):
-            return False
-    elif op == AccessComparisonKind.LESS_EQUAL:
-        try:
-            if record_value is None or resolved_value is None:
-                return False
-            return float(record_value) <= float(resolved_value)
-        except (TypeError, ValueError):
-            return False
-    elif op == AccessComparisonKind.IN:
-        if value_list:
-            normalized_list = [_normalize_for_comparison(v) for v in value_list]
-            return record_val_str in normalized_list
-        return False
-    elif op == AccessComparisonKind.NOT_IN:
-        if value_list:
-            normalized_list = [_normalize_for_comparison(v) for v in value_list]
-            return record_val_str not in normalized_list
-        return True
-    elif op == AccessComparisonKind.IS:
+    # IS / IS_NOT are identity checks — not covered by eval_comparison_op
+    if op == AccessComparisonKind.IS:
         if resolved_value is None:
             return record_value is None
         return bool(record_value == resolved_value)
-    elif op == AccessComparisonKind.IS_NOT:
+    if op == AccessComparisonKind.IS_NOT:
         if resolved_value is None:
             return record_value is not None
         return bool(record_value != resolved_value)
+
+    # Normalize both sides to strings for equality and membership tests
+    record_val_str = normalize_for_comparison(record_value)
+    resolved_val_str = normalize_for_comparison(resolved_value)
+
+    if op == AccessComparisonKind.EQUALS:
+        return eval_comparison_op("eq", record_val_str, resolved_val_str)
+    if op == AccessComparisonKind.NOT_EQUALS:
+        return eval_comparison_op("ne", record_val_str, resolved_val_str)
+    if op == AccessComparisonKind.IN:
+        normalized_list = [normalize_for_comparison(v) for v in value_list] if value_list else None
+        return eval_comparison_op(
+            "in", record_val_str, resolved_val_str, value_list=normalized_list
+        )
+    if op == AccessComparisonKind.NOT_IN:
+        normalized_list = [normalize_for_comparison(v) for v in value_list] if value_list else None
+        return eval_comparison_op(
+            "not_in", record_val_str, resolved_val_str, value_list=normalized_list
+        )
 
     return False
 

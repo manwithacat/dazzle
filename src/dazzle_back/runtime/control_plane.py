@@ -15,16 +15,9 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
+from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter
+
 logger = logging.getLogger(__name__)
-
-try:
-    from fastapi import APIRouter
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore[misc, assignment]
-
 
 if TYPE_CHECKING:
     from dazzle_back.runtime.auth import AuthStore

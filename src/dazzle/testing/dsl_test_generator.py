@@ -34,6 +34,7 @@ from dazzle.core.ir.process import ProcessSpec
 from dazzle.core.ir.surfaces import SurfaceMode
 from dazzle.core.ir.workspaces import WorkspaceSpec
 from dazzle.core.project import load_project
+from dazzle.testing.field_value_gen import generate_field_value
 
 
 def _invariant_required_fields(entity: EntitySpec) -> list[str]:
@@ -231,72 +232,7 @@ def _slugify(text: str) -> str:
 
 def _generate_field_value(fld: FieldSpec, unique_suffix: int = 0) -> Any:
     """Generate a test value for a field."""
-    import uuid as uuid_module
-
-    from dazzle.core.ir.fields import FieldTypeKind
-
-    type_kind = fld.type.kind
-    name = fld.name.lower()
-    # Use random suffixes for unique fields to avoid collisions across
-    # test runs (e.g. on staging servers without DB resets)
-    if fld.is_unique:
-        suffix = f"_{uuid_module.uuid4().hex[:8]}"
-    else:
-        suffix = ""
-
-    # Enum handling
-    if type_kind == FieldTypeKind.ENUM:
-        if fld.type.enum_values:
-            return fld.type.enum_values[0]
-        return "default"
-
-    # Common field name patterns
-    if name == "email" or type_kind == FieldTypeKind.EMAIL:
-        return f"test{suffix}@example.com"
-    if name == "version":
-        return f"1.0.{unique_suffix}"
-    if name in ("serial_number", "serialnumber"):
-        return f"SN{unique_suffix or 1}"
-
-    # Type-based generation
-    if type_kind == FieldTypeKind.UUID:
-        return str(uuid_module.uuid4())
-    elif type_kind == FieldTypeKind.STR:
-        max_len = fld.type.max_length
-        if fld.is_unique and max_len and max_len <= 16:
-            # Short unique field: use pure hex to maximize uniqueness
-            return uuid_module.uuid4().hex[:max_len]
-        value = f"Test {fld.name}{suffix}"
-        if max_len and len(value) > max_len:
-            # Truncate but keep suffix for uniqueness
-            if suffix and max_len >= len(suffix) + 1:
-                value = value[: max_len - len(suffix)] + suffix
-            else:
-                value = value[:max_len]
-        return value
-    elif type_kind == FieldTypeKind.TEXT:
-        return f"Test description for {fld.name}{suffix}"
-    elif type_kind == FieldTypeKind.INT:
-        return 1
-    elif type_kind == FieldTypeKind.DECIMAL:
-        return 10.0
-    elif type_kind == FieldTypeKind.BOOL:
-        return True
-    elif type_kind == FieldTypeKind.DATE:
-        return datetime.now().strftime("%Y-%m-%d")
-    elif type_kind == FieldTypeKind.DATETIME:
-        return datetime.now().isoformat()
-    elif type_kind == FieldTypeKind.URL:
-        return f"https://example.com/{fld.name}{suffix}"
-    elif type_kind == FieldTypeKind.FILE:
-        return f"test_file{suffix}.txt"
-    elif type_kind == FieldTypeKind.MONEY:
-        currency = fld.type.currency_code or "USD"
-        return {f"{fld.name}_minor": 10000, f"{fld.name}_currency": currency}
-    elif type_kind == FieldTypeKind.JSON:
-        return {"key": f"value{suffix}"}
-    else:
-        return f"test_{fld.name}{suffix}"
+    return generate_field_value(fld, index=unique_suffix)
 
 
 def _generate_entity_data(entity: EntitySpec, entity_map: dict[str, EntitySpec]) -> dict[str, Any]:

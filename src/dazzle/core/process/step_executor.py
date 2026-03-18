@@ -434,6 +434,76 @@ def _execute_send_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Query step helpers
+# ---------------------------------------------------------------------------
+
+_PROCESS_QUERY_OPS: dict[str, str] = {
+    "gt": "{field} > %s",
+    "gte": "{field} >= %s",
+    "lt": "{field} < %s",
+    "lte": "{field} <= %s",
+    "ne": "{field} != %s",
+    "in": "{field} IN ({placeholders})",
+    "not_in": "{field} NOT IN ({placeholders})",
+    "contains": "{field} LIKE %s",
+    "icontains": "LOWER({field}) LIKE LOWER(%s)",
+    "isnull": "{field} IS NULL",
+    "eq": "{field} = %s",
+}
+
+
+def _build_process_where_clause(filters: dict[str, Any]) -> tuple[str, list[Any]]:
+    """Build a parameterised WHERE clause from Django-style filter dict.
+
+    Supports operators: eq (default), gt, gte, lt, lte, ne, in, not_in,
+    contains, icontains, isnull.  Field names are validated to be safe SQL
+    identifiers before interpolation.
+    """
+    import re
+
+    _ident = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+    clauses: list[str] = []
+    params: list[Any] = []
+
+    for key, value in filters.items():
+        parts = key.split("__", 1)
+        field = parts[0]
+        op = parts[1] if len(parts) == 2 else "eq"
+
+        if not _ident.match(field):
+            logger.warning("Skipping unsafe field name in query filter: %r", field)
+            continue
+
+        quoted = f'"{field}"'
+        template = _PROCESS_QUERY_OPS.get(op, "{field} = %s")
+
+        if op == "isnull":
+            is_null = bool(value)
+            clause = f'"{field}" IS {"NULL" if is_null else "NOT NULL"}'
+            clauses.append(clause)
+        elif op in ("in", "not_in"):
+            items = list(value) if not isinstance(value, list) else value
+            if not items:
+                # Empty IN → always-false / always-true condition
+                clauses.append("1 = 0" if op == "in" else "1 = 1")
+            else:
+                phs = ", ".join(["%s"] * len(items))
+                clause = template.format(field=quoted, placeholders=phs)
+                clauses.append(clause)
+                params.extend(items)
+        elif op in ("contains", "icontains"):
+            clause = template.format(field=quoted)
+            clauses.append(clause)
+            params.append(f"%{value}%")
+        else:
+            clause = template.format(field=quoted)
+            clauses.append(clause)
+            params.append(value)
+
+    return (" AND ".join(clauses), params)
+
+
+# ---------------------------------------------------------------------------
 # Query step
 # ---------------------------------------------------------------------------
 
@@ -485,13 +555,7 @@ def _execute_query_step(
             ]
         resolved[key] = value
 
-    from dazzle_back.runtime.query_builder import QueryBuilder
-
-    builder = QueryBuilder(table_name=table_name)
-    builder.add_filters(resolved)
-    builder.set_pagination(page=1, page_size=limit)
-
-    where_clause, params = builder.build_where_clause()
+    where_clause, params = _build_process_where_clause(resolved)
     sql = f'SELECT * FROM "{table_name}"'  # noqa: S608
     if where_clause:
         sql += f" WHERE {where_clause}"

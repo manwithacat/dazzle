@@ -7,17 +7,13 @@ Mounted at /api/_audit/*.
 
 from typing import Any
 
-try:
-    from fastapi import APIRouter, Depends, HTTPException, Query
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore[misc, assignment]
-    Depends = None  # type: ignore[assignment]
-    HTTPException = None  # type: ignore[misc, assignment]
-    Query = None  # type: ignore[assignment]
-
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+)
 from dazzle_back.runtime.audit_log import AuditLogger
 from dazzle_back.runtime.auth import AuthContext
 

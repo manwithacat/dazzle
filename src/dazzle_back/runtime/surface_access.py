@@ -5,142 +5,35 @@ Enforces access control based on SurfaceAccessSpec:
 - Authentication checks
 - Persona-based authorization (allow_personas, deny_personas)
 - Unauthenticated user handling (401 for API, redirect for UI)
+
+The pure types (SurfaceAccessConfig, SurfaceAccessDenied, check_surface_access)
+live in dazzle_ui.runtime.surface_access so the UI package can enforce access
+control on page routes without importing dazzle_back.  This module re-exports
+those types and adds the FastAPI-specific helpers (middleware factory, exception
+handler) that are only needed in the backend.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Any
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.responses import Response
 
-# =============================================================================
-# Access Control Exceptions
-# =============================================================================
+from dazzle_ui.runtime.surface_access import (
+    SurfaceAccessConfig,
+    SurfaceAccessDenied,
+    check_surface_access,
+)
 
-
-class SurfaceAccessDenied(Exception):
-    """
-    Exception raised when access to a surface is denied.
-
-    Attributes:
-        reason: Human-readable reason for denial
-        redirect_url: URL to redirect to (for UI surfaces)
-        is_auth_required: Whether the denial is due to missing authentication
-    """
-
-    def __init__(
-        self,
-        reason: str,
-        *,
-        redirect_url: str | None = None,
-        is_auth_required: bool = False,
-    ):
-        super().__init__(reason)
-        self.reason = reason
-        self.redirect_url = redirect_url
-        self.is_auth_required = is_auth_required
-
-
-# =============================================================================
-# Access Spec Data Class
-# =============================================================================
-
-
-@dataclass
-class SurfaceAccessConfig:
-    """
-    Runtime access configuration for a surface.
-
-    Derived from SurfaceAccessSpec IR type.
-    """
-
-    require_auth: bool = False
-    allow_personas: list[str] | None = None  # None = all authenticated users allowed
-    deny_personas: list[str] | None = None
-    redirect_unauthenticated: str = "/"
-
-    @classmethod
-    def from_spec(cls, spec: Any) -> "SurfaceAccessConfig":
-        """
-        Create from SurfaceAccessSpec.
-
-        Args:
-            spec: SurfaceAccessSpec object
-
-        Returns:
-            SurfaceAccessConfig instance
-        """
-        if spec is None:
-            return cls()
-
-        return cls(
-            require_auth=spec.require_auth,
-            allow_personas=spec.allow_personas if spec.allow_personas else None,
-            deny_personas=spec.deny_personas if spec.deny_personas else None,
-            redirect_unauthenticated=spec.redirect_unauthenticated or "/",
-        )
-
-
-# =============================================================================
-# Access Check Functions
-# =============================================================================
-
-
-def check_surface_access(
-    access_config: SurfaceAccessConfig,
-    user: dict[str, Any] | None,
-    user_personas: list[str] | None = None,
-    is_api_request: bool = True,
-) -> None:
-    """
-    Check if a user can access a surface.
-
-    Args:
-        access_config: Surface access configuration
-        user: Current user dict (from auth middleware) or None
-        user_personas: List of persona IDs the user has (from membership)
-        is_api_request: Whether this is an API request (vs UI route)
-
-    Raises:
-        SurfaceAccessDenied: If access is denied
-    """
-    # No auth required - allow all
-    if not access_config.require_auth:
-        return
-
-    # Auth required but no user
-    if user is None:
-        raise SurfaceAccessDenied(
-            "Authentication required",
-            redirect_url=access_config.redirect_unauthenticated if not is_api_request else None,
-            is_auth_required=True,
-        )
-
-    # User is authenticated - check personas
-    user_personas = user_personas or []
-
-    # Check deny list first (explicit denials take precedence)
-    if access_config.deny_personas:
-        for denied in access_config.deny_personas:
-            if denied in user_personas:
-                raise SurfaceAccessDenied(
-                    f"Access denied for persona '{denied}'",
-                    is_auth_required=False,
-                )
-
-    # Check allow list (if specified)
-    if access_config.allow_personas:
-        # User must have at least one of the allowed personas
-        has_allowed_persona = any(p in user_personas for p in access_config.allow_personas)
-        if not has_allowed_persona:
-            raise SurfaceAccessDenied(
-                f"Requires one of personas: {access_config.allow_personas}",
-                is_auth_required=False,
-            )
-
-    # All checks passed
+__all__ = [
+    "SurfaceAccessConfig",
+    "SurfaceAccessDenied",
+    "check_surface_access",
+    "get_user_personas_from_membership",
+    "create_access_check_handler",
+    "create_access_denied_handler",
+]
 
 
 async def get_user_personas_from_membership(
@@ -169,17 +62,25 @@ async def get_user_personas_from_membership(
         # The membership table stores: user_id, tenant_id (optional), personas (JSON array)
         ph = getattr(db_manager, "placeholder", "?")
 
+        # ph is a DB driver placeholder constant ("?" or "%s"), not user input.
+        # Pre-build both query variants to avoid string concatenation at call site.
+        _queries = {
+            "?": (
+                'SELECT "personas" FROM "UserMembership" WHERE "user_id" = ? AND "tenant_id" = ?',
+                'SELECT "personas" FROM "UserMembership" WHERE "user_id" = ?',
+            ),
+            "%s": (
+                'SELECT "personas" FROM "UserMembership" WHERE "user_id" = %s AND "tenant_id" = %s',
+                'SELECT "personas" FROM "UserMembership" WHERE "user_id" = %s',
+            ),
+        }
+        _q_both, _q_user = _queries.get(ph, _queries["?"])
+
         with db_manager.connection() as conn:
             if tenant_id:
-                cursor = conn.execute(
-                    f'SELECT "personas" FROM "UserMembership" WHERE "user_id" = {ph} AND "tenant_id" = {ph}',
-                    (user_id, tenant_id),
-                )
+                cursor = conn.execute(_q_both, (user_id, tenant_id))
             else:
-                cursor = conn.execute(
-                    f'SELECT "personas" FROM "UserMembership" WHERE "user_id" = {ph}',
-                    (user_id,),
-                )
+                cursor = conn.execute(_q_user, (user_id,))
 
             row = cursor.fetchone()
             if row:

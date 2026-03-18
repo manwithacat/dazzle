@@ -5,24 +5,17 @@ from __future__ import annotations
 from datetime import timedelta
 from typing import Any
 
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    APIRouter,
+    FastAPIRequest,
+    JSONResponse,
+    Response,
+)
+
 from .crypto import cookie_secure
 from .models import TwoFactorSetupRequest, TwoFactorVerifyRequest, UserRecord
 from .store import AuthStore
-
-# FastAPI is optional - import for type hints and runtime
-try:
-    from fastapi import APIRouter
-    from fastapi import Request as FastAPIRequest
-    from fastapi.responses import JSONResponse
-    from starlette.responses import Response
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    APIRouter = None  # type: ignore[assignment,misc]
-    FastAPIRequest = None  # type: ignore[assignment,misc]
-    JSONResponse = None  # type: ignore[assignment,misc]
-    Response = None  # type: ignore[assignment,misc]
-    FASTAPI_AVAILABLE = False
 
 
 def create_2fa_routes(

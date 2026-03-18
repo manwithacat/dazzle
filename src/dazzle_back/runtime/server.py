@@ -15,6 +15,12 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel
 
 from dazzle.core.ir import AppSpec
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    HTTPException,
+    Request,
+)
+from dazzle_back.runtime._fastapi_compat import FastAPI as _FastAPI
 from dazzle_back.runtime.auth import (
     AuthMiddleware,
     AuthStore,
@@ -45,6 +51,11 @@ from dazzle_back.runtime.workspace_rendering import (  # noqa: F401
     _workspace_batch_handler,
     _workspace_region_handler,
 )
+
+if FASTAPI_AVAILABLE:
+    from dazzle_back.runtime.route_generator import RouteGenerator
+else:
+    RouteGenerator = None  # type: ignore[assignment,misc]
 
 # FastAPI is optional - use TYPE_CHECKING for type hints
 if TYPE_CHECKING:
@@ -204,7 +215,7 @@ class IntegrationManager:
         async def get_channel_status(channel_name: str) -> dict[str, Any]:
             status = channel_manager.get_channel_status(channel_name)
             if not status:
-                return {"error": f"Channel '{channel_name}' not found"}
+                raise HTTPException(status_code=404, detail=f"Channel '{channel_name}' not found")
             result: dict[str, Any] = status.to_dict()
             return result
 
@@ -232,7 +243,7 @@ class IntegrationManager:
                 return {"status": "queued"}
             except Exception as e:
                 logger.error("Channel test message failed: %s", e)
-                return {"error": "Failed to send test message"}
+                raise HTTPException(status_code=500, detail="Failed to send test message")
 
         @self._app.post("/_dazzle/channels/health", tags=["Channels"])
         async def check_channel_health() -> dict[str, Any]:
@@ -709,23 +720,6 @@ class ServerConfig:
     entity_auto_includes: dict[str, list[str]] = field(default_factory=dict)
 
 
-# Runtime import
-try:
-    from fastapi import FastAPI as _FastAPI
-    from fastapi import Request
-    from fastapi.middleware.cors import CORSMiddleware
-
-    from dazzle_back.runtime.route_generator import RouteGenerator
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    _FastAPI = None  # type: ignore
-    CORSMiddleware = None  # type: ignore
-    RouteGenerator = None  # type: ignore
-    Request = None  # type: ignore
-
-
 # =============================================================================
 # Application Builder
 # =============================================================================
@@ -862,6 +856,76 @@ class DazzleBackendApp:
         self._entity_search_fields: dict[str, list[str]] = config.entity_search_fields
         # Auto-eager-load ref relations (v0.26.0)
         self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
+        # Keep full config for subsystem context
+        self._config: ServerConfig = config
+        # Subsystem plugin infrastructure (v0.42.0)
+        self._subsystem_ctx: Any | None = None  # SubsystemContext, set in _setup_optional_features
+        self._subsystems: list[Any] = self._build_default_subsystems()
+
+    # ------------------------------------------------------------------
+    # Subsystem plugin infrastructure
+    # ------------------------------------------------------------------
+
+    def _build_default_subsystems(self) -> list[Any]:
+        """Create the ordered list of default subsystem plugins."""
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
+        from dazzle_back.runtime.subsystems.console import ConsoleSubsystem
+        from dazzle_back.runtime.subsystems.events import EventsSubsystem
+        from dazzle_back.runtime.subsystems.llm_queue import LLMQueueSubsystem
+        from dazzle_back.runtime.subsystems.process import ProcessSubsystem
+        from dazzle_back.runtime.subsystems.seed import SeedSubsystem
+        from dazzle_back.runtime.subsystems.sla import SLASubsystem
+
+        return [
+            EventsSubsystem(),
+            ChannelsSubsystem(),
+            ConsoleSubsystem(),
+            ProcessSubsystem(),
+            SLASubsystem(),
+            LLMQueueSubsystem(),
+            SeedSubsystem(),
+        ]
+
+    def _build_subsystem_context(self) -> Any:
+        """Build SubsystemContext from current DazzleBackendApp state."""
+        from dazzle_back.runtime.subsystems import SubsystemContext
+
+        assert self._app is not None
+        return SubsystemContext(
+            app=self._app,
+            appspec=self._appspec,
+            config=self._config,
+            services=self._services,
+            repositories=self._repositories,
+            entities=self._entities,
+            channels=self._channels,
+            db_manager=self._db_manager,
+            auth_middleware=self._auth_middleware,
+            enable_auth=self._enable_auth,
+            enable_test_mode=self._enable_test_mode,
+        )
+
+    def _run_subsystems(self) -> None:
+        """Call startup() on each registered subsystem plugin in order."""
+        assert self._subsystem_ctx is not None
+        for plugin in self._subsystems:
+            try:
+                plugin.startup(self._subsystem_ctx)
+            except Exception as exc:  # pragma: no cover
+                logging.getLogger("dazzle.server").warning(
+                    "Subsystem '%s' startup failed: %s", getattr(plugin, "name", "?"), exc
+                )
+        # Sync mutable outputs back to DazzleBackendApp attributes so existing
+        # properties (channel_manager, process_manager, etc.) still work.
+        ctx = self._subsystem_ctx
+        if ctx.event_framework is not None:
+            self._event_framework = ctx.event_framework
+        if ctx.process_manager is not None:
+            self._process_manager = ctx.process_manager
+        if ctx.process_adapter is not None:
+            self._process_adapter = ctx.process_adapter
+        if ctx.sla_manager is not None:
+            self._sla_manager = ctx.sla_manager
 
     def _init_channel_manager(self) -> None:
         """Initialize the channel manager for messaging (delegates to IntegrationManager)."""
@@ -1017,114 +1081,6 @@ class DazzleBackendApp:
 
         return config if any_configured else None
 
-    def _init_event_framework(self) -> None:
-        """Initialize the event framework for event-driven features (v0.18.0)."""
-        if not self._app:
-            return
-
-        from dazzle_back.events.null import EVENTS_AVAILABLE, NullEventFramework
-
-        if EVENTS_AVAILABLE:
-            try:
-                from dazzle_back.events.framework import EventFramework, EventFrameworkConfig
-
-                # Create event framework with same database as app
-                config = EventFrameworkConfig(
-                    auto_start_publisher=True,
-                    auto_start_consumers=True,
-                    database_url=self._database_url,
-                )
-                self._event_framework = EventFramework(config)
-            except Exception as e:
-                import logging
-
-                logging.getLogger("dazzle.server").warning("Failed to init event framework: %s", e)
-                self._event_framework = NullEventFramework()
-        else:
-            self._event_framework = NullEventFramework()
-
-        # Capture for closures
-        event_framework = self._event_framework
-
-        @self._app.on_event("startup")
-        async def startup_events() -> None:
-            """Start event framework on app startup."""
-            await event_framework.start()
-
-        @self._app.on_event("shutdown")
-        async def shutdown_events() -> None:
-            """Stop event framework on app shutdown."""
-            await event_framework.stop()
-
-        # Wire EventEmittingMixin on services
-        for service in self._services.values():
-            if hasattr(service, "set_event_framework"):
-                service.set_event_framework(self._event_framework)
-
-    def _init_console(self) -> None:
-        """Initialize the Founder Console (v0.26.0)."""
-        if not self._app or not self._enable_console:
-            return
-
-        try:
-            from dazzle_back.runtime.console_routes import create_console_routes
-            from dazzle_back.runtime.deploy_history import DeployHistoryStore
-            from dazzle_back.runtime.deploy_routes import create_deploy_routes
-            from dazzle_back.runtime.ops_database import OpsDatabase
-            from dazzle_back.runtime.rollback_manager import RollbackManager
-            from dazzle_back.runtime.spec_versioning import SpecVersionStore
-
-            # Create ops database for console (PostgreSQL)
-            if not self._database_url:
-                import logging as _log
-
-                _log.getLogger("dazzle.server").info("Console requires DATABASE_URL — skipping")
-                return
-            ops_db = OpsDatabase(
-                database_url=self._database_url,
-            )
-            spec_version_store = SpecVersionStore(ops_db)
-            deploy_history_store = DeployHistoryStore(ops_db)
-
-            # Save current spec version
-            spec_version_store.save_version(self._appspec)
-
-            # Rollback manager
-            rollback_manager = RollbackManager(
-                spec_version_store=spec_version_store,
-                deploy_history_store=deploy_history_store,
-            )
-
-            console_router = create_console_routes(
-                ops_db=ops_db,
-                appspec=self._appspec,
-                spec_version_store=spec_version_store,
-                deploy_history_store=deploy_history_store,
-            )
-            self._app.include_router(console_router)
-
-            deploy_router = create_deploy_routes(
-                deploy_history_store=deploy_history_store,
-                spec_version_store=spec_version_store,
-                rollback_manager=rollback_manager,
-                appspec=self._appspec,
-            )
-            self._app.include_router(deploy_router)
-
-            import logging
-
-            logging.getLogger("dazzle.server").info("Founder Console initialized at /_console/")
-
-        except ImportError as e:
-            import logging
-
-            logging.getLogger("dazzle.server").debug("Console not available: %s", e)
-
-        except Exception as e:
-            import logging
-
-            logging.getLogger("dazzle.server").warning("Failed to init console: %s", e)
-
     def _init_fragment_routes(self) -> None:
         """Initialize fragment routes for composable HTMX fragments (v0.25.0)."""
         if not self._app:
@@ -1240,16 +1196,14 @@ class DazzleBackendApp:
             async def _handler(entity_id: str, request: Request) -> Any:
                 from uuid import UUID
 
-                from starlette.responses import JSONResponse, Response
+                from starlette.responses import Response
 
                 repo = _repositories.get(_entity_name)
                 if not repo:
-                    return JSONResponse(
-                        {"error": f"Entity {_entity_name} not found"}, status_code=404
-                    )
+                    raise HTTPException(status_code=404, detail=f"Entity {_entity_name} not found")
                 entity_data = await repo.read(UUID(entity_id))
                 if not entity_data:
-                    return JSONResponse({"error": "Record not found"}, status_code=404)
+                    raise HTTPException(status_code=404, detail="Record not found")
                 data = (
                     dict(entity_data)
                     if isinstance(entity_data, dict)
@@ -1360,53 +1314,6 @@ class DazzleBackendApp:
             logging.getLogger("dazzle.server").debug(
                 "Wired entity events to EntityEventBus for %d services", wired
             )
-
-    def _init_llm_executor(self) -> None:
-        """Initialize LLM intent executor, queue, triggers, and routes (v0.38.0)."""
-        if not self._appspec or not self._appspec.llm_config:
-            return
-        if not self._appspec.llm_intents:
-            return
-
-        from dazzle_back.runtime.llm_executor import LLMIntentExecutor
-        from dazzle_back.runtime.llm_queue import LLMJobQueue
-        from dazzle_back.runtime.llm_routes import create_llm_routes
-        from dazzle_back.runtime.llm_trigger import LLMTriggerMatcher
-
-        ai_job_service = self._services.get("AIJob")
-        executor = LLMIntentExecutor(self._appspec, ai_job_service=ai_job_service)
-
-        # Build job queue with rate limits and concurrency from config
-        llm_config = self._appspec.llm_config
-        queue = LLMJobQueue(
-            executor=executor,
-            ai_job_service=ai_job_service,
-            event_bus=getattr(self, "_entity_event_bus", None),
-            rate_limits=llm_config.rate_limits if llm_config else None,
-            concurrency=llm_config.concurrency if llm_config else None,
-        )
-        self._llm_queue = queue
-
-        # Register entity event trigger matcher
-        has_triggers = any(i.triggers for i in self._appspec.llm_intents)
-        if has_triggers and hasattr(self, "_entity_event_bus"):
-            matcher = LLMTriggerMatcher(self._appspec, queue, services=self._services)
-            self._entity_event_bus.add_handler(matcher.handle_event)
-
-        router = create_llm_routes(executor, queue=queue, ai_job_service=ai_job_service)
-        assert self._app is not None  # guaranteed after _create_app()
-        self._app.include_router(router)
-
-        # Start/stop queue workers with the app lifecycle
-        app = self._app
-
-        @app.on_event("startup")
-        async def startup_llm_queue() -> None:
-            await queue.start()
-
-        @app.on_event("shutdown")
-        async def shutdown_llm_queue() -> None:
-            await queue.shutdown()
 
     def _init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""
@@ -1563,73 +1470,6 @@ class DazzleBackendApp:
             wired_count,
         )
 
-    def _init_sla_manager(self) -> None:
-        """Initialize SLA runtime enforcement manager (v0.38.0).
-
-        Tracks SLA timers in memory and runs a periodic background task
-        to detect tier transitions and execute breach actions.
-        """
-        if not self._app or not self._appspec:
-            return
-
-        sla_specs = self._appspec.slas
-        if not sla_specs:
-            return
-
-        try:
-            from dazzle_back.runtime.sla_manager import SLAManager
-
-            self._sla_manager = SLAManager(
-                sla_specs=sla_specs,
-                services=self._services,
-            )
-
-            sla_manager = self._sla_manager  # capture for closures
-
-            # Wire entity lifecycle events to SLA manager
-            wired_count = 0
-            for _service_name, service in self._services.items():
-                if isinstance(service, CRUDService):
-
-                    async def _on_sla_created(
-                        entity_name: str,
-                        entity_id: str,
-                        entity_data: dict[str, Any],
-                        _old_data: dict[str, Any] | None,
-                        _mgr: Any = sla_manager,
-                    ) -> None:
-                        await _mgr.on_entity_event(entity_name, entity_id, entity_data)
-
-                    async def _on_sla_updated(
-                        entity_name: str,
-                        entity_id: str,
-                        entity_data: dict[str, Any],
-                        old_data: dict[str, Any] | None,
-                        _mgr: Any = sla_manager,
-                    ) -> None:
-                        await _mgr.on_entity_event(entity_name, entity_id, entity_data, old_data)
-
-                    service.on_created(_on_sla_created)
-                    service.on_updated(_on_sla_updated)
-                    wired_count += 1
-
-            @self._app.on_event("startup")
-            async def startup_sla() -> None:
-                await sla_manager.start()
-
-            @self._app.on_event("shutdown")
-            async def shutdown_sla() -> None:
-                await sla_manager.shutdown()
-
-            logging.getLogger("dazzle.server").info(
-                "SLA manager initialized — %d SLA(s), wired to %d service(s)",
-                len(sla_specs),
-                wired_count,
-            )
-
-        except Exception as e:
-            logging.getLogger("dazzle.server").warning("Failed to init SLA manager: %s", e)
-
     def _init_transition_effects(self) -> None:
         """Wire on_transition side effects into entity update callbacks (#435)."""
         if not self._appspec:
@@ -1672,31 +1512,6 @@ class DazzleBackendApp:
             logging.getLogger("dazzle.server").info(
                 "Transition effects wired for %d entity/entities", wired
             )
-
-    def _init_seed_runner(self) -> None:
-        """Auto-seed reference data from entity seed templates at startup (#428)."""
-        if not self._app or not self._appspec:
-            return
-        # Check if any entity has a seed template
-        has_seeds = any(e.seed_template for e in self._appspec.domain.entities)
-        if not has_seeds:
-            return
-
-        appspec = self._appspec
-        repositories = self._repositories
-
-        @self._app.on_event("startup")
-        async def run_seeds() -> None:
-            try:
-                from dazzle_back.runtime.seed_runner import run_seed_templates
-
-                count = await run_seed_templates(appspec, repositories)
-                if count:
-                    logging.getLogger("dazzle.server").info(
-                        "Seed runner: %d reference data row(s) ensured", count
-                    )
-            except Exception:
-                logging.getLogger("dazzle.server").warning("Seed runner failed", exc_info=True)
 
     def _wire_send_handler_to_channels(self) -> None:
         """Connect process adapter's SEND step to ChannelManager.
@@ -2269,7 +2084,7 @@ class DazzleBackendApp:
         """Initialize optional features: events, debug, site, channels, etc."""
         assert self._app is not None
 
-        # Create delegate instances
+        # Create delegate instances for workspace and integration features
         self._integration_mgr = IntegrationManager(
             app=self._app,
             appspec=self._appspec,
@@ -2288,8 +2103,15 @@ class DazzleBackendApp:
             entity_auto_includes=self._entity_auto_includes,
         )
 
-        # Event framework (v0.18.0)
-        self._init_event_framework()
+        # Run subsystem plugins (events, channels, console, process, sla,
+        # llm_queue, seed).  Each plugin catches its own errors.
+        self._subsystem_ctx = self._build_subsystem_context()
+        self._run_subsystems()
+
+        # Sync channel_manager back so IntegrationManager-based properties work
+        if self._subsystem_ctx.channel_manager is not None:
+            if self._integration_mgr is not None:
+                self._integration_mgr.channel_manager = self._subsystem_ctx.channel_manager
 
         # Debug routes
         if self._db_manager:
@@ -2328,14 +2150,6 @@ class DazzleBackendApp:
             )
             self._app.include_router(page_router)
 
-        # Messaging channels (v0.9)
-        if self._enable_channels and self._channels:
-            self._init_channel_manager()
-
-        # Founder Console (v0.26.0)
-        if self._enable_console:
-            self._init_console()
-
         # Fragment routes (v0.25.0)
         self._init_fragment_routes()
 
@@ -2345,30 +2159,11 @@ class DazzleBackendApp:
         # Mapping executor (v0.30.0)
         self._init_mapping_executor()
 
-        # LLM intent executor (v0.38.0)
-        self._init_llm_executor()
-
         # Workspace routes (v0.20.0)
         self._init_workspace_routes()
 
-        # Process manager (v0.24.0)
-        if self._enable_processes:
-            self._init_process_manager()
-
-        # SLA runtime enforcement (v0.38.0)
-        self._init_sla_manager()
-
         # Transition side effects (v0.39.0, #435)
         self._init_transition_effects()
-
-        # Seed template auto-seeding at startup (v0.38.0, #428)
-        self._init_seed_runner()
-
-        # Wire process SEND steps to channel manager (v0.33.0)
-        self._wire_send_handler_to_channels()
-
-        # Wire entity event triggers from channel send operations (v0.33.0)
-        self._wire_entity_events_to_channels()
 
     def _setup_system_routes(self) -> None:
         """Register domain service stubs, health check, spec, and db-info routes."""
@@ -2404,13 +2199,13 @@ class DazzleBackendApp:
             ) -> dict[str, Any]:
                 """Invoke a domain service stub."""
                 if not service_loader.has_service(service_id):
-                    return {"error": f"Service not found: {service_id}"}
+                    raise HTTPException(status_code=404, detail=f"Service not found: {service_id}")
                 try:
                     result = service_loader.invoke(service_id, **(payload or {}))
                     return {"result": result}
                 except Exception as e:
                     logger.error("Service invocation failed for %s: %s", service_id, e)
-                    return {"error": "Service invocation failed"}
+                    raise HTTPException(status_code=500, detail="Service invocation failed")
 
         @self._app.get("/health", tags=["System"])
         async def health_check() -> dict[str, str]:

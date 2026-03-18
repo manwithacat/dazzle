@@ -10,6 +10,7 @@ These activities are used by dynamically generated workflows to:
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -20,14 +21,17 @@ logger = logging.getLogger(__name__)
 
 # Activity registry for dynamic loading
 _activity_registry: list[Any] = []
+_activity_registry_lock = threading.Lock()
 
 # In-memory task store (for development - production uses database)
 _task_store: dict[str, ProcessTask] = {}
+_task_store_lock = threading.Lock()
 
 
 def get_all_activities() -> list[Any]:
     """Get all registered activities."""
-    return list(_activity_registry)
+    with _activity_registry_lock:
+        return list(_activity_registry)
 
 
 # Check if temporalio is available
@@ -91,7 +95,8 @@ if _TEMPORAL_AVAILABLE:
         )
 
         # Store task (in production, this would be database insert)
-        _task_store[task_id] = task
+        with _task_store_lock:
+            _task_store[task_id] = task
 
         activity.logger.info("Created human task %s for step '%s'", task_id, params["step_name"])
 
@@ -110,13 +115,16 @@ if _TEMPORAL_AVAILABLE:
         task_id = params["task_id"]
         step_name = params.get("step_name", "unknown")
 
-        if task_id in _task_store:
-            task = _task_store[task_id]
-            task.status = TaskStatus.ESCALATED
-            task.escalated_at = datetime.now(UTC)
-
+        with _task_store_lock:
+            if task_id in _task_store:
+                task = _task_store[task_id]
+                task.status = TaskStatus.ESCALATED
+                task.escalated_at = datetime.now(UTC)
+                found = True
+            else:
+                found = False
+        if found:
             activity.logger.warning("Escalated human task %s (step: %s)", task_id, step_name)
-
         else:
             activity.logger.error("Task %s not found for escalation", task_id)
 
@@ -170,14 +178,15 @@ if _TEMPORAL_AVAILABLE:
         }
 
     # Register activities
-    _activity_registry.extend(
-        [
-            create_human_task,
-            escalate_human_task,
-            emit_hless_event,
-            execute_service,
-        ]
-    )
+    with _activity_registry_lock:
+        _activity_registry.extend(
+            [
+                create_human_task,
+                escalate_human_task,
+                emit_hless_event,
+                execute_service,
+            ]
+        )
 
 
 # Database operations for tasks (used by adapter)
@@ -188,7 +197,8 @@ async def get_task_from_db(task_id: str) -> ProcessTask | None:
     In development mode, uses in-memory store.
     Production would use actual database.
     """
-    return _task_store.get(task_id)
+    with _task_store_lock:
+        return _task_store.get(task_id)
 
 
 async def list_tasks_from_db(
@@ -200,7 +210,8 @@ async def list_tasks_from_db(
     """
     List tasks from the database with filters.
     """
-    tasks = list(_task_store.values())
+    with _task_store_lock:
+        tasks = list(_task_store.values())
 
     # Apply filters
     if run_id:
@@ -222,13 +233,17 @@ async def complete_task_in_db(
     """
     Mark a task as completed in the database.
     """
-    if task_id in _task_store:
-        task = _task_store[task_id]
-        task.status = TaskStatus.COMPLETED
-        task.outcome = outcome
-        task.outcome_data = outcome_data
-        task.completed_at = datetime.now(UTC)
-
+    with _task_store_lock:
+        if task_id in _task_store:
+            task = _task_store[task_id]
+            task.status = TaskStatus.COMPLETED
+            task.outcome = outcome
+            task.outcome_data = outcome_data
+            task.completed_at = datetime.now(UTC)
+            completed = True
+        else:
+            completed = False
+    if completed:
         logger.info("Task %s completed with outcome '%s'", task_id, outcome)
 
 
@@ -240,11 +255,16 @@ async def reassign_task_in_db(
     """
     Reassign a task to a new user.
     """
-    if task_id in _task_store:
-        task = _task_store[task_id]
-        old_assignee = task.assignee_id
-        task.assignee_id = new_assignee_id
-
+    with _task_store_lock:
+        if task_id in _task_store:
+            task = _task_store[task_id]
+            old_assignee = task.assignee_id
+            task.assignee_id = new_assignee_id
+            found = True
+        else:
+            old_assignee = None
+            found = False
+    if found:
         logger.info(
             f"Task {task_id} reassigned from {old_assignee} to {new_assignee_id}"
             + (f": {reason}" if reason else "")
@@ -254,4 +274,5 @@ async def reassign_task_in_db(
 # Clear task store (for testing)
 def clear_task_store() -> None:
     """Clear the in-memory task store (for testing)."""
-    _task_store.clear()
+    with _task_store_lock:
+        _task_store.clear()

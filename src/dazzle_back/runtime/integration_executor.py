@@ -185,10 +185,14 @@ class IntegrationExecutor:
         try:
             import httpx
 
+            from dazzle_back.runtime.http_utils import http_call_with_retry
+
             url = f"{service.base_url.rstrip('/')}/{action.call_operation}"
 
             async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post(
+                resp = await http_call_with_retry(
+                    client,
+                    "POST",
                     url,
                     json=call_params,
                     headers=service.headers,

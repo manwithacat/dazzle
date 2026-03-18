@@ -17,16 +17,20 @@ import logging
 from pathlib import Path
 from typing import Any
 
-try:
-    from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response
-    from fastapi.responses import HTMLResponse, RedirectResponse
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-
 from jinja2 import Environment
 
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    APIRouter,
+    Cookie,
+    Depends,
+    HTMLResponse,
+    HTTPException,
+    Query,
+    RedirectResponse,
+    Request,
+    Response,
+)
 from dazzle_back.runtime.health_aggregator import HealthAggregator
 from dazzle_back.runtime.ops_database import OpsDatabase
 

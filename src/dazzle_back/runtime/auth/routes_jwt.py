@@ -4,22 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import RefreshTokenRequest, TokenRequest, TokenRevokeRequest
-from .store import AuthStore
-
-# FastAPI is optional - import for type hints and runtime
-try:
-    from fastapi import APIRouter
-    from fastapi import Request as FastAPIRequest
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    APIRouter = None  # type: ignore[assignment,misc]
-    FastAPIRequest = None  # type: ignore[assignment,misc]
-    FASTAPI_AVAILABLE = False
-
+from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter, FastAPIRequest
 from dazzle_back.runtime.jwt_auth import JWTService
 from dazzle_back.runtime.token_store import TokenStore
+
+from .models import RefreshTokenRequest, TokenRequest, TokenRevokeRequest
+from .store import AuthStore
 
 
 def create_jwt_auth_routes(

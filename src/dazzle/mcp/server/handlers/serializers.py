@@ -11,7 +11,10 @@ import json
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from dazzle.core.ir.domain import EntitySpec
     from dazzle.core.ir.stories import StorySpec
+    from dazzle.core.ir.surfaces import SurfaceSpec
+    from dazzle.core.ir.ux import UXSpec
 
 
 # =============================================================================
@@ -91,7 +94,7 @@ def serialize_test_design(td: Any) -> dict[str, Any]:
 # =============================================================================
 
 
-def serialize_entity_summary(entity: Any) -> dict[str, Any]:
+def serialize_entity_summary(entity: EntitySpec) -> dict[str, Any]:
     """Compact entity summary: name, title, field count, state machine presence."""
     info: dict[str, Any] = {
         "name": entity.name,
@@ -104,7 +107,7 @@ def serialize_entity_summary(entity: Any) -> dict[str, Any]:
     return info
 
 
-def serialize_entity_detail(entity: Any) -> dict[str, Any]:
+def serialize_entity_detail(entity: EntitySpec) -> dict[str, Any]:
     """Full entity detail: all fields, state machine with transitions."""
     info: dict[str, Any] = {
         "name": entity.name,
@@ -140,7 +143,7 @@ def serialize_entity_detail(entity: Any) -> dict[str, Any]:
 # =============================================================================
 
 
-def serialize_ux_summary(ux: Any) -> dict[str, Any]:
+def serialize_ux_summary(ux: UXSpec) -> dict[str, Any]:
     """Compact UX spec summary for surface serialization."""
     info: dict[str, Any] = {}
     if ux.sort:
@@ -158,7 +161,7 @@ def serialize_ux_summary(ux: Any) -> dict[str, Any]:
     return info
 
 
-def serialize_surface_summary(surface: Any) -> dict[str, Any]:
+def serialize_surface_summary(surface: SurfaceSpec) -> dict[str, Any]:
     """Compact surface summary: name, title, entity, mode."""
     info: dict[str, Any] = {
         "name": surface.name,
@@ -171,7 +174,7 @@ def serialize_surface_summary(surface: Any) -> dict[str, Any]:
     return info
 
 
-def serialize_surface_detail(surface: Any) -> dict[str, Any]:
+def serialize_surface_detail(surface: SurfaceSpec) -> dict[str, Any]:
     """Full surface detail: includes sections, fields, and UX metadata."""
     info: dict[str, Any] = {
         "name": surface.name,

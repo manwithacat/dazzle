@@ -8,13 +8,12 @@ Includes preflight, generate, deploy actions and rollback.
 import logging
 from typing import Any
 
-try:
-    from fastapi import APIRouter, Request
-    from fastapi.responses import HTMLResponse
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    APIRouter,
+    HTMLResponse,
+    Request,
+)
 
 logger = logging.getLogger("dazzle.deploy_routes")
 

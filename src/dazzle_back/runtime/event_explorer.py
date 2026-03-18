@@ -15,16 +15,9 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
-try:
-    from fastapi import APIRouter, Query
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore[misc, assignment]
-    Query = None  # type: ignore[assignment]
-
 from pydantic import BaseModel, Field
+
+from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter, Query
 
 logger = logging.getLogger(__name__)
 

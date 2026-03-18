@@ -29,6 +29,8 @@ from typing import Any
 
 import httpx
 
+from dazzle.testing.field_value_gen import generate_field_value_from_str
+
 logger = logging.getLogger(__name__)
 
 
@@ -696,69 +698,7 @@ class DazzleClient:
         self, name: str, field_type: str, unique: bool = False, max_length: int | None = None
     ) -> Any:
         """Generate a test value for a field type, respecting max_length."""
-        import re
-        import uuid as uuid_module
-
-        # Handle enum types
-        enum_match = re.search(r"enum\(([^)]+)\)", field_type)
-        if enum_match:
-            values = enum_match.group(1).split(",")
-            return values[0].strip()
-
-        # For short max_length fields, use hex-only values to fit
-        if max_length is not None and max_length <= 16 and unique:
-            return uuid_module.uuid4().hex[:max_length]
-
-        # Generate unique suffix for unique fields — use UUID4 hex to
-        # guarantee no collisions across runs or parallel execution.
-        unique_suffix = f"_{uuid_module.uuid4().hex[:8]}" if unique else ""
-
-        # Handle by field name first (for common patterns)
-        name_lower = name.lower()
-        if name_lower == "email" or "email" in field_type:
-            value = f"test{unique_suffix}@example.com"
-        elif name_lower in ("serial_number", "serialnumber", "serial"):
-            value = f"SN{unique_suffix or '_' + uuid_module.uuid4().hex[:8]}"
-        elif name_lower == "version":
-            value = f"1.0.{uuid_module.uuid4().hex[:6]}"
-        elif "uuid" in field_type:
-            return str(uuid_module.uuid4())
-        elif "str" in field_type:
-            value = f"Test {name}{unique_suffix}"
-        elif "text" in field_type:
-            value = f"Test description for {name}{unique_suffix}"
-        elif "int" in field_type:
-            return 1
-        elif "decimal" in field_type or "float" in field_type:
-            return 10.0
-        elif "bool" in field_type:
-            return True
-        elif "date" in field_type and "time" not in field_type:
-            from datetime import datetime
-
-            return datetime.now().strftime("%Y-%m-%d")
-        elif "datetime" in field_type:
-            from datetime import datetime
-
-            return datetime.now().isoformat()
-        else:
-            value = f"test_{name}{unique_suffix}"
-
-        # Truncate to max_length if specified (preserving unique suffix)
-        if max_length is not None and isinstance(value, str) and len(value) > max_length:
-            if unique:
-                # Keep the unique suffix, truncate the prefix
-                suffix = unique_suffix
-                prefix_budget = max_length - len(suffix)
-                if prefix_budget > 0:
-                    value = value[:prefix_budget] + suffix
-                else:
-                    # Field is too short even for suffix — use hex only
-                    value = uuid_module.uuid4().hex[:max_length]
-            else:
-                value = value[:max_length]
-
-        return value
+        return generate_field_value_from_str(name, field_type, unique=unique, max_length=max_length)
 
     def check_ui_loads(self) -> bool:
         """Check if the UI loads successfully."""
@@ -1114,6 +1054,583 @@ class TestRunner:
                 error_message=str(e),
             )
 
+    # ── Per-action execute helpers ───────────────────────────────────────
+
+    def _execute_login_as_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        success = self.client.authenticate(target)
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.SKIPPED,
+            message="" if success else "Auth not required or failed",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_navigate_to_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        # Navigation is conceptual in API tests
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_create_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        entity_name = target.replace("entity:", "")
+        entity_data = self.client.generate_entity_data(entity_name, resolved_data)
+        result = self.client.create_entity(entity_name, entity_data)
+        success = result is not None
+        if success and store_result and result:
+            context[store_result] = result
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message="" if success else f"Create failed for {entity_name}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_update_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.SKIPPED,
+            message="Update requires entity ID context",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_visible_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        success = self.client.check_ui_loads()
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message="" if success else "UI check failed",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_count_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        data: dict[str, Any],
+    ) -> StepResult:
+        assert self.client is not None
+        entity_name = target.replace("entity:", "")
+        if entity_name.endswith("-card"):
+            entity_name = entity_name[:-5]
+        elif entity_name.endswith("-row"):
+            entity_name = entity_name[:-4]
+        entity_mapping = {
+            "overdue-task": "Task",
+            "task-card": "Task",
+            "task-row": "Task",
+            "user-row": "User",
+            "device-row": "Device",
+        }
+        if entity_name in entity_mapping:
+            entity_name = entity_mapping[entity_name]
+        elif "-" in entity_name:
+            entity_name = entity_name.replace("-", " ").title().replace(" ", "")
+        elif entity_name.islower():
+            entity_name = entity_name.capitalize()
+        entities = self.client.get_entities(entity_name)
+        min_count = data.get("min", 0)
+        success = len(entities) >= min_count
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message=f"Found {len(entities)} {entity_name} (min: {min_count})",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_ui_only_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.SKIPPED,
+            message="UI action skipped in API test",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_ui_assertion_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.SKIPPED,
+            message="UI assertion skipped",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_check_route_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+        data: dict[str, Any],
+    ) -> StepResult:
+        assert self.client is not None
+        if not target.startswith("workspace:"):
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.SKIPPED,
+                message="Non-workspace route check skipped",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        workspace_name = target.replace("workspace:", "")
+        route = data.get("route", f"/app/workspaces/{workspace_name}")
+        try:
+            resp = self.client._request(
+                "GET", f"{self.client.ui_url}{route}", follow_redirects=True
+            )
+            if resp.status_code in (200, 304, 401):
+                msg = f"Workspace '{workspace_name}' route exists"
+                if resp.status_code == 401:
+                    msg += " (protected)"
+                return StepResult(
+                    action=action,
+                    target=target,
+                    result=TestResult.PASSED,
+                    message=msg,
+                    duration_ms=(time.time() - start_time) * 1000,
+                )
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message=f"Route {route} returned {resp.status_code}",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        except Exception as e:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message=f"Route check failed: {e}",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+
+    def _execute_e2e_only_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.SKIPPED,
+            message="E2E action skipped in API test",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_read_list_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        entity_name = target.replace("entity:", "")
+        entities = self.client.get_entities(entity_name)
+        context["last_response"] = type(
+            "Response",
+            (),
+            {
+                "status_code": 200,
+                "cookies": {},
+                "headers": {},
+                "json": lambda: entities,
+            },
+        )()
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            message=f"Retrieved {len(entities)} {entity_name} entities",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_post_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        url = f"{self.client.ui_url}{target}"
+        resp = self.client._request("POST", url, data=resolved_data, follow_redirects=False)
+        context["last_response"] = resp
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            message=f"POST {target} → {resp.status_code}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_post_json_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        url = f"{self.client.api_url}{target}"
+        resp = self.client._request("POST", url, json=resolved_data, follow_redirects=False)
+        context["last_response"] = resp
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            message=f"POST(json) {target} → {resp.status_code}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_clear_cookies_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        self.client.client.cookies.clear()
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            message="Cookies cleared",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_get_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        url = f"{self.client.ui_url}{target}"
+        follow = resolved_data.get("follow_redirects", False)
+        resp = self.client._request("GET", url, follow_redirects=follow)
+        context["last_response"] = resp
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            message=f"GET {target} → {resp.status_code}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_get_with_cookie_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        cookie_name = resolved_data.get("cookie", "dazzle_session")
+        cookie_value = resolved_data.get("value", "invalid-token")
+        follow = resolved_data.get("follow_redirects", False)
+        url = f"{self.client.ui_url}{target}"
+        resp = self.client._request(
+            "GET",
+            url,
+            cookies={cookie_name: cookie_value},
+            follow_redirects=follow,
+        )
+        context["last_response"] = resp
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED,
+            message=f"GET {target} with {cookie_name}={cookie_value} → {resp.status_code}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_status_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        last_resp = context.get("last_response")
+        if last_resp is None:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message="No previous response to check",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        expected = resolved_data.get("status", 200)
+        actual = last_resp.status_code
+        success = actual == expected
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message=f"Expected {expected}, got {actual}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_cookie_set_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        last_resp = context.get("last_response")
+        cookie_name = resolved_data.get("cookie", "dazzle_session")
+        has_cookie = (last_resp is not None and cookie_name in last_resp.cookies) or bool(
+            self.client.client.cookies.get(cookie_name)
+        )
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if has_cookie else TestResult.FAILED,
+            message=f"Cookie '{cookie_name}' {'present' if has_cookie else 'missing'}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_no_cookie_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        last_resp = context.get("last_response")
+        cookie_name = resolved_data.get("cookie", "dazzle_session")
+        has_cookie = False
+        if last_resp is not None and cookie_name in last_resp.cookies:
+            cookie_val = last_resp.cookies.get(cookie_name)
+            # Empty value or Max-Age=0 means the server is clearing, not setting
+            if cookie_val and cookie_val != "":
+                has_cookie = True
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if not has_cookie else TestResult.FAILED,
+            message=f"Cookie '{cookie_name}' {'absent (good)' if not has_cookie else 'unexpectedly present'}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_cookie_cleared_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        assert self.client is not None
+        last_resp = context.get("last_response")
+        cookie_name = resolved_data.get("cookie", "dazzle_session")
+        cleared = False
+        if last_resp is not None:
+            set_cookie_hdr = last_resp.headers.get("set-cookie", "")
+            if cookie_name in set_cookie_hdr and "Max-Age=0" in set_cookie_hdr:
+                cleared = True
+            cookie_val = last_resp.cookies.get(cookie_name)
+            if cookie_val is not None and (cookie_val == "" or cookie_val == '""'):
+                cleared = True
+        if not cleared:
+            jar_val = self.client.client.cookies.get(cookie_name)
+            if not jar_val or jar_val == "":
+                cleared = True
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if cleared else TestResult.FAILED,
+            message=f"Cookie '{cookie_name}' {'cleared' if cleared else 'still set'}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_redirect_url_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        last_resp = context.get("last_response")
+        if last_resp is None:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message="No previous response to check",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        expected_url = resolved_data.get("redirect_url", "/app")
+        actual_url = last_resp.headers.get("location", "")
+        if not actual_url:
+            try:
+                body = last_resp.json()
+                actual_url = body.get("redirect_url", body.get("redirect", ""))
+            except Exception:
+                actual_url = ""
+        if not actual_url:
+            actual_url = last_resp.headers.get("hx-redirect", "")
+        success = actual_url.rstrip("/").startswith(expected_url.rstrip("/"))
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message=f"Expected redirect to '{expected_url}', got '{actual_url}'",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_assert_unauthenticated_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        last_resp = context.get("last_response")
+        if last_resp is None:
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.FAILED,
+                message="No previous response to check",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
+        # 403 is included because workspace RBAC returns 403 for
+        # unauthenticated users who lack the required persona role.
+        expected_codes = resolved_data.get("expect", [401, 302, 403])
+        actual = last_resp.status_code
+        success = actual in expected_codes
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.PASSED if success else TestResult.FAILED,
+            message=f"Status {actual} {'matches' if success else 'not in'} {expected_codes}",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
+    def _execute_trigger_transition_step(
+        self,
+        action: str,
+        target: str,
+        resolved_data: dict[str, Any],
+        context: dict[str, Any],
+        store_result: str | None,
+        start_time: float,
+    ) -> StepResult:
+        return StepResult(
+            action=action,
+            target=target,
+            result=TestResult.SKIPPED,
+            message="Transition requires entity context",
+            duration_ms=(time.time() - start_time) * 1000,
+        )
+
     def execute_step(
         self, step: dict[str, Any], design: dict[str, Any], context: dict[str, Any] | None = None
     ) -> StepResult:
@@ -1139,450 +1656,63 @@ class TestRunner:
 
         start_time = time.time()
 
+        # Common kwargs passed to every handler
+        kwargs: dict[str, Any] = {
+            "action": action,
+            "target": target,
+            "resolved_data": resolved_data,
+            "context": context,
+            "store_result": store_result,
+            "start_time": start_time,
+        }
+
         try:
             if action == "login_as":
-                # Authenticate as persona
-                success = self.client.authenticate(target)
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.SKIPPED,
-                    message="" if success else "Auth not required or failed",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_login_as_step(**kwargs)
             elif action == "navigate_to":
-                # For API testing, just verify the endpoint exists
-                # In a real Playwright test, this would navigate the browser
-                success = True  # Navigation is conceptual in API tests
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.FAILED,
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_navigate_to_step(**kwargs)
             elif action == "create":
-                # Create entity
-                entity_name = target.replace("entity:", "")
-                # Generate required fields if not provided, using resolved data
-                entity_data = self.client.generate_entity_data(entity_name, resolved_data)
-                result = self.client.create_entity(entity_name, entity_data)
-                success = result is not None
-
-                # Store result in context if store_result is specified
-                if success and store_result and result:
-                    context[store_result] = result
-
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.FAILED,
-                    message="" if success else f"Create failed for {entity_name}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_create_step(**kwargs)
             elif action == "update":
-                # Update entity - would need entity ID
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message="Update requires entity ID context",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_update_step(**kwargs)
             elif action == "assert_visible":
-                # For API testing, check if UI loads
-                success = self.client.check_ui_loads()
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.FAILED,
-                    message="" if success else "UI check failed",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_visible_step(**kwargs)
             elif action == "assert_count":
-                # Check entity count
-                # Extract entity name from various target formats
-                entity_name = target.replace("entity:", "")
-                # Handle common UI element patterns
-                if entity_name.endswith("-card"):
-                    entity_name = entity_name[:-5]  # Remove "-card"
-                elif entity_name.endswith("-row"):
-                    entity_name = entity_name[:-4]  # Remove "-row"
-                # Map special UI selectors to entity names
-                entity_mapping = {
-                    "overdue-task": "Task",
-                    "task-card": "Task",
-                    "task-row": "Task",
-                    "user-row": "User",
-                    "device-row": "Device",
-                }
-                if entity_name in entity_mapping:
-                    entity_name = entity_mapping[entity_name]
-                elif "-" in entity_name:
-                    # Convert kebab-case to PascalCase: "task-comment" -> "TaskComment"
-                    entity_name = entity_name.replace("-", " ").title().replace(" ", "")
-                elif entity_name.islower():
-                    # Capitalize simple lowercase names: "task" -> "Task"
-                    entity_name = entity_name.capitalize()
-                # Otherwise keep the original casing (e.g., TaskComment stays TaskComment)
-                entities = self.client.get_entities(entity_name)
-                min_count = data.get("min", 0)
-                success = len(entities) >= min_count
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.FAILED,
-                    message=f"Found {len(entities)} {entity_name} (min: {min_count})",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_count_step(**kwargs, data=data)
             elif action == "trigger_transition":
-                # State transition - would require entity ID
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message="Transition requires entity context",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_trigger_transition_step(**kwargs)
             elif action in ("click", "fill", "select", "wait_for"):
-                # UI-only actions - skip in API tests
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message="UI action skipped in API test",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
-            elif action == "assert_not_visible":
-                # Skip in API tests
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message="UI assertion skipped",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
-            elif action == "assert_text":
-                # Skip in API tests
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message="UI assertion skipped",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_ui_only_step(**kwargs)
+            elif action in ("assert_not_visible", "assert_text"):
+                return self._execute_ui_assertion_step(**kwargs)
             elif action == "check_route":
-                # Verify workspace route exists by checking if UI responds
-                # Extract workspace name from target like "workspace:contacts"
-                if target.startswith("workspace:"):
-                    workspace_name = target.replace("workspace:", "")
-                    # Get the route path from step data
-                    route = data.get("route", f"/app/workspaces/{workspace_name}")
-                    try:
-                        # Check if UI route responds
-                        resp = self.client._request(
-                            "GET", f"{self.client.ui_url}{route}", follow_redirects=True
-                        )
-                        # 200/304 = success, 401 = protected (exists but needs auth)
-                        if resp.status_code in (200, 304, 401):
-                            msg = f"Workspace '{workspace_name}' route exists"
-                            if resp.status_code == 401:
-                                msg += " (protected)"
-                            return StepResult(
-                                action=action,
-                                target=target,
-                                result=TestResult.PASSED,
-                                message=msg,
-                                duration_ms=(time.time() - start_time) * 1000,
-                            )
-                        else:
-                            return StepResult(
-                                action=action,
-                                target=target,
-                                result=TestResult.FAILED,
-                                message=f"Route {route} returned {resp.status_code}",
-                                duration_ms=(time.time() - start_time) * 1000,
-                            )
-                    except Exception as e:
-                        return StepResult(
-                            action=action,
-                            target=target,
-                            result=TestResult.FAILED,
-                            message=f"Route check failed: {e}",
-                            duration_ms=(time.time() - start_time) * 1000,
-                        )
-                # Non-workspace routes - skip for now
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message="Non-workspace route check skipped",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_check_route_step(**kwargs, data=data)
             elif action in ("wait_for_load", "assert_no_errors"):
-                # E2E-only actions - skip in API tests
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message="E2E action skipped in API test",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_e2e_only_step(**kwargs)
             elif action == "read_list":
-                # Read entity list
-                entity_name = target.replace("entity:", "")
-                entities = self.client.get_entities(entity_name)
-                # Store a synthetic response-like object for assert_status compatibility
-                context["last_response"] = type(
-                    "Response",
-                    (),
-                    {
-                        "status_code": 200,
-                        "cookies": {},
-                        "headers": {},
-                        "json": lambda: entities,
-                    },
-                )()
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED,
-                    message=f"Retrieved {len(entities)} {entity_name} entities",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
-            # ── Auth lifecycle action handlers ──────────────────────────
-
+                return self._execute_read_list_step(**kwargs)
             elif action == "post":
-                # HTTP POST request (used by auth login/logout tests)
-                url = f"{self.client.ui_url}{target}"
-                resp = self.client._request("POST", url, data=resolved_data, follow_redirects=False)
-                context["last_response"] = resp
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED,
-                    message=f"POST {target} → {resp.status_code}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_post_step(**kwargs)
             elif action == "post_json":
-                # HTTP POST request with JSON body (used by auth login tests)
-                url = f"{self.client.api_url}{target}"
-                resp = self.client._request("POST", url, json=resolved_data, follow_redirects=False)
-                context["last_response"] = resp
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED,
-                    message=f"POST(json) {target} → {resp.status_code}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_post_json_step(**kwargs)
             elif action == "clear_cookies":
-                # Clear all cookies from the httpx client jar
-                self.client.client.cookies.clear()
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED,
-                    message="Cookies cleared",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_clear_cookies_step(**kwargs)
             elif action == "get":
-                # HTTP GET request (used by session/post-logout tests)
-                url = f"{self.client.ui_url}{target}"
-                follow = resolved_data.get("follow_redirects", False)
-                resp = self.client._request("GET", url, follow_redirects=follow)
-                context["last_response"] = resp
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED,
-                    message=f"GET {target} → {resp.status_code}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_get_step(**kwargs)
             elif action == "get_with_cookie":
-                # GET with a specific cookie value (e.g. invalid session token)
-                cookie_name = resolved_data.get("cookie", "dazzle_session")
-                cookie_value = resolved_data.get("value", "invalid-token")
-                follow = resolved_data.get("follow_redirects", False)
-                url = f"{self.client.ui_url}{target}"
-                resp = self.client._request(
-                    "GET",
-                    url,
-                    cookies={cookie_name: cookie_value},
-                    follow_redirects=follow,
-                )
-                context["last_response"] = resp
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED,
-                    message=f"GET {target} with {cookie_name}={cookie_value} → {resp.status_code}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_get_with_cookie_step(**kwargs)
             elif action == "assert_status":
-                # Verify HTTP status code of last response
-                last_resp = context.get("last_response")
-                if last_resp is None:
-                    return StepResult(
-                        action=action,
-                        target=target,
-                        result=TestResult.FAILED,
-                        message="No previous response to check",
-                        duration_ms=(time.time() - start_time) * 1000,
-                    )
-                expected = resolved_data.get("status", 200)
-                actual = last_resp.status_code
-                success = actual == expected
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.FAILED,
-                    message=f"Expected {expected}, got {actual}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_status_step(**kwargs)
             elif action == "assert_cookie_set":
-                # Verify a cookie exists in the response or client jar
-                last_resp = context.get("last_response")
-                cookie_name = resolved_data.get("cookie", "dazzle_session")
-                # Check both the response cookies and the client cookie jar
-                has_cookie = False
-                if last_resp is not None and cookie_name in last_resp.cookies:
-                    has_cookie = True
-                elif self.client.client.cookies.get(cookie_name):
-                    has_cookie = True
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if has_cookie else TestResult.FAILED,
-                    message=f"Cookie '{cookie_name}' {'present' if has_cookie else 'missing'}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_cookie_set_step(**kwargs)
             elif action == "assert_no_cookie":
-                # Verify the RESPONSE did not set a cookie (ignore client jar
-                # which may retain cookies from prior tests)
-                last_resp = context.get("last_response")
-                cookie_name = resolved_data.get("cookie", "dazzle_session")
-                has_cookie = False
-                if last_resp is not None and cookie_name in last_resp.cookies:
-                    cookie_val = last_resp.cookies.get(cookie_name)
-                    # Empty value or Max-Age=0 means the server is clearing, not setting
-                    if cookie_val and cookie_val != "":
-                        has_cookie = True
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if not has_cookie else TestResult.FAILED,
-                    message=f"Cookie '{cookie_name}' {'absent (good)' if not has_cookie else 'unexpectedly present'}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_no_cookie_step(**kwargs)
             elif action == "assert_cookie_cleared":
-                # Verify a cookie has been deleted (empty value or max-age=0)
-                last_resp = context.get("last_response")
-                cookie_name = resolved_data.get("cookie", "dazzle_session")
-                cleared = False
-
-                if last_resp is not None:
-                    # Check Set-Cookie header for explicit clearing (Max-Age=0)
-                    set_cookie_hdr = last_resp.headers.get("set-cookie", "")
-                    if cookie_name in set_cookie_hdr and "Max-Age=0" in set_cookie_hdr:
-                        cleared = True
-
-                    # Also check if cookie value is empty in response
-                    cookie_val = last_resp.cookies.get(cookie_name)
-                    if cookie_val is not None and (cookie_val == "" or cookie_val == '""'):
-                        cleared = True
-
-                if not cleared:
-                    # Fallback: check the client jar — after a clear, it should be gone
-                    jar_val = self.client.client.cookies.get(cookie_name)
-                    if not jar_val or jar_val == "":
-                        cleared = True
-
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if cleared else TestResult.FAILED,
-                    message=f"Cookie '{cookie_name}' {'cleared' if cleared else 'still set'}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_cookie_cleared_step(**kwargs)
             elif action == "assert_redirect_url":
-                # Verify redirect destination (Location header or JSON redirect_url)
-                last_resp = context.get("last_response")
-                if last_resp is None:
-                    return StepResult(
-                        action=action,
-                        target=target,
-                        result=TestResult.FAILED,
-                        message="No previous response to check",
-                        duration_ms=(time.time() - start_time) * 1000,
-                    )
-                expected_url = resolved_data.get("redirect_url", "/app")
-                # Check Location header for 3xx redirects
-                actual_url = last_resp.headers.get("location", "")
-                if not actual_url:
-                    # Check JSON body for redirect_url field
-                    try:
-                        body = last_resp.json()
-                        actual_url = body.get("redirect_url", body.get("redirect", ""))
-                    except Exception:
-                        actual_url = ""
-                # Also check HX-Redirect header (htmx response)
-                if not actual_url:
-                    actual_url = last_resp.headers.get("hx-redirect", "")
-                success = actual_url.rstrip("/").startswith(expected_url.rstrip("/"))
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.FAILED,
-                    message=f"Expected redirect to '{expected_url}', got '{actual_url}'",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_redirect_url_step(**kwargs)
             elif action == "assert_unauthenticated":
-                # Verify response indicates unauthenticated (401, 302, or 403)
-                # 403 is included because workspace RBAC returns 403 for
-                # unauthenticated users who lack the required persona role.
-                last_resp = context.get("last_response")
-                if last_resp is None:
-                    return StepResult(
-                        action=action,
-                        target=target,
-                        result=TestResult.FAILED,
-                        message="No previous response to check",
-                        duration_ms=(time.time() - start_time) * 1000,
-                    )
-                expected_codes = resolved_data.get("expect", [401, 302, 403])
-                actual = last_resp.status_code
-                success = actual in expected_codes
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.PASSED if success else TestResult.FAILED,
-                    message=f"Status {actual} {'matches' if success else 'not in'} {expected_codes}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
-
+                return self._execute_assert_unauthenticated_step(**kwargs)
             else:
                 logger.warning("Unknown test action '%s' — step skipped", action)
                 return StepResult(

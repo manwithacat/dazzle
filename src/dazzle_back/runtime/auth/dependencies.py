@@ -4,17 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 
+from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, FastAPIRequest
+
 from .models import AuthContext
 from .store import AuthStore
-
-# FastAPI is optional - import for type hints and runtime
-try:
-    from fastapi import Request as FastAPIRequest
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FastAPIRequest = None  # type: ignore[assignment,misc]
-    FASTAPI_AVAILABLE = False
 
 
 def create_auth_dependency(

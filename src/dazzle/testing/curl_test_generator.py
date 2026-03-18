@@ -22,6 +22,7 @@ from typing import Any
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.fields import FieldSpec, FieldTypeKind
 from dazzle.core.strings import to_api_plural
+from dazzle.testing.field_value_gen import generate_field_value
 
 logger = logging.getLogger(__name__)
 
@@ -499,51 +500,28 @@ report
     def _generate_field_value(self, field: FieldSpec) -> str:
         """Generate a bash-compatible JSON value string for a field."""
         kind = field.type.kind
-        name = field.name
 
-        if kind == FieldTypeKind.ENUM:
-            if field.type.enum_values:
-                return json.dumps(field.type.enum_values[0])
-            return '"default"'
-
+        # REF and UUID use bash-specific syntax — handled here, not in shared function
         if kind == FieldTypeKind.REF:
-            # Use shell variable reference
             target = field.type.ref_entity or "Unknown"
             return f'"${{ID_{target.upper()}}}"'
-
-        if kind == FieldTypeKind.MONEY:
-            # Money fields expand to _minor + _currency per #131
-            # Handled specially in _generate_create_payload
-            return "10000"
 
         if kind == FieldTypeKind.UUID:
             return '"$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo test-uuid)"'
 
-        if name == "email" or kind == FieldTypeKind.EMAIL:
-            return '"test@example.com"'
+        if kind == FieldTypeKind.MONEY:
+            # Money fields expand to _minor + _currency — handled in _generate_create_payload
+            return "10000"
 
-        if kind == FieldTypeKind.STR:
-            return json.dumps(f"Test {name}")
-        if kind == FieldTypeKind.TEXT:
-            return json.dumps(f"Test description for {name}")
-        if kind == FieldTypeKind.INT:
-            return "1"
-        if kind == FieldTypeKind.DECIMAL:
-            return "10.0"
-        if kind == FieldTypeKind.BOOL:
-            return "true"
-        if kind == FieldTypeKind.DATE:
-            return json.dumps(datetime.now().strftime("%Y-%m-%d"))
-        if kind == FieldTypeKind.DATETIME:
-            return json.dumps(datetime.now().isoformat())
-        if kind == FieldTypeKind.URL:
-            return json.dumps(f"https://example.com/{name}")
-        if kind == FieldTypeKind.FILE:
-            return '"test_file.txt"'
-        if kind == FieldTypeKind.JSON:
-            return '{"key": "value"}'
-
-        return json.dumps(f"test_{name}")
+        # For all other types, use the shared function and re-encode as JSON string
+        value = generate_field_value(field)
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if isinstance(value, (int, float)):
+            return str(value)
+        if isinstance(value, dict):
+            return json.dumps(value)
+        return json.dumps(str(value) if value is not None else "")
 
     def _generate_create_payload(self, entity: Any) -> str:
         """Generate JSON payload string for creating an entity."""

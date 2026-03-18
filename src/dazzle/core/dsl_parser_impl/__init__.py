@@ -103,6 +103,502 @@ class Parser(
     - WorkspaceParserMixin: Workspace declarations with regions
     """
 
+    # ── Per-token-type top-level dispatch handlers ──────────────────────
+
+    def _dispatch_archetype(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        archetype = self.parse_archetype()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "archetypes": [*fragment.archetypes, archetype],
+            }
+        )
+
+    def _dispatch_entity(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        entity = self.parse_entity()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "entities": [*fragment.entities, entity],
+            }
+        )
+
+    def _dispatch_surface(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        surface = self.parse_surface()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "surfaces": [*fragment.surfaces, surface],
+            }
+        )
+
+    def _dispatch_experience(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        experience = self.parse_experience()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "experiences": [*fragment.experiences, experience],
+            }
+        )
+
+    def _dispatch_service(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        service = self.parse_service()
+        # Route to apis or domain_services based on type
+        if isinstance(service, ir.DomainServiceSpec):
+            return ir.ModuleFragment(
+                **{
+                    **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                    "domain_services": [*fragment.domain_services, service],
+                }
+            )
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "apis": [*fragment.apis, service],
+            }
+        )
+
+    def _dispatch_foreign_model(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        foreign_model = self.parse_foreign_model()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "foreign_models": [*fragment.foreign_models, foreign_model],
+            }
+        )
+
+    def _dispatch_integration(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        integration = self.parse_integration()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "integrations": [*fragment.integrations, integration],
+            }
+        )
+
+    def _dispatch_test(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        test = self.parse_test()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "tests": [*fragment.tests, test],
+            }
+        )
+
+    def _dispatch_workspace(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        workspace = self.parse_workspace()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "workspaces": [*fragment.workspaces, workspace],
+            }
+        )
+
+    def _dispatch_flow(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        flow = self.parse_flow()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "e2e_flows": [*fragment.e2e_flows, flow],
+            }
+        )
+
+    def _dispatch_persona(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        persona = self.parse_persona()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "personas": [*fragment.personas, persona],
+            }
+        )
+
+    def _dispatch_scenario(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        scenario = self.parse_scenario()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "scenarios": [*fragment.scenarios, scenario],
+            }
+        )
+
+    def _dispatch_story(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        self.advance()  # consume 'story' token
+        story = self.parse_story()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "stories": [*fragment.stories, story],
+            }
+        )
+
+    def _dispatch_rhythm(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        self.advance()  # consume 'rhythm' token
+        rhythm = self.parse_rhythm()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "rhythms": [*fragment.rhythms, rhythm],
+            }
+        )
+
+    def _dispatch_rule(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        self.advance()  # consume 'rule' token
+        rule = self.parse_rule()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "rules": [*fragment.rules, rule],
+            }
+        )
+
+    def _dispatch_question(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        self.advance()  # consume 'question' token
+        question = self.parse_question()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "questions": [*fragment.questions, question],
+            }
+        )
+
+    def _dispatch_message(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        message = self.parse_message()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "messages": [*fragment.messages, message],
+            }
+        )
+
+    def _dispatch_channel(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        channel = self.parse_channel()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "channels": [*fragment.channels, channel],
+            }
+        )
+
+    def _dispatch_asset(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        asset = self.parse_asset()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "assets": [*fragment.assets, asset],
+            }
+        )
+
+    def _dispatch_document(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        document = self.parse_document()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "documents": [*fragment.documents, document],
+            }
+        )
+
+    def _dispatch_template(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        template = self.parse_template()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "templates": [*fragment.templates, template],
+            }
+        )
+
+    def _dispatch_demo(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        demo_fixtures = self.parse_demo()
+        # Demo fixtures go into the last scenario or create a default one
+        if fragment.scenarios:
+            last_scenario = fragment.scenarios[-1]
+            updated_scenario = ir.ScenarioSpec(
+                id=last_scenario.id,
+                name=last_scenario.name,
+                description=last_scenario.description,
+                persona_entries=last_scenario.persona_entries,
+                seed_data_path=last_scenario.seed_data_path,
+                demo_fixtures=list(last_scenario.demo_fixtures) + demo_fixtures,
+            )
+            return ir.ModuleFragment(
+                **{
+                    **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                    "scenarios": [*fragment.scenarios[:-1], updated_scenario],
+                }
+            )
+        # Create a default scenario for standalone demo blocks
+        default_scenario = ir.ScenarioSpec(
+            id="default",
+            name="Default",
+            description="Default demo scenario",
+            demo_fixtures=demo_fixtures,
+        )
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "scenarios": [default_scenario],
+            }
+        )
+
+    def _dispatch_event_model(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        event_model = self.parse_event_model()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "event_model": event_model,
+            }
+        )
+
+    def _dispatch_subscribe(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        subscription = self.parse_subscribe()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "subscriptions": [*fragment.subscriptions, subscription],
+            }
+        )
+
+    def _dispatch_project(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        projection = self.parse_projection()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "projections": [*fragment.projections, projection],
+            }
+        )
+
+    def _dispatch_stream(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        stream = self.parse_stream()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "streams": [*fragment.streams, stream],
+            }
+        )
+
+    def _dispatch_hless(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        hless_pragma = self.parse_hless_pragma()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "hless_pragma": hless_pragma,
+            }
+        )
+
+    def _dispatch_policies(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        policies = self.parse_policies()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "policies": policies,
+            }
+        )
+
+    def _dispatch_tenancy(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        tenancy = self.parse_tenancy()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "tenancy": tenancy,
+            }
+        )
+
+    def _dispatch_interfaces(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        interfaces = self.parse_interfaces()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "interfaces": interfaces,
+            }
+        )
+
+    def _dispatch_data_products(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        data_products = self.parse_data_products()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "data_products": data_products,
+            }
+        )
+
+    def _dispatch_llm_model(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        llm_model = self.parse_llm_model()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "llm_models": [*fragment.llm_models, llm_model],
+            }
+        )
+
+    def _dispatch_llm_config(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        llm_config = self.parse_llm_config()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "llm_config": llm_config,
+            }
+        )
+
+    def _dispatch_llm_intent(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        llm_intent = self.parse_llm_intent()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "llm_intents": [*fragment.llm_intents, llm_intent],
+            }
+        )
+
+    def _dispatch_process(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        process = self.parse_process()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "processes": [*fragment.processes, process],
+            }
+        )
+
+    def _dispatch_schedule(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        schedule = self.parse_schedule()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "schedules": [*fragment.schedules, schedule],
+            }
+        )
+
+    def _dispatch_ledger(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        ledger = self.parse_ledger()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "ledgers": [*fragment.ledgers, ledger],
+            }
+        )
+
+    def _dispatch_transaction(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        transaction = self.parse_transaction()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "transactions": [*fragment.transactions, transaction],
+            }
+        )
+
+    def _dispatch_enum(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        enum_spec = self.parse_enum()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "enums": [*fragment.enums, enum_spec],
+            }
+        )
+
+    def _dispatch_webhook(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        webhook_spec = self.parse_webhook()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "webhooks": [*fragment.webhooks, webhook_spec],
+            }
+        )
+
+    def _dispatch_approval(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        approval_spec = self.parse_approval()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "approvals": [*fragment.approvals, approval_spec],
+            }
+        )
+
+    def _dispatch_sla(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        sla_spec = self.parse_sla()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "slas": [*fragment.slas, sla_spec],
+            }
+        )
+
+    def _dispatch_island(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        island_spec = self.parse_island()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "islands": [*fragment.islands, island_spec],
+            }
+        )
+
+    def _dispatch_notification(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        notification_spec = self.parse_notification()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "notifications": [*fragment.notifications, notification_spec],
+            }
+        )
+
+    def _dispatch_grant_schema(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        self.advance()  # consume 'grant_schema' token
+        grant_schema = self.parse_grant_schema()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "grant_schemas": [*fragment.grant_schemas, grant_schema],
+            }
+        )
+
+    def _build_parse_dispatch(self) -> dict:  # type: ignore[type-arg]
+        """Build the token-type → handler dispatch table."""
+        from ..lexer import TokenType
+
+        return {
+            TokenType.ARCHETYPE: self._dispatch_archetype,
+            TokenType.ENTITY: self._dispatch_entity,
+            TokenType.SURFACE: self._dispatch_surface,
+            TokenType.EXPERIENCE: self._dispatch_experience,
+            TokenType.SERVICE: self._dispatch_service,
+            TokenType.FOREIGN_MODEL: self._dispatch_foreign_model,
+            TokenType.INTEGRATION: self._dispatch_integration,
+            TokenType.TEST: self._dispatch_test,
+            TokenType.WORKSPACE: self._dispatch_workspace,
+            TokenType.FLOW: self._dispatch_flow,
+            TokenType.PERSONA: self._dispatch_persona,
+            TokenType.SCENARIO: self._dispatch_scenario,
+            TokenType.STORY: self._dispatch_story,
+            TokenType.RHYTHM: self._dispatch_rhythm,
+            TokenType.RULE: self._dispatch_rule,
+            TokenType.QUESTION_DECL: self._dispatch_question,
+            TokenType.MESSAGE: self._dispatch_message,
+            TokenType.CHANNEL: self._dispatch_channel,
+            TokenType.ASSET: self._dispatch_asset,
+            TokenType.DOCUMENT: self._dispatch_document,
+            TokenType.TEMPLATE: self._dispatch_template,
+            TokenType.DEMO: self._dispatch_demo,
+            TokenType.EVENT_MODEL: self._dispatch_event_model,
+            TokenType.SUBSCRIBE: self._dispatch_subscribe,
+            TokenType.PROJECT: self._dispatch_project,
+            TokenType.STREAM: self._dispatch_stream,
+            TokenType.HLESS: self._dispatch_hless,
+            TokenType.POLICIES: self._dispatch_policies,
+            TokenType.TENANCY: self._dispatch_tenancy,
+            TokenType.INTERFACES: self._dispatch_interfaces,
+            TokenType.DATA_PRODUCTS: self._dispatch_data_products,
+            TokenType.LLM_MODEL: self._dispatch_llm_model,
+            TokenType.LLM_CONFIG: self._dispatch_llm_config,
+            TokenType.LLM_INTENT: self._dispatch_llm_intent,
+            TokenType.PROCESS: self._dispatch_process,
+            TokenType.SCHEDULE: self._dispatch_schedule,
+            TokenType.LEDGER: self._dispatch_ledger,
+            TokenType.TRANSACTION: self._dispatch_transaction,
+            TokenType.ENUM: self._dispatch_enum,
+            TokenType.WEBHOOK: self._dispatch_webhook,
+            TokenType.APPROVAL: self._dispatch_approval,
+            TokenType.SLA: self._dispatch_sla,
+            TokenType.ISLAND: self._dispatch_island,
+            TokenType.NOTIFICATION: self._dispatch_notification,
+            TokenType.GRANT_SCHEMA: self._dispatch_grant_schema,
+        }
+
     def parse(self) -> ir.ModuleFragment:
         """
         Parse entire module and return IR fragment.
@@ -112,15 +608,7 @@ class Parser(
         """
         from ..lexer import TokenType
 
-        def _updated(frag: ir.ModuleFragment, **overrides: object) -> ir.ModuleFragment:
-            """Create a new fragment copying all fields, with overrides applied."""
-            return ir.ModuleFragment(
-                **{
-                    **{f: getattr(frag, f) for f in ir.ModuleFragment.model_fields},
-                    **overrides,
-                }
-            )
-
+        dispatch = self._build_parse_dispatch()
         fragment = ir.ModuleFragment()
 
         self.skip_newlines()
@@ -128,256 +616,25 @@ class Parser(
         while not self.match(TokenType.EOF):
             self.skip_newlines()
 
-            # v0.7.1: Check for archetype declaration
-            if self.match(TokenType.ARCHETYPE):
-                archetype = self.parse_archetype()
-                fragment = _updated(fragment, archetypes=[*fragment.archetypes, archetype])
+            token_type = self.current_token().type
 
-            elif self.match(TokenType.ENTITY):
-                entity = self.parse_entity()
-                fragment = _updated(fragment, entities=[*fragment.entities, entity])
-
-            elif self.match(TokenType.SURFACE):
-                surface = self.parse_surface()
-                fragment = _updated(fragment, surfaces=[*fragment.surfaces, surface])
-
-            elif self.match(TokenType.EXPERIENCE):
-                experience = self.parse_experience()
-                fragment = _updated(fragment, experiences=[*fragment.experiences, experience])
-
-            elif self.match(TokenType.SERVICE):
-                service = self.parse_service()
-                # Route to apis or domain_services based on type
-                if isinstance(service, ir.DomainServiceSpec):
-                    fragment = _updated(
-                        fragment,
-                        domain_services=[*fragment.domain_services, service],
-                    )
-                else:
-                    fragment = _updated(fragment, apis=[*fragment.apis, service])
-
-            elif self.match(TokenType.FOREIGN_MODEL):
-                foreign_model = self.parse_foreign_model()
-                fragment = _updated(
-                    fragment, foreign_models=[*fragment.foreign_models, foreign_model]
-                )
-
-            elif self.match(TokenType.INTEGRATION):
-                integration = self.parse_integration()
-                fragment = _updated(fragment, integrations=[*fragment.integrations, integration])
-
-            elif self.match(TokenType.TEST):
-                test = self.parse_test()
-                fragment = _updated(fragment, tests=[*fragment.tests, test])
-
-            elif self.match(TokenType.WORKSPACE):
-                workspace = self.parse_workspace()
-                fragment = _updated(fragment, workspaces=[*fragment.workspaces, workspace])
-
-            elif self.match(TokenType.FLOW):
-                flow = self.parse_flow()
-                fragment = _updated(fragment, e2e_flows=[*fragment.e2e_flows, flow])
-
-            elif self.match(TokenType.PERSONA):
-                persona = self.parse_persona()
-                fragment = _updated(fragment, personas=[*fragment.personas, persona])
-
-            elif self.match(TokenType.SCENARIO):
-                scenario = self.parse_scenario()
-                fragment = _updated(fragment, scenarios=[*fragment.scenarios, scenario])
-
-            # v0.22.0 Stories DSL
-            elif self.match(TokenType.STORY):
-                self.advance()  # consume 'story' token
-                story = self.parse_story()
-                fragment = _updated(fragment, stories=[*fragment.stories, story])
-
-            # v0.39.0 Rhythms
-            elif self.match(TokenType.RHYTHM):
-                self.advance()  # consume 'rhythm' token
-                rhythm = self.parse_rhythm()
-                fragment = _updated(fragment, rhythms=[*fragment.rhythms, rhythm])
-
-            # v0.41.0 Convergent BDD
-            elif self.match(TokenType.RULE):
-                self.advance()  # consume 'rule' token
-                rule = self.parse_rule()
-                fragment = _updated(fragment, rules=[*fragment.rules, rule])
-
-            elif self.match(TokenType.QUESTION_DECL):
-                self.advance()  # consume 'question' token
-                question = self.parse_question()
-                fragment = _updated(fragment, questions=[*fragment.questions, question])
-
-            # v0.9.0 Messaging Channels
-            elif self.match(TokenType.MESSAGE):
-                message = self.parse_message()
-                fragment = _updated(fragment, messages=[*fragment.messages, message])
-
-            elif self.match(TokenType.CHANNEL):
-                channel = self.parse_channel()
-                fragment = _updated(fragment, channels=[*fragment.channels, channel])
-
-            elif self.match(TokenType.ASSET):
-                asset = self.parse_asset()
-                fragment = _updated(fragment, assets=[*fragment.assets, asset])
-
-            elif self.match(TokenType.DOCUMENT):
-                document = self.parse_document()
-                fragment = _updated(fragment, documents=[*fragment.documents, document])
-
-            elif self.match(TokenType.TEMPLATE):
-                template = self.parse_template()
-                fragment = _updated(fragment, templates=[*fragment.templates, template])
-
-            elif self.match(TokenType.DEMO):
-                demo_fixtures = self.parse_demo()
-                # Demo fixtures go into the first scenario or create a default one
-                if fragment.scenarios:
-                    # Update the last scenario with new fixtures
-                    last_scenario = fragment.scenarios[-1]
-                    updated_scenario = ir.ScenarioSpec(
-                        id=last_scenario.id,
-                        name=last_scenario.name,
-                        description=last_scenario.description,
-                        persona_entries=last_scenario.persona_entries,
-                        seed_data_path=last_scenario.seed_data_path,
-                        demo_fixtures=list(last_scenario.demo_fixtures) + demo_fixtures,
-                    )
-                    fragment = _updated(
-                        fragment,
-                        scenarios=[*fragment.scenarios[:-1], updated_scenario],
-                    )
-                else:
-                    # Create a default scenario for standalone demo blocks
-                    default_scenario = ir.ScenarioSpec(
-                        id="default",
-                        name="Default",
-                        description="Default demo scenario",
-                        demo_fixtures=demo_fixtures,
-                    )
-                    fragment = _updated(fragment, scenarios=[default_scenario])
-
-            # v0.18.0 Event-First Architecture
-            elif self.match(TokenType.EVENT_MODEL):
-                event_model = self.parse_event_model()
-                fragment = _updated(fragment, event_model=event_model)
-
-            elif self.match(TokenType.SUBSCRIBE):
-                subscription = self.parse_subscribe()
-                fragment = _updated(fragment, subscriptions=[*fragment.subscriptions, subscription])
-
-            elif self.match(TokenType.PROJECT):
-                projection = self.parse_projection()
-                fragment = _updated(fragment, projections=[*fragment.projections, projection])
-
-            # v0.19.0 HLESS - High-Level Event Semantics
-            elif self.match(TokenType.STREAM):
-                stream = self.parse_stream()
-                fragment = _updated(fragment, streams=[*fragment.streams, stream])
-
-            elif self.match(TokenType.HLESS):
-                hless_pragma = self.parse_hless_pragma()
-                fragment = _updated(fragment, hless_pragma=hless_pragma)
-
-            # v0.18.0 Governance sections (Issue #25)
-            elif self.match(TokenType.POLICIES):
-                policies = self.parse_policies()
-                fragment = _updated(fragment, policies=policies)
-
-            elif self.match(TokenType.TENANCY):
-                tenancy = self.parse_tenancy()
-                fragment = _updated(fragment, tenancy=tenancy)
-
-            elif self.match(TokenType.INTERFACES):
-                interfaces = self.parse_interfaces()
-                fragment = _updated(fragment, interfaces=interfaces)
-
-            elif self.match(TokenType.DATA_PRODUCTS):
-                data_products = self.parse_data_products()
-                fragment = _updated(fragment, data_products=data_products)
-
-            # LLM Jobs as First-Class Events (v0.21.0 - Issue #33)
-            elif self.match(TokenType.LLM_MODEL):
-                llm_model = self.parse_llm_model()
-                fragment = _updated(fragment, llm_models=[*fragment.llm_models, llm_model])
-
-            elif self.match(TokenType.LLM_CONFIG):
-                llm_config = self.parse_llm_config()
-                fragment = _updated(fragment, llm_config=llm_config)
-
-            elif self.match(TokenType.LLM_INTENT):
-                llm_intent = self.parse_llm_intent()
-                fragment = _updated(fragment, llm_intents=[*fragment.llm_intents, llm_intent])
-
-            # v0.23.0 Process Workflows
-            elif self.match(TokenType.PROCESS):
-                process = self.parse_process()
-                fragment = _updated(fragment, processes=[*fragment.processes, process])
-
-            elif self.match(TokenType.SCHEDULE):
-                schedule = self.parse_schedule()
-                fragment = _updated(fragment, schedules=[*fragment.schedules, schedule])
-
-            # v0.24.0 TigerBeetle Ledgers
-            elif self.match(TokenType.LEDGER):
-                ledger = self.parse_ledger()
-                fragment = _updated(fragment, ledgers=[*fragment.ledgers, ledger])
-
-            elif self.match(TokenType.TRANSACTION):
-                transaction = self.parse_transaction()
-                fragment = _updated(fragment, transactions=[*fragment.transactions, transaction])
-
-            # v0.25.0 Shared Enums
-            elif self.match(TokenType.ENUM):
-                enum_spec = self.parse_enum()
-                fragment = _updated(fragment, enums=[*fragment.enums, enum_spec])
-
-            # v0.25.0 Views (VIEW token already exists for e2e flows,
-            # but top-level 'view' followed by identifier = view construct)
-            elif self.match(TokenType.VIEW) and self.peek_token().type in (
+            # v0.25.0 Views: VIEW followed by identifier/string = view construct
+            # (VIEW is also used in e2e flow steps, so guard with peek)
+            if token_type == TokenType.VIEW and self.peek_token().type in (
                 TokenType.IDENTIFIER,
                 TokenType.STRING,
             ):
                 view_spec = self.parse_view()
-                fragment = _updated(fragment, views=[*fragment.views, view_spec])
-
-            # v0.25.0 Webhooks
-            elif self.match(TokenType.WEBHOOK):
-                webhook_spec = self.parse_webhook()
-                fragment = _updated(fragment, webhooks=[*fragment.webhooks, webhook_spec])
-
-            # v0.25.0 Approvals
-            elif self.match(TokenType.APPROVAL):
-                approval_spec = self.parse_approval()
-                fragment = _updated(fragment, approvals=[*fragment.approvals, approval_spec])
-
-            # v0.25.0 SLAs
-            elif self.match(TokenType.SLA):
-                sla_spec = self.parse_sla()
-                fragment = _updated(fragment, slas=[*fragment.slas, sla_spec])
-
-            # UI Islands
-            elif self.match(TokenType.ISLAND):
-                island_spec = self.parse_island()
-                fragment = _updated(fragment, islands=[*fragment.islands, island_spec])
-
-            # v0.34.0 Notifications
-            elif self.match(TokenType.NOTIFICATION):
-                notification_spec = self.parse_notification()
-                fragment = _updated(
-                    fragment, notifications=[*fragment.notifications, notification_spec]
+                fragment = ir.ModuleFragment(
+                    **{
+                        **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                        "views": [*fragment.views, view_spec],
+                    }
                 )
-
-            # v0.42.0 Grant Schemas (Runtime RBAC)
-            elif self.match(TokenType.GRANT_SCHEMA):
-                self.advance()  # consume 'grant_schema' token
-                grant_schema = self.parse_grant_schema()
-                fragment = _updated(fragment, grant_schemas=[*fragment.grant_schemas, grant_schema])
-
+            elif token_type in dispatch:
+                fragment = dispatch[token_type](fragment)
             else:
-                token = self.current_token()
-                if token.type == TokenType.EOF:
+                if token_type == TokenType.EOF:
                     break
                 # Skip unknown tokens
                 self.advance()

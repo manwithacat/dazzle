@@ -14,18 +14,14 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    APIRouter,
+    HTTPException,
+    Request,
+)
+
 logger = logging.getLogger(__name__)
-
-# FastAPI imports - needed at module level for proper dependency injection
-try:
-    from fastapi import APIRouter, HTTPException, Request
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore
-    HTTPException = None  # type: ignore
-    Request = None  # type: ignore
 
 if TYPE_CHECKING:
     from dazzle_back.runtime.auth import AuthStore, UserRecord
@@ -256,9 +252,13 @@ async def exchange_github_code(
             code="missing_dependency",
         )
 
+    from dazzle_back.runtime.http_utils import http_call_with_retry
+
     async with httpx.AsyncClient() as client:
         # Exchange code for access token
-        token_response = await client.post(
+        token_response = await http_call_with_retry(
+            client,
+            "POST",
             "https://github.com/login/oauth/access_token",
             data={
                 "client_id": client_id,
@@ -287,7 +287,9 @@ async def exchange_github_code(
         access_token = token_data["access_token"]
 
         # Fetch user profile
-        user_response = await client.get(
+        user_response = await http_call_with_retry(
+            client,
+            "GET",
             "https://api.github.com/user",
             headers={
                 "Authorization": f"Bearer {access_token}",
@@ -307,7 +309,9 @@ async def exchange_github_code(
         # Fetch primary email
         email = user_data.get("email")
         if not email:
-            emails_response = await client.get(
+            emails_response = await http_call_with_retry(
+                client,
+                "GET",
                 "https://api.github.com/user/emails",
                 headers={
                     "Authorization": f"Bearer {access_token}",
@@ -360,9 +364,13 @@ async def verify_github_token(access_token: str) -> SocialProfile:
             code="missing_dependency",
         )
 
+    from dazzle_back.runtime.http_utils import http_call_with_retry
+
     async with httpx.AsyncClient() as client:
         # Fetch user profile
-        user_response = await client.get(
+        user_response = await http_call_with_retry(
+            client,
+            "GET",
             "https://api.github.com/user",
             headers={
                 "Authorization": f"Bearer {access_token}",
@@ -382,7 +390,9 @@ async def verify_github_token(access_token: str) -> SocialProfile:
         # Fetch primary email
         email = user_data.get("email")
         if not email:
-            emails_response = await client.get(
+            emails_response = await http_call_with_retry(
+                client,
+                "GET",
                 "https://api.github.com/user/emails",
                 headers={
                     "Authorization": f"Bearer {access_token}",

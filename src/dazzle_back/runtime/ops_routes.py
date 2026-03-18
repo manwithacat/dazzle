@@ -17,16 +17,17 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-try:
-    from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore
-    HTTPException = None  # type: ignore
-
 from dazzle_back.metrics.system_collector import SystemMetricsCollector
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    APIRouter,
+    Cookie,
+    Depends,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from dazzle_back.runtime.health_aggregator import HealthAggregator
 from dazzle_back.runtime.ops_database import OpsDatabase
 from dazzle_back.runtime.ops_services import (

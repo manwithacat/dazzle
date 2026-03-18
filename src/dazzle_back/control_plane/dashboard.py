@@ -442,7 +442,7 @@ async def login_submit(request: Request) -> HTMLResponse | RedirectResponse:
 
     if username_valid and password_valid:
         # Create session and redirect
-        session_token = create_session()
+        session_token = await create_session()
         response = RedirectResponse(url="/", status_code=303)
         response.set_cookie(
             key="control_session",
@@ -476,7 +476,7 @@ async def logout(request: Request) -> RedirectResponse:
 
     session_token = request.cookies.get("control_session")
     if session_token:
-        invalidate_session(session_token)
+        await invalidate_session(session_token)
 
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie("control_session")

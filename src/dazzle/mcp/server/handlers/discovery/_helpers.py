@@ -6,7 +6,10 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 
 from dazzle.core.paths import project_discovery_dir, project_kg_db
 
@@ -35,7 +38,12 @@ def _populate_kg_for_discovery(
 
 
 def _build_mission_summary(
-    mission: Any, mode: str, appspec: Any, kg_store: Any, base_url: str, persona: str | None = None
+    mission: Any,
+    mode: str,
+    appspec: AppSpec,
+    kg_store: Any,
+    base_url: str,
+    persona: str | None = None,
 ) -> dict[str, Any]:
     """Build a structured summary of a mission for the response."""
     tool_summaries = []

@@ -72,10 +72,10 @@ def _dispatch_project_ops(
     project_path = _resolve_project(arguments)
     if project_path is None:
         return _project_error()
-    handler = ops.get(operation)  # type: ignore[arg-type]
-    if handler is None:
+    fn = ops.get(operation)  # type: ignore[arg-type]
+    if fn is None:
         return unknown_op_response(operation, tool_label)
-    return handler(project_path, arguments)
+    return fn(project_path, arguments)
 
 
 async def _dispatch_project_ops_async(
@@ -90,10 +90,10 @@ async def _dispatch_project_ops_async(
     project_path = _resolve_project(arguments)
     if project_path is None:
         return _project_error()
-    handler = ops.get(operation)  # type: ignore[arg-type]
-    if handler is None:
+    fn = ops.get(operation)  # type: ignore[arg-type]
+    if fn is None:
         return unknown_op_response(operation, tool_label)
-    result = handler(project_path, arguments)
+    result = fn(project_path, arguments)
     if inspect.isawaitable(result):
         rv: str = await result
         return rv
@@ -107,10 +107,10 @@ def _dispatch_standalone_ops(
 ) -> str:
     """Dispatch for handlers that take only arguments (no project_path)."""
     operation = arguments.get("operation")
-    handler = ops.get(operation)  # type: ignore[arg-type]
-    if handler is None:
+    fn = ops.get(operation)  # type: ignore[arg-type]
+    if fn is None:
         return unknown_op_response(operation, tool_label)
-    return handler(arguments)
+    return fn(arguments)
 
 
 # ---------------------------------------------------------------------------
@@ -189,50 +189,33 @@ def _make_standalone_handler(
 # DSL Operations Handler
 # =============================================================================
 
+_MOD_DSL = "dazzle.mcp.server.handlers.dsl"
+_MOD_DSL_STORIES = "dazzle.mcp.server.handlers.stories"
+_MOD_DSL_FIDELITY = "dazzle.mcp.server.handlers.fidelity"
 
-def handle_dsl(arguments: dict[str, Any]) -> str:
-    """Handle consolidated DSL operations."""
-    from .handlers.dsl import (
-        analyze_patterns,
-        get_unified_issues,
-        inspect_entity,
-        inspect_surface,
-        lint_project,
-        list_modules,
-        validate_dsl,
-    )
-    from .handlers.stories import get_dsl_spec_handler
 
-    def _fidelity(project_path: Path, args: dict[str, Any]) -> str:
-        from .handlers.fidelity import score_fidelity_handler
+def _dsl_list_fragments(project_path: Path, args: dict[str, Any]) -> str:
+    from dazzle_ui.runtime.fragment_registry import get_fragment_registry
 
-        return score_fidelity_handler(project_path, args)
+    return json.dumps({"fragments": get_fragment_registry()}, indent=2)
 
-    def _export_frontend_spec(project_path: Path, args: dict[str, Any]) -> str:
-        from .handlers.dsl import export_frontend_spec_handler
 
-        return export_frontend_spec_handler(project_path, args)
-
-    def _list_fragments(project_path: Path, args: dict[str, Any]) -> str:
-        from dazzle_ui.runtime.fragment_registry import get_fragment_registry
-
-        return json.dumps({"fragments": get_fragment_registry()}, indent=2)
-
-    ops: dict[str, Callable[..., str]] = {
-        "validate": validate_dsl,
-        "list_modules": list_modules,
-        "inspect_entity": inspect_entity,
-        "inspect_surface": inspect_surface,
-        "analyze": analyze_patterns,
-        "lint": lint_project,
-        "issues": get_unified_issues,
-        "get_spec": get_dsl_spec_handler,
-        "fidelity": _fidelity,
-        "export_frontend_spec": _export_frontend_spec,
-        "list_fragments": _list_fragments,
-    }
-
-    return _dispatch_project_ops(arguments, ops, "DSL")
+handle_dsl: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "DSL",
+    {
+        "validate": f"{_MOD_DSL}:validate_dsl",
+        "list_modules": f"{_MOD_DSL}:list_modules",
+        "inspect_entity": f"{_MOD_DSL}:inspect_entity",
+        "inspect_surface": f"{_MOD_DSL}:inspect_surface",
+        "analyze": f"{_MOD_DSL}:analyze_patterns",
+        "lint": f"{_MOD_DSL}:lint_project",
+        "issues": f"{_MOD_DSL}:get_unified_issues",
+        "get_spec": f"{_MOD_DSL_STORIES}:get_dsl_spec_handler",
+        "fidelity": f"{_MOD_DSL_FIDELITY}:score_fidelity_handler",
+        "export_frontend_spec": f"{_MOD_DSL}:export_frontend_spec_handler",
+        "list_fragments": _dsl_list_fragments,
+    },
+)
 
 
 # =============================================================================
@@ -289,66 +272,46 @@ handle_mock: Callable[[dict[str, Any]], str] = _make_project_handler(
 # Story Handler
 # =============================================================================
 
+_MOD_STORY = "dazzle.mcp.server.handlers.stories"
+_MOD_STORY_PROC = "dazzle.mcp.server.handlers.process"
+
+_story_dispatch: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "story",
+    {
+        "get": f"{_MOD_STORY}:get_stories_handler",
+        "coverage": f"{_MOD_STORY_PROC}:stories_coverage_handler",
+        "scope_fidelity": f"{_MOD_STORY_PROC}:scope_fidelity_handler",
+    },
+)
+
 
 def handle_story(arguments: dict[str, Any]) -> str:
     """Handle consolidated story operations (read-only)."""
-    from .handlers.process import scope_fidelity_handler, stories_coverage_handler
-    from .handlers.stories import (
-        get_stories_handler,
-        wall_stories_handler,
-    )
-
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
-
-    if project_path is None:
-        return _project_error()
-
     # Special case: "get" with wall view
-    if operation == "get" and arguments.get("view") == "wall":
+    if arguments.get("operation") == "get" and arguments.get("view") == "wall":
+        project_path = _resolve_project(arguments)
+        if project_path is None:
+            return _project_error()
+        from .handlers.stories import wall_stories_handler
+
         return wall_stories_handler(project_path, arguments)
-
-    ops: dict[str, Callable[..., str]] = {
-        "get": get_stories_handler,
-        "coverage": stories_coverage_handler,
-        "scope_fidelity": scope_fidelity_handler,
-    }
-
-    handler = ops.get(operation)  # type: ignore[arg-type]
-    if handler is None:
-        return unknown_op_response(operation, "story")
-    return handler(project_path, arguments)
+    return _story_dispatch(arguments)
 
 
 # =============================================================================
 # Rhythm Handler
 # =============================================================================
 
+_MOD_RHYTHM = "dazzle.mcp.server.handlers.rhythm"
 
-def handle_rhythm(arguments: dict[str, Any]) -> str:
-    """Handle consolidated rhythm operations (read-only)."""
-    from .handlers.rhythm import (
-        coverage_rhythms_handler,
-        get_rhythm_handler,
-        list_rhythms_handler,
-    )
-
-    operation = arguments.get("operation")
-    project_path = _resolve_project(arguments)
-
-    if project_path is None:
-        return _project_error()
-
-    ops: dict[str, Callable[..., str]] = {
-        "coverage": coverage_rhythms_handler,
-        "get": get_rhythm_handler,
-        "list": list_rhythms_handler,
-    }
-
-    handler = ops.get(operation)  # type: ignore[arg-type]
-    if handler is None:
-        return unknown_op_response(operation, "rhythm")
-    return handler(project_path, arguments)
+handle_rhythm: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "rhythm",
+    {
+        "coverage": f"{_MOD_RHYTHM}:coverage_rhythms_handler",
+        "get": f"{_MOD_RHYTHM}:get_rhythm_handler",
+        "list": f"{_MOD_RHYTHM}:list_rhythms_handler",
+    },
+)
 
 
 # =============================================================================
@@ -396,35 +359,31 @@ handle_sitespec: Callable[[dict[str, Any]], str] = _make_project_handler(
 # Semantics Handler
 # =============================================================================
 
+_MOD_SEM = "dazzle.mcp.event_first_tools"
 
-def handle_semantics(arguments: dict[str, Any]) -> str:
-    """Handle consolidated semantics operations."""
-    from dazzle.mcp.event_first_tools import (
-        handle_extract_guards,
-        handle_extract_semantics,
-        handle_infer_analytics,
-        handle_infer_compliance,
-        handle_infer_tenancy,
-        handle_validate_events,
-    )
 
-    # These handlers take (arguments, project_path) — reversed signature
-    def _wrap(fn: Callable[..., str]) -> Callable[..., str]:
-        def wrapper(project_path: Path, args: dict[str, Any]) -> str:
-            return fn(args, project_path)
+def _sem_wrap(ref: str) -> Callable[[Path, dict[str, Any]], str]:
+    """Adapt an event_first_tools handler (args, project_path) to (project_path, args)."""
+    lazy = _lazy_import(ref)
 
-        return wrapper
+    def wrapper(project_path: Path, args: dict[str, Any]) -> str:
+        result: str = lazy(args, project_path)
+        return result
 
-    ops: dict[str, Callable[..., str]] = {
-        "extract": _wrap(handle_extract_semantics),
-        "validate_events": _wrap(handle_validate_events),
-        "tenancy": _wrap(handle_infer_tenancy),
-        "compliance": _wrap(handle_infer_compliance),
-        "analytics": _wrap(handle_infer_analytics),
-        "extract_guards": _wrap(handle_extract_guards),
-    }
+    return wrapper
 
-    return _dispatch_project_ops(arguments, ops, "semantics")
+
+handle_semantics: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "semantics",
+    {
+        "extract": _sem_wrap(f"{_MOD_SEM}:handle_extract_semantics"),
+        "validate_events": _sem_wrap(f"{_MOD_SEM}:handle_validate_events"),
+        "tenancy": _sem_wrap(f"{_MOD_SEM}:handle_infer_tenancy"),
+        "compliance": _sem_wrap(f"{_MOD_SEM}:handle_infer_compliance"),
+        "analytics": _sem_wrap(f"{_MOD_SEM}:handle_infer_analytics"),
+        "extract_guards": _sem_wrap(f"{_MOD_SEM}:handle_extract_guards"),
+    },
+)
 
 
 # =============================================================================
@@ -449,78 +408,62 @@ handle_process: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
 # Status Handler
 # =============================================================================
 
+_MOD_STATUS = "dazzle.mcp.server.handlers.status"
+_MOD_STATUS_PROJ = "dazzle.mcp.server.handlers.project"
+
+_status_standalone: Callable[[dict[str, Any]], str] = _make_standalone_handler(
+    "status",
+    {
+        "mcp": f"{_MOD_STATUS}:get_mcp_status_handler",
+        "logs": f"{_MOD_STATUS}:get_dnr_logs_handler",
+        "telemetry": f"{_MOD_STATUS}:get_telemetry_handler",
+        "activity": f"{_MOD_STATUS}:get_activity_handler",
+    },
+)
+
 
 def handle_status(arguments: dict[str, Any]) -> str:
     """Handle consolidated status operations."""
-    from .handlers.project import get_active_project_info
-    from .handlers.status import (
-        get_activity_handler,
-        get_dnr_logs_handler,
-        get_mcp_status_handler,
-        get_telemetry_handler,
-    )
+    # active_project uses a resolved path arg rather than the standard dispatch
+    if arguments.get("operation") == "active_project":
+        from .handlers.project import get_active_project_info
 
-    operation = arguments.get("operation")
-
-    # All status ops are standalone (no project_path)
-    standalone_ops: dict[str, Callable[..., str]] = {
-        "mcp": get_mcp_status_handler,
-        "logs": get_dnr_logs_handler,
-        "telemetry": get_telemetry_handler,
-        "activity": get_activity_handler,
-    }
-
-    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
-    if standalone is not None:
-        return standalone(arguments)
-
-    # active_project uses a different arg
-    if operation == "active_project":
-        resolved = arguments.get("_resolved_project_path")
-        return get_active_project_info(resolved_path=resolved)
-
-    return unknown_op_response(operation, "status")
+        return get_active_project_info(resolved_path=arguments.get("_resolved_project_path"))
+    return _status_standalone(arguments)
 
 
 # =============================================================================
 # Knowledge Handler
 # =============================================================================
 
+_MOD_KNOW = "dazzle.mcp.server.handlers.knowledge"
+_MOD_KNOW_TOOL = "dazzle.mcp.server.tool_handlers"
+
+_knowledge_standalone: Callable[[dict[str, Any]], str] = _make_standalone_handler(
+    "knowledge",
+    {
+        "concept": f"{_MOD_KNOW}:lookup_concept_handler",
+        "examples": f"{_MOD_KNOW_TOOL}:find_examples_handler",
+        "cli_help": f"{_MOD_KNOW}:get_cli_help_handler",
+        "workflow": f"{_MOD_KNOW}:get_workflow_guide_handler",
+        "inference": f"{_MOD_KNOW}:lookup_inference_handler",
+    },
+)
+
+_knowledge_project: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "knowledge",
+    {
+        "get_spec": f"{_MOD_KNOW_TOOL}:get_product_spec_handler",
+    },
+)
+
 
 def handle_knowledge(arguments: dict[str, Any]) -> str:
     """Handle consolidated knowledge operations."""
-    from .handlers.knowledge import (
-        get_cli_help_handler,
-        get_workflow_guide_handler,
-        lookup_concept_handler,
-        lookup_inference_handler,
-    )
-    from .tool_handlers import find_examples_handler
-
-    standalone_ops: dict[str, Callable[..., str]] = {
-        "concept": lookup_concept_handler,
-        "examples": find_examples_handler,
-        "cli_help": get_cli_help_handler,
-        "workflow": get_workflow_guide_handler,
-        "inference": lookup_inference_handler,
-    }
-
-    operation = arguments.get("operation")
-
-    standalone = standalone_ops.get(operation)  # type: ignore[arg-type]
-    if standalone is not None:
-        return standalone(arguments)
-
-    # get_spec needs project context
-    if operation == "get_spec":
-        project_path = _resolve_project(arguments)
-        if project_path is None:
-            return _project_error()
-        from .tool_handlers import get_product_spec_handler
-
-        return get_product_spec_handler(project_path, arguments)
-
-    return unknown_op_response(operation, "knowledge")
+    # get_spec needs project context; all other ops are standalone
+    if arguments.get("operation") == "get_spec":
+        return _knowledge_project(arguments)
+    return _knowledge_standalone(arguments)
 
 
 # =============================================================================
@@ -926,10 +869,9 @@ def handle_graph(arguments: dict[str, Any]) -> str:
     from dazzle.mcp.knowledge_graph import KnowledgeGraphHandlers
 
     handlers = KnowledgeGraphHandlers(graph)
-    operation = arguments.get("operation")
 
     # Operations that use the KnowledgeGraphHandlers wrapper
-    handler_ops: dict[str, Callable[..., str]] = {
+    ops: dict[str, Callable[..., str]] = {
         "query": lambda args: _handle_graph_query(handlers, args),
         "dependencies": lambda args: _handle_graph_dependencies(handlers, args),
         "dependents": lambda args: _handle_graph_dependents(handlers, args),
@@ -948,10 +890,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
         "triggers": lambda args: _handle_graph_triggers(args),
     }
 
-    handler_fn = handler_ops.get(operation)  # type: ignore[arg-type]
-    if handler_fn is None:
-        return unknown_op_response(operation, "graph")
-    return handler_fn(arguments)
+    return _dispatch_standalone_ops(arguments, ops, "graph")
 
 
 # =============================================================================
@@ -972,28 +911,32 @@ handle_discovery: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
 # User Profile Handler
 # =============================================================================
 
+_MOD_UP = "dazzle.mcp.server.handlers.user_profile"
 
-def handle_user_profile(arguments: dict[str, Any]) -> str:
-    """Handle user profile operations."""
-    from .handlers.user_profile import handle_user_profile as _handle
-
-    return _handle(arguments)
+handle_user_profile: Callable[[dict[str, Any]], str] = _lazy_import(
+    f"{_MOD_UP}:handle_user_profile"
+)
 
 
 # =============================================================================
 # Policy Handler
 # =============================================================================
 
+_MOD_POL = "dazzle.mcp.server.handlers.policy"
 
-def handle_policy(arguments: dict[str, Any]) -> str:
-    """Handle policy analysis operations."""
-    from .handlers.policy import handle_policy as _handle
+# handle_policy(project_path, args) handles its own op dispatch internally;
+# wrap it so _make_project_handler resolves the project path before calling it.
+_policy_inner: Callable[..., str] = _lazy_import(f"{_MOD_POL}:handle_policy")
 
-    project_path = _resolve_project(arguments)
-    if project_path is None:
-        return _project_error()
-
-    return _handle(project_path, arguments)
+handle_policy: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "policy",
+    {
+        "analyze": _policy_inner,
+        "conflicts": _policy_inner,
+        "coverage": _policy_inner,
+        "simulate": _policy_inner,
+    },
+)
 
 
 # =============================================================================

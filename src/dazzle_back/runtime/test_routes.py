@@ -14,19 +14,15 @@ import os
 import re
 from typing import Any
 
-try:
-    from fastapi import APIRouter, Depends, HTTPException, Request
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore[misc,assignment,unused-ignore]
-    Depends = None  # type: ignore[misc,assignment,unused-ignore]
-    HTTPException = None  # type: ignore[misc,assignment,unused-ignore]
-    Request = None  # type: ignore[misc,assignment,unused-ignore]
-
 from pydantic import BaseModel
 
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    APIRouter,
+    Depends,
+    HTTPException,
+    Request,
+)
 from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
 from dazzle_back.specs.entity import EntitySpec
 

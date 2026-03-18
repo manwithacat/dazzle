@@ -13,16 +13,9 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-try:
-    from fastapi import APIRouter
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None  # type: ignore[misc, assignment]
-
 from pydantic import BaseModel
 
+from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter
 from dazzle_back.runtime.query_builder import quote_identifier, validate_sql_identifier
 
 if TYPE_CHECKING:

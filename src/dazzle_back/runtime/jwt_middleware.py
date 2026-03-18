@@ -11,16 +11,8 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, FastAPIRequest
 from dazzle_back.runtime.jwt_auth import JWTClaims, JWTError, JWTService
-
-# FastAPI is optional - import for type hints and runtime
-try:
-    from fastapi import Request as FastAPIRequest
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FastAPIRequest = None  # type: ignore
-    FASTAPI_AVAILABLE = False
 
 if TYPE_CHECKING:
     pass

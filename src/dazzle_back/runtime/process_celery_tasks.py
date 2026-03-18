@@ -8,7 +8,7 @@ These tasks handle:
 
 Configuration:
     Set REDIS_URL environment variable for Redis connection.
-    Run worker with: celery -A dazzle.core.process.celery_tasks worker -l info --beat
+    Run worker with: celery -A dazzle_back.runtime.process_celery_tasks worker -l info --beat
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ celery_app = Celery(
     "dazzle_processes",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["dazzle.core.process.celery_tasks"],
+    include=["dazzle_back.runtime.process_celery_tasks"],
 )
 
 celery_app.conf.update(
@@ -54,7 +54,7 @@ celery_app.conf.update(
     task_soft_time_limit=3300,
     worker_prefetch_multiplier=1,
     task_routes={
-        "dazzle.core.process.celery_tasks.*": {"queue": "process"},
+        "dazzle_back.runtime.process_celery_tasks.*": {"queue": "process"},
     },
     task_default_queue="celery",
 )
@@ -475,62 +475,6 @@ def _execute_send_step(run: ProcessRun, step: dict[str, Any]) -> dict[str, Any]:
     return {"output": {"sent": True, "channel": channel}}
 
 
-_PROCESS_QUERY_OPS: dict[str, str] = {
-    "gt": "{field} > %s",
-    "gte": "{field} >= %s",
-    "lt": "{field} < %s",
-    "lte": "{field} <= %s",
-    "ne": "{field} != %s",
-    "in": "{field} IN ({placeholders})",
-    "not_in": "{field} NOT IN ({placeholders})",
-    "contains": "{field} LIKE %s",
-    "icontains": "LOWER({field}) LIKE LOWER(%s)",
-    "isnull": "{field} IS NULL",
-    "eq": "{field} = %s",
-}
-
-
-def _build_process_where_clause(filters: dict[str, Any]) -> tuple[str, list[Any]]:
-    """Build a parameterised WHERE clause from Django-style filter dict."""
-    import re
-
-    _ident = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
-    clauses: list[str] = []
-    params: list[Any] = []
-
-    for key, value in filters.items():
-        parts = key.split("__", 1)
-        field = parts[0]
-        op = parts[1] if len(parts) == 2 else "eq"
-
-        if not _ident.match(field):
-            logger.warning("Skipping unsafe field name in query filter: %r", field)
-            continue
-
-        quoted = f'"{field}"'
-        template = _PROCESS_QUERY_OPS.get(op, "{field} = %s")
-
-        if op == "isnull":
-            is_null = bool(value)
-            clauses.append(f'"{field}" IS {"NULL" if is_null else "NOT NULL"}')
-        elif op in ("in", "not_in"):
-            items = list(value) if not isinstance(value, list) else value
-            if not items:
-                clauses.append("1 = 0" if op == "in" else "1 = 1")
-            else:
-                phs = ", ".join(["%s"] * len(items))
-                clauses.append(template.format(field=quoted, placeholders=phs))
-                params.extend(items)
-        elif op in ("contains", "icontains"):
-            clauses.append(template.format(field=quoted))
-            params.append(f"%{value}%")
-        else:
-            clauses.append(template.format(field=quoted))
-            params.append(value)
-
-    return (" AND ".join(clauses), params)
-
-
 def _execute_query_step(
     store: ProcessStateStore,
     run: ProcessRun,
@@ -593,7 +537,14 @@ def _execute_query_step(
             ]
         resolved[key] = value
 
-    where_clause, params = _build_process_where_clause(resolved)
+    # Build query using QueryBuilder
+    from dazzle_back.runtime.query_builder import QueryBuilder
+
+    builder = QueryBuilder(table_name=table_name)
+    builder.add_filters(resolved)
+    builder.set_pagination(page=1, page_size=limit)
+
+    where_clause, params = builder.build_where_clause()
     sql = f'SELECT * FROM "{table_name}"'  # noqa: S608
     if where_clause:
         sql += f" WHERE {where_clause}"

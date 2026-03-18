@@ -13,7 +13,10 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 
 from dazzle.core.ir.conditions import ConditionExpr, LogicalOperator
 from dazzle.core.ir.domain import (
@@ -85,7 +88,7 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _analyze(appspec: Any, entity_names: list[str] | None) -> AnalyzeResult:
+def _analyze(appspec: AppSpec, entity_names: list[str] | None) -> AnalyzeResult:
     """Find entities without access rules and operations without permit coverage."""
     entities = _filter_entities(appspec, entity_names)
 
@@ -128,7 +131,7 @@ def _analyze(appspec: Any, entity_names: list[str] | None) -> AnalyzeResult:
 # ---------------------------------------------------------------------------
 
 
-def _find_conflicts(appspec: Any, entity_names: list[str] | None) -> dict[str, Any]:
+def _find_conflicts(appspec: AppSpec, entity_names: list[str] | None) -> dict[str, Any]:
     """Detect contradictory permit/forbid rules on the same operation and personas."""
     entities = _filter_entities(appspec, entity_names)
     conflicts: list[dict[str, Any]] = []
@@ -178,7 +181,7 @@ def _personas_overlap(rule_a: PermissionRule, rule_b: PermissionRule) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _coverage_matrix(appspec: Any, entity_names: list[str] | None) -> dict[str, Any]:
+def _coverage_matrix(appspec: AppSpec, entity_names: list[str] | None) -> dict[str, Any]:
     """Build a permission matrix: persona x entity x operation -> allow/deny/unset.
 
     Returns a compact nested structure: entity -> persona -> {op: decision}
@@ -265,7 +268,7 @@ def _evaluate_rules(entity: EntitySpec, persona_id: str, op: PermissionKind) -> 
 
 
 def _simulate(
-    appspec: Any,
+    appspec: AppSpec,
     entity_name: str,
     persona: str,
     operation_kind: str,
@@ -367,7 +370,7 @@ def _simulate(
 # ---------------------------------------------------------------------------
 
 
-def _filter_entities(appspec: Any, entity_names: list[str] | None) -> list[EntitySpec]:
+def _filter_entities(appspec: AppSpec, entity_names: list[str] | None) -> list[EntitySpec]:
     """Filter entities by name list, or return all."""
     entities: list[EntitySpec] = appspec.domain.entities
     if entity_names:

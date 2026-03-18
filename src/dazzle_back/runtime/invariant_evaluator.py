@@ -11,6 +11,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
+from dazzle_back.runtime._comparison import eval_comparison_op
 from dazzle_back.specs.entity import (
     DurationUnitKind,
     InvariantComparisonKind,
@@ -135,7 +136,7 @@ def _evaluate_comparison(
         else:
             return True
 
-    # Normalize values for comparison
+    # Normalize values for comparison (date/datetime/Decimal-aware)
     left = _normalize_for_comparison(left)
     right = _normalize_for_comparison(right)
 
@@ -143,22 +144,7 @@ def _evaluate_comparison(
     left, right = _handle_date_arithmetic(left, right)
 
     try:
-        result: bool
-        if op == InvariantComparisonKind.EQ:
-            result = left == right
-        elif op == InvariantComparisonKind.NE:
-            result = left != right
-        elif op == InvariantComparisonKind.GT:
-            result = left > right
-        elif op == InvariantComparisonKind.LT:
-            result = left < right
-        elif op == InvariantComparisonKind.GE:
-            result = left >= right
-        elif op == InvariantComparisonKind.LE:
-            result = left <= right
-        else:
-            return False
-        return bool(result)
+        return bool(eval_comparison_op(op.value, left, right))
     except TypeError:
         # Incompatible types for comparison
         return False

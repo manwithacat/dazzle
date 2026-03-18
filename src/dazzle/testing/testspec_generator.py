@@ -8,6 +8,8 @@ Generates E2ETestSpec from AppSpec, automatically creating:
 - Test fixtures from entity schemas
 """
 
+from typing import Any
+
 from dazzle.core.ir import (
     A11yRule,
     AppSpec,
@@ -33,57 +35,15 @@ from dazzle.core.ir import (
 from dazzle.core.ir.computed import AggregateCall, AggregateFunction, ComputedFieldSpec
 from dazzle.core.manifest import ProjectManifest
 from dazzle.testing.auth_flows import generate_all_auth_flows
+from dazzle.testing.field_value_gen import generate_field_value
 
 # =============================================================================
 # Fixture Generation
 # =============================================================================
 
 
-def _generate_field_value(field: FieldSpec, suffix: str = "") -> str | int | float | bool:
-    """Generate a sample value for a field based on its type."""
-    kind = field.type.kind
-
-    if kind == FieldTypeKind.STR:
-        max_len = field.type.max_length or 50
-        base = f"Test {field.name.replace('_', ' ').title()}"
-        return (base + suffix)[:max_len]
-
-    elif kind == FieldTypeKind.TEXT:
-        return f"Sample text content for {field.name}{suffix}."
-
-    elif kind == FieldTypeKind.INT:
-        return 42
-
-    elif kind == FieldTypeKind.DECIMAL:
-        return 99.99
-
-    elif kind == FieldTypeKind.BOOL:
-        return True
-
-    elif kind == FieldTypeKind.DATE:
-        return "2025-01-15"
-
-    elif kind == FieldTypeKind.DATETIME:
-        return "2025-01-15T10:30:00Z"
-
-    elif kind == FieldTypeKind.UUID:
-        # UUIDs are typically auto-generated, skip
-        return None  # type: ignore
-
-    elif kind == FieldTypeKind.EMAIL:
-        return f"test{suffix}@example.com"
-
-    elif kind == FieldTypeKind.ENUM:
-        # Use first enum value
-        if field.type.enum_values:
-            return field.type.enum_values[0]
-        return "default"
-
-    elif kind == FieldTypeKind.REF:
-        # References need fixture refs, skip here
-        return None  # type: ignore
-
-    return f"value{suffix}"
+def _generate_field_value(field: FieldSpec, suffix: str = "") -> Any:
+    return generate_field_value(field, unique_suffix=suffix)
 
 
 def generate_entity_fixtures(entity: EntitySpec) -> list[FixtureSpec]:

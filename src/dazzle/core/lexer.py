@@ -772,6 +772,146 @@ class Lexer:
                     1,
                 )
 
+    def _handle_line_start(self) -> bool:
+        """
+        Process indentation at the start of a line.
+
+        Reads leading whitespace, skips blank lines/comments, emits INDENT/DEDENT.
+
+        Returns:
+            True if the line was blank/comment (caller should ``continue``),
+            False if a real token follows and ``at_line_start`` should be cleared.
+        """
+        indent_level = 0
+        while self.current_char() in (" ", "\t"):
+            if self.current_char() == " ":
+                indent_level += 1
+            else:  # "\t"
+                indent_level += 4  # Treat tab as 4 spaces
+            self.advance()
+
+        # Skip blank lines and comments
+        if self.current_char() in ("\n", "#"):
+            if self.current_char() == "#":
+                self.skip_comment()
+            if self.current_char() == "\n":
+                self.tokens.append(Token(TokenType.NEWLINE, "\\n", self.line, self.column))
+                self.advance()
+            return True  # blank/comment line — caller should continue
+
+        # Handle indentation changes for real content lines
+        if self.current_char() is not None:
+            self.handle_indentation(indent_level)
+        return False
+
+    def _tokenize_string(self, token_line: int, token_col: int) -> None:
+        """Read a quoted string and append a STRING token."""
+        value = self.read_string()
+        self.tokens.append(Token(TokenType.STRING, value, token_line, token_col))
+
+    def _tokenize_number(self, token_line: int, token_col: int) -> None:
+        """Read a numeric literal (or duration) and append the appropriate token."""
+        value, is_duration = self.read_number()
+        if is_duration:
+            self.tokens.append(Token(TokenType.DURATION_LITERAL, value, token_line, token_col))
+        else:
+            self.tokens.append(Token(TokenType.NUMBER, value, token_line, token_col))
+
+    def _tokenize_identifier(self, token_line: int, token_col: int) -> None:
+        """Read an identifier or keyword and append the appropriate token."""
+        value = self.read_identifier()
+        token_type = TokenType(value) if value in KEYWORDS else TokenType.IDENTIFIER
+        self.tokens.append(Token(token_type, value, token_line, token_col))
+
+    def _tokenize_operator(self, ch: str, token_line: int, token_col: int) -> None:
+        """
+        Consume one operator character (or multi-char sequence) and append a token.
+
+        Raises:
+            ParseError: for invalid single-char operators (``!`` without ``=``).
+        """
+        # Single-character operators with no lookahead needed
+        _simple: dict[str, TokenType] = {
+            ":": TokenType.COLON,
+            ",": TokenType.COMMA,
+            "(": TokenType.LPAREN,
+            ")": TokenType.RPAREN,
+            "[": TokenType.LBRACKET,
+            "]": TokenType.RBRACKET,
+            ".": TokenType.DOT,
+            "?": TokenType.QUESTION,
+            "/": TokenType.SLASH,
+            "+": TokenType.PLUS,
+            "*": TokenType.STAR,
+            "%": TokenType.PERCENT,
+            "$": TokenType.DOLLAR,
+        }
+        if ch in _simple:
+            self.advance()
+            self.tokens.append(Token(_simple[ch], ch, token_line, token_col))
+            return
+
+        if ch == "=":
+            if self.peek_char() == "=":
+                self.advance()
+                self.advance()
+                self.tokens.append(Token(TokenType.DOUBLE_EQUALS, "==", token_line, token_col))
+            else:
+                self.advance()
+                self.tokens.append(Token(TokenType.EQUALS, "=", token_line, token_col))
+
+        elif ch == "!":
+            if self.peek_char() == "=":
+                self.advance()
+                self.advance()
+                self.tokens.append(Token(TokenType.NOT_EQUALS, "!=", token_line, token_col))
+            else:
+                raise make_parse_error(
+                    f"Unexpected character: {ch!r}", self.file, token_line, token_col
+                )
+
+        elif ch == ">":
+            if self.peek_char() == "=":
+                self.advance()
+                self.advance()
+                self.tokens.append(Token(TokenType.GREATER_EQUAL, ">=", token_line, token_col))
+            else:
+                self.advance()
+                self.tokens.append(Token(TokenType.GREATER_THAN, ">", token_line, token_col))
+
+        elif ch == "-":
+            if self.peek_char() == ">":
+                self.advance()
+                self.advance()
+                self.tokens.append(Token(TokenType.ARROW, "->", token_line, token_col))
+            else:
+                self.advance()
+                self.tokens.append(Token(TokenType.MINUS, "-", token_line, token_col))
+
+        elif ch == "<":
+            if self.peek_char() == "-":
+                if self.peek_char(2) == ">":
+                    self.advance()
+                    self.advance()
+                    self.advance()
+                    self.tokens.append(Token(TokenType.BIARROW, "<->", token_line, token_col))
+                else:
+                    self.advance()
+                    self.advance()
+                    self.tokens.append(Token(TokenType.LARROW, "<-", token_line, token_col))
+            elif self.peek_char() == "=":
+                self.advance()
+                self.advance()
+                self.tokens.append(Token(TokenType.LESS_EQUAL, "<=", token_line, token_col))
+            else:
+                self.advance()
+                self.tokens.append(Token(TokenType.LESS_THAN, "<", token_line, token_col))
+
+        else:
+            raise make_parse_error(
+                f"Unexpected character: {ch!r}", self.file, token_line, token_col
+            )
+
     def tokenize(self) -> list[Token]:
         """
         Tokenize the entire source text.
@@ -787,27 +927,8 @@ class Lexer:
         while self.pos < len(self.text):
             # Handle line start (indentation)
             if at_line_start:
-                indent_level = 0
-                while self.current_char() in (" ", "\t"):
-                    if self.current_char() == " ":
-                        indent_level += 1
-                    elif self.current_char() == "\t":
-                        indent_level += 4  # Treat tab as 4 spaces
-                    self.advance()
-
-                # Skip blank lines and comments
-                if self.current_char() in ("\n", "#"):
-                    if self.current_char() == "#":
-                        self.skip_comment()
-                    if self.current_char() == "\n":
-                        self.tokens.append(Token(TokenType.NEWLINE, "\\n", self.line, self.column))
-                        self.advance()
+                if self._handle_line_start():
                     continue
-
-                # Handle indentation changes
-                if self.current_char() is not None:
-                    self.handle_indentation(indent_level)
-
                 at_line_start = False
 
             # Skip whitespace (but not newlines)
@@ -817,165 +938,23 @@ class Lexer:
             if ch is None:
                 break
 
-            # Save position for token
             token_line = self.line
             token_col = self.column
 
-            # Comments
             if ch == "#":
                 self.skip_comment()
-                continue
-
-            # Newlines
             elif ch == "\n":
                 self.tokens.append(Token(TokenType.NEWLINE, "\\n", token_line, token_col))
                 self.advance()
                 at_line_start = True
-
-            # Strings
             elif ch in ('"', "'"):
-                value = self.read_string()
-                self.tokens.append(Token(TokenType.STRING, value, token_line, token_col))
-
-            # Numbers (and duration literals like 7d, 24h)
+                self._tokenize_string(token_line, token_col)
             elif ch.isdigit():
-                value, is_duration = self.read_number()
-                if is_duration:
-                    self.tokens.append(
-                        Token(TokenType.DURATION_LITERAL, value, token_line, token_col)
-                    )
-                else:
-                    self.tokens.append(Token(TokenType.NUMBER, value, token_line, token_col))
-
-            # Identifiers and keywords
+                self._tokenize_number(token_line, token_col)
             elif ch.isalpha() or ch == "_":
-                value = self.read_identifier()
-                if value in KEYWORDS:
-                    token_type = TokenType(value)
-                else:
-                    token_type = TokenType.IDENTIFIER
-                self.tokens.append(Token(token_type, value, token_line, token_col))
-
-            # Operators
-            elif ch == ":":
-                self.advance()
-                self.tokens.append(Token(TokenType.COLON, ":", token_line, token_col))
-
-            elif ch == ",":
-                self.advance()
-                self.tokens.append(Token(TokenType.COMMA, ",", token_line, token_col))
-
-            elif ch == "(":
-                self.advance()
-                self.tokens.append(Token(TokenType.LPAREN, "(", token_line, token_col))
-
-            elif ch == ")":
-                self.advance()
-                self.tokens.append(Token(TokenType.RPAREN, ")", token_line, token_col))
-
-            elif ch == "[":
-                self.advance()
-                self.tokens.append(Token(TokenType.LBRACKET, "[", token_line, token_col))
-
-            elif ch == "]":
-                self.advance()
-                self.tokens.append(Token(TokenType.RBRACKET, "]", token_line, token_col))
-
-            elif ch == "=":
-                if self.peek_char() == "=":
-                    self.advance()
-                    self.advance()
-                    self.tokens.append(Token(TokenType.DOUBLE_EQUALS, "==", token_line, token_col))
-                else:
-                    self.advance()
-                    self.tokens.append(Token(TokenType.EQUALS, "=", token_line, token_col))
-
-            elif ch == "!":
-                if self.peek_char() == "=":
-                    self.advance()
-                    self.advance()
-                    self.tokens.append(Token(TokenType.NOT_EQUALS, "!=", token_line, token_col))
-                else:
-                    raise make_parse_error(
-                        f"Unexpected character: {ch!r}",
-                        self.file,
-                        token_line,
-                        token_col,
-                    )
-
-            elif ch == ">":
-                if self.peek_char() == "=":
-                    self.advance()
-                    self.advance()
-                    self.tokens.append(Token(TokenType.GREATER_EQUAL, ">=", token_line, token_col))
-                else:
-                    self.advance()
-                    self.tokens.append(Token(TokenType.GREATER_THAN, ">", token_line, token_col))
-
-            elif ch == ".":
-                self.advance()
-                self.tokens.append(Token(TokenType.DOT, ".", token_line, token_col))
-
-            elif ch == "?":
-                self.advance()
-                self.tokens.append(Token(TokenType.QUESTION, "?", token_line, token_col))
-
-            elif ch == "/":
-                self.advance()
-                self.tokens.append(Token(TokenType.SLASH, "/", token_line, token_col))
-
-            elif ch == "-":
-                if self.peek_char() == ">":
-                    self.advance()
-                    self.advance()
-                    self.tokens.append(Token(TokenType.ARROW, "->", token_line, token_col))
-                else:
-                    # Standalone minus operator (for arithmetic)
-                    self.advance()
-                    self.tokens.append(Token(TokenType.MINUS, "-", token_line, token_col))
-
-            elif ch == "<":
-                if self.peek_char() == "-":
-                    if self.peek_char(2) == ">":
-                        self.advance()
-                        self.advance()
-                        self.advance()
-                        self.tokens.append(Token(TokenType.BIARROW, "<->", token_line, token_col))
-                    else:
-                        self.advance()
-                        self.advance()
-                        self.tokens.append(Token(TokenType.LARROW, "<-", token_line, token_col))
-                elif self.peek_char() == "=":
-                    self.advance()
-                    self.advance()
-                    self.tokens.append(Token(TokenType.LESS_EQUAL, "<=", token_line, token_col))
-                else:
-                    self.advance()
-                    self.tokens.append(Token(TokenType.LESS_THAN, "<", token_line, token_col))
-
-            elif ch == "+":
-                self.advance()
-                self.tokens.append(Token(TokenType.PLUS, "+", token_line, token_col))
-
-            elif ch == "*":
-                self.advance()
-                self.tokens.append(Token(TokenType.STAR, "*", token_line, token_col))
-
-            elif ch == "%":
-                self.advance()
-                self.tokens.append(Token(TokenType.PERCENT, "%", token_line, token_col))
-
-            elif ch == "$":
-                self.advance()
-                self.tokens.append(Token(TokenType.DOLLAR, "$", token_line, token_col))
-
+                self._tokenize_identifier(token_line, token_col)
             else:
-                raise make_parse_error(
-                    f"Unexpected character: {ch!r}",
-                    self.file,
-                    token_line,
-                    token_col,
-                )
+                self._tokenize_operator(ch, token_line, token_col)
 
         # Emit remaining DEDENTs
         while len(self.indent_stack) > 1:

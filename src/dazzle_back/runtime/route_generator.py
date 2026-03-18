@@ -12,29 +12,23 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from dazzle.core.strings import to_api_plural
+from dazzle_back.runtime._fastapi_compat import (
+    FASTAPI_AVAILABLE,
+    Depends,
+    HTMLResponse,
+    HTTPException,
+    Query,
+    Request,
+)
+from dazzle_back.runtime._fastapi_compat import APIRouter as _APIRouter
 from dazzle_back.specs.endpoint import EndpointSpec, HttpMethod
 from dazzle_back.specs.service import OperationKind, ServiceSpec
 
-# FastAPI is optional - only import if available
-try:
-    from fastapi import APIRouter as _APIRouter
-    from fastapi import Depends, HTTPException, Query, Request
-    from fastapi.responses import HTMLResponse, JSONResponse
-
+if FASTAPI_AVAILABLE:
     from dazzle_back.runtime.auth import AuthContext
     from dazzle_back.runtime.htmx_response import htmx_trigger_headers
-
-    FASTAPI_AVAILABLE = True
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    _APIRouter = None  # type: ignore
-    HTTPException = None  # type: ignore
-    Query = None  # type: ignore
-    Request = None  # type: ignore
-    Depends = None  # type: ignore
-    HTMLResponse = None  # type: ignore
-    JSONResponse = None  # type: ignore
-    AuthContext = None  # type: ignore
+else:
+    AuthContext = None  # type: ignore[assignment,misc]
 
 # Expose APIRouter name for return-type annotations (the real class is
 # imported as _APIRouter to allow a None fallback when FastAPI is absent).
@@ -437,6 +431,7 @@ async def _log_audit_decision(
 def _wrap_with_auth(
     core_fn: Callable[..., Any],
     *,
+    service: Any,
     cedar_access_spec: Any | None,
     auth_dep: Callable[..., Any] | None,
     optional_auth_dep: Callable[..., Any] | None,
@@ -468,6 +463,7 @@ def _wrap_with_auth(
         assert optional_auth_dep is not None  # narrowing for mypy
         return _build_cedar_handler(
             core_fn,
+            service=service,
             cedar_access_spec=cedar_access_spec,
             optional_auth_dep=optional_auth_dep,
             operation=operation,
@@ -481,6 +477,7 @@ def _wrap_with_auth(
     if require_auth_by_default and auth_dep:
         return _build_auth_handler(
             core_fn,
+            service=service,
             auth_dep=auth_dep,
             operation=operation,
             entity_name=entity_name,
@@ -496,6 +493,7 @@ def _wrap_with_auth(
 def _build_cedar_handler(
     core_fn: Callable[..., Any],
     *,
+    service: Any,
     cedar_access_spec: Any,
     optional_auth_dep: Callable[..., Any],
     operation: str,
@@ -521,7 +519,7 @@ def _build_cedar_handler(
         # Pre-read for operations that need existing record for policy eval
         existing = None
         if needs_pre_read and id is not None:
-            existing = await core_fn.__self_service__.execute(operation="read", id=id)  # type: ignore[attr-defined]
+            existing = await service.execute(operation="read", id=id)
             if existing is None:
                 raise HTTPException(status_code=404, detail="Not found")
 
@@ -630,6 +628,7 @@ def _build_cedar_handler(
 def _build_auth_handler(
     core_fn: Callable[..., Any],
     *,
+    service: Any,
     auth_dep: Callable[..., Any],
     operation: str,
     entity_name: str,
@@ -651,7 +650,7 @@ def _build_auth_handler(
         # Pre-read for field-change diffs
         existing = None
         if needs_pre_read and include_field_changes and audit_logger and id is not None:
-            existing = await core_fn.__self_service__.execute(operation="read", id=id)  # type: ignore[attr-defined]
+            existing = await service.execute(operation="read", id=id)
 
         raw_roles = list(getattr(user, "roles", [])) if user else []
         _is_su = getattr(user, "is_superuser", False) if user else False
@@ -1219,9 +1218,9 @@ def create_read_handler(
         return _read_cedar
 
     # Non-cedar: use the generic wrapper (no pre-read needed)
-    _core.__self_service__ = service  # type: ignore[attr-defined]
     return _wrap_with_auth(
         _core,
+        service=service,
         cedar_access_spec=None,
         auth_dep=auth_dep,
         optional_auth_dep=optional_auth_dep,
@@ -1278,9 +1277,9 @@ def create_create_handler(
             request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
         )
 
-    _core.__self_service__ = service  # type: ignore[attr-defined]
     return _wrap_with_auth(
         _core,
+        service=service,
         cedar_access_spec=cedar_access_spec,
         auth_dep=auth_dep,
         optional_auth_dep=optional_auth_dep,
@@ -1329,9 +1328,9 @@ def create_update_handler(
             request, result, entity_name, "updated", redirect_url=_htmx_current_url(request)
         )
 
-    _core.__self_service__ = service  # type: ignore[attr-defined]
     return _wrap_with_auth(
         _core,
+        service=service,
         cedar_access_spec=cedar_access_spec,
         auth_dep=auth_dep,
         optional_auth_dep=optional_auth_dep,
@@ -1375,9 +1374,9 @@ def create_delete_handler(
             redirect_url=_htmx_parent_url(request),
         )
 
-    _core.__self_service__ = service  # type: ignore[attr-defined]
     return _wrap_with_auth(
         _core,
+        service=service,
         cedar_access_spec=cedar_access_spec,
         auth_dep=auth_dep,
         optional_auth_dep=optional_auth_dep,
