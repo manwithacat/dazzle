@@ -126,7 +126,9 @@ def _lazy_import(ref: str) -> Callable[..., Any]:
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         nonlocal fn
         if fn is None:
-            mod = importlib.import_module(module_path)
+            mod = importlib.import_module(  # nosemgrep: python.lang.security.audit.non-literal-import.non-literal-import
+                module_path
+            )
             fn = getattr(mod, attr_name)
         return fn(*args, **kwargs)
 
@@ -264,6 +266,21 @@ handle_mock: Callable[[dict[str, Any]], str] = _make_project_handler(
     {
         "status": f"{_MOD_MOCK}:mock_status_handler",
         "request_log": f"{_MOD_MOCK}:mock_request_log_handler",
+    },
+)
+
+
+# =============================================================================
+# DB Handler
+# =============================================================================
+
+_MOD_DB = "dazzle.mcp.server.handlers.db"
+
+handle_db: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "db",
+    {
+        "status": f"{_MOD_DB}:db_status_handler",
+        "verify": f"{_MOD_DB}:db_verify_handler",
     },
 )
 
@@ -1018,6 +1035,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "dsl": handle_dsl,
     "api_pack": handle_api_pack,
     "mock": handle_mock,
+    "db": handle_db,
     "story": handle_story,
     "rhythm": handle_rhythm,
     "demo_data": handle_demo_data,

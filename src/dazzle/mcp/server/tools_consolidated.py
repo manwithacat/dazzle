@@ -227,6 +227,25 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # DB Operations (read-only — write ops are CLI-only)
+        # =====================================================================
+        Tool(
+            name="db",
+            description="Database operations: status (row counts per entity, database size), verify (FK integrity check, orphan detection).",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["status", "verify"],
+                        "description": "Operation to perform",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Stories (replaces 6 tools)
         # =====================================================================
         Tool(
