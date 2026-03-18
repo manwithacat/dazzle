@@ -767,9 +767,16 @@ def create_page_routes(
             ws_ctx = build_workspace_context(workspace, appspec)
             _ws_ctx = ws_ctx
             _ws_route = f"{app_prefix}/workspaces/{workspace.name}"
-            _ws_allowed = (
-                list(workspace.access.allow_personas) if getattr(workspace, "access", None) else []
-            )
+            _explicit_access = getattr(workspace, "access", None)
+            if _explicit_access:
+                _ws_allowed = list(workspace.access.allow_personas)
+            else:
+                # No explicit access: declaration — infer from persona default_workspace.
+                # Only restrict if at least one persona claims this workspace; otherwise
+                # leave open to all authenticated users (backward-compat).
+                _ws_allowed = [
+                    p.id for p in appspec.personas if p.default_workspace == workspace.name
+                ]
             _ws_entity_items = ws_entity_nav.get(workspace.name, [])
             _ws_nav_groups = ws_nav_group_map.get(workspace.name, [])
 
