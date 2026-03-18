@@ -504,7 +504,7 @@ async def status_badge(request: Request) -> str:
         if err_count > 10:
             return '<div class="badge badge-error gap-2">Issues Detected</div>'
         elif err_count > 0:
-            return f'<div class="badge badge-warning gap-2">{err_count} Errors</div>'
+            return f'<div class="badge badge-warning gap-2">{int(err_count)} Errors</div>'
         return '<div class="badge badge-success gap-2">Healthy</div>'
     except Exception:
         return '<div class="badge badge-ghost gap-2">Unknown</div>'

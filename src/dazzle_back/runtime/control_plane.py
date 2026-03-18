@@ -11,6 +11,7 @@ These endpoints are only available in dev/native mode or when test_mode is enabl
 from __future__ import annotations
 
 import logging
+import re
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
@@ -18,6 +19,18 @@ from pydantic import BaseModel
 from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter
 
 logger = logging.getLogger(__name__)
+
+# Table-name pattern: only word chars (letters, digits, underscore).
+_SAFE_TABLE_RE = re.compile(r"^[A-Za-z_]\w*$")
+
+
+def _delete_all_rows(conn: Any, table_name: str) -> None:
+    """Delete all rows from *table_name* after validating it is a safe identifier."""
+    if not _SAFE_TABLE_RE.match(table_name):
+        raise ValueError(f"Unsafe table name: {table_name!r}")
+    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query
+    conn.execute(f"DELETE FROM {table_name}")  # table_name validated above
+
 
 if TYPE_CHECKING:
     from dazzle_back.runtime.auth import AuthStore
@@ -264,7 +277,7 @@ def create_control_plane_routes(
             with db_manager.connection() as conn:
                 for entity in entities:
                     try:
-                        conn.execute(f"DELETE FROM {entity.name}")
+                        _delete_all_rows(conn, entity.name)
                     except Exception:
                         logger.debug("Failed to delete from %s", entity.name, exc_info=True)
 
@@ -317,7 +330,7 @@ def create_control_plane_routes(
         with db_manager.connection() as conn:
             for entity in entities:
                 try:
-                    conn.execute(f"DELETE FROM {entity.name}")
+                    _delete_all_rows(conn, entity.name)
                 except Exception:
                     logger.debug("Failed to reset table %s", entity.name, exc_info=True)
 
@@ -342,7 +355,7 @@ def create_control_plane_routes(
         with db_manager.connection() as conn:
             for entity in entities:
                 try:
-                    conn.execute(f"DELETE FROM {entity.name}")
+                    _delete_all_rows(conn, entity.name)
                 except Exception:
                     logger.debug(
                         "Failed to clear table %s before regeneration", entity.name, exc_info=True
