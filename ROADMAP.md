@@ -1,79 +1,81 @@
 # DAZZLE Development Roadmap
 
-**Last Updated**: 2026-02-01
-**Current Version**: v0.42.0
+**Last Updated**: 2026-03-18
+**Current Version**: v0.43.0
 
 For past releases, see [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## Philosophy
+## How Dazzle Evolves
 
-DAZZLE is a **DSL-first toolkit** that bridges human specifications and production code.
+Dazzle does not follow a traditional sprint roadmap. Development is **issue-driven** — we build real applications with the framework, encounter gaps, file issues, and fix them. Each complex domain (healthcare, education, finance, logistics) stresses a different combination of DSL constructs and exposes different classes of problems.
 
-```
-Human Intent ──▶ LLM ──▶ Structured DSL ──▶ Runtime (live app)
-                         (one-time cost)    (zero marginal cost)
-```
-
-1. **LLM translates intent to DSL** - High-value token spend, done once
-2. **DSL is the compression boundary** - Validated, version-controlled spec
-3. **Runtime executes directly** - No code generation step, your spec is the app
+This means the roadmap is less "what we plan to build next quarter" and more "what kinds of problems we're looking for." If you bring a domain that exposes a new class of gap, that's a contribution.
 
 ---
 
-## Recently Completed
+## Active Focus Areas
 
-- **Fidelity scoring** - Spec-aware interaction checks, `source=` field validation
-- **Fragment system** - `search_select` and `search_results` fragments with API pack bridge; all 9 HTMX fragments registered for MCP discovery
-- **Codebase cleanup** - Split oversized modules, removed dead code, registered all fragments
-- **Founder Console** - HTMX + DaisyUI control plane at `/_console/`
+### Provable RBAC
 
----
+The RBAC verification framework (`dazzle rbac matrix`, `dazzle rbac verify`) is new in v0.43.0. The static matrix and audit trail are complete. The dynamic verifier (Layer 2) — which spins up the app, seeds golden-master data, and probes every endpoint as every role — is stubbed and needs implementation. This is the most impactful piece of work available: completing it means every Dazzle app can prove its security model holds.
 
-## In Progress
+See [RBAC Verification Reference](docs/reference/rbac-verification.md) for the full architecture.
 
-### WS1: Dazzle Bar HTMX Rebuild
-Server-rendered Dazzle Bar using HTMX + Alpine.js + DaisyUI. Replaces previous JS-based bar with partial endpoints and composable templates.
+### Domain Stress-Testing
 
-### WS2: FragmentContext Standardization
-Wire `source=` annotations from DSL surfaces through to fragment rendering. Standardize `FragmentContext` as the base model for all fragment rendering inputs.
+Dazzle's DSL grows by encountering domains it can't yet express cleanly. The most productive contributions are **example applications from complex, real-world domains** that push the boundaries of what the DSL can describe. Current examples cover task management, contact management, ops dashboards, and medical prescribing. We're particularly interested in:
 
-### WS3: Integration Runtime
-Execute `integration` actions against external APIs at form submit time. Maps DSL `IntegrationAction` call/response mappings to real HTTP calls via httpx.
+- **Multi-tenant SaaS** — domains where tenancy isolation, delegated admin, and cross-tenant reporting intersect
+- **Regulated industries** — healthcare, finance, education — where audit trails, approval workflows, and separation of duty are non-negotiable
+- **Complex state machines** — domains with many entity lifecycle states, conditional transitions, and escalation paths
+- **High-cardinality relationships** — domains where entities have dozens of related entities and the UI must navigate them efficiently
 
-### WS4: Workspace Layouts
-Render `WorkspaceSpec` as HTMX pages with stage-driven grid layouts (focus metric, dual pane, scanner table, monitor wall, command center).
+Each new domain that doesn't fit cleanly generates issues. Those issues drive the DSL forward.
 
----
+### Runtime Hardening
 
-## Next Up
+The v0.43.0 release fixed critical RBAC enforcement bugs (#520) and 14 code smells (#504-#518). Ongoing focus areas:
 
-- **Experience flows** - Multi-step user journeys (parser/IR complete, needs runtime)
-- **Sync scheduling** - Cron/event-driven `IntegrationSync` execution
-- **Advanced display modes** - KANBAN, TIMELINE, MAP, chart modes for workspaces
+- **Subsystem decomposition** — `DazzleBackendApp` (2182 lines) has subsystem plugin infrastructure but more `_init_*` methods to extract (#517)
+- **Cedar evaluation completeness** — the `_is_field_condition` gate logic is correct but the row-filter path needs comprehensive testing for complex OR/AND condition trees
+- **Audit trail integration** — the `evaluate_permission()` audit sink is wired; the `dazzle rbac verify` dynamic verifier needs its server lifecycle + probe implementation
 
 ---
 
-## Deferred
+## Interesting Problems We'd Like to Solve
 
-These are real plans but not the current priority:
+These are not scheduled. They're problems that would make Dazzle meaningfully better if someone brought the right domain or approach.
 
-- **Multi-platform support** ([#23](https://github.com/manwithacat/dazzle/issues/23)) - React Native, desktop packaging
-- **Orchestrator control plane** ([#22](https://github.com/manwithacat/dazzle/issues/22)) - Spec versioning, migrations, blue/green deploys
+**Grant-based delegation** — the `grant_schema` DSL construct exists (v0.42.0) but the runtime grant resolution is minimal. A domain that needs "school admin delegates marking authority to a specific teacher for a specific class" would drive this to completion.
+
+**Process orchestration at scale** — the process engine handles state machines and human tasks but hasn't been stressed with long-running, multi-step workflows (insurance claims, immigration applications, clinical trials). Bringing a domain with 20+ step processes would expose gaps in timeout handling, compensation, and parallel execution.
+
+**Derived views and aggregation** — workspaces support `aggregate:` blocks but the DSL can't yet express "show me a dashboard of KPIs computed from multiple entities with time-series rollup." This is a common SaaS pattern that would benefit from DSL-level support.
+
+**Multi-language / i18n** — the DSL has `label` strings everywhere but no localization framework. A domain requiring multiple languages would define the requirements.
 
 ---
 
 ## Contributing
 
-**Current Opportunities**:
+The best way to contribute to Dazzle is to **build something with it** and tell us where it breaks.
 
-1. **API Packs** - Contribute curated API pack definitions
-2. **Queue/Stream Adapters** - Add RabbitMQ, Redis Streams send adapters
-3. **Documentation** - Improve guides and tutorials
-4. **Example Projects** - Create domain-specific examples
+1. Pick a domain you know well
+2. Write the DSL (start with entities + surfaces)
+3. Run `dazzle serve --local` and `dazzle rbac matrix`
+4. File issues for anything that doesn't work or can't be expressed
+5. Submit your example as a PR to `examples/`
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Each example app that exercises a new combination of DSL constructs is a permanent regression test. See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup.
+
+**Specific opportunities right now:**
+
+- **Complete `dazzle rbac verify`** — implement the server lifecycle + HTTP probe loop (types and comparison logic exist in `src/dazzle/rbac/verifier.py`)
+- **API Packs** — contribute integration packs for third-party APIs (Stripe, Xero, HMRC exist; many more needed)
+- **Example apps** — complex domains that stress the DSL
+- **Documentation** — guides, tutorials, and reference improvements
 
 ---
 

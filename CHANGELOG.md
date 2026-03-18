@@ -9,6 +9,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-03-18
+
+### Added
+- **RBAC Verification Framework** — three-layer provable access control: static access matrix (Layer 1), dynamic verification (Layer 2), decision audit trail (Layer 3)
+- `dazzle rbac matrix` CLI command — generate (role, entity, operation) → permit/deny matrix from DSL
+- `dazzle rbac verify` CLI command (stub) — dynamic verification pipeline
+- `dazzle rbac report` CLI command — compliance report from verification results
+- `policy access_matrix` and `policy verify_status` MCP operations
+- `src/dazzle/rbac/` package: `matrix.py`, `audit.py`, `verifier.py`, `report.py`
+- `AccessDecisionRecord` audit trail with pluggable sinks (Null, InMemory, JsonFile)
+- `evaluate_permission()` instrumented to emit audit records on every decision
+- `examples/shapes_validation/` — abstract RBAC validation domain (7 personas, 4 entities) exercising RBAC0/RBAC2/ABAC/multi-tenancy patterns
+- CI security gate: Shapes RBAC matrix validated on every push (fails if any entity is PERMIT_UNPROTECTED)
+- Two-tier access control evaluation model documented in `docs/reference/access-control.md`
+- RBAC verification deep-dive with academic references in `docs/reference/rbac-verification.md`
+- README "Provable RBAC" section
+
+### Fixed
+- **Critical: LIST gate silently disabled for all role-based access rules** (#520) — `_is_field_condition()` now correctly classifies role_check conditions as gate-evaluable
+- Sidebar navigation not filtered by role — restricted workspaces now hidden from unauthorized users (#521)
+- Workspace region filters fall back to unfiltered when result is empty (#522)
+- HTMX workspace region loading no longer causes unintended page navigation (#523)
+- URL scheme validation in `_sync_fetch` prevents file:// SSRF (#519)
+- SQL table name validation in control_plane `_delete_all_rows()` (#519)
+
+### Changed
+- 14 code smells fixed from systematic analysis (#504–#518): `_sessions` race condition locked, `__self_service__` monkey-patch removed, comparison logic deduplicated across 3 evaluators, 6 `_generate_field_value` implementations consolidated, FastAPI import guards centralized, HTTP error responses standardized, mutable globals protected with locks, core→backend layer boundary restored, dazzle_ui→dazzle_back dependency made one-directional, subsystem plugin infrastructure created, deep nesting reduced in parser/tokenizer/test runner
+- `DazzleBackendApp` partially decomposed into subsystem plugins (9 modules, 6 dead `_init_*` methods removed)
+
+### Removed
+- `__self_service__` dynamic attribute pattern in route_generator.py
+- 17 duplicate FastAPI import guard blocks (replaced by `_fastapi_compat.py`)
+- `hx-push-url="true"` from workspace region templates (redundant with drawer JS)
+
 ## [0.42.0] - 2026-03-14
 
 ### Added
