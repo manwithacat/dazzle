@@ -404,3 +404,38 @@ class TestExtractViaCheckFilters:
 
         subquery_keys = [k for k in filters if k.endswith("__in_subquery")]
         assert len(subquery_keys) == 1
+
+
+# ---------------------------------------------------------------------------
+# RBAC matrix integration tests
+# ---------------------------------------------------------------------------
+
+
+class TestRbacMatrixVia:
+    def test_via_scope_produces_permit_scoped(self) -> None:
+        """A scope rule with a via condition should produce PERMIT_SCOPED."""
+        dsl = """
+module test
+app test "Test"
+
+entity AgentAssignment "Assignment":
+  agent: ref Contact required
+  contact: ref Contact required
+
+entity Contact "Contact":
+  name: str(200) required
+
+  permit:
+    list: role(agent)
+
+  scope:
+    list: via AgentAssignment(agent = current_user.contact, contact = id)
+      for: agent
+"""
+        fragment = _parse(dsl)
+        contact = [e for e in fragment.entities if e.name == "Contact"][0]
+
+        # Verify the scope rule has a via condition
+        scope_rule = contact.access.scopes[0]
+        assert scope_rule.condition.via_condition is not None
+        assert scope_rule.personas == ["agent"]

@@ -100,6 +100,8 @@ surface task_list "Tasks":
 
 **Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `view`, `webhook`, `approval`, `sla`, `rhythm`
 
+**Scope via clause**: `via JunctionEntity(field = current_user.attr, field = id)` — row filtering through junction tables. Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and a `for:` clause naming the personas.
+
 ### TigerBeetle Ledgers
 
 ```dsl

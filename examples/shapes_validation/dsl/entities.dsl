@@ -87,6 +87,38 @@ entity Shape "Shape":
     read: realm = current_user.realm or creator = current_user
       for: forgemaster, witness
 
+# --- Junction-Table Scope Example (#530) ---
+# Demonstrates via clause for access control through junction tables.
+
+entity RealmGuardian "Realm Guardian":
+  guardian: ref Persona required
+  realm: str(100) required
+  revoked_at: datetime
+
+  permit:
+    create: role(oracle)
+    list: role(oracle)
+    read: role(oracle)
+
+  scope:
+    list: all
+      for: oracle
+
+entity Artifact "Artifact":
+  name: str(200) required
+  realm: str(100) required
+  creator: ref Persona
+
+  permit:
+    list: role(oracle), role(guardian)
+    read: role(oracle), role(guardian)
+
+  scope:
+    list: all
+      for: oracle
+    list: via RealmGuardian(guardian = current_user, realm = realm, revoked_at = null)
+      for: guardian
+
 entity Inscription "Inscription":
   id: uuid pk
   text: str(500) required
