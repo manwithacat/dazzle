@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from dazzle.core.ir.conditions import ConditionExpr, ViaBinding, ViaCondition
 
 
@@ -68,3 +70,151 @@ class TestConditionExprViaField:
         expr = ConditionExpr()
         assert expr.via_condition is None
         assert not expr.is_via_check
+
+
+# ---------------------------------------------------------------------------
+# Parser tests
+# ---------------------------------------------------------------------------
+
+from pathlib import Path  # noqa: E402
+
+from dazzle.core.dsl_parser_impl import parse_dsl  # noqa: E402
+from dazzle.core.errors import ParseError  # noqa: E402
+
+
+def _parse(dsl: str):
+    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+    return fragment
+
+
+class TestParseViaClause:
+    def test_basic_via(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity AgentAssignment "Assignment":
+  agent: ref Contact required
+  contact: ref Contact required
+
+entity Contact "Contact":
+  name: str(200) required
+
+  permit:
+    list: role(agent)
+
+  scope:
+    list: via AgentAssignment(agent = current_user.contact, contact = id)
+      for: agent
+"""
+        fragment = _parse(dsl)
+        contact = [e for e in fragment.entities if e.name == "Contact"][0]
+        assert contact.access is not None
+        assert len(contact.access.scopes) == 1
+        scope_rule = contact.access.scopes[0]
+        assert scope_rule.condition is not None
+        assert scope_rule.condition.via_condition is not None
+        via = scope_rule.condition.via_condition
+        assert via.junction_entity == "AgentAssignment"
+        assert len(via.bindings) == 2
+
+    def test_via_with_literal_filter(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity AgentAssignment "Assignment":
+  agent: ref Contact required
+  contact: ref Contact required
+  revoked_at: datetime
+
+entity Contact "Contact":
+  name: str(200) required
+
+  permit:
+    list: role(agent)
+
+  scope:
+    list: via AgentAssignment(agent = current_user.contact, contact = id, revoked_at = null)
+      for: agent
+"""
+        fragment = _parse(dsl)
+        contact = [e for e in fragment.entities if e.name == "Contact"][0]
+        via = contact.access.scopes[0].condition.via_condition
+        assert len(via.bindings) == 3
+        null_binding = [b for b in via.bindings if b.target == "null"][0]
+        assert null_binding.junction_field == "revoked_at"
+
+    def test_via_with_not_equals(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity TeamMembership "Membership":
+  user: ref User required
+  team: ref Team required
+  status: str(20)
+
+entity Task "Task":
+  team: ref Team required
+
+  permit:
+    list: role(member)
+
+  scope:
+    list: via TeamMembership(user = current_user, team = team, status != null)
+      for: member
+"""
+        fragment = _parse(dsl)
+        task = [e for e in fragment.entities if e.name == "Task"][0]
+        via = task.access.scopes[0].condition.via_condition
+        ne_binding = [b for b in via.bindings if b.operator == "!="][0]
+        assert ne_binding.junction_field == "status"
+
+    def test_via_missing_parens_error(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Contact "Contact":
+  name: str(200) required
+  permit:
+    list: role(agent)
+  scope:
+    list: via AgentAssignment agent = current_user
+      for: agent
+"""
+        with pytest.raises(ParseError, match="Expected '\\(' after"):
+            _parse(dsl)
+
+    def test_via_missing_entity_binding_error(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Contact "Contact":
+  name: str(200) required
+  permit:
+    list: role(agent)
+  scope:
+    list: via AgentAssignment(agent = current_user)
+      for: agent
+"""
+        with pytest.raises(ParseError, match="at least one entity binding"):
+            _parse(dsl)
+
+    def test_via_missing_user_binding_error(self) -> None:
+        dsl = """
+module test
+app test "Test"
+
+entity Contact "Contact":
+  name: str(200) required
+  permit:
+    list: role(agent)
+  scope:
+    list: via AgentAssignment(contact = id)
+      for: agent
+"""
+        with pytest.raises(ParseError, match="at least one user binding"):
+            _parse(dsl)

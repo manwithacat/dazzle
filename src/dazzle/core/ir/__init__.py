@@ -47,6 +47,8 @@ from .conditions import (
     GrantCheck,
     LogicalOperator,
     RoleCheck,
+    ViaBinding,
+    ViaCondition,
 )
 
 # Date Expressions (v0.10.2)
