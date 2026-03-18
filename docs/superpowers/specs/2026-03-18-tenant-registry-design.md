@@ -41,7 +41,17 @@ class TenantConfig:
     header_name: str = "X-Tenant-ID"  # only used when resolver = "header"
 ```
 
-Added to `ProjectManifest` as `tenant: TenantConfig = field(default_factory=TenantConfig)`. Parsed in `load_manifest()` from the `[tenant]` TOML section.
+Added to `ProjectManifest` as `tenant: TenantConfig = field(default_factory=TenantConfig)`. Parsed in `load_manifest()` following the existing pattern:
+
+```python
+# In load_manifest(), after existing config sections:
+tenant_data = data.get("tenant", {})
+tenant_config = TenantConfig(
+    isolation=tenant_data.get("isolation", "none"),
+    resolver=tenant_data.get("resolver", "subdomain"),
+    header_name=tenant_data.get("header_name", "X-Tenant-ID"),
+)
+```
 
 ---
 
@@ -63,7 +73,7 @@ CREATE TABLE IF NOT EXISTS public.tenants (
 
 **Schema naming convention:** `tenant_<slug>`. The `tenant_` prefix avoids collisions with PostgreSQL system schemas (`public`, `information_schema`, `pg_catalog`) and any future Dazzle-internal schemas.
 
-**Slug validation:** `^[a-z][a-z0-9_]{1,62}$` — lowercase alpha start, alphanumeric + underscores, 2–63 chars total. This ensures valid PostgreSQL identifiers.
+**Slug validation:** `^[a-z][a-z0-9_]{1,55}$` — lowercase alpha start, alphanumeric + underscores, 2–56 chars total. The limit accounts for the `tenant_` prefix (7 chars) — the resulting schema name must fit within PostgreSQL's 63-byte identifier limit.
 
 **`TenantRegistry` class** (`src/dazzle/tenant/registry.py`):
 
@@ -101,7 +111,7 @@ class TenantRecord:
     updated_at: str
 ```
 
-The registry uses synchronous `psycopg2` connections (same as the existing `AuthStore` pattern) since CLI commands are synchronous.
+The registry uses synchronous `psycopg` (v3) connections with `dict_row` factory — the same pattern as the existing `AuthStore` in `src/dazzle_back/runtime/auth/store.py`. CLI commands are synchronous.
 
 ---
 
@@ -124,14 +134,12 @@ class TenantProvisioner:
 
 Provisioning steps:
 1. `CREATE SCHEMA IF NOT EXISTS "<schema_name>"`
-2. `SET search_path TO "<schema_name>"`
-3. Create all entity tables (reuse `DatabaseManager.create_tables()` logic with the tenant schema as target)
-4. Create auth tables (users, sessions, roles) within the tenant schema
-5. Reset `search_path` to default
+2. Create all entity tables using fully qualified names (`"<schema_name>"."<table_name>"`) — no `SET search_path`. This is concurrency-safe (no session-scoped state) and works correctly with connection pools.
+3. Create auth tables (users, sessions, roles) within the tenant schema, also using fully qualified names.
 
 **Idempotency:** If the registry row exists but the schema is missing (partial failure), re-running `create` provisions the schema. If both exist, reports "already exists."
 
-**All DDL uses `quote_identifier()`** for schema and table names — no string interpolation of user-provided values into SQL.
+**All DDL uses `quote_id()` from `dazzle.db.sql`** for schema and table names — no string interpolation of user-provided values into SQL. This avoids importing from `dazzle_back.runtime.query_builder` (which has heavier dependencies).
 
 ---
 
@@ -172,18 +180,18 @@ dazzle tenant activate <slug>
 | File | Responsibility |
 |------|---------------|
 | `src/dazzle/tenant/__init__.py` | Package init |
-| `src/dazzle/tenant/config.py` | `TenantConfig` dataclass, slug validation |
+| `src/dazzle/tenant/config.py` | Slug validation (`validate_slug()`) and tenant constants |
 | `src/dazzle/tenant/registry.py` | `TenantRegistry` + `TenantRecord` — CRUD on `public.tenants` |
 | `src/dazzle/tenant/provisioner.py` | `TenantProvisioner` — schema creation + table provisioning |
 | `src/dazzle/cli/tenant.py` | CLI command group (`dazzle tenant create/list/status/suspend/activate`) |
 | `src/dazzle/cli/__init__.py` | **Modify** — register `tenant_app` |
-| `src/dazzle/core/manifest.py` | **Modify** — add `TenantConfig` + parse `[tenant]` section |
+| `src/dazzle/core/manifest.py` | **Modify** — add `TenantConfig` dataclass + parse `[tenant]` section in `load_manifest()` |
 
 ---
 
 ### Error Handling
 
-- **Invalid slug:** `"Slug must match ^[a-z][a-z0-9_]{1,62}$. Got: '<slug>'"`
+- **Invalid slug:** `"Slug must match ^[a-z][a-z0-9_]{1,55}$. Got: '<slug>'"`
 - **Duplicate slug:** `"Tenant '<slug>' already exists"`
 - **Tenant not found:** `"Tenant '<slug>' not found"`
 - **Tenant mode not enabled:** `"Multi-tenancy not enabled. Add [tenant] isolation = \"schema\" to dazzle.toml"`
