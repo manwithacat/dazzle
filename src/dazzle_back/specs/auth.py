@@ -205,7 +205,7 @@ class AccessConditionSpec(BaseModel):
         - owner.team_id = current_team and status = active
     """
 
-    kind: Literal["comparison", "role_check", "logical", "grant_check"] = Field(
+    kind: Literal["comparison", "role_check", "logical", "grant_check", "via_check"] = Field(
         description="Condition type"
     )
     # For comparison: field, operator, value
@@ -230,6 +230,13 @@ class AccessConditionSpec(BaseModel):
     )
     grant_scope_field: str | None = Field(
         default=None, description="Scope field for has_grant() check"
+    )
+    # For via_check: subquery through junction table (#530)
+    via_junction_entity: str | None = Field(
+        default=None, description="Junction entity name (e.g., 'AgentAssignment')"
+    )
+    via_bindings: list[dict[str, str]] | None = Field(
+        default=None, description="List of binding dicts with junction_field, target, operator"
     )
     # For logical: left, operator, right
     logical_op: AccessLogicalKind | None = Field(

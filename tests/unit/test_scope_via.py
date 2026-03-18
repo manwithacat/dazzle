@@ -250,3 +250,57 @@ class TestInSubqueryOperator:
         assert '"id"' in sql
         assert 'SELECT "contact"' in sql
         assert params == ["user-123"]
+
+
+# ---------------------------------------------------------------------------
+# Converter tests
+# ---------------------------------------------------------------------------
+
+from dazzle.core.ir.domain import PermissionKind, ScopeRule  # noqa: E402
+from dazzle_back.converters.entity_converter import _convert_scope_rule  # noqa: E402
+from dazzle_back.specs.auth import AccessOperationKind  # noqa: E402
+
+
+class TestConvertViaCondition:
+    def test_converts_via_scope_rule(self) -> None:
+        via = ViaCondition(
+            junction_entity="AgentAssignment",
+            bindings=[
+                ViaBinding(junction_field="agent", target="current_user.contact"),
+                ViaBinding(junction_field="contact", target="id"),
+                ViaBinding(junction_field="revoked_at", target="null"),
+            ],
+        )
+        rule = ScopeRule(
+            operation=PermissionKind.LIST,
+            condition=ConditionExpr(via_condition=via),
+            personas=["agent"],
+        )
+        spec = _convert_scope_rule(rule)
+
+        assert spec.operation == AccessOperationKind.LIST
+        assert spec.condition is not None
+        assert spec.condition.kind == "via_check"
+        assert spec.condition.via_junction_entity == "AgentAssignment"
+        assert len(spec.condition.via_bindings) == 3
+        assert spec.personas == ["agent"]
+
+    def test_converts_via_binding_fields(self) -> None:
+        via = ViaCondition(
+            junction_entity="TeamMembership",
+            bindings=[
+                ViaBinding(junction_field="user", target="current_user"),
+                ViaBinding(junction_field="team", target="team"),
+            ],
+        )
+        rule = ScopeRule(
+            operation=PermissionKind.LIST,
+            condition=ConditionExpr(via_condition=via),
+            personas=["member"],
+        )
+        spec = _convert_scope_rule(rule)
+        bindings = spec.condition.via_bindings
+        assert bindings[0]["junction_field"] == "user"
+        assert bindings[0]["target"] == "current_user"
+        assert bindings[1]["junction_field"] == "team"
+        assert bindings[1]["target"] == "team"

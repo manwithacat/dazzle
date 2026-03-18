@@ -668,6 +668,22 @@ def _convert_permission_rule(rule: ir.PermissionRule) -> PermissionRuleSpec:
     )
 
 
+def _convert_via_condition(via: ir.ViaCondition) -> AccessConditionSpec:
+    """Convert IR ViaCondition to BackendSpec AccessConditionSpec with kind='via_check'."""
+    return AccessConditionSpec(
+        kind="via_check",
+        via_junction_entity=via.junction_entity,
+        via_bindings=[
+            {
+                "junction_field": b.junction_field,
+                "target": b.target,
+                "operator": b.operator,
+            }
+            for b in via.bindings
+        ],
+    )
+
+
 def _convert_scope_rule(rule: ir.ScopeRule) -> ScopeRuleSpec:
     """Convert IR ScopeRule to BackendSpec ScopeRuleSpec."""
     op_map = {
@@ -677,9 +693,17 @@ def _convert_scope_rule(rule: ir.ScopeRule) -> ScopeRuleSpec:
         ir.PermissionKind.DELETE: AccessOperationKind.DELETE,
         ir.PermissionKind.LIST: AccessOperationKind.LIST,
     }
+
+    condition = None
+    if rule.condition:
+        if rule.condition.via_condition:
+            condition = _convert_via_condition(rule.condition.via_condition)
+        else:
+            condition = _convert_access_condition(rule.condition)
+
     return ScopeRuleSpec(
         operation=op_map[rule.operation],
-        condition=_convert_access_condition(rule.condition) if rule.condition else None,
+        condition=condition,
         personas=list(rule.personas),
     )
 
