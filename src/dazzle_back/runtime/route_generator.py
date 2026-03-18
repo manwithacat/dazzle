@@ -874,6 +874,28 @@ def create_list_handler(
     return _noauth_handler
 
 
+def _is_field_condition(condition: Any) -> bool:
+    """Return True if condition requires record data to evaluate.
+
+    Role checks need only the user's roles — evaluable at the gate without a record.
+    Comparisons and grant checks reference entity fields — need record data.
+    Logical nodes recurse: if either branch needs record data, the whole
+    condition is a field condition.
+    """
+    if condition is None:
+        return False
+    kind = getattr(condition, "kind", None)
+    if kind == "role_check":
+        return False
+    if kind in ("comparison", "grant_check"):
+        return True
+    if kind == "logical":
+        return _is_field_condition(getattr(condition, "logical_left", None)) or _is_field_condition(
+            getattr(condition, "logical_right", None)
+        )
+    return False
+
+
 async def _list_handler_body(
     service: Any,
     access_spec: dict[str, Any] | None,
@@ -913,7 +935,7 @@ async def _list_handler_body(
             r for r in cedar_access_spec.permissions if r.operation == AccessOperationKind.LIST
         ]
         # Only gate when all list rules are pure role checks (no field conditions)
-        has_field_conditions = any(r.condition is not None for r in list_rules)
+        has_field_conditions = any(_is_field_condition(r.condition) for r in list_rules)
         if list_rules and not has_field_conditions:
             from dazzle_back.runtime.access_evaluator import evaluate_permission
 
