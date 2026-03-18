@@ -86,6 +86,95 @@ entity Prescription "Prescription":
 
 ---
 
+## Scope Rules
+
+Row-level filtering rules on entities. `scope:` blocks control **what rows** a permitted role sees — they are separate from `permit:` blocks, which control **whether** a role may access an endpoint at all.
+
+The two-block pattern is mandatory:
+
+- `permit:` — authorization gate. Contains **only** `role()` checks. Field conditions inside `permit:` are a parser error.
+- `scope:` — row filter. Contains field conditions with `for:` clauses. Evaluated at query time, not at the gate.
+
+Every role that passes a `permit:` gate must have a matching `scope:` rule, or `scope: all` for unrestricted row access.
+
+### Syntax
+
+```dsl
+scope:
+  for role(<name>): <field_condition>
+  for role(<name>): all
+  *
+
+# for role(<name>): <condition>  — rows matching condition are visible to role
+# for role(<name>): all          — all rows are visible to role (unrestricted)
+# *                              — all rows visible to every permitted role (wildcard)
+
+# Field conditions use standard ConditionExpr:
+#   field = current_user
+#   field = value
+#   field != value
+#   Combine with: and, or
+```
+
+### Example
+
+```dsl
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+  owner: ref User required
+  team: ref Team required
+  status: enum[open,closed]=open
+
+  # Authorization: who may access this entity
+  permit:
+    list: role(admin) or role(manager) or role(member)
+    read: role(admin) or role(manager) or role(member)
+    create: role(admin) or role(manager)
+    update: role(admin) or role(manager) or role(member)
+    delete: role(admin)
+
+  # Row filtering: what each permitted role sees
+  scope:
+    for role(admin): all
+    for role(manager): team = current_user.team
+    for role(member): owner = current_user
+
+entity Shape "Shape":
+  id: uuid pk
+  colour: enum[red,blue,green]
+  realm: ref Realm required
+
+  permit:
+    list: role(oracle) or role(sovereign)
+    read: role(oracle) or role(sovereign)
+
+  # Wildcard: all permitted roles see all rows
+  scope:
+    *
+```
+
+### The `all` keyword and `*` wildcard
+
+- `for role(admin): all` — the named role sees every row, no filter applied.
+- `*` on its own line — every permitted role sees every row. Use when no per-role scoping is needed. Equivalent to writing `all` for each permitted role individually.
+
+### Default-deny at both layers
+
+- If a role has no matching `permit:` rule, the endpoint gate rejects it with HTTP 403.
+- If a role passes the gate but has no `scope:` rule (and no `*`), it sees zero rows. This is intentional default-deny at the row level.
+
+### Best Practices
+
+- Never put field conditions inside `permit:` — they are a parser error.
+- Every permitted role needs an explicit `scope:` entry or a `*` wildcard.
+- Use `for role(admin): all` to grant unrestricted access to administrative roles.
+- Prefer named `for:` clauses over `*` when different roles need different row visibility.
+
+**Related:** [Access Rules](access-control.md#access-rules), [Entity](entities.md#entity), [Runtime Evaluation Model](access-control.md#runtime-evaluation-model)
+
+---
+
 ## Visibility Rules
 
 Row-level visibility rules on entities. Controls which records are visible based on authentication state (anonymous or authenticated). Evaluated before permission rules to determine which records a user can see in list/query results. Uses ConditionExpr for the filter condition.
@@ -256,41 +345,43 @@ workspace team_board "Team Board":
 
 ## Runtime Evaluation Model
 
-Access rules evaluate in two tiers at runtime. Understanding this distinction is critical when writing rules that mix role checks with field conditions.
+Access rules evaluate in two tiers at runtime. The `permit:` and `scope:` blocks map directly onto these two tiers.
 
-### Tier 1: Entity-Level Gate
+### Tier 1: Entity-Level Gate (permit: blocks)
 
 Before any database query runs, the route handler performs a **gate check**: "Does this user have permission to access this endpoint at all?" This check calls `evaluate_permission(operation, record=None, context)` — note `record=None`, meaning no row data is available.
 
-**Only pure role-check rules can be evaluated at the gate.** A rule like `list: role(teacher)` can be resolved with just the user's roles. A rule like `list: school = current_user.school` cannot — it references a field on the record, and there is no record yet.
+**`permit:` blocks are evaluated here.** They contain only `role()` checks, which can be resolved with just the user's roles. Field conditions cannot appear in `permit:` (they are a parser error), so the gate is always unambiguous.
 
-The gate therefore **skips rules that contain field conditions** and only enforces rules where every condition is a role check. If all LIST rules have field conditions, the gate passes everyone through and lets Tier 2 handle enforcement.
+If a role has no matching `permit:` rule, the gate returns HTTP 403 immediately.
 
-### Tier 2: Row-Level Filters
+### Tier 2: Row-Level Filters (scope: blocks)
 
 After the gate, the handler builds SQL filters from two sources:
 
 1. **Visibility rules** (`visible:` blocks) — converted to SQL WHERE clauses based on auth state
-2. **Cedar row filters** — field conditions from `permit:` rules (e.g., `school = current_user.school`) are extracted and merged into the query
+2. **Scope rules** (`scope:` blocks) — the `for role(<name>): <condition>` clause matching the authenticated user's role is extracted and merged into the query
 
-These filters ensure only authorized rows are returned. They run at query time, when record data is available.
+These filters ensure only authorized rows are returned. They run at query time, when record data is available. A role with no matching `scope:` entry (and no `*` wildcard) sees zero rows by default.
 
 ### Evaluation Flow
 
 ```
 Request arrives
   │
-  ├─ Tier 1: Gate check (no record)
-  │   ├─ Collect LIST/READ rules
-  │   ├─ Any field conditions? → skip gate, pass through
-  │   └─ All pure role checks? → evaluate_permission(LIST, None, ctx)
-  │       ├─ FORBID match → 403
-  │       ├─ PERMIT match → continue
-  │       └─ No match → 403 (default-deny)
+  ├─ Tier 1: Gate check (permit: blocks only — no record available)
+  │   ├─ Does any permit: rule match the user's roles?
+  │   │   ├─ FORBID match → 403
+  │   │   ├─ PERMIT match → continue to Tier 2
+  │   │   └─ No match → 403 (default-deny)
+  │   └─ Note: field conditions inside permit: are a parser error, never reached here
   │
   ├─ Build SQL filters
   │   ├─ Visibility filters (visible: blocks)
-  │   └─ Cedar row filters (field conditions from permit: rules)
+  │   └─ Scope filters (scope: blocks — for role(<name>): <condition>)
+  │       ├─ Matching for: clause found → apply field condition as WHERE clause
+  │       ├─ for role(<name>): all → no WHERE clause added (all rows)
+  │       └─ * wildcard → no WHERE clause for any role (all rows)
   │
   ├─ Execute query with merged filters
   │
@@ -298,30 +389,34 @@ Request arrives
       └─ evaluate_permission(op, record, ctx) — full condition evaluation
 ```
 
-### Why This Matters
+### Why Two Separate Blocks?
 
-A rule like `permit: list: school = current_user.school` grants LIST access, but **only to rows matching the condition**. If the gate tried to evaluate this rule with `record=None`, it would fail (the field lookup returns `None`), and the user would get a 403 even though they should see a filtered result set.
+The gate (Tier 1) runs before any database query, so it cannot evaluate field conditions — there is no record yet. Putting field conditions inside `permit:` would force the gate to fail them (field lookup returns `None`), causing legitimate users to receive HTTP 403 even when they should see a filtered result set.
 
-This is why #503 was a regression: #502 added a LIST gate that evaluated *all* rules — including field-condition rules — against `record=None`. Field-condition rules always failed at the gate, blocking legitimate access. The fix was to make the gate skip any rule with field conditions, deferring enforcement to the row-level filter stage.
+`scope:` blocks exist precisely to express "this role may access the endpoint, but only sees rows matching this condition." They are evaluated at query time (Tier 2), where record data is available.
+
+This was the lesson of PR #503: a LIST gate that evaluated all `permit:` rules against `record=None` broke field-condition rules. The fix separated the concern — `permit:` for who, `scope:` for what.
 
 ### Rule Type Summary
 
-| Rule Pattern | Gate Evaluable? | Enforcement Point |
-|---|---|---|
-| `list: role(admin)` | Yes | Tier 1 gate |
-| `list: school = current_user.school` | No | Tier 2 row filter |
-| `list: role(teacher) or school = current_user.school` | No (has field condition) | Tier 2 row filter |
-| `read: role(doctor)` | Yes | Tier 1 gate (detail) |
-| `read: patient = current_user` | No | Tier 2 per-record check |
+| Block | Pattern | Enforcement Point | Notes |
+|-------|---------|-------------------|-------|
+| `permit:` | `list: role(admin)` | Tier 1 gate | Fast — no DB touch |
+| `permit:` | `list: role(teacher) or role(admin)` | Tier 1 gate | Multiple roles in one rule |
+| `scope:` | `for role(teacher): school = current_user.school` | Tier 2 row filter | Applied as SQL WHERE |
+| `scope:` | `for role(admin): all` | Tier 2 (no-op) | No filter added |
+| `scope:` | `*` | Tier 2 (no-op) | All permitted roles see all rows |
+| `visible:` | `when authenticated: owner = current_user` | Tier 2 row filter | Auth-state filter |
 
 ### Best Practices
 
-- **Pure role gates are fast** — they reject unauthorized users before touching the DB. Prefer `list: role(X)` when the role alone determines access.
-- **Field-condition rules are filters** — they allow the endpoint but restrict which rows are returned. Use these for multi-tenant or ownership-scoped access.
-- **Mixing both** — if you need both a gate and a filter, write separate rules: one pure role rule for the gate, and a field-condition rule for row filtering. They compose via Cedar's FORBID > PERMIT > default-deny semantics.
-- **OR conditions with mixed types** — `list: role(admin) or owner = current_user` has a field condition, so the gate skips it entirely. The admin gets through via the row filter (which sees the unconditional role match and returns all rows). This works but is less efficient than separate rules.
+- **`permit:` is for who, `scope:` is for what.** Never mix them. Field conditions in `permit:` are a parser error.
+- **Every permitted role needs a scope entry.** Either a named `for role(X):` clause or a `*` wildcard. A role with no scope entry sees zero rows.
+- **Use `for role(admin): all`** to grant unrestricted row access to administrative roles.
+- **Pure role gates are fast** — the gate rejects unauthorized users before touching the DB.
+- **`*` wildcard** simplifies entities where all permitted roles see all rows with no per-role distinction.
 
-**Related:** [Access Rules](access-control.md#access-rules), [Cedar Rbac](patterns.md#cedar-rbac), [Visibility Rules](access-control.md#visibility-rules)
+**Related:** [Access Rules](access-control.md#access-rules), [Scope Rules](access-control.md#scope-rules), [Cedar Rbac](patterns.md#cedar-rbac), [Visibility Rules](access-control.md#visibility-rules)
 
 ---
 

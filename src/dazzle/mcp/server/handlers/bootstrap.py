@@ -194,8 +194,8 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "the refined specification, then follow the generation steps below."
             ),
             "generation_steps": [
-                "Follow the same 17-step generation workflow as the direct-generation phase:",
-                "Structure (1-3) → Data model (4-6) → Access control (7) → UI (8-10) → ",
+                "Follow the same 18-step generation workflow as the direct-generation phase:",
+                "Structure (1-3) → Data model (4-6) → Access control (7a-7b) → UI (8-10) → ",
                 "Validation (11-13) → Security verification (14-16) → Coverage (17)",
                 "See the generation phase 'steps' array for exact instructions per step.",
             ],
@@ -203,9 +203,9 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
                 "Generate incrementally: entities first, then surfaces, then workspaces",
                 (
-                    "EVERY entity MUST have permit:/forbid: access rules. No entity should be "
-                    "left without access control. Use role() for role gates, field conditions "
-                    "for ownership scoping. After generating all entities, run "
+                    "EVERY entity MUST have permit: blocks (role-only checks) AND scope: blocks "
+                    "(field conditions with for: clauses). No field conditions inside permit: — "
+                    "that is a parser error. After all entities are defined, run "
                     "policy(operation='access_matrix') to verify zero PERMIT_UNPROTECTED cells."
                 ),
                 "After generating list surfaces, add ux blocks with sort/filter/search/empty",
@@ -236,12 +236,23 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 ),
                 # --- Access control (mandatory) ---
                 (
-                    "7. Add access rules (permit:/forbid: blocks) to EVERY entity. "
-                    "Use knowledge(operation='concept', term='access_rules') for syntax. "
-                    "Every entity MUST have explicit access rules — entities without rules "
-                    "are accessible to all authenticated users. Use role() for role gates, "
-                    "field = current_user for ownership scoping, and forbid: for separation "
-                    "of duty. Default-deny: if a role is not explicitly permitted, it is denied."
+                    "7a. Add permit: blocks to EVERY entity — these are authorization gates. "
+                    "permit: rules MUST contain ONLY role() checks (e.g. 'list: role(admin)'). "
+                    "Field conditions (e.g. 'owner = current_user') are a parser error inside "
+                    "permit: and will fail validation. Every role that needs access to an entity "
+                    "must appear in a permit: block. Default-deny: roles not listed are blocked. "
+                    "Use forbid: for separation-of-duty constraints. "
+                    "Use knowledge(operation='concept', term='access_rules') for syntax."
+                ),
+                (
+                    "7b. Add scope: blocks for row filtering — these control what rows each role "
+                    "sees, not whether they may access the endpoint. Use field conditions with "
+                    "a for: clause: 'scope: for role(teacher): school = current_user.school'. "
+                    "Every role permitted in step 7a MUST have a matching scope: rule unless "
+                    "the intent is to grant unrestricted row access, in which case use "
+                    "'scope: for role(admin): all'. The '*' wildcard grants all rows to all "
+                    "permitted roles when no per-role scoping is needed. "
+                    "scope: and permit: are separate DSL blocks — never mix them."
                 ),
                 # --- UI ---
                 "8. Generate surfaces (CRUD views) for each entity",
@@ -286,8 +297,9 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
                 "Generate incrementally and validate frequently",
                 (
-                    "EVERY entity MUST have permit:/forbid: access rules. No entity should be "
-                    "left without access control. After all entities are defined, run "
+                    "EVERY entity MUST have permit: blocks (role-only checks) AND scope: blocks "
+                    "(field conditions with for: clauses). Field conditions inside permit: are a "
+                    "parser error. After all entities are defined, run "
                     "policy(operation='access_matrix') — zero PERMIT_UNPROTECTED cells required."
                 ),
                 "Do NOT copy from example projects - generate from first principles",

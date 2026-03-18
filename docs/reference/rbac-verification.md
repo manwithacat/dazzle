@@ -40,10 +40,12 @@ Given a parsed AppSpec, compute the complete access matrix without running the a
 
 | Decision | Meaning |
 |----------|---------|
-| `PERMIT` | Explicitly allowed by a permit rule (pure role gate) |
-| `DENY` | Forbidden or no matching permit (default-deny) |
-| `PERMIT_FILTERED` | Allowed but row-filtered by a field condition |
-| `PERMIT_UNPROTECTED` | No access rules defined (backward-compat allows all) |
+| `PERMIT` | Explicitly allowed by a `permit:` rule; no `scope:` restriction applies |
+| `DENY` | Forbidden by a `forbid:` rule, or no matching `permit:` (default-deny) |
+| `PERMIT_FILTERED` | Allowed by `permit:`; row-filtered by a matching `scope: for role(X):` condition |
+| `PERMIT_SCOPED` | Allowed by `permit:`; `scope:` block present with a named `for:` clause for this role |
+| `PERMIT_NO_SCOPE` | Allowed by `permit:`; no matching `scope:` entry and no `*` wildcard — role sees zero rows |
+| `PERMIT_UNPROTECTED` | No access rules defined on the entity (backward-compat allows all; flagged as a warning) |
 
 This is pure computation over the IR — no server, no database, sub-second for any app.
 
@@ -56,13 +58,15 @@ dazzle rbac matrix --format csv       # Compliance spreadsheet
 Example output:
 
 ```
-| Entity   | Op     | oracle  | sovereign | architect | chromat  | outsider |
-|----------|--------|---------|-----------|-----------|----------|----------|
-| Shape    | list   | PERMIT  | FILTERED  | FILTERED  | FILTERED | DENY     |
-| Shape    | read   | PERMIT  | FILTERED  | FILTERED  | FILTERED | DENY     |
-| Shape    | create | PERMIT  | PERMIT    | DENY      | DENY     | DENY     |
-| Shape    | delete | PERMIT  | FILTERED  | DENY      | DENY     | DENY     |
+| Entity   | Op     | oracle  | sovereign      | architect      | chromat        | outsider |
+|----------|--------|---------|----------------|----------------|----------------|----------|
+| Shape    | list   | PERMIT  | PERMIT_SCOPED  | PERMIT_SCOPED  | PERMIT_SCOPED  | DENY     |
+| Shape    | read   | PERMIT  | PERMIT_SCOPED  | PERMIT_SCOPED  | PERMIT_SCOPED  | DENY     |
+| Shape    | create | PERMIT  | PERMIT         | DENY           | DENY           | DENY     |
+| Shape    | delete | PERMIT  | PERMIT_SCOPED  | DENY           | DENY           | DENY     |
 ```
+
+Where `PERMIT_SCOPED` means the role has a matching `scope: for role(X):` entry. The legacy `FILTERED` label is replaced by `PERMIT_SCOPED` to distinguish it from the old pattern where field conditions appeared inside `permit:` blocks.
 
 The matrix also emits static warnings: unrestricted entities (no rules), orphan roles (no permits), and redundant forbids.
 
@@ -110,15 +114,15 @@ Rather than testing RBAC against a real domain (where business logic confuses th
 
 The domain is geometric: Shapes have a form, colour, and material, and belong to a Realm. Seven personas exercise every RBAC pattern:
 
-| Persona | RBAC Pattern | What They Prove |
-|---------|-------------|-----------------|
-| **Oracle** | Platform admin (RBAC0) | Unrestricted cross-tenant access |
-| **Sovereign** | Tenant admin | Everything in own realm, nothing outside |
-| **Architect** | Scope filter (ABAC) | Row-level filtering by realm |
-| **Chromat** | Attribute filter (ABAC) | Row-level filtering by colour |
-| **Forgemaster** | Forbid override (RBAC2) | Separation of duty — FORBID > PERMIT |
-| **Witness** | Mixed OR condition | Composite rules don't leak |
-| **Outsider** | Deny-all baseline | Complete mediation — every endpoint rejects |
+| Persona | RBAC Pattern | scope: entry | What They Prove |
+|---------|-------------|--------------|-----------------|
+| **Oracle** | Platform admin (RBAC0) | `for role(oracle): all` | Unrestricted cross-tenant access |
+| **Sovereign** | Tenant admin | `for role(sovereign): realm = current_user.realm` | Everything in own realm, nothing outside |
+| **Architect** | Scope filter (ABAC) | `for role(architect): realm = current_user.realm` | Row-level filtering by realm via `scope:` |
+| **Chromat** | Attribute filter (ABAC) | `for role(chromat): colour = current_user.preferred_colour` | Row-level filtering by colour via `scope:` |
+| **Forgemaster** | Forbid override (RBAC2) | `for role(forgemaster): material != shadow` | Separation of duty — `forbid:` overrides `permit:` |
+| **Witness** | Mixed OR condition | `for role(witness): realm = current_user.realm` | Composite `permit:` rules with scoped row access |
+| **Outsider** | Deny-all baseline | *(no permit entry)* | Complete mediation — gate rejects before scope is reached |
 
 The golden-master seed is deterministic and uniform: expected row counts per role are pure arithmetic. Two Sovereigns (in different realms) prove multi-tenancy isolation: both are admins, neither sees the other's data.
 
@@ -166,11 +170,11 @@ entity Shape "Shape":
 
 Access rules evaluate in two tiers at runtime (see also [Access Control Reference](access-control.md#runtime-evaluation-model)):
 
-**Tier 1 (Gate)**: Before any database query, check if the user's role has permission for this operation on this entity. Pure role-check rules (`list: role(teacher)`) are evaluated here. If denied, return 403 immediately.
+**Tier 1 (Gate)**: Before any database query, check if the user's role has permission for this operation on this entity. `permit:` blocks contain only `role()` checks and are evaluated here. Field conditions are not allowed in `permit:` — they are a parser error. If denied, return 403 immediately.
 
-**Tier 2 (Row Filter)**: Field-condition rules (`list: school = current_user.school`) are converted to SQL WHERE clauses and applied at query time. This ensures only authorized rows are returned.
+**Tier 2 (Row Filter)**: `scope:` blocks contain `for role(<name>): <condition>` clauses that are converted to SQL WHERE clauses and applied at query time. This ensures only authorized rows are returned. A role with no matching `scope:` entry sees zero rows (default-deny at the row level).
 
-The verification framework tests both tiers: Tier 1 failures produce 403 (caught by the `DENY` comparison), Tier 2 failures produce incorrect row counts (caught by the `PERMIT_FILTERED` comparison).
+The verification framework tests both tiers: Tier 1 failures produce 403 (caught by the `DENY` comparison), Tier 2 failures produce incorrect row counts (caught by the `PERMIT_SCOPED` / `PERMIT_FILTERED` comparison).
 
 ## References
 
