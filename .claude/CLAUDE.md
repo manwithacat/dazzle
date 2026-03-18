@@ -215,6 +215,7 @@ dazzle sentinel scan|suppress
 
 # Database operations
 dazzle db status|verify|reset|cleanup
+dazzle tenant create|list|status|suspend|activate
 
 # Data & integration
 dazzle demo propose|save|generate
