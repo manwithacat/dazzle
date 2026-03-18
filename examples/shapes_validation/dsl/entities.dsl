@@ -10,6 +10,14 @@ entity User "User":
   is_active: bool=true
   created_at: datetime auto_add
 
+  # Only Oracle can manage users
+  permit:
+    list: role(oracle)
+    read: role(oracle)
+    create: role(oracle)
+    update: role(oracle)
+    delete: role(oracle)
+
 entity Realm "Realm":
   id: uuid pk
   name: str(100) required unique

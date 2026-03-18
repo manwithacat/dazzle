@@ -76,6 +76,28 @@ jobs:
       run: |
         pytest tests/unit/test_input_sanitization.py -v --tb=short
 
+    - name: Run RBAC enforcement tests
+      run: |
+        pytest tests/unit/test_rbac_enforcement.py tests/unit/test_rbac_audit.py tests/unit/test_rbac_audit_integration.py tests/unit/test_rbac_matrix.py tests/unit/test_rbac_verifier.py -v --tb=short
+
+    - name: Validate Shapes RBAC matrix (security gate)
+      run: |
+        cd examples/shapes_validation
+        python -m dazzle rbac matrix --format json > /tmp/rbac-matrix.json
+        python3 -c "
+        import json, sys
+        matrix = json.load(open('/tmp/rbac-matrix.json'))
+        cells = matrix['cells']
+        unprotected = [c for c in cells if c['decision'] == 'PERMIT_UNPROTECTED']
+        if unprotected:
+            for c in unprotected[:5]:
+                print(f'FAIL: {c[\"role\"]} / {c[\"entity\"]} / {c[\"operation\"]} is UNPROTECTED')
+            sys.exit(1)
+        deny = sum(1 for c in cells if c['decision'] == 'DENY')
+        allow = sum(1 for c in cells if c['decision'] in ('PERMIT', 'PERMIT_FILTERED'))
+        print(f'RBAC matrix OK: {len(cells)} cells, {allow} permitted, {deny} denied, 0 unprotected')
+        "
+
     - name: Run bandit security scanner
       run: |
         pip install bandit[toml]
