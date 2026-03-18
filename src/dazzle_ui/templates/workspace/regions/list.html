@@ -42,7 +42,7 @@
           <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-error/10{% elif attn.level == 'warning' %}bg-warning/10{% elif attn.level == 'notice' %}bg-info/10{% endif %} {% endif %}{% if action_url %}cursor-pointer hover{% endif %}"
               {% if attn %}title="{{ attn.message }}"{% endif %}
               {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
-              hx-push-url="true" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
             {% for col in columns %}
             <td>
               {% if col.type == "badge" %}
@@ -57,7 +57,7 @@
                 {% set ref = item[col.key] %}
                 {% if ref is mapping and col.ref_route and ref.get("id") %}
                   <a hx-get="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}"
-                     hx-target="#dz-detail-drawer-content" hx-swap="innerHTML" hx-push-url="true"
+                     hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"
                      class="link link-hover link-primary" onclick="event.stopPropagation()">{{ ref | ref_display }}</a>
                 {% else %}{{ ref | ref_display }}{% endif %}
               {% else %}
