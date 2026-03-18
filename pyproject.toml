@@ -273,6 +273,11 @@ module = ["dazzle.core.process.celery_tasks", "dazzle_back.runtime.process_celer
 disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
+module = ["dazzle_back.runtime.ops_routes", "dazzle_back.runtime.island_routes"]
+# FastAPI app.get/post decorators on closure-scoped routes are untyped (app: Any)
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
 module = ["dazzle.mcp.server.workshop", "dazzle.mcp.server.workshop_screens"]
 # Textual generics (Screen[T], App[T]) and dynamic widget APIs don't satisfy strict mypy
 disallow_any_generics = false
