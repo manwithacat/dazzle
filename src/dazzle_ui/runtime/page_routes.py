@@ -589,13 +589,13 @@ def create_page_routes(
         # Entity surfaces are derived from workspace regions' source entities.
         ws_nav_items: list[dict[str, Any]] = []
         for ws in workspaces:
+            ws_access = getattr(ws, "access", None)
             ws_nav_items.append(
                 {
                     "label": ws.title or ws.name.replace("_", " ").title(),
                     "route": f"{app_prefix}/workspaces/{ws.name}",
-                    "allow_personas": list(ws.access.allow_personas)
-                    if getattr(ws, "access", None)
-                    else [],
+                    "allow_personas": list(ws_access.allow_personas) if ws_access else [],
+                    "access_level": ws_access.level if ws_access else "authenticated",
                 }
             )
 
@@ -692,7 +692,14 @@ def create_page_routes(
                     from dazzle_ui.runtime.template_renderer import render_fragment
 
                     # Inject auth context if available
-                    visible_nav = list(ws_nav_items) + list(ws_entity_items)
+                    # Unauthenticated default: only public workspaces are visible.
+                    # Entity items (entity surface links) have no access_level, so
+                    # they are treated as authenticated-only and hidden until login.
+                    visible_nav = [
+                        {"label": item["label"], "route": item["route"]}
+                        for item in ws_nav_items + ws_entity_items
+                        if item.get("access_level") == "public"
+                    ]
                     is_authenticated = False
                     user_email = ""
                     user_name = ""
