@@ -1344,6 +1344,40 @@ def _lint_workspace_routing(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def _lint_workspace_access_declarations(appspec: ir.AppSpec) -> list[str]:
+    """Warn when a workspace has no access: declaration and personas are defined.
+
+    When personas exist but a workspace carries no explicit ``access:`` block,
+    all authenticated users can reach that workspace regardless of their role.
+    This is almost never intentional, so we surface it as a lint warning.
+
+    A workspace is considered *declared* if it has an explicit ``access:``
+    block with at least one ``allow_personas`` entry, OR if at least one
+    persona lists it as its ``default_workspace`` (in which case the runtime
+    infers the restriction automatically).
+    """
+    if not appspec.workspaces or not appspec.personas:
+        return []
+
+    # Workspaces claimed by at least one persona's default_workspace
+    claimed_by_default: set[str] = {
+        p.default_workspace for p in appspec.personas if p.default_workspace
+    }
+
+    warnings: list[str] = []
+    for workspace in appspec.workspaces:
+        ws_access = getattr(workspace, "access", None)
+        has_explicit_access = bool(ws_access and ws_access.allow_personas)
+        if not has_explicit_access and workspace.name not in claimed_by_default:
+            warnings.append(
+                f"Workspace '{workspace.name}' has no access: declaration and no persona "
+                f"lists it as default_workspace. All authenticated users can access it. "
+                f"Add 'access: allow_personas [<persona_id>]' or set default_workspace "
+                f"on the relevant persona(s)."
+            )
+    return warnings
+
+
 def _lint_list_surface_ux(appspec: ir.AppSpec) -> list[str]:
     """Check list surfaces for sort/filter/search/empty completeness."""
     warnings: list[str] = []
@@ -1561,6 +1595,7 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_missing_titles(appspec))
     warnings.extend(_lint_workspace_personas(appspec))
     warnings.extend(_lint_workspace_routing(appspec))
+    warnings.extend(_lint_workspace_access_declarations(appspec))
     warnings.extend(_lint_list_surface_ux(appspec))
     warnings.extend(_lint_integration_bindings(appspec))
     warnings.extend(_lint_process_effects(appspec))
