@@ -594,59 +594,80 @@ class TestAppIntegration:
     """Test that server.py and app_factory.py correctly select EventBusProcessAdapter."""
 
     def test_server_prefers_eventbus_when_redis_url_set(self):
-        """_init_process_manager() should create EventBusProcessAdapter when REDIS_URL is set."""
-        from dazzle_back.runtime.server import DazzleBackendApp
+        """ProcessSubsystem.startup() should create EventBusProcessAdapter when REDIS_URL is set."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.subsystems import SubsystemContext
+        from dazzle_back.runtime.subsystems.process import ProcessSubsystem
+
+        app_mock = MagicMock()
+        config_mock = MagicMock()
+        config_mock.enable_processes = True
+        config_mock.process_adapter_class = None
+        config_mock.database_url = "sqlite:///test.db"
+        config_mock.process_specs = None
+        config_mock.schedule_specs = None
+        config_mock.entity_status_fields = {}
+
+        ctx = SubsystemContext(
+            app=app_mock,
+            appspec=MagicMock(),
+            config=config_mock,
+            services={},
+            repositories={},
+            entities=[],
+            channels=[],
+        )
+
+        subsystem = ProcessSubsystem()
 
         with (
             patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}),
             patch("dazzle.core.process.eventbus_adapter.ProcessStateStore"),
+            patch("dazzle_back.runtime.process_manager.ProcessManager"),
+            patch("dazzle_back.runtime.task_routes.set_process_manager"),
+            patch("dazzle_back.runtime.task_routes.router"),
         ):
-            builder = DazzleBackendApp.__new__(DazzleBackendApp)
-            builder._app = MagicMock()
-            builder._process_adapter_class = None
-            builder._database_url = "sqlite:///test.db"
-            builder._process_specs = None
-            builder._schedule_specs = None
-            builder._services = {}
-            builder._repositories = {}
-            builder._entity_status_fields = {}
-            builder._process_manager = None
-            builder._process_adapter = None
+            subsystem.startup(ctx)
 
-            with (
-                patch("dazzle_back.runtime.process_manager.ProcessManager"),
-                patch("dazzle_back.runtime.task_routes.set_process_manager"),
-                patch("dazzle_back.runtime.task_routes.router"),
-                patch.object(builder, "_wire_entity_events_to_processes"),
-            ):
-                builder._init_process_manager()
+        from dazzle.core.process.eventbus_adapter import EventBusProcessAdapter
 
-            from dazzle.core.process.eventbus_adapter import EventBusProcessAdapter
-
-            assert isinstance(builder._process_adapter, EventBusProcessAdapter)
+        assert isinstance(subsystem._adapter, EventBusProcessAdapter)
 
     def test_server_skips_process_manager_without_redis(self):
-        """_init_process_manager() should skip init without REDIS_URL."""
-        from dazzle_back.runtime.server import DazzleBackendApp
+        """ProcessSubsystem.startup() should skip init without REDIS_URL."""
+        from unittest.mock import MagicMock
+
+        from dazzle_back.runtime.subsystems import SubsystemContext
+        from dazzle_back.runtime.subsystems.process import ProcessSubsystem
+
+        app_mock = MagicMock()
+        config_mock = MagicMock()
+        config_mock.enable_processes = True
+        config_mock.process_adapter_class = None
+        config_mock.database_url = "postgresql://localhost/test"
+        config_mock.process_specs = None
+        config_mock.schedule_specs = None
+        config_mock.entity_status_fields = {}
+
+        ctx = SubsystemContext(
+            app=app_mock,
+            appspec=MagicMock(),
+            config=config_mock,
+            services={},
+            repositories={},
+            entities=[],
+            channels=[],
+        )
+
+        subsystem = ProcessSubsystem()
 
         with patch.dict("os.environ", {}, clear=True):
-            builder = DazzleBackendApp.__new__(DazzleBackendApp)
-            builder._app = MagicMock()
-            builder._process_adapter_class = None
-            builder._database_url = "postgresql://localhost/test"
-            builder._process_specs = None
-            builder._schedule_specs = None
-            builder._services = {}
-            builder._repositories = {}
-            builder._entity_status_fields = {}
-            builder._process_manager = None
-            builder._process_adapter = None
+            subsystem.startup(ctx)
 
-            builder._init_process_manager()
-
-            # No adapter or manager should be set without REDIS_URL
-            assert builder._process_adapter is None
-            assert builder._process_manager is None
+        # No adapter or manager should be set without REDIS_URL
+        assert subsystem._adapter is None
+        assert subsystem._manager is None
 
     def test_app_factory_env_var_eventbus(self):
         """DAZZLE_PROCESS_ADAPTER=eventbus should resolve to EventBusProcessAdapter."""

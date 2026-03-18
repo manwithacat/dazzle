@@ -178,57 +178,50 @@ class TestConvertChannels:
 
 
 # =============================================================================
-# Send handler wiring tests
+# Send handler wiring tests (ProcessSubsystem._wire_send_handler_to_channels)
 # =============================================================================
 
 
-class TestWireSendHandlerToChannels:
-    """Tests for _wire_send_handler_to_channels."""
+def _make_process_subsystem(
+    *,
+    channel_mgr: Any = None,
+    process_adapter: Any = None,
+) -> Any:
+    """Create a ProcessSubsystem with pre-set internals for testing."""
+    from dazzle_back.runtime.subsystems.process import ProcessSubsystem
 
-    def _make_app(
-        self,
-        *,
-        channel_mgr: Any = None,
-        process_adapter: Any = None,
-    ) -> Any:
-        """Create a minimal mock DazzleBackendApp."""
-        app = MagicMock()
-        app.channel_manager = channel_mgr
-        app._process_adapter = process_adapter
-        app.spec = MagicMock()
-        app._services = {}
-        return app
+    subsystem = ProcessSubsystem()
+    subsystem._adapter = process_adapter
+
+    ctx = MagicMock()
+    ctx.channel_manager = channel_mgr
+    return subsystem, ctx
+
+
+class TestWireSendHandlerToChannels:
+    """Tests for ProcessSubsystem._wire_send_handler_to_channels."""
 
     def test_no_channel_manager_skips(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
-
-        app = self._make_app(channel_mgr=None)
-        # Call the unbound method with our mock
-        DazzleBackendApp._wire_send_handler_to_channels(app)
+        subsystem, ctx = _make_process_subsystem(channel_mgr=None)
+        subsystem._wire_send_handler_to_channels(ctx)
         # Should not raise
 
     def test_no_process_adapter_skips(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
-
-        app = self._make_app(channel_mgr=MagicMock(), process_adapter=None)
-        DazzleBackendApp._wire_send_handler_to_channels(app)
+        subsystem, ctx = _make_process_subsystem(channel_mgr=MagicMock(), process_adapter=None)
+        subsystem._wire_send_handler_to_channels(ctx)
 
     def test_adapter_without_set_send_handler_skips(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
-
         adapter = MagicMock(spec=[])  # No attributes
-        app = self._make_app(channel_mgr=MagicMock(), process_adapter=adapter)
-        DazzleBackendApp._wire_send_handler_to_channels(app)
+        subsystem, ctx = _make_process_subsystem(channel_mgr=MagicMock(), process_adapter=adapter)
+        subsystem._wire_send_handler_to_channels(ctx)
 
     def test_wires_handler_to_adapter(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
-
         adapter = MagicMock()
         adapter.set_send_handler = MagicMock()
         channel_mgr = MagicMock()
 
-        app = self._make_app(channel_mgr=channel_mgr, process_adapter=adapter)
-        DazzleBackendApp._wire_send_handler_to_channels(app)
+        subsystem, ctx = _make_process_subsystem(channel_mgr=channel_mgr, process_adapter=adapter)
+        subsystem._wire_send_handler_to_channels(ctx)
 
         adapter.set_send_handler.assert_called_once()
         handler = adapter.set_send_handler.call_args[0][0]
@@ -236,14 +229,12 @@ class TestWireSendHandlerToChannels:
 
     @pytest.mark.asyncio
     async def test_handler_calls_channel_manager_send(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
-
         adapter = MagicMock()
         channel_mgr = MagicMock()
         channel_mgr.send = AsyncMock()
 
-        app = self._make_app(channel_mgr=channel_mgr, process_adapter=adapter)
-        DazzleBackendApp._wire_send_handler_to_channels(app)
+        subsystem, ctx = _make_process_subsystem(channel_mgr=channel_mgr, process_adapter=adapter)
+        subsystem._wire_send_handler_to_channels(ctx)
 
         handler = adapter.set_send_handler.call_args[0][0]
         await handler("notifications", "WelcomeEmail", {"to": "user@example.com"})
@@ -258,42 +249,52 @@ class TestWireSendHandlerToChannels:
 
 
 # =============================================================================
-# Entity event → channel dispatch wiring tests
+# Entity event → channel dispatch wiring tests (ChannelsSubsystem)
 # =============================================================================
 
 
-class TestWireEntityEventsToChannels:
-    """Tests for _wire_entity_events_to_channels."""
+def _make_channels_subsystem_ctx(
+    *,
+    channels: list[ChannelSpec] | None = None,
+    services: dict[str, Any] | None = None,
+    channel_mgr: Any = None,
+) -> Any:
+    """Build a SubsystemContext mock for ChannelsSubsystem tests."""
+    from dazzle_back.runtime.subsystems import SubsystemContext
 
-    def _make_app(
-        self,
-        *,
-        channels: list[ChannelSpec] | None = None,
-        services: dict[str, Any] | None = None,
-        channel_mgr: Any = None,
-    ) -> Any:
-        """Create a minimal mock DazzleBackendApp."""
-        app = MagicMock()
-        app._channels = channels or []
-        app.channel_manager = channel_mgr
-        app._services = services or {}
-        return app
+    ctx = SubsystemContext(
+        app=MagicMock(),
+        appspec=MagicMock(),
+        config=MagicMock(),
+        services=services or {},
+        repositories={},
+        entities=[],
+        channels=channels or [],
+    )
+    ctx.channel_manager = channel_mgr
+    return ctx
+
+
+class TestWireEntityEventsToChannels:
+    """Tests for ChannelsSubsystem._wire_entity_events_to_channels."""
 
     def test_no_channel_manager_skips(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
-        app = self._make_app(channel_mgr=None)
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        ctx = _make_channels_subsystem_ctx(channel_mgr=None)
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
 
     def test_no_services_skips(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
-        app = self._make_app(channel_mgr=MagicMock(), services=None)
-        app._services = None
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        ctx = _make_channels_subsystem_ctx(channel_mgr=MagicMock())
+        ctx.services = None  # type: ignore[assignment]
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
 
     def test_no_triggers_skips(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="emails",
@@ -304,18 +305,19 @@ class TestWireEntityEventsToChannels:
             metadata={},
         )
         service = MagicMock()
-        app = self._make_app(
+        ctx = _make_channels_subsystem_ctx(
             channels=[ch],
             services={"Order": service},
             channel_mgr=MagicMock(),
         )
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
         # No triggers → no callbacks registered
         service.on_created.assert_not_called()
 
     def test_registers_callbacks_for_triggered_entity(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.runtime.service_generator import CRUDService
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -337,20 +339,21 @@ class TestWireEntityEventsToChannels:
         service = MagicMock(spec=CRUDService)
         service.entity_name = "Order"
 
-        app = self._make_app(
+        ctx = _make_channels_subsystem_ctx(
             channels=[ch],
             services={"OrderService": service},
             channel_mgr=MagicMock(),
         )
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
 
         service.on_created.assert_called_once()
         service.on_updated.assert_called_once()
         service.on_deleted.assert_called_once()
 
     def test_skips_non_triggered_entities(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.runtime.service_generator import CRUDService
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -373,19 +376,20 @@ class TestWireEntityEventsToChannels:
         user_service = MagicMock(spec=CRUDService)
         user_service.entity_name = "User"
 
-        app = self._make_app(
+        ctx = _make_channels_subsystem_ctx(
             channels=[ch],
             services={"UserService": user_service},
             channel_mgr=MagicMock(),
         )
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
 
         user_service.on_created.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_callback_dispatches_correct_event(self) -> None:
-        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.runtime.service_generator import CRUDService
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -410,12 +414,13 @@ class TestWireEntityEventsToChannels:
         service = MagicMock(spec=CRUDService)
         service.entity_name = "Order"
 
-        app = self._make_app(
+        ctx = _make_channels_subsystem_ctx(
             channels=[ch],
             services={"OrderService": service},
             channel_mgr=channel_mgr,
         )
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
 
         # Get the on_created callback
         on_created_cb = service.on_created.call_args[0][0]
@@ -439,8 +444,8 @@ class TestWireEntityEventsToChannels:
     @pytest.mark.asyncio
     async def test_callback_only_fires_for_matching_event(self) -> None:
         """on_updated callback should not dispatch 'created' triggers."""
-        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.runtime.service_generator import CRUDService
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -465,12 +470,13 @@ class TestWireEntityEventsToChannels:
         service = MagicMock(spec=CRUDService)
         service.entity_name = "Order"
 
-        app = self._make_app(
+        ctx = _make_channels_subsystem_ctx(
             channels=[ch],
             services={"OrderService": service},
             channel_mgr=channel_mgr,
         )
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
 
         # Get the on_updated callback — should NOT dispatch because
         # trigger is only for "created"
@@ -482,8 +488,8 @@ class TestWireEntityEventsToChannels:
     @pytest.mark.asyncio
     async def test_channel_send_failure_does_not_propagate(self) -> None:
         """Channel send errors should be logged, not raised."""
-        from dazzle_back.runtime.server import DazzleBackendApp
         from dazzle_back.runtime.service_generator import CRUDService
+        from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
 
         ch = ChannelSpec(
             name="notifications",
@@ -508,12 +514,13 @@ class TestWireEntityEventsToChannels:
         service = MagicMock(spec=CRUDService)
         service.entity_name = "Order"
 
-        app = self._make_app(
+        ctx = _make_channels_subsystem_ctx(
             channels=[ch],
             services={"OrderService": service},
             channel_mgr=channel_mgr,
         )
-        DazzleBackendApp._wire_entity_events_to_channels(app)
+        subsystem = ChannelsSubsystem()
+        subsystem._wire_entity_events_to_channels(ctx)
 
         on_created_cb = service.on_created.call_args[0][0]
 
