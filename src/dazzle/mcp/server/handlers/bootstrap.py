@@ -191,8 +191,14 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
             "on_answers": (
                 "Once the user answers, call spec_analyze(operation='refine_spec', "
                 "spec_text=<original_spec>, answers=<user_answers_dict>) to produce "
-                "the refined specification, then proceed to DSL generation."
+                "the refined specification, then follow the generation steps below."
             ),
+            "generation_steps": [
+                "Follow the same 17-step generation workflow as the direct-generation phase:",
+                "Structure (1-3) → Data model (4-6) → Access control (7) → UI (8-10) → ",
+                "Validation (11-13) → Security verification (14-16) → Coverage (17)",
+                "See the generation phase 'steps' array for exact instructions per step.",
+            ],
             "dsl_generation_rules": [
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
                 "Generate incrementally: entities first, then surfaces, then workspaces",
@@ -204,6 +210,10 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 ),
                 "After generating list surfaces, add ux blocks with sort/filter/search/empty",
                 "Validate after each major section with dsl(operation='validate')",
+                (
+                    "After validation, run sentinel(operation='findings') and "
+                    "semantics(operation='tenancy') as security gates."
+                ),
                 "Do NOT copy from example projects - generate from first principles",
             ],
         }
@@ -212,34 +222,64 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
             "phase": "generation",
             "action": "generate_dsl",
             "steps": [
+                # --- Structure ---
                 "1. Create dsl/ directory if it doesn't exist",
                 "2. Generate module header with app name and description",
                 "3. Define personas with descriptions and default_workspace assignments",
+                # --- Data model ---
                 "4. Generate entity definitions based on analysis",
                 "5. Add state machines for entities with lifecycles",
                 (
-                    "6. Add access rules (permit:/forbid: blocks) to EVERY entity. "
+                    "6. If spec mentions third-party services (payments, email, identity, etc.), "
+                    "call api_pack(operation='search', query=<vendor>) to check for existing "
+                    "integration packs before writing integration DSL blocks."
+                ),
+                # --- Access control (mandatory) ---
+                (
+                    "7. Add access rules (permit:/forbid: blocks) to EVERY entity. "
                     "Use knowledge(operation='concept', term='access_rules') for syntax. "
                     "Every entity MUST have explicit access rules — entities without rules "
                     "are accessible to all authenticated users. Use role() for role gates, "
                     "field = current_user for ownership scoping, and forbid: for separation "
                     "of duty. Default-deny: if a role is not explicitly permitted, it is denied."
                 ),
-                "7. Generate surfaces (CRUD views) for each entity",
+                # --- UI ---
+                "8. Generate surfaces (CRUD views) for each entity",
                 (
-                    "8. Add ux blocks to list surfaces: sort (default ordering), "
+                    "9. Add ux blocks to list surfaces: sort (default ordering), "
                     "filter (enum/bool/status fields), search (text fields users "
                     "would search by), empty messages. "
                     "Use knowledge(operation='concept', term='ux_block') for syntax"
                 ),
-                "9. Create workspaces for each persona with access: persona() declarations",
-                "10. Validate with dsl(operation='validate')",
-                "11. Run dsl(operation='lint', extended=true) for quality check",
+                "10. Create workspaces for each persona with access: persona() declarations",
+                # --- Validation gates ---
+                "11. Validate with dsl(operation='validate')",
+                "12. Run dsl(operation='lint', extended=true) for quality check",
                 (
-                    "12. Run policy(operation='access_matrix') to verify the RBAC model. "
+                    "13. Run dsl(operation='fidelity') to verify each surface has all "
+                    "fields the entity defines. Fix any missing fields."
+                ),
+                # --- Security verification ---
+                (
+                    "14. Run policy(operation='access_matrix') to verify the RBAC model. "
                     "Check that: no entity shows PERMIT_UNPROTECTED, sensitive entities "
                     "are DENY for unauthorized roles, and the matrix matches the intended "
                     "access policy. Fix any gaps before proceeding."
+                ),
+                (
+                    "15. Run sentinel(operation='findings') to check for SaaS failure "
+                    "modes: missing audit fields, unsafe state transitions, exposed PII. "
+                    "Fix any high-severity findings."
+                ),
+                (
+                    "16. Run semantics(operation='tenancy') to verify multi-tenant data "
+                    "isolation is correctly scoped. Run semantics(operation='compliance') "
+                    "if the app handles user data or regulated fields."
+                ),
+                # --- Coverage verification ---
+                (
+                    "17. If stories or processes were defined, run story(operation='coverage') "
+                    "and process(operation='coverage') to verify the generated app covers them."
                 ),
             ],
             "dsl_generation_rules": [
@@ -251,5 +291,9 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                     "policy(operation='access_matrix') — zero PERMIT_UNPROTECTED cells required."
                 ),
                 "Do NOT copy from example projects - generate from first principles",
+                (
+                    "After validation, run sentinel(operation='findings') and "
+                    "semantics(operation='tenancy') as security gates."
+                ),
             ],
         }
