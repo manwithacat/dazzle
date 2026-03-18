@@ -79,6 +79,33 @@ def handle_policy(project_path: Path, arguments: dict[str, Any]) -> str:
             _simulate(appspec, entity_names[0], persona, operation_kind),
             indent=2,
         )
+    elif operation == "access_matrix":
+        from dazzle.rbac.matrix import generate_access_matrix
+
+        matrix = generate_access_matrix(appspec)
+        result = matrix.to_json()
+        result["warnings"] = [
+            {"kind": w.kind, "entity": w.entity, "message": w.message} for w in matrix.warnings
+        ]
+        return json.dumps(result, indent=2)
+    elif operation == "verify_status":
+        report_path = project_path / ".dazzle" / "rbac-verify-report.json"
+        if not report_path.exists():
+            return json.dumps({"status": "no_report", "message": "Run `dazzle rbac verify` first"})
+        import json as _json
+
+        report_data = _json.loads(report_path.read_text())
+        return json.dumps(
+            {
+                "status": "ok",
+                "timestamp": report_data.get("timestamp", ""),
+                "total": report_data.get("total", 0),
+                "passed": report_data.get("passed", 0),
+                "violated": report_data.get("violated", 0),
+                "warnings": report_data.get("warnings", 0),
+            },
+            indent=2,
+        )
     else:
         return unknown_op_response(operation, "policy")
 

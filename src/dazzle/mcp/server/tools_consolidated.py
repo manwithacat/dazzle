@@ -993,14 +993,23 @@ def get_consolidated_tools() -> list[Tool]:
                 "Operations: analyze (find entities without access rules), "
                 "conflicts (detect contradictory permit/forbid rules), "
                 "coverage (permission matrix: persona x entity x operation), "
-                "simulate (trace which rules fire for a given persona + entity + operation)"
+                "simulate (trace which rules fire for a given persona + entity + operation), "
+                "access_matrix (full RBAC access matrix from rbac module), "
+                "verify_status (summary of last `dazzle rbac verify` run)"
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["analyze", "conflicts", "coverage", "simulate"],
+                        "enum": [
+                            "analyze",
+                            "conflicts",
+                            "coverage",
+                            "simulate",
+                            "access_matrix",
+                            "verify_status",
+                        ],
                         "description": "Operation to perform",
                     },
                     "entity_names": {
