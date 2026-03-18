@@ -196,6 +196,12 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
             "dsl_generation_rules": [
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
                 "Generate incrementally: entities first, then surfaces, then workspaces",
+                (
+                    "EVERY entity MUST have permit:/forbid: access rules. No entity should be "
+                    "left without access control. Use role() for role gates, field conditions "
+                    "for ownership scoping. After generating all entities, run "
+                    "policy(operation='access_matrix') to verify zero PERMIT_UNPROTECTED cells."
+                ),
                 "After generating list surfaces, add ux blocks with sort/filter/search/empty",
                 "Validate after each major section with dsl(operation='validate')",
                 "Do NOT copy from example projects - generate from first principles",
@@ -208,22 +214,42 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
             "steps": [
                 "1. Create dsl/ directory if it doesn't exist",
                 "2. Generate module header with app name and description",
-                "3. Generate entity definitions based on analysis",
-                "4. Add state machines for entities with lifecycles",
-                "5. Generate surfaces (CRUD views) for each entity",
+                "3. Define personas with descriptions and default_workspace assignments",
+                "4. Generate entity definitions based on analysis",
+                "5. Add state machines for entities with lifecycles",
                 (
-                    "6. Add ux blocks to list surfaces: sort (default ordering), "
+                    "6. Add access rules (permit:/forbid: blocks) to EVERY entity. "
+                    "Use knowledge(operation='concept', term='access_rules') for syntax. "
+                    "Every entity MUST have explicit access rules — entities without rules "
+                    "are accessible to all authenticated users. Use role() for role gates, "
+                    "field = current_user for ownership scoping, and forbid: for separation "
+                    "of duty. Default-deny: if a role is not explicitly permitted, it is denied."
+                ),
+                "7. Generate surfaces (CRUD views) for each entity",
+                (
+                    "8. Add ux blocks to list surfaces: sort (default ordering), "
                     "filter (enum/bool/status fields), search (text fields users "
                     "would search by), empty messages. "
                     "Use knowledge(operation='concept', term='ux_block') for syntax"
                 ),
-                "7. Create workspaces for each persona",
-                "8. Validate with dsl(operation='validate')",
-                "9. Run dsl(operation='lint', extended=true) for quality check",
+                "9. Create workspaces for each persona with access: persona() declarations",
+                "10. Validate with dsl(operation='validate')",
+                "11. Run dsl(operation='lint', extended=true) for quality check",
+                (
+                    "12. Run policy(operation='access_matrix') to verify the RBAC model. "
+                    "Check that: no entity shows PERMIT_UNPROTECTED, sensitive entities "
+                    "are DENY for unauthorized roles, and the matrix matches the intended "
+                    "access policy. Fix any gaps before proceeding."
+                ),
             ],
             "dsl_generation_rules": [
                 "Use knowledge(operation='concept', term=<construct>) for syntax - not examples",
                 "Generate incrementally and validate frequently",
+                (
+                    "EVERY entity MUST have permit:/forbid: access rules. No entity should be "
+                    "left without access control. After all entities are defined, run "
+                    "policy(operation='access_matrix') — zero PERMIT_UNPROTECTED cells required."
+                ),
                 "Do NOT copy from example projects - generate from first principles",
             ],
         }

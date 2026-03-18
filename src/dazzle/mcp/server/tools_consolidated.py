@@ -780,7 +780,9 @@ def get_consolidated_tools() -> list[Tool]:
                 "runs cognition pass, and returns a mission briefing with agent instructions. "
                 "Call this first when a user wants to build an app. Returns structured "
                 "guidance for the next steps: either questions to ask the user, or "
-                "instructions for DSL generation."
+                "instructions for DSL generation. The workflow includes mandatory RBAC: "
+                "every entity must have permit:/forbid: access rules, verified via "
+                "policy(operation='access_matrix') before the app is considered complete."
             ),
             inputSchema={
                 "type": "object",
