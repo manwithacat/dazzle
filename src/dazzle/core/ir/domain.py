@@ -111,6 +111,19 @@ class PermissionRule(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class ScopeRule(BaseModel):
+    """Row-filtering scope rule with persona binding.
+
+    Defines which records a role can see after passing the permit gate.
+    condition=None means 'all' (no filter). personas=["*"] means all
+    authorized roles.
+    """
+
+    operation: PermissionKind
+    condition: ConditionExpr | None = None
+    personas: list[str] = Field(default_factory=list)
+
+
 class AccessSpec(BaseModel):
     """
     Access control specification for an entity.
@@ -120,10 +133,12 @@ class AccessSpec(BaseModel):
     Attributes:
         visibility: List of visibility rules by auth context
         permissions: List of permission rules by operation
+        scopes: List of row-filtering scope rules by operation and persona
     """
 
     visibility: list[VisibilityRule] = Field(default_factory=list)
     permissions: list[PermissionRule] = Field(default_factory=list)
+    scopes: list[ScopeRule] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
