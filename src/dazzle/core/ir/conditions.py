@@ -142,6 +142,38 @@ class Comparison(BaseModel):
         return self.field or ""
 
 
+class ViaBinding(BaseModel):
+    """A single binding inside a via() scope clause.
+
+    Binding types:
+    - Entity binding: junction_field = "id" or "field_name" (links back to scoped entity)
+    - User binding: junction_field = "current_user" or "current_user.attr"
+    - Literal filter: junction_field = "null" (with operator "=" or "!=")
+    """
+
+    junction_field: str
+    target: str  # "id", "field_name", "current_user", "current_user.attr", or "null"
+    operator: str = "="  # "=" or "!="
+
+    model_config = ConfigDict(frozen=True)
+
+
+class ViaCondition(BaseModel):
+    """Subquery condition through a junction table.
+
+    Example DSL:
+        via AgentAssignment(agent = current_user.contact, contact = id, revoked_at = null)
+
+    Generates SQL:
+        WHERE "id" IN (SELECT "contact" FROM "AgentAssignment" WHERE "agent" = $1 AND "revoked_at" IS NULL)
+    """
+
+    junction_entity: str
+    bindings: list[ViaBinding]
+
+    model_config = ConfigDict(frozen=True)
+
+
 class ConditionExpr(BaseModel):
     """
     A condition expression that can be simple or compound.
@@ -155,6 +187,7 @@ class ConditionExpr(BaseModel):
     comparison: Comparison | None = None  # Simple comparison condition
     role_check: RoleCheck | None = None  # Role-based condition (v0.7.0)
     grant_check: GrantCheck | None = None  # Grant-based condition
+    via_condition: ViaCondition | None = None  # Junction-table scope condition (#530)
     left: ConditionExpr | None = None  # For compound conditions
     operator: LogicalOperator | None = None  # AND/OR
     right: ConditionExpr | None = None  # For compound conditions
@@ -175,6 +208,11 @@ class ConditionExpr(BaseModel):
     def is_grant_check(self) -> bool:
         """Check if this is a grant check condition."""
         return self.grant_check is not None
+
+    @property
+    def is_via_check(self) -> bool:
+        """Check if this is a junction-table via condition."""
+        return self.via_condition is not None
 
 
 def _rebuild_condition_value() -> None:
