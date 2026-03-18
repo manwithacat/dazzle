@@ -161,3 +161,34 @@ def _manage_sys_modules_mocks(request: pytest.FixtureRequest) -> Any:
         else:
             sys.modules[k] = prev
         _clean_parent_attr(k)
+
+
+@pytest.fixture
+def make_entity():
+    """Factory for mock EntitySpec objects with ref fields (for dazzle.db tests)."""
+    from unittest.mock import MagicMock
+
+    def _make(name: str, refs: dict[str, str] | None = None) -> MagicMock:
+        entity = MagicMock()
+        entity.name = name
+        fields = []
+        # PK field
+        pk = MagicMock()
+        pk.name = "id"
+        pk.type = MagicMock()
+        pk.type.kind = "uuid"
+        pk.type.ref_entity = None
+        fields.append(pk)
+        # Ref fields (FieldTypeKind.REF — the only kind with FK columns on this entity)
+        if refs:
+            for field_name, ref_entity in refs.items():
+                f = MagicMock()
+                f.name = field_name
+                f.type = MagicMock()
+                f.type.kind = "ref"
+                f.type.ref_entity = ref_entity
+                fields.append(f)
+        entity.fields = fields
+        return entity
+
+    return _make
