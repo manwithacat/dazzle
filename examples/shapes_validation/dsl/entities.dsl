@@ -41,6 +41,7 @@ entity Shape "Shape":
   creator: ref User required
   created_at: datetime auto_add
 
+  # Oracle can do everything
   permit:
     list: role(oracle)
     read: role(oracle)
@@ -48,32 +49,33 @@ entity Shape "Shape":
     update: role(oracle)
     delete: role(oracle)
 
+  # Sovereign can create shapes, and see/edit shapes in their realm
   permit:
-    list: realm = current_user.realm
-    read: realm = current_user.realm
     create: role(sovereign)
-    update: realm = current_user.realm
-    delete: realm = current_user.realm
 
-  permit:
-    list: realm = current_user.realm
-    read: realm = current_user.realm
-
-  permit:
-    list: colour = current_user.colour
-    read: colour = current_user.colour
-
-  permit:
-    list: material = metal or material = stone
-    read: material = metal or material = stone
-
+  # Shadow material is forbidden for non-oracle roles
   forbid:
-    list: material = shadow
-    read: material = shadow
+    list: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness) or role(outsider)
+    read: role(sovereign) or role(architect) or role(chromat) or role(forgemaster) or role(witness) or role(outsider)
 
-  permit:
+  # Row-level filters: realm-scoped and colour-scoped access
+  scope:
+    list: realm = current_user.realm
+      for: sovereign, architect
+    read: realm = current_user.realm
+      for: sovereign, architect
+    update: realm = current_user.realm
+      for: sovereign
+    delete: realm = current_user.realm
+      for: sovereign
+    list: colour = current_user.colour
+      for: chromat
+    read: colour = current_user.colour
+      for: chromat
     list: realm = current_user.realm or creator = current_user
+      for: forgemaster, witness
     read: realm = current_user.realm or creator = current_user
+      for: forgemaster, witness
 
 entity Inscription "Inscription":
   id: uuid pk
@@ -86,6 +88,8 @@ entity Inscription "Inscription":
     list: role(oracle)
     read: role(oracle)
 
-  permit:
+  scope:
     list: shape.realm = current_user.realm
+      for: *
     read: shape.realm = current_user.realm
+      for: *

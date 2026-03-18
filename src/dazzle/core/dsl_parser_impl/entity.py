@@ -71,6 +71,7 @@ class EntityParserMixin:
         constraints: list[ir.Constraint] = []
         visibility_rules: list[ir.VisibilityRule] = []
         permission_rules: list[ir.PermissionRule] = []
+        scope_rules: list[ir.ScopeRule] = []
         transitions: list[ir.StateTransition] = []
         transition_effects: list[tuple[str, str, list[ir.StepEffect]]] = []
         invariants: list[ir.InvariantSpec] = []
@@ -384,6 +385,25 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # Check for scope: block (row-filtering rules with for: clauses)
+            if self.match(TokenType.SCOPE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+                    rule = self._parse_scope_rule()
+                    scope_rules.append(rule)
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+                self.skip_newlines()
+                continue
+
             # Check for audit: directive
             if self.match(TokenType.AUDIT):
                 self.advance()
@@ -497,10 +517,11 @@ class EntityParserMixin:
 
         # Build access spec if any rules were defined
         access = None
-        if visibility_rules or permission_rules:
+        if visibility_rules or permission_rules or scope_rules:
             access = ir.AccessSpec(
                 visibility=visibility_rules,
                 permissions=permission_rules,
+                scopes=scope_rules,
             )
 
         # Merge on_transition effects into transitions
@@ -733,11 +754,123 @@ class EntityParserMixin:
 
         # Otherwise parse condition expression (implies authenticated)
         condition = self.parse_condition_expr()
+
+        # Reject field conditions in permit: blocks — they define row filtering,
+        # not authorization. Field conditions must live in scope: blocks.
+        if effect == ir.PolicyEffect.PERMIT and self._has_field_condition(condition):
+            token = self.current_token()
+            raise make_parse_error(
+                "Field condition in permit: block. "
+                "Field conditions define row filtering, not authorization. "
+                "Move to a scope: block.",
+                self.file,
+                token.line,
+                token.column,
+            )
+
         return ir.PermissionRule(
             operation=operation,
             require_auth=True,
             condition=condition,
             effect=effect,
+        )
+
+    def _has_field_condition(self, condition: ir.ConditionExpr) -> bool:
+        """Return True if condition contains a Comparison (field condition).
+
+        Role checks and grant checks are pure authorization — not field conditions.
+        A Comparison (e.g. school = current_user.school) is a field condition.
+        """
+        if condition.comparison is not None:
+            return True
+        if condition.left is not None and self._has_field_condition(condition.left):
+            return True
+        if condition.right is not None and self._has_field_condition(condition.right):
+            return True
+        return False
+
+    def _parse_scope_rule(self) -> ir.ScopeRule:
+        """Parse a single rule inside a scope: block.
+
+        Syntax:
+            list: school = current_user.school
+              for: teacher, school_admin
+            list: all
+              for: oracle
+            read: owner = current_user
+              for: *
+        """
+        op_map = {
+            TokenType.CREATE: ir.PermissionKind.CREATE,
+            TokenType.READ: ir.PermissionKind.READ,
+            TokenType.UPDATE: ir.PermissionKind.UPDATE,
+            TokenType.DELETE: ir.PermissionKind.DELETE,
+            TokenType.LIST: ir.PermissionKind.LIST,
+        }
+
+        token = self.current_token()
+        operation = None
+        for token_type, kind in op_map.items():
+            if self.match(token_type):
+                self.advance()
+                operation = kind
+                break
+
+        if operation is None:
+            raise make_parse_error(
+                f"Expected 'create', 'read', 'update', 'delete', or 'list' "
+                f"in scope: block, got {token.type.value}",
+                self.file,
+                token.line,
+                token.column,
+            )
+
+        self.expect(TokenType.COLON)
+
+        # Check for 'all' keyword — means no row filter
+        condition: ir.ConditionExpr | None
+        if self.match(TokenType.ALL):
+            self.advance()
+            condition = None
+        else:
+            condition = self.parse_condition_expr()
+
+        self.skip_newlines()
+
+        # Parse for: clause (indented one level deeper)
+        self.expect(TokenType.INDENT)
+        self.skip_newlines()
+
+        # Expect 'for' keyword (it's a TokenType.FOR keyword)
+        for_token = self.current_token()
+        if not self.match(TokenType.FOR):
+            raise make_parse_error(
+                f"Expected 'for:' clause in scope rule, got {for_token.type.value}",
+                self.file,
+                for_token.line,
+                for_token.column,
+            )
+        self.advance()
+        self.expect(TokenType.COLON)
+
+        # Parse comma-separated role names or '*'
+        personas: list[str] = []
+        if self.match(TokenType.STAR):
+            self.advance()
+            personas = ["*"]
+        else:
+            personas.append(self.expect_identifier_or_keyword().value)
+            while self.match(TokenType.COMMA):
+                self.advance()
+                personas.append(self.expect_identifier_or_keyword().value)
+
+        self.skip_newlines()
+        self.expect(TokenType.DEDENT)
+
+        return ir.ScopeRule(
+            operation=operation,
+            condition=condition,
+            personas=personas,
         )
 
     def _parse_bulk_config(self) -> ir.BulkConfig:

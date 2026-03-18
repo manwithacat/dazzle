@@ -85,6 +85,7 @@ from .domain import (
     PermissionKind,
     PermissionRule,
     PolicyEffect,
+    ScopeRule,
     VisibilityRule,
 )
 
@@ -730,6 +731,7 @@ __all__ = [
     "PermissionRule",
     "AuditConfig",
     "AccessSpec",
+    "ScopeRule",
     "ExampleRecord",
     "EntitySpec",
     "DomainSpec",
