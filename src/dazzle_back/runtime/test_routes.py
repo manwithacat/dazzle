@@ -253,6 +253,10 @@ def create_test_routes(
                             username=p.get("label") or pid,
                             roles=[pid],
                         )
+                    elif user.roles != [pid]:
+                        # Roles may be stale — reset to the canonical persona role
+                        # so authenticate calls after reset always get the right role.
+                        auth_store.update_user(user.id, roles=[pid])
                 except Exception:
                     logger.debug("Could not recreate demo user for %s", pid, exc_info=True)
 
@@ -304,6 +308,12 @@ def create_test_routes(
                     username=username,
                     roles=[role],
                 )
+            elif user.roles != [role]:
+                # Roles may be stale from a previous test cycle — update them so
+                # the LIST gate (and other RBAC checks) sees the correct role.
+                updated = auth_store.update_user(user.id, roles=[role])
+                if updated is not None:
+                    user = updated
             session = auth_store.create_session(user)
             session_token = session.id
             user_id = str(user.id)
