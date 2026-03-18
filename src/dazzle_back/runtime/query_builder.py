@@ -85,6 +85,7 @@ class FilterOperator(StrEnum):
     NOT_IN = "not_in"  # Not in list
     ISNULL = "isnull"  # Is null / is not null
     BETWEEN = "between"  # Between two values
+    IN_SUBQUERY = "in_subquery"  # IN subquery (for via-check scope rules)
 
 
 # Operator mapping to SQL
@@ -231,6 +232,12 @@ class FilterCondition:
         ):
             sql = OPERATOR_SQL[self.operator].format(field=field_ref)
             return sql, [f"%{converted_value}"]
+
+        elif self.operator == FilterOperator.IN_SUBQUERY:
+            # Value is (subquery_sql, params) tuple
+            subquery_sql, subquery_params = self.value
+            sql = f"{field_ref} IN ({subquery_sql})"
+            return sql, list(subquery_params)
 
         else:
             # Standard operator

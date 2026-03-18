@@ -218,3 +218,35 @@ entity Contact "Contact":
 """
         with pytest.raises(ParseError, match="at least one user binding"):
             _parse(dsl)
+
+
+# ---------------------------------------------------------------------------
+# Query builder tests
+# ---------------------------------------------------------------------------
+
+from dazzle_back.runtime.query_builder import FilterCondition, FilterOperator  # noqa: E402
+
+
+class TestInSubqueryOperator:
+    def test_filter_operator_exists(self) -> None:
+        assert FilterOperator.IN_SUBQUERY == "in_subquery"
+
+    def test_parse_in_subquery_key(self) -> None:
+        fc = FilterCondition.parse(
+            "id__in_subquery",
+            ('SELECT "contact" FROM "AgentAssignment" WHERE "agent" = %s', ["user-123"]),
+        )
+        assert fc.field == "id"
+        assert fc.operator == FilterOperator.IN_SUBQUERY
+
+    def test_to_sql_in_subquery(self) -> None:
+        fc = FilterCondition(
+            field="id",
+            operator=FilterOperator.IN_SUBQUERY,
+            value=('SELECT "contact" FROM "AgentAssignment" WHERE "agent" = %s', ["user-123"]),
+        )
+        sql, params = fc.to_sql()
+        assert "IN" in sql
+        assert '"id"' in sql
+        assert 'SELECT "contact"' in sql
+        assert params == ["user-123"]
