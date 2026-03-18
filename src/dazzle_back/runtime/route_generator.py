@@ -1843,7 +1843,7 @@ def generate_crud_routes(
 
     # Create
     @router.post(prefix, tags=tags, summary=f"Create {entity_name}", response_model=model)
-    async def create_item(request: Request, data: create_schema) -> Any:  # type: ignore
+    async def create_item(request: Request, data: create_schema) -> Any:
         result = await service.execute(operation="create", data=data)
         return _with_htmx_triggers(request, result, entity_name, "created")
 
@@ -1851,7 +1851,7 @@ def generate_crud_routes(
     @router.put(
         f"{prefix}/{{id}}", tags=tags, summary=f"Update {entity_name}", response_model=model
     )
-    async def update_item(id: UUID, request: Request, data: update_schema) -> Any:  # type: ignore
+    async def update_item(id: UUID, request: Request, data: update_schema) -> Any:
         result = await service.execute(operation="update", id=id, data=data)
         if result is None:
             raise HTTPException(status_code=404, detail="Not found")

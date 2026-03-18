@@ -273,9 +273,29 @@ module = ["dazzle.core.process.celery_tasks", "dazzle_back.runtime.process_celer
 disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
-module = ["dazzle_back.runtime.ops_routes", "dazzle_back.runtime.island_routes"]
-# FastAPI app.get/post decorators on closure-scoped routes are untyped (app: Any)
+module = [
+    "dazzle_back.runtime.ops_routes",
+    "dazzle_back.runtime.island_routes",
+    "dazzle_back.runtime.console_routes",
+    "dazzle_back.runtime.control_plane",
+    "dazzle_back.runtime.debug_routes",
+    "dazzle_back.runtime.deploy_routes",
+    "dazzle_back.runtime.event_explorer",
+    "dazzle_back.runtime.audit_routes",
+    "dazzle_back.runtime.test_routes",
+    "dazzle_back.runtime.social_auth",
+    "dazzle_back.runtime.jwt_middleware",
+    "dazzle_back.runtime.route_generator",
+    "dazzle_back.runtime.auth.routes",
+    "dazzle_back.runtime.auth.routes_2fa",
+    "dazzle_back.runtime.auth.routes_jwt",
+]
+# FastAPI app.get/post decorators on closure-scoped routes are untyped (app: Any).
+# APIRouter imported via _fastapi_compat is typed as Any, causing valid-type errors
+# on return annotations. These are structural issues from the optional-import shim.
 disallow_untyped_decorators = false
+warn_return_any = false
+disable_error_code = ["valid-type"]
 
 [[tool.mypy.overrides]]
 module = ["dazzle.mcp.server.workshop", "dazzle.mcp.server.workshop_screens"]
