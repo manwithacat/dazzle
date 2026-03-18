@@ -29,7 +29,7 @@ class AccessDecisionRecord:
     record_id: str | None
     tier: str
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, object]:
         return asdict(self)
 
 

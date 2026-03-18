@@ -264,9 +264,9 @@ class AccessMatrix:
 
         return "\n".join(lines)
 
-    def to_json(self) -> dict:
+    def to_json(self) -> dict[str, object]:
         """Return a JSON-serialisable representation of the matrix."""
-        cells_serialized: list[dict] = []
+        cells_serialized: list[dict[str, str]] = []
         for (role, entity, operation), decision in self._cells.items():
             cells_serialized.append(
                 {
@@ -277,7 +277,7 @@ class AccessMatrix:
                 }
             )
 
-        warnings_serialized: list[dict] = [
+        warnings_serialized: list[dict[str, str | None]] = [
             {
                 "kind": w.kind,
                 "entity": w.entity,
@@ -369,7 +369,8 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
             )
             continue
 
-        access = entity.access  # type: ignore[assignment]  # narrowed above
+        assert entity.access is not None  # guarded by has_rules check above
+        access = entity.access
 
         for role in roles:
             for op in operations:
@@ -377,17 +378,18 @@ def generate_access_matrix(appspec: AppSpec) -> AccessMatrix:
                 cells[(role, entity_name, op)] = decision
 
         # Warn about redundant FORBID (FORBID on a role that has no PERMIT).
+        perms = access.permissions
         for op in operations:
             op_kind = PermissionKind(op)
             forbid_roles = {
                 r
-                for rule in access.permissions
+                for rule in perms
                 if rule.operation == op_kind and rule.effect == PolicyEffect.FORBID
                 for r in (rule.personas if rule.personas else roles)
             }
             permit_roles = {
                 r
-                for rule in access.permissions
+                for rule in perms
                 if rule.operation == op_kind and rule.effect == PolicyEffect.PERMIT
                 for r in (rule.personas if rule.personas else roles)
             }
