@@ -36,6 +36,7 @@ cd examples/simple_task && dazzle serve
 - [The MCP Tooling Pipeline](#the-mcp-tooling-pipeline)
 - [Agent Framework](#agent-framework)
 - [Three-Tier Testing](#three-tier-testing)
+- [Provable RBAC](#provable-rbac)
 - [API Packs](#api-packs)
 - [Fidelity Scoring](#fidelity-scoring)
 - [Why HTMX, Not React](#why-htmx-not-react)
@@ -267,6 +268,30 @@ See [Testing Reference](docs/reference/testing.md) for the full discovery workfl
 Dazzle generates tests from the DSL at three tiers: **Tier 1 (DSL tests)** — fast HTTP-level API contract tests covering CRUD, state machines, and access control; **Tier 2 (Playwright)** — browser automation for UI rendering, form submission, and visual regression with viewport screenshot baselines; **Tier 3 (Agent)** — LLM-guided end-to-end user journeys that validate behavior against stories. The test design system tracks coverage across entities, personas, and processes, and proposes new tests to fill gaps.
 
 See [Testing Reference](docs/reference/testing.md) for details on all three tiers.
+
+---
+
+## Provable RBAC
+
+Dazzle's access control is **secure by construction**. Because the DSL declares every access rule and the runtime is the only enforcement path, we can verify the entire security surface mechanically — for every role, every entity, every operation.
+
+The verification framework has three layers, grounded in NIST RBAC theory (Sandhu et al., 1996) and the complete mediation principle (Saltzer & Schroeder, 1975):
+
+| Layer | Purpose | Method |
+|-------|---------|--------|
+| **Static Matrix** | What *should* happen | Parse DSL, compute (role, entity, operation) → permit/deny for every combination |
+| **Dynamic Verification** | What *does* happen | Spin up the app, probe every endpoint as every role, compare against the matrix |
+| **Decision Audit Trail** | *Why* it happened | Every `evaluate_permission()` call emits a structured record with matched rule and decision |
+
+```bash
+dazzle rbac matrix          # Generate access matrix (no server needed)
+dazzle rbac verify          # Full verification pipeline (CI gate)
+dazzle rbac report          # Compliance report for auditors
+```
+
+The `examples/shapes_validation/` app is a purpose-built abstract domain (shapes, colours, realms) that exercises every RBAC pattern — pure role gates, field-condition filters, forbid overrides, multi-tenancy isolation, and composite OR rules — without real-world domain bias. The Shapes RBAC matrix runs as a CI security gate on every push.
+
+See [RBAC Verification Reference](docs/reference/rbac-verification.md) for the full architecture, theoretical foundation, and academic references.
 
 ---
 
