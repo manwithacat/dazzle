@@ -358,11 +358,11 @@ def set_project_root(path: Path | None) -> None:
     Clears the cache so that subsequent calls to list_packs/load_pack
     will re-discover packs from both project-local and built-in dirs.
     """
-    global _project_root, _packs_loaded
+    global _project_root, _packs_loaded, _pack_cache
     with _packs_lock:
         _project_root = path
         _packs_loaded = False
-        _pack_cache.clear()
+        _pack_cache = {}
 
 
 def _get_packs_dir() -> Path:
@@ -501,8 +501,8 @@ def _load_pack_from_toml(toml_path: Path) -> ApiPack:
     )
 
 
-def _discover_packs_from_dir(packs_dir: Path) -> None:
-    """Discover packs in a single directory tree (provider/name.toml)."""
+def _collect_packs_from_dir(packs_dir: Path, into: dict[str, ApiPack]) -> None:
+    """Collect packs from a single directory tree into a local dict (provider/name.toml)."""
     if not packs_dir.is_dir():
         return
     for provider_dir in packs_dir.iterdir():
@@ -511,28 +511,32 @@ def _discover_packs_from_dir(packs_dir: Path) -> None:
                 try:
                     pack = _load_pack_from_toml(toml_file)
                     # Don't overwrite — first-discovered wins (project-local first)
-                    if pack.name not in _pack_cache:
-                        _pack_cache[pack.name] = pack
+                    if pack.name not in into:
+                        into[pack.name] = pack
                 except Exception:
                     logger.warning("Failed to load API pack from %s", toml_file, exc_info=True)
 
 
 def _discover_packs() -> None:
     """Discover all available packs (project-local first, then built-in)."""
-    global _packs_loaded
+    global _packs_loaded, _pack_cache
 
     with _packs_lock:
         if _packs_loaded:
             return
 
+        new_cache: dict[str, ApiPack] = {}
+
         # Project-local packs take priority
         if _project_root is not None:
             project_packs_dir = _project_root / ".dazzle" / "api_packs"
-            _discover_packs_from_dir(project_packs_dir)
+            _collect_packs_from_dir(project_packs_dir, new_cache)
 
         # Built-in packs (won't overwrite project-local ones with same name)
-        _discover_packs_from_dir(_get_packs_dir())
+        _collect_packs_from_dir(_get_packs_dir(), new_cache)
 
+        # Atomic replacement — readers outside the lock see a consistent snapshot
+        _pack_cache = new_cache
         _packs_loaded = True
 
 
