@@ -754,6 +754,7 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.TRIGGER,
     # v0.34.0 Platform Capability Keywords
     TokenType.SOFT_DELETE,
+    TokenType.DISPLAY_FIELD,
     TokenType.SEARCHABLE,
     TokenType.BULK,
     TokenType.IMPORT,

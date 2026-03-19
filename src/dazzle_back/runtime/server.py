@@ -472,6 +472,10 @@ class DazzleBackendApp:
         from dazzle_back.runtime.relation_loader import RelationLoader, RelationRegistry
 
         relation_registry = RelationRegistry.from_entities(self._entities)
+        # Populate display_field map from IR for FK display resolution (#555)
+        for _ir_entity in self._appspec.domain.entities:
+            if _ir_entity.display_field:
+                relation_registry.display_fields[_ir_entity.name] = _ir_entity.display_field
         relation_loader = RelationLoader(
             registry=relation_registry,
             entities=self._entities,

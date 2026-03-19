@@ -65,6 +65,8 @@ class EntityParserMixin:
         bulk_config: ir.BulkConfig | None = None
         # v0.38.0: Seed template
         seed_template: ir.SeedTemplateSpec | None = None
+        # v0.44.0: Explicit display field for FK references
+        display_field: str | None = None
 
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
@@ -482,6 +484,14 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # v0.44.0: display_field: <field_name>
+            if self.match(TokenType.DISPLAY_FIELD):
+                self.advance()
+                self.expect(TokenType.COLON)
+                display_field = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+                continue
+
             # Parse field
             field_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
@@ -582,6 +592,7 @@ class EntityParserMixin:
             examples=examples,
             publishes=publishes,
             seed_template=seed_template,
+            display_field=display_field,
             source=loc,
         )
 

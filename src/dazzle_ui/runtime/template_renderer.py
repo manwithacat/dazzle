@@ -189,6 +189,7 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict.
 
     Priority chain:
+    0. Explicit display_field override (__display__ key, set by relation loader from entity DSL)
     1. Well-known fields: name, company_name, first+last, forename+surname, title, label, email
     2. First non-id string value (catches entity-specific fields like component_name, question_text)
     3. id (UUID fallback)
@@ -198,6 +199,10 @@ def _ref_display_name(value: Any, fallback: str = "") -> str:
     """
     if not isinstance(value, dict):
         return str(value) if value else fallback
+    # Explicit display_field override from entity DSL (#555)
+    _explicit = value.get("__display__")
+    if _explicit:
+        return str(_explicit)
     # Well-known fields
     result = (
         value.get("name")

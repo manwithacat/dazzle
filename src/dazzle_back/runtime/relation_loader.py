@@ -48,6 +48,8 @@ class RelationRegistry:
 
     _relations: dict[str, list[RelationInfo]] = field(default_factory=dict)
     _by_name: dict[tuple[str, str], RelationInfo] = field(default_factory=dict)
+    # v0.44.0: entity name → display_field for FK display resolution
+    display_fields: dict[str, str] = field(default_factory=dict)
 
     def register(self, entity_name: str, relation: RelationInfo) -> None:
         """Register a relation for an entity."""
@@ -242,8 +244,14 @@ class RelationLoader:
         cursor = conn.execute(sql, list(fk_values))
         related_rows = cursor.fetchall()
 
-        # Build lookup by ID
-        related_map = {str(dict(r)["id"]): dict(r) for r in related_rows}
+        # Build lookup by ID, injecting __display__ if entity has display_field
+        _display_key = self.registry.display_fields.get(relation.to_entity)
+        related_map: dict[str, dict[str, Any]] = {}
+        for r in related_rows:
+            d = dict(r)
+            if _display_key and _display_key in d:
+                d["__display__"] = d[_display_key]
+            related_map[str(d["id"])] = d
 
         # Attach to rows
         for row in rows:

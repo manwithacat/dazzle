@@ -274,6 +274,8 @@ class EntitySpec(BaseModel):
     publishes: list[PublishSpec] = Field(default_factory=list)
     # v0.38.0: Declarative seed template for reference data
     seed_template: SeedTemplateSpec | None = None
+    # v0.44.0: Explicit display field for FK references
+    display_field: str | None = None
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
 

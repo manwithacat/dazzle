@@ -148,6 +148,7 @@ class TokenType(Enum):
 
     # v0.34.0 Platform Capability Keywords
     SOFT_DELETE = "soft_delete"
+    DISPLAY_FIELD = "display_field"
     SEARCHABLE = "searchable"
     BULK = "bulk"
     IMPORT = "import"

@@ -100,3 +100,22 @@ class TestRefDisplayName:
 
     def test_custom_fallback(self) -> None:
         assert _ref_display_name(None, fallback="N/A") == "N/A"
+
+    def test_display_field_override(self) -> None:
+        """Entity display_field injects __display__ key, used first (#555)."""
+        result = _ref_display_name(
+            {"id": "abc", "name": "Fallback", "__display__": "Preferred Name"}
+        )
+        assert result == "Preferred Name"
+
+    def test_display_field_overrides_well_known(self) -> None:
+        """__display__ takes priority over all well-known fields."""
+        result = _ref_display_name(
+            {"id": "abc", "name": "Alice", "title": "CEO", "__display__": "trading_name_value"}
+        )
+        assert result == "trading_name_value"
+
+    def test_display_field_empty_falls_through(self) -> None:
+        """Empty __display__ falls through to normal chain."""
+        result = _ref_display_name({"id": "abc", "name": "Alice", "__display__": ""})
+        assert result == "Alice"

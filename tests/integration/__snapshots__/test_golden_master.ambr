@@ -26,6 +26,7 @@
           ]),
           'constraints': list([
           ]),
+          'display_field': None,
           'domain': None,
           'examples': list([
           ]),
