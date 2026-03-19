@@ -19,6 +19,61 @@ logger = logging.getLogger(__name__)
 _AGGREGATE_RE = re.compile(r"\s*(count|sum|avg|min|max)\s*\(\s*(\w+)\s*(?:where\s+(.+?))?\s*\)")
 
 
+async def _resolve_workspace_user(
+    request: Any,
+    auth_middleware: Any,
+    repositories: dict[str, Any] | None,
+) -> tuple[str | None, dict[str, Any] | None]:
+    """Resolve the current authenticated user to a DSL User entity UUID and attributes dict.
+
+    Returns (entity_uuid, entity_dict) or (auth_user_id, None) as fallback.
+    If no user can be resolved, returns (None, None).
+    """
+    if not auth_middleware:
+        return None, None
+    try:
+        auth = auth_middleware.get_auth_context(request)
+        if not (auth and auth.is_authenticated and auth.user):
+            return None, None
+    except Exception:
+        logger.debug("Failed to resolve current user for filter context", exc_info=True)
+        return None, None
+
+    # Try to find the User entity record by email so filters use entity IDs
+    email = getattr(auth.user, "email", None)
+    if email and repositories:
+        user_repo = repositories.get("User")
+        if user_repo:
+            try:
+                user_result = await user_repo.list(filters={"email": email}, page_size=1)
+                user_items = (
+                    user_result.get("items", [])
+                    if isinstance(user_result, dict)
+                    else getattr(user_result, "items", [])
+                )
+                if user_items:
+                    entity_user = user_items[0]
+                    uid = (
+                        entity_user.get("id")
+                        if isinstance(entity_user, dict)
+                        else getattr(entity_user, "id", None)
+                    )
+                    if uid:
+                        entity_dict = (
+                            entity_user
+                            if isinstance(entity_user, dict)
+                            else entity_user.model_dump()
+                            if hasattr(entity_user, "model_dump")
+                            else {}
+                        )
+                        return str(uid), entity_dict
+            except Exception:
+                logger.debug("Could not resolve User entity by email", exc_info=True)
+
+    # Fallback to auth user ID
+    return str(auth.user.id), None
+
+
 def _field_kind_to_col_type(field: Any, entity: Any = None) -> str:
     """Map an IR field to a column rendering type for workspace templates.
 
@@ -265,50 +320,30 @@ async def _workspace_region_handler(
     # Auth user IDs and User entity IDs are separate; resolve via email match (#480).
     # Always attempt resolution when middleware is available, even in test mode
     # where require_auth is False — the user may still be authenticated (#483).
-    _current_user_id: str | None = None
-    _current_user_entity: dict[str, Any] | None = None
+    _current_user_id, _current_user_entity = await _resolve_workspace_user(
+        request, ctx.auth_middleware, ctx.repositories
+    )
+
+    # Build auth_context for _extract_condition_filters (shared with entity scope path)
+    _auth_ctx_for_filters: Any = None
     if ctx.auth_middleware:
         try:
-            _auth = ctx.auth_middleware.get_auth_context(request)
-            if _auth and _auth.is_authenticated and _auth.user:
-                # Try to find the User entity record by email so filters use entity IDs
-                _resolved = False
-                _email = getattr(_auth.user, "email", None)
-                if _email and ctx.repositories:
-                    _user_repo = ctx.repositories.get("User")
-                    if _user_repo:
-                        try:
-                            _user_result = await _user_repo.list(
-                                filters={"email": _email}, page_size=1
-                            )
-                            _user_items = (
-                                _user_result.get("items", [])
-                                if isinstance(_user_result, dict)
-                                else getattr(_user_result, "items", [])
-                            )
-                            if _user_items:
-                                _entity_user = _user_items[0]
-                                _uid = (
-                                    _entity_user.get("id")
-                                    if isinstance(_entity_user, dict)
-                                    else getattr(_entity_user, "id", None)
-                                )
-                                if _uid:
-                                    _current_user_id = str(_uid)
-                                    _resolved = True
-                                    _current_user_entity = (
-                                        _entity_user
-                                        if isinstance(_entity_user, dict)
-                                        else _entity_user.model_dump()
-                                        if hasattr(_entity_user, "model_dump")
-                                        else {}
-                                    )
-                        except Exception:
-                            logger.debug("Could not resolve User entity by email", exc_info=True)
-                if not _resolved:
-                    _current_user_id = str(_auth.user.id)
+            _auth_ctx_for_filters = ctx.auth_middleware.get_auth_context(request)
+            # Ensure preferences contain entity attributes so current_user.<attr> resolves
+            if _auth_ctx_for_filters and _current_user_entity:
+                prefs = getattr(_auth_ctx_for_filters, "preferences", None)
+                if prefs is None:
+                    _auth_ctx_for_filters.preferences = {}
+                    prefs = _auth_ctx_for_filters.preferences
+                for k, v in _current_user_entity.items():
+                    if k not in prefs:
+                        prefs[k] = v
+                if _current_user_id and "entity_id" not in prefs:
+                    prefs["entity_id"] = _current_user_id
         except Exception:
-            logger.debug("Failed to resolve current user for filter context", exc_info=True)
+            logger.debug("Failed to get auth context for filter resolution", exc_info=True)
+
+    # Build legacy filter context for attention signals and grant evaluation
     _filter_context: dict[str, Any] = {}
     if _current_user_id:
         _filter_context["current_user_id"] = _current_user_id
@@ -359,14 +394,20 @@ async def _workspace_region_handler(
             ir_filter = getattr(ctx, "_source_filter", None) or ctx.ir_region.filter
             if ir_filter is not None:
                 try:
-                    from dazzle_back.runtime.condition_evaluator import (
-                        condition_to_sql_filter,
+                    from dazzle_back.runtime.route_generator import (
+                        _extract_condition_filters,
                     )
 
-                    filters = condition_to_sql_filter(
-                        ir_filter.model_dump(exclude_none=True),
-                        context=_filter_context,
+                    filters = {}
+                    _extract_condition_filters(
+                        ir_filter,
+                        _current_user_id or "",
+                        filters,
+                        logger,
+                        _auth_ctx_for_filters,
                     )
+                    if not filters:
+                        filters = None
                 except Exception:
                     logger.warning("Failed to evaluate condition filter", exc_info=True)
 
@@ -569,6 +610,9 @@ async def _fetch_region_json(
     page_size: int,
     ctx: WorkspaceRegionContext,
     filter_context: dict[str, Any] | None = None,
+    *,
+    auth_context: Any = None,
+    user_id: str | None = None,
 ) -> dict[str, Any]:
     """Fetch a single region's data as JSON for batch responses."""
     repo = ctx.repositories.get(ctx.source) if ctx.repositories else None
@@ -581,12 +625,20 @@ async def _fetch_region_json(
             ir_filter = ctx.ir_region.filter
             if ir_filter is not None:
                 try:
-                    from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
-
-                    filters = condition_to_sql_filter(
-                        ir_filter.model_dump(exclude_none=True),
-                        context=filter_context or {},
+                    from dazzle_back.runtime.route_generator import (
+                        _extract_condition_filters,
                     )
+
+                    filters = {}
+                    _extract_condition_filters(
+                        ir_filter,
+                        user_id or (filter_context or {}).get("current_user_id", ""),
+                        filters,
+                        logger,
+                        auth_context,
+                    )
+                    if not filters:
+                        filters = None
                 except Exception:
                     logger.warning("Failed to evaluate condition filter for region", exc_info=True)
 
@@ -660,56 +712,49 @@ async def _workspace_batch_handler(
     # Resolve current user entity ID for filter context (same logic as
     # _workspace_region_handler) so batch region filters using current_user
     # compare against the DSL User entity UUID, not the auth UUID (#546).
-    _batch_filter_ctx: dict[str, Any] = {}
     _first_ctx = region_ctxs[0] if region_ctxs else None
+    _batch_user_id, _batch_user_entity = await _resolve_workspace_user(
+        request,
+        _first_ctx.auth_middleware if _first_ctx else None,
+        _first_ctx.repositories if _first_ctx else None,
+    )
+
+    # Build auth_context for _extract_condition_filters
+    _batch_auth_ctx: Any = None
     if _first_ctx and _first_ctx.auth_middleware:
         try:
-            _auth = _first_ctx.auth_middleware.get_auth_context(request)
-            if _auth and _auth.is_authenticated and _auth.user:
-                _resolved = False
-                _email = getattr(_auth.user, "email", None)
-                _repositories = _first_ctx.repositories
-                if _email and _repositories:
-                    _user_repo = _repositories.get("User")
-                    if _user_repo:
-                        try:
-                            _user_result = await _user_repo.list(
-                                filters={"email": _email}, page_size=1
-                            )
-                            _user_items = (
-                                _user_result.get("items", [])
-                                if isinstance(_user_result, dict)
-                                else getattr(_user_result, "items", [])
-                            )
-                            if _user_items:
-                                _entity_user = _user_items[0]
-                                _uid = (
-                                    _entity_user.get("id")
-                                    if isinstance(_entity_user, dict)
-                                    else getattr(_entity_user, "id", None)
-                                )
-                                if _uid:
-                                    _batch_filter_ctx["current_user_id"] = str(_uid)
-                                    _resolved = True
-                                    _batch_filter_ctx["current_user_entity"] = (
-                                        _entity_user
-                                        if isinstance(_entity_user, dict)
-                                        else _entity_user.model_dump()
-                                        if hasattr(_entity_user, "model_dump")
-                                        else {}
-                                    )
-                        except Exception:
-                            logger.debug(
-                                "Batch: could not resolve User entity by email", exc_info=True
-                            )
-                if not _resolved:
-                    _batch_filter_ctx["current_user_id"] = str(_auth.user.id)
+            _batch_auth_ctx = _first_ctx.auth_middleware.get_auth_context(request)
+            if _batch_auth_ctx and _batch_user_entity:
+                prefs = getattr(_batch_auth_ctx, "preferences", None)
+                if prefs is None:
+                    _batch_auth_ctx.preferences = {}
+                    prefs = _batch_auth_ctx.preferences
+                for k, v in _batch_user_entity.items():
+                    if k not in prefs:
+                        prefs[k] = v
+                if _batch_user_id and "entity_id" not in prefs:
+                    prefs["entity_id"] = _batch_user_id
         except Exception:
-            logger.debug("Batch: failed to resolve current user", exc_info=True)
+            logger.debug("Batch: failed to get auth context", exc_info=True)
+
+    # Legacy filter context for backward compat
+    _batch_filter_ctx: dict[str, Any] = {}
+    if _batch_user_id:
+        _batch_filter_ctx["current_user_id"] = _batch_user_id
+    if _batch_user_entity:
+        _batch_filter_ctx["current_user_entity"] = _batch_user_entity
 
     results = await asyncio.gather(
         *(
-            _fetch_region_json(request, page, page_size, ctx, filter_context=_batch_filter_ctx)
+            _fetch_region_json(
+                request,
+                page,
+                page_size,
+                ctx,
+                filter_context=_batch_filter_ctx,
+                auth_context=_batch_auth_ctx,
+                user_id=_batch_user_id,
+            )
             for ctx in region_ctxs
         ),
         return_exceptions=True,

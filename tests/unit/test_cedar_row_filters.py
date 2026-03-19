@@ -328,12 +328,12 @@ class TestExtractConditionFilters:
         _extract_condition_filters(cond, "u1", filters, None)
         assert filters == {}
 
-    def test_greater_than_ignored(self) -> None:
-        """Non-equality comparisons are not pushed to SQL."""
+    def test_greater_than_pushed_to_sql(self) -> None:
+        """Inequality comparisons (>, >=, <, <=) are pushed to SQL (#547)."""
         cond = _make_condition("age", 18, AccessComparisonKind.GREATER_THAN)
         filters: dict[str, object] = {}
         _extract_condition_filters(cond, "u1", filters, None)
-        assert filters == {}
+        assert filters == {"age__gt": 18}
 
 
 class TestExtractConditionFiltersIR:

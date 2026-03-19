@@ -365,6 +365,16 @@ def _extract_condition_filters(
                 filters[field] = value
             elif op_val in ("!=", "ne", "not_equals"):
                 filters[f"{field}__ne"] = value
+            elif op_val in (">", "gt"):
+                filters[f"{field}__gt"] = value
+            elif op_val in (">=", "ge"):
+                filters[f"{field}__gte"] = value
+            elif op_val in ("<", "lt"):
+                filters[f"{field}__lt"] = value
+            elif op_val in ("<=", "le"):
+                filters[f"{field}__lte"] = value
+            elif op_val == "in":
+                filters[f"{field}__in"] = value
         return
 
     if kind == "logical":
@@ -433,6 +443,16 @@ def _extract_condition_filters(
                 filters[field] = raw_value
             elif op_val in ("!=", "ne", "not_equals"):
                 filters[f"{field}__ne"] = raw_value
+            elif op_val in (">", "gt"):
+                filters[f"{field}__gt"] = raw_value
+            elif op_val in (">=", "ge"):
+                filters[f"{field}__gte"] = raw_value
+            elif op_val in ("<", "lt"):
+                filters[f"{field}__lt"] = raw_value
+            elif op_val in ("<=", "le"):
+                filters[f"{field}__lte"] = raw_value
+            elif op_val == "in":
+                filters[f"{field}__in"] = raw_value
         return
 
     # Compound ConditionExpr: .operator (AND/OR) with .left / .right

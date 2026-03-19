@@ -904,19 +904,19 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle_back.runtime.workspace_rendering import _workspace_region_handler
+        from dazzle_back.runtime.workspace_rendering import _resolve_workspace_user
 
-        source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
+        source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
 
         # The old buggy pattern: `_user_result.items if hasattr(...)` confuses
         # dict.items (the method) with the "items" key in the result dict.
         assert "_user_result.items if hasattr" not in source, (
             "Still using attribute-style access on dict return from repository.list() — "
-            "use _user_result.get('items', []) instead"
+            "use user_result.get('items', []) instead"
         )
         # Verify the fix is present
-        assert '_user_result.get("items"' in source or "_user_result.get('items'" in source, (
-            "Expected dict-style access _user_result.get('items') for repository.list() result"
+        assert 'user_result.get("items"' in source or "user_result.get('items'" in source, (
+            "Expected dict-style access user_result.get('items') for repository.list() result"
         )
 
     def test_user_entity_stored_in_filter_context(self) -> None:
@@ -928,11 +928,15 @@ class TestCurrentUserTestMode:
         import inspect
         import textwrap
 
-        from dazzle_back.runtime.workspace_rendering import _workspace_region_handler
+        from dazzle_back.runtime.workspace_rendering import (
+            _resolve_workspace_user,
+            _workspace_region_handler,
+        )
 
-        source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
+        handler_source = textwrap.dedent(inspect.getsource(_workspace_region_handler))
+        helper_source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
 
-        assert "current_user_entity" in source, (
+        assert "current_user_entity" in handler_source or "entity_dict" in helper_source, (
             "Must store user entity record in filter context as 'current_user_entity' "
             "for current_user.<field> dot-notation resolution"
         )
