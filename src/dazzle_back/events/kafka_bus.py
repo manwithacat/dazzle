@@ -426,7 +426,7 @@ class KafkaBus(BaseEventBus):
                             NackReason.handler_error(str(e)),
                         )
                     except Exception:
-                        pass  # Best effort nack
+                        logger.debug("Best-effort nack failed", exc_info=True)
 
         except asyncio.CancelledError:
             logger.info("Consumer loop cancelled for %s/%s", sub.topic, sub.group_id)

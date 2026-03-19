@@ -199,7 +199,7 @@ class LLMJobQueue:
                     data={"status": "running"},
                 )
             except Exception:
-                pass
+                logger.debug("Failed to update AI job status", exc_info=True)
 
         # Acquire semaphore (concurrency limit)
         sem = self._semaphores.get(model_name) if model_name else None

@@ -505,7 +505,7 @@ class SessionStoreMixin:
             )
             prefs = {r["key"]: r["value"] for r in rows}
         except Exception:
-            pass
+            logger.debug("Could not load user preferences", exc_info=True)
 
         # Merge domain attributes from DSL User entity (e.g. school, department)
         # so scope rules like `current_user.school` resolve correctly (#532).

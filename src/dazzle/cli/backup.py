@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
@@ -17,6 +18,8 @@ import typer
 
 from dazzle.core.manifest import load_manifest
 
+logger = logging.getLogger(__name__)
+
 backup_app = typer.Typer(help="Backup and restore project data.")
 
 
@@ -30,7 +33,7 @@ def _resolve_database_url(manifest_path: Path) -> str:
             if url.startswith("env:"):
                 url = os.environ.get(url[4:], "")
         except Exception:
-            pass
+            logger.debug("Could not load manifest for DB URL", exc_info=True)
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
     return url
@@ -100,7 +103,7 @@ def backup_command(
         project_name = mf.name
         framework_version = mf.version
     except Exception:
-        pass
+        logger.debug("Could not load manifest for DB URL", exc_info=True)
 
     timestamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     uploads_dir = project_root / "uploads"

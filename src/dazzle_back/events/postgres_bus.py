@@ -247,7 +247,7 @@ class PostgresBus(BaseEventBus):
             async for _notify in self._listen_conn.notifies():  # type: ignore[union-attr]
                 self._notify_event.set()
         except Exception:
-            pass  # Connection closed during shutdown
+            logger.debug("Connection closed during shutdown", exc_info=True)
 
     async def _notify(self) -> None:
         """Send NOTIFY to wake up consumers."""
