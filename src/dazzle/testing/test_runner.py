@@ -1064,6 +1064,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         success = self.client.authenticate(target)
@@ -1083,6 +1084,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         # Navigation is conceptual in API tests
         return StepResult(
@@ -1100,6 +1102,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         entity_name = target.replace("entity:", "")
@@ -1124,6 +1127,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         return StepResult(
             action=action,
@@ -1141,6 +1145,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         success = self.client.check_ui_loads()
@@ -1200,6 +1205,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         return StepResult(
             action=action,
@@ -1217,6 +1223,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         return StepResult(
             action=action,
@@ -1286,6 +1293,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         return StepResult(
             action=action,
@@ -1303,6 +1311,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         entity_name = target.replace("entity:", "")
@@ -1333,6 +1342,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         url = f"{self.client.ui_url}{target}"
@@ -1354,6 +1364,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         url = f"{self.client.api_url}{target}"
@@ -1375,6 +1386,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         self.client.client.cookies.clear()
@@ -1394,6 +1406,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         url = f"{self.client.ui_url}{target}"
@@ -1416,6 +1429,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         cookie_name = resolved_data.get("cookie", "dazzle_session")
@@ -1445,6 +1459,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         last_resp = context.get("last_response")
         if last_resp is None:
@@ -1474,6 +1489,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         last_resp = context.get("last_response")
@@ -1497,6 +1513,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         last_resp = context.get("last_response")
         cookie_name = resolved_data.get("cookie", "dazzle_session")
@@ -1522,6 +1539,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         assert self.client is not None
         last_resp = context.get("last_response")
@@ -1554,6 +1572,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         last_resp = context.get("last_response")
         if last_resp is None:
@@ -1591,6 +1610,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         last_resp = context.get("last_response")
         if last_resp is None:
@@ -1622,6 +1642,7 @@ class TestRunner:
         context: dict[str, Any],
         store_result: str | None,
         start_time: float,
+        **_kw: Any,
     ) -> StepResult:
         return StepResult(
             action=action,
@@ -1630,6 +1651,51 @@ class TestRunner:
             message="Transition requires entity context",
             duration_ms=(time.time() - start_time) * 1000,
         )
+
+    # Dispatch table mapping action names to handler methods.
+    # Multi-action entries (tuples) are expanded in _get_step_handler().
+    _STEP_DISPATCH_SINGLE: dict[str, str] = {
+        "login_as": "_execute_login_as_step",
+        "navigate_to": "_execute_navigate_to_step",
+        "create": "_execute_create_step",
+        "update": "_execute_update_step",
+        "assert_visible": "_execute_assert_visible_step",
+        "assert_count": "_execute_assert_count_step",
+        "trigger_transition": "_execute_trigger_transition_step",
+        "check_route": "_execute_check_route_step",
+        "read_list": "_execute_read_list_step",
+        "post": "_execute_post_step",
+        "post_json": "_execute_post_json_step",
+        "clear_cookies": "_execute_clear_cookies_step",
+        "get": "_execute_get_step",
+        "get_with_cookie": "_execute_get_with_cookie_step",
+        "assert_status": "_execute_assert_status_step",
+        "assert_cookie_set": "_execute_assert_cookie_set_step",
+        "assert_no_cookie": "_execute_assert_no_cookie_step",
+        "assert_cookie_cleared": "_execute_assert_cookie_cleared_step",
+        "assert_redirect_url": "_execute_assert_redirect_url_step",
+        "assert_unauthenticated": "_execute_assert_unauthenticated_step",
+    }
+    _STEP_DISPATCH_MULTI: dict[str, str] = {
+        "click": "_execute_ui_only_step",
+        "fill": "_execute_ui_only_step",
+        "select": "_execute_ui_only_step",
+        "wait_for": "_execute_ui_only_step",
+        "assert_not_visible": "_execute_ui_assertion_step",
+        "assert_text": "_execute_ui_assertion_step",
+        "wait_for_load": "_execute_e2e_only_step",
+        "assert_no_errors": "_execute_e2e_only_step",
+    }
+
+    def _get_step_handler(self, action: str) -> Callable[..., StepResult] | None:
+        """Look up the handler for an action name."""
+        method_name = self._STEP_DISPATCH_SINGLE.get(action) or self._STEP_DISPATCH_MULTI.get(
+            action
+        )
+        if method_name is None:
+            return None
+        handler: Callable[..., StepResult] = getattr(self, method_name)
+        return handler
 
     def execute_step(
         self, step: dict[str, Any], design: dict[str, Any], context: dict[str, Any] | None = None
@@ -1647,16 +1713,12 @@ class TestRunner:
         data = step.get("data", {}) or {}
         store_result = step.get("store_result")
 
-        # Initialize context if not provided
         if context is None:
             context = {}
 
-        # Resolve $ref: placeholders in data
         resolved_data = self._resolve_refs(data, context)
-
         start_time = time.time()
 
-        # Common kwargs passed to every handler
         kwargs: dict[str, Any] = {
             "action": action,
             "target": target,
@@ -1664,65 +1726,22 @@ class TestRunner:
             "context": context,
             "store_result": store_result,
             "start_time": start_time,
+            "data": data,
         }
 
         try:
-            if action == "login_as":
-                return self._execute_login_as_step(**kwargs)
-            elif action == "navigate_to":
-                return self._execute_navigate_to_step(**kwargs)
-            elif action == "create":
-                return self._execute_create_step(**kwargs)
-            elif action == "update":
-                return self._execute_update_step(**kwargs)
-            elif action == "assert_visible":
-                return self._execute_assert_visible_step(**kwargs)
-            elif action == "assert_count":
-                return self._execute_assert_count_step(**kwargs, data=data)
-            elif action == "trigger_transition":
-                return self._execute_trigger_transition_step(**kwargs)
-            elif action in ("click", "fill", "select", "wait_for"):
-                return self._execute_ui_only_step(**kwargs)
-            elif action in ("assert_not_visible", "assert_text"):
-                return self._execute_ui_assertion_step(**kwargs)
-            elif action == "check_route":
-                return self._execute_check_route_step(**kwargs, data=data)
-            elif action in ("wait_for_load", "assert_no_errors"):
-                return self._execute_e2e_only_step(**kwargs)
-            elif action == "read_list":
-                return self._execute_read_list_step(**kwargs)
-            elif action == "post":
-                return self._execute_post_step(**kwargs)
-            elif action == "post_json":
-                return self._execute_post_json_step(**kwargs)
-            elif action == "clear_cookies":
-                return self._execute_clear_cookies_step(**kwargs)
-            elif action == "get":
-                return self._execute_get_step(**kwargs)
-            elif action == "get_with_cookie":
-                return self._execute_get_with_cookie_step(**kwargs)
-            elif action == "assert_status":
-                return self._execute_assert_status_step(**kwargs)
-            elif action == "assert_cookie_set":
-                return self._execute_assert_cookie_set_step(**kwargs)
-            elif action == "assert_no_cookie":
-                return self._execute_assert_no_cookie_step(**kwargs)
-            elif action == "assert_cookie_cleared":
-                return self._execute_assert_cookie_cleared_step(**kwargs)
-            elif action == "assert_redirect_url":
-                return self._execute_assert_redirect_url_step(**kwargs)
-            elif action == "assert_unauthenticated":
-                return self._execute_assert_unauthenticated_step(**kwargs)
-            else:
-                logger.warning("Unknown test action '%s' — step skipped", action)
-                return StepResult(
-                    action=action,
-                    target=target,
-                    result=TestResult.SKIPPED,
-                    message=f"Unknown action: {action}",
-                    duration_ms=(time.time() - start_time) * 1000,
-                )
+            handler = self._get_step_handler(action)
+            if handler is not None:
+                return handler(**kwargs)
 
+            logger.warning("Unknown test action '%s' — step skipped", action)
+            return StepResult(
+                action=action,
+                target=target,
+                result=TestResult.SKIPPED,
+                message=f"Unknown action: {action}",
+                duration_ms=(time.time() - start_time) * 1000,
+            )
         except Exception as e:
             return StepResult(
                 action=action,
