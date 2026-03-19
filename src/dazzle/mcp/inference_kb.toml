@@ -1782,20 +1782,110 @@ entity ProductTag "Product Tag":
   index tag_id
 """
 
-[[relationship_patterns]]
-id = "polymorphic_owner"
-name = "Polymorphic Ownership"
-triggers = ["can belong to X or Y", "owner can be", "polymorphic", "attachable"]
-suggests = "owner_type: enum[...] + owner_id: uuid"
-rationale = "Polymorphic relationships use a type discriminator with the FK"
+# =============================================================================
+# MODELING GUIDANCE (Anti-Pattern Steering)
+# =============================================================================
+# Surfaces when agents query with anti-pattern keywords.
+# Each entry has anti_pattern (what to avoid) and prefer (what to do instead).
+
+[[modeling_guidance]]
+id = "no_polymorphic_keys"
+name = "Prefer Typed Refs Over Polymorphic Keys"
+triggers = ["can belong to X or Y", "owner can be", "polymorphic", "attachable", "commentable", "taggable", "owner_type", "item_type"]
+anti_pattern = "item_type: enum[...] + item_id: uuid"
+prefer = "Separate nullable ref fields or a junction entity"
+rationale = "Polymorphic keys break referential integrity, prevent linker validation, and block runtime auto-include"
 example = """
-# SPEC says: Comment can belong to Post or Photo
-# On Comment entity:
+# BAD — polymorphic key pair
 commentable_type: enum[post,photo] required
 commentable_id: uuid required
 
-# Query comments for a specific post:
-# filter: commentable_type = post and commentable_id = <post_id>
+# GOOD — separate typed refs (nullable)
+post: ref Post        # set when comment is on a post
+photo: ref Photo      # set when comment is on a photo
+
+# GOOD — for many-to-many, use a junction entity
+entity ProductTag "Product Tag":
+  id: uuid pk
+  product: ref Product required
+  tag: ref Tag required
+"""
+
+[[modeling_guidance]]
+id = "no_god_entities"
+name = "Decompose God Entities"
+triggers = ["too many fields", "large entity", "god entity", "monolith entity", "kitchen sink"]
+anti_pattern = "Single entity with 15+ fields spanning unrelated concerns"
+prefer = "Separate entities connected by refs"
+rationale = "God entities make surfaces unwieldy, RBAC rules overly broad, and state machines complex. The DSL's entity + ref model is designed for decomposition."
+example = """
+# BAD — 20-field Order with address, payment, delivery inline
+
+# GOOD — decomposed
+entity Order "Order":
+  customer: ref Customer required
+  shipping_address: ref Address
+  status: enum[draft,placed,shipped,delivered]=draft
+
+entity OrderLine "Order Line":
+  order: ref Order required
+  product: ref Product required
+  quantity: int required
+"""
+
+[[modeling_guidance]]
+id = "no_soft_delete"
+name = "Use State Machines Instead of Soft-Delete Flags"
+triggers = ["soft delete", "is_deleted", "deleted_at", "archived_at", "tombstone", "logical delete"]
+anti_pattern = "is_deleted: bool or deleted_at: datetime as a field"
+prefer = "State machine transition to a terminal state, or simply delete the record"
+rationale = "Soft-delete flags create invisible data that scope rules must manually filter, break list counts, and bypass the transitions block which provides audit trails and role-gated deletion."
+example = """
+# BAD
+is_deleted: bool=false
+deleted_at: datetime
+
+# GOOD — state machine
+status: enum[active,archived]=active
+
+transitions:
+  active -> archived: role(admin)
+"""
+
+[[modeling_guidance]]
+id = "no_stringly_refs"
+name = "Use Typed Refs Instead of String Copies"
+triggers = ["customer_email", "user_name as field", "string reference", "denormalized", "copy of name"]
+anti_pattern = "customer_email: str or user_name: str used as a reference to another entity"
+prefer = "Typed ref fields: customer: ref Customer"
+rationale = "String copies lose relational semantics. The runtime can't auto-include the related record, FK enforcement is absent, and scope rules can't traverse the relationship."
+example = """
+# BAD
+customer_email: str(200) required
+assigned_user_name: str(100)
+
+# GOOD
+customer: ref Customer required
+assigned_to: ref User
+"""
+
+[[modeling_guidance]]
+id = "no_duplicated_fields"
+name = "Don't Copy Parent Fields — Use Refs"
+triggers = ["duplicated field", "copy parent field", "denormalized name", "school_name on student"]
+anti_pattern = "Copying parent entity fields into child entities alongside a ref"
+prefer = "Use the ref and let the runtime auto-include related data"
+rationale = "Creates data inconsistency when the parent changes. The runtime auto-includes ref data in API responses and the UI resolves display names through the relation."
+example = """
+# BAD
+entity StudentProfile "Student":
+  school: ref School required
+  school_name: str(200)       # duplicates School.name
+
+# GOOD — ref is sufficient
+entity StudentProfile "Student":
+  school: ref School required
+  # school.name is auto-included in API responses
 """
 
 # =============================================================================
