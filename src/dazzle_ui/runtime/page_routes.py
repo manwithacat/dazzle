@@ -168,6 +168,84 @@ def _is_field_cond(cond: Any) -> bool:
     return False
 
 
+def _should_suppress_mutations(
+    deps: "_PageDeps",
+    surface_name: str | None,
+    auth_ctx: Any,
+    user_roles: list[str],
+) -> bool:
+    """Check if all mutations should be suppressed (workspace read_only)."""
+    # Check workspace persona variant read_only directive
+    if surface_name and deps.surface_workspace.get(surface_name):
+        ws_name = deps.surface_workspace[surface_name]
+        for ws in deps.appspec.workspaces:
+            if ws.name == ws_name and ws.ux and ws.ux.persona_variants:
+                normalized = [r.removeprefix("role_") for r in user_roles]
+                for variant in ws.ux.persona_variants:
+                    if variant.persona in normalized and variant.read_only:
+                        return True
+    return False
+
+
+def _user_can_mutate(
+    deps: "_PageDeps",
+    surface_name: str | None,
+    operation: str,
+    auth_ctx: Any,
+) -> bool:
+    """Check if user can perform a mutation (create/update/delete) on the entity."""
+    if not surface_name or not deps.entity_cedar_specs or auth_ctx is None:
+        return True  # No access control configured
+
+    _entity_name = deps.surface_entity.get(surface_name)
+    _cedar_spec = deps.entity_cedar_specs.get(_entity_name) if _entity_name else None
+    if _cedar_spec is None:
+        return True  # No access rules for this entity
+
+    try:
+        from dazzle_back.runtime.access_evaluator import (
+            AccessRuntimeContext,
+            evaluate_permission,
+        )
+        from dazzle_back.specs.auth import AccessOperationKind
+
+        op_map = {
+            "create": AccessOperationKind.CREATE,
+            "update": AccessOperationKind.UPDATE,
+            "delete": AccessOperationKind.DELETE,
+        }
+        _op = op_map.get(operation)
+        if _op is None:
+            return True
+
+        # Only evaluate when rules are pure role checks (no field conditions)
+        _op_rules = [r for r in _cedar_spec.permissions if r.operation == _op]
+        _has_scopes = bool(getattr(_cedar_spec, "scopes", None))
+        _has_field_conditions = (
+            False if _has_scopes else any(_is_field_cond(r.condition) for r in _op_rules)
+        )
+        if not _op_rules or _has_field_conditions:
+            return True  # No rules or needs record context — allow UI button
+
+        _user = auth_ctx.user if auth_ctx.is_authenticated else None
+        _raw_roles = list(getattr(_user, "roles", [])) if _user else []
+        _runtime_ctx = AccessRuntimeContext(
+            user_id=str(_user.id) if _user else None,
+            roles=[r.removeprefix("role_") for r in _raw_roles],
+            is_superuser=getattr(_user, "is_superuser", False) if _user else False,
+        )
+        _decision = evaluate_permission(
+            _cedar_spec,
+            _op,
+            None,
+            _runtime_ctx,
+            entity_name=_entity_name or "",
+        )
+        return _decision.allowed
+    except ImportError:
+        return True  # dazzle_back not available
+
+
 # =============================================================================
 # Dependencies Container
 # =============================================================================
@@ -185,6 +263,7 @@ class _PageDeps:
     entity_cedar_specs: dict[str, Any] = field(default_factory=dict)
     surface_entity: dict[str, str] = field(default_factory=dict)
     surface_mode: dict[str, str] = field(default_factory=dict)
+    surface_workspace: dict[str, str] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -365,6 +444,28 @@ async def _page_handler(
                     if not evaluate_condition(_tab.visible_condition, {}, _role_ctx):
                         _tab.visible = False
 
+        # Suppress Edit/Delete buttons when permit rules deny the operation
+        # or when the workspace declares read_only for the user's persona (#550, #552).
+        if ctx.user_roles is not None:
+            _suppress_mutations = _should_suppress_mutations(
+                deps, surface_name, auth_ctx, ctx.user_roles
+            )
+            if _suppress_mutations:
+                req_detail.edit_url = None
+                req_detail.delete_url = None
+                req_detail.transitions = []
+                req_detail.integration_actions = []
+            else:
+                # Fine-grained: check UPDATE and DELETE individually
+                if req_detail.edit_url and not _user_can_mutate(
+                    deps, surface_name, "update", auth_ctx
+                ):
+                    req_detail.edit_url = None
+                if req_detail.delete_url and not _user_can_mutate(
+                    deps, surface_name, "delete", auth_ctx
+                ):
+                    req_detail.delete_url = None
+
         # Substitute {id} in the per-request copy only
         if req_detail.edit_url:
             req_detail.edit_url = req_detail.edit_url.replace("{id}", str(path_id))
@@ -511,6 +612,13 @@ async def _page_handler(
         _ctx_overrides["form"] = req_form
 
     if ctx.table:
+        # Suppress Create button when user lacks CREATE permission or workspace is read_only
+        if ctx.user_roles is not None and ctx.table.create_url:
+            if _should_suppress_mutations(
+                deps, surface_name, auth_ctx, ctx.user_roles
+            ) or not _user_can_mutate(deps, surface_name, "create", auth_ctx):
+                ctx.table.create_url = None
+
         # Fetch list data from backend
         import urllib.parse
 
@@ -796,14 +904,24 @@ def create_page_routes(
     except ImportError:
         pass  # dazzle_back not available (e.g. in tests without backend)
 
-    # Build surface_name -> entity_name and surface_name -> mode mappings for
-    # Cedar gate lookup in the page handler.
+    # Build surface_name -> entity_name, surface_name -> mode, and
+    # surface_name -> workspace_name mappings for access control.
     surface_entity: dict[str, str] = {}
     surface_mode: dict[str, str] = {}
+    surface_workspace: dict[str, str] = {}
     for _surface in appspec.surfaces:
         if _surface.entity_ref:
             surface_entity[_surface.name] = _surface.entity_ref
         surface_mode[_surface.name] = _surface.mode.value if _surface.mode else "list"
+    # Map surfaces to their parent workspace via workspace regions
+    for _ws in appspec.workspaces:
+        for _region in getattr(_ws, "regions", []) or []:
+            _source = getattr(_region, "source", None)
+            if _source:
+                # source can be a surface name or entity name
+                for _surface in appspec.surfaces:
+                    if _surface.name == _source or _surface.entity_ref == _source:
+                        surface_workspace[_surface.name] = _ws.name
 
     # Inject integration manual trigger actions into detail contexts
     _inject_integration_actions(appspec, page_contexts)
@@ -823,6 +941,7 @@ def create_page_routes(
         entity_cedar_specs=entity_cedar_specs,
         surface_entity=surface_entity,
         surface_mode=surface_mode,
+        surface_workspace=surface_workspace,
     )
 
     # Register routes — sort by specificity so FastAPI matches the most-specific
