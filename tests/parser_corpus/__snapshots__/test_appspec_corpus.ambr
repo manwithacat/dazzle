@@ -91,7 +91,7 @@
         'column': 9,
         'error_type': 'ParseError',
         'line': 8,
-        'message': 'Unknown type: invalidtype',
+        'message': "Unknown type: 'invalidtype'",
         'severity': 'error',
       }),
     ]),

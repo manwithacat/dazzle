@@ -2886,5 +2886,54 @@ entity Doc "Doc":
     assert t_pub.guards[0].requires_field == "summary"
 
 
+class TestParserErrorMessages:
+    """Tests for parser error messages (#544)."""
+
+    def test_missing_field_type_gives_clear_error(self):
+        """Field with colon but no type should give helpful error, not 'Unknown type: \\n'."""
+        import pytest
+
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Thing "Thing":
+  id: uuid pk
+  name:
+  status: bool
+"""
+        with pytest.raises(ParseError, match="Missing field type after ':'"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_missing_field_type_trailing_space(self):
+        """Field with colon and trailing space should give helpful error."""
+        import pytest
+
+        from dazzle.core.errors import ParseError
+
+        dsl = 'module t\napp t "T"\n\nentity E "E":\n  id: uuid pk\n  name: \n'
+        with pytest.raises(ParseError, match="Missing field type after ':'"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_unknown_type_shows_repr(self):
+        """Unknown type name should use repr in error for clarity."""
+        import pytest
+
+        from dazzle.core.errors import ParseError
+
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Thing "Thing":
+  id: uuid pk
+  category: foobar
+"""
+        with pytest.raises(ParseError, match=r"Unknown type: 'foobar'"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+
 if __name__ == "__main__":
     main()

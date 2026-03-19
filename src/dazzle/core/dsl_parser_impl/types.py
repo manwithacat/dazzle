@@ -127,8 +127,17 @@ class TypeParserMixin:
         if token_type_parser is not None:
             return token_type_parser()
 
+        if token.type in (TokenType.NEWLINE, TokenType.DEDENT, TokenType.EOF):
+            raise make_parse_error(
+                "Missing field type after ':'.\n"
+                "  Expected a type like: str(200), int, bool, date, ref Entity, etc.\n"
+                "  Example: name: str(200) required",
+                self.file,
+                token.line,
+                token.column,
+            )
         raise make_parse_error(
-            f"Unknown type: {token.value}",
+            f"Unknown type: {token.value!r}",
             self.file,
             token.line,
             token.column,
