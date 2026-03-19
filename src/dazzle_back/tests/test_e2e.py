@@ -28,7 +28,7 @@ from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
 from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
 from dazzle.core.ir.fields import FieldType as IRFieldType
 from dazzle.core.ir.surfaces import SurfaceElement, SurfaceMode, SurfaceSection, SurfaceSpec
-from dazzle_back.runtime.server import create_app
+from dazzle_back.runtime.app_factory import create_app
 
 # =============================================================================
 # Fixtures

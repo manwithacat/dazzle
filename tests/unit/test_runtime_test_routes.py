@@ -280,7 +280,7 @@ class TestTestRoutesIntegration:
         """Create a shared test client for the class (reused across tests)."""
         from fastapi.testclient import TestClient
 
-        from dazzle_back.runtime.server import create_app
+        from dazzle_back.runtime.app_factory import create_app
 
         app = create_app(
             appspec,
@@ -533,7 +533,7 @@ class TestTestModeDisabled:
         """Create a test client WITHOUT test mode enabled."""
         from fastapi.testclient import TestClient
 
-        from dazzle_back.runtime.server import create_app
+        from dazzle_back.runtime.app_factory import create_app
 
         app = create_app(
             appspec,

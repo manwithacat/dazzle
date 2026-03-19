@@ -35,6 +35,7 @@ from dazzle_back.runtime.access_evaluator import (
     evaluate_visibility,
     filter_visible_records,
 )
+from dazzle_back.runtime.app_factory import create_app, run_app
 from dazzle_back.runtime.migrations import (
     MigrationAction,
     MigrationError,
@@ -66,8 +67,6 @@ from dazzle_back.runtime.route_generator import (
 from dazzle_back.runtime.server import (
     DazzleBackendApp,
     ServerConfig,
-    create_app,
-    run_app,
 )
 from dazzle_back.runtime.service_generator import (
     BaseService,

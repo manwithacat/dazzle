@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dazzle.core.ir as ir
-from dazzle_back.runtime.server import build_entity_list_projections
+from dazzle_back.runtime.app_factory import build_entity_list_projections
 
 
 def _entity(name: str, fields: list[ir.FieldSpec]) -> ir.EntitySpec:
