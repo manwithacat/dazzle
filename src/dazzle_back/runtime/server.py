@@ -864,7 +864,9 @@ class DazzleBackendApp:
         # Keep full config for subsystem context
         self._config: ServerConfig = config
         # Subsystem plugin infrastructure (v0.42.0)
-        self._subsystem_ctx: Any | None = None  # SubsystemContext, set in _setup_optional_features
+        self._subsystem_ctx: Any | None = (
+            None  # SubsystemContext, set in build() after _setup_optional_features
+        )
         self._subsystems: list[Any] = self._build_default_subsystems()
 
     # ------------------------------------------------------------------
@@ -891,7 +893,7 @@ class DazzleBackendApp:
             SeedSubsystem(),
         ]
 
-    def _build_subsystem_context(self) -> Any:
+    def _build_subsystem_context(self, auth_dep: Any = None, optional_auth_dep: Any = None) -> Any:
         """Build SubsystemContext from current DazzleBackendApp state."""
         from dazzle_back.runtime.subsystems import SubsystemContext
 
@@ -908,6 +910,13 @@ class DazzleBackendApp:
             auth_middleware=self._auth_middleware,
             enable_auth=self._enable_auth,
             enable_test_mode=self._enable_test_mode,
+            auth_store=self._auth_store,
+            auth_dep=auth_dep,
+            optional_auth_dep=optional_auth_dep,
+            auth_config=self._auth_config,
+            database_url=self._database_url or "",
+            security_profile=self._security_profile,
+            project_root=self._project_root,
         )
 
     def _run_subsystems(self) -> None:
@@ -1864,15 +1873,9 @@ class DazzleBackendApp:
             entity_auto_includes=self._entity_auto_includes,
         )
 
-        # Run subsystem plugins (events, channels, console, process, sla,
-        # llm_queue, seed).  Each plugin catches its own errors.
-        self._subsystem_ctx = self._build_subsystem_context()
-        self._run_subsystems()
-
-        # Sync channel_manager back so IntegrationManager-based properties work
-        if self._subsystem_ctx.channel_manager is not None:
-            if self._integration_mgr is not None:
-                self._integration_mgr.channel_manager = self._subsystem_ctx.channel_manager
+        # NOTE: subsystem context building and _run_subsystems() are now called
+        # explicitly in build() after _setup_optional_features(), so auth deps
+        # can be forwarded into SubsystemContext.
 
         # Debug routes
         if self._db_manager:
@@ -2086,7 +2089,14 @@ class DazzleBackendApp:
         self._setup_services()
         auth_dep, optional_auth_dep = self._setup_auth()
         self._setup_routes(auth_dep, optional_auth_dep)
-        self._setup_optional_features()
+        self._setup_optional_features()  # keep for now — will be extracted later
+        # Build subsystem context with auth deps, then run subsystems
+        self._subsystem_ctx = self._build_subsystem_context(auth_dep, optional_auth_dep)
+        self._run_subsystems()
+        # Sync channel_manager back so IntegrationManager-based properties work
+        if self._subsystem_ctx.channel_manager is not None:
+            if self._integration_mgr is not None:
+                self._integration_mgr.channel_manager = self._subsystem_ctx.channel_manager
         self._setup_system_routes()
 
         # Validate routes for conflicts

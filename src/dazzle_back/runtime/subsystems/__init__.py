@@ -53,6 +53,26 @@ class SubsystemContext:
     enable_auth: bool = False
     enable_test_mode: bool = False
 
+    # Auth — set by DazzleBackendApp._setup_auth() before subsystems run
+    auth_store: Any | None = None
+    auth_dep: Any | None = None  # FastAPI Depends for required auth
+    optional_auth_dep: Any | None = None  # FastAPI Depends for optional auth
+    auth_config: Any | None = None  # AuthConfig from manifest
+    database_url: str = ""  # for subsystems needing DB access
+
+    # Integration — set by integrations subsystem
+    integration_mgr: Any | None = None
+
+    # Workspace — set by workspace subsystem
+    workspace_builder: Any | None = None
+
+    # Audit — set by DazzleBackendApp._setup_routes, read by system_routes subsystem
+    audit_logger: Any | None = None
+
+    # Config forwarded from ServerConfig
+    security_profile: str = "basic"
+    project_root: Any | None = None
+
 
 @runtime_checkable
 class SubsystemPlugin(Protocol):
