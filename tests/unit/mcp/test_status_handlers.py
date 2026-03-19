@@ -190,6 +190,64 @@ class TestGetMcpStatusHandler:
                 assert "skipped" in data["reload"]
 
 
+class TestNewSinceLastCheck:
+    """Tests for new_since_last_check in status(mcp) response."""
+
+    def _call_with_changelog(self, temp_project, changelog_text, last_seen=None):
+        """Helper: call status handler with a fake changelog and optional last_seen."""
+        import dazzle.core.changelog as _cl
+
+        tmp_changelog = temp_project / "CHANGELOG.md"
+        tmp_changelog.write_text(changelog_text)
+
+        if last_seen is not None:
+            dazzle_dir = temp_project / ".dazzle"
+            dazzle_dir.mkdir(exist_ok=True)
+            (dazzle_dir / "last_seen_version").write_text(last_seen)
+
+        with patch.object(_cl, "get_changelog_path", return_value=tmp_changelog):
+            result = get_mcp_status_handler({"_resolved_project_path": temp_project})
+        return json.loads(result)
+
+    def test_first_run_includes_new_items(self, temp_project) -> None:
+        """First run (no last_seen_version file) should include new items."""
+        # Use the actual framework version from the handler
+        from dazzle._version import get_version
+
+        ver = get_version()
+        sample = f"## [{ver}] - 2026-01-01\n\n### Added\n- **Cool feature** — does things\n"
+        data = self._call_with_changelog(temp_project, sample)
+
+        assert "new_since_last_check" in data
+        assert isinstance(data["new_since_last_check"], list)
+        assert len(data["new_since_last_check"]) > 0
+        assert data["last_seen_version"] is None
+
+    def test_same_version_returns_empty_list(self, temp_project) -> None:
+        """When last_seen == current, new_since_last_check should be empty."""
+        from dazzle._version import get_version
+
+        ver = get_version()
+        sample = f"## [{ver}]\n### Added\n- Feature\n"
+        data = self._call_with_changelog(temp_project, sample, last_seen=ver)
+
+        assert "new_since_last_check" in data
+        assert data["new_since_last_check"] == []
+        assert data["last_seen_version"] == ver
+
+    def test_version_file_written_after_check(self, temp_project) -> None:
+        """After status(mcp), last_seen_version file should contain current version."""
+        from dazzle._version import get_version
+
+        ver = get_version()
+        sample = f"## [{ver}]\n### Added\n- Feature\n"
+        self._call_with_changelog(temp_project, sample)
+
+        version_file = temp_project / ".dazzle" / "last_seen_version"
+        assert version_file.exists()
+        assert version_file.read_text().strip() == ver
+
+
 class TestGetDnrLogsHandler:
     """Tests for get_dnr_logs_handler."""
 

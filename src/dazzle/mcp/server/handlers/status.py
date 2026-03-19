@@ -10,7 +10,7 @@ import json
 import logging
 from typing import Any
 
-from dazzle.core.paths import project_log_dir, project_manifest
+from dazzle.core.paths import project_last_seen_version, project_log_dir, project_manifest
 from dazzle.mcp.semantics import get_mcp_version
 
 from ..state import (
@@ -73,6 +73,41 @@ def get_mcp_status_handler(args: dict[str, Any]) -> str:
     # Internal KB version info
     version_info = get_mcp_version()
     result["semantics_version"] = version_info
+
+    # New-since-last-check: surface new capabilities from CHANGELOG.md
+    try:
+        current_version = result.get("version", "unknown")
+        resolved = args.get("_resolved_project_path")
+        project_path = (
+            resolved
+            if isinstance(resolved, Path)
+            else (get_active_project_path() or get_project_root())
+        )
+        version_file = project_last_seen_version(project_path)
+        last_seen: str | None = None
+
+        if version_file.exists():
+            last_seen = version_file.read_text(encoding="utf-8").strip()
+
+        if current_version != "unknown":
+            from dazzle.core.changelog import get_changelog_path, parse_changelog_since
+
+            if last_seen and last_seen != current_version:
+                new_items = parse_changelog_since(get_changelog_path(), last_seen)
+            elif last_seen is None:
+                # First run — show what's in the current version
+                new_items = parse_changelog_since(get_changelog_path(), "")
+            else:
+                new_items = []
+
+            result["new_since_last_check"] = new_items
+            result["last_seen_version"] = last_seen
+
+            # Persist the current version
+            version_file.parent.mkdir(parents=True, exist_ok=True)
+            version_file.write_text(current_version, encoding="utf-8")
+    except Exception:
+        logger.debug("Failed to compute new-since-last-check", exc_info=True)
 
     if reload_requested:
         if not is_dev_mode():

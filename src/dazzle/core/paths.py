@@ -34,6 +34,9 @@ PROCESSES_DIR = "processes"
 # -- Override registry -------------------------------------------------------
 OVERRIDES_FILE = "overrides.json"
 
+# -- Version tracking --------------------------------------------------------
+LAST_SEEN_VERSION_FILE = "last_seen_version"
+
 # -- Log files ---------------------------------------------------------------
 ACTIVITY_LOG_FILE = "mcp-activity.log"
 DNR_LOG_FILE = "dazzle.log"
@@ -110,3 +113,8 @@ def project_processes_dir(project_root: Path) -> Path:
 def project_overrides_file(project_root: Path) -> Path:
     """Return the overrides registry path for a project."""
     return project_dazzle_dir(project_root) / OVERRIDES_FILE
+
+
+def project_last_seen_version(project_root: Path) -> Path:
+    """Return the last-seen-version file path for a project."""
+    return project_dazzle_dir(project_root) / LAST_SEEN_VERSION_FILE
