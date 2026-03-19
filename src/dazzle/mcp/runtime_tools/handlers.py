@@ -7,6 +7,7 @@ Implementations for backend, UI, and GraphQL BFF tool calls.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Any
 
 from .components import (
@@ -19,55 +20,20 @@ from .components import (
 )
 from .state import get_appspec_data, get_or_create_ui_spec, get_ui_spec
 
+# Dispatch table mapping tool names to handler functions.
+# Populated after handler definitions via _build_dispatch_table().
+_TOOL_DISPATCH: dict[str, Callable[[dict[str, Any]], str]] = {}
+
 
 def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:
     """Handle DNR tool calls."""
-
-    # Backend tools
-    if name == "list_dnr_entities":
-        return _list_dnr_entities()
-    elif name == "get_dnr_entity":
-        return _get_dnr_entity(arguments)
-    elif name == "list_backend_services":
-        return _list_backend_services(arguments)
-    elif name == "get_backend_service_spec":
-        return _get_backend_service_spec(arguments)
-
-    # UI tools
-    elif name == "list_dnr_components":
-        return _list_dnr_components(arguments)
-    elif name == "get_dnr_component_spec":
-        return _get_dnr_component_spec(arguments)
-    elif name == "list_workspace_layouts":
-        return _list_workspace_layouts()
-    elif name == "create_uispec_component":
-        return _create_uispec_component(arguments)
-    elif name == "patch_uispec_component":
-        return _patch_uispec_component(arguments)
-    elif name == "compose_workspace":
-        return _compose_workspace(arguments)
-
-    # GraphQL BFF tools (v0.6)
-    elif name == "get_graphql_schema":
-        return _get_graphql_schema(arguments)
-    elif name == "list_graphql_types":
-        return _list_graphql_types()
-    elif name == "list_adapters":
-        return _list_adapters()
-    elif name == "get_adapter_guide":
-        return _get_adapter_guide(arguments)
-
-    # Channel/Messaging tools (v0.9)
-    elif name == "list_channels":
-        return _list_channels()
-    elif name == "get_channel_status":
-        return _get_channel_status(arguments)
-    elif name == "list_messages":
-        return _list_messages(arguments)
-    elif name == "get_outbox_status":
-        return _get_outbox_status()
-
-    return json.dumps({"error": f"Unknown DNR tool: {name}"})
+    handler = _TOOL_DISPATCH.get(name)
+    if handler is None:
+        return json.dumps({"error": f"Unknown DNR tool: {name}"})
+    try:
+        return handler(arguments)
+    except Exception as e:
+        return json.dumps({"error": str(e)})
 
 
 # =============================================================================
@@ -75,7 +41,7 @@ def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def _list_dnr_entities() -> str:
+def _list_dnr_entities(_args: dict[str, Any] | None = None) -> str:
     """List all entities from AppSpec."""
     spec = get_appspec_data()
     if not spec:
@@ -276,7 +242,7 @@ def _get_dnr_component_spec(args: dict[str, Any]) -> str:
     )
 
 
-def _list_workspace_layouts() -> str:
+def _list_workspace_layouts(_args: dict[str, Any] | None = None) -> str:
     """List available workspace layouts."""
     return json.dumps(
         {
@@ -525,7 +491,7 @@ def _get_graphql_schema(args: dict[str, Any]) -> str:
         )
 
 
-def _list_graphql_types() -> str:
+def _list_graphql_types(_args: dict[str, Any] | None = None) -> str:
     """List GraphQL types from AppSpec entities."""
     spec = get_appspec_data()
     if not spec:
@@ -620,7 +586,7 @@ def _map_to_graphql_type(dazzle_type: str) -> str:
         return "String"
 
 
-def _list_adapters() -> str:
+def _list_adapters(_args: dict[str, Any] | None = None) -> str:
     """List available adapter patterns for BFF layer."""
     from .adapter_examples import ADAPTERS, SERVICE_PATTERNS
 
@@ -657,7 +623,7 @@ def _get_adapter_guide(args: dict[str, Any]) -> str:
 # =============================================================================
 
 
-def _list_channels() -> str:
+def _list_channels(_args: dict[str, Any] | None = None) -> str:
     """List all messaging channels from AppSpec."""
     spec = get_appspec_data()
     if not spec:
@@ -810,7 +776,7 @@ def _list_messages(args: dict[str, Any]) -> str:
     )
 
 
-def _get_outbox_status() -> str:
+def _get_outbox_status(_args: dict[str, Any] | None = None) -> str:
     """Get outbox statistics."""
     spec = get_appspec_data()
     if not spec:
@@ -843,3 +809,35 @@ def _get_outbox_status() -> str:
         },
         indent=2,
     )
+
+
+# =============================================================================
+# Dispatch Table
+# =============================================================================
+
+_TOOL_DISPATCH.update(
+    {
+        # Backend tools
+        "list_dnr_entities": _list_dnr_entities,
+        "get_dnr_entity": _get_dnr_entity,
+        "list_backend_services": _list_backend_services,
+        "get_backend_service_spec": _get_backend_service_spec,
+        # UI tools
+        "list_dnr_components": _list_dnr_components,
+        "get_dnr_component_spec": _get_dnr_component_spec,
+        "list_workspace_layouts": _list_workspace_layouts,
+        "create_uispec_component": _create_uispec_component,
+        "patch_uispec_component": _patch_uispec_component,
+        "compose_workspace": _compose_workspace,
+        # GraphQL BFF tools (v0.6)
+        "get_graphql_schema": _get_graphql_schema,
+        "list_graphql_types": _list_graphql_types,
+        "list_adapters": _list_adapters,
+        "get_adapter_guide": _get_adapter_guide,
+        # Channel/Messaging tools (v0.9)
+        "list_channels": _list_channels,
+        "get_channel_status": _get_channel_status,
+        "list_messages": _list_messages,
+        "get_outbox_status": _get_outbox_status,
+    }
+)
