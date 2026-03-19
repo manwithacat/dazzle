@@ -1621,8 +1621,59 @@ def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
                 f"— consider decomposing into smaller entities connected by refs."
             )
 
-    _ = entity_names  # used by future tasks
-    _ = entity_map  # used by future tasks
+        # 3. Soft-delete flags without state machine
+        if entity.state_machine is None:
+            for field in entity.fields:
+                if field.name in _SOFT_DELETE_NAMES:
+                    warnings.append(
+                        f"Entity '{entity.name}': field '{field.name}' is a soft-delete "
+                        f"flag. Prefer a state machine with a terminal state "
+                        f"(e.g., 'archived')."
+                    )
+
+        # 4. Stringly-typed refs: <entity>_name or <entity>_email
+        for field in entity.fields:
+            if field.type.kind not in (ir.FieldTypeKind.STR, ir.FieldTypeKind.EMAIL):
+                continue
+            for suffix in ("_name", "_email"):
+                if field.name.endswith(suffix):
+                    prefix = field.name.removesuffix(suffix)
+                    if prefix.lower() in entity_names and prefix.lower() != entity.name.lower():
+                        target = next(
+                            (
+                                e.name
+                                for e in appspec.domain.entities
+                                if e.name.lower() == prefix.lower()
+                            ),
+                            prefix,
+                        )
+                        warnings.append(
+                            f"Entity '{entity.name}': field '{field.name}' looks like "
+                            f"a string copy of {target}.{suffix.lstrip('_')}. "
+                            f"Use 'ref {target}' instead — the runtime auto-includes related data."
+                        )
+
+        # 5. Duplicated ref fields: ref X + x_<field> where <field> exists on X
+        for field in entity.fields:
+            if field.type.kind != ir.FieldTypeKind.REF or not field.type.ref_entity:
+                continue
+            target_entity = entity_map.get(field.type.ref_entity)
+            if target_entity is None:
+                continue  # ref target not found — skip silently
+            target_field_names = {f.name for f in target_entity.fields if f.name != "id"}
+            ref_lower = field.name.lower()
+            for sibling in entity.fields:
+                if sibling is field:
+                    continue
+                if sibling.name.startswith(f"{ref_lower}_"):
+                    attr = sibling.name[len(ref_lower) + 1 :]
+                    if attr in target_field_names:
+                        warnings.append(
+                            f"Entity '{entity.name}': field '{sibling.name}' may "
+                            f"duplicate {field.type.ref_entity}.{attr} — the ref "
+                            f"already provides access via auto-include."
+                        )
+
     return warnings
 
 
