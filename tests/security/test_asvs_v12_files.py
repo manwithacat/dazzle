@@ -10,9 +10,9 @@ class TestFileSizeLimits:
 
     def test_content_length_check_exists(self):
         """V12.1.1: Upload endpoint must check Content-Length header."""
-        from dazzle_back.runtime.file_routes import create_file_routes
+        from dazzle_back.runtime.file_routes import _upload_file
 
-        source = inspect.getsource(create_file_routes)
+        source = inspect.getsource(_upload_file)
         assert "content-length" in source.lower()
         assert "413" in source
 

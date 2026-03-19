@@ -48,9 +48,9 @@ class TestCredentialRecovery:
 
     def test_forgot_password_no_enumeration(self):
         """V2.5.2: Forgot password returns same response whether user exists or not."""
-        from dazzle_back.runtime.auth.routes import create_auth_routes
+        from dazzle_back.runtime.auth.routes import _forgot_password
 
-        source = inspect.getsource(create_auth_routes)
+        source = inspect.getsource(_forgot_password)
         # The function should always return success to prevent user enumeration
         assert "prevent user enumeration" in source.lower() or "always return" in source.lower()
 

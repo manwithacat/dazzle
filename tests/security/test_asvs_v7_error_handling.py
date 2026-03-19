@@ -17,15 +17,15 @@ class TestErrorMessages:
 
     def test_generic_error_in_auth(self):
         """V7.4.2: Auth errors should use generic messages to prevent enumeration."""
-        from dazzle_back.runtime.auth.routes import create_auth_routes
+        from dazzle_back.runtime.auth.routes import _login
 
-        source = inspect.getsource(create_auth_routes)
+        source = inspect.getsource(_login)
         # Login should not reveal whether email or password was wrong
         assert "Invalid credentials" in source
 
     def test_forgot_password_generic_response(self):
         """V7.4.3: Forgot password always returns same message."""
-        from dazzle_back.runtime.auth.routes import create_auth_routes
+        from dazzle_back.runtime.auth.routes import _forgot_password
 
-        source = inspect.getsource(create_auth_routes)
+        source = inspect.getsource(_forgot_password)
         assert "If an account with that email exists" in source
