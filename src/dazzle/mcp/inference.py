@@ -106,6 +106,11 @@ _SUGGESTION_SCHEMA: dict[str, tuple[str, dict[str, str], dict[str, str]]] = {
         {"tool": "tool", "operation": "operation", "suggestion": "suggestion", "mode": "mode"},
         {},
     ),
+    "modeling_guidance": (
+        "modeling_guidance",
+        {"avoid": "anti_pattern", "prefer": "prefer", "why": "rationale"},
+        {"example": "example"},
+    ),
 }
 
 
@@ -140,7 +145,10 @@ def _inference_entity_to_suggestion(
 _GUIDANCE = (
     "These are SUGGESTIONS based on common patterns. "
     "Use your judgment - override when context warrants. "
-    "Adapt examples to the specific domain."
+    "Adapt examples to the specific domain. "
+    "Avoid: polymorphic keys (use typed refs), god entities (decompose), "
+    "soft-delete booleans (use state machines), stringly-typed refs (use ref), "
+    "and duplicated fields (let auto-include resolve)."
 )
 
 # ---------------------------------------------------------------------------
@@ -278,6 +286,7 @@ def list_all_patterns() -> dict[str, Any]:
         "workspace_inference": "workspace_triggers",
         "sitespec_section_inference": "sitespec_section_triggers",
         "tool_suggestions": "tool_suggestion_triggers",
+        "modeling_guidance": "modeling_guidance_triggers",
     }
     for category, key in trigger_key_map.items():
         if category in category_triggers:

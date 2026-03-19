@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 2
+SEED_SCHEMA_VERSION = 3
 
 
 def compute_seed_version() -> str:
@@ -264,6 +264,7 @@ def _seed_inference_kb(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
         ("surface_inference", "triggers"),
         ("workspace_inference", "triggers"),
         ("tool_suggestions", "triggers"),
+        ("modeling_guidance", "triggers"),
     ]
 
     for category, trigger_field in categories:
