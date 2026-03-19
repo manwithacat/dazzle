@@ -4,6 +4,7 @@ Type parsing for DAZZLE DSL.
 Handles field type specifications and field modifiers.
 """
 
+import re
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
@@ -26,6 +27,35 @@ DURATION_SUFFIX_MAP = {
     "y": ir.DurationUnit.YEARS,
 }
 
+# Operator tokens that indicate an invalid default value
+_INVALID_DEFAULT_OPERATOR_TOKENS = {
+    TokenType.SLASH,
+    TokenType.STAR,
+    TokenType.PLUS,
+    TokenType.MINUS,
+    TokenType.COLON,
+    TokenType.COMMA,
+    TokenType.DOT,
+    TokenType.ARROW,
+}
+
+# Tokens that indicate an expression default (after an identifier)
+_EXPR_OPERATORS = {
+    TokenType.PLUS,
+    TokenType.MINUS,
+    TokenType.STAR,
+    TokenType.SLASH,
+    TokenType.PERCENT,
+    TokenType.DOUBLE_EQUALS,
+    TokenType.NOT_EQUALS,
+    TokenType.GREATER_THAN,
+    TokenType.LESS_THAN,
+    TokenType.GREATER_EQUAL,
+    TokenType.LESS_EQUAL,
+    TokenType.DOT,
+    TokenType.ARROW,
+}
+
 
 class TypeParserMixin:
     """
@@ -45,6 +75,10 @@ class TypeParserMixin:
         file: Any
         _is_keyword_as_identifier: Any
 
+    # ------------------------------------------------------------------
+    # parse_type_spec and sub-parsers
+    # ------------------------------------------------------------------
+
     def parse_type_spec(self) -> ir.FieldType:
         """
         Parse field type specification.
@@ -57,167 +91,201 @@ class TypeParserMixin:
         """
         token = self.current_token()
 
-        # str(N)
-        if token.value == "str":
+        # Dispatch by token value for keyword-style types
+        _value_dispatch: dict[str, Any] = {
+            "str": self._parse_str_type,
+            "text": self._parse_text_type,
+            "int": self._parse_int_type,
+            "decimal": self._parse_decimal_type,
+            "bool": self._parse_bool_type,
+            "date": self._parse_date_type,
+            "datetime": self._parse_datetime_type,
+            "uuid": self._parse_uuid_type,
+            "email": self._parse_email_type,
+            "json": self._parse_json_type,
+            "money": self._parse_money_type,
+            "file": self._parse_file_type,
+            "url": self._parse_url_type,
+            "timezone": self._parse_timezone_type,
+            "enum": self._parse_enum_type,
+            "ref": self._parse_ref_type,
+        }
+
+        value_parser = _value_dispatch.get(token.value)
+        if value_parser is not None:
+            return value_parser()
+
+        # Dispatch by token type for relationship types
+        _token_type_dispatch: dict[TokenType, Any] = {
+            TokenType.HAS_MANY: self._parse_has_many_type,
+            TokenType.HAS_ONE: self._parse_has_one_type,
+            TokenType.EMBEDS: self._parse_embeds_type,
+            TokenType.BELONGS_TO: self._parse_belongs_to_type,
+        }
+
+        token_type_parser = _token_type_dispatch.get(token.type)
+        if token_type_parser is not None:
+            return token_type_parser()
+
+        raise make_parse_error(
+            f"Unknown type: {token.value}",
+            self.file,
+            token.line,
+            token.column,
+        )
+
+    def _parse_str_type(self) -> ir.FieldType:
+        """Parse str(N) type."""
+        self.advance()
+        self.expect(TokenType.LPAREN)
+        max_len = int(self.expect(TokenType.NUMBER).value)
+        self.expect(TokenType.RPAREN)
+        return ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=max_len)
+
+    def _parse_text_type(self) -> ir.FieldType:
+        """Parse text type."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.TEXT)
+
+    def _parse_int_type(self) -> ir.FieldType:
+        """Parse int type."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.INT)
+
+    def _parse_decimal_type(self) -> ir.FieldType:
+        """Parse decimal(P,S) type."""
+        self.advance()
+        self.expect(TokenType.LPAREN)
+        precision = int(self.expect(TokenType.NUMBER).value)
+        self.expect(TokenType.COMMA)
+        scale = int(self.expect(TokenType.NUMBER).value)
+        self.expect(TokenType.RPAREN)
+        return ir.FieldType(kind=ir.FieldTypeKind.DECIMAL, precision=precision, scale=scale)
+
+    def _parse_bool_type(self) -> ir.FieldType:
+        """Parse bool type."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.BOOL)
+
+    def _parse_date_type(self) -> ir.FieldType:
+        """Parse date type."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.DATE)
+
+    def _parse_datetime_type(self) -> ir.FieldType:
+        """Parse datetime type."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.DATETIME)
+
+    def _parse_uuid_type(self) -> ir.FieldType:
+        """Parse uuid type."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.UUID)
+
+    def _parse_email_type(self) -> ir.FieldType:
+        """Parse email type."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.EMAIL)
+
+    def _parse_json_type(self) -> ir.FieldType:
+        """Parse json type (v0.9.4)."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.JSON)
+
+    def _parse_money_type(self) -> ir.FieldType:
+        """Parse money or money(CURRENCY) type (v0.9.5)."""
+        self.advance()
+        currency_code = "GBP"  # Default to GBP for UK focus
+        if self.match(TokenType.LPAREN):
             self.advance()
-            self.expect(TokenType.LPAREN)
-            max_len = int(self.expect(TokenType.NUMBER).value)
+            currency_code = self.expect_identifier_or_keyword().value.upper()
             self.expect(TokenType.RPAREN)
-            return ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=max_len)
+        return ir.FieldType(kind=ir.FieldTypeKind.MONEY, currency_code=currency_code)
 
-        # text
-        elif token.value == "text":
+    def _parse_file_type(self) -> ir.FieldType:
+        """Parse file or file(200MB) type (v0.9.5, v0.39.0)."""
+        self.advance()
+        max_size = None
+        if self.match(TokenType.LPAREN):
             self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.TEXT)
-
-        # int
-        elif token.value == "int":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.INT)
-
-        # decimal(P,S)
-        elif token.value == "decimal":
-            self.advance()
-            self.expect(TokenType.LPAREN)
-            precision = int(self.expect(TokenType.NUMBER).value)
-            self.expect(TokenType.COMMA)
-            scale = int(self.expect(TokenType.NUMBER).value)
+            max_size = self._parse_size_literal()
             self.expect(TokenType.RPAREN)
-            return ir.FieldType(kind=ir.FieldTypeKind.DECIMAL, precision=precision, scale=scale)
+        return ir.FieldType(kind=ir.FieldTypeKind.FILE, max_size=max_size)
 
-        # bool
-        elif token.value == "bool":
+    def _parse_url_type(self) -> ir.FieldType:
+        """Parse url type (v0.9.5)."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.URL)
+
+    def _parse_timezone_type(self) -> ir.FieldType:
+        """Parse timezone type (v0.10.3) - IANA timezone identifier."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.TIMEZONE)
+
+    def _parse_enum_type(self) -> ir.FieldType:
+        """Parse enum[val1,val2,...] type."""
+        self.advance()
+        self.expect(TokenType.LBRACKET)
+        values = [self.expect_identifier_or_keyword().value]
+        while self.match(TokenType.COMMA):
             self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.BOOL)
-
-        # date
-        elif token.value == "date":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.DATE)
-
-        # datetime
-        elif token.value == "datetime":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.DATETIME)
-
-        # uuid
-        elif token.value == "uuid":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.UUID)
-
-        # email
-        elif token.value == "email":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.EMAIL)
-
-        # json (v0.9.4)
-        elif token.value == "json":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.JSON)
-
-        # money or money(CURRENCY) (v0.9.5)
-        elif token.value == "money":
-            self.advance()
-            currency_code = "GBP"  # Default to GBP for UK focus
-            if self.match(TokenType.LPAREN):
-                self.advance()
-                # Currency code as identifier (e.g., USD, EUR, GBP)
-                currency_code = self.expect_identifier_or_keyword().value.upper()
-                self.expect(TokenType.RPAREN)
-            return ir.FieldType(kind=ir.FieldTypeKind.MONEY, currency_code=currency_code)
-
-        # file or file(200MB) (v0.9.5, v0.39.0)
-        elif token.value == "file":
-            self.advance()
-            max_size = None
-            if self.match(TokenType.LPAREN):
-                self.advance()
-                max_size = self._parse_size_literal()
-                self.expect(TokenType.RPAREN)
-            return ir.FieldType(kind=ir.FieldTypeKind.FILE, max_size=max_size)
-
-        # url (v0.9.5)
-        elif token.value == "url":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.URL)
-
-        # timezone (v0.10.3) - IANA timezone identifier
-        elif token.value == "timezone":
-            self.advance()
-            return ir.FieldType(kind=ir.FieldTypeKind.TIMEZONE)
-
-        # enum[val1,val2,...]
-        elif token.value == "enum":
-            self.advance()
-            self.expect(TokenType.LBRACKET)
-
-            values = []
             values.append(self.expect_identifier_or_keyword().value)
+        self.expect(TokenType.RBRACKET)
+        return ir.FieldType(kind=ir.FieldTypeKind.ENUM, enum_values=values)
 
-            while self.match(TokenType.COMMA):
-                self.advance()
-                values.append(self.expect_identifier_or_keyword().value)
+    def _parse_ref_type(self) -> ir.FieldType:
+        """Parse ref EntityName type."""
+        self.advance()
+        entity_name = self.expect(TokenType.IDENTIFIER).value
+        return ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity=entity_name)
 
-            self.expect(TokenType.RBRACKET)
-            return ir.FieldType(kind=ir.FieldTypeKind.ENUM, enum_values=values)
+    def _parse_has_many_type(self) -> ir.FieldType:
+        """Parse has_many EntityName [via JunctionEntity] [cascade|restrict|nullify] [readonly] (v0.7.1)."""
+        self.advance()
+        entity_name = self.expect(TokenType.IDENTIFIER).value
 
-        # ref EntityName
-        elif token.value == "ref":
+        # v0.9.5: Optional via junction entity for many-to-many
+        via_entity = None
+        if self.match(TokenType.VIA):
             self.advance()
-            entity_name = self.expect(TokenType.IDENTIFIER).value
-            return ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity=entity_name)
+            via_entity = self.expect(TokenType.IDENTIFIER).value
 
-        # v0.7.1: has_many EntityName [via JunctionEntity] [cascade|restrict|nullify] [readonly]
-        elif token.type == TokenType.HAS_MANY:
-            self.advance()
-            entity_name = self.expect(TokenType.IDENTIFIER).value
+        behavior, readonly = self._parse_relationship_modifiers()
+        return ir.FieldType(
+            kind=ir.FieldTypeKind.HAS_MANY,
+            ref_entity=entity_name,
+            via_entity=via_entity,
+            relationship_behavior=behavior,
+            readonly=readonly,
+        )
 
-            # v0.9.5: Optional via junction entity for many-to-many
-            via_entity = None
-            if self.match(TokenType.VIA):
-                self.advance()
-                via_entity = self.expect(TokenType.IDENTIFIER).value
+    def _parse_has_one_type(self) -> ir.FieldType:
+        """Parse has_one EntityName [cascade|restrict] [readonly] (v0.7.1)."""
+        self.advance()
+        entity_name = self.expect(TokenType.IDENTIFIER).value
+        behavior, readonly = self._parse_relationship_modifiers()
+        return ir.FieldType(
+            kind=ir.FieldTypeKind.HAS_ONE,
+            ref_entity=entity_name,
+            relationship_behavior=behavior,
+            readonly=readonly,
+        )
 
-            behavior, readonly = self._parse_relationship_modifiers()
-            return ir.FieldType(
-                kind=ir.FieldTypeKind.HAS_MANY,
-                ref_entity=entity_name,
-                via_entity=via_entity,
-                relationship_behavior=behavior,
-                readonly=readonly,
-            )
+    def _parse_embeds_type(self) -> ir.FieldType:
+        """Parse embeds EntityName (v0.7.1)."""
+        self.advance()
+        entity_name = self.expect(TokenType.IDENTIFIER).value
+        return ir.FieldType(kind=ir.FieldTypeKind.EMBEDS, ref_entity=entity_name)
 
-        # v0.7.1: has_one EntityName [cascade|restrict] [readonly]
-        elif token.type == TokenType.HAS_ONE:
-            self.advance()
-            entity_name = self.expect(TokenType.IDENTIFIER).value
-            behavior, readonly = self._parse_relationship_modifiers()
-            return ir.FieldType(
-                kind=ir.FieldTypeKind.HAS_ONE,
-                ref_entity=entity_name,
-                relationship_behavior=behavior,
-                readonly=readonly,
-            )
+    def _parse_belongs_to_type(self) -> ir.FieldType:
+        """Parse belongs_to EntityName (v0.7.1)."""
+        self.advance()
+        entity_name = self.expect(TokenType.IDENTIFIER).value
+        return ir.FieldType(kind=ir.FieldTypeKind.BELONGS_TO, ref_entity=entity_name)
 
-        # v0.7.1: embeds EntityName
-        elif token.type == TokenType.EMBEDS:
-            self.advance()
-            entity_name = self.expect(TokenType.IDENTIFIER).value
-            return ir.FieldType(kind=ir.FieldTypeKind.EMBEDS, ref_entity=entity_name)
-
-        # v0.7.1: belongs_to EntityName
-        elif token.type == TokenType.BELONGS_TO:
-            self.advance()
-            entity_name = self.expect(TokenType.IDENTIFIER).value
-            return ir.FieldType(kind=ir.FieldTypeKind.BELONGS_TO, ref_entity=entity_name)
-
-        else:
-            raise make_parse_error(
-                f"Unknown type: {token.value}",
-                self.file,
-                token.line,
-                token.column,
-            )
+    # ------------------------------------------------------------------
+    # Relationship and duration helpers
+    # ------------------------------------------------------------------
 
     def _parse_relationship_modifiers(
         self,
@@ -255,8 +323,6 @@ class TypeParserMixin:
         value_str = token.value
 
         # Extract numeric part and suffix
-        import re
-
         match = re.match(r"(\d+)(min|h|d|w|m|y)", value_str)
         if not match:
             raise make_parse_error(
@@ -322,6 +388,10 @@ class TypeParserMixin:
         # Just a literal (today or now)
         return base
 
+    # ------------------------------------------------------------------
+    # parse_field_modifiers and default-value sub-parsers
+    # ------------------------------------------------------------------
+
     def parse_field_modifiers(
         self,
     ) -> tuple[list[ir.FieldModifier], DefaultValue, "_Expr | None"]:
@@ -334,105 +404,110 @@ class TypeParserMixin:
         v0.10.2: default can now be a date expression (DateLiteral, DateArithmeticExpr)
         v0.29.0: default_expr for typed expression defaults (e.g., = box1 + box2)
         """
-        modifiers = []
+        modifiers: list[ir.FieldModifier] = []
         default: DefaultValue = None
         default_expr: _Expr | None = None
+
+        _modifier_map: dict[str, ir.FieldModifier] = {
+            "required": ir.FieldModifier.REQUIRED,
+            "optional": ir.FieldModifier.OPTIONAL,
+            "pk": ir.FieldModifier.PK,
+            "auto_add": ir.FieldModifier.AUTO_ADD,
+            "auto_update": ir.FieldModifier.AUTO_UPDATE,
+            "sensitive": ir.FieldModifier.SENSITIVE,
+            "searchable": ir.FieldModifier.SEARCHABLE,
+        }
 
         while True:
             token = self.current_token()
 
-            if token.value == "required":
+            # Simple single-keyword modifiers
+            simple_mod = _modifier_map.get(token.value)
+            if simple_mod is not None:
                 self.advance()
-                modifiers.append(ir.FieldModifier.REQUIRED)
-            elif token.value == "optional":
-                self.advance()
-                modifiers.append(ir.FieldModifier.OPTIONAL)
-            elif token.value == "pk":
-                self.advance()
-                modifiers.append(ir.FieldModifier.PK)
-            elif token.value == "unique":
+                modifiers.append(simple_mod)
+                continue
+
+            # unique / unique? — needs special handling for optional '?'
+            if token.value == "unique":
                 self.advance()
                 if self.match(TokenType.QUESTION):
                     self.advance()
                     modifiers.append(ir.FieldModifier.UNIQUE_NULLABLE)
                 else:
                     modifiers.append(ir.FieldModifier.UNIQUE)
-            elif token.value == "auto_add":
+                continue
+
+            # default = <value>
+            if self.match(TokenType.EQUALS):
                 self.advance()
-                modifiers.append(ir.FieldModifier.AUTO_ADD)
-            elif token.value == "auto_update":
-                self.advance()
-                modifiers.append(ir.FieldModifier.AUTO_UPDATE)
-            elif token.value == "sensitive":
-                self.advance()
-                modifiers.append(ir.FieldModifier.SENSITIVE)
-            elif token.value == "searchable":
-                self.advance()
-                modifiers.append(ir.FieldModifier.SEARCHABLE)
-            elif self.match(TokenType.EQUALS):
-                # default=value
-                self.advance()
-                # v0.29.0: Check if this is a typed expression (identifier followed
-                # by an operator, or function call)
-                if self._is_expression_default():
-                    default_expr = self.collect_line_as_expr()
-                # v0.10.2: Check for date expressions first (today, now)
-                elif self.match(TokenType.TODAY) or self.match(TokenType.NOW):
-                    default = self._parse_date_expr()
-                elif self.match(TokenType.STRING):
-                    default = self.advance().value
-                elif self.match(TokenType.NUMBER):
-                    num_str = self.advance().value
-                    default = float(num_str) if "." in num_str else int(num_str)
-                elif self.match(TokenType.TRUE):
-                    self.advance()
-                    default = True
-                elif self.match(TokenType.FALSE):
-                    self.advance()
-                    default = False
-                elif self.match(TokenType.IDENTIFIER):
-                    # Could be enum value or boolean (for backwards compatibility)
-                    val = self.advance().value
-                    if val in ("true", "false"):
-                        default = val == "true"
-                    else:
-                        default = val
-                elif self._is_keyword_as_identifier():
-                    # v0.9.1: Allow keywords as default enum values
-                    # e.g., status: enum[draft,submitted,approved]=submitted
-                    default = self.advance().value
-                else:
-                    # v0.14.1: Provide helpful error for invalid default values
-                    err_token = self.current_token()
-                    operator_tokens = {
-                        TokenType.SLASH,
-                        TokenType.STAR,
-                        TokenType.PLUS,
-                        TokenType.MINUS,
-                        TokenType.COLON,
-                        TokenType.COMMA,
-                        TokenType.DOT,
-                        TokenType.ARROW,
-                    }
-                    if err_token.type in operator_tokens:
-                        raise make_parse_error(
-                            f"Invalid default value - unexpected '{err_token.value}'.\n"
-                            f"  If the default contains special characters, use quotes:\n"
-                            f'  Example: mime_type: str(100)="application/pdf"',
-                            self.file,
-                            err_token.line,
-                            err_token.column,
-                        )
-                    raise make_parse_error(
-                        f"Invalid default value: {err_token.value}",
-                        self.file,
-                        err_token.line,
-                        err_token.column,
-                    )
-            else:
-                break
+                default, default_expr = self._parse_default_value()
+                continue
+
+            break
 
         return modifiers, default, default_expr
+
+    def _parse_default_value(
+        self,
+    ) -> tuple[DefaultValue, "_Expr | None"]:
+        """Parse the value portion of a ``= <value>`` default clause.
+
+        Returns a (default, default_expr) pair exactly as ``parse_field_modifiers``
+        expects; exactly one of the two will be non-None.
+        """
+        # v0.29.0: typed expression default (e.g., = box1 + box2, = if ...)
+        if self._is_expression_default():
+            return None, self.collect_line_as_expr()
+
+        # v0.10.2: date expression (today, now, today + 7d, …)
+        if self.match(TokenType.TODAY) or self.match(TokenType.NOW):
+            return self._parse_date_expr(), None
+
+        if self.match(TokenType.STRING):
+            return self.advance().value, None
+
+        if self.match(TokenType.NUMBER):
+            num_str = self.advance().value
+            value: DefaultValue = float(num_str) if "." in num_str else int(num_str)
+            return value, None
+
+        if self.match(TokenType.TRUE):
+            self.advance()
+            return True, None
+
+        if self.match(TokenType.FALSE):
+            self.advance()
+            return False, None
+
+        if self.match(TokenType.IDENTIFIER):
+            val = self.advance().value
+            if val in ("true", "false"):
+                return val == "true", None
+            return val, None
+
+        if self._is_keyword_as_identifier():
+            # v0.9.1: Allow keywords as default enum values
+            # e.g., status: enum[draft,submitted,approved]=submitted
+            return self.advance().value, None
+
+        # v0.14.1: Provide helpful error for invalid default values
+        err_token = self.current_token()
+        if err_token.type in _INVALID_DEFAULT_OPERATOR_TOKENS:
+            raise make_parse_error(
+                f"Invalid default value - unexpected '{err_token.value}'.\n"
+                f"  If the default contains special characters, use quotes:\n"
+                f'  Example: mime_type: str(100)="application/pdf"',
+                self.file,
+                err_token.line,
+                err_token.column,
+            )
+        raise make_parse_error(
+            f"Invalid default value: {err_token.value}",
+            self.file,
+            err_token.line,
+            err_token.column,
+        )
 
     def _is_expression_default(self) -> bool:
         """Check if the default value starting at current position is a typed expression.
@@ -440,21 +515,6 @@ class TypeParserMixin:
         An expression default is detected when an identifier (or keyword-as-identifier)
         is followed by an arithmetic/comparison operator or '(' (function call).
         """
-        _EXPR_OPERATORS = {
-            TokenType.PLUS,
-            TokenType.MINUS,
-            TokenType.STAR,
-            TokenType.SLASH,
-            TokenType.PERCENT,
-            TokenType.DOUBLE_EQUALS,
-            TokenType.NOT_EQUALS,
-            TokenType.GREATER_THAN,
-            TokenType.LESS_THAN,
-            TokenType.GREATER_EQUAL,
-            TokenType.LESS_EQUAL,
-            TokenType.DOT,
-            TokenType.ARROW,
-        }
         is_ident = self.match(TokenType.IDENTIFIER) or self._is_keyword_as_identifier()
         if not is_ident:
             # Check for 'if' keyword (conditional expression)
@@ -483,8 +543,6 @@ class TypeParserMixin:
 
         Returns size in bytes.
         """
-        from ..errors import make_parse_error
-
         num_token = self.expect(TokenType.NUMBER)
         value = int(num_token.value)
 
