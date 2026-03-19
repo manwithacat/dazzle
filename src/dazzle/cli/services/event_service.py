@@ -20,7 +20,7 @@ class EventService:
     @asynccontextmanager
     async def _broker(self) -> AsyncIterator[Any]:
         """Get an event bus via the tier system."""
-        from dazzle_back.events.tier import create_bus
+        from dazzle_back import create_bus
 
         bus = create_bus()
         if hasattr(bus, "connect"):

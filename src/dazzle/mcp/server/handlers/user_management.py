@@ -31,7 +31,7 @@ def _get_auth_store(project_path: Path | None = None) -> Any:
     DATABASE_URL env var, or falls back to the default.
     """
     from dazzle.core.manifest import load_manifest, resolve_database_url
-    from dazzle_back.runtime.auth import AuthStore
+    from dazzle_back import AuthStore
 
     if project_path is None:
         project_path = get_active_project_path()

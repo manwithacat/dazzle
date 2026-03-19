@@ -223,7 +223,7 @@ def migrate_command(
     from dazzle.cli.services.build_service import BuildService
 
     try:
-        from dazzle_back.runtime.migrations import MigrationAction
+        from dazzle_back import MigrationAction
     except ImportError as e:
         typer.echo(f"Dazzle packages not available: {e}", err=True)
         typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
@@ -567,8 +567,7 @@ def _run_codegen_targets(appspec: Any, output_dir: Path, target: str) -> None:
 def _generate_sql_target(appspec: Any, output_dir: Path) -> None:
     """Generate SQL DDL schema from AppSpec."""
     try:
-        from dazzle_back.converters.entity_converter import convert_entities
-        from dazzle_back.runtime.sa_schema import build_metadata
+        from dazzle_back import build_metadata, convert_entities
     except ImportError as e:
         typer.echo(f"  SQL target requires dazzle-app-back: {e}", err=True)
         return

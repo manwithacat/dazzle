@@ -31,16 +31,14 @@ class BuildService:
 
     def plan_migrations(self, database_url: str, entities: Any) -> Any:
         """Plan migrations without applying. Returns MigrationPlan."""
-        from dazzle_back.runtime.migrations import plan_migrations
-        from dazzle_back.runtime.pg_backend import PostgresBackend
+        from dazzle_back import PostgresBackend, plan_migrations
 
         db_manager = PostgresBackend(database_url)
         return plan_migrations(db_manager, entities)
 
     def auto_migrate(self, database_url: str, entities: Any, *, record_history: bool = True) -> Any:
         """Apply safe migrations automatically. Returns MigrationPlan."""
-        from dazzle_back.runtime.migrations import auto_migrate
-        from dazzle_back.runtime.pg_backend import PostgresBackend
+        from dazzle_back import PostgresBackend, auto_migrate
 
         db_manager = PostgresBackend(database_url)
         return auto_migrate(db_manager, entities, record_history=record_history)

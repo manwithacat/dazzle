@@ -7,8 +7,6 @@ Inspect the Dazzle app structure and generated artifacts.
 from __future__ import annotations
 
 import json as json_module
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -382,8 +380,7 @@ def _inspect_components(ui_spec: UISpec, format_output: str) -> None:
 def _inspect_schema(appspec: ir.AppSpec, format_output: str) -> None:
     """Inspect GraphQL schema."""
     try:
-        from dazzle_back.converters import convert_appspec_to_backend
-        from dazzle_back.graphql.integration import inspect_schema, print_schema
+        from dazzle_back import convert_appspec_to_backend, inspect_schema, print_schema
     except ImportError:
         typer.echo(
             "GraphQL support not available. Install with: pip install strawberry-graphql",
@@ -409,12 +406,15 @@ def _inspect_live(api_url: str, format_output: str, entity_name: str | None = No
 
     def fetch_json(endpoint: str) -> dict[str, Any] | None:
         """Fetch JSON from API endpoint."""
+        import httpx
+
         url = f"{api_url.rstrip('/')}{endpoint}"
         try:
-            with urllib.request.urlopen(url, timeout=5) as response:
-                result: dict[str, Any] = json_module.loads(response.read().decode())
-                return result
-        except urllib.error.URLError as e:
+            response = httpx.get(url, timeout=5)
+            response.raise_for_status()
+            result: dict[str, Any] = response.json()
+            return result
+        except httpx.ConnectError as e:
             typer.echo(f"Error connecting to {url}: {e}", err=True)
             return None
         except Exception as e:
