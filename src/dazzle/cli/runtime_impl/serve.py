@@ -133,18 +133,7 @@ def serve_command(
     local: bool = typer.Option(
         False,
         "--local",
-        help="Run locally without Docker (default is docker-first)",
-    ),
-    rebuild: bool = typer.Option(
-        False,
-        "--rebuild",
-        help="Force rebuild of Docker image",
-    ),
-    attach: bool = typer.Option(
-        False,
-        "--attach",
-        "-a",
-        help="Run Docker container attached (stream logs to terminal)",
+        help="Skip Docker infrastructure; require DATABASE_URL and REDIS_URL to be set manually",
     ),
     graphql: bool = typer.Option(
         False,
@@ -170,8 +159,9 @@ def serve_command(
     """
     Serve Dazzle app (backend API + UI with live data).
 
-    By default, runs frontend and backend in separate Docker containers.
-    Use --local to run without Docker.
+    By default, starts Postgres + Redis in Docker and runs the app locally.
+    Use --local to skip Docker infrastructure (you must set DATABASE_URL
+    and REDIS_URL yourself).
 
     Runs:
     - FastAPI backend on api-port (default 8000) with PostgreSQL persistence
@@ -180,12 +170,10 @@ def serve_command(
     - Interactive API docs at http://host:api-port/docs
 
     Examples:
-        dazzle serve                    # Docker mode (default)
-        dazzle serve --local --watch    # Local mode with hot reload
-        dazzle serve --attach           # Run Docker with log streaming
-        dazzle serve --local            # Run locally without Docker
+        dazzle serve                    # Start infra in Docker, run app locally
+        dazzle serve --local            # No Docker; bring your own Postgres + Redis
+        dazzle serve --watch            # With hot reload (DSL file watching)
         dazzle serve --backend-only     # API server only (for separate frontend)
-        dazzle serve --rebuild          # Force Docker image rebuild
         dazzle serve --port 4000        # Frontend on 4000
         dazzle serve --api-port 9000    # API on 9000
         dazzle serve --ui-only          # Static UI only (no API)
@@ -194,11 +182,9 @@ def serve_command(
 
     Hot reload (--watch):
         Watch DSL files for changes and auto-refresh browser.
-        Currently only works in --local mode.
 
     Related commands:
-        dazzle stop                     # Stop the running container
-        dazzle rebuild                  # Rebuild and restart container
+        dazzle stop                     # Stop dev infrastructure
         dazzle logs                     # View container logs
     """
     # Resolve project path from manifest
@@ -250,16 +236,7 @@ def serve_command(
     from dazzle.core.manifest import resolve_database_url
 
     database_url = resolve_database_url(mf, explicit_url=database_url)
-    # Ensure env var is set for subcomponents that read it
-    if database_url:
-        os.environ["DATABASE_URL"] = database_url
-
-    # Validate required infrastructure (PostgreSQL + Redis)
-    validated_db_url, redis_url = _validate_infrastructure()
-    # Use validated URL if CLI didn't provide one
-    if not database_url and validated_db_url:
-        database_url = validated_db_url
-        os.environ["DATABASE_URL"] = database_url
+    redis_url = os.environ.get("REDIS_URL", "")
 
     # Allocate ports based on project name (deterministic hashing)
     # This prevents collisions when running multiple Dazzle instances
@@ -292,45 +269,66 @@ def serve_command(
     if watch_source:
         watch = True
 
-    # Warn if --watch is used without --local
-    if watch and not local:
-        typer.echo(
-            "Note: --watch requires --local mode. Enabling local mode automatically.",
-            err=True,
-        )
-        local = True
-
-    # Docker-first: unless --local is specified, try Docker first
+    # Docker infrastructure mode: start Postgres + Redis in Docker,
+    # then run the app locally (same as --local but with Docker-provided services).
     if not local and not ui_only and not backend_only:
         try:
-            from dazzle_ui.runtime import is_docker_available, run_in_docker
+            from dazzle_ui.runtime.docker.utils import is_docker_available
 
             if is_docker_available():
-                detach = not attach  # Default to detached (no logs), --attach streams logs
-                auth_desc = " with auth" if auth_enabled else ""
-                typer.echo(
-                    f"Running in Docker mode{auth_desc} (use --local to run without Docker)"
-                    if attach
-                    else f"Starting Docker containers in background{auth_desc}..."
+                from dazzle.cli.runtime_impl.docker import (
+                    start_dev_infrastructure,
+                    stop_dev_infrastructure,
                 )
-                exit_code = run_in_docker(
-                    project_path=project_root,
-                    frontend_port=port,
-                    api_port=api_port,
-                    test_mode=enable_test_mode,
-                    auth_enabled=auth_enabled,
-                    rebuild=rebuild,
-                    detach=detach,
-                    project_name=project_name,
-                    dev_mode=enable_dev_mode,
-                )
-                raise typer.Exit(code=exit_code)
+
+                typer.echo("Starting dev infrastructure (Postgres + Redis) in Docker...")
+                try:
+                    infra_db_url, infra_redis_url = start_dev_infrastructure(
+                        project_root=project_root,
+                        project_name=project_name,
+                    )
+                    # Set env vars so the local app connects to Docker services
+                    os.environ["DATABASE_URL"] = infra_db_url
+                    os.environ["REDIS_URL"] = infra_redis_url
+                    database_url = infra_db_url
+                    redis_url = infra_redis_url
+
+                    typer.echo("  PostgreSQL: ready")
+                    typer.echo("  Redis:      ready")
+                    typer.echo()
+
+                    # Register shutdown to stop Docker services
+                    def _stop_infra() -> None:
+                        typer.echo("Stopping dev infrastructure...")
+                        stop_dev_infrastructure(project_root)
+
+                    atexit.register(_stop_infra)
+
+                except RuntimeError as exc:
+                    typer.echo(f"Docker infrastructure failed: {exc}", err=True)
+                    typer.echo(
+                        "Falling back to local mode (ensure DATABASE_URL and REDIS_URL are set)"
+                    )
+                    typer.echo()
             else:
                 typer.echo("Docker not available, falling back to local mode")
-                typer.echo("Install Docker for the recommended development experience")
+                typer.echo("Install Docker for automatic Postgres + Redis setup")
                 typer.echo()
         except ImportError:
-            pass  # Docker runner not available, fall back to local
+            pass  # Docker runtime not available, fall through to local
+
+    # Ensure env var is set for subcomponents that read it
+    if database_url:
+        os.environ["DATABASE_URL"] = database_url
+
+    # Validate required infrastructure (PostgreSQL + Redis)
+    validated_db_url, validated_redis_url = _validate_infrastructure()
+    # Use validated URL if not already set
+    if not database_url and validated_db_url:
+        database_url = validated_db_url
+        os.environ["DATABASE_URL"] = database_url
+    if not redis_url and validated_redis_url:
+        redis_url = validated_redis_url
 
     # Local mode execution
     try:
