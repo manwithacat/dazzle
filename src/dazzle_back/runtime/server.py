@@ -1585,7 +1585,15 @@ class DazzleBackendApp:
             return auth_dep, optional_auth_dep
 
         assert self._database_url is not None  # guaranteed by _setup_database()
-        self._auth_store = AuthStore(database_url=self._database_url)
+        # Pass the DSL user entity name so auth can load domain attributes
+        # (e.g. school, department) into preferences for scope rules (#532).
+        _user_entity = (
+            getattr(self._auth_config, "user_entity", "User") if self._auth_config else "User"
+        )
+        self._auth_store = AuthStore(
+            database_url=self._database_url,
+            user_entity_table=_user_entity,
+        )
         self._auth_middleware = AuthMiddleware(self._auth_store)
 
         # Build persona -> default_route mapping for post-login redirect

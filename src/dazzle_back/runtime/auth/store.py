@@ -376,9 +376,43 @@ class SessionStoreMixin:
     _execute: Any
     _execute_one: Any
     _execute_modify: Any
+    _user_entity_table: str  # Set by AuthStore.__init__
 
     # Cross-cutting method provided by UserStoreMixin via AuthStore.
     get_user_by_id: Any
+
+    def _load_domain_user_attributes(self, email: str) -> dict[str, str]:
+        """Look up the DSL User entity record by email and return scalar fields.
+
+        Returns a dict of field_name -> string value for all non-null scalar
+        columns. These are merged into preferences so scope rules referencing
+        ``current_user.<attr>`` can resolve domain attributes like ``school``,
+        ``department``, ``trust`` that live on the DSL entity, not the auth
+        UserRecord (#532).
+        """
+        if not self._user_entity_table:
+            return {}
+        try:
+            from dazzle_back.runtime.query_builder import quote_identifier
+
+            table = quote_identifier(self._user_entity_table)
+            rows = self._execute(
+                f"SELECT * FROM {table} WHERE email = %s LIMIT 1",  # nosemgrep
+                (email,),
+            )
+        except Exception:
+            return {}
+        if not rows:
+            return {}
+        row = rows[0]
+        _SKIP = {"id", "email", "password", "password_hash", "hashed_password"}
+        result: dict[str, str] = {}
+        for k, v in row.items():
+            if k in _SKIP or v is None:
+                continue
+            if isinstance(v, str | int | float | bool):
+                result[k] = str(v)
+        return result
 
     def create_session(
         self,
@@ -473,6 +507,12 @@ class SessionStoreMixin:
         except Exception:
             pass
 
+        # Merge domain attributes from DSL User entity (e.g. school, department)
+        # so scope rules like `current_user.school` resolve correctly (#532).
+        domain_attrs = self._load_domain_user_attributes(user.email)
+        for k, v in domain_attrs.items():
+            prefs.setdefault(k, v)  # Explicit preferences take priority
+
         return AuthContext(
             user=user,
             session=session,
@@ -528,14 +568,20 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
     def __init__(
         self,
         database_url: str,
+        user_entity_table: str = "",
     ):
         """
         Initialize the auth store.
 
         Args:
             database_url: PostgreSQL connection URL
+            user_entity_table: DSL User entity table name (e.g. "User").
+                When set, domain attributes from this table are merged
+                into auth_context.preferences during session validation,
+                so scope rules like ``current_user.school`` resolve.
         """
         self._database_url = database_url
+        self._user_entity_table = user_entity_table
         # Normalize Heroku's postgres:// to postgresql://
         if self._database_url.startswith("postgres://"):
             self._database_url = self._database_url.replace("postgres://", "postgresql://", 1)
