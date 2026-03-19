@@ -21,13 +21,17 @@ logger = logging.getLogger(__name__)
 
 
 def error_response(msg: str) -> str:
-    """Return a JSON error response string."""
-    return json.dumps({"error": msg})
+    """Delegate to handlers.common.error_response (canonical definition)."""
+    from .handlers.common import error_response as _impl
+
+    return _impl(msg)
 
 
 def unknown_op_response(operation: str | None, tool: str) -> str:
-    """Return a JSON error for an unknown operation."""
-    return json.dumps({"error": f"Unknown {tool} operation: {operation}"})
+    """Delegate to handlers.common.unknown_op_response (canonical definition)."""
+    from .handlers.common import unknown_op_response as _impl
+
+    return _impl(operation, tool)
 
 
 def _resolve_project(arguments: dict[str, Any]) -> Path | None:

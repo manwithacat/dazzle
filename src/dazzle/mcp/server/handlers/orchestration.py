@@ -12,9 +12,12 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .common import DEFAULT_STEP_TIMEOUT
+
+if TYPE_CHECKING:
+    from dazzle.mcp.server.activity_log import ActivityStore
 
 logger = logging.getLogger("dazzle.mcp.handlers.orchestration")
 
@@ -44,7 +47,7 @@ class QualityStep:
 def run_step(
     step: QualityStep,
     *,
-    activity_store: Any | None = None,
+    activity_store: ActivityStore | None = None,
     activity_prefix: str = "",
     timeout: float = DEFAULT_STEP_TIMEOUT,
 ) -> dict[str, Any]:

@@ -15,9 +15,12 @@ import logging
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .common import extract_progress, wrap_handler_errors
+
+if TYPE_CHECKING:
+    from dazzle.mcp.server.activity_log import ActivityStore
 from .orchestration import QualityStep, aggregate_results, run_step
 
 logger = logging.getLogger("dazzle.mcp.handlers.nightly")
@@ -155,7 +158,7 @@ def nightly_run_impl(
     base_url: str | None = None,
     detail: str = "issues",
     workers: int = 4,
-    activity_store: Any = None,
+    activity_store: ActivityStore | None = None,
     on_step_complete: Any = None,
 ) -> dict[str, Any]:
     """Run quality steps in parallel with topological scheduling.

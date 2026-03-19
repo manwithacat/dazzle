@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from dazzle.agent.core import Mission
     from dazzle.core.ir.appspec import AppSpec
+    from dazzle.mcp.knowledge_graph.store import KnowledgeGraph
 
 from dazzle.core.paths import project_discovery_dir, project_kg_db
 
@@ -38,10 +40,10 @@ def _populate_kg_for_discovery(
 
 
 def _build_mission_summary(
-    mission: Any,
+    mission: Mission,
     mode: str,
     appspec: AppSpec,
-    kg_store: Any,
+    kg_store: KnowledgeGraph | None,
     base_url: str,
     persona: str | None = None,
 ) -> dict[str, Any]:
