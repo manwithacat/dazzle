@@ -1,13 +1,16 @@
-"""Tests for recursive FK dependency chain resolution (issue #237)."""
+"""Tests for recursive FK dependency chain resolution (issue #237) and
+3-way OR invariants with nullable FK refs (issue #533)."""
 
 from __future__ import annotations
 
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
+from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
+from dazzle.core.ir.invariant import InvariantSpec
 from dazzle.core.ir.state_machine import StateMachineSpec, StateTransition
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
-from dazzle.testing.dsl_test_generator import DSLTestGenerator
+from dazzle.testing.dsl_test_generator import DSLTestGenerator, _invariant_required_fields
 
 
 def _field(name: str, kind: FieldTypeKind = FieldTypeKind.STR, **kwargs) -> FieldSpec:
@@ -371,3 +374,98 @@ class TestStateMachineWithRefs:
         assert steps[1]["data"]["org"] == "$ref:parent_org.id"
         assert steps[2]["target"] == "entity:Ticket"
         assert steps[2]["data"]["team"] == "$ref:parent_team.id"
+
+
+# ---------------------------------------------------------------------------
+# Issue #533 — 3-way OR invariants with nullable REF fields
+# ---------------------------------------------------------------------------
+
+
+def _ne_null(field_name: str) -> BinaryExpr:
+    """Build a ``field != null`` BinaryExpr node."""
+    return BinaryExpr(
+        op=BinaryOp.NE,
+        left=FieldRef(path=[field_name]),
+        right=Literal(value=None),
+    )
+
+
+def _or_expr(left: BinaryExpr, right: BinaryExpr) -> BinaryExpr:
+    """Combine two expressions with OR."""
+    return BinaryExpr(op=BinaryOp.OR, left=left, right=right)
+
+
+def _three_way_or_invariant(a: str, b: str, c: str) -> InvariantSpec:
+    """Build ``(a != null or b != null) or c != null`` — left-associative 3-way OR."""
+    inner = _or_expr(_ne_null(a), _ne_null(b))
+    outer = _or_expr(inner, _ne_null(c))
+    return InvariantSpec(invariant_expr=outer)
+
+
+class TestThreeWayOrInvariantWithRefFields:
+    """_invariant_required_fields handles left-associative 3-way OR (issue #533)."""
+
+    def _make_entity_with_three_nullable_refs(self) -> tuple[EntitySpec, EntitySpec]:
+        """Return (Owner, Location, Category, Junction) entities.
+
+        Junction has three nullable ref fields and a 3-way OR invariant
+        requiring at least one to be non-null.
+        """
+        owner = EntitySpec(name="Owner", fields=[_pk_field(), _str_field("name")])
+        location = EntitySpec(name="Location", fields=[_pk_field(), _str_field("name")])
+        category = EntitySpec(name="Category", fields=[_pk_field(), _str_field("name")])
+
+        # All three ref fields are nullable (no REQUIRED modifier)
+        junction = EntitySpec(
+            name="Junction",
+            title="Junction",
+            fields=[
+                _pk_field(),
+                _field("owner_id", FieldTypeKind.REF, ref_entity="Owner"),
+                _field("location_id", FieldTypeKind.REF, ref_entity="Location"),
+                _field("category_id", FieldTypeKind.REF, ref_entity="Category"),
+                _str_field("label"),
+            ],
+            invariants=[_three_way_or_invariant("owner_id", "location_id", "category_id")],
+        )
+        return owner, location, category, junction
+
+    def test_invariant_required_fields_returns_at_least_one(self) -> None:
+        """For ``(A or B) or C``, _invariant_required_fields must return at least one field."""
+        _, _, _, junction = self._make_entity_with_three_nullable_refs()
+        required = _invariant_required_fields(junction)
+        assert len(required) >= 1, (
+            "_invariant_required_fields returned no fields for a 3-way OR invariant"
+        )
+
+    def test_invariant_required_field_is_one_of_the_three(self) -> None:
+        """The returned field must be one of the three ref fields named in the invariant."""
+        _, _, _, junction = self._make_entity_with_three_nullable_refs()
+        required = _invariant_required_fields(junction)
+        assert required[0] in {"owner_id", "location_id", "category_id"}
+
+    def test_get_required_refs_includes_invariant_ref(self) -> None:
+        """_get_required_refs picks up the nullable ref identified by the invariant."""
+        owner, location, category, junction = self._make_entity_with_three_nullable_refs()
+        gen = DSLTestGenerator(_make_appspec(owner, location, category, junction))
+        refs = gen._get_required_refs(junction)
+        ref_field_names = {r[0] for r in refs}
+        # At least one of the three invariant refs must appear in required refs
+        assert ref_field_names & {"owner_id", "location_id", "category_id"}, (
+            f"Expected at least one invariant ref in required refs, got {ref_field_names}"
+        )
+
+    def test_crud_create_test_includes_parent_setup(self) -> None:
+        """CRUD CREATE for Junction should include at least one parent setup step."""
+        owner, location, category, junction = self._make_entity_with_three_nullable_refs()
+        gen = DSLTestGenerator(_make_appspec(owner, location, category, junction))
+        tests = gen._generate_entity_tests(junction)
+        create_test = next((t for t in tests if "CREATE" in t["test_id"]), None)
+        assert create_test is not None, "No CREATE test generated for Junction"
+
+        steps = create_test["steps"]
+        parent_targets = {s["target"] for s in steps if s.get("action") == "create"}
+        invariant_parent_targets = {"entity:Owner", "entity:Location", "entity:Category"}
+        assert parent_targets & invariant_parent_targets, (
+            f"No invariant parent setup step found. Steps: {[s['target'] for s in steps]}"
+        )

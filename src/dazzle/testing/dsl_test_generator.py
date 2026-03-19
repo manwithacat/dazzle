@@ -42,6 +42,8 @@ def _invariant_required_fields(entity: EntitySpec) -> list[str]:
 
     For invariants like ``uprn != null or canonical_text != null``, returns
     the first field from each OR clause so that at least one is non-null.
+    Handles left-associative nesting, e.g. ``(A or B) or C`` parsed as a
+    nested tree — the first successfully extracted field from the tree is used.
     """
     from dazzle.core.ir.expressions import BinaryExpr, BinaryOp
     from dazzle.core.ir.invariant import LogicalExpr
@@ -53,6 +55,9 @@ def _invariant_required_fields(entity: EntitySpec) -> list[str]:
             uexpr = inv.invariant_expr
             if isinstance(uexpr, BinaryExpr) and uexpr.op == BinaryOp.OR:
                 field_name = _extract_not_null_field_expr(uexpr.left)
+                if field_name is None:
+                    # Left side is itself an OR (3-way+): recurse into the tree
+                    field_name = _extract_not_null_field_expr_or_tree(uexpr)
                 if field_name:
                     fields.append(field_name)
         elif inv.expression is not None:
@@ -62,6 +67,18 @@ def _invariant_required_fields(entity: EntitySpec) -> list[str]:
                 if field_name:
                     fields.append(field_name)
     return fields
+
+
+def _extract_not_null_field_expr_or_tree(expr: Any) -> str | None:
+    """Recursively walk an OR tree and return the first ``field != null`` field name found."""
+    from dazzle.core.ir.expressions import BinaryExpr, BinaryOp
+
+    if isinstance(expr, BinaryExpr) and expr.op == BinaryOp.OR:
+        result = _extract_not_null_field_expr_or_tree(expr.left)
+        if result is not None:
+            return result
+        return _extract_not_null_field_expr_or_tree(expr.right)
+    return _extract_not_null_field_expr(expr)
 
 
 def _extract_not_null_field_expr(expr: Any) -> str | None:
