@@ -85,6 +85,57 @@ def format_duration(seconds: int) -> str:
     return f"{seconds}s"
 
 
+class _StepFields:
+    """Mutable accumulator for step fields parsed inside _parse_single_step."""
+
+    __slots__ = (
+        "kind",
+        "service",
+        "llm_intent",
+        "llm_input_map",
+        "channel",
+        "message",
+        "wait_duration_seconds",
+        "wait_for_signal",
+        "human_task",
+        "subprocess",
+        "inputs",
+        "output_mapping",
+        "timeout_seconds",
+        "retry",
+        "on_success",
+        "on_failure",
+        "compensate_with",
+        "condition",
+        "on_true",
+        "on_false",
+        "effects",
+    )
+
+    def __init__(self) -> None:
+        self.kind: ir.ProcessStepKind = ir.ProcessStepKind.SERVICE
+        self.service: str | None = None
+        self.llm_intent: str | None = None
+        self.llm_input_map: dict[str, str] | None = None
+        self.channel: str | None = None
+        self.message: str | None = None
+        self.wait_duration_seconds: int | None = None
+        self.wait_for_signal: str | None = None
+        self.human_task: ir.HumanTaskSpec | None = None
+        self.subprocess: str | None = None
+        self.inputs: list[ir.InputMapping] = []
+        self.output_mapping: str | None = None
+        self.timeout_seconds: int = 30
+        self.retry: ir.RetryConfig | None = None
+        self.on_success: str | None = None
+        self.on_failure: str | None = None
+        self.compensate_with: str | None = None
+        self.condition: str | None = None
+        self.on_true: str | None = None
+        self.on_false: str | None = None
+        self.effects: list[StepEffect] = []
+
+
 class ProcessParserMixin:
     """Parser mixin for process and schedule blocks."""
 
@@ -687,208 +738,229 @@ class ProcessParserMixin:
         self.skip_newlines()
         self.expect(TokenType.INDENT)
 
-        # Initialize step fields
-        kind: ir.ProcessStepKind = ir.ProcessStepKind.SERVICE
-        service: str | None = None
-        llm_intent: str | None = None
-        llm_input_map: dict[str, str] | None = None
-        channel: str | None = None
-        message: str | None = None
-        wait_duration_seconds: int | None = None
-        wait_for_signal: str | None = None
-        human_task: ir.HumanTaskSpec | None = None
-        subprocess: str | None = None
-        inputs: list[ir.InputMapping] = []
-        output_mapping: str | None = None
-        timeout_seconds: int = 30
-        retry: ir.RetryConfig | None = None
-        on_success: str | None = None
-        on_failure: str | None = None
-        compensate_with: str | None = None
-        condition: str | None = None
-        on_true: str | None = None
-        on_false: str | None = None
-        effects: list[StepEffect] = []
+        fields = _StepFields()
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
             if self.match(TokenType.DEDENT):
                 break
-
-            if self.match(TokenType.SERVICE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                service = str(self.expect_identifier_or_keyword().value)
-                kind = ir.ProcessStepKind.SERVICE
-                self.skip_newlines()
-
-            # llm_intent: intent_name
-            elif self.match(TokenType.LLM_INTENT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                llm_intent = str(self.expect_identifier_or_keyword().value)
-                kind = ir.ProcessStepKind.LLM_INTENT
-                self.skip_newlines()
-
-            elif self.match(TokenType.CHANNEL):
-                self.advance()
-                self.expect(TokenType.COLON)
-                channel = str(self.expect_identifier_or_keyword().value)
-                kind = ir.ProcessStepKind.SEND
-                self.skip_newlines()
-
-            elif self.match(TokenType.MESSAGE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                message = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.WAIT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                kind = ir.ProcessStepKind.WAIT
-                # Could be duration or signal
-                wait_val = self._parse_duration_or_signal()
-                if isinstance(wait_val, int):
-                    wait_duration_seconds = wait_val
-                else:
-                    wait_for_signal = wait_val
-                self.skip_newlines()
-
-            elif self.match(TokenType.HUMAN_TASK):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                human_task = self._parse_human_task()
-                kind = ir.ProcessStepKind.HUMAN_TASK
-
-            elif self.match(TokenType.SUBPROCESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                subprocess = str(self.expect_identifier_or_keyword().value)
-                kind = ir.ProcessStepKind.SUBPROCESS
-                self.skip_newlines()
-
-            elif self.match(TokenType.CONDITION):
-                self.advance()
-                self.expect(TokenType.COLON)
-                condition = self._parse_condition_string()
-                kind = ir.ProcessStepKind.CONDITION
-                self.skip_newlines()
-
-            elif self.match(TokenType.ON_TRUE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                on_true = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.ON_FALSE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                on_false = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.GOTO):
-                self.advance()
-                self.expect(TokenType.COLON)
-                # Could be on_true or on_false in condition context
-                # For now, treat as on_success
-                on_success = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.ON_SUCCESS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                on_success = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.ON_FAILURE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                on_failure = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.COMPENSATE):
-                self.advance()
-                self.expect(TokenType.COLON)
-                compensate_with = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.TIMEOUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                timeout_str = self._parse_duration_value()
-                timeout_seconds = parse_duration(timeout_str)
-                self.skip_newlines()
-
-            elif self.match(TokenType.RETRY):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                retry = self._parse_retry_config()
-
-            elif self.match(TokenType.INPUTS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                inputs = self._parse_input_mappings()
-
-            elif self.match(TokenType.OUTPUT):
-                self.advance()
-                self.expect(TokenType.COLON)
-                output_mapping = str(self.expect_identifier_or_keyword().value)
-                self.skip_newlines()
-
-            elif self.match(TokenType.EFFECTS):
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                effects = self._parse_step_effects()
-
-            # input_map: (nested block for llm_intent steps)
-            elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "input_map":
-                self.advance()
-                self.expect(TokenType.COLON)
-                self.skip_newlines()
-                llm_input_map = self._parse_step_input_map()
-
-            else:
-                # Skip unknown field
-                self.advance()
-                if self.match(TokenType.COLON):
-                    self.advance()
-                    self._skip_to_next_step_field()
+            self._parse_step_field(fields)
 
         self.expect(TokenType.DEDENT)
 
         # Auto-detect side-effect-only steps: effects present but no service/channel/etc.
-        if kind == ir.ProcessStepKind.SERVICE and service is None and effects:
-            kind = ir.ProcessStepKind.SIDE_EFFECT
+        if fields.kind == ir.ProcessStepKind.SERVICE and fields.service is None and fields.effects:
+            fields.kind = ir.ProcessStepKind.SIDE_EFFECT
 
         return ir.ProcessStepSpec(
             name=name,
-            kind=kind,
-            service=service,
-            llm_intent=llm_intent,
-            llm_input_map=llm_input_map,
-            channel=channel,
-            message=message,
-            wait_duration_seconds=wait_duration_seconds,
-            wait_for_signal=wait_for_signal,
-            human_task=human_task,
-            subprocess=subprocess,
-            condition=condition,
-            on_true=on_true,
-            on_false=on_false,
-            inputs=inputs,
-            output_mapping=output_mapping,
-            timeout_seconds=timeout_seconds,
-            retry=retry,
-            on_success=on_success,
-            on_failure=on_failure,
-            compensate_with=compensate_with,
-            effects=effects,
+            kind=fields.kind,
+            service=fields.service,
+            llm_intent=fields.llm_intent,
+            llm_input_map=fields.llm_input_map,
+            channel=fields.channel,
+            message=fields.message,
+            wait_duration_seconds=fields.wait_duration_seconds,
+            wait_for_signal=fields.wait_for_signal,
+            human_task=fields.human_task,
+            subprocess=fields.subprocess,
+            condition=fields.condition,
+            on_true=fields.on_true,
+            on_false=fields.on_false,
+            inputs=fields.inputs,
+            output_mapping=fields.output_mapping,
+            timeout_seconds=fields.timeout_seconds,
+            retry=fields.retry,
+            on_success=fields.on_success,
+            on_failure=fields.on_failure,
+            compensate_with=fields.compensate_with,
+            effects=fields.effects,
         )
+
+    def _parse_step_field(self, f: _StepFields) -> None:
+        """Parse a single field within a step block, dispatching by token type."""
+        if self.match(TokenType.SERVICE):
+            self._parse_step_service_field(f)
+        elif self.match(TokenType.LLM_INTENT):
+            self._parse_step_llm_intent_field(f)
+        elif self.match(TokenType.CHANNEL):
+            self._parse_step_channel_field(f)
+        elif self.match(TokenType.MESSAGE):
+            self._parse_step_message_field(f)
+        elif self.match(TokenType.WAIT):
+            self._parse_step_wait_field(f)
+        elif self.match(TokenType.HUMAN_TASK):
+            self._parse_step_human_task_field(f)
+        elif self.match(TokenType.SUBPROCESS):
+            self._parse_step_subprocess_field(f)
+        elif self.match(TokenType.CONDITION):
+            self._parse_step_condition_field(f)
+        elif self.match(TokenType.ON_TRUE):
+            self._parse_step_on_true_field(f)
+        elif self.match(TokenType.ON_FALSE):
+            self._parse_step_on_false_field(f)
+        elif self.match(TokenType.GOTO):
+            self._parse_step_goto_field(f)
+        elif self.match(TokenType.ON_SUCCESS):
+            self._parse_step_on_success_field(f)
+        elif self.match(TokenType.ON_FAILURE):
+            self._parse_step_on_failure_field(f)
+        elif self.match(TokenType.COMPENSATE):
+            self._parse_step_compensate_field(f)
+        elif self.match(TokenType.TIMEOUT):
+            self._parse_step_timeout_field(f)
+        elif self.match(TokenType.RETRY):
+            self._parse_step_retry_field(f)
+        elif self.match(TokenType.INPUTS):
+            self._parse_step_inputs_field(f)
+        elif self.match(TokenType.OUTPUT):
+            self._parse_step_output_field(f)
+        elif self.match(TokenType.EFFECTS):
+            self._parse_step_effects_field(f)
+        elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "input_map":
+            self._parse_step_input_map_field(f)
+        else:
+            # Skip unknown field
+            self.advance()
+            if self.match(TokenType.COLON):
+                self.advance()
+                self._skip_to_next_step_field()
+
+    def _parse_step_service_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.service = str(self.expect_identifier_or_keyword().value)
+        f.kind = ir.ProcessStepKind.SERVICE
+        self.skip_newlines()
+
+    def _parse_step_llm_intent_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.llm_intent = str(self.expect_identifier_or_keyword().value)
+        f.kind = ir.ProcessStepKind.LLM_INTENT
+        self.skip_newlines()
+
+    def _parse_step_channel_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.channel = str(self.expect_identifier_or_keyword().value)
+        f.kind = ir.ProcessStepKind.SEND
+        self.skip_newlines()
+
+    def _parse_step_message_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.message = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_wait_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.kind = ir.ProcessStepKind.WAIT
+        # Could be duration or signal
+        wait_val = self._parse_duration_or_signal()
+        if isinstance(wait_val, int):
+            f.wait_duration_seconds = wait_val
+        else:
+            f.wait_for_signal = wait_val
+        self.skip_newlines()
+
+    def _parse_step_human_task_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        f.human_task = self._parse_human_task()
+        f.kind = ir.ProcessStepKind.HUMAN_TASK
+
+    def _parse_step_subprocess_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.subprocess = str(self.expect_identifier_or_keyword().value)
+        f.kind = ir.ProcessStepKind.SUBPROCESS
+        self.skip_newlines()
+
+    def _parse_step_condition_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.condition = self._parse_condition_string()
+        f.kind = ir.ProcessStepKind.CONDITION
+        self.skip_newlines()
+
+    def _parse_step_on_true_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.on_true = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_on_false_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.on_false = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_goto_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        # Could be on_true or on_false in condition context
+        # For now, treat as on_success
+        f.on_success = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_on_success_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.on_success = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_on_failure_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.on_failure = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_compensate_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.compensate_with = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_timeout_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        timeout_str = self._parse_duration_value()
+        f.timeout_seconds = parse_duration(timeout_str)
+        self.skip_newlines()
+
+    def _parse_step_retry_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        f.retry = self._parse_retry_config()
+
+    def _parse_step_inputs_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        f.inputs = self._parse_input_mappings()
+
+    def _parse_step_output_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        f.output_mapping = str(self.expect_identifier_or_keyword().value)
+        self.skip_newlines()
+
+    def _parse_step_effects_field(self, f: _StepFields) -> None:
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        f.effects = self._parse_step_effects()
+
+    def _parse_step_input_map_field(self, f: _StepFields) -> None:
+        # input_map: (nested block for llm_intent steps)
+        self.advance()
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        f.llm_input_map = self._parse_step_input_map()
 
     def _parse_parallel_block(self) -> ir.ProcessStepSpec:
         """
