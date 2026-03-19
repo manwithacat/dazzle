@@ -71,8 +71,9 @@ class TestLoadDomainUserAttributes:
         assert result["department"] == "maths"
         assert result["trust"] == "trust-uuid-789"
         assert result["name"] == "Admin User"
-        # Should skip auth-internal and null fields
+        # Should skip auth-internal and null fields (id stored as entity_id)
         assert "id" not in result
+        assert result["entity_id"] == "user-123"  # domain entity PK (#534)
         assert "email" not in result
         assert "password_hash" not in result
         assert "nullable_field" not in result
@@ -199,3 +200,15 @@ class TestResolveUserAttributeWithPreferences:
 
         result = _resolve_user_attribute("school", auth_context)
         assert result == "__RBAC_DENY__"
+
+    def test_resolves_entity_id_from_preferences(self) -> None:
+        """current_user in via clauses should resolve to DSL entity ID (#534)."""
+        from dazzle_back.runtime.route_generator import _resolve_user_attribute
+
+        auth_context = MagicMock()
+        auth_context.user = MagicMock()
+        auth_context.user.entity_id = MagicMock(spec=[])  # not a scalar on UserRecord
+        auth_context.preferences = {"entity_id": "dsl-user-uuid-789"}
+
+        result = _resolve_user_attribute("entity_id", auth_context)
+        assert result == "dsl-user-uuid-789"

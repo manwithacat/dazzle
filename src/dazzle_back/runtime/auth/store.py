@@ -412,6 +412,11 @@ class SessionStoreMixin:
                 continue
             if isinstance(v, str | int | float | bool):
                 result[k] = str(v)
+        # Store the domain entity ID as "entity_id" so via clauses can
+        # resolve current_user to the DSL User entity PK (#534).
+        domain_id = row.get("id")
+        if domain_id is not None:
+            result["entity_id"] = str(domain_id)
         return result
 
     def create_session(

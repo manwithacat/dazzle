@@ -245,7 +245,11 @@ def _build_via_subquery(
                 where_clauses.append(f"{jf} IS NOT NULL")  # nosemgrep
         elif target.startswith("current_user"):
             if target == "current_user":
-                resolved = user_id
+                # Prefer DSL User entity ID over auth user ID so via
+                # clauses matching ref User fields work correctly (#534).
+                resolved = _resolve_user_attribute("entity_id", auth_context)
+                if resolved == "__RBAC_DENY__":
+                    resolved = user_id  # fallback to auth ID
             else:
                 attr_name = target[len("current_user.") :]
                 resolved = _resolve_user_attribute(attr_name, auth_context)
