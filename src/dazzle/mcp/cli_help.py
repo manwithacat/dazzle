@@ -1020,6 +1020,141 @@ entity Task "Task":
                 "Re-run discovery to verify fixes",
             ],
         },
+        "quality_nightly": {
+            "name": "Nightly Quality Check",
+            "description": "Automated nightly validation and health check",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Check dazzle-dsl version",
+                    "command": "pip index versions dazzle-dsl",
+                },
+                {
+                    "step": 2,
+                    "action": "Run validation pipeline",
+                    "command": "dazzle validate && dazzle lint",
+                },
+                {
+                    "step": 3,
+                    "action": "Run static analysis",
+                    "command": "dazzle sentinel scan",
+                    "mcp_tool": "sentinel(operation='findings')",
+                },
+                {
+                    "step": 4,
+                    "action": "Check site health",
+                    "command": "curl -sf http://localhost:3000/health",
+                    "mcp_tool": "status(operation='mcp')",
+                },
+                {
+                    "step": 5,
+                    "action": "Write report",
+                    "notes": "Save to dev_docs/nightly-YYYY-MM-DD.md",
+                },
+            ],
+            "references": ["dsl(validate)", "sentinel(scan)", "status(mcp)"],
+        },
+        "quality_actions": {
+            "name": "Action Discovery & Fixes",
+            "description": "Parse nightly report, discover issues, implement DSL fixes",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Parse latest nightly report",
+                    "notes": "Read dev_docs/nightly-*.md for action items",
+                },
+                {
+                    "step": 2,
+                    "action": "Discover additional issues",
+                    "mcp_tool": "sentinel(operation='findings')",
+                },
+                {
+                    "step": 3,
+                    "action": "Check compliance and guards",
+                    "mcp_tool": "semantics(operation='compliance')",
+                },
+                {
+                    "step": 4,
+                    "action": "Implement DSL fixes by impact priority",
+                    "notes": "BLOCKING > CONFUSING > NOISY > POLISH",
+                },
+                {
+                    "step": 5,
+                    "action": "Validate after each fix",
+                    "command": "dazzle validate",
+                    "mcp_tool": "dsl(operation='lint')",
+                },
+                {
+                    "step": 6,
+                    "action": "Write report",
+                    "notes": "Save to dev_docs/actions-YYYY-MM-DD.md",
+                },
+            ],
+            "references": [
+                "sentinel(findings)",
+                "semantics(compliance)",
+                "dsl(lint)",
+            ],
+        },
+        "quality_ux": {
+            "name": "UX Evaluation & Improvement",
+            "description": "Evaluate workspace UX per persona and implement fixes",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Curl-based UX audit per workspace",
+                    "notes": "Evaluate against 7-point rubric (parallelizable)",
+                },
+                {
+                    "step": 2,
+                    "action": "Playwright persona journey testing",
+                    "notes": "Login -> workspace -> detail -> back (sequential)",
+                },
+                {
+                    "step": 3,
+                    "action": "Prioritize findings by impact",
+                    "notes": "BLOCKING > CONFUSING > NOISY > POLISH",
+                },
+                {
+                    "step": 4,
+                    "action": "Implement UX improvements",
+                    "mcp_tool": "test_design(operation='gaps')",
+                },
+                {
+                    "step": 5,
+                    "action": "Write dual-audience report",
+                    "notes": "Save to dev_docs/ux-actions-YYYY-MM-DD.md",
+                    "mcp_tool": "discovery(operation='coherence')",
+                },
+            ],
+            "references": ["test_design(gaps)", "discovery(coherence)"],
+        },
+        "quality_full": {
+            "name": "Full Quality Pipeline",
+            "description": "Run nightly -> actions -> ux sequentially",
+            "steps": [
+                {
+                    "step": 1,
+                    "action": "Run nightly check",
+                    "notes": "Use quality_nightly workflow",
+                },
+                {
+                    "step": 2,
+                    "action": "Run action discovery and fixes",
+                    "notes": "Use quality_actions workflow",
+                },
+                {
+                    "step": 3,
+                    "action": "Run UX evaluation",
+                    "notes": "Use quality_ux workflow",
+                },
+                {
+                    "step": 4,
+                    "action": "Write combined report",
+                    "notes": "Save to dev_docs/quality-YYYY-MM-DD.md. Alert on critical failures only.",
+                },
+            ],
+        },
         "troubleshoot": {
             "name": "Troubleshooting Common Issues",
             "issues": [

@@ -1096,3 +1096,13 @@ entity UserMembership "User Membership":
 '''
 use_cases = ["Multi-tenant user management", "Per-tenant role assignment", "User invitation system", "Team member management"]
 related = ["user_archetype", "tenant_archetype"]
+
+[concepts.quality_ux_rubric]
+category = "Quality"
+definition = "7-point UX evaluation rubric for workspace quality assessment: (1) UUID visibility, (2) information density, (3) actionability, (4) column relevance, (5) data freshness, (6) dead-end detection, (7) sidebar coherence."
+best_practices = ["Evaluate each workspace per-persona", "Use curl for parallel evaluation, Playwright for sequential journeys", "Score each criterion pass/fail with evidence"]
+
+[concepts.quality_impact_scale]
+category = "Quality"
+definition = "4-level impact prioritization for quality findings: BLOCKING (user cannot complete task), CONFUSING (user misled or uncertain), NOISY (unnecessary clutter), POLISH (cosmetic improvement)."
+best_practices = ["Fix BLOCKING before CONFUSING", "Group findings by persona story for stakeholder reports", "POLISH items are optional — skip if time-constrained"]
