@@ -14,6 +14,9 @@ Auth: Reuses OpsSessionManager cookie-based sessions from ops_routes.
 """
 
 import logging
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -48,6 +51,11 @@ NAV_ITEMS = (
 )
 
 
+# =============================================================================
+# Module-level helpers
+# =============================================================================
+
+
 def _get_templates_dir() -> Path:
     """Resolve templates directory from dazzle_ui package."""
     import dazzle_ui
@@ -65,6 +73,445 @@ def _create_jinja_env() -> Environment:
         autoescape=select_autoescape(["html"]),
     )
     return env
+
+
+# =============================================================================
+# Dependencies Container
+# =============================================================================
+
+
+@dataclass
+class _ConsoleDeps:
+    ops_db: OpsDatabase
+    health_aggregator: HealthAggregator | None
+    appspec: Any | None
+    spec_version_store: Any | None
+    deploy_history_store: Any | None
+    require_auth: bool
+    session_manager: Any  # OpsSessionManager — imported lazily to avoid circular
+    jinja_env: Environment
+
+
+# =============================================================================
+# Module-level handler functions
+# =============================================================================
+
+# -------------------------------------------------------------------------
+# Rendering helper
+# -------------------------------------------------------------------------
+
+
+def _render(
+    deps: _ConsoleDeps,
+    template_name: str,
+    context: dict[str, Any] | None = None,
+    *,
+    request: Request | None = None,
+) -> HTMLResponse:
+    """Render a Jinja2 template to HTMLResponse.
+
+    When *request* is provided and it carries HTMX headers, the
+    ``_htmx_partial`` template variable is set so ``base.html``
+    omits the ``<html><head>`` wrapper for boosted navigations.
+    """
+    ctx: dict[str, Any] = {
+        "nav_items": NAV_ITEMS,
+        "app_name": "Dazzle Console",
+        **(context or {}),
+    }
+    if request is not None:
+        from dazzle_back.runtime.htmx_response import HtmxDetails
+
+        htmx = HtmxDetails.from_request(request)
+        if htmx.is_htmx and not htmx.is_history_restore:
+            ctx["_htmx_partial"] = True
+        if htmx.current_url:
+            from urllib.parse import urlparse
+
+            ctx["current_route"] = urlparse(htmx.current_url).path
+    template = deps.jinja_env.get_template(template_name)
+    html = template.render(**ctx)
+    return HTMLResponse(content=html)
+
+
+# -------------------------------------------------------------------------
+# Auth dependencies
+# -------------------------------------------------------------------------
+
+
+async def _get_current_user(
+    deps: _ConsoleDeps,
+    ops_session: str | None = Cookie(None),
+) -> str:
+    """Validate ops session and return username."""
+    if not deps.require_auth:
+        return "anonymous"
+    if not ops_session:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    username = deps.session_manager.validate_session(ops_session)
+    if not username:
+        raise HTTPException(status_code=401, detail="Session expired")
+    return username
+
+
+async def _get_optional_user(
+    deps: _ConsoleDeps,
+    ops_session: str | None = Cookie(None),
+) -> str | None:
+    """Return username if authenticated, None otherwise."""
+    if not deps.require_auth:
+        return "anonymous"
+    if not ops_session:
+        return None
+    return deps.session_manager.validate_session(ops_session)
+
+
+# -------------------------------------------------------------------------
+# Login / Logout
+# -------------------------------------------------------------------------
+
+
+async def _login_page(
+    deps: _ConsoleDeps,
+    user: str | None,
+) -> Response:
+    """Show login page or redirect if already authenticated."""
+    if user:
+        return RedirectResponse(url="/_console/", status_code=302)
+    return _render(
+        deps, "console/login.html", {"setup_required": not deps.ops_db.has_credentials()}
+    )
+
+
+async def _login_submit(
+    deps: _ConsoleDeps,
+    request: Request,
+    response: Response,
+) -> Response:
+    """Handle login form submission (HTMX or standard)."""
+    form = await request.form()
+    username = str(form.get("username", ""))
+    password = str(form.get("password", ""))
+
+    if not deps.ops_db.has_credentials():
+        # First-time setup
+        if len(password) < 8:
+            return _render(
+                deps,
+                "console/login.html",
+                {
+                    "error": "Password must be at least 8 characters",
+                    "setup_required": True,
+                },
+            )
+        deps.ops_db.create_credentials(username, password)
+
+    if not deps.ops_db.verify_credentials(username, password):
+        return _render(
+            deps,
+            "console/login.html",
+            {
+                "error": "Invalid credentials",
+                "setup_required": False,
+            },
+        )
+
+    token = deps.session_manager.create_session(username)
+    resp = RedirectResponse(url="/_console/", status_code=302)
+    from dazzle_back.runtime.auth.crypto import cookie_secure
+
+    resp.set_cookie(
+        key="ops_session",
+        value=token,
+        httponly=True,
+        secure=cookie_secure(request),
+        samesite="lax",
+        max_age=86400,
+    )
+    return resp
+
+
+async def _logout(
+    deps: _ConsoleDeps,
+    response: Response,
+    ops_session: str | None = Cookie(None),
+) -> RedirectResponse:
+    """Log out and redirect to login."""
+    if ops_session:
+        deps.session_manager.revoke_session(ops_session)
+    resp = RedirectResponse(url="/_console/login", status_code=302)
+    resp.delete_cookie("ops_session")
+    return resp
+
+
+# -------------------------------------------------------------------------
+# Dashboard
+# -------------------------------------------------------------------------
+
+
+async def _dashboard(
+    deps: _ConsoleDeps,
+    request: Request,
+    user: str | None,
+) -> Response:
+    """Main dashboard page."""
+    if not user:
+        return RedirectResponse(url="/_console/login", status_code=302)
+
+    app_summary = _get_app_summary(deps.appspec)
+    return _render(
+        deps,
+        "console/dashboard.html",
+        {
+            "current_route": "/_console/",
+            "username": user,
+            "app_summary": app_summary,
+        },
+        request=request,
+    )
+
+
+async def _health_cards_partial(
+    deps: _ConsoleDeps,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: health status cards."""
+    health_data = _get_health_data(deps.health_aggregator)
+    return _render(
+        deps,
+        "console/partials/health_cards.html",
+        {"health": health_data},
+    )
+
+
+# -------------------------------------------------------------------------
+# App Map
+# -------------------------------------------------------------------------
+
+
+async def _app_map(
+    deps: _ConsoleDeps,
+    request: Request,
+    user: str | None,
+) -> Response:
+    """App map page showing entities, surfaces, integrations."""
+    if not user:
+        return RedirectResponse(url="/_console/login", status_code=302)
+    return _render(
+        deps,
+        "console/app_map.html",
+        {
+            "current_route": "/_console/app-map",
+            "username": user,
+        },
+        request=request,
+    )
+
+
+async def _entities_partial(
+    deps: _ConsoleDeps,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: entity list."""
+    entities = _get_entities(deps.appspec)
+    return _render(deps, "console/partials/entity_list.html", {"entities": entities})
+
+
+async def _surfaces_partial(
+    deps: _ConsoleDeps,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: surface list."""
+    surfaces = _get_surfaces(deps.appspec)
+    return _render(deps, "console/partials/surface_list.html", {"surfaces": surfaces})
+
+
+async def _integrations_partial(
+    deps: _ConsoleDeps,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: integrations/services/foreign models list."""
+    integrations = _get_integrations(deps.appspec)
+    return _render(deps, "console/partials/integration_list.html", {"integrations": integrations})
+
+
+# -------------------------------------------------------------------------
+# Changes / Spec Versioning
+# -------------------------------------------------------------------------
+
+
+async def _changes_page(
+    deps: _ConsoleDeps,
+    request: Request,
+    user: str | None,
+) -> Response:
+    """Spec versioning and change tracking page."""
+    if not user:
+        return RedirectResponse(url="/_console/login", status_code=302)
+    return _render(
+        deps,
+        "console/changes.html",
+        {
+            "current_route": "/_console/changes",
+            "username": user,
+        },
+        request=request,
+    )
+
+
+async def _version_timeline_partial(
+    deps: _ConsoleDeps,
+    page: int,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: paginated version timeline."""
+    versions: list[dict[str, Any]] = []
+    total = 0
+    if deps.spec_version_store:
+        versions = deps.spec_version_store.list_versions(page=page, per_page=10)
+        total = deps.spec_version_store.count_versions()
+    return _render(
+        deps,
+        "console/partials/version_timeline.html",
+        {
+            "versions": versions,
+            "page": page,
+            "total": total,
+            "per_page": 10,
+        },
+    )
+
+
+async def _spec_diff_partial(
+    deps: _ConsoleDeps,
+    version_id: str,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: structured diff for a spec version."""
+    diff: dict[str, Any] = {}
+    if deps.spec_version_store:
+        diff = deps.spec_version_store.get_diff(version_id)
+    return _render(
+        deps, "console/partials/spec_diff.html", {"diff": diff, "version_id": version_id}
+    )
+
+
+# -------------------------------------------------------------------------
+# Deploy
+# -------------------------------------------------------------------------
+
+
+async def _deploy_page(
+    deps: _ConsoleDeps,
+    request: Request,
+    user: str | None,
+) -> Response:
+    """Deployment pipeline page."""
+    if not user:
+        return RedirectResponse(url="/_console/login", status_code=302)
+    return _render(
+        deps,
+        "console/deploy.html",
+        {
+            "current_route": "/_console/deploy",
+            "username": user,
+        },
+        request=request,
+    )
+
+
+async def _deploy_history_partial(
+    deps: _ConsoleDeps,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: deployment history table."""
+    history: list[dict[str, Any]] = []
+    if deps.deploy_history_store:
+        history = deps.deploy_history_store.list_deployments(limit=20)
+    return _render(deps, "console/partials/deploy_history.html", {"history": history})
+
+
+# -------------------------------------------------------------------------
+# Performance
+# -------------------------------------------------------------------------
+
+
+async def _performance_page(
+    deps: _ConsoleDeps,
+    request: Request,
+    user: str | None,
+) -> Response:
+    """Performance monitoring page."""
+    if not user:
+        return RedirectResponse(url="/_console/login", status_code=302)
+    return _render(
+        deps,
+        "console/performance.html",
+        {
+            "current_route": "/_console/performance",
+            "username": user,
+        },
+        request=request,
+    )
+
+
+async def _api_perf_partial(
+    deps: _ConsoleDeps,
+    hours: int,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: API performance table."""
+    stats = deps.ops_db.get_api_call_stats(hours=hours)
+    perf_data = _get_api_perf_data(deps.ops_db, hours)
+    return _render(
+        deps,
+        "console/partials/api_performance.html",
+        {
+            "stats": stats,
+            "perf_data": perf_data,
+            "hours": hours,
+        },
+    )
+
+
+async def _errors_partial(
+    deps: _ConsoleDeps,
+    hours: int,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: error summary."""
+    cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
+    error_data = _get_error_data(deps.ops_db, cutoff)
+    return _render(
+        deps,
+        "console/partials/error_summary.html",
+        {
+            "error_data": error_data,
+            "hours": hours,
+        },
+    )
+
+
+async def _costs_partial(
+    deps: _ConsoleDeps,
+    hours: int,
+    username: str,
+) -> HTMLResponse:
+    """HTMX partial: cost indicators."""
+    cost_data = _get_cost_data(deps.ops_db, hours)
+    return _render(
+        deps,
+        "console/partials/cost_indicators.html",
+        {
+            "cost_data": cost_data,
+            "hours": hours,
+        },
+    )
+
+
+# =============================================================================
+# Route Factory
+# =============================================================================
 
 
 def create_console_routes(
@@ -95,376 +542,189 @@ def create_console_routes(
     from dazzle_back.runtime.ops_services import OpsSessionManager
 
     router = APIRouter(prefix="/_console", tags=["Founder Console"])
-    session_manager = OpsSessionManager()
-    jinja_env = _create_jinja_env()
+    deps = _ConsoleDeps(
+        ops_db=ops_db,
+        health_aggregator=health_aggregator,
+        appspec=appspec,
+        spec_version_store=spec_version_store,
+        deploy_history_store=deploy_history_store,
+        require_auth=require_auth,
+        session_manager=OpsSessionManager(),
+        jinja_env=_create_jinja_env(),
+    )
 
-    # -------------------------------------------------------------------------
-    # Auth dependency (reuses ops_session cookie)
-    # -------------------------------------------------------------------------
-
-    async def get_current_user(ops_session: str | None = Cookie(None)) -> str:
-        """Validate ops session and return username."""
-        if not require_auth:
-            return "anonymous"
-        if not ops_session:
-            raise HTTPException(status_code=401, detail="Not authenticated")
-        username = session_manager.validate_session(ops_session)
-        if not username:
-            raise HTTPException(status_code=401, detail="Session expired")
-        return username
-
-    async def get_optional_user(ops_session: str | None = Cookie(None)) -> str | None:
-        """Return username if authenticated, None otherwise."""
-        if not require_auth:
-            return "anonymous"
-        if not ops_session:
-            return None
-        return session_manager.validate_session(ops_session)
-
-    # -------------------------------------------------------------------------
-    # Helper: render template
-    # -------------------------------------------------------------------------
-
-    def render(
-        template_name: str,
-        context: dict[str, Any] | None = None,
-        *,
-        request: Request | None = None,
-    ) -> HTMLResponse:
-        """Render a Jinja2 template to HTMLResponse.
-
-        When *request* is provided and it carries HTMX headers, the
-        ``_htmx_partial`` template variable is set so ``base.html``
-        omits the ``<html><head>`` wrapper for boosted navigations.
-        """
-        ctx: dict[str, Any] = {
-            "nav_items": NAV_ITEMS,
-            "app_name": "Dazzle Console",
-            **(context or {}),
-        }
-        if request is not None:
-            from dazzle_back.runtime.htmx_response import HtmxDetails
-
-            htmx = HtmxDetails.from_request(request)
-            if htmx.is_htmx and not htmx.is_history_restore:
-                ctx["_htmx_partial"] = True
-            if htmx.current_url:
-                from urllib.parse import urlparse
-
-                ctx["current_route"] = urlparse(htmx.current_url).path
-        template = jinja_env.get_template(template_name)
-        html = template.render(**ctx)
-        return HTMLResponse(content=html)
+    # Auth dependencies bound to this deps instance
+    auth_required = partial(_get_current_user, deps)
+    auth_optional = partial(_get_optional_user, deps)
 
     # -------------------------------------------------------------------------
     # Login / Logout
     # -------------------------------------------------------------------------
 
-    @router.get("/login", response_model=None)
-    async def login_page(
-        user: str | None = Depends(get_optional_user),
-    ) -> Response:
-        """Show login page or redirect if already authenticated."""
-        if user:
-            return RedirectResponse(url="/_console/", status_code=302)
-        return render("console/login.html", {"setup_required": not ops_db.has_credentials()})
+    async def login_page(user: str | None = Depends(auth_optional)) -> Response:
+        return await _login_page(deps, user)
 
-    @router.post("/login", response_model=None)
-    async def login_submit(
-        request: Request,
-        response: Response,
-    ) -> Response:
-        """Handle login form submission (HTMX or standard)."""
-        form = await request.form()
-        username = str(form.get("username", ""))
-        password = str(form.get("password", ""))
+    async def login_submit(request: Request, response: Response) -> Response:
+        return await _login_submit(deps, request, response)
 
-        if not ops_db.has_credentials():
-            # First-time setup
-            if len(password) < 8:
-                return render(
-                    "console/login.html",
-                    {
-                        "error": "Password must be at least 8 characters",
-                        "setup_required": True,
-                    },
-                )
-            ops_db.create_credentials(username, password)
-
-        if not ops_db.verify_credentials(username, password):
-            return render(
-                "console/login.html",
-                {
-                    "error": "Invalid credentials",
-                    "setup_required": False,
-                },
-            )
-
-        token = session_manager.create_session(username)
-        resp = RedirectResponse(url="/_console/", status_code=302)
-        from dazzle_back.runtime.auth.crypto import cookie_secure
-
-        resp.set_cookie(
-            key="ops_session",
-            value=token,
-            httponly=True,
-            secure=cookie_secure(request),
-            samesite="lax",
-            max_age=86400,
-        )
-        return resp
-
-    @router.get("/logout")
     async def logout(
         response: Response,
         ops_session: str | None = Cookie(None),
     ) -> RedirectResponse:
-        """Log out and redirect to login."""
-        if ops_session:
-            session_manager.revoke_session(ops_session)
-        resp = RedirectResponse(url="/_console/login", status_code=302)
-        resp.delete_cookie("ops_session")
-        return resp
+        return await _logout(deps, response, ops_session)
+
+    router.add_api_route("/login", login_page, methods=["GET"], response_model=None)
+    router.add_api_route("/login", login_submit, methods=["POST"], response_model=None)
+    router.add_api_route("/logout", logout, methods=["GET"])
 
     # -------------------------------------------------------------------------
-    # Dashboard (Phase 1)
+    # Dashboard
     # -------------------------------------------------------------------------
 
-    @router.get("/", response_model=None)
     async def dashboard(
         request: Request,
-        user: str | None = Depends(get_optional_user),
+        user: str | None = Depends(auth_optional),
     ) -> Response:
-        """Main dashboard page."""
-        if not user:
-            return RedirectResponse(url="/_console/login", status_code=302)
+        return await _dashboard(deps, request, user)
 
-        # Gather app summary from appspec
-        app_summary = _get_app_summary(appspec)
-
-        return render(
-            "console/dashboard.html",
-            {
-                "current_route": "/_console/",
-                "username": user,
-                "app_summary": app_summary,
-            },
-            request=request,
-        )
-
-    @router.get("/partials/health-cards", response_class=HTMLResponse)
     async def health_cards_partial(
-        user: str = Depends(get_current_user),
+        username: str = Depends(auth_required),
     ) -> HTMLResponse:
-        """HTMX partial: health status cards."""
-        health_data = _get_health_data(health_aggregator)
-        return render(
-            "console/partials/health_cards.html",
-            {
-                "health": health_data,
-            },
-        )
+        return await _health_cards_partial(deps, username)
+
+    router.add_api_route("/", dashboard, methods=["GET"], response_model=None)
+    router.add_api_route(
+        "/partials/health-cards",
+        health_cards_partial,
+        methods=["GET"],
+        response_class=HTMLResponse,
+    )
 
     # -------------------------------------------------------------------------
-    # App Map (Phase 2)
+    # App Map
     # -------------------------------------------------------------------------
 
-    @router.get("/app-map", response_model=None)
     async def app_map(
         request: Request,
-        user: str | None = Depends(get_optional_user),
+        user: str | None = Depends(auth_optional),
     ) -> Response:
-        """App map page showing entities, surfaces, integrations."""
-        if not user:
-            return RedirectResponse(url="/_console/login", status_code=302)
-        return render(
-            "console/app_map.html",
-            {
-                "current_route": "/_console/app-map",
-                "username": user,
-            },
-            request=request,
-        )
+        return await _app_map(deps, request, user)
 
-    @router.get("/partials/entities", response_class=HTMLResponse)
-    async def entities_partial(
-        user: str = Depends(get_current_user),
-    ) -> HTMLResponse:
-        """HTMX partial: entity list."""
-        entities = _get_entities(appspec)
-        return render("console/partials/entity_list.html", {"entities": entities})
+    async def entities_partial(username: str = Depends(auth_required)) -> HTMLResponse:
+        return await _entities_partial(deps, username)
 
-    @router.get("/partials/surfaces", response_class=HTMLResponse)
-    async def surfaces_partial(
-        user: str = Depends(get_current_user),
-    ) -> HTMLResponse:
-        """HTMX partial: surface list."""
-        surfaces = _get_surfaces(appspec)
-        return render("console/partials/surface_list.html", {"surfaces": surfaces})
+    async def surfaces_partial(username: str = Depends(auth_required)) -> HTMLResponse:
+        return await _surfaces_partial(deps, username)
 
-    @router.get("/partials/integrations", response_class=HTMLResponse)
-    async def integrations_partial(
-        user: str = Depends(get_current_user),
-    ) -> HTMLResponse:
-        """HTMX partial: integrations/services/foreign models list."""
-        integrations = _get_integrations(appspec)
-        return render("console/partials/integration_list.html", {"integrations": integrations})
+    async def integrations_partial(username: str = Depends(auth_required)) -> HTMLResponse:
+        return await _integrations_partial(deps, username)
+
+    router.add_api_route("/app-map", app_map, methods=["GET"], response_model=None)
+    router.add_api_route(
+        "/partials/entities", entities_partial, methods=["GET"], response_class=HTMLResponse
+    )
+    router.add_api_route(
+        "/partials/surfaces", surfaces_partial, methods=["GET"], response_class=HTMLResponse
+    )
+    router.add_api_route(
+        "/partials/integrations", integrations_partial, methods=["GET"], response_class=HTMLResponse
+    )
 
     # -------------------------------------------------------------------------
-    # Changes / Spec Versioning (Phase 3)
+    # Changes / Spec Versioning
     # -------------------------------------------------------------------------
 
-    @router.get("/changes", response_model=None)
     async def changes_page(
         request: Request,
-        user: str | None = Depends(get_optional_user),
+        user: str | None = Depends(auth_optional),
     ) -> Response:
-        """Spec versioning and change tracking page."""
-        if not user:
-            return RedirectResponse(url="/_console/login", status_code=302)
-        return render(
-            "console/changes.html",
-            {
-                "current_route": "/_console/changes",
-                "username": user,
-            },
-            request=request,
-        )
+        return await _changes_page(deps, request, user)
 
-    @router.get("/partials/version-timeline", response_class=HTMLResponse)
     async def version_timeline_partial(
         page: int = Query(default=1, ge=1),
-        user: str = Depends(get_current_user),
+        username: str = Depends(auth_required),
     ) -> HTMLResponse:
-        """HTMX partial: paginated version timeline."""
-        versions: list[dict[str, Any]] = []
-        total = 0
-        if spec_version_store:
-            versions = spec_version_store.list_versions(page=page, per_page=10)
-            total = spec_version_store.count_versions()
-        return render(
-            "console/partials/version_timeline.html",
-            {
-                "versions": versions,
-                "page": page,
-                "total": total,
-                "per_page": 10,
-            },
-        )
+        return await _version_timeline_partial(deps, page, username)
 
-    @router.get("/partials/spec-diff/{version_id}", response_class=HTMLResponse)
     async def spec_diff_partial(
         version_id: str,
-        user: str = Depends(get_current_user),
+        username: str = Depends(auth_required),
     ) -> HTMLResponse:
-        """HTMX partial: structured diff for a spec version."""
-        diff: dict[str, Any] = {}
-        if spec_version_store:
-            diff = spec_version_store.get_diff(version_id)
-        return render("console/partials/spec_diff.html", {"diff": diff, "version_id": version_id})
+        return await _spec_diff_partial(deps, version_id, username)
+
+    router.add_api_route("/changes", changes_page, methods=["GET"], response_model=None)
+    router.add_api_route(
+        "/partials/version-timeline",
+        version_timeline_partial,
+        methods=["GET"],
+        response_class=HTMLResponse,
+    )
+    router.add_api_route(
+        "/partials/spec-diff/{version_id}",
+        spec_diff_partial,
+        methods=["GET"],
+        response_class=HTMLResponse,
+    )
 
     # -------------------------------------------------------------------------
-    # Deploy (Phase 4) - delegates to deploy_routes
+    # Deploy
     # -------------------------------------------------------------------------
 
-    @router.get("/deploy", response_model=None)
     async def deploy_page(
         request: Request,
-        user: str | None = Depends(get_optional_user),
+        user: str | None = Depends(auth_optional),
     ) -> Response:
-        """Deployment pipeline page."""
-        if not user:
-            return RedirectResponse(url="/_console/login", status_code=302)
-        return render(
-            "console/deploy.html",
-            {
-                "current_route": "/_console/deploy",
-                "username": user,
-            },
-            request=request,
-        )
+        return await _deploy_page(deps, request, user)
 
-    @router.get("/partials/deploy-history", response_class=HTMLResponse)
-    async def deploy_history_partial(
-        user: str = Depends(get_current_user),
-    ) -> HTMLResponse:
-        """HTMX partial: deployment history table."""
-        history: list[dict[str, Any]] = []
-        if deploy_history_store:
-            history = deploy_history_store.list_deployments(limit=20)
-        return render("console/partials/deploy_history.html", {"history": history})
+    async def deploy_history_partial(username: str = Depends(auth_required)) -> HTMLResponse:
+        return await _deploy_history_partial(deps, username)
+
+    router.add_api_route("/deploy", deploy_page, methods=["GET"], response_model=None)
+    router.add_api_route(
+        "/partials/deploy-history",
+        deploy_history_partial,
+        methods=["GET"],
+        response_class=HTMLResponse,
+    )
 
     # -------------------------------------------------------------------------
-    # Performance (Phase 5)
+    # Performance
     # -------------------------------------------------------------------------
 
-    @router.get("/performance", response_model=None)
     async def performance_page(
         request: Request,
-        user: str | None = Depends(get_optional_user),
+        user: str | None = Depends(auth_optional),
     ) -> Response:
-        """Performance monitoring page."""
-        if not user:
-            return RedirectResponse(url="/_console/login", status_code=302)
-        return render(
-            "console/performance.html",
-            {
-                "current_route": "/_console/performance",
-                "username": user,
-            },
-            request=request,
-        )
+        return await _performance_page(deps, request, user)
 
-    @router.get("/partials/api-perf", response_class=HTMLResponse)
     async def api_perf_partial(
         hours: int = Query(default=24, le=168),
-        user: str = Depends(get_current_user),
+        username: str = Depends(auth_required),
     ) -> HTMLResponse:
-        """HTMX partial: API performance table."""
-        stats = ops_db.get_api_call_stats(hours=hours)
-        # Also get p95 from raw data
-        perf_data = _get_api_perf_data(ops_db, hours)
-        return render(
-            "console/partials/api_performance.html",
-            {
-                "stats": stats,
-                "perf_data": perf_data,
-                "hours": hours,
-            },
-        )
+        return await _api_perf_partial(deps, hours, username)
 
-    @router.get("/partials/errors", response_class=HTMLResponse)
     async def errors_partial(
         hours: int = Query(default=24, le=168),
-        user: str = Depends(get_current_user),
+        username: str = Depends(auth_required),
     ) -> HTMLResponse:
-        """HTMX partial: error summary."""
-        from datetime import UTC, datetime, timedelta
+        return await _errors_partial(deps, hours, username)
 
-        cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
-        error_data = _get_error_data(ops_db, cutoff)
-        return render(
-            "console/partials/error_summary.html",
-            {
-                "error_data": error_data,
-                "hours": hours,
-            },
-        )
-
-    @router.get("/partials/costs", response_class=HTMLResponse)
     async def costs_partial(
         hours: int = Query(default=24, le=168),
-        user: str = Depends(get_current_user),
+        username: str = Depends(auth_required),
     ) -> HTMLResponse:
-        """HTMX partial: cost indicators."""
-        cost_data = _get_cost_data(ops_db, hours)
-        return render(
-            "console/partials/cost_indicators.html",
-            {
-                "cost_data": cost_data,
-                "hours": hours,
-            },
-        )
+        return await _costs_partial(deps, hours, username)
+
+    router.add_api_route("/performance", performance_page, methods=["GET"], response_model=None)
+    router.add_api_route(
+        "/partials/api-perf", api_perf_partial, methods=["GET"], response_class=HTMLResponse
+    )
+    router.add_api_route(
+        "/partials/errors", errors_partial, methods=["GET"], response_class=HTMLResponse
+    )
+    router.add_api_route(
+        "/partials/costs", costs_partial, methods=["GET"], response_class=HTMLResponse
+    )
 
     return router
 
@@ -630,8 +890,6 @@ def _get_integrations(appspec: Any) -> list[dict[str, Any]]:
 
 def _get_api_perf_data(ops_db: Any, hours: int) -> list[dict[str, Any]]:
     """Get API performance data with p95 latency."""
-    from datetime import UTC, datetime, timedelta
-
     cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
     result = []
     try:
@@ -708,8 +966,6 @@ def _get_error_data(ops_db: Any, cutoff: str) -> dict[str, Any]:
 
 def _get_cost_data(ops_db: Any, hours: int) -> dict[str, Any]:
     """Get cost indicator data."""
-    from datetime import UTC, datetime, timedelta
-
     cutoff = (datetime.now(UTC) - timedelta(hours=hours)).isoformat()
     result: dict[str, Any] = {"by_service": {}, "total_cents": 0, "total_calls": 0}
     try:
