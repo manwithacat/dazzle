@@ -91,7 +91,8 @@ entity Shape "Shape":
 # Demonstrates via clause for access control through junction tables.
 
 entity RealmGuardian "Realm Guardian":
-  guardian: ref Persona required
+  id: uuid pk
+  guardian: ref User required
   realm: str(100) required
   revoked_at: datetime
 
@@ -105,13 +106,14 @@ entity RealmGuardian "Realm Guardian":
       for: oracle
 
 entity Artifact "Artifact":
+  id: uuid pk
   name: str(200) required
   realm: str(100) required
-  creator: ref Persona
+  creator: ref User
 
   permit:
-    list: role(oracle), role(guardian)
-    read: role(oracle), role(guardian)
+    list: role(oracle) or role(guardian)
+    read: role(oracle) or role(guardian)
 
   scope:
     list: all

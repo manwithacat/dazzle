@@ -396,8 +396,8 @@ class EntityParserMixin:
                     self.skip_newlines()
                     if self.match(TokenType.DEDENT):
                         break
-                    rule = self._parse_scope_rule()
-                    scope_rules.append(rule)
+                    scope_rule = self._parse_scope_rule()
+                    scope_rules.append(scope_rule)
                     self.skip_newlines()
 
                 self.expect(TokenType.DEDENT)

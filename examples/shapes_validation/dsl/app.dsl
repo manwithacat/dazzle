@@ -39,5 +39,8 @@ persona forgemaster "Forgemaster":
 persona witness "Witness":
   description: "Mixed OR — sees own realm or own creations"
 
+persona guardian "Guardian":
+  description: "Junction-scoped — sees artifacts via RealmGuardian assignment"
+
 persona outsider "Outsider":
   description: "Deny-all baseline — proves complete mediation"

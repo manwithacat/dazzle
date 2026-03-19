@@ -721,6 +721,8 @@ __all__ = [
     "RoleCheck",
     "Comparison",
     "ConditionExpr",
+    "ViaBinding",
+    "ViaCondition",
     # Domain
     "BulkConfig",
     "BulkFormat",
