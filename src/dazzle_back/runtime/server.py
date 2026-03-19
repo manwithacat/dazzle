@@ -1417,6 +1417,7 @@ class DazzleBackendApp:
             )
 
             resolver = build_resolver(tenant_config)
+            assert self._database_url is not None, "database_url required for tenant isolation"
             registry = TenantRegistry(self._database_url)
             registry.ensure_table()
             self._app.add_middleware(
