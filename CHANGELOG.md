@@ -9,6 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-03-19
+
+### Added
+- **Schema-per-tenant isolation** — `TenantMiddleware` with subdomain/header/session resolvers, registry cache, `pg_backend` context-var routing, `--tenant` flag on `dazzle db` commands (#531)
+- **Domain user attribute resolution** — auth session validation merges DSL User entity fields into `auth_context.preferences` so scope rules like `current_user.school` resolve correctly (#532)
+- **Via clause entity ID resolution** — bare `current_user` in via clauses now resolves to DSL User entity PK via `preferences["entity_id"]` (#534)
+- **DSL anti-pattern guidance** — 5 modeling anti-patterns (polymorphic keys, god entities, soft-delete booleans, stringly-typed refs, duplicated fields) surfaced via inference KB, lint warnings, and `_guidance` string
+- **External action links** — new `OutcomeKind.EXTERNAL` and `external` keyword for URL-based action links on surfaces (#542)
+- **Docker dev infrastructure** — `dazzle serve` (Docker mode) now starts Postgres+Redis via Docker Compose while running the app locally (#540, #541)
+
+### Fixed
+- Scope rules using `current_user.school` resolve to null — auth users lacked domain attributes (#532)
+- Via clause `current_user` resolved to auth user ID instead of DSL entity ID (#534)
+- Test generator didn't populate nullable FKs required by 3-way OR invariants (#533)
+- 4 pre-existing CI failures (type-check, security tests, PostgreSQL tests, E2E smoke) all resolved
+- 6 bare `except Exception: pass` sites given proper logging
+- `_pack_cache` thread-safety gap fixed via atomic snapshot replacement
+- HTTP retry coverage gap — 4 unretried outbound call sites retrofitted
+- Docker container runtime SQLite → PostgreSQL default (#541)
+
+### Changed
+- **`server.py` subsystem migration** — reduced from 2,214 to 936 lines; `IntegrationManager` and `WorkspaceRouteBuilder` moved to standalone modules; circular import with `app_factory.py` eliminated (#535)
+- **Route factory extraction** — all 13 route factory mega-functions (300-784L each) refactored: handlers extracted to module level with `_XxxDeps` dataclasses, factories shrunk to route registration (#536)
+- **Parser nesting depth** — top 4 offenders flattened: `execute_step` (depth 24→dispatch), `_parse_single_step` (22→field parsers), `parse_type_spec` (20→sub-parsers), `handle_runtime_tool` (18→dispatch table) (#537)
+- **`dazzle_back` public API** — `__init__.py` exports 11 symbols via lazy loaders; CLI/MCP no longer reach into `dazzle_back.runtime.*` internals (#539)
+- Duplicated `error_response`/`unknown_op_response` in `handlers_consolidated.py` removed
+- 8 `Any` annotations replaced with concrete `TYPE_CHECKING` types
+- `ViaBinding` and `ViaCondition` added to `ir.__init__.__all__`
+- Shapes validation DSL fixed: `or` syntax in permit blocks, missing PKs and persona
+
 ## [0.43.0] - 2026-03-18
 
 ### Added
