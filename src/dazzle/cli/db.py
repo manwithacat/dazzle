@@ -153,15 +153,32 @@ async def _run_with_connection(
     project_root: Path,
     database_url: str,
     coro_factory: Any,
+    schema: str = "",
 ) -> Any:
-    """Connect to DB, run async operation, close connection."""
+    """Connect to DB, run async operation, close connection.
+
+    Args:
+        schema: Optional tenant schema name. When provided, sets the
+                search_path before running the operation.
+    """
     from dazzle.db.connection import get_connection
 
     conn = await get_connection(explicit_url=database_url, project_root=project_root)
     try:
+        if schema:
+            # schema is pre-validated via slug_to_schema_name (alphanumeric + underscore only)
+            await conn.execute(f"SET search_path TO {schema}, public")  # nosemgrep
         return await coro_factory(conn)
     finally:
         await conn.close()
+
+
+def _resolve_tenant_schema(tenant: str) -> str:
+    """Convert tenant slug to a quoted schema name for SET search_path."""
+    from dazzle.tenant.config import slug_to_schema_name, validate_slug
+
+    validate_slug(tenant)
+    return slug_to_schema_name(tenant)
 
 
 def _resolve_url(database_url: str) -> str:
@@ -174,6 +191,7 @@ def _resolve_url(database_url: str) -> str:
 @db_app.command(name="status")
 def status_command(
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Show row counts per entity and database size."""
@@ -183,13 +201,14 @@ def status_command(
     appspec = load_project_appspec(project_root)
     entities = appspec.domain.entities
     url = _resolve_url(database_url)
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     from dazzle.db.status import db_status_impl
 
     async def _run(conn: Any) -> Any:
         return await db_status_impl(entities=entities, conn=conn)
 
-    result = asyncio.run(_run_with_connection(project_root, url, _run))
+    result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
     if as_json:
         console.print(json_mod.dumps(result, indent=2))
@@ -210,6 +229,7 @@ def status_command(
 @db_app.command(name="verify")
 def verify_command(
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
 ) -> None:
     """Check FK integrity across all entity relationships."""
@@ -219,13 +239,14 @@ def verify_command(
     appspec = load_project_appspec(project_root)
     entities = appspec.domain.entities
     url = _resolve_url(database_url)
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     from dazzle.db.verify import db_verify_impl
 
     async def _run(conn: Any) -> Any:
         return await db_verify_impl(entities=entities, conn=conn)
 
-    result = asyncio.run(_run_with_connection(project_root, url, _run))
+    result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
     if as_json:
         console.print(json_mod.dumps(result, indent=2))
@@ -255,6 +276,7 @@ def verify_command(
 @db_app.command(name="reset")
 def reset_command(
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be truncated"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
@@ -266,6 +288,7 @@ def reset_command(
     appspec = load_project_appspec(project_root)
     entities = appspec.domain.entities
     url = _resolve_url(database_url)
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     from dazzle.db.reset import db_reset_impl
 
@@ -274,7 +297,7 @@ def reset_command(
         async def _run_dry(conn: Any) -> Any:
             return await db_reset_impl(entities=entities, conn=conn, dry_run=True)
 
-        result = asyncio.run(_run_with_connection(project_root, url, _run_dry))
+        result = asyncio.run(_run_with_connection(project_root, url, _run_dry, schema=schema))
 
         if as_json:
             console.print(json_mod.dumps(result, indent=2))
@@ -299,7 +322,7 @@ def reset_command(
     async def _run(conn: Any) -> Any:
         return await db_reset_impl(entities=entities, conn=conn)
 
-    result = asyncio.run(_run_with_connection(project_root, url, _run))
+    result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
     if as_json:
         console.print(json_mod.dumps(result, indent=2))
@@ -316,6 +339,7 @@ def reset_command(
 @db_app.command(name="cleanup")
 def cleanup_command(
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
     dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be deleted"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Skip confirmation"),
     as_json: bool = typer.Option(False, "--json", help="Output as JSON"),
@@ -327,6 +351,7 @@ def cleanup_command(
     appspec = load_project_appspec(project_root)
     entities = appspec.domain.entities
     url = _resolve_url(database_url)
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
 
     from dazzle.db.cleanup import db_cleanup_impl
 
@@ -335,7 +360,7 @@ def cleanup_command(
         async def _run_dry(conn: Any) -> Any:
             return await db_cleanup_impl(entities=entities, conn=conn, dry_run=True)
 
-        result = asyncio.run(_run_with_connection(project_root, url, _run_dry))
+        result = asyncio.run(_run_with_connection(project_root, url, _run_dry, schema=schema))
 
         if as_json:
             console.print(json_mod.dumps(result, indent=2))
@@ -362,7 +387,7 @@ def cleanup_command(
     async def _run(conn: Any) -> Any:
         return await db_cleanup_impl(entities=entities, conn=conn)
 
-    result = asyncio.run(_run_with_connection(project_root, url, _run))
+    result = asyncio.run(_run_with_connection(project_root, url, _run, schema=schema))
 
     if as_json:
         console.print(json_mod.dumps(result, indent=2))

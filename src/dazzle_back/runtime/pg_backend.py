@@ -13,10 +13,40 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
+from psycopg import sql as pgsql
+
 from dazzle_back.runtime.query_builder import quote_identifier
 from dazzle_back.specs.entity import EntitySpec, FieldSpec, FieldType, ScalarType
 
 logger = logging.getLogger(__name__)
+
+
+def _set_search_path(conn: Any, schema: str) -> None:
+    """Set search_path on a connection using safe SQL composition.
+
+    Uses psycopg.sql.SQL + Identifier (not Python str.format) to prevent injection.
+    """
+    # psycopg.sql.SQL.format() is safe SQL composition, not string interpolation
+    stmt = pgsql.SQL("SET search_path TO {schema}, public").format(schema=pgsql.Identifier(schema))
+    conn.execute(stmt)  # nosemgrep
+
+
+def _create_table_sql(table_name: str, columns: str) -> pgsql.Composed:
+    """Build a safe CREATE TABLE statement."""
+    return pgsql.SQL("CREATE TABLE IF NOT EXISTS {} ({})").format(
+        pgsql.Identifier(table_name),
+        pgsql.SQL(columns),
+    )
+
+
+def _create_index_sql(entity_name: str, field_name: str) -> pgsql.Composed:
+    """Build a safe CREATE INDEX statement."""
+    idx_name = f"idx_{entity_name}_{field_name}"
+    return pgsql.SQL("CREATE INDEX IF NOT EXISTS {} ON {} ({})").format(
+        pgsql.Identifier(idx_name),
+        pgsql.Identifier(entity_name),
+        pgsql.Identifier(field_name),
+    )
 
 
 # =============================================================================
@@ -186,11 +216,18 @@ class PostgresBackend:
         Yields a wrapped psycopg connection with dict_row factory.
         Rows support string key access (row["col"]).
         The wrapper adds .execute() for sqlite3 API compatibility.
+
+        If a tenant schema is set via context var (by TenantMiddleware),
+        it takes precedence over the instance's search_path.
         """
+        from dazzle_back.runtime.tenant_isolation import get_current_tenant_schema
+
+        effective_search_path = get_current_tenant_schema() or self.search_path
+
         if self._pool is not None:
             with self._pool.connection() as conn:
-                if self.search_path:
-                    conn.execute(f"SET search_path TO {self.search_path}, public")
+                if effective_search_path:
+                    _set_search_path(conn, effective_search_path)
                 yield PgConnectionWrapper(conn)
             return
 
@@ -200,8 +237,8 @@ class PostgresBackend:
 
         conn = psycopg.connect(self.database_url, row_factory=dict_row)
         try:
-            if self.search_path:
-                conn.execute(f"SET search_path TO {self.search_path}, public")
+            if effective_search_path:
+                _set_search_path(conn, effective_search_path)
             yield PgConnectionWrapper(conn)
             conn.commit()
         except Exception:
@@ -222,7 +259,7 @@ class PostgresBackend:
         if self._connection is None or self._connection.closed:
             raw = psycopg.connect(self.database_url, row_factory=dict_row)
             if self.search_path:
-                raw.execute(f"SET search_path TO {self.search_path}, public")
+                _set_search_path(raw, self.search_path)
             self._connection = PgConnectionWrapper(raw)
         return self._connection
 
@@ -243,19 +280,16 @@ class PostgresBackend:
     def create_table(self, entity: EntitySpec, *, registry: Any = None) -> None:
         """Create a table for an entity if it doesn't exist."""
         columns = self._build_columns(entity, registry=registry)
-        table = quote_identifier(entity.name)
-        sql = f"CREATE TABLE IF NOT EXISTS {table} ({columns})"
+        stmt = _create_table_sql(entity.name, columns)
 
         with self.connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(sql)
+            cursor.execute(stmt)
 
             # Create indexes
             for field in entity.fields:
                 if field.indexed:
-                    col = quote_identifier(field.name)
-                    index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
-                    cursor.execute(index_sql)
+                    cursor.execute(_create_index_sql(entity.name, field.name))
 
             # Create FK indexes
             if registry is not None:
@@ -339,10 +373,7 @@ class PostgresBackend:
             for entity in entities:
                 for field in entity.fields:
                     if field.indexed:
-                        col = quote_identifier(field.name)
-                        table = quote_identifier(entity.name)
-                        index_sql = f"CREATE INDEX IF NOT EXISTS idx_{entity.name}_{field.name} ON {table}({col})"
-                        cursor.execute(index_sql)
+                        cursor.execute(_create_index_sql(entity.name, field.name))
                 for fk_idx_sql in get_foreign_key_indexes(entity, registry):
                     cursor.execute(fk_idx_sql)
 

@@ -11,7 +11,7 @@ Tests:
 
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -311,105 +311,46 @@ class TestSurfaceAccess:
 
 
 class TestTenantIsolation:
-    """Tests for tenant database isolation using PostgreSQL schemas."""
+    """Tests for tenant schema isolation — context vars and slug validation."""
 
     def test_tenant_schema_generation(self) -> None:
-        """Test tenant schema name generation."""
-        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
+        """Test tenant schema name generation via dazzle.tenant."""
+        from dazzle.tenant.config import slug_to_schema_name
 
-        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
-        schema = manager._get_tenant_schema("tenant-123")
+        assert slug_to_schema_name("cyfuture") == "tenant_cyfuture"
+        assert slug_to_schema_name("smith_co") == "tenant_smith_co"
 
-        assert "tenant-123" in schema
-        assert schema == "tenant_tenant-123"
+    def test_tenant_slug_validation(self) -> None:
+        """Test tenant slug validation rejects invalid input."""
+        from dazzle.tenant.config import validate_slug
 
-    def test_tenant_schema_sanitization(self) -> None:
-        """Test tenant ID is sanitized to prevent injection."""
-        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
+        # Valid slugs
+        validate_slug("cyfuture")
+        validate_slug("smith_co")
 
-        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
-
-        # Should work with alphanumeric and dashes
-        schema = manager._get_tenant_schema("tenant-123-abc")
-        assert "tenant-123-abc" in schema
-
-        # Path traversal characters are stripped
-        schema = manager._get_tenant_schema("../../../etc/passwd")
-        # Should NOT contain path traversal
-        assert ".." not in schema
-        assert "/" not in schema
-
-        # Empty string should raise
+        # Invalid slugs
         with pytest.raises(ValueError):
-            manager._get_tenant_schema("")
+            validate_slug("")
+        with pytest.raises(ValueError):
+            validate_slug("../../../etc/passwd")
+        with pytest.raises(ValueError):
+            validate_slug("smith-co")  # hyphens not allowed
 
-    @patch("psycopg.connect")
-    def test_list_tenants_empty(self, mock_connect) -> None:
-        """Test listing tenants when none exist."""
-        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
+    def test_context_var_set_and_get(self) -> None:
+        """Test tenant context var lifecycle."""
+        from dazzle_back.runtime.tenant_isolation import (
+            _current_tenant_schema,
+            get_current_tenant_schema,
+            set_current_tenant_schema,
+        )
 
-        mock_conn = MagicMock()
-        mock_conn.execute.return_value.fetchall.return_value = []
-        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
-        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
-
-        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
-        tenants = manager.list_tenants()
-
-        assert tenants == []
-
-    @patch("psycopg.connect")
-    def test_tenant_exists_false(self, mock_connect) -> None:
-        """Test tenant_exists returns False for non-existent tenant."""
-        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
-
-        mock_conn = MagicMock()
-        mock_conn.execute.return_value.fetchone.return_value = None
-        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
-        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
-
-        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
-
-        assert manager.tenant_exists("tenant-123") is False
-
-    @patch("psycopg.connect")
-    def test_delete_nonexistent_tenant(self, mock_connect) -> None:
-        """Test deleting non-existent tenant returns False."""
-        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
-
-        mock_conn = MagicMock()
-        mock_conn.execute.return_value.fetchone.return_value = None
-        mock_connect.return_value.__enter__ = MagicMock(return_value=mock_conn)
-        mock_connect.return_value.__exit__ = MagicMock(return_value=False)
-
-        manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
-
-        assert manager.delete_tenant("tenant-123") is False
-
-    def test_get_tenant_manager_creates_manager(self) -> None:
-        """Test get_tenant_manager creates a PostgresBackend."""
-        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
-
-        with patch("dazzle_back.runtime.tenant_isolation.PostgresBackend") as mock_pg:
-            manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
-            tenant_db = manager.get_tenant_manager("tenant-123")
-
-            assert tenant_db is not None
-            mock_pg.assert_called_once()
-            # Verify search_path was set for tenant isolation
-            call_args = mock_pg.call_args
-            assert "tenant_tenant-123" in str(call_args)
-
-    def test_get_tenant_manager_cached(self) -> None:
-        """Test get_tenant_manager returns cached manager."""
-        from dazzle_back.runtime.tenant_isolation import TenantDatabaseManager
-
-        with patch("dazzle_back.runtime.tenant_isolation.PostgresBackend"):
-            manager = TenantDatabaseManager(database_url="postgresql://localhost/test")
-            db1 = manager.get_tenant_manager("tenant-123")
-            db2 = manager.get_tenant_manager("tenant-123")
-
-            assert db1 is db2
+        assert get_current_tenant_schema() is None
+        token = set_current_tenant_schema("tenant_cyfuture")
+        try:
+            assert get_current_tenant_schema() == "tenant_cyfuture"
+        finally:
+            _current_tenant_schema.reset(token)
+        assert get_current_tenant_schema() is None
 
 
 # =============================================================================

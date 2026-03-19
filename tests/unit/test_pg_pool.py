@@ -92,7 +92,12 @@ class TestConnectionFallback:
         with _pg_backend.connection():
             pass
 
-        mock_pool_conn.execute.assert_called_with("SET search_path TO tenant_abc, public")
+        # pg_backend uses psycopg.sql.Composed for safe SQL composition
+        from psycopg.sql import Composed
+
+        mock_pool_conn.execute.assert_called_once()
+        composed = mock_pool_conn.execute.call_args[0][0]
+        assert isinstance(composed, Composed)
 
 
 class TestPoolEnvConfig:

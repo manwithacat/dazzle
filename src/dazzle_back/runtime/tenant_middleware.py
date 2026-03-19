@@ -1,207 +1,168 @@
+"""Tenant middleware — resolves tenant from request, routes to schema.
+
+Resolver protocol + implementations (subdomain, header, session).
+TenantMiddleware class with registry cache.
 """
-Tenant middleware for DNR-Back applications.
 
-Extracts tenant ID from requests and sets it in the request context.
-Works with TenantDatabaseManager to route requests to the correct database.
-"""
+from __future__ import annotations
 
-from collections.abc import Callable
-from typing import Any
+import logging
+import os
+import time
+from typing import Any, Protocol
 
-from fastapi import FastAPI
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-# =============================================================================
-# Tenant Header Configuration
-# =============================================================================
+logger = logging.getLogger(__name__)
+
+CACHE_TTL_SECONDS = 60
 
 
-# HTTP header for tenant identification
-TENANT_HEADER = "X-Tenant-ID"
+class TenantResolver(Protocol):
+    """Extracts tenant slug from a request."""
 
-# Cookie name for tenant (fallback)
-TENANT_COOKIE = "dazzle_tenant_id"
-
-# Query parameter for tenant (lowest priority)
-TENANT_QUERY_PARAM = "tenant_id"
+    def resolve(self, request: Request) -> str | None: ...
 
 
-# =============================================================================
-# Tenant Middleware
-# =============================================================================
+class SubdomainResolver:
+    """Extracts tenant slug from subdomain: {slug}.{base_domain}."""
 
+    def __init__(self, base_domain: str) -> None:
+        self._base_domain = base_domain.lower()
 
-def create_tenant_middleware(
-    on_tenant_not_found: Callable[[str], Any] | None = None,
-    allow_missing_tenant: bool = False,
-) -> Any:
-    """
-    Create a middleware that extracts and sets tenant ID.
-
-    Tenant ID is extracted from (in order of priority):
-    1. X-Tenant-ID header
-    2. dazzle_tenant_id cookie
-    3. tenant_id query parameter
-
-    Args:
-        on_tenant_not_found: Optional callback when tenant doesn't exist
-        allow_missing_tenant: If True, allow requests without tenant ID
-
-    Returns:
-        Starlette middleware class
-    """
-    from starlette.middleware.base import BaseHTTPMiddleware
-    from starlette.requests import Request
-    from starlette.responses import JSONResponse, Response
-
-    from dazzle_back.runtime.tenant_isolation import set_current_tenant_id
-
-    class TenantMiddleware(BaseHTTPMiddleware):
-        """Middleware to extract and set tenant ID for each request."""
-
-        async def dispatch(self, request: Request, call_next: Any) -> Response:
-            # Extract tenant ID from various sources
-            tenant_id = self._extract_tenant_id(request)
-
-            # Set tenant context
-            set_current_tenant_id(tenant_id)
-
-            # Store in request state for easy access
-            request.state.tenant_id = tenant_id
-
-            # Check if tenant is required but missing
-            if not allow_missing_tenant and tenant_id is None:
-                # Skip check for certain paths (health checks, auth, etc.)
-                path = request.url.path
-                skip_paths = [
-                    "/health",
-                    "/docs",
-                    "/openapi.json",
-                    "/redoc",
-                    "/auth/",
-                    "/_dazzle/",
-                    "/_dazzle/",
-                ]
-                if not any(path.startswith(skip) for skip in skip_paths):
-                    return JSONResponse(
-                        status_code=400,
-                        content={
-                            "detail": f"Missing required {TENANT_HEADER} header",
-                            "error": "tenant_required",
-                        },
-                    )
-
-            # Validate tenant exists if callback provided
-            if tenant_id and on_tenant_not_found:
-                # Let the callback handle validation
-                error_response = on_tenant_not_found(tenant_id)
-                if error_response:
-                    return error_response  # type: ignore[no-any-return]
-
-            try:
-                response = await call_next(request)
-                return response  # type: ignore[no-any-return]
-            finally:
-                # Clean up context
-                set_current_tenant_id(None)
-
-        def _extract_tenant_id(self, request: Request) -> str | None:
-            """Extract tenant ID from request."""
-            # 1. Check header (highest priority)
-            tenant_id = request.headers.get(TENANT_HEADER)
-            if tenant_id:
-                return tenant_id
-
-            # 2. Check cookie
-            tenant_id = request.cookies.get(TENANT_COOKIE)
-            if tenant_id:
-                return tenant_id
-
-            # 3. Check query parameter (lowest priority)
-            tenant_id = request.query_params.get(TENANT_QUERY_PARAM)
-            if tenant_id:
-                return tenant_id
-
+    def resolve(self, request: Request) -> str | None:
+        host = (request.url.hostname or "").lower()
+        if not host or not self._base_domain:
             return None
+        if not host.endswith(f".{self._base_domain}"):
+            return None
+        prefix = host[: -(len(self._base_domain) + 1)]
+        # Take only the immediate subdomain (first segment)
+        slug = prefix.split(".")[-1] if "." in prefix else prefix
+        return slug if slug else None
 
-    return TenantMiddleware
+
+class HeaderResolver:
+    """Extracts tenant slug from an HTTP header."""
+
+    def __init__(self, header_name: str = "X-Tenant-ID") -> None:
+        self._header_name = header_name.lower()
+
+    def resolve(self, request: Request) -> str | None:
+        return request.headers.get(self._header_name) or None
 
 
-def apply_tenant_middleware(
-    app: FastAPI,
-    tenant_manager: Any,
-    *,
-    allow_missing_tenant: bool = False,
-    auto_provision: bool = True,
-) -> None:
-    """
-    Apply tenant middleware to a FastAPI application.
+class SessionResolver:
+    """Extracts tenant slug from a session cookie."""
 
-    Args:
-        app: FastAPI application instance
-        tenant_manager: TenantDatabaseManager instance
-        allow_missing_tenant: If True, allow requests without tenant ID
-        auto_provision: If True, auto-provision new tenants
-    """
+    def __init__(self, cookie_name: str = "dazzle_tenant") -> None:
+        self._cookie_name = cookie_name
 
-    def on_tenant_not_found(tenant_id: str) -> JSONResponse | None:
-        """Handle missing tenant."""
-        if tenant_manager.tenant_exists(tenant_id):
-            return None  # Tenant exists, continue
+    def resolve(self, request: Request) -> str | None:
+        return request.cookies.get(self._cookie_name) or None
 
-        if auto_provision:
-            # Auto-provision the tenant
-            try:
-                tenant_manager.provision_tenant(tenant_id)
-                return None  # Successfully provisioned
-            except Exception as e:
-                return JSONResponse(
-                    status_code=500,
-                    content={
-                        "detail": f"Failed to provision tenant: {e}",
-                        "error": "tenant_provision_failed",
-                    },
-                )
+
+def build_resolver(tenant_config: Any) -> TenantResolver:
+    """Build the appropriate resolver from TenantConfig."""
+    resolver_type = tenant_config.resolver
+    if resolver_type == "subdomain":
+        return SubdomainResolver(base_domain=tenant_config.base_domain)
+    elif resolver_type == "header":
+        return HeaderResolver(header_name=tenant_config.header_name)
+    elif resolver_type == "session":
+        return SessionResolver()
+    else:
+        raise ValueError(f"Unknown tenant resolver: {resolver_type}")
+
+
+class _RegistryCache:
+    """In-memory cache for tenant registry lookups with TTL."""
+
+    def __init__(self, registry: Any, ttl: int = CACHE_TTL_SECONDS) -> None:
+        self._registry = registry
+        self._ttl = ttl
+        self._cache: dict[str, tuple[Any, float]] = {}
+
+    def get(self, slug: str) -> Any | None:
+        """Look up tenant record, using cache with TTL."""
+        now = time.monotonic()
+        cached = self._cache.get(slug)
+        if cached and (now - cached[1]) < self._ttl:
+            return cached[0]
+        record = self._registry.get(slug)
+        if record:
+            self._cache[slug] = (record, now)
         else:
+            self._cache.pop(slug, None)
+        return record
+
+
+_EXCLUDED_PREFIXES = (
+    "/health",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/static/",
+    "/auth/",
+    "/_dazzle/",
+)
+
+
+class TenantMiddleware(BaseHTTPMiddleware):
+    """Starlette middleware that resolves tenant and sets schema context."""
+
+    def __init__(
+        self,
+        app: Any,
+        resolver: TenantResolver,
+        registry: Any,
+        excluded_prefixes: tuple[str, ...] = _EXCLUDED_PREFIXES,
+    ) -> None:
+        super().__init__(app)
+        self._resolver = resolver
+        self._cache = _RegistryCache(registry)
+        self._excluded_prefixes = excluded_prefixes
+
+    async def dispatch(self, request: Request, call_next: Any) -> Any:
+        from .tenant_isolation import _current_tenant_schema, set_current_tenant_schema
+
+        path = request.url.path
+
+        # Skip excluded paths
+        if any(path.startswith(p) for p in self._excluded_prefixes):
+            return await call_next(request)
+
+        # Dev override: DAZZLE_TENANT_SLUG env var
+        slug = os.environ.get("DAZZLE_TENANT_SLUG") or self._resolver.resolve(request)
+
+        if not slug:
             return JSONResponse(
-                status_code=404,
-                content={
-                    "detail": f"Tenant '{tenant_id}' not found",
-                    "error": "tenant_not_found",
-                },
+                {"detail": "Tenant not specified"},
+                status_code=400,
             )
 
-    TenantMiddleware = create_tenant_middleware(
-        on_tenant_not_found=on_tenant_not_found,
-        allow_missing_tenant=allow_missing_tenant,
-    )
-    app.add_middleware(TenantMiddleware)
+        record = self._cache.get(slug)
+        if not record:
+            return JSONResponse(
+                {"detail": f"Tenant '{slug}' not found"},
+                status_code=404,
+            )
 
+        if record.status == "suspended":
+            return JSONResponse(
+                {"detail": f"Tenant '{slug}' is suspended"},
+                status_code=503,
+            )
 
-# =============================================================================
-# Dependency Helpers
-# =============================================================================
+        # Set schema context for pg_backend
+        token = set_current_tenant_schema(record.schema_name)
+        request.state.tenant = record
 
+        try:
+            response = await call_next(request)
+        finally:
+            _current_tenant_schema.reset(token)
 
-def get_tenant_db_dependency(tenant_manager: Any) -> Callable[..., Any]:
-    """
-    Create a FastAPI dependency that returns the tenant's DatabaseManager.
-
-    Args:
-        tenant_manager: TenantDatabaseManager instance
-
-    Returns:
-        FastAPI dependency function
-    """
-    from fastapi import Request
-
-    def get_tenant_db(request: Request) -> Any:
-        """Get the database manager for the current tenant."""
-        tenant_id = getattr(request.state, "tenant_id", None)
-        if not tenant_id:
-            from fastapi import HTTPException
-
-            raise HTTPException(status_code=400, detail="Tenant ID required")
-        return tenant_manager.get_tenant_manager(tenant_id)
-
-    return get_tenant_db
+        return response

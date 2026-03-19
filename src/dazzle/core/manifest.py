@@ -306,6 +306,7 @@ class TenantConfig:
     isolation: str = "none"  # "none" | "schema"
     resolver: str = "subdomain"  # "subdomain" | "header" | "session"
     header_name: str = "X-Tenant-ID"  # only used when resolver = "header"
+    base_domain: str = ""  # only used when resolver = "subdomain"
 
 
 @dataclass
@@ -530,6 +531,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         isolation=tenant_data.get("isolation", "none"),
         resolver=tenant_data.get("resolver", "subdomain"),
         header_name=tenant_data.get("header_name", "X-Tenant-ID"),
+        base_domain=tenant_data.get("base_domain", ""),
     )
 
     # Parse [ui] config

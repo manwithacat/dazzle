@@ -706,6 +706,9 @@ class ServerConfig:
     schedule_specs: list[Any] = field(default_factory=list)  # ScheduleSpec list from AppSpec
     entity_status_fields: dict[str, str] = field(default_factory=dict)  # entity_name → status field
 
+    # Tenant isolation (v0.43.0)
+    tenant_config: Any = None  # TenantConfig from manifest
+
     # Fragment sources from DSL source= annotations (v0.25.1)
     fragment_sources: dict[str, dict[str, Any]] = field(default_factory=dict)
 
@@ -846,6 +849,8 @@ class DazzleBackendApp:
         self._process_manager: Any | None = None  # ProcessManager type
         self._process_adapter: Any | None = None  # ProcessAdapter type
         self._sla_manager: Any | None = None  # SLAManager type
+        # Tenant isolation (v0.43.0)
+        self._tenant_config = config.tenant_config
         # Fragment sources from DSL source= annotations (v0.25.1)
         self._fragment_sources: dict[str, dict[str, Any]] = config.fragment_sources
         # Founder Console (v0.26.0)
@@ -1401,6 +1406,24 @@ class DazzleBackendApp:
             add_metrics_middleware(self._app)
         except ImportError:
             pass
+
+        # Tenant isolation middleware (schema-per-tenant)
+        tenant_config = self._tenant_config
+        if tenant_config and tenant_config.isolation == "schema":
+            from dazzle.tenant.registry import TenantRegistry
+            from dazzle_back.runtime.tenant_middleware import (
+                TenantMiddleware,
+                build_resolver,
+            )
+
+            resolver = build_resolver(tenant_config)
+            registry = TenantRegistry(self._database_url)
+            registry.ensure_table()
+            self._app.add_middleware(
+                TenantMiddleware,
+                resolver=resolver,
+                registry=registry,
+            )
 
         # Exception handlers (v0.28.0)
         from dazzle_back.runtime.exception_handlers import register_exception_handlers
