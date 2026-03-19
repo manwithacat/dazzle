@@ -320,12 +320,17 @@ def build_server_config(
     # Extract search fields from surface declarations
     entity_search_fields = build_entity_search_fields(surfaces=appspec.surfaces)
 
-    # Auto-detect ref fields for eager loading (prevents N+1 queries)
+    # Auto-detect ref/belongs_to fields for eager loading (prevents N+1 queries).
+    # Use relation names (strip _id suffix) to match relation_loader conventions.
     entity_auto_includes: dict[str, list[str]] = {}
     for entity in appspec.domain.entities:
-        ref_names = [f.name for f in entity.fields if f.type.kind == "ref" and f.type.ref_entity]
-        if ref_names:
-            entity_auto_includes[entity.name] = ref_names
+        rel_names = [
+            f.name[:-3] if f.name.endswith("_id") else f.name
+            for f in entity.fields
+            if f.type.kind in ("ref", "belongs_to") and f.type.ref_entity
+        ]
+        if rel_names:
+            entity_auto_includes[entity.name] = rel_names
 
     # Extract entity status fields for process trigger status transition detection
     entity_status_fields: dict[str, str] = {}

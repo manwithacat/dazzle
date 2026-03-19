@@ -133,8 +133,8 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
         ft = f.type
         kind = ft.kind
         kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-        # Ref fields
-        if kind_val == "ref":
+        # Ref and belongs_to fields
+        if kind_val in ("ref", "belongs_to"):
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
             ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
@@ -149,7 +149,7 @@ def _build_surface_columns(entity_spec: Any, surface_spec: Any) -> list[dict[str
             )
             continue
         # Skip non-displayable types
-        if kind_val in ("uuid", "has_many", "has_one", "embeds", "belongs_to"):
+        if kind_val in ("uuid", "has_many", "has_one", "embeds"):
             continue
         col_type = _field_kind_to_col_type(f, entity_spec)
         col_key = f"{f.name}_minor" if kind_val == "money" else f.name
@@ -200,8 +200,8 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
         ft = f.type
         kind = ft.kind
         kind_val: str = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-        # Show ref columns with resolved display name; hide other relation types
-        if kind_val == "ref":
+        # Show ref/belongs_to columns with resolved display name; hide other relation types
+        if kind_val in ("ref", "belongs_to"):
             rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
             ref_entity = getattr(ft, "ref_entity", None)
             # Ensure ref_entity is a plain string (not a pydantic/Cython object)
@@ -216,7 +216,7 @@ def _build_entity_columns(entity_spec: Any) -> list[dict[str, Any]]:
                 }
             )
             continue
-        if kind_val in ("uuid", "has_many", "has_one", "embeds", "belongs_to"):
+        if kind_val in ("uuid", "has_many", "has_one", "embeds"):
             continue
         if f.name.endswith("_id"):
             continue

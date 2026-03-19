@@ -811,3 +811,47 @@ class TestBuildEntityColumns:
         cols = _build_entity_columns(contact)
         company_col = next(c for c in cols if c.key == "company")
         assert company_col.type == "ref"
+
+    def test_ref_field_id_suffix_stripped_for_column_key(self):
+        """Ref fields with _id suffix use relation name as column key (#553)."""
+        entity = ir.EntitySpec(
+            name="Task",
+            title="Task",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                ir.FieldSpec(
+                    name="assigned_to_id",
+                    type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
+                ),
+            ],
+        )
+        cols = _build_entity_columns(entity)
+        ref_col = next(c for c in cols if c.type == "ref")
+        assert ref_col.key == "assigned_to"
+        assert ref_col.label == "Assigned To"
+
+    def test_belongs_to_field_maps_to_ref_type(self):
+        """Belongs_to fields also map to ref column type (#553)."""
+        entity = ir.EntitySpec(
+            name="LineItem",
+            title="Line Item",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=FieldTypeKind.UUID),
+                    modifiers=[FieldModifier.PK],
+                ),
+                ir.FieldSpec(
+                    name="order_id",
+                    type=ir.FieldType(kind=FieldTypeKind.BELONGS_TO, ref_entity="Order"),
+                ),
+            ],
+        )
+        cols = _build_entity_columns(entity)
+        ref_col = next(c for c in cols if c.type == "ref")
+        assert ref_col.key == "order"
+        assert ref_col.label == "Order"

@@ -97,9 +97,9 @@ class RelationRegistry:
                 )
                 registry.register(entity.name, info)
 
-            # Register implicit relations from ref fields
+            # Register implicit relations from ref/belongs_to fields
             for field_spec in entity.fields:
-                if field_spec.type.kind == "ref" and field_spec.type.ref_entity:
+                if field_spec.type.kind in ("ref", "belongs_to") and field_spec.type.ref_entity:
                     ref_entity = field_spec.type.ref_entity
 
                     # Check if we already have an explicit relation for this

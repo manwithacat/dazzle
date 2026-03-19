@@ -1409,6 +1409,7 @@ class TestBuildEntityColumns:
         assert _build_entity_columns(None) == []
 
     def test_hidden_relation_types(self) -> None:
+        """has_many is hidden; belongs_to is shown as ref column (#553)."""
         from dazzle_back.runtime.server import _build_entity_columns
 
         entity = SimpleNamespace(
@@ -1422,9 +1423,11 @@ class TestBuildEntityColumns:
                     type=SimpleNamespace(kind=SimpleNamespace(value="has_many")),
                 ),
                 SimpleNamespace(
-                    name="parent",
+                    name="parent_id",
                     label=None,
-                    type=SimpleNamespace(kind=SimpleNamespace(value="belongs_to")),
+                    type=SimpleNamespace(
+                        kind=SimpleNamespace(value="belongs_to"), ref_entity="Parent"
+                    ),
                 ),
                 SimpleNamespace(
                     name="title",
@@ -1435,8 +1438,12 @@ class TestBuildEntityColumns:
             state_machine=None,
         )
         cols = _build_entity_columns(entity)
-        assert len(cols) == 1
-        assert cols[0]["key"] == "title"
+        assert len(cols) == 2
+        keys = [c["key"] for c in cols]
+        assert "parent" in keys  # belongs_to shown as ref column, _id stripped
+        assert "title" in keys
+        ref_col = next(c for c in cols if c["key"] == "parent")
+        assert ref_col["type"] == "ref"
 
 
 class TestBuildSurfaceColumns:

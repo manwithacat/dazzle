@@ -130,6 +130,7 @@ def _field_type_to_column_type(field_spec: ir.FieldSpec | None) -> str:
         FieldTypeKind.DECIMAL: "text",
         FieldTypeKind.ENUM: "badge",
         FieldTypeKind.REF: "ref",
+        FieldTypeKind.BELONGS_TO: "ref",
     }
     return type_map.get(kind, "text")
 
@@ -231,18 +232,35 @@ def _build_columns(
                     else ("text", [])
                 )
                 # Money fields: use expanded _minor column key
+                # Ref/belongs_to fields: use relation name (strip _id) so templates
+                # access the eagerly-loaded dict, not the raw FK UUID.
                 col_key = element.field_name
                 col_currency = ""
                 if field_spec and field_spec.type and field_spec.type.kind == FieldTypeKind.MONEY:
                     col_key = f"{element.field_name}_minor"
                     col_currency = field_spec.type.currency_code or "GBP"
+                elif (
+                    field_spec
+                    and field_spec.type
+                    and field_spec.type.kind
+                    in (
+                        FieldTypeKind.REF,
+                        FieldTypeKind.BELONGS_TO,
+                    )
+                ):
+                    col_key = (
+                        element.field_name[:-3]
+                        if element.field_name.endswith("_id")
+                        else element.field_name
+                    )
                 # Sensitive fields are masked in list views (show last 4 chars)
                 is_sensitive = bool(field_spec and field_spec.is_sensitive)
                 col_type = "sensitive" if is_sensitive else _field_type_to_column_type(field_spec)
+                col_label = element.label or col_key.replace("_", " ").title()
                 columns.append(
                     ColumnContext(
                         key=col_key,
-                        label=element.label or element.field_name.replace("_", " ").title(),
+                        label=col_label,
                         type=col_type,
                         sortable=has_sort,
                         filterable=filterable and not is_sensitive,
@@ -260,16 +278,22 @@ def _build_columns(
                     _infer_filter_type(field, entity, field.name) if filterable else ("text", [])
                 )
                 # Money fields: use expanded _minor column key
+                # Ref/belongs_to fields: use relation name (strip _id)
                 col_key = field.name
                 col_currency = ""
                 if field.type and field.type.kind == FieldTypeKind.MONEY:
                     col_key = f"{field.name}_minor"
                     col_currency = field.type.currency_code or "GBP"
+                elif field.type and field.type.kind in (
+                    FieldTypeKind.REF,
+                    FieldTypeKind.BELONGS_TO,
+                ):
+                    col_key = field.name[:-3] if field.name.endswith("_id") else field.name
                 col_type = "sensitive" if is_sensitive else _field_type_to_column_type(field)
                 columns.append(
                     ColumnContext(
                         key=col_key,
-                        label=field.name.replace("_", " ").title(),
+                        label=col_key.replace("_", " ").title(),
                         type=col_type,
                         sortable=has_sort,
                         filterable=filterable,
@@ -675,10 +699,12 @@ def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
         if field.type and field.type.kind == FieldTypeKind.MONEY:
             col_key = f"{field.name}_minor"
             col_currency = field.type.currency_code or "GBP"
+        elif field.type and field.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO):
+            col_key = field.name[:-3] if field.name.endswith("_id") else field.name
         columns.append(
             ColumnContext(
                 key=col_key,
-                label=field.name.replace("_", " ").title(),
+                label=col_key.replace("_", " ").title(),
                 type=_field_type_to_column_type(field),
                 currency_code=col_currency,
             )

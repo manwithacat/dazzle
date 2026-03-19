@@ -130,7 +130,24 @@ class TestFilterableColumns:
             ft = getattr(f, "type", None)
             kind = getattr(ft, "kind", None)
             kind_val = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-            if kind_val in ("ref", "uuid", "has_many", "has_one", "embeds", "belongs_to"):
+            # Ref and belongs_to: show as ref columns with relation name key
+            if kind_val in ("ref", "belongs_to"):
+                rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+                ref_entity = getattr(ft, "ref_entity", None)
+                from dazzle.core.strings import to_api_plural
+
+                ref_route = f"/{to_api_plural(str(ref_entity))}/{{id}}" if ref_entity else ""
+                columns.append(
+                    {
+                        "key": rel_name,
+                        "label": rel_name.replace("_", " ").title(),
+                        "type": "ref",
+                        "sortable": False,
+                        "ref_route": ref_route,
+                    }
+                )
+                continue
+            if kind_val in ("uuid", "has_many", "has_one", "embeds"):
                 continue
             if f.name.endswith("_id"):
                 continue
@@ -309,10 +326,10 @@ class TestAttentionHighlighting:
 
 
 class TestRefColumnHiding:
-    """Ref, UUID, and relationship columns should be hidden from workspace tables."""
+    """Ref/belongs_to show as ref columns; UUID and relationship columns are hidden."""
 
     def _build_columns(self, entity: Any) -> list[dict[str, Any]]:
-        """Simulate the column-building loop from server.py."""
+        """Simulate the column-building loop from workspace_rendering.py."""
         from dazzle_back.runtime.server import _field_kind_to_col_type
 
         columns: list[dict[str, Any]] = []
@@ -322,7 +339,11 @@ class TestRefColumnHiding:
             ft = getattr(f, "type", None)
             kind = getattr(ft, "kind", None)
             kind_val = kind.value if hasattr(kind, "value") else str(kind) if kind else ""
-            if kind_val in ("ref", "uuid", "has_many", "has_one", "embeds", "belongs_to"):
+            if kind_val in ("ref", "belongs_to"):
+                rel_name = f.name[:-3] if f.name.endswith("_id") else f.name
+                columns.append({"key": rel_name, "type": "ref"})
+                continue
+            if kind_val in ("uuid", "has_many", "has_one", "embeds"):
                 continue
             if f.name.endswith("_id"):
                 continue
@@ -330,7 +351,8 @@ class TestRefColumnHiding:
             columns.append({"key": f.name, "type": col_type})
         return columns
 
-    def test_ref_field_hidden(self) -> None:
+    def test_ref_field_shown_as_ref_column(self) -> None:
+        """Ref fields appear as ref-type columns with relation name key (#553)."""
         fields = [
             _make_field("title", FieldTypeKind.STR),
             _make_field("customer", FieldTypeKind.REF, ref_entity="Customer"),
@@ -338,8 +360,23 @@ class TestRefColumnHiding:
         entity = _make_entity("Order", fields)
         cols = self._build_columns(entity)
         keys = [c["key"] for c in cols]
-        assert "customer" not in keys
+        assert "customer" in keys
         assert "title" in keys
+        ref_col = next(c for c in cols if c["key"] == "customer")
+        assert ref_col["type"] == "ref"
+
+    def test_belongs_to_field_shown_as_ref_column(self) -> None:
+        """Belongs_to fields appear as ref-type columns (#553)."""
+        fields = [
+            _make_field("title", FieldTypeKind.STR),
+            _make_field("order_id", FieldTypeKind.BELONGS_TO, ref_entity="Order"),
+        ]
+        entity = _make_entity("LineItem", fields)
+        cols = self._build_columns(entity)
+        keys = [c["key"] for c in cols]
+        assert "order" in keys  # _id suffix stripped
+        ref_col = next(c for c in cols if c["key"] == "order")
+        assert ref_col["type"] == "ref"
 
     def test_uuid_field_hidden(self) -> None:
         fields = [
