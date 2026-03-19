@@ -417,30 +417,9 @@ async def _workspace_region_handler(
                 total = result.get("total", 0)
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
 
-            # Soft/advisory filter fallback: workspace region filters (e.g. `filter:
-            # created_by = current_user`) are advisory hints for personalization, not
-            # hard access-control gates.  Bulk-loaded or seeded records may have a
-            # NULL or different `created_by`, causing the filtered query to return
-            # nothing.  When the filter produces zero results we re-query without it
-            # so that seed/demo data is always visible.  Entity-level access rules
-            # (Cedar policies, RBAC) are enforced separately and remain hard gates.
-            if not items and filters is not None and ir_filter is not None:
-                logger.debug(
-                    "Workspace region filter produced no results; falling back to unfiltered query"
-                )
-                unfiltered_result = await repo.list(
-                    page=page,
-                    page_size=limit,
-                    filters=None,
-                    sort=sort_list,
-                    include=include_rels or None,
-                )
-                if isinstance(unfiltered_result, dict):
-                    raw_items = unfiltered_result.get("items", [])
-                    total = unfiltered_result.get("total", 0)
-                    items = [
-                        i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items
-                    ]
+            # Zero results is valid — the region shows its empty: message.
+            # Do NOT fall back to unfiltered queries: scope/filter conditions
+            # are access-control gates, not advisory hints (#546).
         except Exception:
             logger.warning("Failed to list items for workspace region", exc_info=True)
 
@@ -626,24 +605,8 @@ async def _fetch_region_json(
                 total = result.get("total", 0)
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
 
-            # Soft/advisory filter fallback — see _workspace_region_handler for rationale.
-            if not items and filters is not None and ir_filter is not None:
-                logger.debug(
-                    "Batch region filter produced no results; falling back to unfiltered query"
-                )
-                unfiltered_result = await repo.list(
-                    page=page,
-                    page_size=limit,
-                    filters=None,
-                    sort=sort_list,
-                    include=include_rels,
-                )
-                if isinstance(unfiltered_result, dict):
-                    raw_items = unfiltered_result.get("items", [])
-                    total = unfiltered_result.get("total", 0)
-                    items = [
-                        i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items
-                    ]
+            # Zero results is valid — the region shows its empty: message.
+            # Do NOT fall back to unfiltered queries (#546).
         except Exception:
             logger.warning(
                 "Batch: failed to list items for region %s", ctx.ctx_region.name, exc_info=True
