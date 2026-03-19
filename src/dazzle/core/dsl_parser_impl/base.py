@@ -768,4 +768,6 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.DATE_RANGE,
     TokenType.TIME_BUCKET,
     TokenType.DATE_FIELD,
+    # v0.44.0 External action links
+    TokenType.EXTERNAL,
 )
