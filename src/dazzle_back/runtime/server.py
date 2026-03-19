@@ -24,8 +24,6 @@ from dazzle_back.runtime._fastapi_compat import FastAPI as _FastAPI
 from dazzle_back.runtime.auth import (
     AuthMiddleware,
     AuthStore,
-    create_2fa_routes,
-    create_auth_routes,
 )
 from dazzle_back.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle_back.runtime.file_storage import FileService
@@ -820,10 +818,6 @@ class DazzleBackendApp:
         self._db_manager: PostgresBackend | None = None
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
-        # Social auth (OAuth2)
-        self._jwt_service: Any | None = None  # JWTService type
-        self._token_store: Any | None = None  # TokenStore type
-        self._social_auth_service: Any | None = None  # SocialAuthService type
         self._file_service: FileService | None = None
         self._last_migration: MigrationPlan | None = None
         self._start_time: datetime | None = None
@@ -875,6 +869,7 @@ class DazzleBackendApp:
 
     def _build_default_subsystems(self) -> list[Any]:
         """Create the ordered list of default subsystem plugins."""
+        from dazzle_back.runtime.subsystems.auth import AuthSubsystem
         from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
         from dazzle_back.runtime.subsystems.console import ConsoleSubsystem
         from dazzle_back.runtime.subsystems.events import EventsSubsystem
@@ -884,6 +879,7 @@ class DazzleBackendApp:
         from dazzle_back.runtime.subsystems.sla import SLASubsystem
 
         return [
+            AuthSubsystem(),
             EventsSubsystem(),
             ChannelsSubsystem(),
             ConsoleSubsystem(),
@@ -940,150 +936,6 @@ class DazzleBackendApp:
             self._process_adapter = ctx.process_adapter
         if ctx.sla_manager is not None:
             self._sla_manager = ctx.sla_manager
-
-    def _init_social_auth(self) -> None:
-        """Initialize social auth (OAuth2) if providers are configured."""
-        if not self._auth_config or not self._app or not self._auth_store:
-            return
-
-        # Check if OAuth providers are configured
-        oauth_providers = getattr(self._auth_config, "oauth_providers", None)
-        if not oauth_providers:
-            return
-
-        import logging
-        import os
-
-        logger = logging.getLogger(__name__)
-
-        try:
-            from dazzle_back.runtime.jwt_auth import JWTConfig, JWTService
-            from dazzle_back.runtime.social_auth import (
-                SocialAuthService,
-                create_social_auth_routes,
-            )
-            from dazzle_back.runtime.token_store import TokenStore
-        except ImportError as e:
-            logger.warning("Social auth dependencies not available: %s", e)
-            return
-
-        # Get JWT config from auth_config
-        jwt_cfg = getattr(self._auth_config, "jwt", None)
-        access_minutes = getattr(jwt_cfg, "access_token_minutes", 15) if jwt_cfg else 15
-        refresh_days = getattr(jwt_cfg, "refresh_token_days", 7) if jwt_cfg else 7
-
-        # Create JWT service
-        jwt_secret = os.getenv("JWT_SECRET")
-        jwt_config_kwargs: dict[str, Any] = {
-            "access_token_expire_minutes": access_minutes,
-            "refresh_token_expire_days": refresh_days,
-        }
-        if jwt_secret:
-            jwt_config_kwargs["secret_key"] = jwt_secret
-        else:
-            logger.warning(
-                "JWT_SECRET not set — using auto-generated secret. "
-                "Sessions will be invalidated on server restart. "
-                "Set JWT_SECRET in your environment for production use."
-            )
-        self._jwt_service = JWTService(JWTConfig(**jwt_config_kwargs))
-
-        # Create token store (PostgreSQL-only)
-        if not self._database_url:
-            logger.warning("Social auth requires DATABASE_URL for token storage")
-            return
-        self._token_store = TokenStore(
-            database_url=self._database_url,
-            token_lifetime_days=refresh_days,
-        )
-
-        # Build social auth config from manifest + environment
-        social_config = self._build_social_auth_config(oauth_providers)
-        if not social_config:
-            logger.info("No OAuth providers configured with valid credentials")
-            return
-
-        # Create social auth service
-        self._social_auth_service = SocialAuthService(
-            auth_store=self._auth_store,
-            jwt_service=self._jwt_service,
-            token_store=self._token_store,
-            config=social_config,
-        )
-
-        # Register social auth routes
-        social_router = create_social_auth_routes(self._social_auth_service)
-        self._app.include_router(social_router)
-
-        # Log enabled providers
-        enabled = []
-        if social_config.google_client_id:
-            enabled.append("google")
-        if social_config.github_client_id:
-            enabled.append("github")
-        if social_config.apple_team_id:
-            enabled.append("apple")
-
-        if enabled:
-            logger.info("Social auth enabled: %s", ", ".join(enabled))
-
-    def _build_social_auth_config(self, oauth_providers: list[Any]) -> Any | None:
-        """
-        Build SocialAuthConfig from manifest oauth_providers.
-
-        Reads credentials from environment variables specified in manifest.
-        """
-        import logging
-        import os
-
-        from dazzle_back.runtime.social_auth import SocialAuthConfig
-
-        logger = logging.getLogger(__name__)
-        config = SocialAuthConfig()
-        any_configured = False
-
-        for provider_cfg in oauth_providers:
-            provider = provider_cfg.provider.lower()
-
-            if provider == "google":
-                client_id = os.getenv(provider_cfg.client_id_env)
-                if client_id:
-                    config.google_client_id = client_id
-                    any_configured = True
-                else:
-                    logger.warning("Google OAuth: %s not set", provider_cfg.client_id_env)
-
-            elif provider == "github":
-                client_id = os.getenv(provider_cfg.client_id_env)
-                client_secret = os.getenv(provider_cfg.client_secret_env)
-                if client_id and client_secret:
-                    config.github_client_id = client_id
-                    config.github_client_secret = client_secret
-                    any_configured = True
-                else:
-                    # Log which env vars are missing (names only, never values)
-                    missing_names: list[str] = []
-                    if not client_id:
-                        missing_names.append("client_id")
-                    if not client_secret:
-                        missing_names.append("client_secret")
-                    logger.warning(
-                        "GitHub OAuth: missing env vars for %s",
-                        ", ".join(missing_names),
-                    )
-
-            elif provider == "apple":
-                # Apple requires team_id, key_id, private_key, bundle_id
-                # These would need extended manifest schema
-                logger.warning(
-                    "Apple OAuth: requires extended configuration "
-                    "(team_id, key_id, private_key, bundle_id)"
-                )
-
-            else:
-                logger.warning("Unknown OAuth provider: %s", provider)
-
-        return config if any_configured else None
 
     def _init_fragment_routes(self) -> None:
         """Initialize fragment routes for composable HTMX fragments (v0.25.0)."""
@@ -1605,37 +1457,6 @@ class DazzleBackendApp:
         )
         self._auth_middleware = AuthMiddleware(self._auth_store)
 
-        # Build persona -> default_route mapping for post-login redirect
-        _persona_routes: dict[str, str] = {}
-        for p in self._personas:
-            route = p.get("default_route")
-            if route:
-                _persona_routes[p["id"]] = route
-        # Default signup role: first persona ID (public-facing persona by convention)
-        _default_signup_roles = [self._personas[0]["id"]] if self._personas else None
-        auth_router = create_auth_routes(
-            self._auth_store,
-            persona_routes=_persona_routes or None,
-            default_signup_roles=_default_signup_roles,
-        )
-        assert self._app is not None
-        self._app.include_router(auth_router)
-
-        # 2FA routes
-        twofa_router = create_2fa_routes(
-            self._auth_store,
-            database_url=self._database_url,
-        )
-        self._app.include_router(twofa_router)
-
-        # SES webhook (if SES is configured)
-        try:
-            from dazzle_back.channels.ses_webhooks import register_ses_webhook
-
-            register_ses_webhook(self._app)
-        except Exception:
-            logger.info("SES webhooks not available, skipping registration")
-
         from dazzle_back.runtime.auth import (
             create_auth_dependency,
             create_optional_auth_dependency,
@@ -1643,9 +1464,6 @@ class DazzleBackendApp:
 
         auth_dep = create_auth_dependency(self._auth_store)
         optional_auth_dep = create_optional_auth_dependency(self._auth_store)
-
-        # Social auth (OAuth providers)
-        self._init_social_auth()
 
         return auth_dep, optional_auth_dep
 

@@ -310,19 +310,13 @@ class TestSocialAuthWiring:
 
 
 class TestBuildSocialAuthConfig:
-    """Tests for _build_social_auth_config helper method."""
+    """Tests for _build_social_auth_config helper method (now on AuthSubsystem)."""
 
     def test_google_provider_extracts_client_id(self, tmp_path) -> None:
         """Google provider correctly extracts client_id from env."""
-        from dazzle_back.runtime.server import DazzleBackendApp
+        from dazzle_back.runtime.subsystems.auth import AuthSubsystem
 
-        spec = AppSpec(name="test", domain=DomainSpec())
-
-        app_builder = DazzleBackendApp(
-            spec,
-            database_url="postgresql://mock/test",
-            enable_auth=True,
-        )
+        subsystem = AuthSubsystem()
 
         providers = [
             MockAuthOAuthProvider(
@@ -333,22 +327,16 @@ class TestBuildSocialAuthConfig:
         ]
 
         with patch.dict(os.environ, {"MY_GOOGLE_ID": "google-12345"}):
-            config = app_builder._build_social_auth_config(providers)
+            config = subsystem._build_social_auth_config(providers)
 
         assert config is not None
         assert config.google_client_id == "google-12345"
 
     def test_github_provider_extracts_id_and_secret(self, tmp_path) -> None:
         """GitHub provider correctly extracts client_id and secret from env."""
-        from dazzle_back.runtime.server import DazzleBackendApp
+        from dazzle_back.runtime.subsystems.auth import AuthSubsystem
 
-        spec = AppSpec(name="test", domain=DomainSpec())
-
-        app_builder = DazzleBackendApp(
-            spec,
-            database_url="postgresql://mock/test",
-            enable_auth=True,
-        )
+        subsystem = AuthSubsystem()
 
         providers = [
             MockAuthOAuthProvider(
@@ -363,7 +351,7 @@ class TestBuildSocialAuthConfig:
             "MY_GITHUB_SECRET": "github-secret-456",
         }
         with patch.dict(os.environ, env):
-            config = app_builder._build_social_auth_config(providers)
+            config = subsystem._build_social_auth_config(providers)
 
         assert config is not None
         assert config.github_client_id == "github-id-123"
@@ -371,15 +359,9 @@ class TestBuildSocialAuthConfig:
 
     def test_returns_none_when_no_providers_configured(self, tmp_path) -> None:
         """Returns None when no providers have valid credentials."""
-        from dazzle_back.runtime.server import DazzleBackendApp
+        from dazzle_back.runtime.subsystems.auth import AuthSubsystem
 
-        spec = AppSpec(name="test", domain=DomainSpec())
-
-        app_builder = DazzleBackendApp(
-            spec,
-            database_url="postgresql://mock/test",
-            enable_auth=True,
-        )
+        subsystem = AuthSubsystem()
 
         providers = [
             MockAuthOAuthProvider(
@@ -390,5 +372,5 @@ class TestBuildSocialAuthConfig:
         ]
 
         # Don't set any env vars
-        config = app_builder._build_social_auth_config(providers)
+        config = subsystem._build_social_auth_config(providers)
         assert config is None
