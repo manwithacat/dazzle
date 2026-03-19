@@ -13,6 +13,7 @@ import json
 import logging
 from collections.abc import AsyncIterator
 from datetime import datetime
+from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from pydantic import BaseModel, Field
@@ -187,6 +188,303 @@ class EventSystemStatus(BaseModel):
 
 
 # =============================================================================
+# Module-level handler functions
+# =============================================================================
+
+
+async def _event_system_status(framework: EventFramework | None) -> EventSystemStatus:
+    """
+    Get event system status.
+
+    Returns whether the event system is running and summary statistics.
+    """
+    if framework is None or framework.bus is None:
+        return EventSystemStatus(
+            running=False,
+            broker_type="none",
+            topics_count=0,
+            consumers_count=0,
+            outbox_pending=0,
+            dlq_count=0,
+        )
+
+    bus = cast(EventBusExplorer, framework.bus)
+    topics = await bus.list_topics()
+    consumers = await bus.list_consumer_groups(topic="*")
+    outbox_stats = await framework.get_outbox_stats()
+    dlq_count = await bus.get_dlq_count()
+
+    return EventSystemStatus(
+        running=True,
+        broker_type=bus.__class__.__name__,
+        topics_count=len(topics),
+        consumers_count=len(consumers),
+        outbox_pending=outbox_stats.get("pending", 0),
+        dlq_count=dlq_count,
+    )
+
+
+async def _list_topics(framework: EventFramework | None) -> TopicsResponse:
+    """
+    List all event topics.
+
+    Returns topic names with event counts and consumer groups.
+    """
+    if framework is None or framework.bus is None:
+        return TopicsResponse(topics=[], total_events=0)
+
+    topics: list[TopicInfo] = []
+    total_events = 0
+
+    topic_names = await framework.bus.list_topics()
+    for name in topic_names:
+        info = await framework.bus.get_topic_info(name)
+        topics.append(
+            TopicInfo(
+                name=name,
+                event_count=info.get("event_count", 0),
+                consumer_groups=info.get("consumer_groups", []),
+                dlq_count=info.get("dlq_count", 0),
+                oldest_event=info.get("oldest_event"),
+                newest_event=info.get("newest_event"),
+            )
+        )
+        total_events += info.get("event_count", 0)
+
+    return TopicsResponse(topics=topics, total_events=total_events)
+
+
+async def _list_events(
+    framework: EventFramework | None,
+    topic: str,
+    offset: int = Query(default=0, ge=0, description="Number of events to skip"),
+    limit: int = Query(default=20, ge=1, le=100, description="Maximum events to return"),
+    key: str | None = Query(default=None, description="Filter by partition key"),
+    event_type: str | None = Query(default=None, description="Filter by event type"),
+) -> EventsResponse:
+    """
+    List events in a topic.
+
+    Returns paginated events with optional filtering.
+    """
+    if framework is None or framework.bus is None:
+        return EventsResponse(
+            topic=topic,
+            events=[],
+            total=0,
+            offset=offset,
+            limit=limit,
+        )
+
+    bus = cast(EventBusExplorer, framework.bus)
+    events: list[EventSummary] = []
+    total = 0
+    current = 0
+
+    async for event in bus.replay(  # type: ignore[call-arg]  # event_type_filter not in ABC
+        topic,
+        key_filter=key,
+        event_type_filter=event_type,
+    ):
+        total += 1
+        if current >= offset and len(events) < limit:
+            payload_preview = json.dumps(event.payload, default=str)[:100]
+            if len(payload_preview) == 100:
+                payload_preview += "..."
+
+            events.append(
+                EventSummary(
+                    event_id=str(event.event_id),
+                    event_type=event.event_type,
+                    key=event.key,
+                    timestamp=event.timestamp.isoformat(),
+                    payload_preview=payload_preview,
+                )
+            )
+        current += 1
+
+    return EventsResponse(
+        topic=topic,
+        events=events,
+        total=total,
+        offset=offset,
+        limit=limit,
+    )
+
+
+async def _get_event(
+    framework: EventFramework | None,
+    event_id: str,
+) -> EventDetail | None:
+    """
+    Get full details of a specific event.
+
+    Args:
+        framework: EventFramework instance
+        event_id: UUID of the event to retrieve
+    """
+    if framework is None or framework.bus is None:
+        return None
+
+    bus = cast(EventBusExplorer, framework.bus)
+    event = await bus.get_event(event_id)
+    if event is None:
+        return None
+
+    return EventDetail(
+        event_id=str(event.event_id),
+        event_type=event.event_type,
+        event_version=event.event_version,
+        key=event.key,
+        timestamp=event.timestamp.isoformat(),
+        payload=event.payload,
+        headers=event.headers,
+        correlation_id=str(event.correlation_id) if event.correlation_id else None,
+        causation_id=str(event.causation_id) if event.causation_id else None,
+        topic=getattr(event, "topic", "unknown"),
+    )
+
+
+async def _list_consumers(framework: EventFramework | None) -> ConsumersResponse:
+    """
+    List all consumer groups.
+
+    Returns consumer group status and lag information.
+    """
+    if framework is None or framework.bus is None:
+        return ConsumersResponse(consumers=[])
+
+    bus = cast(EventBusExplorer, framework.bus)
+    consumers: list[ConsumerInfo] = []
+    groups: Any = await bus.list_consumer_groups(topic="*")
+
+    for group in groups:
+        info = await bus.get_consumer_info(group["group_id"], group["topic"])
+        consumers.append(
+            ConsumerInfo(
+                group_id=group["group_id"],
+                topic=group["topic"],
+                last_sequence=info.get("last_sequence", 0),
+                lag=info.get("lag", 0),
+            )
+        )
+
+    return ConsumersResponse(consumers=consumers)
+
+
+async def _outbox_status(framework: EventFramework | None) -> OutboxResponse:
+    """
+    Get outbox status.
+
+    Returns outbox statistics and recent entries.
+    """
+    if framework is None:
+        return OutboxResponse(
+            stats=OutboxStats(
+                pending=0,
+                publishing=0,
+                published=0,
+                failed=0,
+            ),
+            recent_entries=[],
+        )
+
+    stats_dict = await framework.get_outbox_stats()
+    recent = await framework.get_recent_outbox_entries(limit=10)
+
+    entries: list[OutboxEntry] = []
+    for entry in recent:
+        entries.append(
+            OutboxEntry(
+                id=str(entry.id),
+                topic=entry.topic,
+                event_type=entry.event_type,
+                key=entry.key,
+                status=entry.status,
+                created_at=entry.created_at.isoformat()
+                if isinstance(entry.created_at, datetime)
+                else entry.created_at,
+                published_at=entry.published_at.isoformat()
+                if entry.published_at and isinstance(entry.published_at, datetime)
+                else entry.published_at,
+                attempts=entry.attempts,
+                last_error=entry.last_error,
+            )
+        )
+
+    return OutboxResponse(
+        stats=OutboxStats(
+            pending=stats_dict.get("pending", 0),
+            publishing=stats_dict.get("publishing", 0),
+            published=stats_dict.get("published", 0),
+            failed=stats_dict.get("failed", 0),
+            oldest_pending=stats_dict.get("oldest_pending"),
+        ),
+        recent_entries=entries,
+    )
+
+
+async def _dlq_list(
+    framework: EventFramework | None,
+    topic: str | None = Query(default=None, description="Filter by topic"),
+    limit: int = Query(default=20, ge=1, le=100, description="Maximum entries to return"),
+) -> DLQResponse:
+    """
+    List dead letter queue entries.
+
+    Returns failed events that exceeded retry attempts.
+    """
+    if framework is None or framework.bus is None:
+        return DLQResponse(entries=[], total=0)
+
+    bus = cast(EventBusExplorer, framework.bus)
+    dlq_events = await bus.get_dlq_events(topic=topic, limit=limit)
+
+    entries: list[DLQEntry] = []
+    for event in dlq_events:
+        entries.append(
+            DLQEntry(
+                event_id=event["event_id"],
+                topic=event["topic"],
+                group_id=event["group_id"],
+                reason_code=event.get("reason_code", "unknown"),
+                reason_message=event.get("reason_message", ""),
+                attempts=event.get("attempts", 0),
+                created_at=event.get("created_at", ""),
+            )
+        )
+
+    total = await bus.get_dlq_count(topic=topic)
+
+    return DLQResponse(entries=entries, total=total)
+
+
+async def _replay_dlq_event(
+    framework: EventFramework | None,
+    event_id: str,
+    group_id: str = Query(..., description="Consumer group to replay to"),
+) -> dict[str, Any]:
+    """
+    Replay a single event from the DLQ.
+
+    Removes the event from DLQ and re-queues it for processing.
+    """
+    if framework is None or framework.bus is None:
+        return {"success": False, "error": "Event system not running"}
+
+    bus = cast(EventBusExplorer, framework.bus)
+    try:
+        success = await bus.replay_dlq_event(event_id, group_id)
+        if success:
+            return {"success": True, "message": f"Event {event_id} replayed successfully"}
+        else:
+            return {"success": False, "error": f"Event {event_id} not found in DLQ"}
+    except Exception as e:
+        logger.warning("DLQ replay failed for event %s: %s", event_id, e)
+        return {"success": False, "error": "Replay failed"}
+
+
+# =============================================================================
 # Event Explorer Routes
 # =============================================================================
 
@@ -211,289 +509,52 @@ def create_event_explorer_routes(framework: EventFramework | None) -> APIRouter:
 
     router = APIRouter(prefix="/_dazzle/events", tags=["Event Explorer"])
 
-    @router.get("/status", response_model=EventSystemStatus)
-    async def event_system_status() -> EventSystemStatus:
-        """
-        Get event system status.
-
-        Returns whether the event system is running and summary statistics.
-        """
-        if framework is None or framework.bus is None:
-            return EventSystemStatus(
-                running=False,
-                broker_type="none",
-                topics_count=0,
-                consumers_count=0,
-                outbox_pending=0,
-                dlq_count=0,
-            )
-
-        bus = cast(EventBusExplorer, framework.bus)
-        topics = await bus.list_topics()
-        consumers = await bus.list_consumer_groups(topic="*")
-        outbox_stats = await framework.get_outbox_stats()
-        dlq_count = await bus.get_dlq_count()
-
-        return EventSystemStatus(
-            running=True,
-            broker_type=bus.__class__.__name__,
-            topics_count=len(topics),
-            consumers_count=len(consumers),
-            outbox_pending=outbox_stats.get("pending", 0),
-            dlq_count=dlq_count,
-        )
-
-    @router.get("/topics", response_model=TopicsResponse)
-    async def list_topics() -> TopicsResponse:
-        """
-        List all event topics.
-
-        Returns topic names with event counts and consumer groups.
-        """
-        if framework is None or framework.bus is None:
-            return TopicsResponse(topics=[], total_events=0)
-
-        topics: list[TopicInfo] = []
-        total_events = 0
-
-        topic_names = await framework.bus.list_topics()
-        for name in topic_names:
-            info = await framework.bus.get_topic_info(name)
-            topics.append(
-                TopicInfo(
-                    name=name,
-                    event_count=info.get("event_count", 0),
-                    consumer_groups=info.get("consumer_groups", []),
-                    dlq_count=info.get("dlq_count", 0),
-                    oldest_event=info.get("oldest_event"),
-                    newest_event=info.get("newest_event"),
-                )
-            )
-            total_events += info.get("event_count", 0)
-
-        return TopicsResponse(topics=topics, total_events=total_events)
-
-    @router.get("/topics/{topic}", response_model=EventsResponse)
-    async def list_events(
-        topic: str,
-        offset: int = Query(default=0, ge=0, description="Number of events to skip"),
-        limit: int = Query(default=20, ge=1, le=100, description="Maximum events to return"),
-        key: str | None = Query(default=None, description="Filter by partition key"),
-        event_type: str | None = Query(default=None, description="Filter by event type"),
-    ) -> EventsResponse:
-        """
-        List events in a topic.
-
-        Returns paginated events with optional filtering.
-        """
-        if framework is None or framework.bus is None:
-            return EventsResponse(
-                topic=topic,
-                events=[],
-                total=0,
-                offset=offset,
-                limit=limit,
-            )
-
-        bus = cast(EventBusExplorer, framework.bus)
-        events: list[EventSummary] = []
-        total = 0
-        current = 0
-
-        async for event in bus.replay(  # type: ignore[call-arg]  # event_type_filter not in ABC
-            topic,
-            key_filter=key,
-            event_type_filter=event_type,
-        ):
-            total += 1
-            if current >= offset and len(events) < limit:
-                payload_preview = json.dumps(event.payload, default=str)[:100]
-                if len(payload_preview) == 100:
-                    payload_preview += "..."
-
-                events.append(
-                    EventSummary(
-                        event_id=str(event.event_id),
-                        event_type=event.event_type,
-                        key=event.key,
-                        timestamp=event.timestamp.isoformat(),
-                        payload_preview=payload_preview,
-                    )
-                )
-            current += 1
-
-        return EventsResponse(
-            topic=topic,
-            events=events,
-            total=total,
-            offset=offset,
-            limit=limit,
-        )
-
-    @router.get("/event/{event_id}", response_model=EventDetail | None)
-    async def get_event(event_id: str) -> EventDetail | None:
-        """
-        Get full details of a specific event.
-
-        Args:
-            event_id: UUID of the event to retrieve
-        """
-        if framework is None or framework.bus is None:
-            return None
-
-        bus = cast(EventBusExplorer, framework.bus)
-        event = await bus.get_event(event_id)
-        if event is None:
-            return None
-
-        return EventDetail(
-            event_id=str(event.event_id),
-            event_type=event.event_type,
-            event_version=event.event_version,
-            key=event.key,
-            timestamp=event.timestamp.isoformat(),
-            payload=event.payload,
-            headers=event.headers,
-            correlation_id=str(event.correlation_id) if event.correlation_id else None,
-            causation_id=str(event.causation_id) if event.causation_id else None,
-            topic=getattr(event, "topic", "unknown"),
-        )
-
-    @router.get("/consumers", response_model=ConsumersResponse)
-    async def list_consumers() -> ConsumersResponse:
-        """
-        List all consumer groups.
-
-        Returns consumer group status and lag information.
-        """
-        if framework is None or framework.bus is None:
-            return ConsumersResponse(consumers=[])
-
-        bus = cast(EventBusExplorer, framework.bus)
-        consumers: list[ConsumerInfo] = []
-        groups: Any = await bus.list_consumer_groups(topic="*")
-
-        for group in groups:
-            info = await bus.get_consumer_info(group["group_id"], group["topic"])
-            consumers.append(
-                ConsumerInfo(
-                    group_id=group["group_id"],
-                    topic=group["topic"],
-                    last_sequence=info.get("last_sequence", 0),
-                    lag=info.get("lag", 0),
-                )
-            )
-
-        return ConsumersResponse(consumers=consumers)
-
-    @router.get("/outbox", response_model=OutboxResponse)
-    async def outbox_status() -> OutboxResponse:
-        """
-        Get outbox status.
-
-        Returns outbox statistics and recent entries.
-        """
-        if framework is None:
-            return OutboxResponse(
-                stats=OutboxStats(
-                    pending=0,
-                    publishing=0,
-                    published=0,
-                    failed=0,
-                ),
-                recent_entries=[],
-            )
-
-        stats_dict = await framework.get_outbox_stats()
-        recent = await framework.get_recent_outbox_entries(limit=10)
-
-        entries: list[OutboxEntry] = []
-        for entry in recent:
-            entries.append(
-                OutboxEntry(
-                    id=str(entry.id),
-                    topic=entry.topic,
-                    event_type=entry.event_type,
-                    key=entry.key,
-                    status=entry.status,
-                    created_at=entry.created_at.isoformat()
-                    if isinstance(entry.created_at, datetime)
-                    else entry.created_at,
-                    published_at=entry.published_at.isoformat()
-                    if entry.published_at and isinstance(entry.published_at, datetime)
-                    else entry.published_at,
-                    attempts=entry.attempts,
-                    last_error=entry.last_error,
-                )
-            )
-
-        return OutboxResponse(
-            stats=OutboxStats(
-                pending=stats_dict.get("pending", 0),
-                publishing=stats_dict.get("publishing", 0),
-                published=stats_dict.get("published", 0),
-                failed=stats_dict.get("failed", 0),
-                oldest_pending=stats_dict.get("oldest_pending"),
-            ),
-            recent_entries=entries,
-        )
-
-    @router.get("/dlq", response_model=DLQResponse)
-    async def dlq_list(
-        topic: str | None = Query(default=None, description="Filter by topic"),
-        limit: int = Query(default=20, ge=1, le=100, description="Maximum entries to return"),
-    ) -> DLQResponse:
-        """
-        List dead letter queue entries.
-
-        Returns failed events that exceeded retry attempts.
-        """
-        if framework is None or framework.bus is None:
-            return DLQResponse(entries=[], total=0)
-
-        bus = cast(EventBusExplorer, framework.bus)
-        dlq_events = await bus.get_dlq_events(topic=topic, limit=limit)
-
-        entries: list[DLQEntry] = []
-        for event in dlq_events:
-            entries.append(
-                DLQEntry(
-                    event_id=event["event_id"],
-                    topic=event["topic"],
-                    group_id=event["group_id"],
-                    reason_code=event.get("reason_code", "unknown"),
-                    reason_message=event.get("reason_message", ""),
-                    attempts=event.get("attempts", 0),
-                    created_at=event.get("created_at", ""),
-                )
-            )
-
-        total = await bus.get_dlq_count(topic=topic)
-
-        return DLQResponse(entries=entries, total=total)
-
-    @router.post("/dlq/{event_id}/replay")
-    async def replay_dlq_event(
-        event_id: str,
-        group_id: str = Query(..., description="Consumer group to replay to"),
-    ) -> dict[str, Any]:
-        """
-        Replay a single event from the DLQ.
-
-        Removes the event from DLQ and re-queues it for processing.
-        """
-        if framework is None or framework.bus is None:
-            return {"success": False, "error": "Event system not running"}
-
-        bus = cast(EventBusExplorer, framework.bus)
-        try:
-            success = await bus.replay_dlq_event(event_id, group_id)
-            if success:
-                return {"success": True, "message": f"Event {event_id} replayed successfully"}
-            else:
-                return {"success": False, "error": f"Event {event_id} not found in DLQ"}
-        except Exception as e:
-            logger.warning("DLQ replay failed for event %s: %s", event_id, e)
-            return {"success": False, "error": "Replay failed"}
+    router.add_api_route(
+        "/status",
+        partial(_event_system_status, framework),
+        methods=["GET"],
+        response_model=EventSystemStatus,
+    )
+    router.add_api_route(
+        "/topics",
+        partial(_list_topics, framework),
+        methods=["GET"],
+        response_model=TopicsResponse,
+    )
+    router.add_api_route(
+        "/topics/{topic}",
+        partial(_list_events, framework),
+        methods=["GET"],
+        response_model=EventsResponse,
+    )
+    router.add_api_route(
+        "/event/{event_id}",
+        partial(_get_event, framework),
+        methods=["GET"],
+        response_model=EventDetail | None,
+    )
+    router.add_api_route(
+        "/consumers",
+        partial(_list_consumers, framework),
+        methods=["GET"],
+        response_model=ConsumersResponse,
+    )
+    router.add_api_route(
+        "/outbox",
+        partial(_outbox_status, framework),
+        methods=["GET"],
+        response_model=OutboxResponse,
+    )
+    router.add_api_route(
+        "/dlq",
+        partial(_dlq_list, framework),
+        methods=["GET"],
+        response_model=DLQResponse,
+    )
+    router.add_api_route(
+        "/dlq/{event_id}/replay",
+        partial(_replay_dlq_event, framework),
+        methods=["POST"],
+    )
 
     return router
