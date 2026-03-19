@@ -178,9 +178,9 @@ class TestSeedFieldFiltering:
         """
         import inspect
 
-        from dazzle_back.runtime.test_routes import create_test_routes
+        from dazzle_back.runtime.test_routes import _seed_fixtures
 
-        source = inspect.getsource(create_test_routes)
+        source = inspect.getsource(_seed_fixtures)
         assert "known_fields" in source, (
             "seed_fixtures must define known_fields to filter fixture data"
         )

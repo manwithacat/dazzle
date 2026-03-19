@@ -12,6 +12,8 @@ When ``DAZZLE_TEST_SECRET`` is set, all routes require the
 import logging
 import os
 import re
+from dataclasses import dataclass
+from functools import partial
 from typing import Any
 
 from pydantic import BaseModel
@@ -36,7 +38,7 @@ class _EntitySQL:
     """Pre-computed SQL statements for a known entity table.
 
     All SQL is built once at router creation time from validated entity
-    names — no string formatting happens at request time.
+    names -- no string formatting happens at request time.
     """
 
     __slots__ = ("name", "select_all", "select_count", "delete_all", "delete_by_id")
@@ -105,7 +107,290 @@ class AuthenticateResponse(BaseModel):
 
 
 # =============================================================================
-# Test Routes
+# Dependencies Container
+# =============================================================================
+
+
+@dataclass
+class _TestDeps:
+    db_manager: DatabaseManager
+    repositories: dict[str, SQLiteRepository[Any]]
+    entities: list[EntitySpec]
+    entity_sql: dict[str, _EntitySQL]
+    auth_store: Any
+    personas: list[dict[str, Any]]
+
+
+# =============================================================================
+# Module-level handler functions
+# =============================================================================
+
+
+async def _seed_fixtures(deps: _TestDeps, request: SeedRequest) -> SeedResponse:
+    """
+    Seed test fixtures into the database.
+
+    Creates entities from fixture specifications, resolving references
+    between fixtures.
+    """
+    import uuid
+
+    created: dict[str, Any] = {}
+    id_mapping: dict[str, str] = {}  # fixture_id -> actual entity id
+
+    # First pass: generate IDs for all fixtures
+    for fixture in request.fixtures:
+        if "id" in fixture.data:
+            entity_id = fixture.data["id"]
+        else:
+            entity_id = str(uuid.uuid4())
+        id_mapping[fixture.id] = entity_id
+
+    # Second pass: create entities with resolved references
+    for fixture in request.fixtures:
+        entity_name = fixture.entity
+        repo = deps.repositories.get(entity_name)
+
+        if not repo:
+            raise HTTPException(
+                status_code=400,
+                detail="Unknown entity: " + entity_name,
+            )
+
+        # Prepare data -- filter to known entity fields to avoid
+        # SQL errors from stale or incorrect fixture schemas
+        known_fields = set(repo._field_types) | {"id"}
+        data = {k: v for k, v in fixture.data.items() if k in known_fields}
+
+        # Add ID if not present
+        if "id" not in data:
+            data["id"] = id_mapping[fixture.id]
+
+        # Resolve references
+        if fixture.refs:
+            for field_name, ref_fixture_id in fixture.refs.items():
+                if ref_fixture_id in id_mapping:
+                    data[field_name] = id_mapping[ref_fixture_id]
+
+        # Create entity
+        try:
+            entity = await repo.create(data)
+            created[fixture.id] = entity.model_dump() if hasattr(entity, "model_dump") else data
+        except Exception as e:
+            logger.error("Failed to create %s: %s", entity_name, e)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to create {entity_name}: {e}",
+            )
+
+    return SeedResponse(created=created)
+
+
+async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
+    """
+    Clear all data from the database and recreate demo auth users.
+
+    Truncates all entity tables while preserving schema, then
+    recreates auth users for each configured persona so that
+    ``/__test__/authenticate`` works immediately after reset.
+    """
+    with deps.db_manager.connection() as conn:
+        for sql in deps.entity_sql.values():
+            try:
+                conn.execute(sql.delete_all)
+            except Exception:
+                logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
+
+    # Recreate demo auth users from personas (#465)
+    if deps.auth_store is not None and deps.personas:
+        for p in deps.personas:
+            pid = p.get("id", "")
+            if not pid:
+                continue
+            email = pid + "@demo.dazzle.local"
+            try:
+                user = deps.auth_store.get_user_by_email(email)
+                if not user:
+                    deps.auth_store.create_user(
+                        email=email,
+                        password="demo_" + pid + "_password",  # nosec B106
+                        username=p.get("label") or pid,
+                        roles=[pid],
+                    )
+                elif user.roles != [pid]:
+                    # Roles may be stale -- reset to the canonical persona role
+                    # so authenticate calls after reset always get the right role.
+                    deps.auth_store.update_user(user.id, roles=[pid])
+            except Exception:
+                logger.debug("Could not recreate demo user for %s", pid, exc_info=True)
+
+    return {"status": "reset_complete"}
+
+
+async def _get_snapshot(deps: _TestDeps) -> SnapshotResponse:
+    """
+    Get a snapshot of all data in the database.
+
+    Returns all records from all entity tables.
+    """
+    result: dict[str, list[dict[str, Any]]] = {}
+
+    with deps.db_manager.connection() as conn:
+        for sql in deps.entity_sql.values():
+            try:
+                cursor = conn.execute(sql.select_all)
+                rows = cursor.fetchall()
+                result[sql.name] = [dict(row) for row in rows]
+            except Exception:
+                # Table might not exist
+                result[sql.name] = []
+
+    return SnapshotResponse(entities=result)
+
+
+async def _authenticate_test_user(deps: _TestDeps, request: AuthenticateRequest) -> Any:
+    """
+    Create a test authentication session.
+
+    When auth_store is available, creates a real user and session so the
+    returned token works with the auth middleware.  Otherwise falls back
+    to returning a mock token.
+    """
+    import uuid
+
+    username = request.username or request.role or "test_user"
+    role = request.role or "user"
+
+    if deps.auth_store is not None:
+        # Create (or reuse) a real user + session in the auth store
+        email = username + "@test.local"
+        user = deps.auth_store.get_user_by_email(email)
+        if not user:
+            user = deps.auth_store.create_user(
+                email=email,
+                password="test_password",  # nosec B106 - test-only credential
+                username=username,
+                roles=[role],
+            )
+        elif user.roles != [role]:
+            # Roles may be stale from a previous test cycle -- update them so
+            # the LIST gate (and other RBAC checks) sees the correct role.
+            updated = deps.auth_store.update_user(user.id, roles=[role])
+            if updated is not None:
+                user = updated
+        session = deps.auth_store.create_session(user)
+        session_token = session.id
+        user_id = str(user.id)
+    else:
+        user_id = str(uuid.uuid4())
+        session_token = str(uuid.uuid4())
+
+    from starlette.responses import JSONResponse
+
+    # Return as JSON with Set-Cookie so both cookie-based and
+    # token-based clients can authenticate.
+    resp = JSONResponse(
+        content={
+            "user_id": user_id,
+            "username": username,
+            "role": role,
+            "session_token": session_token,
+            "token": session_token,
+        }
+    )
+    resp.set_cookie(
+        key="dazzle_session",
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+    )
+    return resp
+
+
+async def _get_entity_data(deps: _TestDeps, entity_name: str) -> list[dict[str, Any]]:
+    """
+    Get all records for a specific entity.
+
+    Args:
+        entity_name: Name of the entity to query
+
+    Returns:
+        List of all records
+    """
+    sql = deps.entity_sql.get(entity_name)
+    if sql is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Unknown entity: " + entity_name,
+        )
+
+    with deps.db_manager.connection() as conn:
+        try:
+            cursor = conn.execute(sql.select_all)
+            rows = cursor.fetchall()
+            return [dict(row) for row in rows]
+        except Exception:
+            return []
+
+
+async def _get_entity_count(deps: _TestDeps, entity_name: str) -> dict[str, int]:
+    """
+    Get count of records for a specific entity.
+
+    Args:
+        entity_name: Name of the entity to count
+
+    Returns:
+        Count of records
+    """
+    sql = deps.entity_sql.get(entity_name)
+    if sql is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Unknown entity: " + entity_name,
+        )
+
+    with deps.db_manager.connection() as conn:
+        try:
+            cursor = conn.execute(sql.select_count)
+            row = cursor.fetchone()
+            count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
+            return {"count": count}
+        except Exception:
+            return {"count": 0}
+
+
+async def _delete_entity(deps: _TestDeps, entity_name: str, entity_id: str) -> dict[str, str]:
+    """
+    Delete a specific entity by ID.
+
+    Args:
+        entity_name: Name of the entity
+        entity_id: ID of the entity to delete
+
+    Returns:
+        Status message
+    """
+    sql = deps.entity_sql.get(entity_name)
+    if sql is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Unknown entity: " + entity_name,
+        )
+
+    with deps.db_manager.connection() as conn:
+        cursor = conn.execute(sql.delete_by_id, (entity_id,))
+        if cursor.rowcount == 0:
+            raise HTTPException(
+                status_code=404,
+                detail="Entity not found: " + entity_name + "/" + entity_id,
+            )
+
+    return {"status": "deleted"}
+
+
+# =============================================================================
+# Route Factory
 # =============================================================================
 
 
@@ -140,6 +425,15 @@ def create_test_routes(
     # Pre-compute SQL statements from validated entity names (startup-time only)
     entity_sql: dict[str, _EntitySQL] = {e.name: _EntitySQL(e.name) for e in entities}
 
+    deps = _TestDeps(
+        db_manager=db_manager,
+        repositories=repositories,
+        entities=entities,
+        entity_sql=entity_sql,
+        auth_store=auth_store,
+        personas=personas or [],
+    )
+
     # --- Authentication dependency ---
     # When DAZZLE_TEST_SECRET is set, require X-Test-Secret header.
     # When unset, test routes are open (backward compat for local dev).
@@ -161,267 +455,25 @@ def create_test_routes(
         dependencies=[Depends(_verify_test_secret)],
     )
 
-    @router.post("/seed", response_model=SeedResponse)
-    async def seed_fixtures(request: SeedRequest) -> SeedResponse:
-        """
-        Seed test fixtures into the database.
-
-        Creates entities from fixture specifications, resolving references
-        between fixtures.
-        """
-        import uuid
-
-        created: dict[str, Any] = {}
-        id_mapping: dict[str, str] = {}  # fixture_id -> actual entity id
-
-        # First pass: generate IDs for all fixtures
-        for fixture in request.fixtures:
-            if "id" in fixture.data:
-                entity_id = fixture.data["id"]
-            else:
-                entity_id = str(uuid.uuid4())
-            id_mapping[fixture.id] = entity_id
-
-        # Second pass: create entities with resolved references
-        for fixture in request.fixtures:
-            entity_name = fixture.entity
-            repo = repositories.get(entity_name)
-
-            if not repo:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Unknown entity: " + entity_name,
-                )
-
-            # Prepare data — filter to known entity fields to avoid
-            # SQL errors from stale or incorrect fixture schemas
-            known_fields = set(repo._field_types) | {"id"}
-            data = {k: v for k, v in fixture.data.items() if k in known_fields}
-
-            # Add ID if not present
-            if "id" not in data:
-                data["id"] = id_mapping[fixture.id]
-
-            # Resolve references
-            if fixture.refs:
-                for field_name, ref_fixture_id in fixture.refs.items():
-                    if ref_fixture_id in id_mapping:
-                        data[field_name] = id_mapping[ref_fixture_id]
-
-            # Create entity
-            try:
-                entity = await repo.create(data)
-                created[fixture.id] = entity.model_dump() if hasattr(entity, "model_dump") else data
-            except Exception as e:
-                logger.error("Failed to create %s: %s", entity_name, e)
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Failed to create {entity_name}: {e}",
-                )
-
-        return SeedResponse(created=created)
-
-    @router.post("/reset")
-    async def reset_test_data() -> dict[str, str]:
-        """
-        Clear all data from the database and recreate demo auth users.
-
-        Truncates all entity tables while preserving schema, then
-        recreates auth users for each configured persona so that
-        ``/__test__/authenticate`` works immediately after reset.
-        """
-        with db_manager.connection() as conn:
-            for sql in entity_sql.values():
-                try:
-                    conn.execute(sql.delete_all)
-                except Exception:
-                    logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
-
-        # Recreate demo auth users from personas (#465)
-        if auth_store is not None and personas:
-            for p in personas:
-                pid = p.get("id", "")
-                if not pid:
-                    continue
-                email = pid + "@demo.dazzle.local"
-                try:
-                    user = auth_store.get_user_by_email(email)
-                    if not user:
-                        auth_store.create_user(
-                            email=email,
-                            password="demo_" + pid + "_password",  # nosec B106
-                            username=p.get("label") or pid,
-                            roles=[pid],
-                        )
-                    elif user.roles != [pid]:
-                        # Roles may be stale — reset to the canonical persona role
-                        # so authenticate calls after reset always get the right role.
-                        auth_store.update_user(user.id, roles=[pid])
-                except Exception:
-                    logger.debug("Could not recreate demo user for %s", pid, exc_info=True)
-
-        return {"status": "reset_complete"}
-
-    @router.get("/snapshot", response_model=SnapshotResponse)
-    async def get_snapshot() -> SnapshotResponse:
-        """
-        Get a snapshot of all data in the database.
-
-        Returns all records from all entity tables.
-        """
-        result: dict[str, list[dict[str, Any]]] = {}
-
-        with db_manager.connection() as conn:
-            for sql in entity_sql.values():
-                try:
-                    cursor = conn.execute(sql.select_all)
-                    rows = cursor.fetchall()
-                    result[sql.name] = [dict(row) for row in rows]
-                except Exception:
-                    # Table might not exist
-                    result[sql.name] = []
-
-        return SnapshotResponse(entities=result)
-
-    @router.post("/authenticate", response_model=AuthenticateResponse)
-    async def authenticate_test_user(request: AuthenticateRequest) -> Any:
-        """
-        Create a test authentication session.
-
-        When auth_store is available, creates a real user and session so the
-        returned token works with the auth middleware.  Otherwise falls back
-        to returning a mock token.
-        """
-        import uuid
-
-        username = request.username or request.role or "test_user"
-        role = request.role or "user"
-
-        if auth_store is not None:
-            # Create (or reuse) a real user + session in the auth store
-            email = username + "@test.local"
-            user = auth_store.get_user_by_email(email)
-            if not user:
-                user = auth_store.create_user(
-                    email=email,
-                    password="test_password",  # nosec B106 - test-only credential
-                    username=username,
-                    roles=[role],
-                )
-            elif user.roles != [role]:
-                # Roles may be stale from a previous test cycle — update them so
-                # the LIST gate (and other RBAC checks) sees the correct role.
-                updated = auth_store.update_user(user.id, roles=[role])
-                if updated is not None:
-                    user = updated
-            session = auth_store.create_session(user)
-            session_token = session.id
-            user_id = str(user.id)
-        else:
-            user_id = str(uuid.uuid4())
-            session_token = str(uuid.uuid4())
-
-        from starlette.responses import JSONResponse
-
-        # Return as JSON with Set-Cookie so both cookie-based and
-        # token-based clients can authenticate.
-        resp = JSONResponse(
-            content={
-                "user_id": user_id,
-                "username": username,
-                "role": role,
-                "session_token": session_token,
-                "token": session_token,
-            }
-        )
-        resp.set_cookie(
-            key="dazzle_session",
-            value=session_token,
-            httponly=True,
-            samesite="lax",
-        )
-        return resp
-
-    @router.get("/entity/{entity_name}")
-    async def get_entity_data(entity_name: str) -> list[dict[str, Any]]:
-        """
-        Get all records for a specific entity.
-
-        Args:
-            entity_name: Name of the entity to query
-
-        Returns:
-            List of all records
-        """
-        sql = entity_sql.get(entity_name)
-        if sql is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Unknown entity: " + entity_name,
-            )
-
-        with db_manager.connection() as conn:
-            try:
-                cursor = conn.execute(sql.select_all)
-                rows = cursor.fetchall()
-                return [dict(row) for row in rows]
-            except Exception:
-                return []
-
-    @router.get("/entity/{entity_name}/count")
-    async def get_entity_count(entity_name: str) -> dict[str, int]:
-        """
-        Get count of records for a specific entity.
-
-        Args:
-            entity_name: Name of the entity to count
-
-        Returns:
-            Count of records
-        """
-        sql = entity_sql.get(entity_name)
-        if sql is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Unknown entity: " + entity_name,
-            )
-
-        with db_manager.connection() as conn:
-            try:
-                cursor = conn.execute(sql.select_count)
-                row = cursor.fetchone()
-                count = row[0] if isinstance(row, (tuple, list)) else next(iter(row.values()))
-                return {"count": count}
-            except Exception:
-                return {"count": 0}
-
-    @router.delete("/entity/{entity_name}/{entity_id}")
-    async def delete_entity(entity_name: str, entity_id: str) -> dict[str, str]:
-        """
-        Delete a specific entity by ID.
-
-        Args:
-            entity_name: Name of the entity
-            entity_id: ID of the entity to delete
-
-        Returns:
-            Status message
-        """
-        sql = entity_sql.get(entity_name)
-        if sql is None:
-            raise HTTPException(
-                status_code=404,
-                detail="Unknown entity: " + entity_name,
-            )
-
-        with db_manager.connection() as conn:
-            cursor = conn.execute(sql.delete_by_id, (entity_id,))
-            if cursor.rowcount == 0:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Entity not found: " + entity_name + "/" + entity_id,
-                )
-
-        return {"status": "deleted"}
+    router.add_api_route(
+        "/seed", partial(_seed_fixtures, deps), methods=["POST"], response_model=SeedResponse
+    )
+    router.add_api_route("/reset", partial(_reset_test_data, deps), methods=["POST"])
+    router.add_api_route(
+        "/snapshot", partial(_get_snapshot, deps), methods=["GET"], response_model=SnapshotResponse
+    )
+    router.add_api_route(
+        "/authenticate",
+        partial(_authenticate_test_user, deps),
+        methods=["POST"],
+        response_model=AuthenticateResponse,
+    )
+    router.add_api_route("/entity/{entity_name}", partial(_get_entity_data, deps), methods=["GET"])
+    router.add_api_route(
+        "/entity/{entity_name}/count", partial(_get_entity_count, deps), methods=["GET"]
+    )
+    router.add_api_route(
+        "/entity/{entity_name}/{entity_id}", partial(_delete_entity, deps), methods=["DELETE"]
+    )
 
     return router
