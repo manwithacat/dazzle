@@ -1373,6 +1373,7 @@ class EntityParserMixin:
 
         Syntax (inline):
             open -> assigned: requires assignee
+            published -> canonical requires summary  # colon-free form
             resolved -> closed: auto after 7 days OR manual
             * -> open: role(admin)
 
@@ -1400,7 +1401,10 @@ class EntityParserMixin:
         guards: list[ir.TransitionGuard] = []
         auto_spec: ir.AutoTransitionSpec | None = None
 
-        if self.match(TokenType.COLON):
+        if self.match(TokenType.REQUIRES):
+            # Colon-free inline guard: `published -> canonical requires summary`
+            guards, trigger, auto_spec = self._parse_transition_inline_guard()
+        elif self.match(TokenType.COLON):
             self.advance()
 
             # v0.29.0: Check for indented block (guard: expression syntax)

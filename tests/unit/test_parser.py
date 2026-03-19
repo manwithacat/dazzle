@@ -2852,5 +2852,39 @@ surface record_view "Record View":
         assert action.outcome.kind is OutcomeKind.EXTERNAL
 
 
+def test_transition_requires_guard_without_colon() -> None:
+    """Colon-free `requires` guard syntax on transitions (#543)."""
+    dsl = """
+module test_mod
+app test "Test"
+
+entity Doc "Doc":
+  id: uuid pk
+  title: str(200) required
+  summary: text
+  status: enum[draft,published,canonical]=draft
+
+  transitions:
+    draft -> published
+    published -> canonical requires summary
+"""
+    _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+    assert len(fragment.entities) == 1
+    entity = fragment.entities[0]
+    transitions = entity.state_machine.transitions
+    assert len(transitions) == 2
+
+    # First transition has no guards
+    t_draft = next(t for t in transitions if t.from_state == "draft")
+    assert t_draft.to_state == "published"
+    assert t_draft.guards == []
+
+    # Second transition has a requires guard for "summary"
+    t_pub = next(t for t in transitions if t.from_state == "published")
+    assert t_pub.to_state == "canonical"
+    assert len(t_pub.guards) == 1
+    assert t_pub.guards[0].requires_field == "summary"
+
+
 if __name__ == "__main__":
     main()
