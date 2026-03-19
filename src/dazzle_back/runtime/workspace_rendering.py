@@ -589,6 +589,7 @@ async def _fetch_region_json(
     page: int,
     page_size: int,
     ctx: WorkspaceRegionContext,
+    filter_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Fetch a single region's data as JSON for batch responses."""
     repo = ctx.repositories.get(ctx.source) if ctx.repositories else None
@@ -604,7 +605,8 @@ async def _fetch_region_json(
                     from dazzle_back.runtime.condition_evaluator import condition_to_sql_filter
 
                     filters = condition_to_sql_filter(
-                        ir_filter.model_dump(exclude_none=True), context={}
+                        ir_filter.model_dump(exclude_none=True),
+                        context=filter_context or {},
                     )
                 except Exception:
                     logger.warning("Failed to evaluate condition filter for region", exc_info=True)
@@ -692,8 +694,61 @@ async def _workspace_batch_handler(
                     raise HTTPException(status_code=403, detail="Workspace access denied")
             break  # All regions share the same workspace access
 
+    # Resolve current user entity ID for filter context (same logic as
+    # _workspace_region_handler) so batch region filters using current_user
+    # compare against the DSL User entity UUID, not the auth UUID (#546).
+    _batch_filter_ctx: dict[str, Any] = {}
+    _first_ctx = region_ctxs[0] if region_ctxs else None
+    if _first_ctx and _first_ctx.auth_middleware:
+        try:
+            _auth = _first_ctx.auth_middleware.get_auth_context(request)
+            if _auth and _auth.is_authenticated and _auth.user:
+                _resolved = False
+                _email = getattr(_auth.user, "email", None)
+                _repositories = _first_ctx.repositories
+                if _email and _repositories:
+                    _user_repo = _repositories.get("User")
+                    if _user_repo:
+                        try:
+                            _user_result = await _user_repo.list(
+                                filters={"email": _email}, page_size=1
+                            )
+                            _user_items = (
+                                _user_result.get("items", [])
+                                if isinstance(_user_result, dict)
+                                else getattr(_user_result, "items", [])
+                            )
+                            if _user_items:
+                                _entity_user = _user_items[0]
+                                _uid = (
+                                    _entity_user.get("id")
+                                    if isinstance(_entity_user, dict)
+                                    else getattr(_entity_user, "id", None)
+                                )
+                                if _uid:
+                                    _batch_filter_ctx["current_user_id"] = str(_uid)
+                                    _resolved = True
+                                    _batch_filter_ctx["current_user_entity"] = (
+                                        _entity_user
+                                        if isinstance(_entity_user, dict)
+                                        else _entity_user.model_dump()
+                                        if hasattr(_entity_user, "model_dump")
+                                        else {}
+                                    )
+                        except Exception:
+                            logger.debug(
+                                "Batch: could not resolve User entity by email", exc_info=True
+                            )
+                if not _resolved:
+                    _batch_filter_ctx["current_user_id"] = str(_auth.user.id)
+        except Exception:
+            logger.debug("Batch: failed to resolve current user", exc_info=True)
+
     results = await asyncio.gather(
-        *(_fetch_region_json(request, page, page_size, ctx) for ctx in region_ctxs),
+        *(
+            _fetch_region_json(request, page, page_size, ctx, filter_context=_batch_filter_ctx)
+            for ctx in region_ctxs
+        ),
         return_exceptions=True,
     )
 

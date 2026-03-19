@@ -348,7 +348,10 @@ def _extract_condition_filters(
             op_val = op.value if hasattr(op, "value") else str(op)
 
         if field and value == "current_user" and op_val in ("=", "eq", "equals"):
-            filters[field] = user_id
+            # Prefer DSL User entity ID over auth user ID so comparisons
+            # against ref User fields work correctly (#546).
+            resolved = _resolve_user_attribute("entity_id", auth_context)
+            filters[field] = user_id if resolved == "__RBAC_DENY__" else resolved
         elif (
             field
             and isinstance(value, str)
@@ -409,7 +412,10 @@ def _extract_condition_filters(
             raw_value = cond_value
 
         if field and raw_value == "current_user" and op_val in ("=", "eq", "equals"):
-            filters[field] = user_id
+            # Prefer DSL User entity ID over auth user ID so comparisons
+            # against ref User fields work correctly (#546).
+            resolved = _resolve_user_attribute("entity_id", auth_context)
+            filters[field] = user_id if resolved == "__RBAC_DENY__" else resolved
         elif (
             field
             and isinstance(raw_value, str)
