@@ -15,9 +15,26 @@ are lazily resolved so that the heavy runtime stack is not loaded at CLI
 startup time.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from dazzle._version import get_version as _get_version
 
 __version__ = _get_version()
+
+if TYPE_CHECKING:
+    from dazzle_back.converters import convert_appspec_to_backend as convert_appspec_to_backend
+    from dazzle_back.converters.entity_converter import convert_entities as convert_entities
+    from dazzle_back.events.tier import create_bus as create_bus
+    from dazzle_back.graphql.integration import inspect_schema as inspect_schema
+    from dazzle_back.graphql.integration import print_schema as print_schema
+    from dazzle_back.runtime.auth import AuthStore as AuthStore
+    from dazzle_back.runtime.migrations import MigrationAction as MigrationAction
+    from dazzle_back.runtime.migrations import auto_migrate as auto_migrate
+    from dazzle_back.runtime.migrations import plan_migrations as plan_migrations
+    from dazzle_back.runtime.pg_backend import PostgresBackend as PostgresBackend
+    from dazzle_back.runtime.sa_schema import build_metadata as build_metadata
 
 
 def _get_AuthStore() -> object:  # noqa: N802

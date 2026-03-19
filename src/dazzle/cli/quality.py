@@ -19,7 +19,7 @@ def init_command() -> None:
     appspec = load_project_appspec(project_root)
 
     # 2. Extract context from appspec
-    personas = [p.name for p in (appspec.personas or [])]
+    personas = [p.id for p in (appspec.personas or [])]
     workspaces = [w.name for w in (appspec.workspaces or [])]
     entities = [e.name for e in appspec.domain.entities]
 

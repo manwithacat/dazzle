@@ -42,6 +42,7 @@ class AuthSubsystem:
         # Default signup role: first persona ID (public-facing persona by convention)
         _default_signup_roles = [ctx.config.personas[0]["id"]] if ctx.config.personas else None
 
+        assert ctx.auth_store is not None, "auth_store must be set before AuthSubsystem starts"
         auth_router = create_auth_routes(
             ctx.auth_store,
             persona_routes=_persona_routes or None,

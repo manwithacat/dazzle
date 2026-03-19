@@ -375,6 +375,9 @@ class SystemRoutesSubsystem:
         from dazzle_back.runtime.service_loader import ServiceLoader
 
         # Load domain service stubs
+        assert ctx.services_dir is not None, (
+            "services_dir must be set before SystemRoutesSubsystem starts"
+        )
         self._service_loader = ServiceLoader(services_dir=ctx.services_dir)
         try:
             self._service_loader.load_services()

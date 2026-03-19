@@ -166,7 +166,8 @@ async def _get_entity_count(
     if resp.status_code >= 400:
         raise RuntimeError(f"GET {url} returned {resp.status_code}")
     data = resp.json()
-    return data.get("total", len(data.get("items", [])))
+    count: int = data.get("total", len(data.get("items", [])))
+    return count
 
 
 async def run_scope_verification(

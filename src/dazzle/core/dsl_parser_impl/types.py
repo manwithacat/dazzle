@@ -5,6 +5,7 @@ Handles field type specifications and field modifiers.
 """
 
 import re
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from .. import ir
@@ -92,7 +93,7 @@ class TypeParserMixin:
         token = self.current_token()
 
         # Dispatch by token value for keyword-style types
-        _value_dispatch: dict[str, Any] = {
+        _value_dispatch: dict[str, Callable[[], ir.FieldType]] = {
             "str": self._parse_str_type,
             "text": self._parse_text_type,
             "int": self._parse_int_type,
@@ -116,7 +117,7 @@ class TypeParserMixin:
             return value_parser()
 
         # Dispatch by token type for relationship types
-        _token_type_dispatch: dict[TokenType, Any] = {
+        _token_type_dispatch: dict[TokenType, Callable[[], ir.FieldType]] = {
             TokenType.HAS_MANY: self._parse_has_many_type,
             TokenType.HAS_ONE: self._parse_has_one_type,
             TokenType.EMBEDS: self._parse_embeds_type,

@@ -109,6 +109,7 @@ class TestInitCommand:
             persona_mocks = []
             for name in personas:
                 p = MagicMock()
+                p.id = name
                 p.name = name
                 persona_mocks.append(p)
             appspec.personas = persona_mocks

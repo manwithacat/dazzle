@@ -72,7 +72,8 @@ class AuthService:
         limit: int = 50,
     ) -> list[Any]:
         """List users with optional filters."""
-        return self._store.list_users(active_only=active_only, role=role, limit=limit)
+        result: list[Any] = self._store.list_users(active_only=active_only, role=role, limit=limit)
+        return result
 
     def update_user(
         self,
@@ -95,21 +96,25 @@ class AuthService:
 
     def update_password(self, user_id: UUID, new_password: str) -> bool:
         """Update a user's password."""
-        return self._store.update_password(user_id, new_password)
+        result: bool = self._store.update_password(user_id, new_password)
+        return result
 
     # ----- Sessions -----
 
     def count_active_sessions(self, user_id: UUID) -> int:
         """Count active (non-expired) sessions for a user."""
-        return self._store.count_active_sessions(user_id)
+        result: int = self._store.count_active_sessions(user_id)
+        return result
 
     def delete_user_sessions(self, user_id: UUID) -> int:
         """Delete all sessions for a user. Returns count of deleted sessions."""
-        return self._store.delete_user_sessions(user_id)
+        result: int = self._store.delete_user_sessions(user_id)
+        return result
 
     def cleanup_expired_sessions(self) -> int:
         """Delete all expired sessions. Returns count removed."""
-        return self._store.cleanup_expired_sessions()
+        result: int = self._store.cleanup_expired_sessions()
+        return result
 
     # ----- Raw SQL (for queries not covered by AuthStore API) -----
 
@@ -119,4 +124,5 @@ class AuthService:
         Used by CLI commands that need direct DB access (e.g. session listing,
         config/stats queries) where AuthStore doesn't expose a dedicated method.
         """
-        return self._store._execute(query, params)
+        result: list[dict[str, Any]] = self._store._execute(query, params)
+        return result
