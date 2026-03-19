@@ -1582,6 +1582,50 @@ def validate_notifications(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
     return errors, warnings
 
 
+_GOD_ENTITY_FIELD_THRESHOLD = 15
+_SOFT_DELETE_NAMES = frozenset({"is_deleted", "deleted", "deleted_at", "archived_at"})
+
+
+def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
+    """Detect common modeling anti-patterns and emit warnings."""
+    warnings: list[str] = []
+    entity_names = {e.name.lower() for e in appspec.domain.entities}
+    entity_map = {e.name: e for e in appspec.domain.entities}
+
+    for entity in appspec.domain.entities:
+        field_map = {f.name: f for f in entity.fields}
+
+        # 1. Polymorphic key pairs: *_type (enum) + *_id (uuid)
+        for field in entity.fields:
+            if field.name.endswith("_type") and field.type.kind == ir.FieldTypeKind.ENUM:
+                prefix = field.name.removesuffix("_type")
+                sibling_name = f"{prefix}_id"
+                sibling = field_map.get(sibling_name)
+                if sibling and sibling.type.kind == ir.FieldTypeKind.UUID:
+                    warnings.append(
+                        f"Entity '{entity.name}': fields '{field.name}' + "
+                        f"'{sibling_name}' look like a polymorphic key. "
+                        f"Prefer separate ref fields for each target entity."
+                    )
+
+        # 2. God entities: too many fields
+        meaningful_fields = [
+            f
+            for f in entity.fields
+            if f.name not in ("id", "created_at", "updated_at")
+            and ir.FieldModifier.PK not in (f.modifiers or [])
+        ]
+        if len(meaningful_fields) > _GOD_ENTITY_FIELD_THRESHOLD:
+            warnings.append(
+                f"Entity '{entity.name}' has {len(meaningful_fields)} fields "
+                f"— consider decomposing into smaller entities connected by refs."
+            )
+
+    _ = entity_names  # used by future tasks
+    _ = entity_map  # used by future tasks
+    return warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """Extended lint rules for code quality.
 
@@ -1599,6 +1643,7 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_list_surface_ux(appspec))
     warnings.extend(_lint_integration_bindings(appspec))
     warnings.extend(_lint_process_effects(appspec))
+    warnings.extend(_lint_modeling_anti_patterns(appspec))
     return warnings
 
 
