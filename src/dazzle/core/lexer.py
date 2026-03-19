@@ -489,6 +489,9 @@ class TokenType(Enum):
     # v0.39.0 Transition Side Effects
     ON_TRANSITION = "on_transition"
 
+    # v0.43.0 External Action Links
+    EXTERNAL = "external"
+
     # Comparison operators (for condition expressions)
     DOUBLE_EQUALS = "=="
     NOT_EQUALS = "!="

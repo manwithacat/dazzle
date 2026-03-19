@@ -159,6 +159,15 @@ class RelatedTabContext(BaseModel):
     visible_condition: dict[str, Any] | None = None
 
 
+class ExternalLinkAction(BaseModel):
+    """External URL action link on a detail page."""
+
+    name: str
+    label: str
+    url: str
+    new_tab: bool = True
+
+
 class IntegrationActionContext(BaseModel):
     """Action button for a manual integration trigger on a detail page."""
 
@@ -183,6 +192,7 @@ class DetailContext(BaseModel):
     status_field: str = "status"
     related_tabs: list[RelatedTabContext] = Field(default_factory=list)
     integration_actions: list[IntegrationActionContext] = Field(default_factory=list)
+    external_link_actions: list[ExternalLinkAction] = Field(default_factory=list)
 
 
 class ReviewActionContext(BaseModel):

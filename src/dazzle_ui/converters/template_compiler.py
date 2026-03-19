@@ -18,6 +18,7 @@ from dazzle.core.strings import to_api_plural
 from dazzle_ui.runtime.template_context import (
     ColumnContext,
     DetailContext,
+    ExternalLinkAction,
     FieldContext,
     FieldSourceContext,
     FormContext,
@@ -781,6 +782,20 @@ def _compile_view_surface(
             )
         )
 
+    # Build external link actions from surface actions with EXTERNAL outcomes
+    external_links: list[ExternalLinkAction] = []
+    for action in surface.actions:
+        if action.outcome.kind == ir.OutcomeKind.EXTERNAL and action.outcome.url:
+            label = action.label or action.name.replace("_", " ").title()
+            external_links.append(
+                ExternalLinkAction(
+                    name=action.name,
+                    label=label,
+                    url=action.outcome.url,
+                    new_tab=action.outcome.new_tab,
+                )
+            )
+
     return PageContext(
         page_title=surface.title or f"{entity_name} Details",
         template="components/detail_view.html",
@@ -795,6 +810,7 @@ def _compile_view_surface(
             transitions=transitions,
             status_field=status_field,
             related_tabs=related_tabs,
+            external_link_actions=external_links,
         ),
     )
 

@@ -54,6 +54,7 @@ class OutcomeKind(StrEnum):
     SURFACE = "surface"
     EXPERIENCE = "experience"
     INTEGRATION = "integration"
+    EXTERNAL = "external"
 
 
 class Outcome(BaseModel):
@@ -67,6 +68,8 @@ class Outcome(BaseModel):
     target: str  # surface name, experience name, or integration name
     step: str | None = None  # for experience outcomes
     action: str | None = None  # for integration outcomes
+    url: str | None = None  # for external outcomes
+    new_tab: bool = True  # for external outcomes
 
     model_config = ConfigDict(frozen=True)
 

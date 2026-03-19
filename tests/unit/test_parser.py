@@ -2751,5 +2751,106 @@ entity Doc "Doc":
         assert field.type.max_size is None
 
 
+class TestExternalActionLinks:
+    """Tests for external URL action links on surfaces (#542)."""
+
+    def test_external_action_outcome(self):
+        """Parse action with external URL outcome."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Work "Work":
+  id: uuid pk
+  title: str(200) required
+
+surface work_detail "Work Detail":
+  uses entity Work
+  mode: view
+  section main:
+    field title "Title"
+  action graph_explorer "Graph Explorer":
+    on click -> "http://localhost:7474/explorer/{id}" external
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert len(surface.actions) == 1
+        action = surface.actions[0]
+        assert action.name == "graph_explorer"
+        assert action.label == "Graph Explorer"
+        assert action.outcome.kind.value == "external"
+        assert action.outcome.url == "http://localhost:7474/explorer/{id}"
+        assert action.outcome.new_tab is True
+
+    def test_external_action_target_is_empty(self):
+        """External outcome has empty target (no symbol to resolve)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Item "Item":
+  id: uuid pk
+  name: str(100) required
+
+surface item_detail "Item Detail":
+  uses entity Item
+  mode: view
+  section main:
+    field name "Name"
+  action docs "Documentation":
+    on click -> "https://docs.example.com/items/{id}" external
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        action = fragment.surfaces[0].actions[0]
+        assert action.outcome.target == ""
+
+    def test_external_action_new_tab_default(self):
+        """External outcomes default new_tab to True."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_detail "Task Detail":
+  uses entity Task
+  mode: view
+  section main:
+    field title "Title"
+  action external_link "Open External":
+    on click -> "https://example.com/{id}" external
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        action = fragment.surfaces[0].actions[0]
+        assert action.outcome.new_tab is True
+
+    def test_external_action_outcome_kind(self):
+        """OutcomeKind.EXTERNAL is set correctly."""
+        from dazzle.core.ir import OutcomeKind
+
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Record "Record":
+  id: uuid pk
+  ref: str(50) required
+
+surface record_view "Record View":
+  uses entity Record
+  mode: view
+  section main:
+    field ref "Reference"
+  action view_in_portal "View in Portal":
+    on click -> "https://portal.example.com/records/{id}" external
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        action = fragment.surfaces[0].actions[0]
+        assert action.outcome.kind == OutcomeKind.EXTERNAL
+        assert action.outcome.kind is OutcomeKind.EXTERNAL
+
+
 if __name__ == "__main__":
     main()

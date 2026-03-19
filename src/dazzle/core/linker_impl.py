@@ -627,6 +627,8 @@ def validate_module_access(modules: list[ir.ModuleIR], symbols: SymbolTable) -> 
             # Check surface action outcomes
             for action in surface.actions:
                 outcome = action.outcome
+                if outcome.kind == ir.OutcomeKind.EXTERNAL:
+                    continue  # External URLs have no symbol to resolve
                 target_module = None
 
                 if outcome.kind == ir.OutcomeKind.SURFACE:
@@ -738,6 +740,8 @@ def check_unused_imports(modules: list[ir.ModuleIR], symbols: SymbolTable) -> li
             # Check surface action outcomes
             for action in surface.actions:
                 outcome = action.outcome
+                if outcome.kind == ir.OutcomeKind.EXTERNAL:
+                    continue  # External URLs have no symbol to resolve
                 if outcome.target:
                     owner = symbols.symbol_sources.get(outcome.target)
                     if owner and owner != module.name:
@@ -939,7 +943,9 @@ def validate_references(symbols: SymbolTable) -> list[str]:
         # Check action outcomes
         for action in surface.actions:
             outcome = action.outcome
-            if outcome.kind == ir.OutcomeKind.SURFACE:
+            if outcome.kind == ir.OutcomeKind.EXTERNAL:
+                continue  # External URLs have no symbol to resolve
+            elif outcome.kind == ir.OutcomeKind.SURFACE:
                 if outcome.target not in symbols.surfaces:
                     errors.append(
                         f"Surface '{surface_name}' action '{action.name}' references "

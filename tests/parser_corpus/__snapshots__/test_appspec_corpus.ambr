@@ -519,6 +519,7 @@
               'name': 'save',
               'outcome': dict({
                 'kind': 'surface',
+                'new_tab': True,
                 'target': 'task_list',
               }),
               'trigger': 'submit',
@@ -1337,6 +1338,7 @@
               'name': 'save',
               'outcome': dict({
                 'kind': 'surface',
+                'new_tab': True,
                 'target': 'contact_list',
               }),
               'trigger': 'submit',
@@ -1379,6 +1381,7 @@
               'name': 'save',
               'outcome': dict({
                 'kind': 'surface',
+                'new_tab': True,
                 'target': 'contact_list',
               }),
               'trigger': 'submit',

@@ -45,6 +45,21 @@
   {% endif %}
   {% endblock detail_transitions %}
 
+  {# External link actions #}
+  {% block detail_external_links %}
+  {% if detail.external_link_actions %}
+  <div class="flex gap-2 mb-4" data-dazzle-external-links="{{ detail.entity_name }}">
+    {% for link in detail.external_link_actions %}
+    <a href="{{ link.url }}" {% if link.new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}
+       class="btn btn-outline btn-sm"
+       data-dazzle-action="{{ detail.entity_name }}.external.{{ link.name }}">
+      {{ link.label }}
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endblock detail_external_links %}
+
   {# Integration action buttons (manual triggers) #}
   {% block detail_integration_actions %}
   {% if detail.integration_actions %}

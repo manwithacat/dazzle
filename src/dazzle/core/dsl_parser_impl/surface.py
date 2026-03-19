@@ -306,7 +306,7 @@ class SurfaceParserMixin:
 
         # on submit|click|auto -> outcome
         self.expect(TokenType.ON)
-        trigger_token = self.expect(TokenType.IDENTIFIER)
+        trigger_token = self.expect_identifier_or_keyword()
         trigger = ir.SurfaceTrigger(trigger_token.value)
 
         self.expect(TokenType.ARROW)
@@ -325,6 +325,17 @@ class SurfaceParserMixin:
 
     def parse_outcome(self) -> ir.Outcome:
         """Parse action outcome."""
+        # "url" external — external link outcome
+        if self.match(TokenType.STRING):
+            url = self.advance().value
+            self.expect(TokenType.EXTERNAL)
+            return ir.Outcome(
+                kind=ir.OutcomeKind.EXTERNAL,
+                target="",
+                url=url,
+                new_tab=True,
+            )
+
         # surface SurfaceName
         if self.match(TokenType.SURFACE):
             self.advance()
@@ -355,7 +366,8 @@ class SurfaceParserMixin:
         else:
             token = self.current_token()
             raise make_parse_error(
-                f"Expected outcome (surface/experience/integration), got {token.type.value}",
+                f'Expected outcome (surface/experience/integration/"url" external), '
+                f"got {token.type.value}",
                 self.file,
                 token.line,
                 token.column,
