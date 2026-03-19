@@ -877,6 +877,7 @@ class DazzleBackendApp:
         from dazzle_back.runtime.subsystems.process import ProcessSubsystem
         from dazzle_back.runtime.subsystems.seed import SeedSubsystem
         from dazzle_back.runtime.subsystems.sla import SLASubsystem
+        from dazzle_back.runtime.subsystems.system_routes import SystemRoutesSubsystem
 
         return [
             AuthSubsystem(),
@@ -887,6 +888,7 @@ class DazzleBackendApp:
             SLASubsystem(),
             LLMQueueSubsystem(),
             SeedSubsystem(),
+            SystemRoutesSubsystem(),
         ]
 
     def _build_subsystem_context(self, auth_dep: Any = None, optional_auth_dep: Any = None) -> Any:
@@ -913,6 +915,12 @@ class DazzleBackendApp:
             database_url=self._database_url or "",
             security_profile=self._security_profile,
             project_root=self._project_root,
+            last_migration=self._last_migration,
+            # Resolved instance vars (may differ from config when passed as constructor kwargs)
+            sitespec_data=self._sitespec_data,
+            enable_files=self._enable_files,
+            files_path=self._files_path,
+            services_dir=self._services_dir,
         )
 
     def _run_subsystems(self) -> None:
@@ -936,293 +944,6 @@ class DazzleBackendApp:
             self._process_adapter = ctx.process_adapter
         if ctx.sla_manager is not None:
             self._sla_manager = ctx.sla_manager
-
-    def _init_fragment_routes(self) -> None:
-        """Initialize fragment routes for composable HTMX fragments (v0.25.0)."""
-        if not self._app:
-            return
-
-        try:
-            from dazzle_back.runtime.api_cache import ApiResponseCache
-            from dazzle_back.runtime.fragment_routes import create_fragment_router
-
-            # Build fragment sources from integration specs if available
-            fragment_sources: dict[str, dict[str, Any]] = {}
-            for integration in self._appspec.integrations:
-                if hasattr(integration, "base_url") and integration.base_url:
-                    fragment_sources[integration.name] = {
-                        "url": integration.base_url,
-                        "display_key": "name",
-                        "value_key": "id",
-                        "headers": getattr(integration, "headers", {}),
-                    }
-
-            # Merge fragment sources from DSL source= annotations (v0.25.1)
-            fragment_sources.update(self._fragment_sources)
-
-            fragment_cache = ApiResponseCache()  # auto-detects REDIS_URL
-            fragment_router = create_fragment_router(fragment_sources, cache=fragment_cache)
-            self._app.include_router(fragment_router)
-        except Exception as e:
-            import logging
-
-            logging.getLogger("dazzle.server").debug("Fragment routes not available: %s", e)
-
-    def _init_integration_executor(self) -> None:
-        """Initialize integration action executor (delegates to IntegrationManager)."""
-        if self._integration_mgr:
-            self._integration_mgr.init_integration_executor()
-
-    def _init_mapping_executor(self) -> None:
-        """Initialize declarative integration mapping executor (v0.30.0).
-
-        Scans integrations for ``IntegrationMapping`` blocks and registers
-        handlers on the global entity event bus to fire HTTP requests on
-        entity lifecycle events.
-
-        Uses ``self._appspec.integrations`` because older code paths
-        does not carry integration definitions (#340).
-        """
-        try:
-            # Use appspec integrations
-            integrations = getattr(self._appspec, "integrations", []) if self._appspec else []
-
-            # Check if any integrations have mappings
-            has_mappings = False
-            for integration in integrations:
-                if getattr(integration, "mappings", []):
-                    has_mappings = True
-                    break
-
-            if not has_mappings:
-                return
-
-            from dazzle_back.runtime.api_cache import ApiResponseCache
-            from dazzle_back.runtime.event_bus import get_event_bus
-            from dazzle_back.runtime.mapping_executor import MappingExecutor
-
-            event_bus = get_event_bus()
-            repositories = self._repositories
-
-            async def update_entity(
-                entity_name: str, entity_id: str, fields: dict[str, Any]
-            ) -> None:
-                repo = repositories.get(entity_name)
-                if repo:
-                    from uuid import UUID
-
-                    await repo.update(UUID(entity_id), fields)
-
-            cache = ApiResponseCache()  # auto-detects REDIS_URL
-            executor = MappingExecutor(
-                self._appspec, event_bus, update_entity=update_entity, cache=cache
-            )
-            executor.register_all()
-
-            # Wire entity lifecycle events to the event bus so MappingExecutor
-            # receives on_create / on_transition triggers (#339)
-            self._wire_entity_events_to_bus(event_bus)
-
-            # Register manual trigger endpoint for each entity with manual mappings
-            self._register_manual_trigger_routes(executor)
-
-        except Exception as e:
-            import logging
-
-            logging.getLogger("dazzle.server").warning("Failed to init mapping executor: %s", e)
-
-    def _register_manual_trigger_routes(self, executor: Any) -> None:
-        """Register POST endpoints for manual integration triggers."""
-        if not self._app or not self._appspec:
-            return
-
-        from dazzle.core.ir.integrations import MappingTriggerType
-        from dazzle.core.strings import to_api_plural
-
-        def _make_handler(
-            _executor: Any,
-            _int_name: str,
-            _map_name: str,
-            _entity_name: str,
-            _repositories: Any,
-            _slug: str,
-        ) -> Any:
-            """Factory to capture closure vars without exposing them as route params."""
-
-            async def _handler(entity_id: str, request: Request) -> Any:
-                from uuid import UUID
-
-                from starlette.responses import Response
-
-                repo = _repositories.get(_entity_name)
-                if not repo:
-                    raise HTTPException(status_code=404, detail=f"Entity {_entity_name} not found")
-                entity_data = await repo.read(UUID(entity_id))
-                if not entity_data:
-                    raise HTTPException(status_code=404, detail="Record not found")
-                data = (
-                    dict(entity_data)
-                    if isinstance(entity_data, dict)
-                    else (entity_data.__dict__ if hasattr(entity_data, "__dict__") else {})
-                )
-                force_refresh = request.query_params.get("force") == "1"
-                result = await _executor.execute_manual(
-                    _int_name,
-                    _map_name,
-                    data,
-                    entity_name=_entity_name,
-                    entity_id=entity_id,
-                    force_refresh=force_refresh,
-                )
-
-                # htmx requests: redirect back to the detail page (#341)
-                is_htmx = request.headers.get("HX-Request") == "true"
-                if is_htmx:
-                    detail_url = f"/{_slug}/{entity_id}"
-                    return Response(
-                        status_code=200,
-                        headers={"HX-Redirect": detail_url},
-                    )
-
-                return {
-                    "success": result.success,
-                    "message": result.message if hasattr(result, "message") else "",
-                    "mapped_fields": result.mapped_fields or {},
-                    "cache_hit": result.cache_hit,
-                }
-
-            return _handler
-
-        for integration in getattr(self._appspec, "integrations", []):
-            for mapping in integration.mappings:
-                has_manual = any(
-                    t.trigger_type == MappingTriggerType.MANUAL for t in mapping.triggers
-                )
-                if not has_manual:
-                    continue
-
-                entity_name = mapping.entity_ref
-                slug = to_api_plural(entity_name)
-                int_name = integration.name
-                map_name = mapping.name
-
-                handler = _make_handler(
-                    executor, int_name, map_name, entity_name, self._repositories, slug
-                )
-
-                self._app.post(
-                    f"/{slug}/{{entity_id}}/integrations/{int_name}/{map_name}",
-                    tags=[entity_name],
-                )(handler)
-
-    def _wire_entity_events_to_bus(self, event_bus: Any) -> None:
-        """Wire CRUD service lifecycle callbacks to the EntityEventBus.
-
-        This ensures that on_create / on_update / on_delete integration
-        triggers actually fire by emitting events when entities change (#339).
-        """
-        from dazzle_back.runtime.event_bus import EntityEventBus
-
-        bus: EntityEventBus = event_bus
-
-        async def _on_created(
-            entity_name: str,
-            entity_id: str,
-            entity_data: dict[str, Any],
-            _old_data: dict[str, Any] | None,
-        ) -> None:
-            await bus.emit_created(entity_name, entity_id, entity_data)
-
-        async def _on_updated(
-            entity_name: str,
-            entity_id: str,
-            entity_data: dict[str, Any],
-            old_data: dict[str, Any] | None,
-        ) -> None:
-            # Inject _previous_state for transition detection
-            data = dict(entity_data)
-            if old_data:
-                for key in ("status", "state"):
-                    if key in old_data and old_data[key] != entity_data.get(key):
-                        data["_previous_state"] = old_data[key]
-                        break
-            await bus.emit_updated(entity_name, entity_id, data)
-
-        async def _on_deleted(
-            entity_name: str,
-            entity_id: str,
-            entity_data: dict[str, Any],
-            _old_data: dict[str, Any] | None,
-        ) -> None:
-            await bus.emit_deleted(entity_name, entity_id)
-
-        wired = 0
-        for service in self._services.values():
-            if isinstance(service, CRUDService):
-                service.on_created(_on_created)
-                service.on_updated(_on_updated)
-                service.on_deleted(_on_deleted)
-                wired += 1
-
-        if wired:
-            import logging
-
-            logging.getLogger("dazzle.server").debug(
-                "Wired entity events to EntityEventBus for %d services", wired
-            )
-
-    def _init_workspace_routes(self) -> None:
-        """Initialize workspace layout routes (delegates to WorkspaceRouteBuilder)."""
-        if self._workspace_builder:
-            self._workspace_builder.init_workspace_routes()
-
-    def _init_workspace_entity_routes(self, workspaces: list[Any], app: Any) -> None:
-        """Register workspace-prefixed entity routes (delegates to WorkspaceRouteBuilder)."""
-        if self._workspace_builder:
-            self._workspace_builder._init_workspace_entity_routes(workspaces, app)
-
-    def _init_transition_effects(self) -> None:
-        """Wire on_transition side effects into entity update callbacks (#435)."""
-        if not self._appspec:
-            return
-
-        from dazzle.core.ir.process import StepEffect
-
-        # Collect entities that have transitions with effects
-        entity_transitions: dict[str, list[tuple[str, str, list[StepEffect]]]] = {}
-        for entity in self._appspec.domain.entities:
-            if not entity.state_machine:
-                continue
-            for t in entity.state_machine.transitions:
-                if t.effects:
-                    entity_transitions.setdefault(entity.name, []).append(
-                        (t.from_state, t.to_state, list(t.effects))
-                    )
-
-        if not entity_transitions:
-            return
-
-        from dazzle_back.runtime.side_effect_executor import SideEffectExecutor
-        from dazzle_back.runtime.transition_effects import TransitionEffectRunner
-
-        executor = SideEffectExecutor(services=self._services)
-        runner = TransitionEffectRunner(
-            executor=executor,
-            entity_transitions=entity_transitions,
-            status_fields=self._entity_status_fields,
-        )
-
-        wired = 0
-        for entity_name in entity_transitions:
-            service = self._services.get(entity_name)
-            if service and isinstance(service, CRUDService):
-                service.on_updated(runner.on_entity_updated)
-                wired += 1
-
-        if wired:
-            logging.getLogger("dazzle.server").info(
-                "Transition effects wired for %d entity/entities", wired
-            )
 
     # ------------------------------------------------------------------
     # Build phases — called in order by build()
@@ -1668,228 +1389,6 @@ class DazzleBackendApp:
             )
             self._app.include_router(control_plane_router)
 
-    def _setup_optional_features(self) -> None:
-        """Initialize optional features: events, debug, site, channels, etc."""
-        assert self._app is not None
-
-        # Create delegate instances for workspace and integration features
-        self._integration_mgr = IntegrationManager(
-            app=self._app,
-            appspec=self._appspec,
-            channels=self._channels,
-            db_manager=self._db_manager,
-            fragment_sources=self._fragment_sources,
-        )
-        self._workspace_builder = WorkspaceRouteBuilder(
-            app=self._app,
-            appspec=self._appspec,
-            entities=self._entities,
-            repositories=self._repositories,
-            auth_middleware=self._auth_middleware,
-            enable_auth=self._enable_auth,
-            enable_test_mode=self._enable_test_mode,
-            entity_auto_includes=self._entity_auto_includes,
-        )
-
-        # NOTE: subsystem context building and _run_subsystems() are now called
-        # explicitly in build() after _setup_optional_features(), so auth deps
-        # can be forwarded into SubsystemContext.
-
-        # Debug routes
-        if self._db_manager:
-            from dazzle_back.runtime.debug_routes import create_debug_routes
-
-            self._start_time = datetime.now()
-            debug_router = create_debug_routes(
-                appspec=self._appspec,
-                db_manager=self._db_manager,
-                entities=self._entities,
-                start_time=self._start_time,
-            )
-            self._app.include_router(debug_router)
-
-            from dazzle_back.runtime.event_explorer import create_event_explorer_routes
-
-            event_explorer_router = create_event_explorer_routes(self._event_framework)
-            self._app.include_router(event_explorer_router)
-
-        # Site routes (v0.16.0)
-        if self._sitespec_data:
-            from dazzle_back.runtime.site_routes import (
-                create_site_page_routes,
-                create_site_routes,
-            )
-
-            site_router = create_site_routes(
-                sitespec_data=self._sitespec_data,
-                project_root=self._project_root,
-            )
-            self._app.include_router(site_router)
-
-            page_router = create_site_page_routes(
-                sitespec_data=self._sitespec_data,
-                project_root=self._project_root,
-            )
-            self._app.include_router(page_router)
-
-        # Fragment routes (v0.25.0)
-        self._init_fragment_routes()
-
-        # Integration executor (v0.20.0)
-        self._init_integration_executor()
-
-        # Mapping executor (v0.30.0)
-        self._init_mapping_executor()
-
-        # Workspace routes (v0.20.0)
-        self._init_workspace_routes()
-
-        # Transition side effects (v0.39.0, #435)
-        self._init_transition_effects()
-
-    def _setup_system_routes(self) -> None:
-        """Register domain service stubs, health check, spec, and db-info routes."""
-        assert self._app is not None
-
-        # Load domain service stubs
-        self._service_loader = ServiceLoader(services_dir=self._services_dir)
-        try:
-            self._service_loader.load_services()
-        except Exception:
-            logger.warning("Failed to load domain services", exc_info=True)
-
-        if self._service_loader and self._service_loader.services:
-            service_loader = self._service_loader  # Capture for closure
-
-            @self._app.get("/_dazzle/services", tags=["System"])
-            async def list_domain_services() -> dict[str, Any]:
-                """List loaded domain service stubs."""
-                services = []
-                for service_id, loaded in service_loader.services.items():
-                    services.append(
-                        {
-                            "id": service_id,
-                            "module_path": str(loaded.module_path),
-                            "has_result_type": loaded.result_type is not None,
-                        }
-                    )
-                return {"services": services, "count": len(services)}
-
-            @self._app.post("/_dazzle/services/{service_id}/invoke", tags=["System"])
-            async def invoke_domain_service(
-                service_id: str, payload: dict[str, Any] | None = None
-            ) -> dict[str, Any]:
-                """Invoke a domain service stub."""
-                if not service_loader.has_service(service_id):
-                    raise HTTPException(status_code=404, detail=f"Service not found: {service_id}")
-                try:
-                    result = service_loader.invoke(service_id, **(payload or {}))
-                    return {"result": result}
-                except Exception as e:
-                    logger.error("Service invocation failed for %s: %s", service_id, e)
-                    raise HTTPException(status_code=500, detail="Service invocation failed")
-
-        @self._app.get("/health", tags=["System"])
-        async def health_check() -> dict[str, str]:
-            return {"status": "healthy", "app": self._appspec.name}
-
-        @self._app.get("/spec", tags=["System"])
-        async def get_spec() -> dict[str, Any]:
-            return self._appspec.model_dump()
-
-        def _mask_database_url(url: str | None) -> str | None:
-            """Mask password in database URL for safe display."""
-            if not url:
-                return None
-            import re as _re
-
-            return _re.sub(r"://([^:]+):([^@]+)@", r"://\1:***@", url)
-
-        masked_db_url = _mask_database_url(self._database_url)
-        files_path_str = str(self._files_path) if self._enable_files else None
-        last_migration = self._last_migration
-        auth_enabled = self._enable_auth
-        files_enabled = self._enable_files
-
-        @self._app.get("/db-info", tags=["System"])
-        async def db_info() -> dict[str, Any]:
-            migration_info = None
-            if last_migration:
-                migration_info = {
-                    "steps_executed": len(last_migration.safe_steps),
-                    "warnings": last_migration.warnings,
-                    "has_pending_destructive": last_migration.has_destructive,
-                }
-            return {
-                "database_url": masked_db_url,
-                "database_backend": "postgresql",
-                "tables": [e.name for e in self._entities],
-                "last_migration": migration_info,
-                "auth_enabled": auth_enabled,
-                "files_enabled": files_enabled,
-                "files_path": files_path_str,
-            }
-
-        # Configure project-level template overrides (v0.29.0)
-        try:
-            from dazzle_ui.runtime.template_renderer import (
-                TEMPLATES_DIR,
-                configure_project_templates,
-                get_jinja_env,
-            )
-
-            if self._project_root:
-                project_templates = self._project_root / "templates"
-                if project_templates.is_dir():
-                    configure_project_templates(project_templates)
-
-                # CDN toggle from [ui] cdn in dazzle.toml
-                manifest_path = self._project_root / "dazzle.toml"
-                if manifest_path.exists():
-                    from dazzle.core.manifest import load_manifest
-
-                    mf = load_manifest(manifest_path)
-                    get_jinja_env().globals["_use_cdn"] = mf.cdn
-
-                    # Build override registry if project has declaration headers
-                    try:
-                        from dazzle import __version__ as dz_version
-                        from dazzle_ui.runtime.override_registry import (
-                            build_registry,
-                            save_registry,
-                        )
-
-                        registry = build_registry(
-                            project_templates, TEMPLATES_DIR, framework_version=dz_version
-                        )
-                        if registry.get("template_overrides"):
-                            from dazzle.core.paths import project_overrides_file
-
-                            save_registry(registry, project_overrides_file(self._project_root))
-                    except Exception:
-                        logger.debug("Override registry build skipped", exc_info=True)
-        except ImportError:
-            pass  # dazzle_ui not installed
-
-        # Mount static files from project dir + framework dir
-        try:
-            from pathlib import Path
-
-            import dazzle_ui
-            from dazzle_back.runtime.static_files import CombinedStaticFiles
-
-            framework_static = Path(dazzle_ui.__file__).parent / "runtime" / "static"
-            if framework_static.is_dir():
-                dirs: list[Path] = []
-                if self._project_root:
-                    dirs.append(self._project_root / "static")
-                dirs.append(framework_static)
-                self._app.mount("/static", CombinedStaticFiles(directories=dirs), name="static")
-        except ImportError:
-            pass  # dazzle_ui not installed — static files served externally
-        except Exception:
-            logger.warning("Failed to mount static files", exc_info=True)
-
     # ------------------------------------------------------------------
     # Public build orchestrator
     # ------------------------------------------------------------------
@@ -1907,15 +1406,20 @@ class DazzleBackendApp:
         self._setup_services()
         auth_dep, optional_auth_dep = self._setup_auth()
         self._setup_routes(auth_dep, optional_auth_dep)
-        self._setup_optional_features()  # keep for now — will be extracted later
-        # Build subsystem context with auth deps, then run subsystems
+        # Build subsystem context with auth deps, then run subsystems.
+        # SystemRoutesSubsystem (last) handles _setup_optional_features and
+        # _setup_system_routes.
         self._subsystem_ctx = self._build_subsystem_context(auth_dep, optional_auth_dep)
         self._run_subsystems()
+        # Sync integration_mgr and workspace_builder back from subsystem context
+        if self._subsystem_ctx.integration_mgr is not None:
+            self._integration_mgr = self._subsystem_ctx.integration_mgr
+        if self._subsystem_ctx.workspace_builder is not None:
+            self._workspace_builder = self._subsystem_ctx.workspace_builder
         # Sync channel_manager back so IntegrationManager-based properties work
         if self._subsystem_ctx.channel_manager is not None:
             if self._integration_mgr is not None:
                 self._integration_mgr.channel_manager = self._subsystem_ctx.channel_manager
-        self._setup_system_routes()
 
         # Validate routes for conflicts
         from dazzle_back.runtime.route_validator import validate_routes

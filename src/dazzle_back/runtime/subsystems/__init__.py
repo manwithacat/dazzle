@@ -69,6 +69,15 @@ class SubsystemContext:
     # Audit — set by DazzleBackendApp._setup_routes, read by system_routes subsystem
     audit_logger: Any | None = None
 
+    # Migration plan — set by DazzleBackendApp._setup_database(), read by system_routes subsystem
+    last_migration: Any | None = None
+
+    # Fields that may differ from config when passed as DazzleBackendApp constructor kwargs
+    sitespec_data: Any | None = None  # None → no public site; populated from self._sitespec_data
+    enable_files: bool = False  # populated from self._enable_files
+    files_path: Any | None = None  # populated from self._files_path
+    services_dir: Any | None = None  # populated from self._services_dir
+
     # Config forwarded from ServerConfig
     security_profile: str = "basic"
     project_root: Any | None = None
