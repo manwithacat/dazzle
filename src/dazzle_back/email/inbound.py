@@ -21,6 +21,8 @@ from email.message import Message
 from email.utils import parseaddr
 from typing import TYPE_CHECKING
 
+from dazzle_back.runtime.http_utils import http_call_with_retry
+
 if TYPE_CHECKING:
     from .blob_store import BlobStore
 
@@ -235,7 +237,9 @@ class MailpitInboundAdapter(InboundMailAdapter):
         try:
             async with httpx.AsyncClient() as client:
                 # List messages
-                response = await client.get(
+                response = await http_call_with_retry(
+                    client,
+                    "GET",
                     f"{self._http_url}/api/v1/messages",
                     params={"limit": limit},
                     timeout=10.0,
@@ -254,7 +258,9 @@ class MailpitInboundAdapter(InboundMailAdapter):
                         continue
 
                     # Fetch raw message
-                    raw_response = await client.get(
+                    raw_response = await http_call_with_retry(
+                        client,
+                        "GET",
                         f"{self._http_url}/api/v1/message/{msg_id}/raw",
                         timeout=30.0,
                     )
