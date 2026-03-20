@@ -705,6 +705,7 @@ def _convert_scope_rule(rule: ir.ScopeRule) -> ScopeRuleSpec:
         operation=op_map[rule.operation],
         condition=condition,
         personas=list(rule.personas),
+        predicate=rule.predicate,
     )
 
 

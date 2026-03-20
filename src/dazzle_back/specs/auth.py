@@ -306,6 +306,11 @@ class ScopeRuleSpec(BaseModel):
     Defines which records a role can see after passing the permit gate.
     condition=None means 'all' (no filter). personas=["*"] means all
     authorized roles.
+
+    The ``predicate`` field carries the compiled :class:`ScopePredicate` tree
+    from the linker (typed as ``Any`` to avoid circular imports).  When present,
+    the runtime uses :func:`compile_predicate` to produce SQL directly, bypassing
+    the legacy condition-tree-to-filter-dict pipeline.
     """
 
     operation: AccessOperationKind = Field(description="Operation type")
@@ -317,8 +322,12 @@ class ScopeRuleSpec(BaseModel):
         default_factory=list,
         description="Persona scope (['*'] means all authorized roles)",
     )
+    predicate: Any = Field(
+        default=None,
+        description="Compiled ScopePredicate tree (set by linker, used at runtime for SQL generation)",
+    )
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
 
 class EntityAccessSpec(BaseModel):

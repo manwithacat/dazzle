@@ -619,3 +619,218 @@ entity Note "Note":
         assert list_rule.predicate.user_attr == "id"
 
         assert isinstance(read_rule.predicate, Tautology)
+
+
+# =============================================================================
+# Task 6: Runtime predicate pipeline integration tests
+# =============================================================================
+
+
+class TestResolvePredicateFilters:
+    """Tests for _resolve_predicate_filters — predicate → SQL at request time."""
+
+    def test_tautology_returns_empty(self):
+        """Tautology predicate produces empty filters (no filtering needed)."""
+        pytest.importorskip("fastapi")
+        from dazzle.core.ir.fk_graph import FKGraph
+        from dazzle.core.ir.predicates import Tautology
+        from dazzle_back.runtime.route_generator import _resolve_predicate_filters
+
+        result = _resolve_predicate_filters(Tautology(), "Task", FKGraph(), "user-1", None)
+        assert result == {}
+
+    def test_user_attr_check_produces_scope_predicate(self):
+        """UserAttrCheck produces __scope_predicate with resolved SQL."""
+        pytest.importorskip("fastapi")
+        from dazzle.core.ir.fk_graph import FKGraph
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle_back.runtime.route_generator import _resolve_predicate_filters
+
+        pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
+
+        class FakeUser:
+            school = "school-uuid-abc"
+
+        class FakeAuth:
+            user = FakeUser()
+            preferences = {}
+
+        result = _resolve_predicate_filters(pred, "Student", FKGraph(), "user-1", FakeAuth())
+        assert "__scope_predicate" in result
+        sql, params = result["__scope_predicate"]
+        assert '"school_id"' in sql
+        assert "=" in sql
+        assert params == ["school-uuid-abc"]
+
+    def test_current_user_ref_resolved(self):
+        """CurrentUserRef in predicate params resolves to entity_id or user_id."""
+        pytest.importorskip("fastapi")
+        from dazzle.core.ir.fk_graph import FKGraph
+        from dazzle.core.ir.predicates import ColumnCheck, CompOp, ValueRef
+        from dazzle_back.runtime.route_generator import _resolve_predicate_filters
+
+        pred = ColumnCheck(
+            field="owner_id",
+            op=CompOp.EQ,
+            value=ValueRef(current_user=True),
+        )
+        result = _resolve_predicate_filters(pred, "Task", FKGraph(), "user-123", None)
+        assert "__scope_predicate" in result
+        sql, params = result["__scope_predicate"]
+        assert '"owner_id"' in sql
+        # No auth_context → falls back to user_id
+        assert params == ["user-123"]
+
+    def test_contradiction_produces_false(self):
+        """Contradiction predicate produces SQL 'FALSE'."""
+        pytest.importorskip("fastapi")
+        from dazzle.core.ir.fk_graph import FKGraph
+        from dazzle.core.ir.predicates import Contradiction
+        from dazzle_back.runtime.route_generator import _resolve_predicate_filters
+
+        result = _resolve_predicate_filters(Contradiction(), "Task", FKGraph(), "user-1", None)
+        assert "__scope_predicate" in result
+        sql, params = result["__scope_predicate"]
+        assert sql == "FALSE"
+        assert params == []
+
+
+class TestResolveScopeFiltersPredicatePath:
+    """Tests for _resolve_scope_filters using the new predicate pipeline."""
+
+    def _make_scope_spec_with_predicate(self, predicate, personas=None):
+        """Build a minimal cedar_access_spec with a scope rule carrying a predicate."""
+        from types import SimpleNamespace
+
+        scope_rule = SimpleNamespace(
+            operation=SimpleNamespace(value="list"),
+            condition=SimpleNamespace(kind="comparison", field="x", value="y"),
+            personas=personas or ["*"],
+            predicate=predicate,
+        )
+        return SimpleNamespace(scopes=[scope_rule])
+
+    def test_predicate_path_used_when_available(self):
+        """When predicate and fk_graph are available, predicate pipeline is used."""
+        pytest.importorskip("fastapi")
+        from dazzle.core.ir.fk_graph import FKGraph
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle_back.runtime.route_generator import _resolve_scope_filters
+
+        pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
+
+        class FakeUser:
+            school = "school-42"
+
+        class FakeAuth:
+            user = FakeUser()
+            preferences = {}
+
+        spec = self._make_scope_spec_with_predicate(pred)
+        result = _resolve_scope_filters(
+            spec,
+            "list",
+            {"*"},
+            "user-1",
+            auth_context=FakeAuth(),
+            entity_name="Student",
+            fk_graph=FKGraph(),
+        )
+        assert result is not None
+        assert "__scope_predicate" in result
+
+    def test_legacy_fallback_when_no_fk_graph(self):
+        """Without fk_graph, falls back to legacy condition extraction."""
+        pytest.importorskip("fastapi")
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle_back.runtime.route_generator import _resolve_scope_filters
+
+        pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
+        spec = self._make_scope_spec_with_predicate(pred)
+        result = _resolve_scope_filters(
+            spec,
+            "list",
+            {"*"},
+            "user-1",
+            fk_graph=None,  # no fk_graph → legacy path
+        )
+        assert result is not None
+        # Legacy path uses condition extraction, not __scope_predicate
+        assert "__scope_predicate" not in result
+
+
+class TestQueryBuilderScopePredicate:
+    """Tests for QueryBuilder handling of __scope_predicate."""
+
+    def test_scope_predicate_injected_into_where(self):
+        """__scope_predicate key is extracted and injected into WHERE clause."""
+        from dazzle_back.runtime.query_builder import QueryBuilder
+
+        builder = QueryBuilder(table_name="Task")
+        builder.add_filters(
+            {
+                "__scope_predicate": ('"school_id" = %s', ["school-42"]),
+                "status": "active",
+            }
+        )
+
+        where_clause, params = builder.build_where_clause()
+        assert '"school_id" = %s' in where_clause
+        assert '"status"' in where_clause
+        assert "school-42" in params
+        assert "active" in params
+
+    def test_scope_predicate_alone(self):
+        """Scope predicate works as the only filter."""
+        from dazzle_back.runtime.query_builder import QueryBuilder
+
+        builder = QueryBuilder(table_name="Student")
+        builder.add_filters({"__scope_predicate": ('"owner" = %s', ["u1"])})
+
+        where_clause, params = builder.build_where_clause()
+        assert "WHERE" in where_clause
+        assert '"owner" = %s' in where_clause
+        assert params == ["u1"]
+
+    def test_empty_scope_predicate_ignored(self):
+        """Empty scope predicate SQL does not add a WHERE fragment."""
+        from dazzle_back.runtime.query_builder import QueryBuilder
+
+        builder = QueryBuilder(table_name="Task")
+        builder.add_filters({"__scope_predicate": ("", [])})
+
+        where_clause, params = builder.build_where_clause()
+        assert where_clause == ""
+        assert params == []
+
+
+class TestScopeRuleSpecPredicate:
+    """Tests for ScopeRuleSpec carrying predicate through conversion."""
+
+    def test_scope_rule_spec_carries_predicate(self):
+        """ScopeRuleSpec.predicate is set when converting from IR ScopeRule."""
+        from dazzle.core.ir.predicates import CompOp, UserAttrCheck
+        from dazzle_back.converters.entity_converter import _convert_scope_rule
+
+        pred = UserAttrCheck(field="school_id", user_attr="school", op=CompOp.EQ)
+        ir_rule = ScopeRule(
+            operation=PermissionKind.LIST,
+            condition=_make_condition(),
+            personas=["teacher"],
+            predicate=pred,
+        )
+
+        result = _convert_scope_rule(ir_rule)
+        assert result.predicate is pred
+
+    def test_scope_rule_spec_predicate_none_by_default(self):
+        """ScopeRuleSpec.predicate defaults to None."""
+        from dazzle_back.converters.entity_converter import _convert_scope_rule
+
+        ir_rule = ScopeRule(
+            operation=PermissionKind.LIST,
+            condition=None,
+            personas=["admin"],
+        )
+        result = _convert_scope_rule(ir_rule)
+        assert result.predicate is None

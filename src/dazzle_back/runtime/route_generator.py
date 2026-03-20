@@ -143,6 +143,13 @@ def _extract_cedar_row_filters(
 ) -> dict[str, Any]:
     """Extract SQL-compatible row filters from Cedar permission rules.
 
+    .. deprecated::
+        Superseded by the predicate compiler pipeline in v0.44+.  Scope rules
+        now carry compiled :class:`ScopePredicate` trees which are compiled to
+        SQL by :func:`compile_predicate`.  This function is retained only for
+        backward compatibility with callers that have not yet migrated to the
+        scope: block syntax.
+
     Scans LIST and READ permission rules for field-level conditions that
     reference ``current_user`` and converts them to repository filter syntax.
     Role-only rules (no field condition) are skipped since they grant
@@ -994,6 +1001,7 @@ def create_list_handler(
     entity_name: str = "Item",
     search_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
+    fk_graph: Any | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -1067,6 +1075,7 @@ def create_list_handler(
                 user=auth_context.user if auth_context and auth_context.is_authenticated else None,
                 search_fields=search_fields,
                 ref_targets=ref_targets,
+                fk_graph=fk_graph,
             )
 
         _auth_handler.__annotations__ = {
@@ -1108,6 +1117,7 @@ def create_list_handler(
             entity_name=entity_name,
             search_fields=search_fields,
             ref_targets=ref_targets,
+            fk_graph=fk_graph,
         )
 
     _noauth_handler.__annotations__ = {
@@ -1129,11 +1139,21 @@ def _resolve_scope_filters(
     user_id: str,
     auth_context: Any | None = None,
     ref_targets: dict[str, str] | None = None,
+    *,
+    entity_name: str = "",
+    fk_graph: Any | None = None,
 ) -> dict[str, Any] | None:
     """Resolve scope rules to SQL filters for the user's matched role.
 
+    When the matched scope rule carries a compiled ``predicate``
+    (:class:`ScopePredicate`), the predicate compiler is used to produce a
+    single ``(sql, params)`` tuple.  Marker objects in *params* are resolved
+    to concrete values using the current user context.
+
     Returns:
-        dict of SQL filters — if a scope rule matches with a field condition
+        dict of SQL filters — if a scope rule matches with a field condition.
+            May contain the special key ``__scope_predicate`` with a
+            ``(sql, params)`` tuple when the predicate pipeline is active.
         {} (empty dict) — if scope is 'all' (no filter needed)
         None — if no scope rule matches (default-deny: empty result set)
     """
@@ -1157,21 +1177,71 @@ def _resolve_scope_filters(
         # Check if this scope rule applies to the user's roles
         if "*" in rule_personas or (user_roles & set(rule_personas)):
             condition = getattr(scope_rule, "condition", None)
-            if condition is None:
+            predicate = getattr(scope_rule, "predicate", None)
+
+            if condition is None and predicate is None:
                 return {}  # scope: all — no filter
-            # Extract SQL filters from the condition
-            filters: dict[str, Any] = {}
-            _extract_condition_filters(
-                condition,
-                user_id,
-                filters,
-                logging.getLogger(__name__),
-                auth_context,
-                ref_targets,
-            )
-            return filters
+
+            # ---- New predicate-compiler path --------------------------------
+            if predicate is not None and fk_graph is not None:
+                return _resolve_predicate_filters(
+                    predicate, entity_name, fk_graph, user_id, auth_context
+                )
+
+            # ---- Legacy condition-tree path (fallback) ----------------------
+            if condition is not None:
+                filters: dict[str, Any] = {}
+                _extract_condition_filters(
+                    condition,
+                    user_id,
+                    filters,
+                    logging.getLogger(__name__),
+                    auth_context,
+                    ref_targets,
+                )
+                return filters
+
+            return {}  # predicate set but no fk_graph — treat as no filter
 
     return None  # No scope rule matched — default-deny
+
+
+def _resolve_predicate_filters(
+    predicate: Any,
+    entity_name: str,
+    fk_graph: Any,
+    user_id: str,
+    auth_context: Any | None,
+) -> dict[str, Any]:
+    """Compile a ScopePredicate to SQL and resolve runtime markers.
+
+    Returns a filters dict with the special ``__scope_predicate`` key
+    containing a ``(sql, params)`` tuple ready for the QueryBuilder.
+    """
+    from dazzle_back.runtime.predicate_compiler import (
+        CurrentUserRef,
+        UserAttrRef,
+        compile_predicate,
+    )
+
+    sql, raw_params = compile_predicate(predicate, entity_name, fk_graph)
+
+    if not sql:
+        return {}  # Tautology — no filter needed
+
+    # Resolve marker objects in params to concrete runtime values
+    resolved_params: list[Any] = []
+    for p in raw_params:
+        if isinstance(p, CurrentUserRef):
+            # Prefer DSL User entity ID over auth user ID (#546)
+            resolved = _resolve_user_attribute("entity_id", auth_context)
+            resolved_params.append(user_id if resolved == "__RBAC_DENY__" else resolved)
+        elif isinstance(p, UserAttrRef):
+            resolved_params.append(_resolve_user_attribute(p.attr_name, auth_context))
+        else:
+            resolved_params.append(p)
+
+    return {"__scope_predicate": (sql, resolved_params)}
 
 
 def _is_field_condition(condition: Any) -> bool:
@@ -1217,6 +1287,7 @@ async def _list_handler_body(
     user: Any | None = None,
     search_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
+    fk_graph: Any | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -1228,7 +1299,7 @@ async def _list_handler_body(
     # Only enforced when ALL list rules are pure role checks. Rules with
     # field conditions (e.g. school = current_user.school) are row-level
     # filters that can't be evaluated without a record — those pass the gate
-    # and are enforced at query time by _extract_cedar_row_filters. (#502, #503)
+    # and are enforced at query time by scope predicates. (#502, #503)
     if cedar_access_spec and is_authenticated and auth_context:
         from dazzle_back.specs.auth import AccessOperationKind
 
@@ -1250,9 +1321,9 @@ async def _list_handler_body(
     # Build visibility filters
     sql_filters, post_filter = build_visibility_filter(access_spec, is_authenticated, user_id)
 
-    # Apply scope filters (v0.44 — scope: blocks take priority over old row filters).
-    # When scopes list is non-empty, use _resolve_scope_filters; otherwise fall back
-    # to legacy _extract_cedar_row_filters for backward compat.
+    # Apply scope filters (v0.44 — scope: blocks with predicate-compiled SQL).
+    # When scopes list is non-empty, use _resolve_scope_filters which delegates
+    # to the predicate compiler when predicates are available.
     if cedar_access_spec and is_authenticated and user_id:
         # Collect normalized user roles for scope matching
         _scope_user_roles: set[str] = set()
@@ -1272,6 +1343,8 @@ async def _list_handler_body(
                 user_id,
                 auth_context,
                 ref_targets,
+                entity_name=entity_name,
+                fk_graph=fk_graph,
             )
             if scope_result is None:
                 # No scope rule matched this role — default-deny at scope layer
@@ -1283,11 +1356,6 @@ async def _list_handler_body(
                 }
             if scope_result:
                 sql_filters = {**(sql_filters or {}), **scope_result}
-        else:
-            # Backward compat: old-style field conditions in permit: rules
-            cedar_filters = _extract_cedar_row_filters(cedar_access_spec, user_id, auth_context)
-            if cedar_filters:
-                sql_filters = {**(sql_filters or {}), **cedar_filters}
 
     # Extract filter[field] params from query string
     filters: dict[str, Any] = {}
@@ -1807,6 +1875,7 @@ class RouteGenerator:
         entity_htmx_meta: dict[str, dict[str, Any]] | None = None,
         entity_audit_configs: dict[str, Any] | None = None,
         entity_ref_targets: dict[str, dict[str, str]] | None = None,
+        fk_graph: Any | None = None,
     ):
         """
         Initialize the route generator.
@@ -1828,6 +1897,7 @@ class RouteGenerator:
             entity_audit_configs: Optional dict of entity_name -> AuditConfig for per-entity filtering
             entity_ref_targets: Optional dict mapping entity_name -> {fk_field: target_entity} for
                 dotted-path scope resolution (#556)
+            fk_graph: Optional FKGraph from the linked AppSpec for predicate compilation
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -1848,6 +1918,7 @@ class RouteGenerator:
         self.entity_htmx_meta = entity_htmx_meta or {}
         self.entity_audit_configs = entity_audit_configs or {}
         self.entity_ref_targets = entity_ref_targets or {}
+        self.fk_graph = fk_graph
         self._router = _APIRouter()
 
     def generate_route(
@@ -1989,6 +2060,7 @@ class RouteGenerator:
                 entity_name=entity_name or "Item",
                 search_fields=_search_fields,
                 ref_targets=self.entity_ref_targets.get(entity_name or ""),
+                fk_graph=self.fk_graph,
             )
             self._add_route(endpoint, handler, response_model=None)
 

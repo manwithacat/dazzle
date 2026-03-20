@@ -607,6 +607,35 @@ class DazzleBackendApp:
 
         return auth_dep, optional_auth_dep
 
+    @staticmethod
+    def _verify_scope_predicates(cedar_access_specs: dict[str, Any], fk_graph: Any) -> None:
+        """Verify all scope predicates compile at startup (belt-and-suspenders).
+
+        Iterates every entity with scope rules and calls ``compile_predicate``
+        on each, catching errors early rather than at request time.
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
+        for entity_name, access_spec in cedar_access_specs.items():
+            scopes = getattr(access_spec, "scopes", None)
+            if not scopes:
+                continue
+            for scope_rule in scopes:
+                predicate = getattr(scope_rule, "predicate", None)
+                if predicate is None:
+                    continue
+                try:
+                    from dazzle_back.runtime.predicate_compiler import compile_predicate
+
+                    compile_predicate(predicate, entity_name, fk_graph)
+                except Exception:
+                    logger.exception(
+                        "Scope predicate compilation failed for entity '%s' — "
+                        "scope filtering will fall back to legacy pipeline at runtime",
+                        entity_name,
+                    )
+
     def _setup_routes(self, auth_dep: Any, optional_auth_dep: Any) -> None:
         """Generate entity CRUD routes, audit routes, file routes, and dev routes."""
         assert self._app is not None
@@ -687,6 +716,11 @@ class DazzleBackendApp:
 
                 entity_audit_configs[entity.name] = AuditConfig(enabled=True)
 
+        # Belt-and-suspenders: verify all scope predicates compile at startup
+        _fk_graph = getattr(self._appspec, "fk_graph", None)
+        if _fk_graph is not None:
+            self._verify_scope_predicates(cedar_access_specs, _fk_graph)
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -704,6 +738,7 @@ class DazzleBackendApp:
             entity_htmx_meta=entity_htmx_meta,
             entity_audit_configs=entity_audit_configs,
             entity_ref_targets=self._entity_ref_targets,
+            fk_graph=_fk_graph,
         )
         router = route_generator.generate_all_routes(
             self._endpoint_specs,

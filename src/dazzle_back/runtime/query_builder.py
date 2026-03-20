@@ -329,6 +329,8 @@ class QueryBuilder:
     joins: list[str] = field(default_factory=list)
     search_query: str | None = None
     search_fields: list[str] = field(default_factory=list)
+    # Raw SQL scope predicate from the predicate compiler (sql, params)
+    scope_predicate: tuple[str, list[Any]] | None = None
 
     def __post_init__(self) -> None:
         """Validate table name on initialization."""
@@ -341,9 +343,17 @@ class QueryBuilder:
         return self
 
     def add_filters(self, filters: dict[str, Any]) -> QueryBuilder:
-        """Add multiple filter conditions."""
+        """Add multiple filter conditions.
+
+        The special key ``__scope_predicate`` is intercepted and stored as a
+        raw SQL scope predicate ``(sql, params)`` instead of being parsed as a
+        regular filter condition.
+        """
         for key, value in filters.items():
-            self.add_filter(key, value)
+            if key == "__scope_predicate":
+                self.scope_predicate = value
+            else:
+                self.add_filter(key, value)
         return self
 
     def add_sort(self, sort_str: str) -> QueryBuilder:
@@ -374,13 +384,20 @@ class QueryBuilder:
 
     def build_where_clause(self) -> tuple[str, list[Any]]:
         """
-        Build the WHERE clause from conditions and search query.
+        Build the WHERE clause from conditions, scope predicate, and search query.
 
         Returns:
             Tuple of (where_clause, parameters)
         """
         fragments = []
         params: list[Any] = []
+
+        # Inject raw scope predicate SQL if set by the predicate compiler
+        if self.scope_predicate is not None:
+            scope_sql, scope_params = self.scope_predicate
+            if scope_sql:
+                fragments.append(f"({scope_sql})")
+                params.extend(scope_params)
 
         for condition in self.conditions:
             sql, condition_params = condition.to_sql(placeholder_style=self.placeholder_style)
