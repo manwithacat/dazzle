@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Scope rules compile to formal ScopePredicate algebra with FK graph validation
+- OR conditions in scope rules now compile to SQL OR (previously post-fetch filtered)
+
+### Added
+- `not via` syntax for NOT EXISTS scope rules
+- `not (...)` parenthesised negation in scope rules
+- depth-N FK path traversal in scope rules (previously depth-1 only)
+- Static validation of scope rule FK paths at `dazzle validate` time
+- Runtime startup assertion verifies all scope predicates compile
+
+### Removed
+- Post-fetch OR filtering for scope rules (replaced by SQL OR)
+
 ## [0.44.0] - 2026-03-19
 
 ### Added

@@ -64,7 +64,7 @@ def _resolve_fk_edges(fk_graph: FKGraph, entity: str) -> list[FKEdge]:
     ``dict[str, list[FKEdge]]`` directly for readability.  This helper
     normalises both cases to a list of :class:`FKEdge` instances.
     """
-    raw = fk_graph._edges.get(entity, [])
+    raw: dict[str, str] | list[FKEdge] = fk_graph._edges.get(entity, [])
     if isinstance(raw, list):
         return raw  # already list[FKEdge]
     # dict[str, str] → list[FKEdge]

@@ -5,6 +5,7 @@ Validates entities, surfaces, experiences, services, foreign models, and integra
 for semantic correctness beyond basic reference resolution.
 """
 
+from typing import Any
 from urllib.parse import urlparse
 
 from . import ir
@@ -1942,7 +1943,7 @@ def _validate_predicate_node(
     node: object,
     entity_name: str,
     entity_field_names: set[str],
-    fk_graph: object,
+    fk_graph: Any,
     appspec: ir.AppSpec,
     ctx: str,
     errors: list[str],
@@ -1991,7 +1992,7 @@ def _validate_predicate_node(
             is_last = i == len(node.path) - 1
             if is_last:
                 # Terminal segment: must be a plain field on current entity
-                if not fk_graph.field_exists(current, segment):  # type: ignore[union-attr]
+                if not fk_graph.field_exists(current, segment):
                     errors.append(
                         f"{ctx}: PathCheck path '{path_str}' — terminal field "
                         f"'{segment}' does not exist on entity '{current}'"
@@ -1999,7 +2000,7 @@ def _validate_predicate_node(
             else:
                 # Intermediate segment: must be an FK hop
                 try:
-                    _, target = fk_graph.resolve_segment(current, segment)  # type: ignore[union-attr]
+                    _, target = fk_graph.resolve_segment(current, segment)
                     current = target
                 except (ValueError, AttributeError) as exc:
                     errors.append(f"{ctx}: PathCheck path '{path_str}' — {exc}")
