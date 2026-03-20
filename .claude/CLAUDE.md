@@ -100,7 +100,15 @@ surface task_list "Tasks":
 
 **Constructs**: `entity`, `surface`, `workspace`, `experience`, `island`, `service`, `foreign_model`, `integration`, `ledger`, `transaction`, `process`, `schedule`, `story`, `archetype`, `persona`, `scenario`, `enum`, `view`, `webhook`, `approval`, `sla`, `rhythm`
 
-**Scope via clause**: `via JunctionEntity(field = current_user.attr, field = id)` — row filtering through junction tables. Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and a `for:` clause naming the personas.
+**Scope rules** compile to a formal predicate algebra and are statically validated against the FK graph at `dazzle validate` time. Supported forms:
+- Direct: `school_id = current_user.school` — column equality check
+- FK path (depth-N): `manuscript.assessment_event.school_id = current_user.school` — nested subquery
+- EXISTS: `via JunctionEntity(field = current_user.attr, field = id)` — junction table check
+- NOT EXISTS: `not via BlockList(user = current_user, resource = id)` — negated junction check
+- Negation: `not (status = archived)` — parenthesised negation
+- Boolean: `realm = current_user.realm or creator = current_user` — AND/OR compile to SQL
+
+Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and a `for:` clause naming the personas.
 
 ### TigerBeetle Ledgers
 

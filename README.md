@@ -273,7 +273,7 @@ See [Testing Reference](docs/reference/testing.md) for details on all three tier
 
 ## Provable RBAC
 
-Dazzle's access control is **secure by construction**. Because the DSL declares every access rule and the runtime is the only enforcement path, we can verify the entire security surface mechanically — for every role, every entity, every operation.
+Dazzle's access control is **secure by construction**. Scope rules (row-level filters) compile to a formal predicate algebra that is statically validated against the FK graph at `dazzle validate` time and deterministically compiled to parameterised SQL at runtime. Because the DSL declares every access rule and the runtime is the only enforcement path, we can verify the entire security surface mechanically — for every role, every entity, every operation.
 
 The verification framework has three layers, grounded in NIST RBAC theory (Sandhu et al., 1996) and the complete mediation principle (Saltzer & Schroeder, 1975):
 

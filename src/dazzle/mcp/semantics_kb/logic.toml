@@ -9,7 +9,7 @@ concept_count = 7
 category = "Business Logic (v0.7)"
 doc_page = "access-control"
 doc_order = 1
-definition = "Inline access control rules on entities. Cedar-style syntax uses two separate blocks: permit: (WHO may access — role checks only) and scope: (WHAT they can see — row-level field conditions with for: clauses). Legacy access: blocks are still supported. Evaluation order: FORBID > PERMIT > default-deny. Field conditions in permit: are a parser error — they must live in scope: blocks."
+definition = "Inline access control rules on entities. Cedar-style syntax uses two separate blocks: permit: (WHO may access — role checks only) and scope: (WHAT they can see — row-level field conditions with for: clauses). Scope rules compile to a formal predicate algebra with static FK graph validation. Legacy access: blocks are still supported. Evaluation order: FORBID > PERMIT > default-deny. Field conditions in permit: are a parser error — they must live in scope: blocks."
 syntax = '''
 # Two-block pattern (recommended): separate WHO from WHAT
 permit:
@@ -32,11 +32,15 @@ audit:
 # role(<name>) - User has the specified role
 # role(a) or role(b) - Either role
 
-# scope: expressions — field conditions only:
+# scope: expressions — field conditions only (compile to predicate algebra):
 # field = current_user - Field matches logged-in user
 # field = current_user.field - Field matches a property of the logged-in user
 # field = value - Field equals literal value
-# Combine with: and, or
+# parent.field = current_user - FK path traversal (depth-N, nested subquery)
+# via Entity(field = current_user, field = id) - EXISTS subquery (junction table)
+# not via Entity(field = current_user, field = id) - NOT EXISTS (exclusion)
+# not (condition) - Parenthesised negation
+# Combine with: and, or — all boolean logic compiles to SQL
 
 # Cedar-style actions: list, read, create, update, delete, approve, prescribe, etc.
 # Cedar evaluation: FORBID rules override PERMIT; default is deny
