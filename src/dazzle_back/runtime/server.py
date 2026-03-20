@@ -492,6 +492,17 @@ class DazzleBackendApp:
             record_history=True,
         )
 
+        # Create _dazzle_params framework table (#572)
+        from dazzle_back.runtime.migrations import ensure_dazzle_params_table
+
+        ensure_dazzle_params_table(self._db_manager)
+
+        # Build param resolver from AppSpec (#572)
+        from dazzle_back.runtime.param_store import ParamResolver
+
+        param_specs = {p.key: p for p in self._appspec.params} if self._appspec.params else {}
+        self._param_resolver = ParamResolver(specs=param_specs)
+
         # Migrate tenant schemas when using schema-per-tenant isolation (#561)
         if self._tenant_config and self._tenant_config.isolation == "schema":
             self._migrate_tenant_schemas()

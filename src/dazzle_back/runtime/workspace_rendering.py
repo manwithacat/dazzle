@@ -278,6 +278,9 @@ class WorkspaceRegionContext:
     # Surface UX metadata (#362)
     surface_default_sort: list[Any] = field(default_factory=list)
     surface_empty_message: str = ""
+    # Runtime parameter resolution (#572)
+    param_resolver: Any = None  # ParamResolver | None
+    tenant_id: str | None = None
 
 
 def _resolve_display_name(value: Any) -> str:
@@ -670,9 +673,21 @@ async def _workspace_region_handler(
     # Heatmap: pivot flat items into a matrix structure (v0.44.0)
     heatmap_matrix: list[dict[str, Any]] = []
     heatmap_col_values: list[str] = []
-    heatmap_thresholds: list[float] = list(
-        getattr(ctx.ctx_region, "heatmap_thresholds", None) or []
-    )
+    # Resolve heatmap_thresholds — may be a ParamRef (#572)
+    _raw_thresholds = getattr(ctx.ctx_region, "heatmap_thresholds", None)
+    if hasattr(_raw_thresholds, "key"):  # ParamRef
+        from dazzle_back.runtime.param_store import resolve_value
+
+        heatmap_thresholds: list[float] = list(
+            resolve_value(
+                _raw_thresholds,
+                getattr(ctx, "param_resolver", None),
+                tenant_id=getattr(ctx, "tenant_id", None),
+            )
+            or []
+        )
+    else:
+        heatmap_thresholds = list(_raw_thresholds or [])
     if ctx.ctx_region.display == "HEATMAP" and items:
         hm_rows_field = getattr(ctx.ctx_region, "heatmap_rows", "") or ""
         hm_cols_field = getattr(ctx.ctx_region, "heatmap_columns", "") or ""

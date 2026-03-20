@@ -726,3 +726,25 @@ def plan_migrations(
     """
     planner = MigrationPlanner(db_manager, schema=schema)
     return planner.plan_migrations(entities)
+
+
+# =============================================================================
+# Framework Table: _dazzle_params (#572)
+# =============================================================================
+
+
+def ensure_dazzle_params_table(db_manager: DatabaseBackend) -> None:
+    """Create the _dazzle_params framework table if it doesn't exist."""
+    with db_manager.connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS _dazzle_params (
+                key TEXT NOT NULL,
+                scope TEXT NOT NULL,
+                scope_id TEXT NOT NULL DEFAULT '',
+                value_json JSONB NOT NULL,
+                updated_by TEXT,
+                updated_at TIMESTAMPTZ DEFAULT now(),
+                PRIMARY KEY (key, scope, scope_id)
+            )
+        """)
