@@ -7,10 +7,14 @@ metrics, and rendering workspace regions as HTML or JSON.
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any
+
+from starlette.responses import StreamingResponse
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +280,31 @@ class WorkspaceRegionContext:
     surface_empty_message: str = ""
 
 
+def _render_csv_response(
+    items: list[dict[str, Any]],
+    columns: list[dict[str, Any]],
+    region_name: str,
+) -> StreamingResponse:
+    """Return items as a CSV download."""
+    output = io.StringIO()
+    col_keys = [c["key"] for c in columns]
+    col_labels = [c.get("label", c["key"]) for c in columns]
+
+    writer = csv.writer(output)
+    writer.writerow(col_labels)
+    for item in items:
+        row = [str(item.get(k, "")) for k in col_keys]
+        writer.writerow(row)
+
+    output.seek(0)
+    filename = f"{region_name}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 async def _workspace_region_handler(
     request: Any,
     page: int,
@@ -435,6 +464,20 @@ async def _workspace_region_handler(
                         filters = {}
                     filters[field_name] = param_val
 
+            # Date range filtering (#566)
+            date_field = ctx.ctx_region.date_field if hasattr(ctx.ctx_region, "date_field") else ""
+            if date_field:
+                date_from = request.query_params.get("date_from")
+                date_to = request.query_params.get("date_to")
+                if date_from:
+                    if filters is None:
+                        filters = {}
+                    filters[f"{date_field}__gte"] = date_from
+                if date_to:
+                    if filters is None:
+                        filters = {}
+                    filters[f"{date_field}__lte"] = date_to
+
             # Use pre-computed auto_include from entity_auto_includes (#272, #423)
             include_rels = ctx.auto_include
 
@@ -478,6 +521,11 @@ async def _workspace_region_handler(
             for k in items[0].keys()
             if k != "id"
         ]
+
+    # CSV export (#562)
+    format_param = request.query_params.get("format")
+    if format_param == "csv":
+        return _render_csv_response(items, columns, ctx.ctx_region.name)
 
     # Build aggregate metrics if configured
     metrics: list[dict[str, Any]] = []
@@ -672,6 +720,11 @@ async def _workspace_region_handler(
         progress_total=progress_total,
         complete_count=progress_complete_count,
         complete_pct=progress_complete_pct,
+        # Date range (v0.44.0)
+        date_range=getattr(ctx.ctx_region, "date_range", False),
+        date_field=getattr(ctx.ctx_region, "date_field", ""),
+        date_from=request.query_params.get("date_from", ""),
+        date_to=request.query_params.get("date_to", ""),
     )
     return HTMLResponse(content=html)
 

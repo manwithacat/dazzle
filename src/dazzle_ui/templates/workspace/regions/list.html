@@ -1,6 +1,13 @@
 <div class="card bg-base-100 shadow-sm">
   <div class="card-body p-3">
-    <h3 class="card-title text-sm">{{ title }}</h3>
+    <div class="flex items-center justify-between">
+      <h3 class="card-title text-sm">{{ title }}</h3>
+      <a href="{{ endpoint }}?format=csv" download class="btn btn-ghost btn-xs" title="Export CSV">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+        </svg>
+      </a>
+    </div>
     {% if filter_columns %}
     <div class="flex flex-wrap gap-2 mb-2 filter-bar">
       {% for fc in filter_columns %}
@@ -13,6 +20,11 @@
         {% endfor %}
       </select>
       {% endfor %}
+    </div>
+    {% endif %}
+    {% if date_range %}
+    <div class="date-range-bar">
+      {% include "fragments/date_range_picker.html" %}
     </div>
     {% endif %}
     {% if items %}
@@ -74,7 +86,7 @@
     <p class="text-xs opacity-50 mt-2">Showing {{ items | length }} of {{ total }}</p>
     {% endif %}
     {% else %}
-    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% include "fragments/empty_state.html" %}
     {% endif %}
   </div>
 </div>

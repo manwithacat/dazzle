@@ -588,6 +588,66 @@ class TestQueueDisplayMode:
         assert DisplayMode("queue").value == "queue"
 
 
+class TestActivityFeedDisplayMode:
+    """Tests for the activity_feed display mode (#564)."""
+
+    def test_display_mode_enum_has_activity_feed(self) -> None:
+        """DisplayMode enum includes ACTIVITY_FEED value."""
+        from dazzle.core.ir.workspaces import DisplayMode
+
+        assert DisplayMode.ACTIVITY_FEED == "activity_feed"
+        assert DisplayMode("activity_feed") == DisplayMode.ACTIVITY_FEED
+
+    def test_activity_feed_template_mapping(self) -> None:
+        """ACTIVITY_FEED maps to the activity_feed.html template."""
+        from dazzle_ui.runtime.workspace_renderer import DISPLAY_TEMPLATE_MAP
+
+        assert "ACTIVITY_FEED" in DISPLAY_TEMPLATE_MAP
+        assert DISPLAY_TEMPLATE_MAP["ACTIVITY_FEED"] == "workspace/regions/activity_feed.html"
+
+    def test_workspace_region_with_activity_feed_display(self) -> None:
+        """WorkspaceRegion accepts display=activity_feed."""
+        from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion
+
+        region = WorkspaceRegion(
+            name="recent_activity",
+            source="AuditLog",
+            display=DisplayMode.ACTIVITY_FEED,
+        )
+        assert region.display == DisplayMode.ACTIVITY_FEED
+
+    def test_activity_feed_region_renders_correct_template(self) -> None:
+        """Activity feed region context gets the activity_feed template path."""
+        from dazzle.core.ir.workspaces import DisplayMode, WorkspaceRegion, WorkspaceSpec
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        fields = [
+            _make_field("description", FieldTypeKind.STR),
+        ]
+        entity = _make_entity("AuditLog", fields)
+        region = WorkspaceRegion(name="feed", source="AuditLog", display=DisplayMode.ACTIVITY_FEED)
+        ws = WorkspaceSpec(name="dashboard", regions=[region])
+
+        app_spec = SimpleNamespace(
+            domain=SimpleNamespace(
+                entities=[entity],
+                get_entity=lambda n: entity if n == "AuditLog" else None,
+            ),
+            surfaces=[],
+            workspaces=[ws],
+        )
+
+        ctx = build_workspace_context(ws, app_spec)
+        assert ctx.regions[0].template == "workspace/regions/activity_feed.html"
+
+    def test_display_mode_activity_feed_from_string(self) -> None:
+        """DisplayMode('activity_feed') works (used by DSL parser via token.value)."""
+        from dazzle.core.ir.workspaces import DisplayMode
+
+        assert DisplayMode("activity_feed") == DisplayMode.ACTIVITY_FEED
+        assert DisplayMode("activity_feed").value == "activity_feed"
+
+
 # ===========================================================================
 # TestBuildSurfaceColumns (#357)
 # ===========================================================================
