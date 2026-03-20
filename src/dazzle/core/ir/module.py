@@ -54,6 +54,7 @@ from .messaging import (
     TemplateSpec,
 )
 from .notifications import NotificationSpec
+from .params import ParamSpec
 from .personas import PersonaSpec
 from .process import (
     ProcessSpec,
@@ -189,6 +190,8 @@ class ModuleFragment(BaseModel):
     notifications: list[NotificationSpec] = Field(default_factory=list)
     # Grant Schemas (v0.42.0 Runtime RBAC)
     grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
+    # Runtime Parameters (v0.44.0)
+    params: list[ParamSpec] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

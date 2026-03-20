@@ -56,6 +56,7 @@ from .messaging import (
     TemplateSpec,
 )
 from .notifications import NotificationSpec
+from .params import ParamSpec
 from .personas import PersonaSpec
 from .process import (
     ProcessSpec,
@@ -176,6 +177,8 @@ class AppSpec(BaseModel):
     rhythms: list[RhythmSpec] = Field(default_factory=list)
     # Grant Schemas (v0.42.0 Runtime RBAC)
     grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
+    # Runtime Parameters (v0.44.0)
+    params: list[ParamSpec] = Field(default_factory=list)
     # Global audit trail (v0.34.0) — when True, all entities are audited by default
     audit_trail: bool = False
     # FK graph built at link time (Task 5 predicate algebra).

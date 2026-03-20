@@ -212,6 +212,8 @@
     'name': 'simple_test',
     'notifications': list([
     ]),
+    'params': list([
+    ]),
     'personas': list([
     ]),
     'policies': None,

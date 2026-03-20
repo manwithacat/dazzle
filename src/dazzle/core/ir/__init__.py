@@ -442,6 +442,9 @@ from .notifications import (
     NotificationTrigger,
 )
 
+# Runtime Parameters (v0.44.0)
+from .params import ParamConstraints, ParamRef, ParamSpec
+
 # Personas (v0.8.5)
 from .personas import (
     PersonaSpec,
@@ -1124,6 +1127,10 @@ __all__ = [
     "TimeBucket",
     "ViewFieldSpec",
     "ViewSpec",
+    # Runtime Parameters (v0.44.0)
+    "ParamConstraints",
+    "ParamRef",
+    "ParamSpec",
     # Notifications (v0.34.0)
     "NotificationChannel",
     "NotificationPreference",
