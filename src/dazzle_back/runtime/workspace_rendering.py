@@ -539,10 +539,14 @@ async def _workspace_region_handler(
             )
             if isinstance(result, dict):
                 raw_items = result.get("items", [])
-                total = result.get("total", 0)
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
                 # Resolve FK dicts to display strings (#571)
                 items = [_inject_display_names(item) for item in items]
+                # SECURITY: use item count as total for workspace regions.
+                # The repo COUNT query may not have scope rules applied,
+                # which would leak unscoped record counts in pagination
+                # metadata (e.g., "Showing 10 of 52,380") (#573).
+                total = len(items)
 
             # Zero results is valid — the region shows its empty: message.
             # Do NOT fall back to unfiltered queries: scope/filter conditions
