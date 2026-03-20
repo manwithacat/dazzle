@@ -164,7 +164,8 @@ class TokenType(Enum):
     TIME_BUCKET = "time_bucket"
     DATE_FIELD = "date_field"
 
-    # v0.44.0 Heatmap / Progress region keywords
+    # v0.44.0 Heatmap / Progress / Activity Feed region keywords
+    ACTIVITY_FEED = "activity_feed"
     ROWS = "rows"
     COLUMNS = "columns"
     VALUE = "value"

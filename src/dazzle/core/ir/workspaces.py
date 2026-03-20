@@ -63,6 +63,7 @@ class DisplayMode(StrEnum):
     TABBED_LIST = "tabbed_list"  # v0.33.0: Tabbed multi-source list
     HEATMAP = "heatmap"  # v0.44.0: Heat-map matrix view
     PROGRESS = "progress"  # v0.44.0: Progress bar view
+    ACTIVITY_FEED = "activity_feed"  # v0.44.0: Activity feed / timeline display
 
 
 class WorkspaceRegion(BaseModel):

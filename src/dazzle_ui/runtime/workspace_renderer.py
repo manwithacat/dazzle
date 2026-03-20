@@ -71,6 +71,9 @@ class RegionContext(BaseModel):
     # Progress fields (v0.44.0)
     progress_stages: list[str] = Field(default_factory=list)
     progress_complete_at: str = ""
+    # Date range filtering (v0.44.0)
+    date_field: str = ""
+    date_range: bool = False
     # CSS
     grid_class: str = ""  # col-span/row-span classes
     template: str = "workspace/regions/list.html"  # Region display template
@@ -118,6 +121,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "TABBED_LIST": "workspace/regions/tabbed_list.html",
     "HEATMAP": "workspace/regions/heatmap.html",
     "PROGRESS": "workspace/regions/progress.html",
+    "ACTIVITY_FEED": "workspace/regions/activity_feed.html",
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -282,6 +286,8 @@ def build_workspace_context(
                 heatmap_thresholds=list(getattr(region, "heatmap_thresholds", None) or []),
                 progress_stages=list(getattr(region, "progress_stages", None) or []),
                 progress_complete_at=getattr(region, "progress_complete_at", None) or "",
+                date_field=getattr(region, "date_field", None) or "",
+                date_range=bool(getattr(region, "date_range", False)),
                 grid_class=region_grid,
                 template=template,
             )

@@ -289,6 +289,27 @@ workspace pipeline "Pipeline":
 
         assert region.display.value == "funnel_chart"
 
+    def test_activity_feed_display_mode(self):
+        """Test activity_feed display mode."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity AuditEntry "Audit Entry":
+  id: uuid pk
+  description: str(500)
+
+workspace activity "Activity":
+  feed:
+    source: AuditEntry
+    display: activity_feed
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        workspace = fragment.workspaces[0]
+        region = workspace.regions[0]
+
+        assert region.display.value == "activity_feed"
+
 
 class TestAppConfig:
     """Tests for app config block parsing (v0.9.5)."""
