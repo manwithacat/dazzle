@@ -302,6 +302,22 @@ def _resolve_display_name(value: Any) -> str:
     return str(value)
 
 
+def _inject_display_names(item: dict[str, Any]) -> dict[str, Any]:
+    """Inject ``{field}_display`` keys for FK dict fields (#571).
+
+    For each field whose value is a dict (FK relation), adds a sibling key
+    with the resolved display name. The original dict is preserved for
+    templates that need the id for linking.
+    """
+    extras: dict[str, str] = {}
+    for key, value in item.items():
+        if isinstance(value, dict) and key != "_attention":
+            extras[f"{key}_display"] = _resolve_display_name(value)
+    if extras:
+        item.update(extras)
+    return item
+
+
 def _render_csv_response(
     items: list[dict[str, Any]],
     columns: list[dict[str, Any]],
@@ -315,7 +331,7 @@ def _render_csv_response(
     writer = csv.writer(output)
     writer.writerow(col_labels)
     for item in items:
-        row = [str(item.get(k, "")) for k in col_keys]
+        row = [str(item.get(f"{k}_display", item.get(k, ""))) for k in col_keys]
         writer.writerow(row)
 
     output.seek(0)
@@ -522,6 +538,8 @@ async def _workspace_region_handler(
                 raw_items = result.get("items", [])
                 total = result.get("total", 0)
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
+                # Resolve FK dicts to display strings (#571)
+                items = [_inject_display_names(item) for item in items]
 
             # Zero results is valid — the region shows its empty: message.
             # Do NOT fall back to unfiltered queries: scope/filter conditions
@@ -829,6 +847,7 @@ async def _fetch_region_json(
                 raw_items = result.get("items", [])
                 total = result.get("total", 0)
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
+                items = [_inject_display_names(item) for item in items]
 
             # Zero results is valid — the region shows its empty: message.
             # Do NOT fall back to unfiltered queries (#546).

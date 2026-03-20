@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from dazzle_back.runtime.workspace_rendering import _resolve_display_name
+from dazzle_back.runtime.workspace_rendering import (
+    _inject_display_names,
+    _resolve_display_name,
+)
 
 
 class TestResolveDisplayName:
@@ -50,3 +53,41 @@ class TestResolveDisplayName:
     def test_dict_with_only_non_standard_string(self) -> None:
         val = {"some_field": "value", "number": 42}
         assert _resolve_display_name(val) == "value"
+
+
+class TestInjectDisplayNames:
+    def test_injects_display_for_fk_dicts(self) -> None:
+        item = {
+            "id": "abc",
+            "title": "My Task",
+            "assignee": {"id": "u1", "name": "Alice Smith"},
+        }
+        result = _inject_display_names(item)
+        assert result["assignee_display"] == "Alice Smith"
+        assert result["assignee"] == {"id": "u1", "name": "Alice Smith"}
+
+    def test_skips_scalar_fields(self) -> None:
+        item = {"id": "abc", "title": "Test", "count": 42}
+        result = _inject_display_names(item)
+        assert "title_display" not in result
+        assert "count_display" not in result
+
+    def test_skips_attention_field(self) -> None:
+        item = {"id": "abc", "_attention": {"level": "warning"}}
+        result = _inject_display_names(item)
+        assert "_attention_display" not in result
+
+    def test_multiple_fk_fields(self) -> None:
+        item = {
+            "id": "abc",
+            "student": {"id": "s1", "__display__": "Ben Jones"},
+            "subject": {"id": "sub1", "code": "MATH"},
+        }
+        result = _inject_display_names(item)
+        assert result["student_display"] == "Ben Jones"
+        assert result["subject_display"] == "MATH"
+
+    def test_empty_dict_fk(self) -> None:
+        item = {"id": "abc", "category": {}}
+        result = _inject_display_names(item)
+        assert result["category_display"] == ""
