@@ -35,6 +35,7 @@ from .ledger import LedgerParserMixin
 from .llm import LLMParserMixin
 from .messaging import MessagingParserMixin
 from .notification import NotificationParserMixin
+from .params import ParamParserMixin
 from .process import ProcessParserMixin
 from .question import QuestionParserMixin
 from .rhythm import RhythmParserMixin
@@ -84,6 +85,7 @@ class Parser(
     IslandParserMixin,
     NotificationParserMixin,
     GrantParserMixin,
+    ParamParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -547,6 +549,16 @@ class Parser(
             }
         )
 
+    def _dispatch_param(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        self.advance()  # consume 'param' token
+        param = self.parse_param()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "params": [*fragment.params, param],
+            }
+        )
+
     def _build_parse_dispatch(self) -> dict:  # type: ignore[type-arg]
         """Build the token-type → handler dispatch table."""
         from ..lexer import TokenType
@@ -597,6 +609,7 @@ class Parser(
             TokenType.ISLAND: self._dispatch_island,
             TokenType.NOTIFICATION: self._dispatch_notification,
             TokenType.GRANT_SCHEMA: self._dispatch_grant_schema,
+            TokenType.PARAM: self._dispatch_param,
         }
 
     def parse(self) -> ir.ModuleFragment:
@@ -697,4 +710,5 @@ __all__ = [
     "SLAParserMixin",
     "IslandParserMixin",
     "GrantParserMixin",
+    "ParamParserMixin",
 ]

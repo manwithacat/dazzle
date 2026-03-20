@@ -503,6 +503,9 @@ class TokenType(Enum):
     # v0.43.0 External Action Links
     EXTERNAL = "external"
 
+    # v0.44.0 Runtime Parameters
+    PARAM = "param"
+
     # Comparison operators (for condition expressions)
     DOUBLE_EQUALS = "=="
     NOT_EQUALS = "!="

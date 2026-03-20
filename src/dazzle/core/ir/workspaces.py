@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .conditions import ConditionExpr
 from .location import SourceLocation
+from .params import ParamRef
 from .ux import SortSpec, UXSpec
 
 
@@ -110,7 +111,9 @@ class WorkspaceRegion(BaseModel):
     heatmap_rows: str | None = None  # FK field for row grouping
     heatmap_columns: str | None = None  # FK field for column grouping
     heatmap_value: str | None = None  # Expression for cell value
-    heatmap_thresholds: list[float] = Field(default_factory=list)  # e.g. [0.4, 0.6] for RAG
+    heatmap_thresholds: list[float] | ParamRef = Field(
+        default_factory=list
+    )  # e.g. [0.4, 0.6] for RAG
     # v0.44.0: Progress bar configuration
     progress_stages: list[str] = Field(default_factory=list)  # ordered status values
     progress_complete_at: str | None = None  # which stage means "done"

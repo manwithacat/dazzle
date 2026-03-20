@@ -332,7 +332,7 @@ class WorkspaceParserMixin:
         heatmap_rows: str | None = None
         heatmap_columns: str | None = None
         heatmap_value: str | None = None
-        heatmap_thresholds: list[float] = []
+        heatmap_thresholds: list[float] | ir.ParamRef = []
         progress_stages: list[str] = []
         progress_complete_at: str | None = None
 
@@ -494,27 +494,36 @@ class WorkspaceParserMixin:
                 heatmap_value = " ".join(value_parts)
                 self.skip_newlines()
 
-            # thresholds: [0.4, 0.6]
+            # thresholds: param("key") OR thresholds: [0.4, 0.6]
             elif self.match(TokenType.THRESHOLDS):
                 self.advance()
                 self.expect(TokenType.COLON)
-                self.expect(TokenType.LBRACKET)
-                while not self.match(TokenType.RBRACKET):
-                    self.skip_newlines()
-                    if self.match(TokenType.RBRACKET):
-                        break
-                    num_token = self.expect(TokenType.NUMBER)
-                    # Handle decimal: NUMBER DOT NUMBER
-                    num_str = num_token.value
-                    if self.match(TokenType.DOT):
-                        self.advance()
-                        frac = self.expect(TokenType.NUMBER).value
-                        num_str = num_str + "." + frac
-                    heatmap_thresholds.append(float(num_str))
-                    if self.match(TokenType.COMMA):
-                        self.advance()
-                    self.skip_newlines()
-                self.expect(TokenType.RBRACKET)
+                if self.match(TokenType.PARAM):
+                    self.advance()  # consume 'param'
+                    self.expect(TokenType.LPAREN)
+                    ref_key = self.expect(TokenType.STRING).value
+                    self.expect(TokenType.RPAREN)
+                    heatmap_thresholds = ir.ParamRef(
+                        key=ref_key, param_type="list[float]", default=[]
+                    )
+                else:
+                    self.expect(TokenType.LBRACKET)
+                    while not self.match(TokenType.RBRACKET):
+                        self.skip_newlines()
+                        if self.match(TokenType.RBRACKET):
+                            break
+                        num_token = self.expect(TokenType.NUMBER)
+                        # Handle decimal: NUMBER DOT NUMBER
+                        num_str = num_token.value
+                        if self.match(TokenType.DOT):
+                            self.advance()
+                            frac = self.expect(TokenType.NUMBER).value
+                            num_str = num_str + "." + frac
+                        heatmap_thresholds.append(float(num_str))
+                        if self.match(TokenType.COMMA):
+                            self.advance()
+                        self.skip_newlines()
+                    self.expect(TokenType.RBRACKET)
                 self.skip_newlines()
 
             # stages: [uploaded, queued, processing, marked, reviewed, flagged]
