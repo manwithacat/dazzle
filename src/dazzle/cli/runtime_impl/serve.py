@@ -566,4 +566,5 @@ def serve_command(
         theme_overrides=theme_overrides if theme_overrides else None,
         redis_url=redis_url,
         workers=workers,
+        tenant_config=mf.tenant if mf.tenant.isolation != "none" else None,
     )

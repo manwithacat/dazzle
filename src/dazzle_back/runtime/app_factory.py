@@ -293,6 +293,7 @@ def build_server_config(
     enable_console: bool = False,
     enable_processes: bool = True,
     process_adapter_class: type | None = None,
+    tenant_config: Any = None,
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,
     sitespec_data: dict[str, Any] | None = None,
@@ -400,6 +401,7 @@ def build_server_config(
         schedule_specs=list(appspec.schedules),
         entity_status_fields=entity_status_fields,
         fragment_sources=fragment_sources,
+        tenant_config=tenant_config,
     )
 
 
@@ -735,6 +737,7 @@ def create_app_factory(
         enable_console=enable_dev_mode,
         enable_processes=enable_processes,
         process_adapter_class=resolved_adapter_class,
+        tenant_config=manifest.tenant if manifest.tenant.isolation != "none" else None,
         personas=personas,
         scenarios=[],
         sitespec_data=sitespec_data,

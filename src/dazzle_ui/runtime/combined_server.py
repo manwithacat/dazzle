@@ -41,6 +41,7 @@ class UnifiedServerConfig:
     theme_preset: str = "saas-default"
     theme_overrides: dict[str, Any] | None = None
     redis_url: str = ""
+    tenant_config: Any = None
 
 
 # =============================================================================
@@ -129,6 +130,7 @@ def run_unified_server(
     theme_overrides: dict[str, Any] | None = None,
     redis_url: str = "",
     workers: int | None = None,
+    tenant_config: Any = None,
     *,
     config: UnifiedServerConfig | None = None,
 ) -> None:
@@ -161,6 +163,7 @@ def run_unified_server(
         theme_preset = config.theme_preset
         theme_overrides = config.theme_overrides
         redis_url = config.redis_url
+        tenant_config = config.tenant_config
     try:
         import uvicorn
 
@@ -210,6 +213,7 @@ def run_unified_server(
         enable_auth=enable_auth,
         auth_config=auth_config,
         enable_dev_mode=enable_dev_mode,
+        tenant_config=tenant_config,
         personas=personas or [],
         scenarios=scenarios or [],
         sitespec_data=sitespec_data,
