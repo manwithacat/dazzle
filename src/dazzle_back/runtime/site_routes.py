@@ -9,11 +9,12 @@ Generates FastAPI routes from SiteSpec to serve:
 """
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter
-from fastapi.responses import HTMLResponse, Response
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 logger = logging.getLogger("dazzle.site_routes")
 
@@ -264,6 +265,8 @@ def _load_content_file(project_root: Path, content_path: str) -> str | None:
 def create_site_page_routes(
     sitespec_data: dict[str, Any],
     project_root: Path | None = None,
+    get_auth_context: Callable[..., Any] | None = None,
+    persona_routes: dict[str, str] | None = None,
 ) -> APIRouter:
     """
     Create FastAPI routes that serve HTML pages directly.
@@ -271,9 +274,17 @@ def create_site_page_routes(
     This is for server-side rendering of site pages using Jinja2 templates.
     For SPA mode, use create_site_routes() API endpoints instead.
 
+    When ``get_auth_context`` and ``persona_routes`` are provided, the root
+    route (``/``) will redirect authenticated users to their persona's
+    default workspace instead of showing the marketing landing page.
+
     Args:
         sitespec_data: SiteSpec as dict
         project_root: Project root for content file loading
+        get_auth_context: Optional callable that takes a Request and returns
+            an auth context object with ``is_authenticated`` and ``roles``.
+        persona_routes: Optional dict mapping persona id to default route
+            (e.g. ``{"customer": "/app/workspaces/customer_dashboard"}``).
 
     Returns:
         FastAPI router with HTML page routes
@@ -318,22 +329,59 @@ def create_site_page_routes(
             page_data_cache[lroute] = _format_legal_page_response(ltype, lpage, project_root)
 
     # Create route for each page
+    _auth_redirect_enabled = bool(get_auth_context and persona_routes)
+
+    # Capture auth helpers once for the root redirect closure (#569).
+    # Defined outside the loop so ruff B023 is satisfied.
+    _root_auth_fn = get_auth_context if _auth_redirect_enabled else None
+    _root_persona_routes: dict[str, str] = dict(persona_routes) if persona_routes else {}
+
     for page in pages:
         route = page.get("route", "/")
 
         # Capture route in closure
         page_route = route
 
-        @router.get(route, response_class=HTMLResponse, include_in_schema=False)
-        async def serve_page(
-            r: str = page_route,
-            sitespec: dict[str, Any] = sitespec_data,
-        ) -> str:
-            """Serve a site page as HTML with SSR content."""
-            ctx = build_site_page_context(
-                sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
-            )
-            return render_site_page("site/page.html", ctx)
+        if route == "/" and _auth_redirect_enabled:
+            # Root route: redirect authenticated users to their persona's
+            # default workspace (#569), serve the landing page otherwise.
+
+            @router.get("/", include_in_schema=False)
+            async def serve_root_page(
+                request: Request,
+                r: str = page_route,
+                sitespec: dict[str, Any] = sitespec_data,
+            ) -> Response:
+                """Serve landing page or redirect authenticated users."""
+                if _root_auth_fn is not None:
+                    try:
+                        auth_ctx = _root_auth_fn(request)
+                        if auth_ctx and auth_ctx.is_authenticated and auth_ctx.roles:
+                            for role in auth_ctx.roles:
+                                target = _root_persona_routes.get(role)
+                                if target:
+                                    return RedirectResponse(url=target, status_code=302)
+                    except Exception:
+                        logger.debug(
+                            "Auth check failed on root redirect, serving landing page",
+                            exc_info=True,
+                        )
+                ctx = build_site_page_context(
+                    sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+                )
+                return HTMLResponse(content=render_site_page("site/page.html", ctx))
+        else:
+
+            @router.get(route, response_class=HTMLResponse, include_in_schema=False)
+            async def serve_page(
+                r: str = page_route,
+                sitespec: dict[str, Any] = sitespec_data,
+            ) -> str:
+                """Serve a site page as HTML with SSR content."""
+                ctx = build_site_page_context(
+                    sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+                )
+                return render_site_page("site/page.html", ctx)
 
     # Create routes for legal pages
     if legal.get("terms"):

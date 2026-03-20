@@ -432,6 +432,21 @@ def assemble_post_build_routes(
     8. 404 handler (if sitespec)
     9. Route validation via ``validate_routes()``
     """
+    # Resolve auth context callable once — used by both site and app routes
+    get_auth_context = None
+    if builder.auth_middleware:
+        get_auth_context = builder.auth_middleware.get_auth_context
+
+    # Compute persona -> default route mapping for authenticated root redirect (#569)
+    persona_routes: dict[str, str] | None = None
+    if get_auth_context and appspec.personas:
+        try:
+            from dazzle_ui.converters.workspace_converter import compute_persona_default_routes
+
+            persona_routes = compute_persona_default_routes(appspec.personas, appspec.workspaces)
+        except ImportError:
+            pass
+
     # ---- 1. Site page routes ----
     if sitespec_data:
         try:
@@ -443,6 +458,8 @@ def assemble_post_build_routes(
             site_page_router = create_site_page_routes(
                 sitespec_data=sitespec_data,
                 project_root=project_root,
+                get_auth_context=get_auth_context,
+                persona_routes=persona_routes,
             )
             app.include_router(site_page_router)
             logger.info("  Site pages: landing, /site.js, /styles/dazzle.css")
@@ -457,10 +474,6 @@ def assemble_post_build_routes(
     # ---- 3. App page routes (/app/*) ----
     try:
         from dazzle_ui.runtime.page_routes import create_page_routes
-
-        get_auth_context = None
-        if builder.auth_middleware:
-            get_auth_context = builder.auth_middleware.get_auth_context
 
         page_router = create_page_routes(
             appspec,
