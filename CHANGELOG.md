@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OR conditions in scope rules now compile to SQL OR (previously post-fetch filtered)
 
 ### Added
+- `dazzle e2e journey` — persona-driven E2E testing against live deployments (#557)
+- Two-phase execution: deterministic workspace exploration + LLM story verification
+- Cross-persona pattern analysis with structured HTML reports
+- `test_intelligence journey` MCP operation (read-only)
+- `.dazzle/test_personas.toml` credential file for journey testing
+- `dazzle demo propose` now generates test persona credentials
 - `not via` syntax for NOT EXISTS scope rules
 - `not (...)` parenthesised negation in scope rules
 - depth-N FK path traversal in scope rules (previously depth-1 only)
