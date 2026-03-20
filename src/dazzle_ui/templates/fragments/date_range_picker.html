@@ -1,0 +1,13 @@
+{# Date range picker for workspace regions with date_range enabled #}
+<div class="flex items-center gap-2 mb-2">
+  <label class="text-xs text-base-content/60">From</label>
+  <input type="date" name="date_from" value="{{ date_from or '' }}"
+         class="input input-xs input-bordered w-36"
+         hx-get="{{ endpoint }}" hx-target="#region-{{ region_name }}" hx-swap="innerHTML"
+         hx-include="closest .date-range-bar"/>
+  <label class="text-xs text-base-content/60">To</label>
+  <input type="date" name="date_to" value="{{ date_to or '' }}"
+         class="input input-xs input-bordered w-36"
+         hx-get="{{ endpoint }}" hx-target="#region-{{ region_name }}" hx-swap="innerHTML"
+         hx-include="closest .date-range-bar"/>
+</div>
