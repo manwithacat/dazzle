@@ -61,6 +61,8 @@ class DisplayMode(StrEnum):
     FUNNEL_CHART = "funnel_chart"  # v0.9.5: Funnel chart (e.g., sales pipeline)
     QUEUE = "queue"  # v0.33.0: Review queue with inline actions
     TABBED_LIST = "tabbed_list"  # v0.33.0: Tabbed multi-source list
+    HEATMAP = "heatmap"  # v0.44.0: Heat-map matrix view
+    PROGRESS = "progress"  # v0.44.0: Progress bar view
 
 
 class WorkspaceRegion(BaseModel):
@@ -102,6 +104,14 @@ class WorkspaceRegion(BaseModel):
     # v0.34.0: Date-range filtering
     date_field: str | None = None
     date_range: bool = False  # Enable date picker on this region
+    # v0.44.0: Heatmap configuration
+    heatmap_rows: str | None = None  # FK field for row grouping
+    heatmap_columns: str | None = None  # FK field for column grouping
+    heatmap_value: str | None = None  # Expression for cell value
+    heatmap_thresholds: list[float] = Field(default_factory=list)  # e.g. [0.4, 0.6] for RAG
+    # v0.44.0: Progress bar configuration
+    progress_stages: list[str] = Field(default_factory=list)  # ordered status values
+    progress_complete_at: str | None = None  # which stage means "done"
 
     model_config = ConfigDict(frozen=True)
 

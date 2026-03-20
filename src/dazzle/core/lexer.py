@@ -164,6 +164,14 @@ class TokenType(Enum):
     TIME_BUCKET = "time_bucket"
     DATE_FIELD = "date_field"
 
+    # v0.44.0 Heatmap / Progress region keywords
+    ROWS = "rows"
+    COLUMNS = "columns"
+    VALUE = "value"
+    THRESHOLDS = "thresholds"
+    STAGES = "stages"
+    COMPLETE_AT = "complete_at"
+
     # v0.3.1 keywords
     ENGINE_HINT = "engine_hint"  # Deprecated: use STAGE instead
     STAGE = "stage"  # v0.8.0: Workspace layout stage (replaces engine_hint)

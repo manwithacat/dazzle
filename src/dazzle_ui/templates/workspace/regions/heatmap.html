@@ -1,0 +1,47 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if heatmap_matrix %}
+    <div class="overflow-x-auto">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th></th>
+            {% for col in heatmap_col_values %}
+            <th class="text-center">{{ col }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in heatmap_matrix %}
+          <tr>
+            <td class="font-medium">{{ row.row }}</td>
+            {% for cell in row.cells %}
+            <td class="text-center cursor-pointer hover:opacity-80
+              {%- if heatmap_thresholds|length >= 2 -%}
+                {%- if cell.value < heatmap_thresholds[0] %} bg-error/20
+                {%- elif cell.value < heatmap_thresholds[1] %} bg-warning/20
+                {%- else %} bg-success/20
+                {%- endif -%}
+              {%- elif heatmap_thresholds|length == 1 -%}
+                {%- if cell.value < heatmap_thresholds[0] %} bg-error/20
+                {%- else %} bg-success/20
+                {%- endif -%}
+              {%- endif -%}"
+              {% if action_url %}hx-get="{{ action_url }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+              {{ "%.1f"|format(cell.value) }}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if total > items|length %}
+    <p class="text-xs opacity-50 mt-2">Showing {{ items|length }} of {{ total }}</p>
+    {% endif %}
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% endif %}
+  </div>
+</div>

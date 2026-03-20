@@ -329,6 +329,12 @@ class WorkspaceParserMixin:
         aggregates: dict[str, str] = {}
         date_field: str | None = None
         date_range: bool = False
+        heatmap_rows: str | None = None
+        heatmap_columns: str | None = None
+        heatmap_value: str | None = None
+        heatmap_thresholds: list[float] = []
+        progress_stages: list[str] = []
+        progress_complete_at: str | None = None
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -458,6 +464,82 @@ class WorkspaceParserMixin:
 
                 self.expect(TokenType.DEDENT)
 
+            # rows: field.path (heatmap row grouping)
+            elif self.match(TokenType.ROWS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                heatmap_rows = self.expect_identifier_or_keyword().value
+                while self.match(TokenType.DOT):
+                    self.advance()
+                    heatmap_rows += "." + self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # columns: field.path (heatmap column grouping)
+            elif self.match(TokenType.COLUMNS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                heatmap_columns = self.expect_identifier_or_keyword().value
+                while self.match(TokenType.DOT):
+                    self.advance()
+                    heatmap_columns += "." + self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
+            # value: expression (capture as string until newline)
+            elif self.match(TokenType.VALUE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                value_parts: list[str] = []
+                while not self.match(TokenType.NEWLINE, TokenType.DEDENT):
+                    value_parts.append(self.advance().value)
+                heatmap_value = " ".join(value_parts)
+                self.skip_newlines()
+
+            # thresholds: [0.4, 0.6]
+            elif self.match(TokenType.THRESHOLDS):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.expect(TokenType.LBRACKET)
+                while not self.match(TokenType.RBRACKET):
+                    self.skip_newlines()
+                    if self.match(TokenType.RBRACKET):
+                        break
+                    num_token = self.expect(TokenType.NUMBER)
+                    # Handle decimal: NUMBER DOT NUMBER
+                    num_str = num_token.value
+                    if self.match(TokenType.DOT):
+                        self.advance()
+                        frac = self.expect(TokenType.NUMBER).value
+                        num_str = num_str + "." + frac
+                    heatmap_thresholds.append(float(num_str))
+                    if self.match(TokenType.COMMA):
+                        self.advance()
+                    self.skip_newlines()
+                self.expect(TokenType.RBRACKET)
+                self.skip_newlines()
+
+            # stages: [uploaded, queued, processing, marked, reviewed, flagged]
+            elif self.match(TokenType.STAGES):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.expect(TokenType.LBRACKET)
+                while not self.match(TokenType.RBRACKET):
+                    self.skip_newlines()
+                    if self.match(TokenType.RBRACKET):
+                        break
+                    progress_stages.append(self.expect_identifier_or_keyword().value)
+                    if self.match(TokenType.COMMA):
+                        self.advance()
+                    self.skip_newlines()
+                self.expect(TokenType.RBRACKET)
+                self.skip_newlines()
+
+            # complete_at: reviewed
+            elif self.match(TokenType.COMPLETE_AT):
+                self.advance()
+                self.expect(TokenType.COLON)
+                progress_complete_at = self.expect_identifier_or_keyword().value
+                self.skip_newlines()
+
             else:
                 break
 
@@ -503,4 +585,10 @@ class WorkspaceParserMixin:
             aggregates=aggregates,
             date_field=date_field,
             date_range=date_range,
+            heatmap_rows=heatmap_rows,
+            heatmap_columns=heatmap_columns,
+            heatmap_value=heatmap_value,
+            heatmap_thresholds=heatmap_thresholds,
+            progress_stages=progress_stages,
+            progress_complete_at=progress_complete_at,
         )

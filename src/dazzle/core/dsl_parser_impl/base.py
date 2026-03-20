@@ -771,4 +771,11 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.DATE_FIELD,
     # v0.44.0 External action links
     TokenType.EXTERNAL,
+    # v0.44.0 Heatmap / Progress keywords (can be field names)
+    TokenType.ROWS,
+    TokenType.COLUMNS,
+    TokenType.VALUE,
+    TokenType.THRESHOLDS,
+    TokenType.STAGES,
+    TokenType.COMPLETE_AT,
 )

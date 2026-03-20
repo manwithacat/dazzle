@@ -1,0 +1,27 @@
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+    {% if stage_counts %}
+    <div class="flex items-center gap-2 mb-2">
+      <progress class="progress progress-primary w-full" value="{{ complete_pct }}" max="100"></progress>
+      <span class="text-sm font-medium whitespace-nowrap">{{ complete_pct }}%</span>
+    </div>
+    <div class="flex flex-wrap gap-1">
+      {% for stage in stage_counts %}
+      <span class="badge badge-sm
+        {%- if stage.complete %} badge-success
+        {%- elif stage.count > 0 %} badge-warning
+        {%- else %} badge-ghost
+        {%- endif %}">
+        {{ stage.name }} ({{ stage.count }})
+      </span>
+      {% endfor %}
+    </div>
+    {% if progress_total > 0 %}
+    <p class="text-xs opacity-50 mt-2">{{ complete_count }} of {{ progress_total }} complete</p>
+    {% endif %}
+    {% else %}
+    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% endif %}
+  </div>
+</div>

@@ -576,6 +576,69 @@ async def _workspace_region_handler(
     # Multi-source tabbed regions pass source_tabs to the template
     source_tabs = ctx.ctx_region.source_tabs or []
 
+    # Heatmap: pivot flat items into a matrix structure (v0.44.0)
+    heatmap_matrix: list[dict[str, Any]] = []
+    heatmap_col_values: list[str] = []
+    heatmap_thresholds: list[float] = list(
+        getattr(ctx.ctx_region, "heatmap_thresholds", None) or []
+    )
+    if ctx.ctx_region.display == "HEATMAP" and items:
+        hm_rows_field = getattr(ctx.ctx_region, "heatmap_rows", "") or ""
+        hm_cols_field = getattr(ctx.ctx_region, "heatmap_columns", "") or ""
+        hm_value_field = getattr(ctx.ctx_region, "heatmap_value", "") or ""
+        # Collect unique column values and build pivot
+        col_set: set[str] = set()
+        for item in items:
+            cv = str(item.get(hm_cols_field, ""))
+            if cv:
+                col_set.add(cv)
+        heatmap_col_values = sorted(col_set)
+        # Group by row → column → value
+        row_map: dict[str, dict[str, float]] = {}
+        for item in items:
+            rv = str(item.get(hm_rows_field, ""))
+            cv = str(item.get(hm_cols_field, ""))
+            val = float(item.get(hm_value_field, 0) or 0)
+            if rv not in row_map:
+                row_map[rv] = {}
+            row_map[rv][cv] = val
+        for row_label in sorted(row_map.keys()):
+            cells: list[dict[str, Any]] = []
+            for col_label in heatmap_col_values:
+                cell_val = row_map[row_label].get(col_label, 0.0)
+                cells.append({"value": cell_val, "column": col_label})
+            heatmap_matrix.append({"row": row_label, "cells": cells})
+
+    # Progress: count items per stage and compute percentage (v0.44.0)
+    progress_stage_counts: list[dict[str, Any]] = []
+    progress_total = 0
+    progress_complete_count = 0
+    progress_complete_pct = 0.0
+    progress_stages_list: list[str] = list(getattr(ctx.ctx_region, "progress_stages", None) or [])
+    progress_complete_at: str = getattr(ctx.ctx_region, "progress_complete_at", "") or ""
+    if ctx.ctx_region.display == "PROGRESS" and items and progress_stages_list:
+        stage_counter: dict[str, int] = dict.fromkeys(progress_stages_list, 0)
+        status_field = group_by or "status"
+        for item in items:
+            item_stage = str(item.get(status_field, ""))
+            if item_stage in stage_counter:
+                stage_counter[item_stage] += 1
+        progress_total = sum(stage_counter.values())
+        # Find the index of complete_at stage; everything at or past it is "complete"
+        complete_idx = -1
+        if progress_complete_at in progress_stages_list:
+            complete_idx = progress_stages_list.index(progress_complete_at)
+        for i, stage_name in enumerate(progress_stages_list):
+            cnt = stage_counter.get(stage_name, 0)
+            is_complete = complete_idx >= 0 and i >= complete_idx
+            progress_stage_counts.append(
+                {"name": stage_name, "count": cnt, "complete": is_complete}
+            )
+            if is_complete:
+                progress_complete_count += cnt
+        if progress_total > 0:
+            progress_complete_pct = round(progress_complete_count / progress_total * 100, 1)
+
     html = render_fragment(
         ctx.ctx_region.template,
         title=ctx.ctx_region.title,
@@ -600,6 +663,15 @@ async def _workspace_region_handler(
         queue_api_endpoint=queue_api_endpoint,
         source_tabs=source_tabs,
         source_entity=ctx.source,
+        # Heatmap context (v0.44.0)
+        heatmap_matrix=heatmap_matrix,
+        heatmap_col_values=heatmap_col_values,
+        heatmap_thresholds=heatmap_thresholds,
+        # Progress context (v0.44.0)
+        stage_counts=progress_stage_counts,
+        progress_total=progress_total,
+        complete_count=progress_complete_count,
+        complete_pct=progress_complete_pct,
     )
     return HTMLResponse(content=html)
 

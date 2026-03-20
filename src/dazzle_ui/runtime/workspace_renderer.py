@@ -63,6 +63,14 @@ class RegionContext(BaseModel):
     # Multi-source (v0.33.0)
     sources: list[str] = Field(default_factory=list)
     source_tabs: list[SourceTabContext] = Field(default_factory=list)
+    # Heatmap fields (v0.44.0)
+    heatmap_rows: str = ""
+    heatmap_columns: str = ""
+    heatmap_value: str = ""
+    heatmap_thresholds: list[float] = Field(default_factory=list)
+    # Progress fields (v0.44.0)
+    progress_stages: list[str] = Field(default_factory=list)
+    progress_complete_at: str = ""
     # CSS
     grid_class: str = ""  # col-span/row-span classes
     template: str = "workspace/regions/list.html"  # Region display template
@@ -108,6 +116,8 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "FUNNEL_CHART": "workspace/regions/funnel_chart.html",
     "QUEUE": "workspace/regions/queue.html",
     "TABBED_LIST": "workspace/regions/tabbed_list.html",
+    "HEATMAP": "workspace/regions/heatmap.html",
+    "PROGRESS": "workspace/regions/progress.html",
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -266,6 +276,12 @@ def build_workspace_context(
                 action_url=action_url,
                 sources=region_sources,
                 source_tabs=source_tabs,
+                heatmap_rows=getattr(region, "heatmap_rows", None) or "",
+                heatmap_columns=getattr(region, "heatmap_columns", None) or "",
+                heatmap_value=getattr(region, "heatmap_value", None) or "",
+                heatmap_thresholds=list(getattr(region, "heatmap_thresholds", None) or []),
+                progress_stages=list(getattr(region, "progress_stages", None) or []),
+                progress_complete_at=getattr(region, "progress_complete_at", None) or "",
                 grid_class=region_grid,
                 template=template,
             )
