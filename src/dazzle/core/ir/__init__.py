@@ -447,6 +447,22 @@ from .personas import (
     PersonaSpec,
 )
 
+# Predicate Algebra (Scope row-level security)
+from .predicates import (
+    BoolComposite,
+    BoolOp,
+    ColumnCheck,
+    CompOp,
+    Contradiction,
+    ExistsBinding,
+    ExistsCheck,
+    PathCheck,
+    ScopePredicate,
+    Tautology,
+    UserAttrCheck,
+    ValueRef,
+)
+
 # Process Workflows (v0.23.0)
 from .process import (
     CompensationSpec,
@@ -891,6 +907,19 @@ __all__ = [
     "InvariantSpec",
     # Personas (v0.8.5)
     "PersonaSpec",
+    # Predicate Algebra (Scope row-level security)
+    "BoolComposite",
+    "BoolOp",
+    "ColumnCheck",
+    "CompOp",
+    "Contradiction",
+    "ExistsBinding",
+    "ExistsCheck",
+    "PathCheck",
+    "ScopePredicate",
+    "Tautology",
+    "UserAttrCheck",
+    "ValueRef",
     # Process Workflows (v0.23.0)
     "CompensationSpec",
     "EffectAction",
