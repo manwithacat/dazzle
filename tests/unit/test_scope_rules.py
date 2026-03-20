@@ -2,8 +2,11 @@
 Unit tests for ScopeRule IR type and AccessSpec.scopes field,
 plus parser tests for scope: blocks and permit: field-condition rejection.
 Includes converter tests for _convert_scope_rule (Task 3).
+Includes linker integration tests for FK graph and predicate compilation (Task 5).
 """
 
+import os
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -454,3 +457,165 @@ class TestConvertScopeRule:
         result = _convert_scope_rule(ir_rule)
 
         assert result.personas == []
+
+
+# =============================================================================
+# Task 5: Linker integration — FK graph building and predicate compilation
+# =============================================================================
+
+
+def _build_appspec(dsl: str):
+    """Parse DSL text and link into an AppSpec via build_appspec."""
+    from dazzle.core.linker import build_appspec
+    from dazzle.core.parser import parse_modules
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".dsl", delete=False) as f:
+        f.write(dsl)
+        f.flush()
+        fpath = Path(f.name)
+    try:
+        modules = parse_modules([fpath])
+        return build_appspec(modules, modules[0].name)
+    finally:
+        os.unlink(fpath)
+
+
+class TestLinkerFKGraphAndPredicates:
+    """Integration tests: FK graph built and predicates compiled at link time."""
+
+    def test_fk_graph_populated_on_appspec(self):
+        """AppSpec.fk_graph is not None after build_appspec."""
+        dsl = """\
+module test
+app test_app "Test App"
+
+entity School "School":
+  id: uuid pk
+  name: str(200) required
+
+  permit:
+    list: role(teacher)
+
+  scope:
+    list: all
+      for: teacher
+"""
+        appspec = _build_appspec(dsl)
+        assert appspec.fk_graph is not None
+
+    def test_scope_all_produces_tautology(self):
+        """scope: all compiles to a Tautology predicate at link time."""
+        from dazzle.core.ir.predicates import Tautology
+
+        dsl = """\
+module test
+app test_app "Test App"
+
+entity Report "Report":
+  id: uuid pk
+
+  permit:
+    list: role(admin)
+
+  scope:
+    list: all
+      for: admin
+"""
+        appspec = _build_appspec(dsl)
+        entity = appspec.get_entity("Report")
+        assert entity is not None
+        assert entity.access is not None
+        scope_rules = entity.access.scopes
+        assert len(scope_rules) == 1
+        rule = scope_rules[0]
+        assert rule.predicate is not None
+        assert isinstance(rule.predicate, Tautology)
+
+    def test_user_attr_check_predicate(self):
+        """scope: school_id = current_user.school compiles to UserAttrCheck."""
+        from dazzle.core.ir.predicates import UserAttrCheck
+
+        dsl = """\
+module test
+app test_app "Test App"
+
+entity Student "Student":
+  id: uuid pk
+  school_id: str(100) required
+
+  permit:
+    list: role(teacher)
+
+  scope:
+    list: school_id = current_user.school
+      for: teacher
+"""
+        appspec = _build_appspec(dsl)
+        entity = appspec.get_entity("Student")
+        assert entity is not None
+        assert entity.access is not None
+        scope_rules = entity.access.scopes
+        assert len(scope_rules) == 1
+        rule = scope_rules[0]
+        assert rule.predicate is not None
+        assert isinstance(rule.predicate, UserAttrCheck)
+        assert rule.predicate.field == "school_id"
+        assert rule.predicate.user_attr == "school"
+
+    def test_entity_without_scopes_unaffected(self):
+        """Entity with no scope block has no predicates; fk_graph is still built."""
+        dsl = """\
+module test
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+  permit:
+    read: authenticated
+"""
+        appspec = _build_appspec(dsl)
+        assert appspec.fk_graph is not None
+        entity = appspec.get_entity("Task")
+        assert entity is not None
+        # No scopes → no predicates to check, but access may be present
+        if entity.access is not None:
+            assert entity.access.scopes == []
+
+    def test_multiple_scope_rules_all_compiled(self):
+        """Multiple scope rules on one entity each get a predicate."""
+        from dazzle.core.ir.predicates import Tautology, UserAttrCheck
+
+        dsl = """\
+module test
+app test_app "Test App"
+
+entity Note "Note":
+  id: uuid pk
+  owner_id: str(100) required
+
+  permit:
+    list: role(teacher)
+    read: role(admin)
+
+  scope:
+    list: owner_id = current_user.id
+      for: teacher
+    read: all
+      for: admin
+"""
+        appspec = _build_appspec(dsl)
+        entity = appspec.get_entity("Note")
+        assert entity is not None
+        assert entity.access is not None
+        scopes = entity.access.scopes
+        assert len(scopes) == 2
+
+        list_rule = next(r for r in scopes if r.operation == PermissionKind.LIST)
+        read_rule = next(r for r in scopes if r.operation == PermissionKind.READ)
+
+        assert isinstance(list_rule.predicate, UserAttrCheck)
+        assert list_rule.predicate.user_attr == "id"
+
+        assert isinstance(read_rule.predicate, Tautology)

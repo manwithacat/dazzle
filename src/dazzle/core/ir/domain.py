@@ -8,6 +8,7 @@ and the domain specification.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -117,11 +118,17 @@ class ScopeRule(BaseModel):
     Defines which records a role can see after passing the permit gate.
     condition=None means 'all' (no filter). personas=["*"] means all
     authorized roles.
+
+    The ``predicate`` field is populated by the linker at link time.
+    It is typed as ``Any`` to avoid circular imports between domain.py and
+    predicates.py (ScopePredicate is a Pydantic discriminated union that
+    causes Pydantic rebuild issues when imported into domain.py at module load).
     """
 
     operation: PermissionKind
     condition: ConditionExpr | None = None
     personas: list[str] = Field(default_factory=list)
+    predicate: Any = None  # ScopePredicate, compiled at link time
 
 
 class AccessSpec(BaseModel):

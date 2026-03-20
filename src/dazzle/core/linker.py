@@ -112,12 +112,20 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     if merged_fragment.llm_config is not None and not any(e.name == "AIJob" for e in entities):
         entities = [*entities, _build_ai_job_entity()]
 
-    # 10. Build final AppSpec
+    # 10. Build FK graph and compile scope predicates
+    from .ir.fk_graph import FKGraph
+    from .ir.predicate_builder import build_scope_predicate
+
+    fk_graph = FKGraph.from_entities(list(entities))
+    entities = _compile_scope_predicates(entities, fk_graph, build_scope_predicate)
+
+    # 11. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
         title=app_title,
         version="0.1.0",
         domain=ir.DomainSpec(entities=entities),
+        fk_graph=fk_graph,
         surfaces=merged_fragment.surfaces,
         workspaces=merged_fragment.workspaces,
         experiences=merged_fragment.experiences,
@@ -153,6 +161,45 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
             "link_warnings": unused_import_warnings,  # v0.14.1
         },
     )
+
+
+def _compile_scope_predicates(
+    entities: list[ir.EntitySpec],
+    fk_graph: object,
+    build_scope_predicate: object,
+) -> list[ir.EntitySpec]:
+    """Compile scope predicates for all entities with scope rules.
+
+    For each entity that has access.scopes, calls build_scope_predicate on
+    each ScopeRule's condition and attaches the resulting ScopePredicate to
+    the rule's ``predicate`` field.
+
+    Because Pydantic models are frozen, this reconstructs the ScopeRule,
+    AccessSpec, and EntitySpec using model_copy(update={...}).
+
+    Args:
+        entities:             List of entity specifications.
+        fk_graph:             FKGraph built from the entities.
+        build_scope_predicate: Callable (condition, entity_name, fk_graph) → ScopePredicate.
+
+    Returns:
+        Updated list of entity specifications with predicates attached.
+    """
+    result: list[ir.EntitySpec] = []
+    for entity in entities:
+        if entity.access is None or not entity.access.scopes:
+            result.append(entity)
+            continue
+
+        compiled_scopes: list[ir.ScopeRule] = []
+        for rule in entity.access.scopes:
+            predicate = build_scope_predicate(rule.condition, entity.name, fk_graph)  # type: ignore[operator]
+            compiled_scopes.append(rule.model_copy(update={"predicate": predicate}))
+
+        new_access = entity.access.model_copy(update={"scopes": compiled_scopes})
+        result.append(entity.model_copy(update={"access": new_access}))
+
+    return result
 
 
 def _build_security_config(app_config: ir.AppConfigSpec | None) -> SecurityConfig:

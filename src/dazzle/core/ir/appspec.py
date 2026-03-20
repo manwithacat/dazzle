@@ -178,6 +178,10 @@ class AppSpec(BaseModel):
     grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
     # Global audit trail (v0.34.0) — when True, all entities are audited by default
     audit_trail: bool = False
+    # FK graph built at link time (Task 5 predicate algebra).
+    # Typed as Any to avoid circular import: FKGraph is a dataclass from ir.fk_graph
+    # and importing it here would create import cycles with the linker.
+    fk_graph: Any = None
 
     model_config = ConfigDict(frozen=True)
 
