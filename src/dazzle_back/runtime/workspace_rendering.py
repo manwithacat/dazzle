@@ -624,6 +624,9 @@ async def _workspace_region_handler(
     # Multi-source tabbed regions pass source_tabs to the template
     source_tabs = ctx.ctx_region.source_tabs or []
 
+    # Tree display (#565) — build nested tree from flat items using group_by as parent ref
+    tree_items: list[dict[str, Any]] = []
+
     # Heatmap: pivot flat items into a matrix structure (v0.44.0)
     heatmap_matrix: list[dict[str, Any]] = []
     heatmap_col_values: list[str] = []
@@ -687,6 +690,27 @@ async def _workspace_region_handler(
         if progress_total > 0:
             progress_complete_pct = round(progress_complete_count / progress_total * 100, 1)
 
+    # Tree display (#565) — build nested hierarchy from flat items
+    display_upper = ctx.ctx_region.display
+    if display_upper == "TREE" and group_by and items:
+        items_by_id = {str(item.get("id", "")): item for item in items}
+        children_map: dict[str, list[dict[str, Any]]] = {}
+        for item in items:
+            parent_id = str(item.get(group_by, "") or "")
+            children_map.setdefault(parent_id, []).append(item)
+
+        # Root items have no parent or parent not in the set
+        roots = [item for item in items if str(item.get(group_by, "") or "") not in items_by_id]
+
+        def _build_subtree(node: dict[str, Any]) -> dict[str, Any]:
+            node_id = str(node.get("id", ""))
+            node["_children"] = children_map.get(node_id, [])
+            for child in node["_children"]:
+                _build_subtree(child)
+            return node
+
+        tree_items = [_build_subtree(r) for r in roots]
+
     html = render_fragment(
         ctx.ctx_region.template,
         title=ctx.ctx_region.title,
@@ -725,6 +749,8 @@ async def _workspace_region_handler(
         date_field=getattr(ctx.ctx_region, "date_field", ""),
         date_from=request.query_params.get("date_from", ""),
         date_to=request.query_params.get("date_to", ""),
+        # Tree context (#565)
+        tree_items=tree_items,
     )
     return HTMLResponse(content=html)
 

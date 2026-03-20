@@ -1,0 +1,41 @@
+{# Tree / hierarchy display for workspace regions #}
+<div class="card bg-base-100 shadow-sm">
+  <div class="card-body p-3">
+    <h3 class="card-title text-sm">{{ title }}</h3>
+
+    {% macro render_node(node, depth=0) %}
+    <details class="collapse collapse-arrow bg-base-200/30 rounded-lg mb-1" {% if depth == 0 %}open{% endif %}>
+      <summary class="collapse-title text-sm py-1 px-3 min-h-0 flex items-center gap-2"
+               {% if action_url %}hx-get="{{ action_url | replace('{id}', node.id|string) }}"
+               hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+        <span class="font-medium">{{ node.get(display_key, node.get('name', node.get('title', ''))) }}</span>
+        {% if node._children %}
+        <span class="badge badge-ghost badge-xs">{{ node._children|length }}</span>
+        {% endif %}
+      </summary>
+      {% if node._children %}
+      <div class="collapse-content px-2 pb-1">
+        {% for child in node._children %}
+          {{ render_node(child, depth + 1) }}
+        {% endfor %}
+      </div>
+      {% endif %}
+    </details>
+    {% endmacro %}
+
+    {% if tree_items %}
+      {% for node in tree_items %}
+        {{ render_node(node) }}
+      {% endfor %}
+    {% elif items %}
+      {# Fallback: flat list if no tree structure detected #}
+      {% for item in items %}
+      <div class="py-1 px-2 text-sm border-b border-base-200 last:border-0">
+        {{ item.get(display_key, item.get('name', item.get('title', ''))) }}
+      </div>
+      {% endfor %}
+    {% else %}
+      {% include "fragments/empty_state.html" %}
+    {% endif %}
+  </div>
+</div>

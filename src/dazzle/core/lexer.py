@@ -166,6 +166,7 @@ class TokenType(Enum):
 
     # v0.44.0 Heatmap / Progress / Activity Feed region keywords
     ACTIVITY_FEED = "activity_feed"
+    TREE = "tree"
     ROWS = "rows"
     COLUMNS = "columns"
     VALUE = "value"

@@ -773,6 +773,7 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.EXTERNAL,
     # v0.44.0 Heatmap / Progress / Activity Feed keywords (can be field names)
     TokenType.ACTIVITY_FEED,
+    TokenType.TREE,
     TokenType.ROWS,
     TokenType.COLUMNS,
     TokenType.VALUE,

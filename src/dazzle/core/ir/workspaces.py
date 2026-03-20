@@ -64,6 +64,7 @@ class DisplayMode(StrEnum):
     HEATMAP = "heatmap"  # v0.44.0: Heat-map matrix view
     PROGRESS = "progress"  # v0.44.0: Progress bar view
     ACTIVITY_FEED = "activity_feed"  # v0.44.0: Activity feed / timeline display
+    TREE = "tree"  # v0.44.0: Tree / hierarchy display
 
 
 class WorkspaceRegion(BaseModel):

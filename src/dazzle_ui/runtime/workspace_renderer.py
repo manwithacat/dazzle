@@ -122,6 +122,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "HEATMAP": "workspace/regions/heatmap.html",
     "PROGRESS": "workspace/regions/progress.html",
     "ACTIVITY_FEED": "workspace/regions/activity_feed.html",
+    "TREE": "workspace/regions/tree.html",
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
