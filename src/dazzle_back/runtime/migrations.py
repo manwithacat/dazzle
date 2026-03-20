@@ -92,15 +92,15 @@ class ColumnInfo:
     is_pk: bool
 
 
-def get_table_schema(conn: Any, table_name: str) -> list[ColumnInfo]:
+def get_table_schema(conn: Any, table_name: str, schema: str = "public") -> list[ColumnInfo]:
     """Get column information for a PostgreSQL table."""
     cursor = conn.cursor()
     cursor.execute(
         "SELECT column_name, data_type, is_nullable, column_default "
         "FROM information_schema.columns "
-        "WHERE table_schema = 'public' AND table_name = %s "
+        "WHERE table_schema = %s AND table_name = %s "
         "ORDER BY ordinal_position",
-        (table_name,),
+        (schema, table_name),
     )
     columns = []
     for row in cursor.fetchall():
@@ -117,12 +117,12 @@ def get_table_schema(conn: Any, table_name: str) -> list[ColumnInfo]:
     return columns
 
 
-def get_table_indexes(conn: Any, table_name: str) -> list[str]:
+def get_table_indexes(conn: Any, table_name: str, schema: str = "public") -> list[str]:
     """Get index names for a PostgreSQL table."""
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT indexname FROM pg_indexes WHERE tablename = %s",
-        (table_name,),
+        "SELECT indexname FROM pg_indexes WHERE schemaname = %s AND tablename = %s",
+        (schema, table_name),
     )
     return [dict(row)["indexname"] for row in cursor.fetchall()]
 
@@ -137,8 +137,9 @@ class MigrationPlanner:
     Plans migrations by comparing EntitySpec to existing database schema.
     """
 
-    def __init__(self, db_manager: DatabaseBackend):
+    def __init__(self, db_manager: DatabaseBackend, schema: str = "public"):
         self.db = db_manager
+        self.schema = schema
 
     def plan_migrations(self, entities: list[EntitySpec]) -> MigrationPlan:
         """
@@ -223,8 +224,8 @@ class MigrationPlanner:
         # Check if table exists
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename = %s",
-            (entity.name,),
+            "SELECT tablename FROM pg_tables WHERE schemaname = %s AND tablename = %s",
+            (self.schema, entity.name),
         )
         table_exists = cursor.fetchone() is not None
 
@@ -269,9 +270,9 @@ class MigrationPlanner:
             return steps, warnings
 
         # Table exists - compare columns
-        existing_columns = get_table_schema(conn, entity.name)
+        existing_columns = get_table_schema(conn, entity.name, schema=self.schema)
         existing_column_names = {c.name for c in existing_columns}
-        existing_indexes = set(get_table_indexes(conn, entity.name))
+        existing_indexes = set(get_table_indexes(conn, entity.name, schema=self.schema))
 
         # Build expected columns from entity
         expected_fields = {f.name: f for f in entity.fields}
@@ -383,8 +384,14 @@ class MigrationPlanner:
             )
             columns.extend(fk_clauses)
 
-        table = quote_identifier(entity.name)
+        table = self._qualified_table(entity.name)
         return f"CREATE TABLE IF NOT EXISTS {table} ({', '.join(columns)})"
+
+    def _qualified_table(self, table_name: str) -> str:
+        """Return schema-qualified table identifier."""
+        if self.schema == "public":
+            return quote_identifier(table_name)
+        return f"{quote_identifier(self.schema)}.{quote_identifier(table_name)}"
 
     def _plan_deferred_fk_constraints(
         self,
@@ -407,9 +414,9 @@ class MigrationPlanner:
                     continue
 
                 constraint_name = f"fk_{entity.name}_{field.name}_{ref_entity}"
-                table = quote_identifier(entity.name)
+                table = self._qualified_table(entity.name)
                 col = quote_identifier(field.name)
-                ref_table = quote_identifier(ref_entity)
+                ref_table = self._qualified_table(ref_entity)
                 ref_col = quote_identifier("id")
                 # Use DO block for idempotency (PG has no ADD CONSTRAINT IF NOT EXISTS)
                 sql = (
@@ -468,7 +475,7 @@ class MigrationPlanner:
     def _generate_add_column_sql(self, table_name: str, field: FieldSpec) -> str:
         """Generate ALTER TABLE ADD COLUMN SQL."""
         col_type = self._get_column_type(field)
-        table = quote_identifier(table_name)
+        table = self._qualified_table(table_name)
         col_name = quote_identifier(field.name)
         parts = [f"ALTER TABLE {table} ADD COLUMN {col_name} {col_type}"]
 
@@ -514,14 +521,15 @@ class MigrationPlanner:
 
     def _generate_drop_not_null_sql(self, table_name: str, column_name: str) -> str:
         """Generate ALTER TABLE ... ALTER COLUMN ... DROP NOT NULL SQL."""
-        table = quote_identifier(table_name)
+        table = self._qualified_table(table_name)
         col = quote_identifier(column_name)
         return f"ALTER TABLE {table} ALTER COLUMN {col} DROP NOT NULL"
 
     def _generate_index_sql(self, table_name: str, column_name: str) -> str:
         """Generate CREATE INDEX SQL."""
-        index_name = f"idx_{table_name}_{column_name}"
-        table = quote_identifier(table_name)
+        schema_prefix = f"{self.schema}_" if self.schema != "public" else ""
+        index_name = f"idx_{schema_prefix}{table_name}_{column_name}"
+        table = self._qualified_table(table_name)
         col = quote_identifier(column_name)
         return f"CREATE INDEX IF NOT EXISTS {index_name} ON {table}({col})"
 
@@ -658,6 +666,7 @@ def auto_migrate(
     db_manager: DatabaseBackend,
     entities: list[EntitySpec],
     record_history: bool = True,
+    schema: str = "public",
 ) -> MigrationPlan:
     """
     Automatically migrate database to match entity specifications.
@@ -670,6 +679,7 @@ def auto_migrate(
         db_manager: Database manager instance (PostgresBackend)
         entities: List of entity specifications
         record_history: Whether to record migration history
+        schema: PostgreSQL schema to operate on (default: "public")
 
     Returns:
         The executed migration plan
@@ -677,7 +687,7 @@ def auto_migrate(
     with db_manager.connection() as conn:
         conn.execute("SELECT pg_advisory_lock(%s)", (_MIGRATION_LOCK_ID,))
         try:
-            planner = MigrationPlanner(db_manager)
+            planner = MigrationPlanner(db_manager, schema=schema)
             plan = planner.plan_migrations(entities)
 
             if plan.is_empty:
@@ -699,6 +709,7 @@ def auto_migrate(
 def plan_migrations(
     db_manager: DatabaseBackend,
     entities: list[EntitySpec],
+    schema: str = "public",
 ) -> MigrationPlan:
     """
     Plan migrations without executing them.
@@ -708,9 +719,10 @@ def plan_migrations(
     Args:
         db_manager: Database manager instance (PostgresBackend)
         entities: List of entity specifications
+        schema: PostgreSQL schema to operate on (default: "public")
 
     Returns:
         Migration plan
     """
-    planner = MigrationPlanner(db_manager)
+    planner = MigrationPlanner(db_manager, schema=schema)
     return planner.plan_migrations(entities)

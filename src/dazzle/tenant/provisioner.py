@@ -38,11 +38,13 @@ class TenantProvisioner:
         return psycopg.connect(self._db_url, row_factory=dict_row)
 
     def provision(self, schema_name: str) -> None:
-        """Create schema and all entity tables within it.
+        """Create schema and run full auto_migrate within it.
 
-        Uses fully-qualified table names (schema.table) — no SET search_path.
+        Creates the PostgreSQL schema, then delegates to auto_migrate to
+        generate complete table definitions matching the AppSpec entities.
         Identifiers are composed via psycopg.sql.Identifier (never string-formatted).
         """
+        # Step 1: Create the schema
         with self._connect() as conn:
             with conn.cursor() as cur:
                 _exec_composed(
@@ -51,22 +53,28 @@ class TenantProvisioner:
                         pgsql.Identifier(schema_name)
                     ),
                 )
-                for entity in self._appspec.domain.entities:
-                    _exec_composed(
-                        cur,
-                        pgsql.SQL(
-                            "CREATE TABLE IF NOT EXISTS {}.{}"
-                            " (id UUID PRIMARY KEY DEFAULT gen_random_uuid())"
-                        ).format(
-                            pgsql.Identifier(schema_name),
-                            pgsql.Identifier(entity.name),
-                        ),
-                    )
             conn.commit()
+
+        # Step 2: Run auto_migrate to create full table definitions
+        from dazzle_back.converters.entity_converter import convert_entities
+        from dazzle_back.runtime.migrations import auto_migrate
+        from dazzle_back.runtime.pg_backend import PostgresBackend
+
+        db_manager = PostgresBackend(self._db_url)
+        entities = convert_entities(self._appspec.domain.entities)
+        plan = auto_migrate(
+            db_manager,
+            entities,
+            record_history=False,
+            schema=schema_name,
+        )
+
+        table_count = sum(1 for s in plan.steps if s.action == "create_table")
         logger.info(
-            "Provisioned schema %s with %d tables",
+            "Provisioned schema %s — %d tables created, %d total migration steps",
             schema_name,
-            len(self._appspec.domain.entities),
+            table_count,
+            len(plan.steps),
         )
 
     def schema_exists(self, schema_name: str) -> bool:

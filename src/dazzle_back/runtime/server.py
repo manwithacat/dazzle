@@ -428,6 +428,42 @@ class DazzleBackendApp:
 
         register_exception_handlers(self._app)
 
+    def _migrate_tenant_schemas(self) -> None:
+        """Apply auto_migrate to each active tenant schema (#561)."""
+        import logging
+
+        logger = logging.getLogger(__name__)
+        assert self._database_url is not None
+
+        try:
+            from dazzle.tenant.registry import TenantRegistry
+
+            registry = TenantRegistry(self._database_url)
+            registry.ensure_table()
+            tenants = registry.list()
+        except Exception as exc:
+            logger.warning("Could not list tenants for schema migration: %s", exc)
+            return
+
+        for tenant in tenants:
+            if tenant.status != "active":
+                continue
+            schema_name = tenant.schema_name
+            if not schema_name:
+                continue
+            try:
+                plan = auto_migrate(
+                    self._db_manager,
+                    self._entities,
+                    record_history=False,
+                    schema=schema_name,
+                )
+                if not plan.is_empty:
+                    safe_count = len(plan.safe_steps)
+                    logger.info("Migrated tenant schema %s: %d steps", schema_name, safe_count)
+            except Exception as exc:
+                logger.warning("Failed to migrate tenant schema %s: %s", schema_name, exc)
+
     def _setup_models(self) -> None:
         """Generate Pydantic models and create/update schemas from the spec."""
         self._models = generate_all_entity_models(self._entities)
@@ -455,6 +491,10 @@ class DazzleBackendApp:
             self._entities,
             record_history=True,
         )
+
+        # Migrate tenant schemas when using schema-per-tenant isolation (#561)
+        if self._tenant_config and self._tenant_config.isolation == "schema":
+            self._migrate_tenant_schemas()
 
         # Open connection pool and register lifecycle events (#438)
         pool_min = int(os.environ.get("DAZZLE_DB_POOL_MIN", "2"))
