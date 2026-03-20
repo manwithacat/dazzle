@@ -280,6 +280,28 @@ class WorkspaceRegionContext:
     surface_empty_message: str = ""
 
 
+def _resolve_display_name(value: Any) -> str:
+    """Resolve a field value to a display string.
+
+    FK relations are dicts with an optional ``__display__`` key.
+    Falls back to ``name``, ``title``, ``code``, ``label``, then ``id``.
+    Scalar values are simply stringified.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, dict):
+        for key in ("__display__", "name", "title", "code", "label", "id"):
+            v = value.get(key)
+            if v is not None:
+                return str(v)
+        # Last resort: first string value in the dict
+        for v in value.values():
+            if isinstance(v, str) and v:
+                return v
+        return str(value.get("id", ""))
+    return str(value)
+
+
 def _render_csv_response(
     items: list[dict[str, Any]],
     columns: list[dict[str, Any]],
@@ -640,15 +662,15 @@ async def _workspace_region_handler(
         # Collect unique column values and build pivot
         col_set: set[str] = set()
         for item in items:
-            cv = str(item.get(hm_cols_field, ""))
+            cv = _resolve_display_name(item.get(hm_cols_field, ""))
             if cv:
                 col_set.add(cv)
         heatmap_col_values = sorted(col_set)
         # Group by row → column → value
         row_map: dict[str, dict[str, float]] = {}
         for item in items:
-            rv = str(item.get(hm_rows_field, ""))
-            cv = str(item.get(hm_cols_field, ""))
+            rv = _resolve_display_name(item.get(hm_rows_field, ""))
+            cv = _resolve_display_name(item.get(hm_cols_field, ""))
             val = float(item.get(hm_value_field, 0) or 0)
             if rv not in row_map:
                 row_map[rv] = {}
