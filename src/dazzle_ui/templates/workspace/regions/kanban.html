@@ -75,7 +75,7 @@
     </div>
     {% endif %}
     {% else %}
-    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    {% include "fragments/empty_state.html" %}
     {% endif %}
   </div>
 </div>
