@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OR conditions in scope rules now compile to SQL OR (previously post-fetch filtered)
 
 ### Added
+- `param` DSL construct for runtime-configurable parameters with tenant-scoped cascade (#572)
+- `param("key")` reference syntax in workspace region constructs (heatmap thresholds)
+- `_dazzle_params` table for storing per-scope parameter overrides
+- `param list/get/validate` MCP operations and CLI commands
+- Startup validation of stored param overrides against DSL declarations
 - `dazzle e2e journey` — persona-driven E2E testing against live deployments (#557)
 - Two-phase execution: deterministic workspace exploration + LLM story verification
 - Cross-persona pattern analysis with structured HTML reports

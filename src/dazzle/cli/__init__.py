@@ -174,6 +174,7 @@ from dazzle.cli.migrate import migrate_app  # noqa: E402
 from dazzle.cli.mock import mock_app  # noqa: E402
 from dazzle.cli.nightly import nightly_app  # noqa: E402
 from dazzle.cli.overrides import overrides_app  # noqa: E402
+from dazzle.cli.param import param_app  # noqa: E402
 from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
 from dazzle.cli.process_cli import process_app  # noqa: E402
@@ -226,6 +227,7 @@ app.add_typer(rhythm_app, name="rhythm")
 app.add_typer(sentinel_app, name="sentinel")
 app.add_typer(test_design_app, name="test-design")
 app.add_typer(overrides_app, name="overrides")
+app.add_typer(param_app, name="param")
 
 
 # =============================================================================

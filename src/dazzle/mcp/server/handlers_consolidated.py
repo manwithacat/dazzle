@@ -1032,6 +1032,21 @@ handle_llm: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# Param Handler
+# =============================================================================
+
+_MOD_PARAM = "dazzle.mcp.server.handlers.param"
+
+handle_param: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "param",
+    {
+        "list": f"{_MOD_PARAM}:param_list_handler",
+        "get": f"{_MOD_PARAM}:param_get_handler",
+    },
+)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1062,6 +1077,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "sentinel": handle_sentinel,
     "test_intelligence": handle_test_intelligence,
     "llm": handle_llm,
+    "param": handle_param,
 }
 
 

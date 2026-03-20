@@ -1288,6 +1288,33 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Param (runtime parameter inspection)
+        # =====================================================================
+        Tool(
+            name="param",
+            description=(
+                "Query runtime parameter declarations. Operations: "
+                "list (all declared params with defaults), "
+                "get (specific param by key with type, constraints, scope)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["list", "get"],
+                        "description": "Operation to perform",
+                    },
+                    "key": {
+                        "type": "string",
+                        "description": "Parameter key (for 'get' operation)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 
