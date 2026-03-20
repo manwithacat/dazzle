@@ -15,6 +15,7 @@ from dazzle_back.runtime._fastapi_compat import (
 )
 
 from .crypto import cookie_secure, verify_password
+from .events import emit_user_logged_in, emit_user_password_changed, emit_user_registered
 from .models import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
@@ -143,6 +144,8 @@ async def _login(deps: _AuthDeps, credentials: LoginRequest, request: FastAPIReq
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 
+    await emit_user_logged_in(user, session_id=session.id)
+
     return response
 
 
@@ -225,6 +228,8 @@ async def _register(deps: _AuthDeps, data: RegisterRequest, request: FastAPIRequ
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
 
+    await emit_user_registered(user, session_id=session.id)
+
     return response
 
 
@@ -287,6 +292,8 @@ async def _change_password(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
+
+    await emit_user_password_changed(user)
 
     response = JSONResponse(content={"message": "Password changed successfully"})
 

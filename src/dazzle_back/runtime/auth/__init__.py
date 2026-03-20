@@ -11,6 +11,14 @@ from .dependencies import (
     create_deny_dependency,
     create_optional_auth_dependency,
 )
+from .events import (
+    AUTH_USER_LOGGED_IN,
+    AUTH_USER_PASSWORD_CHANGED,
+    AUTH_USER_REGISTERED,
+    emit_user_logged_in,
+    emit_user_password_changed,
+    emit_user_registered,
+)
 from .middleware import AuthMiddleware
 from .models import (
     AuthContext,
@@ -33,6 +41,9 @@ from .routes_jwt import create_jwt_auth_routes
 from .store import AuthStore, TwoFactorMixin
 
 __all__ = [
+    "AUTH_USER_LOGGED_IN",
+    "AUTH_USER_PASSWORD_CHANGED",
+    "AUTH_USER_REGISTERED",
     "AuthContext",
     "AuthMiddleware",
     "AuthStore",
@@ -55,6 +66,9 @@ __all__ = [
     "create_deny_dependency",
     "create_jwt_auth_routes",
     "create_optional_auth_dependency",
+    "emit_user_logged_in",
+    "emit_user_password_changed",
+    "emit_user_registered",
     "hash_password",
     "verify_password",
 ]

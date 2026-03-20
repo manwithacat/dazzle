@@ -14,6 +14,7 @@ from dazzle_back.runtime._fastapi_compat import (
 )
 
 from .crypto import cookie_secure
+from .events import emit_user_logged_in
 from .models import TwoFactorSetupRequest, TwoFactorVerifyRequest, UserRecord
 from .store import AuthStore
 
@@ -254,6 +255,8 @@ async def _verify_2fa(
         samesite="lax",
         max_age=deps.session_expires_days * 24 * 60 * 60,
     )
+
+    await emit_user_logged_in(user, session_id=session.id, method="2fa")
 
     return response
 
