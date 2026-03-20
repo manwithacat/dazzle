@@ -150,6 +150,27 @@ COMMAND_CENTER_SPANS: list[str] = [
 # =============================================================================
 
 
+def _resolve_thresholds(raw: object) -> list[float]:
+    """Extract thresholds from a literal list or ParamRef (use default).
+
+    ParamRef objects carry the DSL default — extract it at context-build time
+    so that RegionContext passes Pydantic validation. Full tenant-scoped
+    resolution happens later in the rendering handler (#572, #575).
+    """
+    if raw is None:
+        return []
+    # ParamRef — use the declared default
+    if hasattr(raw, "default") and hasattr(raw, "key"):
+        default = raw.default
+        if isinstance(default, list):
+            return [float(v) for v in default]
+        return []
+    # Already a list of floats
+    if isinstance(raw, list):
+        return [float(v) for v in raw]
+    return []
+
+
 def build_workspace_context(
     workspace: Any,
     app_spec: Any | None = None,
@@ -284,7 +305,7 @@ def build_workspace_context(
                 heatmap_rows=getattr(region, "heatmap_rows", None) or "",
                 heatmap_columns=getattr(region, "heatmap_columns", None) or "",
                 heatmap_value=getattr(region, "heatmap_value", None) or "",
-                heatmap_thresholds=list(getattr(region, "heatmap_thresholds", None) or []),
+                heatmap_thresholds=_resolve_thresholds(getattr(region, "heatmap_thresholds", None)),
                 progress_stages=list(getattr(region, "progress_stages", None) or []),
                 progress_complete_at=getattr(region, "progress_complete_at", None) or "",
                 date_field=getattr(region, "date_field", None) or "",

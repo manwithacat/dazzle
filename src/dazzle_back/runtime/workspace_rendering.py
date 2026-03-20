@@ -751,21 +751,21 @@ async def _workspace_region_handler(
     # Heatmap: pivot flat items into a matrix structure (v0.44.0)
     heatmap_matrix: list[dict[str, Any]] = []
     heatmap_col_values: list[str] = []
-    # Resolve heatmap_thresholds — may be a ParamRef (#572)
-    _raw_thresholds = getattr(ctx.ctx_region, "heatmap_thresholds", None)
-    if hasattr(_raw_thresholds, "key"):  # ParamRef
+    # Resolve heatmap_thresholds — check IR for ParamRef (#572, #575)
+    _ir_thresholds = getattr(ctx.ir_region, "heatmap_thresholds", None)
+    if hasattr(_ir_thresholds, "key"):  # ParamRef in IR
         from dazzle_back.runtime.param_store import resolve_value
 
         heatmap_thresholds: list[float] = list(
             resolve_value(
-                _raw_thresholds,
+                _ir_thresholds,
                 getattr(ctx, "param_resolver", None),
                 tenant_id=getattr(ctx, "tenant_id", None),
             )
             or []
         )
     else:
-        heatmap_thresholds = list(_raw_thresholds or [])
+        heatmap_thresholds = list(getattr(ctx.ctx_region, "heatmap_thresholds", None) or [])
     if ctx.ctx_region.display == "HEATMAP" and items:
         hm_rows_field = getattr(ctx.ctx_region, "heatmap_rows", "") or ""
         hm_cols_field = getattr(ctx.ctx_region, "heatmap_columns", "") or ""
