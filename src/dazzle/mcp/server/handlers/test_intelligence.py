@@ -1,11 +1,12 @@
 """Test intelligence handlers — query persisted test history.
 
-Provides 5 operations:
+Provides 6 operations:
 - summary: recent runs overview
 - failures: failure patterns, flaky tests, persistent failures
 - regression: tests that regressed (pass→fail) between last two runs
 - coverage: trend across recent runs
 - context: single-call AI-ready snapshot combining all above
+- journey: most recent E2E journey analysis
 """
 
 from __future__ import annotations
@@ -191,3 +192,20 @@ def test_context_handler(project_root: Path, args: dict[str, Any]) -> str:
         context["flaky_tests"] = failures["flaky_tests"][:10]
 
     return json.dumps(context, indent=2)
+
+
+@wrap_handler_errors
+def test_journey_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Return the most recent journey analysis.json."""
+    sessions_dir = project_root / ".dazzle" / "test_sessions"
+
+    if not sessions_dir.exists():
+        return json.dumps({"error": "No journey sessions found. Run 'dazzle e2e journey' first."})
+
+    # Find most recent analysis.json
+    analysis_files = sorted(sessions_dir.glob("*/analysis.json"))
+    if not analysis_files:
+        return json.dumps({"error": "No journey sessions found. Run 'dazzle e2e journey' first."})
+
+    latest = analysis_files[-1]
+    return latest.read_text(encoding="utf-8")

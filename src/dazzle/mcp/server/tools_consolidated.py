@@ -1157,7 +1157,8 @@ def get_consolidated_tools() -> list[Tool]:
                 "failures (failure patterns, flaky tests, persistent failures), "
                 "regression (tests that went pass→fail between last two runs), "
                 "coverage (success rate trend across recent runs), "
-                "context (single-call AI-ready snapshot combining all above). "
+                "context (single-call AI-ready snapshot combining all above), "
+                "journey (most recent E2E journey analysis). "
                 "Results are automatically persisted by dsl_test run_all."
             ),
             inputSchema={
@@ -1171,6 +1172,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "regression",
                             "coverage",
                             "context",
+                            "journey",
                         ],
                         "description": "Operation to perform",
                     },

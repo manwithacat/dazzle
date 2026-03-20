@@ -993,6 +993,7 @@ handle_test_intelligence: Callable[[dict[str, Any]], str] = _make_project_handle
         "regression": f"{_MOD_TI}:test_regression_handler",
         "coverage": f"{_MOD_TI}:test_coverage_handler",
         "context": f"{_MOD_TI}:test_context_handler",
+        "journey": f"{_MOD_TI}:test_journey_handler",
     },
 )
 
