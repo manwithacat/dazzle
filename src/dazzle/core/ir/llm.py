@@ -312,7 +312,7 @@ AI_JOB_FIELDS: list[tuple[str, str, list[str], str | None]] = [
     ("provider", "str(100)", ["required"], None),
     ("tokens_in", "int", [], "0"),
     ("tokens_out", "int", [], "0"),
-    ("cost_usd", "decimal(12,6)", [], None),
+    ("cost_usd", "money(USD)", [], None),
     ("duration_ms", "int", [], None),
     ("status", "enum[pending,running,completed,failed]", ["required"], "pending"),
     ("entity_type", "str(200)", [], None),

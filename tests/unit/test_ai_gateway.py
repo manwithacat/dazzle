@@ -55,7 +55,7 @@ class TestAIJobFields:
 
     def test_has_cost_usd(self) -> None:
         cost_field = next(f for f in AI_JOB_FIELDS if f[0] == "cost_usd")
-        assert cost_field[1] == "decimal(12,6)"
+        assert cost_field[1] == "money(USD)"
 
     def test_has_status_enum(self) -> None:
         status_field = next(f for f in AI_JOB_FIELDS if f[0] == "status")
@@ -95,9 +95,8 @@ class TestBuildAIJobEntity:
     def test_cost_usd_field(self) -> None:
         entity = _build_ai_job_entity()
         cost_field = next(f for f in entity.fields if f.name == "cost_usd")
-        assert cost_field.type.kind.value == "decimal"
-        assert cost_field.type.precision == 12
-        assert cost_field.type.scale == 6
+        assert cost_field.type.kind.value == "money"
+        assert cost_field.type.currency_code == "USD"
 
     def test_status_field(self) -> None:
         entity = _build_ai_job_entity()

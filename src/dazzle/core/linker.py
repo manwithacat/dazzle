@@ -259,6 +259,9 @@ def _parse_field_type(type_str: str) -> FieldType:
     if type_str.startswith("enum[") and type_str.endswith("]"):
         values = [v.strip() for v in type_str[5:-1].split(",")]
         return FieldType(kind=FieldTypeKind.ENUM, enum_values=values)
+    if type_str.startswith("money(") and type_str.endswith(")"):
+        currency = type_str[6:-1].strip()
+        return FieldType(kind=FieldTypeKind.MONEY, currency_code=currency)
     raise ValueError(f"Unknown field type: {type_str}")
 
 
