@@ -214,6 +214,50 @@ def _extract_cedar_row_filters(
     return filters
 
 
+def _build_fk_path_subquery(
+    field: str,
+    resolved_value: Any,
+    ref_targets: dict[str, str],
+) -> tuple[str, str, list[Any]] | None:
+    """Build a subquery for a left-side dotted path like ``manuscript.student``.
+
+    Given field="manuscript.student", resolves:
+    - ``manuscript`` → FK field ``manuscript_id`` on current entity
+    - target entity ``Manuscript`` (from ref_targets["manuscript_id"])
+    - ``student`` → column ``student_id`` on target entity (with _id suffix inferred)
+
+    Returns (fk_field, subquery_sql, params) or None if the path can't be resolved.
+    """
+    from dazzle_back.runtime.query_builder import quote_identifier
+
+    parts = field.split(".", 1)
+    if len(parts) != 2:
+        return None
+
+    relation_name, target_field = parts
+
+    # Resolve relation name to FK field on current entity.
+    # Convention: relation "manuscript" → FK field "manuscript_id"
+    fk_candidates = [f"{relation_name}_id", relation_name]
+    target_entity = None
+    fk_field = None
+    for candidate in fk_candidates:
+        if candidate in ref_targets:
+            fk_field = candidate
+            target_entity = ref_targets[candidate]
+            break
+
+    if not target_entity or not fk_field:
+        return None
+
+    target_table = quote_identifier(target_entity)
+    # The target field may or may not have _id suffix — try both
+    target_col = quote_identifier(target_field)
+
+    subquery_sql = f'SELECT "id" FROM {target_table} WHERE {target_col} = %s'  # nosemgrep
+    return fk_field, subquery_sql, [resolved_value]
+
+
 def _build_via_subquery(
     *,
     junction_entity: str,
@@ -319,6 +363,7 @@ def _extract_condition_filters(
     filters: dict[str, Any],
     _logger: Any,
     auth_context: Any = None,
+    ref_targets: dict[str, str] | None = None,
 ) -> None:
     """Recursively extract SQL filters from a condition tree.
 
@@ -334,8 +379,21 @@ def _extract_condition_filters(
     user's built-in fields and preferences.  If the attribute cannot be
     resolved the filter is set to ``__RBAC_DENY__`` to ensure no rows are
     returned — secure by default (#526).
+
+    Left-side dotted paths (e.g. ``manuscript.student``) are resolved via
+    subquery JOINs when ``ref_targets`` provides FK→entity mapping (#556).
     """
     kind = getattr(condition, "kind", "")
+
+    # Helper: assign a filter, using subquery if field is a dotted FK path (#556)
+    def _set_filter(fld: str, val: Any) -> None:
+        if "." in fld and ref_targets:
+            result = _build_fk_path_subquery(fld, val, ref_targets)
+            if result:
+                fk_field, sql, params = result
+                filters[f"{fk_field}__in_subquery"] = (sql, params)
+                return
+        filters[fld] = val
 
     # ---- AccessConditionSpec path (has explicit .kind) --------------------
     if kind == "comparison":
@@ -351,7 +409,7 @@ def _extract_condition_filters(
             # Prefer DSL User entity ID over auth user ID so comparisons
             # against ref User fields work correctly (#546).
             resolved = _resolve_user_attribute("entity_id", auth_context)
-            filters[field] = user_id if resolved == "__RBAC_DENY__" else resolved
+            _set_filter(field, user_id if resolved == "__RBAC_DENY__" else resolved)
         elif (
             field
             and isinstance(value, str)
@@ -359,10 +417,10 @@ def _extract_condition_filters(
             and op_val in ("=", "eq", "equals")
         ):
             attr_name = value[len("current_user.") :]
-            filters[field] = _resolve_user_attribute(attr_name, auth_context)
+            _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
         elif field and isinstance(value, str | int | float | bool) and value != "current_user":
             if op_val in ("=", "eq", "equals"):
-                filters[field] = value
+                _set_filter(field, value)
             elif op_val in ("!=", "ne", "not_equals"):
                 filters[f"{field}__ne"] = value
             elif op_val in (">", "gt"):
@@ -386,9 +444,13 @@ def _extract_condition_filters(
             left = getattr(condition, "logical_left", None)
             right = getattr(condition, "logical_right", None)
             if left:
-                _extract_condition_filters(left, user_id, filters, _logger, auth_context)
+                _extract_condition_filters(
+                    left, user_id, filters, _logger, auth_context, ref_targets
+                )
             if right:
-                _extract_condition_filters(right, user_id, filters, _logger, auth_context)
+                _extract_condition_filters(
+                    right, user_id, filters, _logger, auth_context, ref_targets
+                )
         return
 
     if kind == "via_check":
@@ -425,7 +487,7 @@ def _extract_condition_filters(
             # Prefer DSL User entity ID over auth user ID so comparisons
             # against ref User fields work correctly (#546).
             resolved = _resolve_user_attribute("entity_id", auth_context)
-            filters[field] = user_id if resolved == "__RBAC_DENY__" else resolved
+            _set_filter(field, user_id if resolved == "__RBAC_DENY__" else resolved)
         elif (
             field
             and isinstance(raw_value, str)
@@ -433,14 +495,14 @@ def _extract_condition_filters(
             and op_val in ("=", "eq", "equals")
         ):
             attr_name = raw_value[len("current_user.") :]
-            filters[field] = _resolve_user_attribute(attr_name, auth_context)
+            _set_filter(field, _resolve_user_attribute(attr_name, auth_context))
         elif (
             field
             and isinstance(raw_value, str | int | float | bool)
             and raw_value != "current_user"
         ):
             if op_val in ("=", "eq", "equals"):
-                filters[field] = raw_value
+                _set_filter(field, raw_value)
             elif op_val in ("!=", "ne", "not_equals"):
                 filters[f"{field}__ne"] = raw_value
             elif op_val in (">", "gt"):
@@ -465,9 +527,13 @@ def _extract_condition_filters(
             left = getattr(condition, "left", None)
             right = getattr(condition, "right", None)
             if left:
-                _extract_condition_filters(left, user_id, filters, _logger, auth_context)
+                _extract_condition_filters(
+                    left, user_id, filters, _logger, auth_context, ref_targets
+                )
             if right:
-                _extract_condition_filters(right, user_id, filters, _logger, auth_context)
+                _extract_condition_filters(
+                    right, user_id, filters, _logger, auth_context, ref_targets
+                )
         # OR and other logical operators require post-fetch filtering
         # which is handled by the visibility system already
         return
@@ -927,6 +993,7 @@ def create_list_handler(
     audit_logger: Any | None = None,
     entity_name: str = "Item",
     search_fields: list[str] | None = None,
+    ref_targets: dict[str, str] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -999,6 +1066,7 @@ def create_list_handler(
                 entity_name=entity_name,
                 user=auth_context.user if auth_context and auth_context.is_authenticated else None,
                 search_fields=search_fields,
+                ref_targets=ref_targets,
             )
 
         _auth_handler.__annotations__ = {
@@ -1039,6 +1107,7 @@ def create_list_handler(
             audit_logger=audit_logger,
             entity_name=entity_name,
             search_fields=search_fields,
+            ref_targets=ref_targets,
         )
 
     _noauth_handler.__annotations__ = {
@@ -1059,6 +1128,7 @@ def _resolve_scope_filters(
     user_roles: set[str],
     user_id: str,
     auth_context: Any | None = None,
+    ref_targets: dict[str, str] | None = None,
 ) -> dict[str, Any] | None:
     """Resolve scope rules to SQL filters for the user's matched role.
 
@@ -1092,7 +1162,12 @@ def _resolve_scope_filters(
             # Extract SQL filters from the condition
             filters: dict[str, Any] = {}
             _extract_condition_filters(
-                condition, user_id, filters, logging.getLogger(__name__), auth_context
+                condition,
+                user_id,
+                filters,
+                logging.getLogger(__name__),
+                auth_context,
+                ref_targets,
             )
             return filters
 
@@ -1141,6 +1216,7 @@ async def _list_handler_body(
     entity_name: str = "Item",
     user: Any | None = None,
     search_fields: list[str] | None = None,
+    ref_targets: dict[str, str] | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -1190,7 +1266,12 @@ async def _list_handler_body(
         _has_scopes = bool(getattr(cedar_access_spec, "scopes", None))
         if _has_scopes:
             scope_result = _resolve_scope_filters(
-                cedar_access_spec, "list", _scope_user_roles, user_id, auth_context
+                cedar_access_spec,
+                "list",
+                _scope_user_roles,
+                user_id,
+                auth_context,
+                ref_targets,
             )
             if scope_result is None:
                 # No scope rule matched this role — default-deny at scope layer
@@ -1725,6 +1806,7 @@ class RouteGenerator:
         entity_auto_includes: dict[str, list[str]] | None = None,
         entity_htmx_meta: dict[str, dict[str, Any]] | None = None,
         entity_audit_configs: dict[str, Any] | None = None,
+        entity_ref_targets: dict[str, dict[str, str]] | None = None,
     ):
         """
         Initialize the route generator.
@@ -1744,6 +1826,8 @@ class RouteGenerator:
             entity_auto_includes: Optional dict mapping entity names to auto-eager-loaded relations
             entity_htmx_meta: Optional dict mapping entity names to HTMX rendering metadata
             entity_audit_configs: Optional dict of entity_name -> AuditConfig for per-entity filtering
+            entity_ref_targets: Optional dict mapping entity_name -> {fk_field: target_entity} for
+                dotted-path scope resolution (#556)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -1763,6 +1847,7 @@ class RouteGenerator:
         self.entity_auto_includes = entity_auto_includes or {}
         self.entity_htmx_meta = entity_htmx_meta or {}
         self.entity_audit_configs = entity_audit_configs or {}
+        self.entity_ref_targets = entity_ref_targets or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -1903,6 +1988,7 @@ class RouteGenerator:
                 audit_logger=_audit_for("list"),
                 entity_name=entity_name or "Item",
                 search_fields=_search_fields,
+                ref_targets=self.entity_ref_targets.get(entity_name or ""),
             )
             self._add_route(endpoint, handler, response_model=None)
 

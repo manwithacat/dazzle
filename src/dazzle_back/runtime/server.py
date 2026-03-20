@@ -130,6 +130,8 @@ class ServerConfig:
     entity_search_fields: dict[str, list[str]] = field(default_factory=dict)
     # Auto-eager-load ref relations (v0.26.0) — entity_name -> [relation_names]
     entity_auto_includes: dict[str, list[str]] = field(default_factory=dict)
+    # FK field → target entity mapping for dotted-path scope resolution (#556)
+    entity_ref_targets: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -266,6 +268,8 @@ class DazzleBackendApp:
         self._entity_search_fields: dict[str, list[str]] = config.entity_search_fields
         # Auto-eager-load ref relations (v0.26.0)
         self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
+        # FK→entity mapping for dotted-path scope resolution (#556)
+        self._entity_ref_targets: dict[str, dict[str, str]] = config.entity_ref_targets
         # Keep full config for subsystem context
         self._config: ServerConfig = config
         # Subsystem plugin infrastructure (v0.42.0)
@@ -699,6 +703,7 @@ class DazzleBackendApp:
             entity_auto_includes=self._entity_auto_includes,
             entity_htmx_meta=entity_htmx_meta,
             entity_audit_configs=entity_audit_configs,
+            entity_ref_targets=self._entity_ref_targets,
         )
         router = route_generator.generate_all_routes(
             self._endpoint_specs,

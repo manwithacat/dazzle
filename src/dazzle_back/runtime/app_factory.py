@@ -332,6 +332,18 @@ def build_server_config(
         if rel_names:
             entity_auto_includes[entity.name] = rel_names
 
+    # Build FK field → target entity mapping for dotted-path scope resolution (#556).
+    # Maps entity_name → {fk_field: target_entity_name} e.g. {"manuscript_id": "Manuscript"}
+    entity_ref_targets: dict[str, dict[str, str]] = {}
+    for entity in appspec.domain.entities:
+        refs = {
+            f.name: f.type.ref_entity
+            for f in entity.fields
+            if f.type.kind in ("ref", "belongs_to") and f.type.ref_entity
+        }
+        if refs:
+            entity_ref_targets[entity.name] = refs
+
     # Extract entity status fields for process trigger status transition detection
     entity_status_fields: dict[str, str] = {}
     if appspec.domain:
@@ -383,6 +395,7 @@ def build_server_config(
         entity_list_projections=entity_list_projections,
         entity_search_fields=entity_search_fields,
         entity_auto_includes=entity_auto_includes,
+        entity_ref_targets=entity_ref_targets,
         process_specs=all_processes,
         schedule_specs=list(appspec.schedules),
         entity_status_fields=entity_status_fields,
