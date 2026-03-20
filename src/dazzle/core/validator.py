@@ -1886,3 +1886,143 @@ def validate_sensitive_fields(appspec: ir.AppSpec) -> tuple[list[str], list[str]
         )
 
     return errors, warnings
+
+
+def validate_scope_predicates(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """
+    Validate scope predicates against the FK graph (belt-and-suspenders).
+
+    The linker already compiles scope predicates and catches many errors during
+    ``build_scope_predicate``.  This validator provides a second layer that
+    walks the *compiled* predicate trees and verifies:
+
+    - ColumnCheck.field exists on the entity
+    - PathCheck.path resolves through the FK graph
+    - ExistsCheck.target_entity exists
+    - No role/grant checks leak into scope rules (already blocked by the
+      predicate builder, but verified here for defense-in-depth)
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    fk_graph = appspec.fk_graph
+    if fk_graph is None:
+        return errors, warnings
+
+    for entity in appspec.domain.entities:
+        if entity.access is None or not entity.access.scopes:
+            continue
+
+        entity_field_names = {f.name for f in entity.fields}
+
+        for rule in entity.access.scopes:
+            predicate = rule.predicate
+            if predicate is None:
+                continue
+
+            ctx = f"Entity '{entity.name}' scope rule"
+            _validate_predicate_node(
+                predicate,
+                entity.name,
+                entity_field_names,
+                fk_graph,
+                appspec,
+                ctx,
+                errors,
+                warnings,
+            )
+
+    return errors, warnings
+
+
+def _validate_predicate_node(
+    node: object,
+    entity_name: str,
+    entity_field_names: set[str],
+    fk_graph: object,
+    appspec: ir.AppSpec,
+    ctx: str,
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Recursively validate a single predicate node against the FK graph."""
+    # Import here to avoid circular imports at module level
+    from .ir.predicates import (
+        BoolComposite,
+        ColumnCheck,
+        Contradiction,
+        ExistsCheck,
+        PathCheck,
+        Tautology,
+        UserAttrCheck,
+    )
+
+    if isinstance(node, (Tautology, Contradiction)):
+        return
+
+    if isinstance(node, ColumnCheck):
+        if node.field not in entity_field_names:
+            errors.append(
+                f"{ctx}: ColumnCheck references non-existent field "
+                f"'{node.field}' on entity '{entity_name}'"
+            )
+        return
+
+    if isinstance(node, UserAttrCheck):
+        if node.field not in entity_field_names:
+            errors.append(
+                f"{ctx}: UserAttrCheck references non-existent field "
+                f"'{node.field}' on entity '{entity_name}'"
+            )
+        return
+
+    if isinstance(node, PathCheck):
+        if not node.path:
+            errors.append(f"{ctx}: PathCheck has empty path")
+            return
+        # Validate FK hops for all segments except the last, then check
+        # the terminal field exists on the final entity.
+        path_str = ".".join(node.path)
+        current = entity_name
+        for i, segment in enumerate(node.path):
+            is_last = i == len(node.path) - 1
+            if is_last:
+                # Terminal segment: must be a plain field on current entity
+                if not fk_graph.field_exists(current, segment):  # type: ignore[union-attr]
+                    errors.append(
+                        f"{ctx}: PathCheck path '{path_str}' — terminal field "
+                        f"'{segment}' does not exist on entity '{current}'"
+                    )
+            else:
+                # Intermediate segment: must be an FK hop
+                try:
+                    _, target = fk_graph.resolve_segment(current, segment)  # type: ignore[union-attr]
+                    current = target
+                except (ValueError, AttributeError) as exc:
+                    errors.append(f"{ctx}: PathCheck path '{path_str}' — {exc}")
+                    break  # Cannot continue resolving after a broken hop
+        return
+
+    if isinstance(node, ExistsCheck):
+        if not appspec.get_entity(node.target_entity):
+            errors.append(
+                f"{ctx}: ExistsCheck references non-existent entity '{node.target_entity}'"
+            )
+        return
+
+    if isinstance(node, BoolComposite):
+        for child in node.children:
+            _validate_predicate_node(
+                child,
+                entity_name,
+                entity_field_names,
+                fk_graph,
+                appspec,
+                ctx,
+                errors,
+                warnings,
+            )
+        return

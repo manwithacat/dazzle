@@ -12,6 +12,7 @@ from .validator import (
     validate_ledgers,
     validate_money_fields,
     validate_notifications,
+    validate_scope_predicates,
     validate_sensitive_fields,
     validate_services,
     validate_slas,
@@ -126,6 +127,11 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
     all_warnings.extend(warnings)
 
     errors, warnings = validate_sensitive_fields(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Scope predicate validation (FK path integrity)
+    errors, warnings = validate_scope_predicates(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
