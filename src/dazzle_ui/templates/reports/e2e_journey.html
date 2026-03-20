@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E2E Journey Report — {{ analysis.run_id }}</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --bg-card: #16213e;
+    --bg-card-alt: #0f3460;
+    --text: #e0e0e0;
+    --text-muted: #a0a0b0;
+    --border: #2a2a4a;
+    --pass: #2ecc71;
+    --fail: #e74c3c;
+    --partial: #f1c40f;
+    --blocked: #e67e22;
+    --dead-end: #9b59b6;
+    --scope-leak: #e74c3c;
+    --confusing: #f39c12;
+    --nav-break: #e67e22;
+    --timeout: #95a5a6;
+    --critical: #e74c3c;
+    --high: #e67e22;
+    --medium: #f1c40f;
+    --low: #3498db;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  h1, h2, h3 { color: #fff; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.4rem; margin: 1.5rem 0 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; }
+  h3 { font-size: 1.1rem; margin: 1rem 0 0.5rem; }
+  .header { margin-bottom: 2rem; }
+  .header .meta { color: var(--text-muted); font-size: 0.9rem; }
+
+  /* Summary stats */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+  }
+  .stat-card .value { font-size: 2rem; font-weight: 700; color: #fff; }
+  .stat-card .label { font-size: 0.85rem; color: var(--text-muted); }
+
+  /* Verdict badges */
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .badge-pass { background: var(--pass); color: #000; }
+  .badge-fail { background: var(--fail); color: #fff; }
+  .badge-partial { background: var(--partial); color: #000; }
+  .badge-blocked { background: var(--blocked); color: #fff; }
+  .badge-dead_end, .badge-dead-end { background: var(--dead-end); color: #fff; }
+  .badge-scope_leak, .badge-scope-leak { background: var(--scope-leak); color: #fff; }
+  .badge-confusing { background: var(--confusing); color: #000; }
+  .badge-nav_break, .badge-nav-break { background: var(--nav-break); color: #fff; }
+  .badge-timeout { background: var(--timeout); color: #fff; }
+
+  /* Severity badges */
+  .severity-critical { background: var(--critical); color: #fff; }
+  .severity-high { background: var(--high); color: #fff; }
+  .severity-medium { background: var(--medium); color: #000; }
+  .severity-low { background: var(--low); color: #fff; }
+
+  /* Verdict counts bar */
+  .verdict-counts {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin: 0.5rem 0;
+  }
+  .verdict-counts .badge { min-width: 3rem; text-align: center; }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .card-title { font-weight: 600; margin-bottom: 0.3rem; }
+  .card-id { color: var(--text-muted); font-size: 0.85rem; font-family: monospace; }
+
+  /* Details / collapsible */
+  details {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  details > summary {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1.05rem;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  details > summary::before { content: "\25b6"; font-size: 0.75rem; transition: transform 0.2s; }
+  details[open] > summary::before { transform: rotate(90deg); }
+  details > .content { padding: 0.5rem 1rem 1rem; }
+
+  /* Steps table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+  tr:hover { background: rgba(255,255,255,0.03); }
+
+  /* Lists */
+  .item-list { list-style: none; }
+  .item-list li { padding: 0.4rem 0; border-bottom: 1px solid var(--border); }
+  .item-list li:last-child { border-bottom: none; }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+  }
+
+  /* Recommendations table */
+  .rec-effort { text-transform: capitalize; }
+
+  .evidence-list { margin: 0.3rem 0 0 1.2rem; color: var(--text-muted); font-size: 0.85rem; }
+  .affected { font-size: 0.85rem; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>E2E Journey Report</h1>
+  <div class="meta">
+    Run: <strong>{{ analysis.run_id }}</strong>
+    &middot; Dazzle {{ analysis.dazzle_version }}
+    &middot; {{ analysis.deployment_url }}
+  </div>
+</div>
+
+<!-- Summary stats -->
+<div class="summary-grid">
+  <div class="stat-card">
+    <div class="value">{{ analysis.personas_analysed }}</div>
+    <div class="label">Personas Analysed</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ analysis.total_steps }}</div>
+    <div class="label">Total Steps</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ analysis.total_stories }}</div>
+    <div class="label">Total Stories</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ analysis.verdict_counts.get('pass', 0) }}</div>
+    <div class="label">Passed</div>
+  </div>
+  <div class="stat-card">
+    <div class="value">{{ analysis.verdict_counts.get('fail', 0) }}</div>
+    <div class="label">Failed</div>
+  </div>
+</div>
+
+<!-- Overall verdict counts -->
+<h2>Verdict Summary</h2>
+<div class="verdict-counts">
+  {% for verdict, count in analysis.verdict_counts.items() %}
+  <span class="badge badge-{{ verdict }}">{{ verdict }}: {{ count }}</span>
+  {% endfor %}
+</div>
+
+{% if sessions %}
+
+<!-- Per-persona sessions -->
+<h2>Persona Sessions</h2>
+{% for session in sessions %}
+<details>
+  <summary>
+    {{ session.persona }}
+    <span class="badge badge-pass">{{ session.verdict_counts.get('pass', 0) }} pass</span>
+    <span class="badge badge-fail">{{ session.verdict_counts.get('fail', 0) }} fail</span>
+    &mdash; {{ session.steps | length }} steps, {{ session.stories_covered }}/{{ session.stories_attempted }} stories
+  </summary>
+  <div class="content">
+    <div class="verdict-counts">
+      {% for verdict, count in session.verdict_counts.items() %}
+        {% if count > 0 %}
+        <span class="badge badge-{{ verdict }}">{{ verdict }}: {{ count }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Action</th>
+          <th>Target</th>
+          <th>Verdict</th>
+          <th>Observation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for step in session.steps %}
+        <tr>
+          <td>{{ step.step_number }}</td>
+          <td>{{ step.action }}</td>
+          <td>{{ step.target }}</td>
+          <td><span class="badge badge-{{ step.verdict.value }}">{{ step.verdict.value }}</span></td>
+          <td>{{ step.observation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% endfor %}
+
+{% else %}
+
+<div class="empty-state">No journey data</div>
+
+{% endif %}
+
+<!-- Cross-persona patterns -->
+{% if analysis.cross_persona_patterns %}
+<h2>Cross-Persona Patterns</h2>
+{% for pattern in analysis.cross_persona_patterns %}
+<div class="card">
+  <div class="card-id">{{ pattern.id }}</div>
+  <div class="card-title">
+    {{ pattern.title }}
+    <span class="badge severity-{{ pattern.severity }}">{{ pattern.severity }}</span>
+  </div>
+  <p>{{ pattern.description }}</p>
+  <div class="affected">Affected: {{ pattern.affected_personas | join(', ') }}</div>
+  {% if pattern.evidence %}
+  <ul class="evidence-list">
+    {% for ev in pattern.evidence %}
+    <li>{{ ev }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p style="margin-top:0.5rem;"><strong>Recommendation:</strong> {{ pattern.recommendation }}</p>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Dead ends -->
+{% if analysis.dead_ends %}
+<h2>Dead Ends</h2>
+<ul class="item-list">
+  {% for de in analysis.dead_ends %}
+  <li>
+    <span class="card-id">{{ de.id }}</span>
+    <strong>{{ de.page }}</strong> ({{ de.persona }})
+    — {{ de.description }}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- Nav breaks -->
+{% if analysis.nav_breaks %}
+<h2>Navigation Breaks</h2>
+<ul class="item-list">
+  {% for nb in analysis.nav_breaks %}
+  <li>
+    <span class="card-id">{{ nb.id }}</span>
+    {{ nb.description }}
+    <span class="affected">Affected: {{ nb.affected_personas | join(', ') }}</span>
+    {% if nb.workaround %}
+    <br><em>Workaround: {{ nb.workaround }}</em>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+<!-- Recommendations -->
+{% if analysis.recommendations %}
+<h2>Recommendations</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Priority</th>
+      <th>Title</th>
+      <th>Description</th>
+      <th>Effort</th>
+      <th>Affected Entities</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rec in analysis.recommendations %}
+    <tr>
+      <td>{{ rec.priority }}</td>
+      <td>{{ rec.title }}</td>
+      <td>{{ rec.description }}</td>
+      <td class="rec-effort">{{ rec.effort }}</td>
+      <td>{{ rec.affected_entities | join(', ') }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</body>
+</html>
