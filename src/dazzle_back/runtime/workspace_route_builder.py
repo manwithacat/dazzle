@@ -279,14 +279,68 @@ class WorkspaceRouteBuilder:
                     _sel_repo = repositories[_ctx_sel.entity]
                     _sel_display = _ctx_sel.display_field
 
+                    # Find entity spec for scope enforcement
+                    _sel_entity_spec = next(
+                        (e for e in entities if e.name == _ctx_sel.entity), None
+                    )
+                    _sel_access = (
+                        getattr(_sel_entity_spec, "access", None) if _sel_entity_spec else None
+                    )
+
                     def _make_context_options_route(
                         sel_repo: Any,
                         display: str,
+                        sel_access: Any = None,
+                        sel_auth_mw: Any = None,
+                        sel_entity_name: str = "",
+                        sel_fk_graph: Any = None,
                     ) -> Any:
                         async def context_options(request: Request) -> Any:
                             from fastapi.responses import JSONResponse
 
-                            result = await sel_repo.list(page=1, page_size=500)
+                            # SECURITY: apply scope predicates to context selector (#574)
+                            scope_filters: dict[str, Any] | None = None
+                            if sel_access and sel_auth_mw and getattr(sel_access, "scopes", None):
+                                try:
+                                    auth_ctx = sel_auth_mw.get_auth_context(request)
+                                    user_id = (
+                                        getattr(auth_ctx, "user_id", None) if auth_ctx else None
+                                    )
+                                    if user_id and auth_ctx:
+                                        from dazzle_back.runtime.route_generator import (
+                                            _normalize_role,
+                                            _resolve_scope_filters,
+                                        )
+
+                                        user_roles: set[str] = set()
+                                        user_obj = getattr(auth_ctx, "user", None)
+                                        if user_obj:
+                                            for r in getattr(user_obj, "roles", []):
+                                                rname = (
+                                                    r
+                                                    if isinstance(r, str)
+                                                    else getattr(r, "name", str(r))
+                                                )
+                                                user_roles.add(_normalize_role(rname))
+                                        scope_result = _resolve_scope_filters(
+                                            sel_access,
+                                            "list",
+                                            user_roles,
+                                            user_id,
+                                            auth_ctx,
+                                            entity_name=sel_entity_name,
+                                            fk_graph=sel_fk_graph,
+                                        )
+                                        if scope_result is None:
+                                            return JSONResponse(content={"options": []})
+                                        if scope_result:
+                                            scope_filters = scope_result
+                                except Exception:
+                                    pass  # Fall through to unscoped if auth fails
+
+                            result = await sel_repo.list(
+                                page=1, page_size=500, filters=scope_filters
+                            )
                             items = result.get("items", []) if isinstance(result, dict) else result
                             options = []
                             for row in items:
@@ -304,7 +358,16 @@ class WorkspaceRouteBuilder:
                     app.get(
                         f"/api/workspaces/{ws_name}/context-options",
                         tags=["Workspaces"],
-                    )(_make_context_options_route(_sel_repo, _sel_display))
+                    )(
+                        _make_context_options_route(
+                            _sel_repo,
+                            _sel_display,
+                            sel_access=_sel_access,
+                            sel_auth_mw=auth_middleware,
+                            sel_entity_name=_ctx_sel.entity,
+                            sel_fk_graph=self._fk_graph,
+                        )
+                    )
 
                 self._init_workspace_entity_routes(workspaces, app)
 

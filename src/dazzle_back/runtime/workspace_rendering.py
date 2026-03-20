@@ -579,9 +579,11 @@ async def _workspace_region_handler(
                     filters[f"{date_field}__lte"] = date_to
 
             # SECURITY: apply entity-level scope predicates (#574)
-            filters, _scope_denied = _apply_workspace_scope_filters(
-                ctx, _auth_ctx_for_filters, _current_user_id, filters
+            _scope_only_filters, _scope_denied = _apply_workspace_scope_filters(
+                ctx, _auth_ctx_for_filters, _current_user_id, None
             )
+            if _scope_only_filters:
+                filters = {**(filters or {}), **_scope_only_filters}
 
             # Use pre-computed auto_include from entity_auto_includes (#272, #423)
             include_rels = ctx.auto_include
@@ -646,7 +648,11 @@ async def _workspace_region_handler(
     metrics: list[dict[str, Any]] = []
     if ctx.ctx_region.aggregates:
         metrics = await _compute_aggregate_metrics(
-            ctx.ctx_region.aggregates, ctx.repositories, total, items
+            ctx.ctx_region.aggregates,
+            ctx.repositories,
+            total,
+            items,
+            scope_filters=_scope_only_filters,
         )
 
     # Build filter column metadata for template
@@ -1065,12 +1071,16 @@ async def _fetch_count_metric(
     metric_name: str,
     agg_repo: Any,
     where_clause: str | None,
+    scope_filters: dict[str, Any] | None = None,
 ) -> tuple[str, Any]:
     """Fetch a single count aggregate metric from a repository."""
     try:
         agg_filters: dict[str, Any] | None = None
         if where_clause:
             agg_filters = _parse_simple_where(where_clause)
+        # SECURITY: merge scope predicates into aggregate filters (#574)
+        if scope_filters:
+            agg_filters = {**(agg_filters or {}), **scope_filters}
         agg_result = await agg_repo.list(page=1, page_size=1, filters=agg_filters)
         if isinstance(agg_result, dict):
             return metric_name, agg_result.get("total", 0)
@@ -1084,6 +1094,7 @@ async def _compute_aggregate_metrics(
     repositories: dict[str, Any] | None,
     total: int,
     items: list[dict[str, Any]],
+    scope_filters: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Compute aggregate metrics, batching independent DB queries concurrently."""
     # Separate metrics into async (need DB query) and sync (computed from existing data)
@@ -1099,7 +1110,10 @@ async def _compute_aggregate_metrics(
             agg_repo = repositories.get(entity_name) if repositories else None
             if func == "count" and agg_repo:
                 async_tasks.append(
-                    (metric_name, _fetch_count_metric(metric_name, agg_repo, where_clause))
+                    (
+                        metric_name,
+                        _fetch_count_metric(metric_name, agg_repo, where_clause, scope_filters),
+                    )
                 )
             else:
                 sync_results[metric_name] = 0
