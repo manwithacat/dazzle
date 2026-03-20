@@ -36,6 +36,7 @@ class LogicalOperator(StrEnum):
 
     AND = "and"
     OR = "or"
+    NOT = "not"
 
 
 class ConditionValue(BaseModel):
@@ -166,10 +167,14 @@ class ViaCondition(BaseModel):
 
     Generates SQL:
         WHERE "id" IN (SELECT "contact" FROM "AgentAssignment" WHERE "agent" = $1 AND "revoked_at" IS NULL)
+
+    When negated=True (from "not via" syntax):
+        WHERE "id" NOT IN (SELECT "contact" FROM "AgentAssignment" WHERE ...)
     """
 
     junction_entity: str
     bindings: list[ViaBinding]
+    negated: bool = False  # True for "not via" — NOT EXISTS / NOT IN subquery
 
     model_config = ConfigDict(frozen=True)
 

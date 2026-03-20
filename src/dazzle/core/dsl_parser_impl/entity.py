@@ -845,6 +845,8 @@ class EntityParserMixin:
             condition = None
         elif self.match(TokenType.VIA):
             condition = self._parse_via_condition()
+        elif self.match(TokenType.NOT):
+            condition = self._parse_not_scope_condition()
         else:
             condition = self.parse_condition_expr()
 
@@ -884,6 +886,55 @@ class EntityParserMixin:
             operation=operation,
             condition=condition,
             personas=personas,
+        )
+
+    def _parse_not_scope_condition(self) -> ir.ConditionExpr:
+        """Parse a negated scope condition.
+
+        Two forms are supported:
+
+        1. ``not via Entity(bindings)``
+           Parses the via clause and sets ``negated=True`` on the resulting
+           ``ViaCondition``.  Produces a ``ConditionExpr(via_condition=...)``
+           where ``via_condition.negated is True``.
+
+        2. ``not (condition)``
+           Wraps the inner condition in a ``ConditionExpr`` with
+           ``operator=LogicalOperator.NOT`` and ``left=inner``.
+
+        Raises:
+            ParseError: If ``not`` is not followed by ``via`` or ``(``.
+        """
+        self.expect(TokenType.NOT)
+
+        # Form 1: not via Entity(...)
+        if self.match(TokenType.VIA):
+            inner = self._parse_via_condition()
+            # The inner expr has a via_condition; rebuild it with negated=True
+            assert inner.via_condition is not None
+            negated_via = ir.ViaCondition(
+                junction_entity=inner.via_condition.junction_entity,
+                bindings=inner.via_condition.bindings,
+                negated=True,
+            )
+            return ir.ConditionExpr(via_condition=negated_via)
+
+        # Form 2: not (condition)
+        if self.match(TokenType.LPAREN):
+            self.advance()
+            inner = self.parse_condition_expr()
+            self.expect(TokenType.RPAREN)
+            return ir.ConditionExpr(
+                operator=ir.LogicalOperator.NOT,
+                left=inner,
+            )
+
+        token = self.current_token()
+        raise make_parse_error(
+            f"Expected 'via' or '(' after 'not' in scope condition, got {token.type.value!r}",
+            self.file,
+            token.line,
+            token.column,
         )
 
     def _parse_via_condition(self) -> ir.ConditionExpr:

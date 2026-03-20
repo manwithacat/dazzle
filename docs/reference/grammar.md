@@ -254,6 +254,7 @@ entity_decl   ::= "entity" IDENT STRING? ":" NEWLINE
                     access_block?
                     permit_block?
                     forbid_block?
+                    scope_block?
                     audit_directive?
                     examples_block?
                     publish_directive*
@@ -376,6 +377,58 @@ forbid_block  ::= "forbid" ":" NEWLINE
                   DEDENT ;
 
 policy_rule   ::= ("create" | "read" | "update" | "delete" | "list") ":" condition_expr NEWLINE ;
+
+(* Scope block — row-filtering rules separate from authorization.
+   Each rule carries a for: clause naming the personas it applies to.
+
+   scope_condition forms:
+     all                           — no row filter (every row passes)
+     via Entity(bindings)          — EXISTS subquery through junction table
+     not via Entity(bindings)      — NOT EXISTS subquery (negated junction check)
+     not (condition)               — general parenthesised negation
+     condition_expr                — arbitrary field comparison expression
+
+   Dotted paths in bindings support depth-N traversal, e.g.:
+     manuscript.assessment_event.school_id
+
+   Examples:
+     scope:
+       list: via AgentAssignment(agent = current_user.contact, contact = id)
+         for: agent
+       list: not via BlockList(blocker = current_user, blocked = id)
+         for: member
+       list: not (status = archived)
+         for: editor
+*)
+scope_block   ::= "scope" ":" NEWLINE
+                  INDENT
+                    scope_rule+
+                  DEDENT ;
+
+scope_rule    ::= ("create" | "read" | "update" | "delete" | "list") ":" scope_condition NEWLINE
+                  INDENT
+                    "for" ":" persona_list NEWLINE
+                  DEDENT ;
+
+scope_condition
+              ::= "all"
+                | via_clause
+                | "not" via_clause
+                | "not" "(" condition_expr ")"
+                | condition_expr ;
+
+via_clause    ::= "via" IDENT "(" via_binding ("," via_binding)* ")" ;
+
+via_binding   ::= IDENT ("=" | "!=") via_target ;
+
+via_target    ::= "current_user" ("." dotted_path)?
+                | "null"
+                | dotted_path ;
+
+(* dotted_path supports depth-N traversal, e.g. manuscript.assessment_event.school_id *)
+dotted_path   ::= IDENT ("." IDENT)* ;
+
+persona_list  ::= "*" | IDENT ("," IDENT)* ;
 
 audit_directive
               ::= "audit" ":" ("all" | BOOLEAN | "[" IDENT ("," IDENT)* "]") NEWLINE ;

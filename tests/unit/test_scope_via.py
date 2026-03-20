@@ -439,3 +439,76 @@ entity Contact "Contact":
         scope_rule = contact.access.scopes[0]
         assert scope_rule.condition.via_condition is not None
         assert scope_rule.personas == ["agent"]
+
+
+# ---------------------------------------------------------------------------
+# Negation syntax tests
+# ---------------------------------------------------------------------------
+
+
+def test_not_via_parsed() -> None:
+    """not via BlockList(...) parses to ViaCondition with negated=True."""
+    dsl = """
+module test
+app test "Test"
+
+entity BlockList "Block List":
+  blocker: ref User required
+  blocked: ref User required
+
+entity User "User":
+  name: str(200) required
+
+  permit:
+    list: role(member)
+
+  scope:
+    list: not via BlockList(blocker = current_user, blocked = id)
+      for: member
+"""
+    fragment = _parse(dsl)
+    user = [e for e in fragment.entities if e.name == "User"][0]
+    assert user.access is not None
+    assert len(user.access.scopes) == 1
+    scope_rule = user.access.scopes[0]
+    assert scope_rule.condition is not None
+    via = scope_rule.condition.via_condition
+    assert via is not None
+    assert via.negated is True
+    assert via.junction_entity == "BlockList"
+    assert len(via.bindings) == 2
+
+
+def test_not_parenthesised() -> None:
+    """not (status = archived) parses as a NOT-wrapped condition."""
+    from dazzle.core.ir.conditions import LogicalOperator
+
+    dsl = """
+module test
+app test "Test"
+
+entity Document "Document":
+  status: enum[draft, active, archived] required
+  owner: ref User required
+
+  permit:
+    list: role(editor)
+
+  scope:
+    list: not (status = archived)
+      for: editor
+"""
+    fragment = _parse(dsl)
+    doc = [e for e in fragment.entities if e.name == "Document"][0]
+    assert doc.access is not None
+    assert len(doc.access.scopes) == 1
+    scope_rule = doc.access.scopes[0]
+    assert scope_rule.condition is not None
+    expr = scope_rule.condition
+    # The outer expression should be a NOT logical operator wrapping the inner comparison
+    assert expr.operator == LogicalOperator.NOT
+    assert expr.left is not None
+    # The inner condition should be the comparison: status = archived
+    inner = expr.left
+    assert inner.comparison is not None
+    assert inner.comparison.field == "status"
