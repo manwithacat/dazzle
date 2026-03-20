@@ -593,10 +593,10 @@ async def _run_journey(
         run_phase1_exploration,
         run_phase2_verification,
     )
-    from dazzle.core.dsl_parser import parse_project
+    from dazzle.core.appspec_loader import load_project_appspec
 
     # Parse AppSpec
-    appspec = parse_project(project_root)
+    appspec = load_project_appspec(project_root)
 
     # Load credentials
     persona_filter = None if personas_arg == "all" else [p.strip() for p in personas_arg.split(",")]
