@@ -281,6 +281,9 @@ class WorkspaceRegionContext:
     # Runtime parameter resolution (#572)
     param_resolver: Any = None  # ParamResolver | None
     tenant_id: str | None = None
+    # Entity access spec for scope predicate enforcement (#574)
+    cedar_access_spec: Any = None
+    fk_graph: Any = None
 
 
 def _resolve_display_name(value: Any) -> str:
@@ -344,6 +347,62 @@ def _render_csv_response(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+def _apply_workspace_scope_filters(
+    ctx: WorkspaceRegionContext,
+    auth_context: Any,
+    user_id: str | None,
+    filters: dict[str, Any] | None,
+) -> tuple[dict[str, Any] | None, bool]:
+    """Apply entity-level scope predicates to workspace region filters.
+
+    Mirrors the scope enforcement in ``route_generator._make_list_handler``
+    so that workspace regions cannot bypass row-level scope rules (#574).
+
+    Returns:
+        (merged_filters, denied) — *denied* is True when no scope rule
+        matched the user's roles (default-deny: caller should return empty).
+    """
+    cedar_access_spec = ctx.cedar_access_spec
+    if not cedar_access_spec or not user_id or not auth_context:
+        return filters, False
+
+    scopes = getattr(cedar_access_spec, "scopes", None)
+    if not scopes:
+        return filters, False  # No scope rules — backward compat
+
+    from dazzle_back.runtime.route_generator import (
+        _normalize_role,
+        _resolve_scope_filters,
+    )
+
+    # Collect normalized user roles
+    scope_user_roles: set[str] = set()
+    user_obj = getattr(auth_context, "user", None)
+    if user_obj:
+        for r in getattr(user_obj, "roles", []):
+            rname = r if isinstance(r, str) else getattr(r, "name", str(r))
+            scope_user_roles.add(_normalize_role(rname))
+
+    scope_result = _resolve_scope_filters(
+        cedar_access_spec,
+        "list",
+        scope_user_roles,
+        user_id,
+        auth_context,
+        entity_name=ctx.source,
+        fk_graph=ctx.fk_graph,
+    )
+
+    if scope_result is None:
+        # No scope rule matched — default-deny
+        return filters, True
+
+    if scope_result:
+        filters = {**(filters or {}), **scope_result}
+
+    return filters, False
 
 
 async def _workspace_region_handler(
@@ -519,6 +578,11 @@ async def _workspace_region_handler(
                         filters = {}
                     filters[f"{date_field}__lte"] = date_to
 
+            # SECURITY: apply entity-level scope predicates (#574)
+            filters, _scope_denied = _apply_workspace_scope_filters(
+                ctx, _auth_ctx_for_filters, _current_user_id, filters
+            )
+
             # Use pre-computed auto_include from entity_auto_includes (#272, #423)
             include_rels = ctx.auto_include
 
@@ -530,13 +594,17 @@ async def _workspace_region_handler(
                 limit = min(page_size, 200) if page_size > 20 else 50
             else:
                 limit = ctx.ctx_region.limit or page_size
-            result = await repo.list(
-                page=page,
-                page_size=limit,
-                filters=filters,
-                sort=sort_list,
-                include=include_rels or None,
-            )
+            if _scope_denied:
+                # No scope rule matched — default-deny: empty result set
+                result = {"items": [], "total": 0}
+            else:
+                result = await repo.list(
+                    page=page,
+                    page_size=limit,
+                    filters=filters,
+                    sort=sort_list,
+                    include=include_rels or None,
+                )
             if isinstance(result, dict):
                 raw_items = result.get("items", [])
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
@@ -857,11 +925,23 @@ async def _fetch_region_json(
             if ir_sort:
                 sort_list = [f"-{s.field}" if s.direction == "desc" else s.field for s in ir_sort]
 
+            # SECURITY: apply entity-level scope predicates (#574)
+            filters, _scope_denied = _apply_workspace_scope_filters(
+                ctx, auth_context, user_id, filters
+            )
+
             limit = ctx.ctx_region.limit or page_size
             include_rels = ctx.auto_include or None
-            result = await repo.list(
-                page=page, page_size=limit, filters=filters, sort=sort_list, include=include_rels
-            )
+            if _scope_denied:
+                result = {"items": [], "total": 0}
+            else:
+                result = await repo.list(
+                    page=page,
+                    page_size=limit,
+                    filters=filters,
+                    sort=sort_list,
+                    include=include_rels,
+                )
             if isinstance(result, dict):
                 raw_items = result.get("items", [])
                 total = result.get("total", 0)

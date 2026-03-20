@@ -54,6 +54,7 @@ class WorkspaceRouteBuilder:
         self._enable_auth = enable_auth
         self._enable_test_mode = enable_test_mode
         self._entity_auto_includes = entity_auto_includes or {}
+        self._fk_graph = getattr(appspec, "fk_graph", None)
 
     def init_workspace_routes(self) -> None:
         """Initialize workspace layout routes (v0.20.0)."""
@@ -144,6 +145,8 @@ class WorkspaceRouteBuilder:
                                     _src_entity_spec, _src_name
                                 ),
                                 auto_include=entity_auto_includes.get(_src_name, []),
+                                cedar_access_spec=getattr(_src_entity_spec, "access", None),
+                                fk_graph=self._fk_graph,
                             )
                             # Override the IR filter for this source
                             _src_region_ctx._source_filter = _src_filter  # type: ignore[attr-defined]
@@ -218,6 +221,8 @@ class WorkspaceRouteBuilder:
                         auto_include=entity_auto_includes.get(_source, []),
                         surface_default_sort=_surface_default_sort,
                         surface_empty_message=_surface_empty_message,
+                        cedar_access_spec=getattr(_entity_spec, "access", None),
+                        fk_graph=self._fk_graph,
                     )
                     _ws_region_ctxs.append(_region_ctx)
 
