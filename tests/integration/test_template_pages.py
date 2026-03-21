@@ -194,15 +194,10 @@ class TestCreatePage:
 class TestDetailPage:
     """Tests for the detail/view page route."""
 
-    def test_detail_returns_html(self, client: TestClient) -> None:
+    def test_detail_nonexistent_returns_404(self, client: TestClient) -> None:
+        """Detail page for a non-existent record returns 404 (#599)."""
         resp = client.get("/task/some-uuid")
-        assert resp.status_code == 200
-        assert "text/html" in resp.headers["content-type"]
-
-    def test_detail_has_structure(self, client: TestClient) -> None:
-        resp = client.get("/task/some-uuid")
-        # Should have detail view markup
-        assert "Task Details" in resp.text or "Title" in resp.text
+        assert resp.status_code == 404
 
 
 class TestNavigation:
@@ -249,17 +244,10 @@ class TestDazzleAttributes:
         resp = client.get("/task/create")
         assert 'data-dazzle-action="Task.save"' in resp.text
 
-    def test_detail_page_has_dazzle_entity(self, client: TestClient) -> None:
+    def test_detail_page_nonexistent_returns_404(self, client: TestClient) -> None:
+        """Detail page for non-existent record returns 404 (#599)."""
         resp = client.get("/task/some-uuid")
-        assert 'data-dazzle-entity="Task"' in resp.text
-
-    def test_detail_page_has_dazzle_action_edit(self, client: TestClient) -> None:
-        resp = client.get("/task/some-uuid")
-        assert 'data-dazzle-action="Task.edit"' in resp.text
-
-    def test_detail_page_has_dazzle_action_delete(self, client: TestClient) -> None:
-        resp = client.get("/task/some-uuid")
-        assert 'data-dazzle-action="Task.delete"' in resp.text
+        assert resp.status_code == 404
 
 
 class TestHtmxFragments:
@@ -369,22 +357,15 @@ class TestEditRouteOrdering:
         app.include_router(router)
         return TestClient(app)
 
-    def test_edit_route_renders_form(self, edit_client: TestClient) -> None:
-        """The /item/{id}/edit route must render a form, not a detail view."""
+    def test_edit_route_nonexistent_returns_404(self, edit_client: TestClient) -> None:
+        """Edit page for non-existent record returns 404 (#599)."""
         resp = edit_client.get("/item/abc-123/edit")
-        assert resp.status_code == 200
-        assert "<form" in resp.text
+        assert resp.status_code == 404
 
-    def test_edit_route_has_input_fields(self, edit_client: TestClient) -> None:
-        """Edit page must contain input elements."""
-        resp = edit_client.get("/item/abc-123/edit")
-        assert "<input" in resp.text
-
-    def test_detail_route_no_form(self, edit_client: TestClient) -> None:
-        """The /item/{id} detail route should NOT render a form."""
+    def test_detail_route_nonexistent_returns_404(self, edit_client: TestClient) -> None:
+        """Detail page for non-existent record returns 404 (#599)."""
         resp = edit_client.get("/item/abc-123")
-        assert resp.status_code == 200
-        assert "<form" not in resp.text
+        assert resp.status_code == 404
 
     def test_create_route_still_works(self, edit_client: TestClient) -> None:
         """The /item/create route should render a form."""

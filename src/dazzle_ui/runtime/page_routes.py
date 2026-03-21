@@ -494,6 +494,7 @@ async def _page_handler(
                 path_id,
                 req_detail.item.get("error"),
             )
+            raise HTTPException(status_code=404, detail="Not found")
 
         # Evaluate when_expr for conditional field visibility (#363)
         if req_detail.item and "error" not in req_detail.item:
@@ -681,6 +682,7 @@ async def _page_handler(
             req_form.initial_values = form_data
         else:
             logger.warning("Failed to fetch initial form values for %s", path_id)
+            raise HTTPException(status_code=404, detail="Not found")
 
         req_form.action_url = req_form.action_url.replace("{id}", str(path_id))
         if req_form.cancel_url:
