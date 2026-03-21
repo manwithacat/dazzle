@@ -185,6 +185,33 @@ entity Employee "Employee":
         assert ni_field.is_sensitive
         assert ni_field.is_required
 
+    def test_indexed_modifier(self):
+        """Test indexed modifier on fields including ref fields (#578)."""
+        dsl = """
+module test.core
+app MyApp "My App"
+
+entity School "School":
+  id: uuid pk
+  name: str(200) required
+
+entity Student "Student":
+  id: uuid pk
+  school: ref School indexed
+  email: str(200) indexed
+  name: str(200) required
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        student = fragment.entities[1]
+
+        school_field = next(f for f in student.fields if f.name == "school")
+        email_field = next(f for f in student.fields if f.name == "email")
+        name_field = next(f for f in student.fields if f.name == "name")
+
+        assert school_field.is_indexed
+        assert email_field.is_indexed
+        assert not name_field.is_indexed
+
 
 class TestV025KeywordsAsIdentifiers:
     """Tests that v0.25.0 keywords can be used as enum values and identifiers."""

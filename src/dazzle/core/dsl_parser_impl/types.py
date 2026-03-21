@@ -426,6 +426,7 @@ class TypeParserMixin:
             "auto_update": ir.FieldModifier.AUTO_UPDATE,
             "sensitive": ir.FieldModifier.SENSITIVE,
             "searchable": ir.FieldModifier.SEARCHABLE,
+            "indexed": ir.FieldModifier.INDEXED,
         }
 
         while True:

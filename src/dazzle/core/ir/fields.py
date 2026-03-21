@@ -123,6 +123,7 @@ class FieldModifier(StrEnum):
     AUTO_UPDATE = "auto_update"
     SENSITIVE = "sensitive"
     SEARCHABLE = "searchable"  # v0.34.0: Include in full-text search
+    INDEXED = "indexed"  # v0.44.0: Create database index on this field
 
 
 class FieldSpec(BaseModel):
@@ -181,6 +182,11 @@ class FieldSpec(BaseModel):
     def is_searchable(self) -> bool:
         """Check if field is included in full-text search (v0.34.0)."""
         return FieldModifier.SEARCHABLE in self.modifiers
+
+    @property
+    def is_indexed(self) -> bool:
+        """Check if field should have a database index (v0.44.0)."""
+        return FieldModifier.INDEXED in self.modifiers
 
 
 def _rebuild_field_spec() -> None:
