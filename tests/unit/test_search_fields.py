@@ -1,8 +1,8 @@
-"""Tests for surface search_fields wiring (#361)."""
+"""Tests for surface search_fields and filter_fields wiring (#361, #596)."""
 
 from __future__ import annotations
 
-from dazzle_back.runtime.app_factory import build_entity_search_fields
+from dazzle_back.runtime.app_factory import build_entity_filter_fields, build_entity_search_fields
 from dazzle_back.runtime.query_builder import QueryBuilder
 
 # =============================================================================
@@ -143,3 +143,64 @@ class TestBuildEntitySearchFields:
 
 # Need SurfaceSpec import for the test_first_surface_wins test
 from dazzle.core.ir.surfaces import SurfaceSpec  # noqa: E402
+
+# =============================================================================
+# build_entity_filter_fields tests (#596)
+# =============================================================================
+
+
+def _make_surface_with_ux(
+    entity_ref: str,
+    filter_fields: list[str] | None = None,
+    search_fields: list[str] | None = None,
+):
+    """Create a minimal surface with UX spec containing filter fields."""
+    from dazzle.core.ir.ux import UXSpec
+
+    ux = UXSpec(filter=filter_fields or [], search=search_fields or []) if filter_fields else None
+    return SurfaceSpec(
+        name=f"{entity_ref.lower()}_list",
+        entity_ref=entity_ref,
+        mode="list",
+        ux=ux,
+    )
+
+
+class TestBuildEntityFilterFields:
+    """build_entity_filter_fields() should extract ux.filter from surface specs."""
+
+    def test_extracts_filter_fields(self) -> None:
+        surfaces = [_make_surface_with_ux("Contact", filter_fields=["company_name", "status"])]
+        result = build_entity_filter_fields(surfaces)
+        assert result == {"Contact": ["company_name", "status"]}
+
+    def test_no_ux_excluded(self) -> None:
+        surfaces = [_make_surface("Task")]
+        result = build_entity_filter_fields(surfaces)
+        assert result == {}
+
+    def test_empty_filter_excluded(self) -> None:
+        surfaces = [_make_surface_with_ux("Task")]
+        result = build_entity_filter_fields(surfaces)
+        assert result == {}
+
+    def test_multiple_entities(self) -> None:
+        surfaces = [
+            _make_surface_with_ux("Task", filter_fields=["status"]),
+            _make_surface_with_ux("Bug", filter_fields=["severity", "assignee"]),
+        ]
+        result = build_entity_filter_fields(surfaces)
+        assert result == {"Task": ["status"], "Bug": ["severity", "assignee"]}
+
+    def test_first_surface_wins(self) -> None:
+        surfaces = [
+            _make_surface_with_ux("Task", filter_fields=["status"]),
+            SurfaceSpec(
+                name="task_detail",
+                entity_ref="Task",
+                mode="list",
+                ux=None,
+            ),
+        ]
+        result = build_entity_filter_fields(surfaces)
+        assert result == {"Task": ["status"]}

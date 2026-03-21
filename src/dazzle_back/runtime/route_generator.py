@@ -1018,6 +1018,7 @@ def create_list_handler(
     audit_logger: Any | None = None,
     entity_name: str = "Item",
     search_fields: list[str] | None = None,
+    filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
     fk_graph: Any | None = None,
 ) -> Callable[..., Any]:
@@ -1039,6 +1040,7 @@ def create_list_handler(
         audit_logger: Optional AuditLogger for recording list access decisions
         entity_name: Entity name for audit logging
         search_fields: Optional field names for LIKE-based search (#361)
+        filter_fields: Allowed field names for bare query param filtering (#596)
     """
 
     def _inject_htmx_meta(request: Request) -> None:
@@ -1060,6 +1062,7 @@ def create_list_handler(
             sort: str | None = Query(None, description="Sort field"),
             dir: str = Query("asc", description="Sort direction (asc/desc)"),
             search: str | None = Query(None, description="Search query"),
+            q: str | None = Query(None, description="Search query (alias for search)"),
         ) -> Any:
             is_authenticated = auth_context.is_authenticated
             user_id = str(auth_context.user.id) if auth_context.user else None
@@ -1070,6 +1073,9 @@ def create_list_handler(
                     status_code=401,
                     detail="Authentication required",
                 )
+
+            # Support ?q= as alias for ?search= (#596)
+            effective_search = search or q
 
             _inject_htmx_meta(request)
             return await _list_handler_body(
@@ -1082,7 +1088,7 @@ def create_list_handler(
                 page_size,
                 sort,
                 dir,
-                search,
+                effective_search,
                 select_fields=select_fields,
                 json_projection=json_projection,
                 auto_include=auto_include,
@@ -1092,6 +1098,7 @@ def create_list_handler(
                 entity_name=entity_name,
                 user=auth_context.user if auth_context and auth_context.is_authenticated else None,
                 search_fields=search_fields,
+                filter_fields=filter_fields,
                 ref_targets=ref_targets,
                 fk_graph=fk_graph,
             )
@@ -1104,6 +1111,7 @@ def create_list_handler(
             "sort": str | None,
             "dir": str,
             "search": str | None,
+            "q": str | None,
             "return": Any,
         }
         return _auth_handler
@@ -1115,7 +1123,11 @@ def create_list_handler(
         sort: str | None = Query(None, description="Sort field"),
         dir: str = Query("asc", description="Sort direction (asc/desc)"),
         search: str | None = Query(None, description="Search query"),
+        q: str | None = Query(None, description="Search query (alias for search)"),
     ) -> Any:
+        # Support ?q= as alias for ?search= (#596)
+        effective_search = search or q
+
         _inject_htmx_meta(request)
         return await _list_handler_body(
             service,
@@ -1127,13 +1139,14 @@ def create_list_handler(
             page_size,
             sort,
             dir,
-            search,
+            effective_search,
             select_fields=select_fields,
             json_projection=json_projection,
             auto_include=auto_include,
             audit_logger=audit_logger,
             entity_name=entity_name,
             search_fields=search_fields,
+            filter_fields=filter_fields,
             ref_targets=ref_targets,
             fk_graph=fk_graph,
         )
@@ -1145,6 +1158,7 @@ def create_list_handler(
         "sort": str | None,
         "dir": str,
         "search": str | None,
+        "q": str | None,
         "return": Any,
     }
     return _noauth_handler
@@ -1311,6 +1325,7 @@ async def _list_handler_body(
     entity_name: str = "Item",
     user: Any | None = None,
     search_fields: list[str] | None = None,
+    filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
     fk_graph: Any | None = None,
 ) -> Any:
@@ -1384,9 +1399,14 @@ async def _list_handler_body(
 
     # Extract filter[field] params from query string
     filters: dict[str, Any] = {}
+    # Reserved query param names that should never be treated as field filters
+    _reserved_params = {"page", "page_size", "sort", "dir", "search", "q", "format"}
     for key, value in request.query_params.items():
         if key.startswith("filter[") and key.endswith("]") and value:
             filters[key[7:-1]] = value
+        elif filter_fields and key in filter_fields and key not in _reserved_params and value:
+            # Accept bare ?field=value when field is in the DSL-declared filter list (#596)
+            filters[key] = value
 
     # Merge visibility filters with user filters
     merged_filters: dict[str, Any] | None = None
@@ -1896,6 +1916,7 @@ class RouteGenerator:
         cedar_access_specs: dict[str, Any] | None = None,
         entity_list_projections: dict[str, list[str]] | None = None,
         entity_search_fields: dict[str, list[str]] | None = None,
+        entity_filter_fields: dict[str, list[str]] | None = None,
         entity_auto_includes: dict[str, list[str]] | None = None,
         entity_htmx_meta: dict[str, dict[str, Any]] | None = None,
         entity_audit_configs: dict[str, Any] | None = None,
@@ -1939,6 +1960,7 @@ class RouteGenerator:
         self.cedar_access_specs = cedar_access_specs or {}
         self.entity_list_projections = entity_list_projections or {}
         self.entity_search_fields = entity_search_fields or {}
+        self.entity_filter_fields = entity_filter_fields or {}
         self.entity_auto_includes = entity_auto_includes or {}
         self.entity_htmx_meta = entity_htmx_meta or {}
         self.entity_audit_configs = entity_audit_configs or {}
@@ -2063,6 +2085,8 @@ class RouteGenerator:
             projection = self.entity_list_projections.get(entity_name or "")
             # Get search fields for this entity (from surface config)
             _search_fields = self.entity_search_fields.get(entity_name or "")
+            # Get filter fields for this entity (from surface UX config)
+            _filter_fields = self.entity_filter_fields.get(entity_name or "")
             # Get auto-include refs for this entity (prevents N+1 queries)
             includes = self.entity_auto_includes.get(entity_name or "")
             # Get HTMX rendering metadata (columns, detail URL, etc.)
@@ -2084,6 +2108,7 @@ class RouteGenerator:
                 audit_logger=_audit_for("list"),
                 entity_name=entity_name or "Item",
                 search_fields=_search_fields,
+                filter_fields=_filter_fields,
                 ref_targets=self.entity_ref_targets.get(entity_name or ""),
                 fk_graph=self.fk_graph,
             )

@@ -244,6 +244,28 @@ def build_entity_search_fields(
     return result
 
 
+def build_entity_filter_fields(
+    surfaces: list[SurfaceSpec],
+) -> dict[str, list[str]]:
+    """Pre-plan filter fields for each entity from surface UX declarations.
+
+    Extracts ``ux.filter`` from list-mode surfaces. When a surface
+    declares filter fields, those field names are accepted as bare
+    query parameters on the entity's list endpoint (e.g. ``?status=active``).
+
+    Returns a mapping of ``{entity_name: [field_names]}``.
+    """
+    result: dict[str, list[str]] = {}
+    for surface in surfaces:
+        entity_ref = surface.entity_ref
+        if not entity_ref or entity_ref in result:
+            continue
+        ux = surface.ux
+        if ux and ux.filter:
+            result[entity_ref] = list(ux.filter)
+    return result
+
+
 # =============================================================================
 # Shared startup helpers
 # =============================================================================
@@ -321,6 +343,9 @@ def build_server_config(
     # Extract search fields from surface declarations
     entity_search_fields = build_entity_search_fields(surfaces=appspec.surfaces)
 
+    # Extract filter fields from surface UX declarations
+    entity_filter_fields = build_entity_filter_fields(surfaces=appspec.surfaces)
+
     # Auto-detect ref/belongs_to fields for eager loading (prevents N+1 queries).
     # Use relation names (strip _id suffix) to match relation_loader conventions.
     entity_auto_includes: dict[str, list[str]] = {}
@@ -395,6 +420,7 @@ def build_server_config(
         enable_console=enable_console,
         entity_list_projections=entity_list_projections,
         entity_search_fields=entity_search_fields,
+        entity_filter_fields=entity_filter_fields,
         entity_auto_includes=entity_auto_includes,
         entity_ref_targets=entity_ref_targets,
         process_specs=all_processes,

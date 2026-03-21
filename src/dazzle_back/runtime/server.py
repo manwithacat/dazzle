@@ -128,6 +128,8 @@ class ServerConfig:
     entity_list_projections: dict[str, list[str]] = field(default_factory=dict)
     # Surface search fields (v0.34.2) — entity_name -> [field_names]
     entity_search_fields: dict[str, list[str]] = field(default_factory=dict)
+    # Surface filter fields (v0.44.1) — entity_name -> [field_names]
+    entity_filter_fields: dict[str, list[str]] = field(default_factory=dict)
     # Auto-eager-load ref relations (v0.26.0) — entity_name -> [relation_names]
     entity_auto_includes: dict[str, list[str]] = field(default_factory=dict)
     # FK field → target entity mapping for dotted-path scope resolution (#556)
@@ -266,6 +268,8 @@ class DazzleBackendApp:
         self._entity_list_projections: dict[str, list[str]] = config.entity_list_projections
         # Surface search fields (v0.34.2)
         self._entity_search_fields: dict[str, list[str]] = config.entity_search_fields
+        # Surface filter fields (v0.44.1)
+        self._entity_filter_fields: dict[str, list[str]] = config.entity_filter_fields
         # Auto-eager-load ref relations (v0.26.0)
         self._entity_auto_includes: dict[str, list[str]] = config.entity_auto_includes
         # FK→entity mapping for dotted-path scope resolution (#556)
@@ -785,6 +789,7 @@ class DazzleBackendApp:
             cedar_access_specs=cedar_access_specs,
             entity_list_projections=self._entity_list_projections,
             entity_search_fields=self._entity_search_fields,
+            entity_filter_fields=self._entity_filter_fields,
             entity_auto_includes=self._entity_auto_includes,
             entity_htmx_meta=entity_htmx_meta,
             entity_audit_configs=entity_audit_configs,
