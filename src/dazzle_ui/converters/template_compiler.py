@@ -182,6 +182,7 @@ def _infer_filter_type(
     field_spec: ir.FieldSpec | None,
     entity: ir.EntitySpec | None,
     field_name: str,
+    enums: list[ir.EnumSpec] | None = None,
 ) -> tuple[str, list[dict[str, str]]]:
     """Infer filter UI type and options from a field spec.
 
@@ -192,8 +193,20 @@ def _infer_filter_type(
     if field_spec and field_spec.type:
         kind = field_spec.type.kind
         if kind == FieldTypeKind.ENUM and field_spec.type.enum_values:
+            # Check if a named EnumSpec matches these values and has titles
+            label_map: dict[str, str] = {}
+            if enums:
+                vals_set = set(field_spec.type.enum_values)
+                for enum_spec in enums:
+                    enum_names = {ev.name for ev in enum_spec.values}
+                    if enum_names == vals_set:
+                        label_map = {ev.name: ev.title for ev in enum_spec.values if ev.title}
+                        break
             return "select", [
-                {"value": v, "label": v.replace("_", " ").title()}
+                {
+                    "value": v,
+                    "label": label_map.get(v, v.replace("_", " ").title()),
+                }
                 for v in field_spec.type.enum_values
             ]
         if kind == FieldTypeKind.BOOL:
@@ -215,6 +228,7 @@ def _build_columns(
     surface: ir.SurfaceSpec,
     entity: ir.EntitySpec | None,
     ux_spec: ir.UXSpec | None = None,
+    enums: list[ir.EnumSpec] | None = None,
 ) -> list[ColumnContext]:
     """Build table column definitions from surface sections or entity fields."""
     columns: list[ColumnContext] = []
@@ -227,7 +241,7 @@ def _build_columns(
                 field_spec = _get_field_spec(entity, element.field_name)
                 filterable = element.field_name in filter_fields
                 filter_type, filter_options = (
-                    _infer_filter_type(field_spec, entity, element.field_name)
+                    _infer_filter_type(field_spec, entity, element.field_name, enums)
                     if filterable
                     else ("text", [])
                 )
@@ -275,7 +289,9 @@ def _build_columns(
                 is_sensitive = field.is_sensitive
                 filterable = field.name in filter_fields and not is_sensitive
                 filter_type, filter_options = (
-                    _infer_filter_type(field, entity, field.name) if filterable else ("text", [])
+                    _infer_filter_type(field, entity, field.name, enums)
+                    if filterable
+                    else ("text", [])
                 )
                 # Money fields: use expanded _minor column key
                 # Ref/belongs_to fields: use relation name (strip _id)
@@ -602,10 +618,11 @@ def _compile_list_surface(
     api_endpoint: str,
     entity_slug: str,
     app_prefix: str,
+    enums: list[ir.EnumSpec] | None = None,
 ) -> PageContext:
     """Compile a LIST mode surface to a PageContext with table context."""
     ux = surface.ux
-    columns = _build_columns(surface, entity, ux)
+    columns = _build_columns(surface, entity, ux, enums)
     default_sort_field = ux.sort[0].field if ux and ux.sort else ""
     default_sort_dir = ux.sort[0].direction if ux and ux.sort else "asc"
     search_fields = list(ux.search) if ux and ux.search else []
@@ -930,6 +947,7 @@ def compile_surface_to_context(
     app_prefix: str = "",
     reverse_refs: list[tuple[str, str, ir.EntitySpec]] | None = None,
     poly_refs: list[tuple[str, str, str, str, ir.EntitySpec]] | None = None,
+    enums: list[ir.EnumSpec] | None = None,
 ) -> PageContext:
     """
     Convert a Surface IR to a PageContext for template rendering.
@@ -945,6 +963,7 @@ def compile_surface_to_context(
             (entity_name, fk_field, entity_spec). Used for related tabs on detail pages.
         poly_refs: Polymorphic FK reverse refs pointing to this entity (#321).
             Each tuple: (source_entity, type_field, id_field, type_value, source_spec).
+        enums: Named enum definitions for human-readable filter labels.
 
     Returns:
         PageContext ready for template rendering.
@@ -955,7 +974,7 @@ def compile_surface_to_context(
 
     if surface.mode == SurfaceMode.LIST:
         return _compile_list_surface(
-            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix
+            surface, entity, entity_name, api_endpoint, entity_slug, app_prefix, enums
         )
     elif surface.mode in (SurfaceMode.CREATE, SurfaceMode.EDIT):
         return _compile_form_surface(
@@ -1138,6 +1157,7 @@ def compile_appspec_to_templates(
             app_prefix=app_prefix,
             reverse_refs=_reverse_refs.get(entity_name),
             poly_refs=_poly_refs.get(entity_name),
+            enums=list(appspec.enums) if appspec.enums else None,
         )
         ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
         ctx.nav_items = nav_items
@@ -1192,7 +1212,12 @@ def compile_appspec_to_templates(
             entity = None
             if domain and first_list.entity_ref:
                 entity = domain.get_entity(first_list.entity_ref)
-            root_ctx = compile_surface_to_context(first_list, entity, app_prefix=app_prefix)
+            root_ctx = compile_surface_to_context(
+                first_list,
+                entity,
+                app_prefix=app_prefix,
+                enums=list(appspec.enums) if appspec.enums else None,
+            )
             root_ctx.app_name = appspec.title or appspec.name.replace("_", " ").title()
             root_ctx.nav_items = nav_items
             root_ctx.nav_by_persona = nav_by_persona

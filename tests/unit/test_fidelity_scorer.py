@@ -557,8 +557,12 @@ class TestMoneyFieldExpansion:
         ]
         assert type_gaps == []
 
-    def test_file_field_text_input_flagged(self) -> None:
-        """File fields rendered as text inputs should be flagged."""
+    def test_file_field_skipped_in_type_check(self) -> None:
+        """File fields should be skipped in input type checks (#579).
+
+        File uploads often use custom widgets (dropzones, etc.) so comparing
+        against <input> type attributes produces false positives.
+        """
         surface = _make_surface(
             name="manuscript_create",
             mode=SurfaceMode.CREATE,
@@ -577,5 +581,4 @@ class TestMoneyFieldExpansion:
         type_gaps = [
             g for g in score.gaps if g.category == FidelityGapCategory.INCORRECT_INPUT_TYPE
         ]
-        assert len(type_gaps) == 1
-        assert "file" in type_gaps[0].expected
+        assert len(type_gaps) == 0

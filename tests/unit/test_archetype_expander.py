@@ -759,3 +759,45 @@ entity UserMembership "User Membership":
         # Membership surfaces
         assert "user_membership_list" in surface_names
         assert "user_membership_edit" in surface_names
+
+
+class TestAuthTokenSensitiveModifier:
+    """Tests for #577 — auth token fields must have SENSITIVE modifier."""
+
+    def test_email_verify_token_is_sensitive(self):
+        """email_verify_token should have both OPTIONAL and SENSITIVE modifiers."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+        user = next(e for e in expanded if e.name == "User")
+        token_field = next(f for f in user.fields if f.name == "email_verify_token")
+        assert ir.FieldModifier.SENSITIVE in token_field.modifiers
+        assert ir.FieldModifier.OPTIONAL in token_field.modifiers
+
+    def test_password_reset_token_is_sensitive(self):
+        """password_reset_token should have both OPTIONAL and SENSITIVE modifiers."""
+        dsl = """
+module test
+app Test "Test"
+
+entity User "User":
+    archetype: user
+    id: uuid pk
+    email: email required unique
+    name: str(200) required
+"""
+        module, symbols = _create_test_module(dsl)
+        expanded = expand_archetypes(list(module.fragment.entities), symbols)
+        user = next(e for e in expanded if e.name == "User")
+        token_field = next(f for f in user.fields if f.name == "password_reset_token")
+        assert ir.FieldModifier.SENSITIVE in token_field.modifiers
+        assert ir.FieldModifier.OPTIONAL in token_field.modifiers

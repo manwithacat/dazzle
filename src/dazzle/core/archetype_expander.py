@@ -667,12 +667,12 @@ def _get_user_auth_fields() -> list[ir.FieldSpec]:
         ir.FieldSpec(
             name="email_verify_token",
             type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=100),
-            modifiers=[ir.FieldModifier.OPTIONAL],
+            modifiers=[ir.FieldModifier.OPTIONAL, ir.FieldModifier.SENSITIVE],
         ),
         ir.FieldSpec(
             name="password_reset_token",
             type=ir.FieldType(kind=ir.FieldTypeKind.STR, max_length=100),
-            modifiers=[ir.FieldModifier.OPTIONAL],
+            modifiers=[ir.FieldModifier.OPTIONAL, ir.FieldModifier.SENSITIVE],
         ),
         ir.FieldSpec(
             name="password_reset_expires",

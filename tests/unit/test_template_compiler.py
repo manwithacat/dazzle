@@ -855,3 +855,65 @@ class TestBuildEntityColumns:
         ref_col = next(c for c in cols if c.type == "ref")
         assert ref_col.key == "order"
         assert ref_col.label == "Order"
+
+
+class TestEnumFilterLabels:
+    """Tests for #584 — enum filter options use human-readable labels."""
+
+    def test_inline_enum_filter_labels_title_cased(self):
+        """Inline enum values get snake_case converted to Title Case."""
+        from dazzle_ui.converters.template_compiler import _infer_filter_type
+
+        field = ir.FieldSpec(
+            name="status",
+            type=ir.FieldType(
+                kind=FieldTypeKind.ENUM, enum_values=["in_progress", "on_hold", "done"]
+            ),
+        )
+        ftype, opts = _infer_filter_type(field, None, "status")
+        assert ftype == "select"
+        assert opts[0] == {"value": "in_progress", "label": "In Progress"}
+        assert opts[1] == {"value": "on_hold", "label": "On Hold"}
+        assert opts[2] == {"value": "done", "label": "Done"}
+
+    def test_named_enum_filter_labels_use_titles(self):
+        """Named EnumSpec titles override mechanical title-casing."""
+        from dazzle_ui.converters.template_compiler import _infer_filter_type
+
+        enum_spec = ir.EnumSpec(
+            name="Priority",
+            title="Priority",
+            values=[
+                ir.EnumValueSpec(name="p1", title="Critical"),
+                ir.EnumValueSpec(name="p2", title="High"),
+                ir.EnumValueSpec(name="p3", title="Medium"),
+            ],
+        )
+        field = ir.FieldSpec(
+            name="priority",
+            type=ir.FieldType(kind=FieldTypeKind.ENUM, enum_values=["p1", "p2", "p3"]),
+        )
+        ftype, opts = _infer_filter_type(field, None, "priority", enums=[enum_spec])
+        assert ftype == "select"
+        assert opts[0] == {"value": "p1", "label": "Critical"}
+        assert opts[1] == {"value": "p2", "label": "High"}
+        assert opts[2] == {"value": "p3", "label": "Medium"}
+
+    def test_named_enum_fallback_when_no_title(self):
+        """Values without titles in EnumSpec fall back to title-casing."""
+        from dazzle_ui.converters.template_compiler import _infer_filter_type
+
+        enum_spec = ir.EnumSpec(
+            name="Status",
+            values=[
+                ir.EnumValueSpec(name="in_progress", title="In Progress"),
+                ir.EnumValueSpec(name="done"),  # no title
+            ],
+        )
+        field = ir.FieldSpec(
+            name="status",
+            type=ir.FieldType(kind=FieldTypeKind.ENUM, enum_values=["in_progress", "done"]),
+        )
+        ftype, opts = _infer_filter_type(field, None, "status", enums=[enum_spec])
+        assert opts[0] == {"value": "in_progress", "label": "In Progress"}
+        assert opts[1] == {"value": "done", "label": "Done"}  # fallback

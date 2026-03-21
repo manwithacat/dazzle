@@ -331,7 +331,7 @@ def _check_form_structure(
                 fspec = entity_field_map[name]
                 expected_type = FIELD_TYPE_TO_INPUT.get(fspec.type.kind, DEFAULT_INPUT_TYPE)
                 actual_type = inp.get_attr("type", "text")
-                if expected_type != actual_type and expected_type != "textarea":
+                if expected_type != actual_type and expected_type not in ("textarea", "file"):
                     gaps.append(
                         FidelityGap(
                             category=FidelityGapCategory.INCORRECT_INPUT_TYPE,
