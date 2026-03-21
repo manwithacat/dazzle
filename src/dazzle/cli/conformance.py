@@ -4,6 +4,7 @@ Commands:
   dazzle conformance generate  — Generate conformance TOML files from DSL
   dazzle conformance summary   — Print conformance coverage summary
   dazzle conformance run       — Run conformance tests via pytest
+  dazzle conformance execute   — Run HTTP conformance session against PostgreSQL
 """
 
 from __future__ import annotations
@@ -89,3 +90,52 @@ def run(
         cmd.append("-v")
     result = subprocess.run(cmd)
     raise typer.Exit(code=result.returncode)
+
+
+@conformance_app.command()
+def execute(
+    project_root: str = typer.Option(".", "--project-root", "-p", help="Project root directory."),
+    database_url: str = typer.Option(
+        "",
+        "--database-url",
+        "-d",
+        help="PostgreSQL URL (default: CONFORMANCE_DATABASE_URL env var).",
+    ),
+) -> None:
+    """Run HTTP conformance session against a live PostgreSQL database.
+
+    Boots the app in-process, seeds deterministic fixture data, runs all
+    derived conformance cases as HTTP assertions, and reports pass/fail.
+    """
+    import asyncio
+
+    from dazzle.conformance.plugin import run_conformance_session
+
+    root = Path(project_root).resolve()
+    db_url = database_url or None
+
+    typer.echo(f"Running conformance execution against {root} ...")
+
+    try:
+        report = asyncio.run(run_conformance_session(root, database_url=db_url))
+    except FileNotFoundError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+    except RuntimeError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    typer.echo("")
+    typer.echo(f"Total:  {report['total']}")
+    typer.echo(f"Passed: {report['passed']}")
+    typer.echo(f"Failed: {report['failed']}")
+    typer.echo(f"Rate:   {report['pass_rate']:.0%}")
+
+    if report["failures"]:
+        typer.echo("")
+        typer.echo("Failures:")
+        for f in report["failures"]:
+            typer.echo(f"  {f['test_id']}: {f['error']}")
+
+    if report["failed"] > 0:
+        raise typer.Exit(code=1)
