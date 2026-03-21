@@ -1,13 +1,13 @@
-{# Bulk actions toolbar — no Alpine, uses data-dz-bulk-* attributes #}
+{# Bulk actions toolbar — Alpine dzTable provides bulkCount and selected state #}
 {# Parameters: entity_name, actions_endpoint, table (for dynamic target ID) #}
-{# State managed by dz.js initTable() — selected IDs injected via htmx:configRequest #}
+{# State managed by dzTable Alpine component — selected IDs injected via htmx:configRequest #}
 {% set tbody_id = (table.table_id or 'dt-table') + '-body' if table is defined and table else 'dt-table-body' %}
-<div data-dz-bulk-bar
-     class="flex items-center gap-3 p-2 bg-base-200 rounded-lg mb-2"
-     style="display:none;">
+<div x-show="bulkCount > 0"
+     x-transition
+     class="flex items-center gap-3 p-2 bg-base-200 rounded-lg mb-2">
 
   <span class="text-sm font-medium">
-    <span data-dz-bulk-count>0</span> selected
+    <span x-text="bulkCount">0</span> selected
   </span>
 
   <div class="flex gap-1">
@@ -32,7 +32,7 @@
     {% endblock %}
   </div>
 
-  <button data-dz-bulk-clear class="btn btn-sm btn-ghost ml-auto">
+  <button @click="clearSelection()" class="btn btn-sm btn-ghost ml-auto">
     Clear
   </button>
 </div>

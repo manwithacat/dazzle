@@ -1,4 +1,4 @@
-{# Form component — HTMX form submission with loading state, no Alpine #}
+{# Form component — HTMX form submission, Alpine dzWizard for multi-step #}
 {% from 'macros/form_field.html' import render_field %}
 
 {% if form %}
@@ -15,9 +15,9 @@
     {% include 'fragments/form_stepper.html' %}
   {% endif %}
 
-  {# Form — data-dz-form enables automatic submit button loading state #}
-  <form data-dz-form data-dazzle-form="{{ form.entity_name }}" data-dazzle-form-mode="{{ form.mode }}"
-        {% if form.sections %}data-dz-wizard data-dz-wizard-steps="{{ form.sections | length }}"{% endif %}
+  {# Form #}
+  <form data-dazzle-form="{{ form.entity_name }}" data-dazzle-form-mode="{{ form.mode }}"
+        {% if form.sections %}x-data="dzWizard({{ form.sections | length }})"{% endif %}
         hx-{{ "put" if form.method == "put" else "post" }}="{{ form.action_url }}"
         hx-target="body"
         hx-swap="innerHTML"
@@ -36,8 +36,8 @@
     {% block form_fields %}
     {% if form.sections %}
       {% for section in form.sections %}
-      <div class="dz-wizard-stage" data-dz-stage="{{ loop.index0 }}"
-           {% if not loop.first %}style="display:none"{% endif %}>
+      <div data-dz-stage="{{ loop.index0 }}"
+           x-show="isCurrent({{ loop.index0 }})">
         <h3 class="text-lg font-semibold mb-3">{{ section.title }}</h3>
         {% for field in section.fields %}
           {{ render_field(field, form.initial_values) }}
@@ -54,15 +54,14 @@
     {# Actions — wizard nav or standard submit #}
     {% block form_actions %}
     {% if form.sections %}
-    <div class="flex gap-3 pt-4" data-dz-wizard-nav>
-      <button type="button" class="btn btn-ghost" data-dz-wizard-prev style="display:none">
+    <div class="flex gap-3 pt-4">
+      <button type="button" class="btn btn-ghost" x-show="step > 0" @click="prev()">
         Back
       </button>
-      <button type="button" class="btn btn-primary" data-dz-wizard-next>
+      <button type="button" class="btn btn-primary" x-show="step < total - 1" @click="next()">
         Next
       </button>
-      <button type="submit" class="btn btn-primary" style="display:none"
-              data-dz-wizard-submit
+      <button type="submit" class="btn btn-primary" x-show="step === total - 1"
               data-dazzle-action="{{ form.entity_name }}.save"
               data-loading-class="loading"
               data-loading-disable>

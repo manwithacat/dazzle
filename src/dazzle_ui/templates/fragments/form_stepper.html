@@ -1,13 +1,12 @@
 {# Form stepper — visual progress indicator for multi-section forms #}
 {# Renders a DaisyUI steps component with stage navigation #}
-{# Requires: form.sections (list of FormSectionContext) #}
+{# Requires: form.sections (list of FormSectionContext), parent dzWizard x-data #}
 
-<div class="mb-6" data-dz-stepper>
+<div class="mb-6">
   <ul class="steps steps-horizontal w-full">
     {% for section in form.sections %}
-    <li class="step {% if loop.first %}step-primary{% endif %}"
-        data-dz-step="{{ loop.index0 }}"
-        data-dz-step-label="{{ section.title }}">
+    <li class="step" :class="isActive({{ loop.index0 }}) && 'step-primary'"
+        @click="goToStep({{ loop.index0 }})" style="cursor: pointer">
       <span class="text-sm">{{ section.title }}</span>
     </li>
     {% endfor %}

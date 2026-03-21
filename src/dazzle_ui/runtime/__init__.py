@@ -1,7 +1,7 @@
 """
 DNR-UI Runtime
 
-Server-rendered UI runtime using Jinja2 templates, HTMX, and dz.js micro-runtime.
+Server-rendered UI runtime using Jinja2 templates, HTMX, and Alpine.js.
 
 This module provides:
 - Template renderer (AppSpec -> Jinja2 -> HTML)

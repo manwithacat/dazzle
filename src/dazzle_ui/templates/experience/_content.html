@@ -25,8 +25,7 @@
       {# Form step: render the form with action rewritten to experience endpoint #}
       {% if ctx.form %}
         <div class="max-w-2xl">
-          <form data-dz-form data-dz-experience-form
-                data-dazzle-form="{{ ctx.form.entity_name }}"
+          <form data-dazzle-form="{{ ctx.form.entity_name }}"
                 data-dazzle-form-mode="{{ ctx.form.mode }}"
                 hx-{{ "put" if ctx.form.method == "put" else "post" }}="{{ ctx.form.action_url }}"
                 hx-target="body"

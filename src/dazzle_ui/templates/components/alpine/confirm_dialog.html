@@ -1,30 +1,29 @@
-{# Confirmation dialog — native <dialog> element, no Alpine #}
-{# Uses htmx.ajax() for the confirmed action (stays in htmx lifecycle). #}
+{# Confirmation dialog — Alpine dzConfirm component with native <dialog> #}
 {# #}
-{# Usage: Include once in page. Trigger with: #}
-{#   <button data-dz-dialog="confirm-dialog" #}
-{#           data-dz-confirm-message="Delete this item?" #}
-{#           data-dz-confirm-action="/api/tasks/1" #}
-{#           data-dz-confirm-method="delete" #}
-{#           data-dz-confirm-target="closest tr" #}
-{#           data-dz-confirm-swap="outerHTML swap:300ms"> #}
+{# Usage: Include once in page. Trigger from any button with: #}
+{#   <button @click="$dispatch('dz-confirm', { #}
+{#     message: 'Delete this item?', #}
+{#     action: '/api/tasks/1', #}
+{#     method: 'delete', #}
+{#     target: 'closest tr', #}
+{#     swap: 'outerHTML swap:300ms', #}
+{#     triggerEl: $el #}
+{#   })"> #}
 {#     Delete #}
 {#   </button> #}
-{# #}
-{# If target/swap are omitted, defaults to the trigger's nearest <tr> #}
-{# (outerHTML swap:300ms) or body (innerHTML) as fallback. #}
-<dialog id="confirm-dialog" class="modal">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg">Confirm Action</h3>
-    <p class="py-4" data-dz-dialog-message></p>
-    <div class="modal-action">
-      <form method="dialog">
-        <button class="btn btn-ghost">Cancel</button>
-      </form>
-      <button class="btn btn-error" data-dz-dialog-confirm>
-        Confirm
-      </button>
+<div x-data="dzConfirm">
+  <dialog x-ref="dialog" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Confirm Action</h3>
+      <p class="py-4" x-text="message"></p>
+      <div class="modal-action">
+        <button class="btn btn-ghost" @click="cancel()">Cancel</button>
+        <button class="btn btn-error" :class="loading && 'loading'" :disabled="loading"
+                @click="confirm()">
+          Confirm
+        </button>
+      </div>
     </div>
-  </div>
-  <form method="dialog" class="modal-backdrop"><button>close</button></form>
-</dialog>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+  </dialog>
+</div>

@@ -33,17 +33,17 @@
   <script src="/static/vendor/htmx-ext-response-targets.js"></script>
   <script src="/static/vendor/htmx-ext-loading-states.js"></script>
   <script src="/static/vendor/htmx-ext-sse.js"></script>
-  {# Alpine.js + plugins (v0.45.0) #}
+  {# Alpine.js + plugins #}
   <script defer src="/static/vendor/sortable.min.js"></script>
   <script defer src="/static/vendor/alpine-sort.min.js"></script>
   <script defer src="/static/vendor/alpine-persist.min.js"></script>
+  <script defer src="/static/js/dz-alpine.js"></script>
+  <script defer src="/static/js/workspace-editor.js"></script>
   <script defer src="/static/vendor/alpine.min.js"></script>
-  {# Dazzle micro-runtime #}
+  {# Dazzle runtime (a11y + islands only — UI state managed by Alpine) #}
   <link rel="stylesheet" href="/static/css/dz.css">
-  <script defer src="/static/js/dz.js"></script>
   <script defer src="/static/js/dz-a11y.js"></script>
   <script defer src="/static/js/dz-islands.js"></script>
-  <script defer src="/static/js/workspace-editor.js"></script>
   {% endif %}
 
   {# CSRF token injection for HTMX requests (v1.0.0) #}
@@ -94,8 +94,16 @@
   {% block body %}
   {% endblock %}
 
-  {# Toast notifications area — no Alpine, just a container for dz.toast() #}
-  <div id="dz-toast" class="toast toast-end toast-top" aria-live="polite"></div>
+  {# Toast notifications — Alpine dzToast component #}
+  <div id="dz-toast" class="toast toast-end toast-top" aria-live="polite"
+       x-data="dzToast">
+    <template x-for="t in toasts" :key="t.id">
+      <div :class="'alert alert-' + t.type + (t.leaving ? ' dz-toast-leave' : '')"
+           @click="dismiss(t.id)">
+        <span x-text="t.message"></span>
+      </div>
+    </template>
+  </div>
 
   {# Screen-reader page announcer for hx-boost navigation #}
   <div id="dz-page-announcer" aria-live="assertive" aria-atomic="true" class="sr-only"></div>

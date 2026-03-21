@@ -101,9 +101,10 @@
 
     {% elif field.type == "money" %}
       {# Money widget: major-unit display input + hidden minor-unit value #}
+      {% set minor_val = values.get(field.name ~ '_minor', '') if values else '' %}
       {% if field.extra.get('currency_fixed', true) %}
-      {# Pinned currency — static prefix symbol #}
-      <div data-dz-money="{{ field.name }}" data-dz-currency="{{ field.extra.currency_code }}"
+      {# Pinned currency — static prefix symbol, Alpine dzMoney #}
+      <div x-data="dzMoney" data-dz-currency="{{ field.extra.currency_code }}"
            data-dz-scale="{{ field.extra.scale }}">
         <div class="join w-full">
           <span class="join-item btn btn-ghost no-animation pointer-events-none dz-money-prefix"
@@ -111,7 +112,8 @@
             {{ field.extra.symbol }}
           </span>
           <input type="text" inputmode="decimal" id="{{ field_id }}"
-                 data-dazzle-field="{{ field.name }}" data-dz-money-display
+                 data-dazzle-field="{{ field.name }}"
+                 x-model="displayValue" @input="onInput()" @blur="onBlur()"
                  class="input input-bordered join-item w-full {% if error %}input-error{% endif %}"
                  placeholder="0.00"
                  aria-label="{{ field.label }} ({{ field.extra.currency_code }})"
@@ -119,16 +121,17 @@
                  {% if error %}aria-invalid="true"{% endif %}
                  {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
         </div>
-        <input type="hidden" name="{{ field.name }}_minor" data-dz-money-minor
-               value="{{ values.get(field.name ~ '_minor', '') if values else '' }}" />
-        <input type="hidden" name="{{ field.name }}_currency" data-dz-money-currency
+        <input type="hidden" name="{{ field.name }}_minor" x-model="minorValue"
+               x-init="minorValue = '{{ minor_val }}'" />
+        <input type="hidden" name="{{ field.name }}_currency"
                value="{{ field.extra.currency_code }}" />
       </div>
       {% else %}
-      {# Unpinned currency — dropdown selector #}
-      <div data-dz-money="{{ field.name }}" data-dz-scale="{{ field.extra.scale }}">
+      {# Unpinned currency — dropdown selector, Alpine dzMoney #}
+      <div x-data="dzMoney" data-dz-scale="{{ field.extra.scale }}">
         <div class="join w-full">
-          <select data-dz-money-currency name="{{ field.name }}_currency"
+          <select name="{{ field.name }}_currency"
+                  @change="onCurrencyChange($event)"
                   class="select select-bordered join-item w-36"
                   aria-label="Currency for {{ field.label }}">
             {% for opt in field.extra.get('currency_options', []) %}
@@ -140,7 +143,8 @@
             {% endfor %}
           </select>
           <input type="text" inputmode="decimal" id="{{ field_id }}"
-                 data-dazzle-field="{{ field.name }}" data-dz-money-display
+                 data-dazzle-field="{{ field.name }}"
+                 x-model="displayValue" @input="onInput()" @blur="onBlur()"
                  class="input input-bordered join-item w-full {% if error %}input-error{% endif %}"
                  placeholder="0.00"
                  aria-label="{{ field.label }}"
@@ -148,8 +152,8 @@
                  {% if error %}aria-invalid="true"{% endif %}
                  {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
         </div>
-        <input type="hidden" name="{{ field.name }}_minor" data-dz-money-minor
-               value="{{ values.get(field.name ~ '_minor', '') if values else '' }}" />
+        <input type="hidden" name="{{ field.name }}_minor" x-model="minorValue"
+               x-init="minorValue = '{{ minor_val }}'" />
       </div>
       {% endif %}
 
@@ -174,26 +178,31 @@
              {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
 
     {% elif field.type == "file" %}
-      {# File upload: uploads to /files/upload, stores returned URL in hidden input #}
-      <div data-dz-file="{{ field.name }}" class="dz-file-upload">
+      {# File upload: Alpine dzFileUpload component #}
+      <div x-data="dzFileUpload" data-dz-file="{{ field.name }}" class="dz-file-upload"
+           {% if value %}x-init="hasFile = true; filename = '{{ value | default('', true) | basename_or_url }}'"{% endif %}>
         <input type="hidden" name="{{ field.name }}" id="{{ field_id }}"
                data-dazzle-field="{{ field.name }}" data-dz-file-value
                value="{{ value | default('', true) }}" />
-        {% if value %}
-        <div data-dz-file-preview class="flex items-center gap-2 p-3 bg-base-200 rounded-lg mb-2">
+        {# File preview (shown when file exists) #}
+        <div x-show="hasFile" class="flex items-center gap-2 p-3 bg-base-200 rounded-lg mb-2">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span class="text-sm truncate" data-dz-file-name>{{ value | default('', true) | basename_or_url }}</span>
-          <button type="button" data-dz-file-clear class="btn btn-ghost btn-xs ml-auto" aria-label="Remove file">
+          <span class="text-sm truncate" x-text="filename"></span>
+          <button type="button" @click="clear()" class="btn btn-ghost btn-xs ml-auto" aria-label="Remove file">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        {% endif %}
-        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-base-300 rounded-lg cursor-pointer hover:border-primary hover:bg-base-200/50 transition-colors {% if value %}hidden{% endif %}"
-               data-dz-file-dropzone {% if value %}style="display:none"{% endif %}>
+        {# Dropzone (shown when no file) #}
+        <label x-show="!hasFile"
+               @dragover.prevent="dragging = true"
+               @dragleave="dragging = false"
+               @drop="onDrop($event)"
+               :class="dragging && 'border-primary bg-base-200/50'"
+               class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-base-300 rounded-lg cursor-pointer hover:border-primary hover:bg-base-200/50 transition-colors">
           <div class="flex flex-col items-center justify-center pt-5 pb-6">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -201,15 +210,18 @@
             <p class="text-sm text-base-content/60">Click to upload or drag and drop</p>
           </div>
           <input type="file" class="hidden" data-dz-file-input
+                 @change="selectFile($event)"
                  accept="{{ field.extra.get('accept', '*/*') }}"
                  {% if field.extra.get('capture') %}capture="{{ field.extra.capture }}"{% endif %}
                  {% if field.required and not value %}required aria-required="true"{% endif %}
                  {% if error %}aria-invalid="true"{% endif %} />
         </label>
-        <div data-dz-file-progress class="hidden mt-2">
-          <progress class="progress progress-primary w-full" value="0" max="100"></progress>
+        {# Upload progress #}
+        <div x-show="uploading" class="mt-2">
+          <progress class="progress progress-primary w-full"></progress>
         </div>
-        <div data-dz-file-error class="text-error text-sm mt-1 hidden"></div>
+        {# Error message #}
+        <div x-show="error" class="text-error text-sm mt-1" x-text="error"></div>
       </div>
 
     {% else %}

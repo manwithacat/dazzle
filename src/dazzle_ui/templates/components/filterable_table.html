@@ -1,12 +1,9 @@
-{# Filterable table component — Alpine for column dropdown, dz.js for table state #}
-{# Sort/bulk/column-visibility state managed by dz.js initTable() via data-dz-table #}
+{# Filterable table component — Alpine dzTable for all state #}
 {% if table %}
 <div id="{{ table.table_id or 'dt-table' }}"
      class="space-y-4"
-     data-dz-table
-     data-dz-table-endpoint="{{ table.api_endpoint }}"
-     data-dz-sort-field="{{ table.sort_field }}"
-     data-dz-sort-dir="{{ table.sort_dir }}">
+     x-data="dzTable('{{ table.table_id or 'dt-table' }}', '{{ table.api_endpoint }}', '{{ table.sort_field }}', '{{ table.sort_dir }}')"
+     data-dazzle-table="{{ table.entity_name }}">
 
   {# Header row: title + actions #}
   {% block table_header %}
@@ -26,7 +23,8 @@
           {% if not col.hidden %}
           <label class="flex items-center gap-2 py-1 px-2 hover:bg-base-200 rounded cursor-pointer">
             <input type="checkbox" class="checkbox checkbox-xs"
-                   data-dz-col-toggle="{{ col.key }}" checked />
+                   :checked="$root.isColumnVisible('{{ col.key }}')"
+                   @change="$root.toggleColumn('{{ col.key }}')" />
             <span class="text-sm">{{ col.label }}</span>
           </label>
           {% endif %}
@@ -86,14 +84,15 @@
 
   {# Table #}
   <div class="overflow-x-auto" role="region" aria-label="{{ table.title }} table" tabindex="0">
-    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}" data-dazzle-table="{{ table.entity_name }}"
+    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}"
            aria-label="{{ table.title }}">
       <caption class="sr-only">{{ table.title }}</caption>
       <thead>
         <tr>
           {% if table.bulk_actions %}
           <th scope="col" class="w-10">
-            <input type="checkbox" class="checkbox checkbox-sm" data-dz-select-all
+            <input type="checkbox" class="checkbox checkbox-sm"
+                   @change="toggleSelectAll($event.target.checked)"
                    aria-label="Select all rows" />
           </th>
           {% endif %}
@@ -101,17 +100,16 @@
           {% if not col.hidden %}
           <th scope="col" data-dz-col="{{ col.key }}"
               {% if col.sortable %}
-              data-dz-sort="{{ col.key }}"
-              aria-sort="none"
+              :aria-sort="ariaSortDir('{{ col.key }}')"
               {% endif %}>
             {% if col.sortable %}
             <button class="inline-flex items-center gap-1 cursor-pointer select-none hover:bg-base-200 rounded px-1 -mx-1"
-                    data-dz-sort-btn
+                    @click="toggleSort('{{ col.key }}')"
                     aria-label="Sort by {{ col.label }}">
               {{ col.label }}
-              <svg data-dz-sort-icon xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                    class="w-3 h-3 stroke-current transition-transform"
-                   style="display:none;" aria-hidden="true">
+                   :class="sortIcon('{{ col.key }}')" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
               </svg>
             </button>
@@ -135,9 +133,8 @@
     </table>
   </div>
 
-  {# Pagination — pages mode uses numbered buttons, infinite mode uses sentinel #}
+  {# Pagination #}
   {% if table.pagination_mode == "infinite" %}
-  {# Sentinel appended after table rows via hx-trigger="revealed" #}
   {% else %}
   <div id="{{ table.table_id or 'dt-table' }}-pagination">
     {% include 'fragments/table_pagination.html' %}
