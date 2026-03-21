@@ -19,7 +19,7 @@ DSL Syntax (v0.44.0):
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from .. import ir
 from ..lexer import TokenType
@@ -101,7 +101,7 @@ class ParamParserMixin:
         # Parse body fields
         param_type: str = "str"
         default: Any = None
-        scope: str = "system"
+        scope: Literal["system", "tenant", "user"] = "system"
         category: str | None = None
         sensitive: bool = False
         constraints: ir.ParamConstraints | None = None

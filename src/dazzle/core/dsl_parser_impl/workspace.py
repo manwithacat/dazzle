@@ -507,6 +507,7 @@ class WorkspaceParserMixin:
                         key=ref_key, param_type="list[float]", default=[]
                     )
                 else:
+                    thresh_list: list[float] = []
                     self.expect(TokenType.LBRACKET)
                     while not self.match(TokenType.RBRACKET):
                         self.skip_newlines()
@@ -519,11 +520,12 @@ class WorkspaceParserMixin:
                             self.advance()
                             frac = self.expect(TokenType.NUMBER).value
                             num_str = num_str + "." + frac
-                        heatmap_thresholds.append(float(num_str))
+                        thresh_list.append(float(num_str))
                         if self.match(TokenType.COMMA):
                             self.advance()
                         self.skip_newlines()
                     self.expect(TokenType.RBRACKET)
+                    heatmap_thresholds = thresh_list
                 self.skip_newlines()
 
             # stages: [uploaded, queued, processing, marked, reviewed, flagged]

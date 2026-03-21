@@ -13,6 +13,7 @@ Commands:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import typer
 
@@ -23,13 +24,12 @@ DEFAULT_TEST_PASSWORD = "dazzle-test-2026"
 
 def _generate_test_personas_toml(
     project_root: Path,
-    blueprint_result: dict,
+    blueprint_result: dict[str, Any],
 ) -> None:
     """Generate .dazzle/test_personas.toml from the demo blueprint.
 
     Does not overwrite if the file already exists.
     """
-    from typing import Any
 
     toml_path = project_root / ".dazzle" / "test_personas.toml"
     if toml_path.exists():
