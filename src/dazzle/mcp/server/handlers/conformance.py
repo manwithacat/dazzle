@@ -1,9 +1,10 @@
 """Conformance tool handlers — query DSL conformance cases and coverage.
 
-Provides 3 operations:
+Provides 4 operations:
 - summary: run derivation pipeline, return coverage metric and per-entity case counts
 - cases: return cases for a specific entity
 - gaps: find entities with permit blocks but no scope blocks
+- monitor_status: return current conformance monitor state (if installed)
 """
 
 from __future__ import annotations
@@ -97,3 +98,32 @@ def conformance_gaps_handler(project_root: Path, args: dict[str, Any]) -> str:
             )
 
     return json.dumps({"gaps": gaps, "total": len(gaps)}, indent=2)
+
+
+@wrap_handler_errors
+def conformance_monitor_status_handler(project_root: Path, args: dict[str, Any]) -> str:
+    """Return the current conformance monitor state.
+
+    If a ConformanceMonitor has been installed (e.g. during a test scenario),
+    returns the current observations and comparison report. Otherwise returns
+    an empty status.
+    """
+    from dazzle.rbac.audit import get_audit_sink
+
+    sink = get_audit_sink()
+
+    # Check if current sink is an InMemoryAuditSink (monitor installed)
+    from dazzle.rbac.audit import InMemoryAuditSink
+
+    if isinstance(sink, InMemoryAuditSink):
+        return json.dumps(
+            {
+                "monitor_installed": True,
+                "observations": len(sink.records),
+                "records": [r.to_dict() for r in sink.records[-20:]],
+            },
+            indent=2,
+            default=str,
+        )
+
+    return json.dumps({"monitor_installed": False, "observations": 0}, indent=2)

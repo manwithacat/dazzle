@@ -1324,14 +1324,15 @@ def get_consolidated_tools() -> list[Tool]:
                 "DSL conformance testing operations. "
                 "summary: run derivation pipeline and return coverage metrics (total cases, per-entity counts, scope types). "
                 "cases: return all conformance cases for a specific entity (requires entity_name). "
-                "gaps: find entities that have permit rules but no scope blocks (authorization without row filtering)."
+                "gaps: find entities that have permit rules but no scope blocks (authorization without row filtering). "
+                "monitor_status: return current runtime conformance monitor state (observations collected)."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "operation": {
                         "type": "string",
-                        "enum": ["summary", "cases", "gaps"],
+                        "enum": ["summary", "cases", "gaps", "monitor_status"],
                         "description": "Operation to perform",
                     },
                     "entity_name": {

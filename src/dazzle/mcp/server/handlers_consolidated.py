@@ -1058,6 +1058,7 @@ handle_conformance: Callable[[dict[str, Any]], str] = _make_project_handler(
         "summary": f"{_MOD_CONF}:conformance_summary_handler",
         "cases": f"{_MOD_CONF}:conformance_cases_handler",
         "gaps": f"{_MOD_CONF}:conformance_gaps_handler",
+        "monitor_status": f"{_MOD_CONF}:conformance_monitor_status_handler",
     },
 )
 
