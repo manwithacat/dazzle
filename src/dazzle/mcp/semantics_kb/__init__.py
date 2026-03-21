@@ -53,6 +53,7 @@ TOML_FILES = [
     "misc.toml",
     "patterns.toml",
     "frontend.toml",
+    "runtime.toml",
 ]
 
 # Alias mapping for common term variations — used by seed.py
@@ -215,6 +216,44 @@ ALIASES = {
     # Source/autocomplete
     "autocomplete": "field_types",
     "source": "field_types",
+    # Runtime contract aliases
+    "display_name": "display_field",
+    "__display__": "display_field",
+    "fk_display": "display_field",
+    "scope_runtime": "scope_runtime",
+    "scope_predicate": "scope_runtime",
+    "scope_predicates": "scope_runtime",
+    "scope_evaluation": "scope_runtime",
+    "scope_filter": "scope_runtime",
+    "row_filter": "scope_runtime",
+    "default_deny": "scope_default_behaviour",
+    "csrf": "csrf",
+    "csrf_token": "csrf",
+    "csrf_middleware": "csrf",
+    "x_csrf_token": "csrf",
+    "route_order": "route_registration",
+    "route_matching": "route_registration",
+    "middleware": "middleware_order",
+    "middleware_order": "middleware_order",
+    "request_lifecycle": "request_lifecycle",
+    "call_chain": "request_lifecycle",
+    "execution_path": "request_lifecycle",
+    "predicate": "predicate_compilation",
+    "predicate_algebra": "predicate_compilation",
+    "compile_predicate": "predicate_compilation",
+    "alpine": "alpine_components",
+    "dz_alpine": "alpine_components",
+    "dz_toast": "alpine_components",
+    "dz_table": "alpine_components",
+    "permit_evaluation": "permit_runtime",
+    "cedar": "permit_runtime",
+    "forbid": "permit_runtime",
+    "rbac_runtime": "permit_runtime",
+    "visible": "visible_directive",
+    "field_visibility": "visible_directive",
+    "template_variables": "template_context",
+    "template_context": "template_context",
+    "jinja_context": "template_context",
 }
 
 

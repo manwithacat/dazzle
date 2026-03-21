@@ -1,0 +1,493 @@
+# Runtime Contracts
+# Documents runtime behaviour, limitations, and implementation details
+# for DSL constructs that have non-obvious runtime semantics.
+#
+# This file bridges the gap between "what DSL syntax to use" (covered by
+# other KB files) and "what happens at runtime" (what AI agents actually
+# need when debugging).
+
+[meta]
+category = "Runtime Contracts"
+version = "0.45.0"
+
+# =============================================================================
+# FK Resolution & Display
+# =============================================================================
+
+[concepts.display_field]
+category = "Runtime Contract"
+definition = """
+Controls how an entity appears when referenced as a FK from another entity.
+When entity A has `ref B`, and B has `display_field: name`, then loading A
+will resolve B's FK to show B's `name` instead of B's raw UUID.
+"""
+runtime_behaviour = """
+- Resolved in `relation_loader.py` when entity is loaded as FK expansion
+- Sets `__display__` key on the expanded dict
+- The fallback chain for display name: __display__ → name → title → code → label → id
+- display_field is resolved by `_resolve_display_name()` in relation_loader.py
+"""
+limitations = """
+- DEPTH LIMIT: Only resolves one level deep. If display_field points to a FK
+  field (e.g. `display_field: student` where student is `ref User`), the
+  __display__ value is the raw UUID of that FK — not the cascaded display name.
+- Workaround: Always use scalar fields (name, code, label, email) for
+  display_field, never FK fields.
+"""
+implemented_by = [
+    "dazzle_back.runtime.relation_loader._resolve_display_name",
+    "dazzle_back.runtime.relation_loader.expand_relations",
+]
+known_issues = ["#590: FK display_field resolves to UUID at depth > 1"]
+syntax = """
+entity User "User":
+  display_field: name    # ← scalar field, GOOD
+  name: str(100) required
+
+entity Task "Task":
+  display_field: title   # ← scalar field, GOOD
+  title: str(200) required
+  assignee: ref User     # Will show User.name, not UUID
+"""
+
+# =============================================================================
+# Scope Evaluation
+# =============================================================================
+
+[concepts.scope_runtime]
+category = "Runtime Contract"
+definition = """
+How scope rules are evaluated at runtime to filter rows on API list endpoints
+and workspace region queries. Scope rules compile from DSL through a multi-stage
+pipeline: ConditionExpr → ScopePredicate → (sql, params) → resolved SQL.
+"""
+runtime_behaviour = """
+- Entry point: `_resolve_scope_filters()` in route_generator.py
+- Called from `_list_handler_body()` for API list endpoints
+- Called from `_apply_workspace_scope_filters()` for workspace regions
+- Both paths must behave identically (same function, same logic)
+
+Evaluation order:
+1. If no cedar_access_spec → no scope filtering (unauthenticated/no-auth app)
+2. If cedar_access_spec but no scope rules → pass through (no row filter)
+3. Collect ALL matching scope rules for user's roles (not first-match!)
+4. If ANY matching rule is unconditional (scope: all) → return {} (no filter)
+5. Otherwise apply the first resolvable predicate filter
+
+For dual-role users (e.g. super_admin + school_admin):
+- The most permissive matching rule wins
+- scope: all on ANY role overrides restrictive scopes on other roles
+"""
+limitations = """
+- Predicate compilation is structural — it doesn't evaluate the predicate
+  against actual data, just compiles to SQL
+- UserAttrRef markers in params must be resolved at request time by the
+  route handler (not by the compiler)
+- OR-combination of multiple restrictive scope rules for different roles
+  is not yet implemented — only scope:all override works for dual-role
+"""
+implemented_by = [
+    "dazzle_back.runtime.route_generator._resolve_scope_filters",
+    "dazzle_back.runtime.route_generator._resolve_predicate_filters",
+    "dazzle_back.runtime.route_generator._list_handler_body",
+    "dazzle_back.runtime.workspace_rendering._apply_workspace_scope_filters",
+    "dazzle_back.runtime.predicate_compiler.compile_predicate",
+    "dazzle.core.ir.predicate_builder.build_scope_predicate",
+]
+known_issues = [
+    "#595: Scope predicates not applied on API list (fixed: _noauth_handler)",
+    "#604: Dual-role users get wrong scope (fixed: most-permissive-wins)",
+    "#607: No scope: blocks returned 0 rows (fixed: pass-through)",
+    "#591: Null FK poisoning in scope evaluation",
+]
+
+[concepts.scope_default_behaviour]
+category = "Runtime Contract"
+definition = """
+What happens when an entity has permit: rules but no scope: blocks.
+"""
+runtime_behaviour = """
+- The permit gate controls entity-level access (can this persona list/create/etc?)
+- The scope layer controls row-level filtering (which rows can they see?)
+- If permit: exists but scope: is absent → NO row filter is applied
+- All rows visible to the permitted persona (permit gate already passed)
+- To restrict rows, explicitly add scope: blocks
+
+This means:
+  permit: viewer can list    → viewer can access the list endpoint
+  (no scope: blocks)         → viewer sees ALL rows
+
+To restrict:
+  scope list: owner = current_user for: viewer
+"""
+important_notes = [
+    "permit: without scope: means ALL rows visible (not zero rows)",
+    "scope: blocks are optional — their absence means no row-level filter",
+    "scope: all for: * is redundant when no scope blocks exist, but documents intent",
+]
+
+# =============================================================================
+# RBAC / Permit Evaluation
+# =============================================================================
+
+[concepts.permit_runtime]
+category = "Runtime Contract"
+definition = """
+How permit rules are evaluated at runtime (the Cedar three-rule evaluation).
+"""
+runtime_behaviour = """
+Entry point: `_extract_cedar_row_filters()` in route_generator.py
+
+Evaluation order (per entity × operation):
+1. If entity has no access spec → UNPROTECTED (all access granted)
+2. FORBID rules checked first — if any forbid matches, 403 (forbid always wins)
+3. PERMIT rules checked — if any permit matches the user's role, access granted
+4. No permit matches → ACCESS_DENIED (403)
+
+After permit gate passes, scope rules are evaluated for row filtering.
+"""
+implemented_by = [
+    "dazzle_back.runtime.route_generator._extract_cedar_row_filters",
+    "dazzle_back.runtime.route_generator._extract_condition_filters",
+]
+
+[concepts.visible_directive]
+category = "Runtime Contract"
+definition = """
+The `visible:` directive on surface elements controls field-level visibility
+based on persona roles. It operates at three levels with different semantics.
+"""
+runtime_behaviour = """
+Three levels:
+1. List column `visible:` — controls which columns appear in the table header
+   and row cells. Evaluated during template compilation, not at request time.
+2. Detail field `visible:` — controls which fields appear on the detail page.
+3. Form field `visible:` — controls which fields appear on create/edit forms.
+
+Implementation:
+- Template compiler evaluates `visible:` at page render time
+- The check is: does the current user's role match the visible: condition?
+- If not matched, the field/column is omitted from the HTML output
+
+IMPORTANT: `visible:` is a UI-layer concern. It does NOT prevent the field
+from being returned in the API JSON response. For API-level field hiding,
+use view-based projections (select_fields).
+"""
+implemented_by = [
+    "dazzle_ui.converters.template_compiler._should_show_element",
+    "dazzle_ui.runtime.page_routes._build_table_columns",
+]
+known_issues = [
+    "#585: visible: on list columns renders for all roles (not enforced)",
+    "#587: visible: evaluates to False for ALL roles (regression)",
+]
+
+# =============================================================================
+# CSRF Protection
+# =============================================================================
+
+[concepts.csrf]
+category = "Runtime Contract"
+definition = """
+Double-submit cookie CSRF protection. Prevents cross-site request forgery
+on state-changing operations (POST/PUT/DELETE/PATCH).
+"""
+runtime_behaviour = """
+Implementation: Pure ASGI middleware in csrf.py (not BaseHTTPMiddleware —
+BaseHTTPMiddleware has a known body consumption bug in Starlette).
+
+Flow:
+1. On any request, check for `dazzle_csrf` cookie
+2. If absent, generate a new token and set it as a cookie (httponly=False)
+3. For safe methods (GET/HEAD/OPTIONS) → pass through
+4. For mutation methods → validate X-CSRF-Token header matches cookie
+5. If mismatch → 403 {"detail": "CSRF token missing or invalid"}
+
+Exempt paths (no CSRF validation required):
+- /health, /docs, /openapi.json, /redoc
+- /webhooks/*, /api/v1/webhooks/*
+- /__test__/* (test mode endpoints)
+- /dazzle/dev/* (dev control plane)
+- /auth/* (login/signup — establish sessions, don't consume them)
+- Bearer-authenticated requests (JWT proves non-CSRF)
+
+Client integration:
+- htmx: base.html injects X-CSRF-Token from cookie on htmx:configRequest
+- Test runners: auto-acquire token via GET /health, inject on mutations
+- httpx/requests: use a Session to persist cookies across requests
+"""
+implemented_by = [
+    "dazzle_back.runtime.csrf.CSRFMiddleware",
+    "dazzle_back.runtime.csrf.apply_csrf_protection",
+]
+known_issues = [
+    "#606: BaseHTTPMiddleware consumed body (fixed: pure ASGI rewrite)",
+    "#605: Test runners lacked CSRF tokens (fixed: auto-acquire)",
+    "#597: CSRF not validated on mutations (fixed: middleware added)",
+]
+
+# =============================================================================
+# Route Registration
+# =============================================================================
+
+[concepts.route_registration]
+category = "Runtime Contract"
+definition = """
+How API routes are registered and matched by FastAPI.
+"""
+runtime_behaviour = """
+FastAPI uses first-match-wins for route matching. Registration order matters.
+
+Route registration sequence in RouteGenerator.generate_all_routes():
+1. Guard routes registered FIRST: /{entity}s/create → 404
+   (prevents 'create' being parsed as a UUID {id} parameter)
+2. Main routes sorted by: more segments first, static before dynamic
+3. This ensures /tasks/create matches before /tasks/{id}
+
+The sort key: (-segment_count, 0 if static else 1)
+- /tasks/bulk-delete (static, 2 segments) → sorted before
+- /tasks/{id} (dynamic, 2 segments) → sorted after
+- /tasks (1 segment) → sorted last
+"""
+implemented_by = [
+    "dazzle_back.runtime.route_generator.RouteGenerator.generate_all_routes",
+    "dazzle_back.runtime.route_generator.RouteGenerator.generate_route",
+]
+known_issues = ["#598: /create parsed as UUID (fixed: guard routes first)"]
+
+# =============================================================================
+# Template Rendering
+# =============================================================================
+
+[concepts.template_context]
+category = "Runtime Contract"
+definition = """
+Variables available in Jinja2 templates at render time.
+"""
+runtime_behaviour = """
+Base context (available in all templates via template_context.py):
+- app_name: str — from appspec.title or appspec.name (human-readable)
+- is_authenticated: bool
+- user_name, user_email: str | None
+- current_route: str — current URL path
+- _htmx_partial: bool — True for HTMX fragment requests
+
+List page context (filterable_table.html):
+- table.entity_name: str — entity name for display
+- table.title: str — human-readable title
+- table.columns: list — column definitions with key, label, type, sortable
+- table.api_endpoint: str — API URL for data fetching
+- table.empty_message: str — from DSL ux: empty: or default
+
+Detail page context (detail_view.html):
+- detail.entity_name, detail.title, detail.item: dict
+- detail.related_tabs: list — hub-and-spoke related entity tabs
+- detail.edit_url, detail.delete_url, detail.back_url
+
+Form context (form.html):
+- form.entity_name, form.title, form.mode (create/edit)
+- form.fields: list — field definitions
+- form.sections: list — wizard sections (if multi-step)
+- form.action_url, form.cancel_url
+
+Workspace context:
+- regions: list — workspace region configurations
+- entity_name: str — per-region entity name
+- empty_message: str — from DSL or default
+"""
+implemented_by = [
+    "dazzle_ui.runtime.template_context.PageContext",
+    "dazzle_ui.runtime.page_routes._build_table_context",
+    "dazzle_ui.runtime.page_routes._build_detail_context",
+    "dazzle_ui.converters.template_compiler._compile_form_surface",
+]
+
+# =============================================================================
+# Request Lifecycle
+# =============================================================================
+
+[concepts.request_lifecycle]
+category = "Runtime Contract"
+definition = """
+The complete call chain for key request types. This is the path agents
+trace manually via grep during debugging — having it indexed saves time.
+"""
+runtime_behaviour = """
+POST /{entity}s (create):
+  → CSRFMiddleware.__call__  (validates X-CSRF-Token)
+  → AuthMiddleware           (extracts session → AuthContext)
+  → _create_auth_handler     (FastAPI route handler)
+    → Cedar permit check     (_extract_cedar_row_filters)
+    → service.execute(operation="create", data=...)
+      → repository.create(data)
+        → QueryBuilder.build_insert()
+        → db.execute(sql, params)
+
+GET /{entity}s (list):
+  → CSRFMiddleware.__call__  (safe method — pass through)
+  → AuthMiddleware           (extracts session → AuthContext)
+  → _list_handler_body
+    → Cedar permit check     (entity-level gate)
+    → build_visibility_filter (access_spec → sql_filters)
+    → _resolve_scope_filters  (scope rules → row filters)
+    → service.execute(operation="list", filters=..., search=...)
+      → repository.list(page, page_size, filters, sort, search)
+        → QueryBuilder.build_select()
+
+GET /{entity}s/{id} (detail):
+  → CSRFMiddleware → AuthMiddleware → _read_auth_handler
+    → Cedar permit check
+    → service.execute(operation="read", id=...)
+      → repository.get(id)
+      → relation_loader.expand_relations(item)
+        → _resolve_display_name()
+
+Workspace region render:
+  → page_routes.workspace_handler
+    → _render_workspace_regions
+      → _apply_workspace_scope_filters (scope enforcement)
+      → _fetch_region_data (repository.list with filters)
+      → template.render(region_context)
+"""
+implemented_by = [
+    "dazzle_back.runtime.csrf.CSRFMiddleware",
+    "dazzle_back.runtime.route_generator.create_list_handler",
+    "dazzle_back.runtime.route_generator._list_handler_body",
+    "dazzle_back.runtime.route_generator.create_detail_handler",
+    "dazzle_back.runtime.route_generator.create_create_handler",
+    "dazzle_back.runtime.service_generator.CRUDService.execute",
+    "dazzle_back.runtime.repository.DazzleRepository.list",
+    "dazzle_back.runtime.relation_loader.expand_relations",
+    "dazzle_ui.runtime.page_routes.workspace_handler",
+]
+
+# =============================================================================
+# Middleware Execution Order
+# =============================================================================
+
+[concepts.middleware_order]
+category = "Runtime Contract"
+definition = """
+The order in which middleware executes on each request. Important for
+understanding why a request gets a 403 before reaching the route handler.
+"""
+runtime_behaviour = """
+Middleware executes in LIFO order (last added = first to run):
+
+1. CSRFMiddleware (outermost — runs first)
+   → Validates CSRF token on mutations
+   → Sets dazzle_csrf cookie on responses
+
+2. CORSMiddleware (if configured)
+   → Handles preflight OPTIONS requests
+
+3. TenantMiddleware (if multi-tenant)
+   → Resolves tenant from subdomain/header/session
+   → Sets search_path on PostgreSQL connection
+
+4. FastAPI routing (innermost)
+   → Matches path to handler
+   → Runs dependency injection (auth, etc.)
+   → Calls route handler
+
+Key implication: CSRF validation happens BEFORE auth, BEFORE routing.
+A missing CSRF token returns 403 before the auth layer even checks
+whether the user is logged in.
+"""
+implemented_by = [
+    "dazzle_back.runtime.server.DazzleBackendApp._setup_security",
+    "dazzle_back.runtime.csrf.apply_csrf_protection",
+]
+
+# =============================================================================
+# Predicate Compilation Chain
+# =============================================================================
+
+[concepts.predicate_compilation]
+category = "Runtime Contract"
+definition = """
+The multi-stage compilation chain that transforms DSL scope rules into
+SQL WHERE clauses. Each stage can introduce fidelity loss.
+"""
+runtime_behaviour = """
+Stage 1: Parse → ConditionExpr
+  DSL text → parser → ConditionExpr tree (conditions.py)
+  Comparison, ViaCondition, LogicalOperator nodes
+
+Stage 2: ConditionExpr → ScopePredicate
+  build_scope_predicate() in predicate_builder.py
+  Maps to typed algebra: ColumnCheck, UserAttrCheck, PathCheck,
+  ExistsCheck, BoolComposite, Tautology, Contradiction
+
+  Key simplifications (BoolComposite.make()):
+  - AND(x, Tautology) → x
+  - OR(x, Tautology) → Tautology
+  - NOT(NOT(x)) → x
+
+Stage 3: ScopePredicate → (sql, params)
+  compile_predicate() in predicate_compiler.py
+  Produces a WHERE fragment with %s placeholders
+  Marker objects: UserAttrRef(attr_name), CurrentUserRef()
+
+Stage 4: Marker resolution (request time)
+  Route handler substitutes markers with concrete values:
+  UserAttrRef("school_id") → current_user.school_id
+  CurrentUserRef() → current_user.id
+
+Stage 5: SQL execution
+  QueryBuilder.add_filters() applies the resolved SQL
+"""
+implemented_by = [
+    "dazzle.core.ir.predicate_builder.build_scope_predicate",
+    "dazzle.core.ir.predicates (ScopePredicate algebra types)",
+    "dazzle_back.runtime.predicate_compiler.compile_predicate",
+    "dazzle_back.runtime.predicate_compiler.UserAttrRef",
+    "dazzle_back.runtime.predicate_compiler.CurrentUserRef",
+    "dazzle_back.runtime.route_generator._resolve_predicate_filters",
+]
+
+# =============================================================================
+# Alpine.js Components
+# =============================================================================
+
+[concepts.alpine_components]
+category = "Runtime Contract"
+definition = """
+Alpine.js components registered in dz-alpine.js that manage UI state.
+Replaced the former dz.js micro-runtime in v0.45.0.
+"""
+runtime_behaviour = """
+Components registered via Alpine.data() in dz-alpine.js:
+
+dzToast — Toast notifications
+  Listens for: HTMX showToast trigger, Alpine $dispatch('toast')
+  Auto-dismisses after 4 seconds
+
+dzConfirm — Confirmation dialog
+  Triggered via: window event 'dz-confirm' with {message, action, method}
+  Executes action via htmx.ajax(), sanitizes URL and method
+
+dzTable — Data table (sort, column visibility, bulk select)
+  Params: dzTable(tableId, endpoint, sortField, sortDir)
+  Column visibility persisted to localStorage
+  Bulk select IDs injected via htmx:configRequest
+
+dzMoney — Currency field (minor unit conversion)
+  ISO 4217 scale table, bidirectional display↔minor conversion
+  Supports pinned and unpinned (dropdown) currency
+
+dzFileUpload — File upload with drag-and-drop
+  Uploads via fetch() to /files/upload
+  Shows preview with clear button
+
+dzWizard — Multi-step form wizard
+  Params: dzWizard(totalSteps)
+  Per-stage validation, stepper dot navigation
+
+Backward compatibility:
+  window.dz.toast(message, type) — global function preserved as shim
+"""
+implemented_by = [
+    "dazzle_ui.runtime.static.js.dz-alpine.js",
+    "dazzle_ui.templates.base.html (script loading order)",
+]
