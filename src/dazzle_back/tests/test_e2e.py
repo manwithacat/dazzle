@@ -6,7 +6,7 @@ Tests the complete flow from spec to running API.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -14,21 +14,61 @@ if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
 try:
-    from fastapi.testclient import TestClient as _TestClient  # noqa: F811
+    from fastapi.testclient import TestClient as _RawTestClient  # noqa: F811
 
     TESTCLIENT_AVAILABLE = True
 except ImportError:
-    _TestClient = None  # type: ignore[misc,assignment]
+    _RawTestClient = None  # type: ignore[misc,assignment]
     TESTCLIENT_AVAILABLE = False
 
-from dazzle.core.ir.appspec import AppSpec
-from dazzle.core.ir.domain import DomainSpec
-from dazzle.core.ir.domain import EntitySpec as IREntitySpec
-from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
-from dazzle.core.ir.fields import FieldSpec as IRFieldSpec
-from dazzle.core.ir.fields import FieldType as IRFieldType
-from dazzle.core.ir.surfaces import SurfaceElement, SurfaceMode, SurfaceSection, SurfaceSpec
-from dazzle_back.runtime.app_factory import create_app
+
+class _TestClient(_RawTestClient):
+    """TestClient that handles CSRF token automatically.
+
+    On the first mutation request, performs a GET to /health to obtain
+    the dazzle_csrf cookie, then sends it as X-CSRF-Token on all
+    subsequent POST/PUT/DELETE/PATCH requests.
+    """
+
+    def _ensure_csrf(self) -> None:
+        if not self.cookies.get("dazzle_csrf"):
+            self.get("/health")
+
+    def _inject_csrf(self, kwargs: Any) -> Any:
+        self._ensure_csrf()
+        headers = dict(kwargs.pop("headers", None) or {})
+        csrf = self.cookies.get("dazzle_csrf")
+        if csrf:
+            headers.setdefault("X-CSRF-Token", csrf)
+        kwargs["headers"] = headers
+        return kwargs
+
+    def post(self, *args: Any, **kwargs: Any) -> Any:
+        return super().post(*args, **self._inject_csrf(kwargs))
+
+    def put(self, *args: Any, **kwargs: Any) -> Any:
+        return super().put(*args, **self._inject_csrf(kwargs))
+
+    def delete(self, *args: Any, **kwargs: Any) -> Any:
+        return super().delete(*args, **self._inject_csrf(kwargs))
+
+    def patch(self, *args: Any, **kwargs: Any) -> Any:
+        return super().patch(*args, **self._inject_csrf(kwargs))
+
+
+from dazzle.core.ir.appspec import AppSpec  # noqa: E402
+from dazzle.core.ir.domain import DomainSpec  # noqa: E402
+from dazzle.core.ir.domain import EntitySpec as IREntitySpec  # noqa: E402
+from dazzle.core.ir.fields import FieldModifier, FieldTypeKind  # noqa: E402
+from dazzle.core.ir.fields import FieldSpec as IRFieldSpec  # noqa: E402
+from dazzle.core.ir.fields import FieldType as IRFieldType  # noqa: E402
+from dazzle.core.ir.surfaces import (  # noqa: E402
+    SurfaceElement,
+    SurfaceMode,
+    SurfaceSection,
+    SurfaceSpec,
+)
+from dazzle_back.runtime.app_factory import create_app  # noqa: E402
 
 # =============================================================================
 # Fixtures
