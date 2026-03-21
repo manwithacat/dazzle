@@ -159,6 +159,7 @@ from dazzle.cli.api_pack import api_pack_app  # noqa: E402
 from dazzle.cli.auth import auth_app  # noqa: E402
 from dazzle.cli.backup import backup_app  # noqa: E402
 from dazzle.cli.composition import composition_app  # noqa: E402
+from dazzle.cli.conformance import conformance_app  # noqa: E402
 from dazzle.cli.contribution import contribution_app  # noqa: E402
 from dazzle.cli.db import db_app  # noqa: E402
 from dazzle.cli.demo import demo_app  # noqa: E402
@@ -193,6 +194,7 @@ from dazzle.cli.vocab import vocab_app  # noqa: E402
 
 app.add_typer(api_pack_app, name="api-pack")
 app.add_typer(auth_app, name="auth")
+app.add_typer(conformance_app, name="conformance")
 app.add_typer(backup_app, name="backup")
 app.add_typer(composition_app, name="composition")
 app.add_typer(contribution_app, name="contribution")
