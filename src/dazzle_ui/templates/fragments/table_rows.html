@@ -19,6 +19,7 @@
   </td>
   {% endif %}
   {% for col in table.columns %}
+  {% if not col.hidden %}
   <td data-dz-col="{{ col.key }}">
     {% if col.type == "badge" %}
       <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
@@ -39,6 +40,7 @@
       {{ item[col.key] | default("") | truncate_text }}
     {% endif %}
   </td>
+  {% endif %}
   {% endfor %}
   <td>
     {# Row action dropdown — uses DaisyUI details-based dropdown, no JS #}

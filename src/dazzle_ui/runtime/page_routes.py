@@ -246,6 +246,69 @@ def _user_can_mutate(
         return True  # dazzle_back not available
 
 
+def _filter_nav_by_entity_access(
+    nav_items: list[Any],
+    deps: "_PageDeps",
+    auth_ctx: Any,
+) -> list[Any]:
+    """Remove nav items whose entity denies the user's role for LIST (#583)."""
+    if auth_ctx is None or not auth_ctx.is_authenticated:
+        return nav_items
+
+    try:
+        from dazzle_back.runtime.access_evaluator import (
+            AccessRuntimeContext,
+            evaluate_permission,
+        )
+        from dazzle_back.specs.auth import AccessOperationKind
+
+        _user = auth_ctx.user
+        _raw_roles = list(getattr(_user, "roles", [])) if _user else []
+        _runtime_ctx = AccessRuntimeContext(
+            user_id=str(_user.id) if _user else None,
+            roles=[r.removeprefix("role_") for r in _raw_roles],
+            is_superuser=getattr(_user, "is_superuser", False) if _user else False,
+        )
+        if _runtime_ctx.is_superuser:
+            return nav_items
+
+        filtered: list[Any] = []
+        for item in nav_items:
+            entity_name = deps.route_entity.get(item.route)
+            if entity_name is None:
+                # Not an entity route (e.g. workspace link) — keep it
+                filtered.append(item)
+                continue
+            cedar_spec = deps.entity_cedar_specs.get(entity_name)
+            if cedar_spec is None:
+                # No access rules — keep it
+                filtered.append(item)
+                continue
+            _op_rules = [
+                r for r in cedar_spec.permissions if r.operation == AccessOperationKind.LIST
+            ]
+            _has_scopes = bool(getattr(cedar_spec, "scopes", None))
+            _has_field_conditions = (
+                False if _has_scopes else any(_is_field_cond(r.condition) for r in _op_rules)
+            )
+            if not _op_rules or _has_field_conditions:
+                # No rules or needs record context — keep the item visible
+                filtered.append(item)
+                continue
+            _decision = evaluate_permission(
+                cedar_spec,
+                AccessOperationKind.LIST,
+                None,
+                _runtime_ctx,
+                entity_name=entity_name,
+            )
+            if _decision.allowed:
+                filtered.append(item)
+        return filtered
+    except ImportError:
+        return nav_items  # dazzle_back not available
+
+
 # =============================================================================
 # Dependencies Container
 # =============================================================================
@@ -264,6 +327,8 @@ class _PageDeps:
     surface_entity: dict[str, str] = field(default_factory=dict)
     surface_mode: dict[str, str] = field(default_factory=dict)
     surface_workspace: dict[str, str] = field(default_factory=dict)
+    # Route path → entity name — for filtering sidebar nav items by entity permit (#583)
+    route_entity: dict[str, str] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -309,6 +374,12 @@ async def _page_handler(
                         if persona_nav is not None:
                             ctx.nav_items = persona_nav
                             break
+
+                # Filter out nav items for entities the user cannot LIST (#583).
+                # This catches entities that appear in an allowed workspace but
+                # whose permit: rules deny the user's role.
+                if ctx.nav_items and deps.entity_cedar_specs and deps.route_entity:
+                    ctx.nav_items = _filter_nav_by_entity_access(ctx.nav_items, deps, auth_ctx)
         except Exception:
             logger.debug("Failed to resolve auth context for page", exc_info=True)
 
@@ -345,9 +416,15 @@ async def _page_handler(
                 )
                 from dazzle_back.specs.auth import AccessOperationKind
 
-                # Determine operation: list surfaces use LIST, others use READ
+                # Determine operation: list surfaces use LIST, create surfaces
+                # use CREATE, others use READ.
                 _mode = deps.surface_mode.get(surface_name, "list")
-                _op = AccessOperationKind.LIST if _mode == "list" else AccessOperationKind.READ
+                if _mode == "list":
+                    _op = AccessOperationKind.LIST
+                elif _mode == "create":
+                    _op = AccessOperationKind.CREATE
+                else:
+                    _op = AccessOperationKind.READ
 
                 # Only gate when all rules for this operation are pure role checks.
                 # When scopes are present, permit rules are guaranteed role-only
@@ -618,6 +695,18 @@ async def _page_handler(
                 deps, surface_name, auth_ctx, ctx.user_roles
             ) or not _user_can_mutate(deps, surface_name, "create", auth_ctx):
                 ctx.table.create_url = None
+
+        # Evaluate role-based visible_condition on list columns (#585)
+        if ctx.user_roles is not None:
+            from dazzle_ui.utils.condition_eval import evaluate_condition
+
+            _role_ctx = {
+                "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
+            }
+            for _col in ctx.table.columns:
+                if _col.visible_condition:
+                    if not evaluate_condition(_col.visible_condition, {}, _role_ctx):
+                        _col.hidden = True
 
         # Fetch list data from backend
         import urllib.parse
@@ -930,6 +1019,13 @@ def create_page_routes(
     for ctx in page_contexts.values():
         ctx.theme_css = theme_css
 
+    # Build route → entity name mapping for sidebar nav filtering (#583).
+    # Entity list routes use the pattern /{app_prefix}/{entity-slug}.
+    route_entity: dict[str, str] = {}
+    for _entity in appspec.domain.entities:
+        _slug = _entity.name.lower().replace("_", "-")
+        route_entity[f"{app_prefix}/{_slug}"] = _entity.name
+
     deps = _PageDeps(
         appspec=appspec,
         backend_url=backend_url,
@@ -942,6 +1038,7 @@ def create_page_routes(
         surface_entity=surface_entity,
         surface_mode=surface_mode,
         surface_workspace=surface_workspace,
+        route_entity=route_entity,
     )
 
     # Register routes — sort by specificity so FastAPI matches the most-specific

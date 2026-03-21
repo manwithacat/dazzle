@@ -23,11 +23,13 @@
         <div data-dz-show style="display:none;"
              class="absolute right-0 mt-2 w-48 bg-base-100 shadow-lg rounded-box p-2 z-50">
           {% for col in table.columns %}
+          {% if not col.hidden %}
           <label class="flex items-center gap-2 py-1 px-2 hover:bg-base-200 rounded cursor-pointer">
             <input type="checkbox" class="checkbox checkbox-xs"
                    data-dz-col-toggle="{{ col.key }}" checked />
             <span class="text-sm">{{ col.label }}</span>
           </label>
+          {% endif %}
           {% endfor %}
         </div>
       </div>
@@ -69,7 +71,9 @@
           {% for _ in range(5) %}
           <tr>
             {% for col in table.columns %}
+            {% if not col.hidden %}
             <td data-dz-col="{{ col.key }}"><div class="dz-skeleton dz-skeleton-cell" style="width: {{ range(50, 90) | random }}%"></div></td>
+            {% endif %}
             {% endfor %}
             <td><div class="dz-skeleton dz-skeleton-cell" style="width: 40%"></div></td>
           </tr>
@@ -94,6 +98,7 @@
           </th>
           {% endif %}
           {% for col in table.columns %}
+          {% if not col.hidden %}
           <th scope="col" data-dz-col="{{ col.key }}"
               {% if col.sortable %}
               data-dz-sort="{{ col.key }}"
@@ -114,6 +119,7 @@
             {{ col.label }}
             {% endif %}
           </th>
+          {% endif %}
           {% endfor %}
           <th scope="col" class="w-16"><span class="sr-only">Actions</span></th>
         </tr>

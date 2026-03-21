@@ -237,6 +237,9 @@ def _build_columns(
 
     if surface.sections:
         for section in surface.sections:
+            # Section-level visible: directive applies to all columns in section
+            _sec_vis = getattr(section, "visible", None)
+            _section_vis_cond = _sec_vis.model_dump() if _sec_vis is not None else None
             for element in section.elements:
                 field_spec = _get_field_spec(entity, element.field_name)
                 filterable = element.field_name in filter_fields
@@ -271,6 +274,9 @@ def _build_columns(
                 is_sensitive = bool(field_spec and field_spec.is_sensitive)
                 col_type = "sensitive" if is_sensitive else _field_type_to_column_type(field_spec)
                 col_label = element.label or col_key.replace("_", " ").title()
+                # Element visible: takes precedence; fall back to section visible (#585)
+                _el_vis = getattr(element, "visible", None)
+                _col_vis = _el_vis.model_dump() if _el_vis else _section_vis_cond
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -281,6 +287,7 @@ def _build_columns(
                         filter_type=filter_type,
                         filter_options=filter_options,
                         currency_code=col_currency,
+                        visible_condition=_col_vis,
                     )
                 )
     elif entity and entity.fields:

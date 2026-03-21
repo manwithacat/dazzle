@@ -32,6 +32,7 @@ class ColumnContext(BaseModel):
     filter_options: list[dict[str, str]] = Field(default_factory=list)
     hidden: bool = False
     currency_code: str = ""
+    visible_condition: dict[str, Any] | None = None  # Role-based visibility (#585)
 
 
 class FieldSourceContext(BaseModel):
