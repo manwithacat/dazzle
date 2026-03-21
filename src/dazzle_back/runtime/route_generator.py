@@ -2213,6 +2213,28 @@ class RouteGenerator:
             service_spec = service_specs.get(endpoint.service)
             self.generate_route(endpoint, service_spec)
 
+        # Register /{plural}/create guard routes so FastAPI doesn't
+        # match "create" as a UUID {id} parameter (#598).
+        _guarded: set[str] = set()
+        for ep in endpoints:
+            if ep.method == HttpMethod.GET and ep.path.endswith("/{id}"):
+                prefix = ep.path[: -len("/{id}")]
+                if prefix and prefix not in _guarded:
+                    _guarded.add(prefix)
+                    create_path = f"{prefix}/create"
+
+                    async def _create_guard(request: Request) -> Any:
+                        raise HTTPException(
+                            status_code=404,
+                            detail="Use the UI create form or POST to the collection endpoint",
+                        )
+
+                    self._router.get(
+                        create_path,
+                        tags=["Guard"],
+                        include_in_schema=False,
+                    )(_create_guard)
+
         return self._router
 
     @property
