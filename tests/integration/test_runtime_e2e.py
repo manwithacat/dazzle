@@ -63,6 +63,10 @@ def wait_for_server(url: str, timeout: int = SERVER_STARTUP_TIMEOUT) -> bool:
     return False
 
 
+# Shared session to persist CSRF cookies across requests
+_session = requests.Session()
+
+
 def _request_with_retry(
     method: str,
     url: str,
@@ -70,11 +74,24 @@ def _request_with_retry(
     timeout: int = REQUEST_TIMEOUT,
     **kwargs: object,
 ) -> requests.Response:
-    """Make an HTTP request with retry on timeout/connection errors."""
+    """Make an HTTP request with retry on timeout/connection errors.
+
+    Uses a shared session to persist cookies (including the dazzle_csrf
+    cookie set by the CSRF middleware on GET responses). For state-changing
+    methods, the CSRF token from the cookie is sent as X-CSRF-Token header.
+    """
+    # Inject CSRF token header for mutation requests
+    if method.upper() in ("POST", "PUT", "DELETE", "PATCH"):
+        csrf_token = _session.cookies.get("dazzle_csrf")
+        if csrf_token:
+            headers = dict(kwargs.pop("headers", {}) or {})  # type: ignore[arg-type]
+            headers.setdefault("X-CSRF-Token", csrf_token)
+            kwargs["headers"] = headers
+
     last_exc: Exception | None = None
     for attempt in range(retries):
         try:
-            resp = requests.request(method, url, timeout=timeout, **kwargs)
+            resp = _session.request(method, url, timeout=timeout, **kwargs)
             return resp
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
             last_exc = e

@@ -41,6 +41,7 @@ class CSRFConfig:
             "/api/v1/webhooks/",
             "/__test__/",
             "/dazzle/dev/",
+            "/auth/",
         ]
     )
 
