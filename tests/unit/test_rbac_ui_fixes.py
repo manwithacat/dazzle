@@ -263,6 +263,40 @@ class TestColumnVisibleCondition:
         assert col.visible_condition is None
         assert col.hidden is False
 
+    def test_shared_table_not_mutated_by_visibility_check(self) -> None:
+        """Regression: visible_condition check must not corrupt the shared ctx (#587).
+
+        The page handler deep-copies ctx.table before checking
+        visibility — verify that the original columns stay unhidden.
+        """
+        from dazzle_ui.runtime.template_context import ColumnContext, TableContext
+
+        vis = {"role_check": {"role_name": "admin"}, "comparison": None, "operator": None}
+        shared_table = TableContext(
+            entity_name="Task",
+            title="Tasks",
+            api_endpoint="/api/tasks",
+            columns=[
+                ColumnContext(key="name", label="Name"),
+                ColumnContext(key="salary", label="Salary", visible_condition=vis),
+            ],
+        )
+
+        # Simulate what page_routes.py now does: deep-copy, then mutate copy
+        req_table = shared_table.model_copy(deep=True)
+        from dazzle_ui.utils.condition_eval import evaluate_condition
+
+        role_ctx = {"user_roles": ["viewer"]}
+        for _col in req_table.columns:
+            if _col.visible_condition:
+                if not evaluate_condition(_col.visible_condition, {}, role_ctx):
+                    _col.hidden = True
+
+        # Copy's column is hidden
+        assert req_table.columns[1].hidden is True
+        # Original is untouched
+        assert shared_table.columns[1].hidden is False
+
 
 # ---------------------------------------------------------------------------
 # #582 — Empty state CTA guard

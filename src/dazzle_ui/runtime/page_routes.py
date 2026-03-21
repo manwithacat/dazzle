@@ -689,12 +689,17 @@ async def _page_handler(
         _ctx_overrides["form"] = req_form
 
     if ctx.table:
+        # Per-request copy — the shared ctx.table is compiled once and
+        # reused across requests.  Mutations (hidden columns, rows,
+        # create_url suppression) must not leak between requests (#587).
+        req_table = ctx.table.model_copy(deep=True)
+
         # Suppress Create button when user lacks CREATE permission or workspace is read_only
-        if ctx.user_roles is not None and ctx.table.create_url:
+        if ctx.user_roles is not None and req_table.create_url:
             if _should_suppress_mutations(
                 deps, surface_name, auth_ctx, ctx.user_roles
             ) or not _user_can_mutate(deps, surface_name, "create", auth_ctx):
-                ctx.table.create_url = None
+                req_table.create_url = None
 
         # Evaluate role-based visible_condition on list columns (#585)
         if ctx.user_roles is not None:
@@ -703,7 +708,7 @@ async def _page_handler(
             _role_ctx = {
                 "user_roles": [r.removeprefix("role_") for r in ctx.user_roles],
             }
-            for _col in ctx.table.columns:
+            for _col in req_table.columns:
                 if _col.visible_condition:
                     if not evaluate_condition(_col.visible_condition, {}, _role_ctx):
                         _col.hidden = True
@@ -725,34 +730,35 @@ async def _page_handler(
         # search_first: skip initial fetch until user provides search/filter
         _has_search = bool(api_params.get("search"))
         _has_filter = any(k.startswith("filter[") for k in api_params)
-        _skip_fetch = ctx.table.search_first and not _has_search and not _has_filter
+        _skip_fetch = req_table.search_first and not _has_search and not _has_filter
 
         if _skip_fetch:
-            ctx.table.rows = []
-            ctx.table.total = 0
+            req_table.rows = []
+            req_table.total = 0
         else:
             query_string = urllib.parse.urlencode(api_params)
-            fetch_url = f"{effective_backend_url}{ctx.table.api_endpoint}?{query_string}"
+            fetch_url = f"{effective_backend_url}{req_table.api_endpoint}?{query_string}"
 
             try:
                 data = await _fetch_url(fetch_url, _cookies)
                 items = data.get("items", [])
                 if items and isinstance(items[0], dict):
-                    ctx.table.rows = items
-                ctx.table.total = data.get("total", len(items))
+                    req_table.rows = items
+                req_table.total = data.get("total", len(items))
             except Exception:
                 logger.warning("Failed to fetch list data from %s", fetch_url, exc_info=True)
-                ctx.table.rows = []
-                ctx.table.total = 0
+                req_table.rows = []
+                req_table.total = 0
 
         # Update table context with current sort/filter state from request
-        ctx.table.sort_field = request.query_params.get("sort", ctx.table.default_sort_field)
-        ctx.table.sort_dir = request.query_params.get("dir", ctx.table.default_sort_dir)
-        ctx.table.filter_values = {
+        req_table.sort_field = request.query_params.get("sort", req_table.default_sort_field)
+        req_table.sort_dir = request.query_params.get("dir", req_table.default_sort_dir)
+        req_table.filter_values = {
             k[7:-1]: v
             for k, v in request.query_params.items()
             if k.startswith("filter[") and k.endswith("]") and v
         }
+        _ctx_overrides["table"] = req_table
 
     from dazzle_ui.runtime.htmx import HtmxDetails
 
@@ -764,10 +770,9 @@ async def _page_handler(
 
         ctx.current_route = urlparse(htmx.current_url).path
 
-    # Build per-request context with detail/form overrides (#291).
-    # Table and nav mutations on the shared ctx are safe (fully
-    # overwritten each request), but detail/form URL templates
-    # degrade after substitution so they use copies.
+    # Build per-request context with table/detail/form overrides.
+    # All three use deep copies to prevent cross-request mutation
+    # of the shared compiled ctx (#291, #587).
     render_ctx = ctx.model_copy(update=_ctx_overrides) if _ctx_overrides else ctx
 
     # Fragment targeting: nav links target #main-content directly,
