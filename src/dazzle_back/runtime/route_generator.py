@@ -364,13 +364,14 @@ def _resolve_user_attribute(attr_name: str, auth_context: Any) -> Any:
         if isinstance(user_val_id, _SCALAR):
             return str(user_val_id)
 
-    # 2. Preferences dict (stores domain-level attributes as strings)
+    # 2. Preferences dict (stores domain-level attributes as strings).
+    # Treat None values as missing — they must not bypass the deny sentinel (#591).
     prefs: dict[str, str] = getattr(auth_context, "preferences", {}) or {}
-    if attr_name in prefs:
+    if attr_name in prefs and prefs[attr_name] is not None:
         return prefs[attr_name]
     # Also try <attr>_id variant in preferences
     attr_id_key = f"{attr_name}_id"
-    if attr_id_key in prefs:
+    if attr_id_key in prefs and prefs[attr_id_key] is not None:
         return prefs[attr_id_key]
 
     return _RBAC_DENY

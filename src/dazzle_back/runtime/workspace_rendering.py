@@ -469,7 +469,7 @@ async def _workspace_region_handler(
                     _auth_ctx_for_filters.preferences = {}
                     prefs = _auth_ctx_for_filters.preferences
                 for k, v in _current_user_entity.items():
-                    if k not in prefs:
+                    if k not in prefs and v is not None:
                         prefs[k] = v
                 if _current_user_id and "entity_id" not in prefs:
                     prefs["entity_id"] = _current_user_id
@@ -1049,7 +1049,7 @@ async def _workspace_batch_handler(
                     _batch_auth_ctx.preferences = {}
                     prefs = _batch_auth_ctx.preferences
                 for k, v in _batch_user_entity.items():
-                    if k not in prefs:
+                    if k not in prefs and v is not None:
                         prefs[k] = v
                 if _batch_user_id and "entity_id" not in prefs:
                     prefs["entity_id"] = _batch_user_id
