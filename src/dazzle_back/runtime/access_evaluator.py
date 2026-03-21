@@ -324,11 +324,11 @@ def _rule_matches(
     if rule.condition is None:
         return True
 
-    # For create operations, handle missing record
+    # For create operations, evaluate the condition without a record.
+    # Permit blocks only contain role/grant/logical conditions (no field
+    # comparisons), so they are safe to evaluate with an empty record.
     if record is None and operation == AccessOperationKind.CREATE:
-        if rule.condition.kind == "role_check":
-            return evaluate_access_condition(rule.condition, {}, context)
-        return context.is_authenticated
+        return evaluate_access_condition(rule.condition, {}, context)
 
     return evaluate_access_condition(rule.condition, record or {}, context)
 

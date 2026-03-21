@@ -243,6 +243,63 @@ class TestCreateHandlerCedar:
             await handler(request, auth_ctx)
         assert exc_info.value.status_code == 403
 
+    @pytest.mark.asyncio
+    async def test_create_compound_or_allowed(self) -> None:
+        """Compound role(A) or role(B) permit allows CREATE for matching role (#594)."""
+        from dazzle_back.specs.auth import AccessLogicalKind
+
+        service = _make_service()
+        auth_ctx = _make_auth_context(roles=["manager"])
+        compound = AccessConditionSpec(
+            kind="logical",
+            logical_op=AccessLogicalKind.OR,
+            logical_left=_role_check("admin"),
+            logical_right=_role_check("manager"),
+        )
+        spec = EntityAccessSpec(permissions=[_permit_rule(AccessOperationKind.CREATE, compound)])
+
+        handler = create_create_handler(
+            service,
+            TaskUpdate,
+            cedar_access_spec=spec,
+            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+            entity_name="Task",
+        )
+
+        request = _make_request(method="POST")
+        result = await handler(request, auth_ctx)
+        assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_create_compound_or_denied(self) -> None:
+        """Compound role(A) or role(B) permit denies CREATE for non-matching role (#594)."""
+        from fastapi import HTTPException
+
+        from dazzle_back.specs.auth import AccessLogicalKind
+
+        service = _make_service()
+        auth_ctx = _make_auth_context(roles=["viewer"])
+        compound = AccessConditionSpec(
+            kind="logical",
+            logical_op=AccessLogicalKind.OR,
+            logical_left=_role_check("admin"),
+            logical_right=_role_check("manager"),
+        )
+        spec = EntityAccessSpec(permissions=[_permit_rule(AccessOperationKind.CREATE, compound)])
+
+        handler = create_create_handler(
+            service,
+            TaskUpdate,
+            cedar_access_spec=spec,
+            optional_auth_dep=_make_optional_auth_dep(auth_ctx),
+            entity_name="Task",
+        )
+
+        request = _make_request(method="POST")
+        with pytest.raises(HTTPException) as exc_info:
+            await handler(request, auth_ctx)
+        assert exc_info.value.status_code == 403
+
 
 # =============================================================================
 # UPDATE handler — Cedar evaluation against existing record
