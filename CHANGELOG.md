@@ -9,11 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Scope rules compile to formal ScopePredicate algebra with FK graph validation
-- OR conditions in scope rules now compile to SQL OR (previously post-fetch filtered)
+## [0.45.0] - 2026-03-21
 
 ### Added
+- **Conformance Role 2**: HTTP execution engine — boots FastAPI in-process, seeds fixtures via `/__test__/seed`, runs all derived cases as HTTP assertions (#601)
+- **Stage invariant verification**: three-stage verifier for predicate compilation chain (ConditionExpr → ScopePredicate → SQL → resolved params) (#603)
+- **Runtime contract monitoring**: `ConformanceMonitor` captures access decisions during scenario execution and compares against expected conformance cases (#602)
+- `dazzle conformance execute` CLI command for running HTTP conformance against PostgreSQL
+- `monitor_status` MCP operation on conformance tool
+- `?q=` alias for `?search=` on all API list endpoints (#596)
+- Bare `?field=value` query params accepted when field is in DSL `ux: filter:` list (#596)
+- `build_entity_filter_fields()` extracts filter allowlist from surface UX declarations
+- Alpine.js `$persist` plugin (835B) for localStorage state management
+- `dz-alpine.js` — Alpine.data() components replacing dz.js: dzToast, dzConfirm, dzTable, dzMoney, dzFileUpload, dzWizard (#600)
 - `param` DSL construct for runtime-configurable parameters with tenant-scoped cascade (#572)
 - `param("key")` reference syntax in workspace region constructs (heatmap thresholds)
 - `_dazzle_params` table for storing per-scope parameter overrides
@@ -31,8 +39,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Static validation of scope rule FK paths at `dazzle validate` time
 - Runtime startup assertion verifies all scope predicates compile
 
+### Changed
+- Scope rules compile to formal ScopePredicate algebra with FK graph validation
+- OR conditions in scope rules now compile to SQL OR (previously post-fetch filtered)
+- Template strings replaced with contextual variables (`app_name`, `entity_name`) across 10 templates (#593)
+- Console routes derive `app_name` from AppSpec instead of hardcoding "Dazzle Console"
+- All UI state management migrated from dz.js to Alpine.js (#600)
+
 ### Removed
+- `dz.js` micro-runtime (1102 lines) — replaced by Alpine.js components in `dz-alpine.js`
 - Post-fetch OR filtering for scope rules (replaced by SQL OR)
+
+### Fixed
+- CSRF middleware now exempts `/__test__/` and `/dazzle/dev/` paths (internal-only endpoints)
 
 ## [0.44.0] - 2026-03-19
 
