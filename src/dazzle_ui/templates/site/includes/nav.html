@@ -5,7 +5,9 @@
       {% for item in nav_items %}
       <a href="{{ item.href }}" class="dz-nav-link">{{ item.label }}</a>
       {% endfor %}
-      {% if nav_cta %}
+      {% if is_authenticated %}
+      <a href="{{ dashboard_url }}" class="btn btn-primary btn-sm">Dashboard</a>
+      {% elif nav_cta %}
       <a href="{{ nav_cta.href }}" class="btn btn-primary btn-sm">{{ nav_cta.label }}</a>
       {% endif %}
       {% include "site/includes/theme_toggle.html" %}

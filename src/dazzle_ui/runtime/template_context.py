@@ -409,6 +409,8 @@ class SitePageContext(BaseModel):
     og_meta: SiteOGMeta | None = None
     sections: list[dict[str, Any]] = Field(default_factory=list)
     custom_css: bool = False
+    is_authenticated: bool = False
+    dashboard_url: str = "/app"
 
 
 class SiteAuthContext(BaseModel):

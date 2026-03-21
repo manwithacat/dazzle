@@ -331,10 +331,31 @@ def create_site_page_routes(
     # Create route for each page
     _auth_redirect_enabled = bool(get_auth_context and persona_routes)
 
-    # Capture auth helpers once for the root redirect closure (#569).
-    # Defined outside the loop so ruff B023 is satisfied.
-    _root_auth_fn = get_auth_context if _auth_redirect_enabled else None
-    _root_persona_routes: dict[str, str] = dict(persona_routes) if persona_routes else {}
+    # Capture auth helpers once for closures (ruff B023).
+    _auth_fn = get_auth_context
+    _persona_routes: dict[str, str] = dict(persona_routes) if persona_routes else {}
+
+    def _resolve_auth(request: Request) -> tuple[bool, str]:
+        """Check auth state and resolve the dashboard URL.
+
+        Returns (is_authenticated, dashboard_url).
+        """
+        if _auth_fn is None:
+            return False, "/app"
+        try:
+            auth_ctx = _auth_fn(request)
+            if auth_ctx and auth_ctx.is_authenticated:
+                dashboard_url = "/app"
+                if _persona_routes and auth_ctx.roles:
+                    for role in auth_ctx.roles:
+                        role_key = role.lower().replace("role_", "")
+                        if role_key in _persona_routes:
+                            dashboard_url = _persona_routes[role_key]
+                            break
+                return True, dashboard_url
+        except Exception:
+            logger.debug("Auth check failed, treating as anonymous", exc_info=True)
+        return False, "/app"
 
     for page in pages:
         route = page.get("route", "/")
@@ -353,33 +374,38 @@ def create_site_page_routes(
                 sitespec: dict[str, Any] = sitespec_data,
             ) -> Response:
                 """Serve landing page or redirect authenticated users."""
-                if _root_auth_fn is not None:
-                    try:
-                        auth_ctx = _root_auth_fn(request)
-                        if auth_ctx and auth_ctx.is_authenticated and auth_ctx.roles:
-                            for role in auth_ctx.roles:
-                                target = _root_persona_routes.get(role)
-                                if target:
-                                    return RedirectResponse(url=target, status_code=302)
-                    except Exception:
-                        logger.debug(
-                            "Auth check failed on root redirect, serving landing page",
-                            exc_info=True,
-                        )
+                is_authed, dash_url = _resolve_auth(request)
+                if is_authed and dash_url != "/app":
+                    # Redirect to persona workspace if a specific route was resolved.
+                    # The generic /app fallback means no persona route matched,
+                    # so show the landing page with auth-aware nav instead.
+                    return RedirectResponse(url=dash_url, status_code=302)
                 ctx = build_site_page_context(
-                    sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+                    sitespec,
+                    r,
+                    page_data=page_data_cache.get(r),
+                    custom_css=has_custom_css,
+                    is_authenticated=is_authed,
+                    dashboard_url=dash_url,
                 )
                 return HTMLResponse(content=render_site_page("site/page.html", ctx))
         else:
 
             @router.get(route, response_class=HTMLResponse, include_in_schema=False)
             async def serve_page(
+                request: Request,
                 r: str = page_route,
                 sitespec: dict[str, Any] = sitespec_data,
             ) -> str:
                 """Serve a site page as HTML with SSR content."""
+                is_authed, dash_url = _resolve_auth(request)
                 ctx = build_site_page_context(
-                    sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+                    sitespec,
+                    r,
+                    page_data=page_data_cache.get(r),
+                    custom_css=has_custom_css,
+                    is_authenticated=is_authed,
+                    dashboard_url=dash_url,
                 )
                 return render_site_page("site/page.html", ctx)
 
@@ -389,12 +415,19 @@ def create_site_page_routes(
 
         @router.get(terms_route, response_class=HTMLResponse, include_in_schema=False)
         async def serve_terms_page(
+            request: Request,
             r: str = terms_route,
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the terms of service page."""
+            is_authed, dash_url = _resolve_auth(request)
             ctx = build_site_page_context(
-                sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+                sitespec,
+                r,
+                page_data=page_data_cache.get(r),
+                custom_css=has_custom_css,
+                is_authenticated=is_authed,
+                dashboard_url=dash_url,
             )
             return render_site_page("site/page.html", ctx)
 
@@ -403,12 +436,19 @@ def create_site_page_routes(
 
         @router.get(privacy_route, response_class=HTMLResponse, include_in_schema=False)
         async def serve_privacy_page(
+            request: Request,
             r: str = privacy_route,
             sitespec: dict[str, Any] = sitespec_data,
         ) -> str:
             """Serve the privacy policy page."""
+            is_authed, dash_url = _resolve_auth(request)
             ctx = build_site_page_context(
-                sitespec, r, page_data=page_data_cache.get(r), custom_css=has_custom_css
+                sitespec,
+                r,
+                page_data=page_data_cache.get(r),
+                custom_css=has_custom_css,
+                is_authenticated=is_authed,
+                dashboard_url=dash_url,
             )
             return render_site_page("site/page.html", ctx)
 

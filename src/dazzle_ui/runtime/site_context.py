@@ -22,8 +22,22 @@ from dazzle_ui.runtime.template_context import (
 )
 
 
-def _extract_nav_items(nav: dict[str, Any]) -> list[SiteNavItem]:
-    """Extract navigation items from nav config."""
+def _extract_nav_items(
+    nav: dict[str, Any],
+    is_authenticated: bool = False,
+) -> list[SiteNavItem]:
+    """Extract navigation items from nav config.
+
+    When *is_authenticated* is True the ``authenticated`` item list is
+    preferred (if non-empty), falling back to ``public``/``items``.
+    """
+    if is_authenticated:
+        auth_items = nav.get("authenticated")
+        if auth_items:
+            return [
+                SiteNavItem(label=item.get("label", ""), href=item.get("href", "#"))
+                for item in auth_items
+            ]
     items = nav.get("public") or nav.get("items") or []
     return [SiteNavItem(label=item.get("label", ""), href=item.get("href", "#")) for item in items]
 
@@ -92,6 +106,8 @@ def build_site_page_context(
     page_data: dict[str, Any] | None = None,
     *,
     custom_css: bool = False,
+    is_authenticated: bool = False,
+    dashboard_url: str = "/app",
 ) -> SitePageContext:
     """Build a SitePageContext from sitespec data and page data.
 
@@ -100,6 +116,8 @@ def build_site_page_context(
         path: Current page route.
         page_data: Pre-resolved page data (sections, title, etc.).
         custom_css: Include project-level custom CSS.
+        is_authenticated: Whether the current user is authenticated.
+        dashboard_url: URL to the user's dashboard/workspace.
 
     Returns:
         SitePageContext ready for template rendering.
@@ -111,7 +129,7 @@ def build_site_page_context(
     auth_config = layout.get("auth") or {}
     footer = layout.get("footer", {})
 
-    nav_items = _extract_nav_items(nav)
+    nav_items = _extract_nav_items(nav, is_authenticated=is_authenticated)
     nav_cta = _extract_nav_cta(nav, auth_config)
     footer_columns = _extract_footer_columns(footer)
     copyright_text = _build_copyright_text(footer, brand)
@@ -156,6 +174,8 @@ def build_site_page_context(
         og_meta=og_meta,
         sections=sections,
         custom_css=custom_css,
+        is_authenticated=is_authenticated,
+        dashboard_url=dashboard_url,
     )
 
 
