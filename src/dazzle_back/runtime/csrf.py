@@ -36,7 +36,12 @@ class CSRFConfig:
         default_factory=lambda: ["/health", "/docs", "/openapi.json", "/redoc"]
     )
     exempt_path_prefixes: list[str] = field(
-        default_factory=lambda: ["/webhooks/", "/api/v1/webhooks/"]
+        default_factory=lambda: [
+            "/webhooks/",
+            "/api/v1/webhooks/",
+            "/__test__/",
+            "/dazzle/dev/",
+        ]
     )
 
 
