@@ -96,6 +96,13 @@ related = [
 v0_7_changes = "Enhanced with state machines, invariants, computed fields, and access rules"
 v0_7_1_changes = "Added intent, domain/patterns tags, extends archetypes, examples block, invariant message/code"
 v0_28_3_changes = "Added sensitive modifier for PII masking and audit compliance"
+implemented_by = [
+    "dazzle.core.dsl_parser_impl.entities.EntityParserMixin (parsing)",
+    "dazzle.core.ir.domain.EntitySpec (IR model)",
+    "dazzle_back.runtime.pg_backend.PostgresBackend.create_table (DDL)",
+    "dazzle_back.runtime.repository.DazzleRepository (CRUD operations)",
+    "dazzle_back.runtime.route_generator.RouteGenerator.generate_route (API routes)",
+]
 
 
 [concepts.surface]
@@ -149,6 +156,13 @@ surface task_detail "Task Detail":
 related = ["entity", "ux_block", "surface_modes", "datatable"]
 v0_2_changes = "Added optional ux: block for semantic layer. List surfaces render as DataTables — add sort/filter/search in ux: block for interactive features."
 v0_30_0_changes = "Added when: clause on surface fields for conditional visibility using typed expressions."
+implemented_by = [
+    "dazzle.core.dsl_parser_impl.surfaces.SurfaceParserMixin (parsing)",
+    "dazzle.core.ir.surfaces.SurfaceSpec (IR model)",
+    "dazzle_ui.converters.template_compiler._compile_list_surface (list rendering)",
+    "dazzle_ui.converters.template_compiler._compile_form_surface (form rendering)",
+    "dazzle_ui.runtime.page_routes.create_page_routes (UI route generation)",
+]
 
 
 [concepts.workspace]

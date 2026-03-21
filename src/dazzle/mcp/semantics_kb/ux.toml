@@ -180,10 +180,15 @@ for member:
 for agent:
   scope: status = open and assigned_to = current_user
 '''
-related = ["persona", "conditions"]
+related = ["persona", "conditions", "scope_runtime"]
 v0_2_changes = "NEW in v0.2"
-important_notes = ["'scope: all' is the only keyword - all other forms require a comparison expression", "Use 'field = current_user' for personal data (NOT 'scope: owned' or 'scope: personal')", "Combine with 'and'/'or' for complex expressions", "Field names must match entity field names exactly"]
+important_notes = ["'scope: all' is the only keyword - all other forms require a comparison expression", "Use 'field = current_user' for personal data (NOT 'scope: owned' or 'scope: personal')", "Combine with 'and'/'or' for complex expressions", "Field names must match entity field names exactly", "See concept 'scope_runtime' for runtime evaluation details (dual-role resolution, default-deny behaviour)"]
 common_mistakes = ["scope: owned  # INVALID - 'owned' is not a keyword", "scope: personal  # INVALID - use 'field = current_user'", "scope: mine  # INVALID - use 'field = current_user'", "scope: self  # INVALID - use 'id = current_user' or similar"]
+implemented_by = [
+    "dazzle.core.dsl_parser_impl.access._parse_scope_block (parsing)",
+    "dazzle.core.ir.domain.ScopeRule (IR model)",
+    "dazzle_back.runtime.route_generator._resolve_scope_filters (runtime evaluation)",
+]
 
 [concepts.ux_block]
 category = "UX Semantic Layer (v0.2)"

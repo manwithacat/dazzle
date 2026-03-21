@@ -122,6 +122,15 @@ v0_7_changes = "Enhanced in v0.7 with refined syntax"
 v0_21_changes = "Cedar-style permit:/forbid:/audit: blocks for fine-grained RBAC with NIST SP 800-162 alignment"
 v0_42_changes = "Two-block pattern: permit: for WHO (role checks only), scope: for WHAT (field conditions with for: clauses). Field conditions in permit: are now a parser error."
 best_practices = ["Use = for equality (not ==)", "Start with restrictive rules, expand as needed", "permit: contains role checks only — field conditions belong in scope:", "scope: rules use for: clauses to bind row-level filters to specific roles", "Use 'all' in scope: for roles that should see the full table (e.g., admins)", "Use for: * in scope: to apply a filter to all permitted roles", "Cedar evaluation order: FORBID > PERMIT > default-deny", "Use audit: blocks for compliance logging of sensitive actions", "Use forbid: for separation-of-duty constraints (e.g., prescriber cannot dispense)"]
+implemented_by = [
+    "dazzle.core.dsl_parser_impl.access.AccessParserMixin (parsing)",
+    "dazzle.core.ir.domain.AccessSpec (IR model)",
+    "dazzle.core.ir.predicate_builder.build_scope_predicate (scope → predicate)",
+    "dazzle_back.runtime.route_generator._extract_cedar_row_filters (permit evaluation)",
+    "dazzle_back.runtime.route_generator._resolve_scope_filters (scope evaluation)",
+    "dazzle_back.runtime.predicate_compiler.compile_predicate (predicate → SQL)",
+    "dazzle.conformance.derivation.derive_conformance_cases (conformance testing)",
+]
 
 [concepts.computed_field]
 category = "Business Logic (v0.7)"

@@ -164,7 +164,13 @@ entity Contact "Contact":
   created_by: ref User required
   updated_by: ref User optional
 '''
-related = ["field_types", "relationships", "entity"]
+related = ["field_types", "relationships", "entity", "display_field"]
+implemented_by = [
+    "dazzle_back.runtime.relation_loader.expand_relations (FK expansion at query time)",
+    "dazzle_back.runtime.relation_loader._resolve_display_name (display_field resolution)",
+    "dazzle_back.runtime.pg_backend.PostgresBackend._build_columns (FK column DDL)",
+    "dazzle.core.ir.fk_graph.FKGraph (FK relationship index)",
+]
 
 [concepts.relationships]
 category = "Type System"
