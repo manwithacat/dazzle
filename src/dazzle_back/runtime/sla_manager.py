@@ -309,7 +309,11 @@ class SLAManager:
     # -- Elapsed time --------------------------------------------------------
 
     def _tier_seconds(self, tier: SLATierSpec) -> float:
-        return tier.duration_value * _UNIT_SECONDS.get(tier.duration_unit, 3600)
+        duration = tier.duration_value
+        # ParamRef: extract the default value
+        if hasattr(duration, "default"):
+            duration = duration.default or 0
+        return int(duration) * _UNIT_SECONDS.get(tier.duration_unit, 3600)
 
     def _elapsed(self, timer: SLATimer) -> float:
         """Calculate effective elapsed seconds for a timer."""
