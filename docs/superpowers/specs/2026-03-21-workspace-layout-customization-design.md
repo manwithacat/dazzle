@@ -119,11 +119,10 @@ A "Customize" button is added to `_content.html` in the workspace header area (t
   <!-- Workspace header with title + Customize button -->
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-lg font-bold">{{ workspace.title }}</h2>
-    <button @click="toggleEdit()" x-text="editing ? 'Editing...' : 'Customize'"
-            class="btn btn-sm btn-ghost" x-show="!editing"></button>
+    <button @click="toggleEdit()" class="btn btn-sm btn-ghost" x-show="!editing">Customize</button>
   </div>
-  <!-- Grid container -->
-  <div class="grid grid-cols-12 gap-4" x-sort="onReorder" :x-sort.disabled="!editing">
+  <!-- Grid container (alpine-sort API: verify exact directive syntax against vendored version) -->
+  <div class="grid grid-cols-12 gap-4" x-sort="onReorder">
     ...regions...
   </div>
   <!-- Floating save toolbar (fixed bottom, edit mode only) -->
