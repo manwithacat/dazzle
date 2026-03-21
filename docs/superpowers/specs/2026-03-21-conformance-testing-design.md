@@ -77,6 +77,7 @@ class ConformanceCase:
     operation: str        # "list", "create", "read", "update", "delete"
     expected_status: int  # 200, 201, 401, 403, 404
     expected_rows: int | None  # exact count for list ops, None for non-list
+    row_target: str | None    # "own" or "other" for read/update/delete, None for list/create
     description: str      # "viewer listing Task sees only own rows"
     scope_type: str       # see ScopeOutcome enum below
 ```
@@ -102,7 +103,11 @@ The derivation engine takes one additional input: `auth_enabled: bool` (from `da
    - If `auth_enabled` → `expected_status=401`, `scope_type="unauthenticated"`
    - If not `auth_enabled` and entity has no access spec → `expected_status=200`, `scope_type="unprotected"`, `expected_rows=total_seed_count`
 
-2. **No access spec on entity** → `expected_status=200`, `expected_rows=total_seed_count`, `scope_type="unprotected"` (unprotected entity — all rows visible to authenticated users)
+2. **`unmatched_role` persona** (authenticated, no matching permit/scope persona):
+   - Entity has access spec → `expected_status=403`, `scope_type="access_denied"` (Cedar default-deny)
+   - Entity has no access spec → `expected_status=200`, `scope_type="unprotected"`
+
+   **No access spec on entity** → `expected_status=200`, `expected_rows=total_seed_count`, `scope_type="unprotected"` (unprotected entity — all rows visible to authenticated users)
 
 3. **Check `forbid` rules first** (Cedar: FORBID > PERMIT):
    - If any `forbid` rule matches this `(persona, operation)` → `expected_status=403`, `scope_type="forbidden"`
@@ -120,10 +125,16 @@ The derivation engine takes one additional input: `auth_enabled: bool` (from `da
    - Scope predicate simplifies to `Contradiction` → `expected_rows=0`, `scope_type="scope_excluded"`
    - No scope rule matches persona → `expected_rows=0`, `scope_type="scope_excluded"` (default-deny per #595)
 
-6. **Permit matches — non-LIST operations:**
-   - **CREATE:** `expected_status=201` (no scope predicate — permit gate is the only check)
-   - **READ:** `expected_status=200` for own row, `expected_status=404` for other's row (Cedar evaluates permit per-record; scope is not applied but the record-level permit check produces 404)
-   - **UPDATE/DELETE:** `expected_status=200` for permitted records, `expected_status=403` or `404` for denied records (per Cedar policy evaluation against the fetched record)
+6. **Permit matches — non-LIST operations** (each produces TWO cases per persona: own-row and other-row):
+   - **CREATE:** single case, `expected_status=201` (no scope predicate — permit gate is the only check)
+   - **READ own row:** `expected_status=200`, `row_target="own"`
+   - **READ other's row:** `expected_status=404`, `row_target="other"` (Cedar evaluates permit per-record; denied records return 404 to avoid leaking existence)
+   - **UPDATE own row:** `expected_status=200`, `row_target="own"`
+   - **UPDATE other's row:** `expected_status=404`, `row_target="other"`
+   - **DELETE own row:** `expected_status=200`, `row_target="own"`
+   - **DELETE other's row:** `expected_status=404`, `row_target="other"`
+
+   For entities with `scope: all` for a persona, both own-row and other-row cases expect `200`.
 
 **Step 3: Compound scopes** — AND/OR/NOT in scope conditions produce `scope_type="filtered"`. The fixture engine assigns explicit field values per row, and the derivation engine evaluates the predicate tree against each fixture row to compute the exact `expected_rows` count. This is a deterministic evaluation of the predicate algebra against known data.
 
@@ -172,7 +183,7 @@ This evaluation is deterministic because both the fixture values and the predica
 
 ### Determinism
 
-All UUIDs are `uuid5(NAMESPACE, f"{entity}.{purpose}")` — same input always produces the same UUID. No randomness. Fixtures are reproducible across runs.
+All UUIDs are `uuid5(CONFORMANCE_NS, f"{entity}.{purpose}")` where `CONFORMANCE_NS = UUID("d4zzl3c0-nf0r-m4nc-3t3s-t1ngfr4m3w0")` — a fixed Dazzle-specific namespace. Same input always produces the same UUID. No randomness. Fixtures are reproducible across runs.
 
 `expected_counts` is computed mechanically from scope rules and seeded data — not from running the app. The test asserts `actual_count == expected_counts[(persona, entity)]`.
 
@@ -196,7 +207,7 @@ Standard pytest plugin. Activated when `dazzle.toml` is found in the project roo
 4. Seed fixtures via direct SQL inserts (bypasses RBAC — avoids interference during seeding)
 5. Create auth tokens for each test persona via the `enable_test_mode` endpoints (`/__test__/create-user`, `/__test__/login`) which are already available when `enable_test_mode=True`
 6. Wrap app in `httpx.AsyncClient(transport=ASGITransport(app))`
-7. Teardown: drop the conformance schema after the session
+7. Teardown: drop all tables in the conformance schema (if using schema suffix) or drop the schema itself. When `CONFORMANCE_DATABASE_URL` points to a dedicated database, truncate all tables instead.
 
 ### Execution Phase (per test case)
 
