@@ -43,8 +43,10 @@ Fixture Engine (pure function)
 Two delivery mechanisms:
     |
     |-- pytest plugin (dynamic, always in sync)
-    |       boots FastAPI app in-process
-    |       seeds SQLite DB with fixtures
+    |       boots FastAPI app in-process via app_factory
+    |       uses isolated PostgreSQL test schema (or pytest-postgresql)
+    |       seeds DB with fixtures via direct SQL
+    |       creates auth tokens via enable_test_mode endpoints
     |       runs HTTP assertions via httpx AsyncClient (ASGI transport)
     |
     |-- static generator (dazzle conformance generate)
@@ -73,31 +75,59 @@ class ConformanceCase:
     entity: str           # "Task"
     persona: str          # "viewer"
     operation: str        # "list", "create", "read", "update", "delete"
-    expected_status: int  # 200, 401, 403
+    expected_status: int  # 200, 201, 401, 403, 404
     expected_rows: int | None  # exact count for list ops, None for non-list
     description: str      # "viewer listing Task sees only own rows"
-    scope_type: str       # "filtered", "all", "denied", "unauthenticated"
+    scope_type: str       # see ScopeOutcome enum below
 ```
+
+**ScopeOutcome values:**
+- `"all"` — scope: all, sees every row
+- `"filtered"` — scope with predicate, sees matching rows only
+- `"scope_excluded"` — permit granted but no matching scope rule → 0 rows (default-deny, #595)
+- `"access_denied"` — no permit rule matches → 403
+- `"forbidden"` — explicit `forbid` rule matches → 403 (Cedar FORBID > PERMIT)
+- `"unauthenticated"` — no auth token → 401
+- `"unprotected"` — entity has no access spec → all rows visible
 
 ### Derivation Rules
 
-1. **Extract personas** — scan all `permit` and `scope` `for:` clauses across all entities. Add synthetic `"unauthenticated"` (no auth) and `"unmatched_role"` (authenticated, no matching persona) personas.
+The derivation engine takes one additional input: `auth_enabled: bool` (from `dazzle.toml` or app config), which affects unauthenticated access behavior.
 
-2. **For each (entity, persona, operation):**
-   - **No access spec on entity** → `expected_status=200`, all rows (unprotected entity)
-   - **Unauthenticated** → `expected_status=401`
-   - **Check permit rules** → is this operation allowed for this persona?
-     - No permit matches → `expected_status=403`, `scope_type="denied"`
-   - **Permit matches, check scope rules:**
-     - `scope: all` → `expected_rows=total_seed_count`, `scope_type="all"`
-     - `scope: field = current_user` → `expected_rows=owned_count`, `scope_type="filtered"`
-     - `scope: field = current_user.<attr>` → `expected_rows=attr_matching_count`, `scope_type="filtered"`
-     - `scope: via JunctionEntity(...)` → `expected_rows=junction_matching_count`, `scope_type="filtered"`
-     - No scope rule matches persona → `expected_rows=0`, `scope_type="denied"` (default-deny per #595)
+**Step 1: Extract personas** — scan all `permit`, `forbid`, and `scope` `for:` clauses across all entities. Add synthetic `"unauthenticated"` (no auth) and `"unmatched_role"` (authenticated, no matching persona) personas.
 
-3. **Compound scopes** — AND/OR/NOT in scope conditions produce `scope_type="filtered"` with expected counts computed from fixture data.
+**Step 2: For each (entity, persona, operation)** — apply Cedar three-rule evaluation order: FORBID > PERMIT > default-deny.
 
-4. **Cross-entity FK paths** — `scope: manuscript.student = current_user` produces `scope_type="filtered"` with expected counts based on the FK chain in fixture data.
+1. **Unauthenticated persona:**
+   - If `auth_enabled` → `expected_status=401`, `scope_type="unauthenticated"`
+   - If not `auth_enabled` and entity has no access spec → `expected_status=200`, `scope_type="unprotected"`, `expected_rows=total_seed_count`
+
+2. **No access spec on entity** → `expected_status=200`, `expected_rows=total_seed_count`, `scope_type="unprotected"` (unprotected entity — all rows visible to authenticated users)
+
+3. **Check `forbid` rules first** (Cedar: FORBID > PERMIT):
+   - If any `forbid` rule matches this `(persona, operation)` → `expected_status=403`, `scope_type="forbidden"`
+
+4. **Check `permit` rules:**
+   - No permit matches → `expected_status=403`, `scope_type="access_denied"`
+
+5. **Permit matches — check scope rules** (LIST operation only):
+   - Scope with `for: *` wildcard → applies to this persona regardless of name
+   - `scope: all` → `expected_rows=total_seed_count`, `scope_type="all"`
+   - `scope: field = current_user` → `expected_rows=owned_count`, `scope_type="filtered"`
+   - `scope: field = current_user.<attr>` → `expected_rows=attr_matching_count`, `scope_type="filtered"`
+   - `scope: field = "literal"` (ColumnCheck) → `expected_rows=literal_matching_count`, `scope_type="filtered"`
+   - `scope: via JunctionEntity(...)` → `expected_rows=junction_matching_count`, `scope_type="filtered"`
+   - Scope predicate simplifies to `Contradiction` → `expected_rows=0`, `scope_type="scope_excluded"`
+   - No scope rule matches persona → `expected_rows=0`, `scope_type="scope_excluded"` (default-deny per #595)
+
+6. **Permit matches — non-LIST operations:**
+   - **CREATE:** `expected_status=201` (no scope predicate — permit gate is the only check)
+   - **READ:** `expected_status=200` for own row, `expected_status=404` for other's row (Cedar evaluates permit per-record; scope is not applied but the record-level permit check produces 404)
+   - **UPDATE/DELETE:** `expected_status=200` for permitted records, `expected_status=403` or `404` for denied records (per Cedar policy evaluation against the fetched record)
+
+**Step 3: Compound scopes** — AND/OR/NOT in scope conditions produce `scope_type="filtered"`. The fixture engine assigns explicit field values per row, and the derivation engine evaluates the predicate tree against each fixture row to compute the exact `expected_rows` count. This is a deterministic evaluation of the predicate algebra against known data.
+
+**Step 4: Cross-entity FK paths** — `scope: manuscript.student = current_user` produces `scope_type="filtered"` with expected counts computed by walking the FK chain through fixture data.
 
 This is a pure transformation — no side effects, no database, no HTTP. Testable in isolation.
 
@@ -120,14 +150,25 @@ class ConformanceFixtures:
 
 For each entity with access rules:
 
-- **2 user entities** — User A (persona-under-test) and User B (different user, same persona). Deterministic UUIDs via `uuid5(NAMESPACE, f"{entity}.{purpose}")`.
-- **3 entity rows per scoped entity:**
-  - Row 1: owned by User A (matches `owner = current_user` scopes)
-  - Row 2: owned by User B (filtered out for scoped personas)
-  - Row 3: owned by User A with different FK attr (tests `current_user.<attr>`)
+- **2 user entities per persona** — User A (persona-under-test) and User B (different user, same persona). Deterministic UUIDs via `uuid5(NAMESPACE, f"{entity}.{persona}.{purpose}")`.
+- **4 entity rows per scoped entity:**
+  - Row 1: owned by User A, User A's realm, matching literal values (satisfies all scope branches)
+  - Row 2: owned by User B, User B's realm (filtered out for ownership scopes)
+  - Row 3: owned by User A, different realm (tests `current_user.<attr>` — matches ownership but not realm)
+  - Row 4: owned by User B, User A's realm (tests OR scopes — doesn't match ownership but matches realm)
 - **FK resolution:** reads entity field specs to populate ref fields correctly
-- **Via-junction fixtures:** creates junction table rows linking User A to appropriate entity rows
-- **`current_user.<attr>` fixtures:** User A's record includes the referenced attribute so the resolution chain works
+- **Via-junction fixtures:** creates junction table rows linking User A to Rows 1 and 3
+- **`current_user.<attr>` fixtures:** User A's record includes the referenced attributes (realm, school, etc.)
+- **ColumnCheck literal fixtures:** when scope rules reference literal values (e.g. `material = "shadow"`), rows are seeded with both matching and non-matching literal values
+
+**OR predicate expected counts:** For a scope like `realm = current_user.realm or creator = current_user`, the derivation engine evaluates the predicate tree against each fixture row:
+- Row 1: owner=A, realm=A's → both branches true → visible (1)
+- Row 2: owner=B, realm=B's → both branches false → hidden (0)
+- Row 3: owner=A, realm=other → right branch true → visible (1)
+- Row 4: owner=B, realm=A's → left branch true → visible (1)
+- Result: `expected_rows=3`
+
+This evaluation is deterministic because both the fixture values and the predicate tree are known at derivation time.
 
 ### Determinism
 
@@ -139,7 +180,7 @@ All UUIDs are `uuid5(NAMESPACE, f"{entity}.{purpose}")` — same input always pr
 
 ### Registration
 
-Standard pytest plugin. Activated when `.dsl` files are found in the project root, or explicitly via `pytest -m conformance`. Marker: `@pytest.mark.conformance`.
+Standard pytest plugin. Activated when `dazzle.toml` is found in the project root, or explicitly via `pytest -m conformance`. Marker: `@pytest.mark.conformance`.
 
 ### Collection Phase (no side effects)
 
@@ -149,11 +190,13 @@ Standard pytest plugin. Activated when `.dsl` files are found in the project roo
 
 ### Setup Phase (session-scoped fixture)
 
-1. Boot FastAPI app from AppSpec via `app_factory.create_app()` with in-memory SQLite
-2. Create tables via ORM layer
-3. Seed fixtures via direct SQL inserts (bypasses RBAC — avoids interference during seeding)
-4. Create auth tokens for each test persona
-5. Wrap app in `httpx.AsyncClient(transport=ASGITransport(app))`
+1. Boot FastAPI app from AppSpec via `app_factory.create_app()` with `enable_test_mode=True`
+2. Use isolated PostgreSQL test schema (the app's existing `PostgresBackend` requires PostgreSQL — no SQLite path exists). Test database URL from `CONFORMANCE_DATABASE_URL` env var or fallback to `dazzle.toml` `[database]` with a `_conformance` suffix on the schema name.
+3. Create tables via the ORM layer (`db_manager.create_tables()`)
+4. Seed fixtures via direct SQL inserts (bypasses RBAC — avoids interference during seeding)
+5. Create auth tokens for each test persona via the `enable_test_mode` endpoints (`/__test__/create-user`, `/__test__/login`) which are already available when `enable_test_mode=True`
+6. Wrap app in `httpx.AsyncClient(transport=ASGITransport(app))`
+7. Teardown: drop the conformance schema after the session
 
 ### Execution Phase (per test case)
 
