@@ -1,12 +1,13 @@
 """
 CSRF protection for Dazzle Backend applications.
 
-Implements the double-submit cookie pattern:
+Implements the double-submit cookie pattern using a pure ASGI middleware
+(not BaseHTTPMiddleware, which has body consumption issues):
 - Sets a `dazzle_csrf` cookie (httponly=False so JS can read it)
 - On state-changing requests (POST/PUT/DELETE/PATCH), validates that the
   `X-CSRF-Token` header matches the cookie value
 - Exempts Bearer-authenticated requests (JWT already proves non-CSRF)
-- Exempts configured paths (health, docs, webhooks)
+- Exempts configured paths (health, docs, webhooks, auth, test)
 """
 
 from __future__ import annotations
@@ -17,11 +18,11 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from fastapi import FastAPI
+    pass
 
 logger = logging.getLogger(__name__)
 
-SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS", "TRACE"})
+SAFE_METHODS = frozenset({b"GET", b"HEAD", b"OPTIONS", b"TRACE"})
 
 
 @dataclass
@@ -47,133 +48,153 @@ class CSRFConfig:
 
 
 def configure_csrf_for_profile(profile: str) -> CSRFConfig:
-    """Get CSRF configuration based on security profile.
-
-    Args:
-        profile: Security profile (basic, standard, strict)
-
-    Returns:
-        CSRFConfig for the profile
-    """
-    # CSRF is enabled for all profiles — mutations must always be protected.
-    # The middleware exempts Bearer-auth and webhook paths automatically.
+    """Get CSRF configuration based on security profile."""
     return CSRFConfig(enabled=True)
 
 
-def create_csrf_middleware(config: CSRFConfig) -> Any:
-    """Create a Starlette middleware class implementing double-submit cookie CSRF.
+def _parse_cookies(headers: list[tuple[bytes, bytes]]) -> dict[str, str]:
+    """Extract cookies from raw ASGI headers."""
+    cookies: dict[str, str] = {}
+    for key, value in headers:
+        if key == b"cookie":
+            for chunk in value.decode("latin-1").split("; "):
+                if "=" in chunk:
+                    k, v = chunk.split("=", 1)
+                    cookies[k.strip()] = v.strip()
+    return cookies
 
-    Args:
-        config: CSRF configuration
 
-    Returns:
-        Starlette middleware class
+def _get_header(headers: list[tuple[bytes, bytes]], name: bytes) -> str | None:
+    """Get a single header value from raw ASGI headers."""
+    for key, value in headers:
+        if key == name:
+            return value.decode("latin-1")
+    return None
+
+
+class CSRFMiddleware:
+    """Pure ASGI middleware for double-submit cookie CSRF protection.
+
+    Uses raw ASGI interface to avoid the body consumption issues of
+    Starlette's BaseHTTPMiddleware.
     """
-    from starlette.middleware.base import BaseHTTPMiddleware
-    from starlette.requests import Request
-    from starlette.responses import JSONResponse, Response
 
-    class CSRFMiddleware(BaseHTTPMiddleware):
-        """Double-submit cookie CSRF protection."""
+    def __init__(self, app: Any, config: CSRFConfig) -> None:
+        self.app = app
+        self.config = config
 
-        async def dispatch(self, request: Request, call_next: Any) -> Response:
-            # Always ensure the CSRF cookie is set
-            csrf_token = request.cookies.get(config.cookie_name)
-            new_token = None
-            if not csrf_token:
-                new_token = secrets.token_hex(config.token_length)
-                csrf_token = new_token
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
 
-            # Safe methods don't need validation
-            if request.method in SAFE_METHODS:
-                response = await call_next(request)
-                if new_token:
-                    response.set_cookie(
-                        key=config.cookie_name,
-                        value=new_token,
-                        httponly=False,  # JS must read this
-                        samesite="lax",
-                        secure=request.url.scheme == "https",
-                    )
-                return response  # type: ignore[no-any-return]
+        method = scope.get("method", "GET").encode()
+        path: str = scope.get("path", "/")
+        headers: list[tuple[bytes, bytes]] = scope.get("headers", [])
 
-            # Check exemptions before validating
-            path = request.url.path
-            if path in config.exempt_paths:
-                response = await call_next(request)
-                if new_token:
-                    response.set_cookie(
-                        key=config.cookie_name,
-                        value=new_token,
-                        httponly=False,
-                        samesite="lax",
-                        secure=request.url.scheme == "https",
-                    )
-                return response  # type: ignore[no-any-return]
+        # Parse existing CSRF cookie
+        cookies = _parse_cookies(headers)
+        csrf_token = cookies.get(self.config.cookie_name)
+        new_token: str | None = None
+        if not csrf_token:
+            new_token = secrets.token_hex(self.config.token_length)
+            csrf_token = new_token
 
-            for prefix in config.exempt_path_prefixes:
-                if path.startswith(prefix):
-                    response = await call_next(request)
-                    if new_token:
-                        response.set_cookie(
-                            key=config.cookie_name,
-                            value=new_token,
-                            httponly=False,
-                            samesite="lax",
-                            secure=request.url.scheme == "https",
-                        )
-                    return response  # type: ignore[no-any-return]
+        # Safe methods — pass through, set cookie if needed
+        if method in SAFE_METHODS:
+            await self._pass_through(scope, receive, send, new_token)
+            return
 
-            # Bearer-authenticated requests are exempt (JWT proves non-CSRF)
-            auth_header = request.headers.get("authorization", "")
-            if auth_header.startswith("Bearer "):
-                response = await call_next(request)
-                if new_token:
-                    response.set_cookie(
-                        key=config.cookie_name,
-                        value=new_token,
-                        httponly=False,
-                        samesite="lax",
-                        secure=request.url.scheme == "https",
-                    )
-                return response  # type: ignore[no-any-return]
+        # Check exemptions
+        if path in self.config.exempt_paths:
+            await self._pass_through(scope, receive, send, new_token)
+            return
 
-            # Validate CSRF token
-            header_token = request.headers.get(config.header_name)
-            if not header_token or not csrf_token or header_token != csrf_token:
-                return JSONResponse(
-                    status_code=403,
-                    content={"detail": "CSRF token missing or invalid"},
-                )
+        for prefix in self.config.exempt_path_prefixes:
+            if path.startswith(prefix):
+                await self._pass_through(scope, receive, send, new_token)
+                return
 
-            response = await call_next(request)
-            if new_token:
-                response.set_cookie(
-                    key=config.cookie_name,
-                    value=new_token,
-                    httponly=False,
-                    samesite="lax",
-                    secure=request.url.scheme == "https",
-                )
-            return response  # type: ignore[no-any-return]
+        # Bearer auth exempt
+        auth = _get_header(headers, b"authorization") or ""
+        if auth.startswith("Bearer "):
+            await self._pass_through(scope, receive, send, new_token)
+            return
 
-    return CSRFMiddleware
+        # Validate CSRF token
+        header_name_bytes = self.config.header_name.lower().encode()
+        header_token = _get_header(headers, header_name_bytes)
+        if not header_token or not csrf_token or header_token != csrf_token:
+            # Reject — send 403 directly without touching the body
+            await self._send_403(send)
+            return
+
+        # Valid CSRF — pass through
+        await self._pass_through(scope, receive, send, new_token)
+
+    async def _pass_through(
+        self, scope: dict[str, Any], receive: Any, send: Any, new_token: str | None
+    ) -> None:
+        """Forward to the app, injecting Set-Cookie on the response if needed."""
+        if not new_token:
+            await self.app(scope, receive, send)
+            return
+
+        # Wrap send to inject the CSRF cookie into response headers
+        scheme = "https" if scope.get("scheme") == "https" else "http"
+        cookie_header = self._build_cookie_header(new_token, secure=(scheme == "https"))
+
+        async def send_with_cookie(message: dict[str, Any]) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"set-cookie", cookie_header.encode()))
+                message = {**message, "headers": headers}
+            await send(message)
+
+        await self.app(scope, receive, send_with_cookie)
+
+    def _build_cookie_header(self, token: str, *, secure: bool) -> str:
+        """Build a Set-Cookie header value."""
+        parts = [
+            f"{self.config.cookie_name}={token}",
+            "Path=/",
+            "SameSite=Lax",
+        ]
+        if secure:
+            parts.append("Secure")
+        return "; ".join(parts)
+
+    async def _send_403(self, send: Any) -> None:
+        """Send a 403 CSRF rejection response."""
+        body = b'{"detail":"CSRF token missing or invalid"}'
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 403,
+                "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
+                ],
+            }
+        )
+        await send(
+            {
+                "type": "http.response.body",
+                "body": body,
+            }
+        )
 
 
-def apply_csrf_protection(app: FastAPI, profile: str) -> None:
-    """Apply CSRF protection middleware to a FastAPI application.
-
-    Args:
-        app: FastAPI application instance
-        profile: Security profile (basic, standard, strict)
-    """
+def apply_csrf_protection(app: Any, profile: str) -> None:
+    """Apply CSRF protection middleware to a FastAPI application."""
     config = configure_csrf_for_profile(profile)
     app.state.csrf_config = config
 
     if not config.enabled:
         return
 
-    CSRFMiddleware = create_csrf_middleware(config)
-    app.add_middleware(CSRFMiddleware)
+    # Register as raw ASGI middleware via Starlette's add_middleware.
+    # The 'config' kwarg is passed to CSRFMiddleware.__init__.
+    app.add_middleware(CSRFMiddleware, config=config)
 
     logger.info("CSRF protection enabled (profile=%s)", profile)

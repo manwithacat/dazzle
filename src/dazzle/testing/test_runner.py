@@ -126,12 +126,33 @@ class DazzleClient:
         self._test_routes_available: bool | None = None  # None = unknown
         self._created_entities: list[tuple[str, str]] = []  # (entity_name, entity_id)
 
+    def _ensure_csrf_token(self) -> None:
+        """Acquire a CSRF token by making a GET request if we don't have one."""
+        if self.client.cookies.get("dazzle_csrf"):
+            return
+        try:
+            self.client.get(f"{self.base_url}/health")
+        except Exception:
+            pass  # Best-effort — server may not be ready yet
+
     def _request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
         """HTTP request with automatic retry on timeout.
 
         Retries up to MAX_RETRIES times with exponential backoff (1s, 2s, 4s)
         when a request times out. Non-timeout errors are raised immediately.
+
+        For mutation methods (POST/PUT/DELETE/PATCH), automatically injects
+        the CSRF token from the dazzle_csrf cookie.
         """
+        # Inject CSRF token for mutation requests
+        if method.upper() in ("POST", "PUT", "DELETE", "PATCH"):
+            self._ensure_csrf_token()
+            csrf_token = self.client.cookies.get("dazzle_csrf")
+            if csrf_token:
+                headers = dict(kwargs.get("headers") or {})
+                headers.setdefault("X-CSRF-Token", csrf_token)
+                kwargs["headers"] = headers
+
         last_exc: httpx.TimeoutException | None = None
         for attempt in range(self.MAX_RETRIES + 1):
             try:
