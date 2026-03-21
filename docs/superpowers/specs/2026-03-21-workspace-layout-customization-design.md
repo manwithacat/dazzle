@@ -34,6 +34,10 @@ User customizes --> Alpine state updates --> Save --> dzPrefs.set() --> PUT /aut
 
 All three are vendored into `src/dazzle_ui/static/vendor/` (consistent with existing HTMX vendoring pattern).
 
+### Relationship to `dz.js`
+
+The existing `dz.js` micro-runtime (~2KB) was written as a lightweight Alpine alternative. With Alpine.js becoming a first-class dependency, `dz.js` features overlap. For this feature, Alpine.js is used exclusively for the workspace editor. A follow-on activity (out of scope for this spec) will evaluate migrating `dz.js` consumers to Alpine and potentially retiring `dz.js`. During the transition, both coexist — they use different attribute namespaces (`x-*` vs `data-dz-*`) and do not conflict at the DOM level.
+
 ### Key Principle
 
 The DSL defines the *default* layout. User preferences store a *delta* (order, hidden set, width overrides). "Reset to default" = delete the preference key. If the DSL adds a new region, it appears at the end of the user's custom order automatically.
@@ -81,7 +85,7 @@ The stage system provides *default* spans (preserving current visual appearance)
 | `focus_metric` | First region: 12, rest: 6 |
 | `dual_pane_flow` | All: 6 |
 | `scanner_table` | All: 12 |
-| `monitor_wall` | All: 4 |
+| `monitor_wall` | All: 6 (was `grid-cols-2 lg:grid-cols-3`; 6 preserves the 2-col default at `md`, losing the 3-col `lg` variant — acceptable trade-off for uniform resizability) |
 | `command_center` | Cycle: 12, 6, 6, 4, 4, 4 |
 
 ### Responsive Behavior
@@ -91,7 +95,7 @@ Below `md` breakpoint, all regions collapse to full width:
 <div class="col-span-12 md:col-span-{{ region.col_span }}">
 ```
 
-### RegionContext Additions
+### RegionContext Changes
 
 ```python
 @dataclass
@@ -99,19 +103,54 @@ class RegionContext:
     # ... existing fields ...
     col_span: int = 12       # resolved column span (4, 6, 8, or 12)
     hidden: bool = False     # user has hidden this region
+    # grid_class is REMOVED — replaced by col_span
 ```
+
+The existing `grid_class` field on `RegionContext` is removed. All templates that reference `{{ region.grid_class }}` (primarily `_content.html`) are updated to use `col-span-12 md:col-span-{{ region.col_span }}`. The `grid_class` field on `WorkspaceContext` (the outer grid) is also removed in favour of the hardcoded `grid grid-cols-12 gap-4`.
 
 ## Edit Mode UX
 
 ### Entry/Exit
 
-A "Customize" button in the workspace header toggles edit mode. Alpine.js manages the `editing` boolean on the workspace container:
+A "Customize" button is added to `_content.html` in the workspace header area (the `flex items-center justify-between` div that holds the workspace title, above the region grid). This button toggles edit mode. Alpine.js manages the `editing` boolean on the workspace container:
 
 ```html
 <div x-data="dzWorkspaceEditor('{{ workspace.name }}', {{ layout_json }})">
+  <!-- Workspace header with title + Customize button -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-bold">{{ workspace.title }}</h2>
+    <button @click="toggleEdit()" x-text="editing ? 'Editing...' : 'Customize'"
+            class="btn btn-sm btn-ghost" x-show="!editing"></button>
+  </div>
+  <!-- Grid container -->
+  <div class="grid grid-cols-12 gap-4" x-sort="onReorder" :x-sort.disabled="!editing">
+    ...regions...
+  </div>
+  <!-- Floating save toolbar (fixed bottom, edit mode only) -->
+  ...
+</div>
 ```
 
 `layout_json` is the server-rendered current layout state so Alpine initializes with correct values without an additional fetch.
+
+### Alpine Component Interface
+
+```javascript
+function dzWorkspaceEditor(workspaceName, initialLayout) {
+  return {
+    editing: false,
+    regions: initialLayout.regions,    // [{name, col_span, hidden}, ...]
+    _snapshot: null,                   // saved state for cancel
+    toggleEdit() { ... },
+    onReorder(item, position) { ... }, // alpine-sort callback
+    setWidth(regionName, span) { ... },
+    toggleVisibility(regionName) { ... },
+    save() { ... },                    // dzPrefs.set + exit edit
+    cancel() { ... },                  // restore _snapshot + exit edit
+    reset() { ... },                   // dzPrefs.del + reload
+  }
+}
+```
 
 ### Edit Mode Controls
 
@@ -123,9 +162,11 @@ A "Customize" button in the workspace header toggles edit mode. Alpine.js manage
 
 **Floating toolbar** (fixed at bottom of viewport, visible in edit mode):
 
-- "Save layout" (primary button) — persists state via `dzPrefs.set()`, exits edit mode
+- "Save layout" (primary button) — persists state via `dzPrefs.set(key, JSON.stringify(layout))`, exits edit mode
 - "Cancel" (secondary) — discards changes, resets Alpine state to server-rendered values, exits edit mode
 - "Reset to default" (text/danger) — deletes the preference key and reloads the workspace
+
+**Note on `dzPrefs.set()` serialization:** `dzPrefs.set()` coerces values to strings via `String()`. The layout object must be `JSON.stringify()`-ed by the caller before passing to `dzPrefs.set()`. On read, `dzPrefs.get()` returns the raw string; the Alpine component parses it with `JSON.parse()`. This avoids modifying the generic `dzPrefs` API.
 
 ### Transitions
 
@@ -146,6 +187,10 @@ New function `apply_layout_preferences(workspace_ctx, user_prefs)`:
 5. Override `col_span` from `widths` map
 
 Called after `build_workspace_context()`, before template rendering.
+
+### Fold Count and Hidden Regions
+
+`WorkspaceContext.fold_count` controls eager vs lazy loading. The fold count applies to *visible* regions only — hidden regions are skipped when counting. This ensures that hiding a region above the fold doesn't push a previously-eager region into lazy loading.
 
 ### `_content.html`
 
@@ -176,6 +221,10 @@ The existing `PUT /auth/preferences` endpoint handles persistence. `dzPrefs.set(
 - Workspace renders with saved layout preference (order, hidden, widths applied)
 - `PUT /auth/preferences` with layout JSON persists; subsequent page load reflects it
 - Reset (delete preference key) restores DSL default layout
+
+### JS Contract Tests
+
+- `test_layout_json_shape` — fixture asserting the JSON structure sent to `dzPrefs.set` matches `{"order": [...], "hidden": [...], "widths": {...}}` schema
 
 ### Not Tested (Client-Side Library Behavior)
 
