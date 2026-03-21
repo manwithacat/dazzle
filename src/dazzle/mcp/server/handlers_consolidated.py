@@ -879,6 +879,125 @@ def _handle_graph_triggers(arguments: dict[str, Any]) -> str:
     )
 
 
+def _handle_graph_topology(arguments: dict[str, Any]) -> str:
+    """Derive project topology from the current AppSpec.
+
+    Returns entity relationships, surface→entity mapping, workspace composition,
+    and dead construct detection. All derived from the DSL — no separate indexing.
+    """
+    from .state import get_active_project_path
+
+    project_root = get_active_project_path()
+    if not project_root:
+        return error_response("No active project")
+
+    from .common import load_project_appspec
+
+    appspec = load_project_appspec(project_root)
+
+    # Entity relationship graph
+    entities_map: dict[str, dict[str, Any]] = {}
+    for entity in appspec.domain.entities:
+        refs: list[dict[str, str]] = []
+        for field in entity.fields:
+            if field.type.kind in ("ref", "belongs_to") and field.type.ref_entity:
+                refs.append(
+                    {
+                        "field": field.name,
+                        "target": field.type.ref_entity,
+                        "kind": str(field.type.kind),
+                        "required": "required" in [str(m) for m in field.modifiers],
+                    }
+                )
+        entities_map[entity.name] = {
+            "field_count": len(entity.fields),
+            "references": refs,
+            "has_state_machine": getattr(entity, "state_machine", None) is not None,
+            "has_access": getattr(entity, "access", None) is not None,
+        }
+
+    # Surface → entity mapping
+    surface_map: dict[str, dict[str, Any]] = {}
+    entity_surfaces: dict[str, list[str]] = {}  # reverse index
+    for surface in appspec.surfaces:
+        surface_map[surface.name] = {
+            "entity_ref": surface.entity_ref,
+            "mode": str(surface.mode),
+            "title": surface.title,
+        }
+        if surface.entity_ref:
+            entity_surfaces.setdefault(surface.entity_ref, []).append(surface.name)
+
+    # Workspace composition
+    workspace_map: dict[str, dict[str, Any]] = {}
+    workspace_entities: dict[str, set[str]] = {}
+    for ws in appspec.workspaces:
+        regions: list[dict[str, str]] = []
+        ws_ents: set[str] = set()
+        for region in getattr(ws, "regions", []):
+            source = getattr(region, "source", None) or ""
+            regions.append(
+                {
+                    "name": getattr(region, "name", ""),
+                    "type": str(getattr(region, "type", "")),
+                    "source": source,
+                }
+            )
+            if source:
+                ws_ents.add(source)
+        workspace_map[ws.name] = {
+            "title": getattr(ws, "title", ws.name),
+            "region_count": len(regions),
+            "regions": regions,
+            "entities": sorted(ws_ents),
+        }
+        workspace_entities[ws.name] = ws_ents
+
+    # Dead construct detection
+    all_entity_names = set(entities_map.keys())
+    entities_with_surfaces = set(entity_surfaces.keys())
+    entities_in_workspaces: set[str] = set()
+    for ws_ents in workspace_entities.values():
+        entities_in_workspaces |= ws_ents
+
+    dead = {
+        "entities_without_surfaces": sorted(all_entity_names - entities_with_surfaces),
+        "entities_without_workspaces": sorted(entities_with_surfaces - entities_in_workspaces),
+    }
+
+    # Query filter (optional — return only info about a specific entity)
+    entity_filter = arguments.get("entity")
+    if entity_filter:
+        filtered = {
+            "entity": entity_filter,
+            "details": entities_map.get(entity_filter, {}),
+            "surfaces": entity_surfaces.get(entity_filter, []),
+            "in_workspaces": [
+                ws_name for ws_name, ents in workspace_entities.items() if entity_filter in ents
+            ],
+            "referenced_by": [
+                {"entity": ename, "field": ref["field"]}
+                for ename, edata in entities_map.items()
+                for ref in edata["references"]
+                if ref["target"] == entity_filter
+            ],
+        }
+        return json.dumps(filtered, indent=2)
+
+    return json.dumps(
+        {
+            "entities": len(entities_map),
+            "surfaces": len(surface_map),
+            "workspaces": len(workspace_map),
+            "entity_graph": entities_map,
+            "surface_map": surface_map,
+            "workspace_map": workspace_map,
+            "dead_constructs": dead,
+        },
+        indent=2,
+    )
+
+
 def handle_graph(arguments: dict[str, Any]) -> str:
     """Handle knowledge graph operations."""
     from .state import get_knowledge_graph, refresh_knowledge_graph
@@ -909,6 +1028,7 @@ def handle_graph(arguments: dict[str, Any]) -> str:
         "export": lambda args: json.dumps(graph.export_project_data(), indent=2),
         "import": lambda args: _handle_graph_import(graph, args),
         "triggers": lambda args: _handle_graph_triggers(args),
+        "topology": lambda args: _handle_graph_topology(args),
     }
 
     return _dispatch_standalone_ops(arguments, ops, "graph")

@@ -887,7 +887,8 @@ def get_consolidated_tools() -> list[Tool]:
                 "related (get related concepts for an entity), "
                 "export (export project KG data to JSON), "
                 "import (import KG data from JSON), "
-                "triggers (show what fires when an entity event occurs)"
+                "triggers (show what fires when an entity event occurs), "
+                "topology (derive project structure from DSL: entity relationships, surface/workspace mapping, dead constructs; optionally filter by entity name)"
             ),
             inputSchema={
                 "type": "object",
@@ -908,6 +909,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "export",
                             "import",
                             "triggers",
+                            "topology",
                         ],
                         "description": "Operation to perform",
                     },
