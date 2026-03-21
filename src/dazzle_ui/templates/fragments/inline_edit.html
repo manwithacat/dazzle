@@ -1,11 +1,12 @@
-{# Inline editing fragment — click-to-edit with HTMX save, no Alpine #}
+{# Inline editing fragment — Alpine x-data for edit mode toggle, HTMX for save #}
 {# Parameters: field_name, field_value, endpoint, field_type (default: text) #}
 {% set field_type = field_type | default('text') %}
-<div data-dz-inline-edit class="inline-edit-container group">
+<div x-data="{ editing: false }" class="inline-edit-container group">
 
   {# Display mode — button for keyboard accessibility #}
   <button type="button"
-          data-dz-inline-display
+          x-show="!editing"
+          @click="editing = true; $nextTick(() => $el.parentElement.querySelector('input[name]').focus())"
           class="inline-flex items-center gap-1 hover:bg-base-200 rounded px-1 -mx-1
                  transition-colors cursor-pointer text-left"
           aria-label="Edit {{ field_name | replace('_', ' ') }}: {{ field_value }}">
@@ -16,8 +17,8 @@
     </svg>
   </button>
 
-  {# Edit mode (hidden by default) #}
-  <form style="display:none;"
+  {# Edit mode #}
+  <form x-show="editing"
         hx-put="{{ endpoint }}"
         hx-target="closest .inline-edit-container"
         hx-swap="outerHTML"
@@ -29,8 +30,9 @@
              type="{{ field_type }}"
              name="{{ field_name }}"
              value="{{ field_value }}"
-             onblur="this.form.requestSubmit()"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();this.form.requestSubmit()}if(event.key==='Escape'){this.closest('[data-dz-inline-edit]').querySelector('[data-dz-inline-display]').style.display='';this.form.style.display='none'}"
+             @blur="$el.form.requestSubmit()"
+             @keydown.enter.prevent="$el.form.requestSubmit()"
+             @keydown.escape="editing = false"
              class="input input-bordered input-sm input-ghost w-full" />
       <span class="htmx-indicator loading loading-spinner loading-xs" aria-hidden="true"></span>
     </div>

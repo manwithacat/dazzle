@@ -1,16 +1,69 @@
 /** @ts-check */
 /**
- * dz.js — Dazzle micro-runtime. Replaces Alpine.js (~15 KB) with ~2 KB of
- * targeted utilities for the patterns Dazzle actually uses.
+ * dz.js — Dazzle custom runtime for features that need imperative JS.
  *
- * Provides:
- *  - dz.persist(key, fallback)  — localStorage read/write helper
- *  - dz.toggle(el)              — open/close state for dropdowns/modals/panels
- *  - dz.toast(message, type)    — toast notification API
- *  - dz.table(config)           — datatable sort/column/bulk-select state
- *  - Event delegation for [data-dz-*] attributes
+ * This file is being incrementally migrated to Alpine.js (#600). Features
+ * should only remain here when they genuinely cannot be expressed declaratively
+ * via Alpine x-data/x-show/x-model, or when they require tight integration
+ * with HTMX lifecycle events that Alpine does not handle.
  *
- * Zero dependencies. No build step. ~2 KB minified+gzipped.
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │  REMAINING IN dz.js — why each feature stays                          │
+ * ├─────────────────────────────────────────────────────────────────────────┤
+ * │  Toast notifications                                                  │
+ * │    Why: Programmatic API (dz.toast(msg, type)) called from JS and     │
+ * │    HTMX HX-Trigger server headers. Alpine cannot intercept custom     │
+ * │    HTMX trigger events cleanly. Consider: Alpine $dispatch if HTMX    │
+ * │    wiring can be replaced with @showToast.window.                     │
+ * │                                                                       │
+ * │  Confirm dialog (native <dialog>)                                     │
+ * │    Why: Reads data attributes from the *triggering* element, passes   │
+ * │    them to htmx.ajax(). The trigger → dialog data flow is hard to     │
+ * │    express in Alpine without a custom directive. Consider: Alpine     │
+ * │    $dispatch('confirm', {action, method, target}) + x-on:confirm.     │
+ * │                                                                       │
+ * │  Data table (sort, column visibility, bulk select)                    │
+ * │    Why: Complex stateful component with htmx reload(), column         │
+ * │    persistence to localStorage, and htmx:configRequest interception   │
+ * │    for bulk action ID injection. Largest single feature (~200 lines). │
+ * │    Consider: Alpine.data('dzTable', ...) named component.             │
+ * │                                                                       │
+ * │  Money field (multi-currency minor unit conversion)                   │
+ * │    Why: ISO 4217 currency scale table + bidirectional conversion      │
+ * │    between display (decimal) and hidden (minor integer) inputs.       │
+ * │    Consider: Alpine.data('dzMoney', ...) named component.             │
+ * │                                                                       │
+ * │  File upload (drag-and-drop + fetch)                                  │
+ * │    Why: Drag events, fetch() upload, preview DOM construction.        │
+ * │    Consider: Alpine.data('dzFileUpload', ...) named component.        │
+ * │                                                                       │
+ * │  Wizard/stepper form navigation                                       │
+ * │    Why: Multi-step validation (reportValidity per stage), step        │
+ * │    visibility toggling, stepper dot activation. Could migrate to      │
+ * │    Alpine x-data={step:0} fairly cleanly.                             │
+ * │    Consider: Likely the next migration candidate.                     │
+ * │                                                                       │
+ * │  Experience flow forms                                                │
+ * │    Why: Single line — ensures hx-target="body" on experience forms.   │
+ * │    Consider: Replace with x-init="$el.setAttribute(...)" or just      │
+ * │    add hx-target="body" directly in the Jinja template.              │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ *
+ * MIGRATED TO ALPINE (v0.45.0, #600):
+ *  - Dark mode toggle → app_shell.html x-data + $persist
+ *  - Sidebar open/close → app_shell.html x-data + $persist
+ *  - Toggle system (dropdowns) → x-data + @click.outside + x-transition
+ *  - Slide-over panel → x-data + x-show + x-transition
+ *  - Inline edit → x-data + x-show
+ *  - Search clear button → x-model
+ *  - Search select dropdown → x-data + x-show
+ *  - Detail view tabs → x-data + x-show
+ *  - Column visibility dropdown → x-data + @click.outside (filterable_table)
+ *
+ * PUBLIC API:
+ *  - dz.toast(message, type) — show a toast notification
+ *  - dz.persist(key, fallback) — read from localStorage
+ *  - dz.save(key, value) — write to localStorage
  */
 
 const dz = (() => {
@@ -1034,15 +1087,11 @@ const dz = (() => {
   // ── Init ─────────────────────────────────────────────────────────────
 
   function init() {
-    initDarkMode();
-    initSidebar();
-    initToggles();
+    // Dark mode, sidebar, toggles, slide-over, inline edit, and search
+    // clear buttons have been migrated to Alpine.js (v0.45.0, #600).
     initDialogs();
-    initSlideOver();
     initToasts();
     initHtmxEvents();
-    initInlineEdit();
-    initSearchInputs();
     initFormLoading();
     initMoneyInputs();
     initFileUploads();
@@ -1054,13 +1103,8 @@ const dz = (() => {
       initTable(/** @type {HTMLElement} */ (el));
     });
 
-    // Re-init after HTMX swaps.  Navigation uses fragment targeting
-    // (#main-content) so sidebar/dark-mode state is preserved.  These
-    // restores still fire for full-body swaps (forms, entity row clicks).
+    // Re-init after HTMX swaps
     document.addEventListener("htmx:afterSettle", (e) => {
-      applySidebar(persist("dz-sidebar", true));
-      applyDarkMode(persist("dz-dark-mode", false));
-
       const target = /** @type {HTMLElement} */ (
         /** @type {CustomEvent} */ (e).detail.elt
       );

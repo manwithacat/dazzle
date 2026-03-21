@@ -1,5 +1,4 @@
-{# Search-select fragment — debounced search with dropdown results, no Alpine #}
-{# Uses native focus/blur + HTMX. Dropdown closes on click-outside via focusout. #}
+{# Search-select fragment — debounced search with dropdown results, Alpine state #}
 {# ARIA combobox pattern for screen reader accessibility. #}
 
 {# Resolve initial value for edit mode: ref objects have display names #}
@@ -13,7 +12,7 @@
   {% set init_display = value %}
 {% endif %}
 
-<div class="relative w-full" data-dz-toggleable>
+<div class="relative w-full" x-data="{ open: false }">
   {# Hidden input stores the selected value #}
   <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}"
          data-dazzle-field="{{ field.name }}" value="{{ init_id }}" />
@@ -25,7 +24,7 @@
          placeholder="{{ field.placeholder or ('Search ' + field.label + '...') }}"
          autocomplete="off"
          role="combobox"
-         aria-expanded="false"
+         :aria-expanded="open"
          aria-controls="search-results-{{ field.name }}"
          aria-autocomplete="list"
          aria-haspopup="listbox"
@@ -36,8 +35,8 @@
          hx-indicator="#search-spinner-{{ field.name }}"
          hx-params="q"
          {% if field.source.min_chars %}hx-vals='{"min_chars": {{ field.source.min_chars }}}'{% endif %}
-         onfocus="this.setAttribute('aria-expanded','true');this.closest('[data-dz-toggleable]').querySelector('[data-dz-show]').style.display=''"
-         onblur="setTimeout(()=>{const c=this.closest('[data-dz-toggleable]');const d=c.querySelector('[data-dz-show]');if(d)d.style.display='none';this.setAttribute('aria-expanded','false')},200)" />
+         @focus="open = true"
+         @blur="setTimeout(() => { open = false }, 200)" />
 
   {# Loading indicator #}
   <span id="search-spinner-{{ field.name }}" class="htmx-indicator absolute right-3 top-3"
@@ -47,10 +46,10 @@
 
   {# Dropdown results container #}
   <div id="search-results-{{ field.name }}"
-       data-dz-show
+       x-show="open"
+       x-cloak
        role="listbox"
        aria-label="{{ field.label }} suggestions"
-       style="display:none;"
        class="absolute z-50 w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
     {# Empty state shown before any search #}
     <div class="p-3 text-sm text-base-content/50" role="option" aria-disabled="true">

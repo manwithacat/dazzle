@@ -1,5 +1,5 @@
-{# Filterable table component — no Alpine, no datatable.js #}
-{# All state managed by dz.js initTable() via data-dz-table #}
+{# Filterable table component — Alpine for column dropdown, dz.js for table state #}
+{# Sort/bulk/column-visibility state managed by dz.js initTable() via data-dz-table #}
 {% if table %}
 <div id="{{ table.table_id or 'dt-table' }}"
      class="space-y-4"
@@ -15,12 +15,12 @@
     <div class="flex gap-2">
       {# Column visibility toggle #}
       {% if table.columns | length > 3 %}
-      <div data-dz-toggleable class="relative">
-        <button data-dz-toggle class="btn btn-ghost btn-sm" aria-label="Toggle column visibility">
+      <div x-data="{ open: false }" @click.outside="open = false" class="relative">
+        <button @click="open = !open" class="btn btn-ghost btn-sm" aria-label="Toggle column visibility">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18"/></svg>
           Columns
         </button>
-        <div data-dz-show style="display:none;"
+        <div x-show="open" x-transition
              class="absolute right-0 mt-2 w-48 bg-base-100 shadow-lg rounded-box p-2 z-50">
           {% for col in table.columns %}
           {% if not col.hidden %}

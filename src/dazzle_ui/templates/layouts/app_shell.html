@@ -3,15 +3,27 @@
 
 {% block body %}
 {{ skip_link("#main-content") }}
-<div class="drawer" data-dz-sidebar>
+<div class="drawer"
+     x-data="{
+       sidebarOpen: $persist(true).as('dz-sidebar'),
+       dark: $persist(false).as('dz-dark-mode'),
+       toggleDark() { this.dark = !this.dark; this.applyDark() },
+       applyDark() { document.documentElement.setAttribute('data-theme', this.dark ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', this.dark) },
+       toggleSidebar(action) {
+         if (action === 'open') this.sidebarOpen = true;
+         else if (action === 'close') this.sidebarOpen = false;
+         else this.sidebarOpen = !this.sidebarOpen;
+       }
+     }"
+     x-init="applyDark()"
+     :data-dz-sidebar="sidebarOpen ? 'open' : ''">
   <input id="dz-drawer" type="checkbox" class="drawer-toggle" />
 
   {# Main content area #}
   <div class="drawer-content flex flex-col">
     {# Top bar (mobile + desktop when sidebar collapsed) #}
     {% block navbar %}
-    <div class="navbar bg-base-100/85 backdrop-blur-md shadow-sm border-b border-base-300/50 sticky top-0 z-30"
-         data-dz-sidebar-navbar>
+    <div class="navbar bg-base-100/85 backdrop-blur-md shadow-sm border-b border-base-300/50 sticky top-0 z-30">
       <div class="flex-none">
         {# Mobile: open drawer #}
         <label for="dz-drawer" class="btn btn-square btn-ghost drawer-button lg:hidden"
@@ -22,8 +34,8 @@
         </label>
         {# Desktop collapsed: expand sidebar #}
         <button class="btn btn-square btn-ghost hidden lg:flex"
-                data-dz-sidebar-toggle="open"
-                data-dz-sidebar-expand
+                x-show="!sidebarOpen"
+                @click="toggleSidebar('open')"
                 aria-label="Expand sidebar">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -38,11 +50,11 @@
         <span class="text-sm hidden sm:inline truncate max-w-[200px]">{{ user_name or user_email }}</span>
         {% endif %}
         {# Dark mode toggle #}
-        <button class="btn btn-ghost btn-sm btn-circle" data-dz-dark-toggle aria-label="Toggle dark mode">
-          <svg data-dz-dark-icon="light" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
+        <button class="btn btn-ghost btn-sm btn-circle" @click="toggleDark()" aria-label="Toggle dark mode">
+          <svg x-show="!dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
           </svg>
-          <svg data-dz-dark-icon="dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5" style="display:none;" aria-hidden="true">
+          <svg x-show="dark" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
           </svg>
         </button>
@@ -67,7 +79,7 @@
       <div class="p-4 border-b border-base-300 flex items-center justify-between">
         <h1 class="text-xl font-bold tracking-tight">{{ app_name | default("Dazzle") }}</h1>
         <button class="btn btn-ghost btn-sm btn-square hidden lg:flex"
-                data-dz-sidebar-toggle="close" aria-label="Collapse sidebar">
+                @click="toggleSidebar('close')" aria-label="Collapse sidebar">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
@@ -151,15 +163,15 @@
 
         {# Dark mode toggle (sidebar, visible on desktop) #}
         <div class="p-4 pt-2 hidden lg:block">
-          <button class="btn btn-ghost btn-sm w-full justify-start gap-2" data-dz-dark-toggle
+          <button class="btn btn-ghost btn-sm w-full justify-start gap-2" @click="toggleDark()"
                   aria-label="Toggle dark mode">
-            <svg data-dz-dark-icon="light" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" aria-hidden="true">
+            <svg x-show="!dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
             </svg>
-            <svg data-dz-dark-icon="dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" style="display:none;" aria-hidden="true">
+            <svg x-show="dark" x-cloak xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
             </svg>
-            <span data-dz-dark-label>Dark mode</span>
+            <span x-text="dark ? 'Light mode' : 'Dark mode'">Dark mode</span>
           </button>
         </div>
       </div>

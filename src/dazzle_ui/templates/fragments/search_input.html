@@ -1,9 +1,9 @@
-{# Reusable search input with debounced HTMX search — no Alpine #}
+{# Reusable search input with debounced HTMX search — Alpine for clear button #}
 {# Parameters: endpoint, target (CSS selector), placeholder (optional) #}
 {% set placeholder = placeholder | default('Search ' + (table.entity_name|default("") |lower) + '...' if table else 'Search...') %}
 {% set target = target | default('#' + (table.table_id or 'dt-table') + '-body' if table else '#search-results') %}
 {% set search_id = 'dz-search-' + (table.table_id or 'search') if table else 'dz-search' %}
-<div data-dz-search class="form-control">
+<div x-data="{ query: '' }" class="form-control">
   <label for="{{ search_id }}" class="sr-only">
     {{ 'Search ' + table.title if table else 'Search' }}
   </label>
@@ -11,7 +11,7 @@
     <input type="search"
            id="{{ search_id }}"
            name="search"
-           data-dz-search-input
+           x-model="query"
            placeholder="{{ placeholder }}"
            aria-label="{{ 'Search ' + table.title if table else 'Search' }}"
            class="input input-bordered input-sm w-full max-w-xs pr-8"
@@ -22,10 +22,11 @@
            hx-include="closest [data-dz-table]"
            hx-headers='{"Accept": "text/html"}'
            hx-indicator="{% if table %}#{{ table.table_id or 'dt-table' }}-loading{% else %}next .htmx-indicator{% endif %}" />
-    {# Clear button — shown/hidden by dz.js on input event #}
-    <button data-dz-search-clear
+    {# Clear button — shown when query is non-empty #}
+    <button x-show="query.length > 0"
+            x-cloak
+            @click="query = ''; $el.previousElementSibling.value = ''; htmx.trigger($el.previousElementSibling, 'keyup')"
             type="button"
-            style="display:none;"
             aria-label="Clear search"
             class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle">
       <span aria-hidden="true">&times;</span>

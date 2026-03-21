@@ -123,16 +123,18 @@
   {# Related entity tabs (hub-and-spoke, #301) #}
   {% if detail.related_tabs %}
   {% block detail_related_tabs %}
-  <div class="mt-6" data-dazzle-related="{{ detail.entity_name }}">
+  {# Related tabs — uses Alpine for tab state #}
+  {% set first_tab_id = detail.related_tabs[0].tab_id if detail.related_tabs else '' %}
+  <div class="mt-6" data-dazzle-related="{{ detail.entity_name }}" x-data="{ activeTab: '{{ first_tab_id }}' }">
     {# Tab navigation with count badges #}
     <div class="tabs tabs-bordered" role="tablist">
       {% for tab in detail.related_tabs %}
       {% if tab.visible | default(true) %}
-      <button class="tab{% if loop.first %} tab-active{% endif %}"
+      <button class="tab"
+              :class="activeTab === '{{ tab.tab_id }}' && 'tab-active'"
               role="tab"
-              aria-selected="{{ 'true' if loop.first else 'false' }}"
-              data-dz-tab="{{ tab.tab_id }}"
-              onclick="document.querySelectorAll('[data-dz-tab]').forEach(t=>{t.classList.remove('tab-active');t.setAttribute('aria-selected','false')});this.classList.add('tab-active');this.setAttribute('aria-selected','true');document.querySelectorAll('[data-dz-tab-panel]').forEach(p=>p.hidden=true);document.querySelector('[data-dz-tab-panel=&quot;'+this.dataset.dzTab+'&quot;]').hidden=false">
+              :aria-selected="activeTab === '{{ tab.tab_id }}'"
+              @click="activeTab = '{{ tab.tab_id }}'">
         {{ tab.label }}
         <span class="badge badge-sm ml-1">{{ tab.total }}</span>
       </button>
@@ -143,7 +145,7 @@
     {# Tab panels #}
     {% for tab in detail.related_tabs %}
     {% if tab.visible | default(true) %}
-    <div data-dz-tab-panel="{{ tab.tab_id }}" {% if not loop.first %}hidden{% endif %} role="tabpanel">
+    <div x-show="activeTab === '{{ tab.tab_id }}'" role="tabpanel">
       <div class="card bg-base-100 shadow-sm mt-2">
         <div class="card-body p-0">
           {% if tab.create_url %}
