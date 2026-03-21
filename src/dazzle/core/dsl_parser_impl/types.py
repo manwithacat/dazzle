@@ -165,6 +165,15 @@ class TypeParserMixin:
     def _parse_decimal_type(self) -> ir.FieldType:
         """Parse decimal(P,S) type."""
         self.advance()
+        if not self.match(TokenType.LPAREN):
+            tok = self.current_token()
+            raise make_parse_error(
+                "decimal requires precision and scale arguments: decimal(P,S)\n"
+                "  Example: amount: decimal(10,2)",
+                self.file,
+                tok.line,
+                tok.column,
+            )
         self.expect(TokenType.LPAREN)
         precision = int(self.expect(TokenType.NUMBER).value)
         self.expect(TokenType.COMMA)

@@ -9,6 +9,8 @@ from pathlib import Path
 from types import ModuleType
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 
 def _import_db_handler():
     """Import db handlers directly to avoid MCP package init issues."""
@@ -40,10 +42,23 @@ def _import_db_handler():
     def _error_response(msg):
         return json.dumps({"error": msg})
 
+    def _wrap_async_handler_errors(fn):
+        from functools import wraps
+
+        @wraps(fn)
+        async def wrapper(*a, **kw):
+            try:
+                return await fn(*a, **kw)
+            except Exception as exc:
+                return json.dumps({"error": str(exc)})
+
+        return wrapper
+
     common_mock.error_response = _error_response
     common_mock.extract_progress = _extract_progress
     common_mock.load_project_appspec = _load_project_appspec
     common_mock.wrap_handler_errors = _wrap_handler_errors
+    common_mock.wrap_async_handler_errors = _wrap_async_handler_errors
     sys.modules["dazzle.mcp.server.handlers.common"] = common_mock
 
     # Import the module directly from file
@@ -67,9 +82,12 @@ _db_mod = _import_db_handler()
 
 
 class TestDbStatusHandler:
+    @pytest.mark.asyncio
     @patch.object(_db_mod, "get_connection")
     @patch.object(_db_mod, "load_project_appspec")
-    def test_returns_status_json(self, mock_load: MagicMock, mock_conn_factory: MagicMock) -> None:
+    async def test_returns_status_json(
+        self, mock_load: MagicMock, mock_conn_factory: MagicMock
+    ) -> None:
         appspec = MagicMock()
         e1 = MagicMock()
         e1.name = "Task"
@@ -87,15 +105,18 @@ class TestDbStatusHandler:
 
         project_path = Path("/fake/project")
         args: dict[str, object] = {"_progress": MagicMock()}
-        result_str = _db_mod.db_status_handler(project_path, args)
+        result_str = await _db_mod.db_status_handler(project_path, args)
         result = json.loads(result_str)
         assert "entities" in result or "total_rows" in result
 
 
 class TestDbVerifyHandler:
+    @pytest.mark.asyncio
     @patch.object(_db_mod, "get_connection")
     @patch.object(_db_mod, "load_project_appspec")
-    def test_returns_verify_json(self, mock_load: MagicMock, mock_conn_factory: MagicMock) -> None:
+    async def test_returns_verify_json(
+        self, mock_load: MagicMock, mock_conn_factory: MagicMock
+    ) -> None:
         appspec = MagicMock()
         appspec.domain.entities = []
         mock_load.return_value = appspec
@@ -110,6 +131,6 @@ class TestDbVerifyHandler:
 
         project_path = Path("/fake/project")
         args: dict[str, object] = {"_progress": MagicMock()}
-        result_str = _db_mod.db_verify_handler(project_path, args)
+        result_str = await _db_mod.db_verify_handler(project_path, args)
         result = json.loads(result_str)
         assert "checks" in result

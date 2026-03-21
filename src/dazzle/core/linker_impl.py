@@ -883,9 +883,15 @@ def validate_references(symbols: SymbolTable) -> list[str]:
     """
     errors = []
 
-    # v0.14.1: Detect entity reference cycles early
+    # v0.14.1: Detect entity reference cycles (warning only — bidirectional
+    # FKs are valid SQL patterns, e.g. Work ↔ ForkLicense) (#608)
     cycle_warnings = detect_entity_cycles(symbols)
-    errors.extend(cycle_warnings)
+    if cycle_warnings:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        for w in cycle_warnings:
+            logger.warning(w)
 
     # Validate entity references in entity fields
     for entity_name, entity in symbols.entities.items():

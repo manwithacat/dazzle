@@ -2248,16 +2248,10 @@ class RouteGenerator:
         """
         service_specs = service_specs or {}
 
-        def _route_sort_key(ep: EndpointSpec) -> tuple[int, int]:
-            # More segments first, then static before dynamic at same depth.
-            return (-ep.path.count("/"), 0 if "{" not in ep.path else 1)
-
-        for endpoint in sorted(endpoints, key=_route_sort_key):
-            service_spec = service_specs.get(endpoint.service)
-            self.generate_route(endpoint, service_spec)
-
-        # Register /{plural}/create guard routes so FastAPI doesn't
-        # match "create" as a UUID {id} parameter (#598).
+        # Register /{plural}/create guard routes BEFORE main routes so
+        # FastAPI doesn't match "create" as a UUID {id} parameter (#598).
+        # FastAPI uses first-match-wins, so /tasks/create must be
+        # registered before /tasks/{id}.
         _guarded: set[str] = set()
         for ep in endpoints:
             if ep.method == HttpMethod.GET and ep.path.endswith("/{id}"):
@@ -2277,6 +2271,14 @@ class RouteGenerator:
                         tags=["Guard"],
                         include_in_schema=False,
                     )(_create_guard)
+
+        def _route_sort_key(ep: EndpointSpec) -> tuple[int, int]:
+            # More segments first, then static before dynamic at same depth.
+            return (-ep.path.count("/"), 0 if "{" not in ep.path else 1)
+
+        for endpoint in sorted(endpoints, key=_route_sort_key):
+            service_spec = service_specs.get(endpoint.service)
+            self.generate_route(endpoint, service_spec)
 
         return self._router
 
