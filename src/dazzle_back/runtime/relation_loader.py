@@ -247,11 +247,37 @@ class RelationLoader:
         # Build lookup by ID, injecting __display__ if entity has display_field
         _display_key = self.registry.display_fields.get(relation.to_entity)
         related_map: dict[str, dict[str, Any]] = {}
+        # Collect FK UUIDs that need nested display resolution (#590)
+        _nested_fk_ids: set[str] = set()
+        _nested_entity: str | None = None
         for r in related_rows:
             d = dict(r)
             if _display_key and _display_key in d:
-                d["__display__"] = d[_display_key]
+                val = d[_display_key]
+                # Check if display_field points to a FK (UUID value, not a scalar)
+                nested_rel = self.registry.get_relation(relation.to_entity, _display_key)
+                if nested_rel and isinstance(val, str) and len(val) == 36 and "-" in val:
+                    _nested_fk_ids.add(val)
+                    _nested_entity = nested_rel.to_entity
+                else:
+                    d["__display__"] = val
             related_map[str(d["id"])] = d
+
+        # Resolve nested FK display names in a single batch query (#590)
+        if _nested_fk_ids and _nested_entity:
+            _nested_display_key = self.registry.display_fields.get(_nested_entity)
+            if _nested_display_key:
+                _nested_table = quote_identifier(_nested_entity)
+                _nested_placeholders = ", ".join(self._placeholder for _ in _nested_fk_ids)
+                _nested_sql = f"SELECT id, {quote_identifier(_nested_display_key)} FROM {_nested_table} WHERE id IN ({_nested_placeholders})"
+                _nested_cursor = conn.execute(_nested_sql, list(_nested_fk_ids))
+                _nested_map = {
+                    str(nr["id"]): nr[_nested_display_key] for nr in _nested_cursor.fetchall()
+                }
+                for d in related_map.values():
+                    if "__display__" not in d and _display_key and _display_key in d:
+                        fk_val = str(d[_display_key])
+                        d["__display__"] = _nested_map.get(fk_val, fk_val)
 
         # Attach to rows
         for row in rows:
