@@ -159,6 +159,55 @@ class KnowledgeGraphActivity:
         finally:
             self._close_connection(conn)
 
+    def get_knowledge_effectiveness(self: KGStoreProtocol) -> dict[str, Any]:
+        """Compute knowledge tool effectiveness metrics.
+
+        Answers the question: "Are agents reaching for the knowledge graph,
+        or bypassing it for grep/file reads?" by comparing tool selection
+        rates across knowledge, DSL, and other tool categories.
+
+        Returns call counts and ratios for knowledge-related tools vs
+        DSL inspection tools, plus error rates as a quality signal.
+        """
+        conn = self._get_connection()
+        try:
+            rows = conn.execute(
+                """
+                SELECT
+                    tool_name,
+                    COUNT(*) AS calls,
+                    SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) AS errors
+                FROM tool_invocations
+                GROUP BY tool_name
+                """
+            ).fetchall()
+
+            # Categorise tools
+            knowledge_tools = {"graph", "knowledge"}
+            dsl_tools = {"dsl"}
+            total = sum(r["calls"] for r in rows)
+            knowledge_calls = sum(r["calls"] for r in rows if r["tool_name"] in knowledge_tools)
+            dsl_calls = sum(r["calls"] for r in rows if r["tool_name"] in dsl_tools)
+            knowledge_errors = sum(r["errors"] for r in rows if r["tool_name"] in knowledge_tools)
+
+            return {
+                "total_mcp_calls": total,
+                "knowledge_calls": knowledge_calls,
+                "dsl_calls": dsl_calls,
+                "knowledge_share": round(knowledge_calls / total, 3) if total > 0 else 0,
+                "knowledge_error_rate": (
+                    round(knowledge_errors / knowledge_calls, 3) if knowledge_calls > 0 else 0
+                ),
+                "interpretation": (
+                    "Low knowledge_share (<10%) suggests agents bypass the KG for grep/file reads. "
+                    "High error_rate suggests stale or missing entries. "
+                    "Track over time to measure improvement from KB updates."
+                ),
+                "by_tool": {r["tool_name"]: r["calls"] for r in rows},
+            }
+        finally:
+            self._close_connection(conn)
+
     # =========================================================================
     # Activity Event Stream
     # =========================================================================

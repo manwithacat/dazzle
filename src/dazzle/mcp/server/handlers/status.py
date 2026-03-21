@@ -193,6 +193,9 @@ def get_telemetry_handler(args: dict[str, Any]) -> str:
 
     result: dict[str, Any] = {"stats": graph.get_tool_stats()}
 
+    # Include knowledge effectiveness metrics (#611, #612, #613)
+    result["knowledge_effectiveness"] = graph.get_knowledge_effectiveness()
+
     if not stats_only:
         since: float | None = None
         if since_minutes is not None:
