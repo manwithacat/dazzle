@@ -374,9 +374,9 @@ def _apply_workspace_scope_filters(
 
     scopes = getattr(cedar_access_spec, "scopes", None)
     if not scopes:
-        # No scope rules — default-deny (#595).  Entities with permit:
-        # blocks must also have scope: blocks for row visibility.
-        return filters, True
+        # No scope rules — pass through without row filtering (#607).
+        # The permit gate already controls entity-level access.
+        return filters, False
 
     from dazzle_back.runtime.route_generator import (
         _normalize_role,

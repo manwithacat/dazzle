@@ -1143,6 +1143,7 @@ def create_list_handler(
             select_fields=select_fields,
             json_projection=json_projection,
             auto_include=auto_include,
+            cedar_access_spec=cedar_access_spec,
             audit_logger=audit_logger,
             entity_name=entity_name,
             search_fields=search_fields,
@@ -1193,13 +1194,18 @@ def _resolve_scope_filters(
 
     scopes = getattr(cedar_access_spec, "scopes", None)
     if not scopes:
-        # No scope rules defined — default-deny.  Entities with permit:
-        # blocks MUST also have scope: blocks to define row visibility.
-        # Use `scope: all for: *` for intentionally public entities (#595).
-        return None
+        # No scope rules defined — pass through without row filtering (#607).
+        # The permit gate already controls entity-level access. Entities that
+        # need row-level isolation must add explicit scope: blocks.
+        return {}
 
     op_val = operation if isinstance(operation, str) else operation.value
 
+    # Collect ALL matching scope rules for the user's roles, not just the
+    # first one (#604).  If any matching rule is unconditional (scope: all),
+    # the user gets unrestricted access.  This handles dual-role users where
+    # one role has a restrictive scope and another has scope: all.
+    matched_rules: list[Any] = []
     for scope_rule in scopes:
         rule_op = getattr(scope_rule, "operation", None)
         if rule_op is None:
@@ -1209,36 +1215,48 @@ def _resolve_scope_filters(
             continue
 
         rule_personas = getattr(scope_rule, "personas", [])
-        # Check if this scope rule applies to the user's roles
         if "*" in rule_personas or (user_roles & set(rule_personas)):
-            condition = getattr(scope_rule, "condition", None)
-            predicate = getattr(scope_rule, "predicate", None)
+            matched_rules.append(scope_rule)
 
-            if condition is None and predicate is None:
-                return {}  # scope: all — no filter
+    if not matched_rules:
+        return None  # No scope rule matched — default-deny
 
-            # ---- New predicate-compiler path --------------------------------
-            if predicate is not None and fk_graph is not None:
-                return _resolve_predicate_filters(
-                    predicate, entity_name, fk_graph, user_id, auth_context
-                )
+    # If ANY matched rule is unconditional (scope: all), return no filter.
+    # This is the most permissive outcome — a user with ANY role granting
+    # scope: all sees everything, regardless of other roles' restrictions.
+    for rule in matched_rules:
+        condition = getattr(rule, "condition", None)
+        predicate = getattr(rule, "predicate", None)
+        if condition is None and predicate is None:
+            return {}  # scope: all — no filter
 
-            # ---- Legacy condition-tree path (fallback) ----------------------
-            if condition is not None:
-                filters: dict[str, Any] = {}
-                _extract_condition_filters(
-                    condition,
-                    user_id,
-                    filters,
-                    logging.getLogger(__name__),
-                    auth_context,
-                    ref_targets,
-                )
-                return filters
+    # All matched rules have conditions — apply the first one that resolves.
+    # TODO(#604): When multiple restrictive rules match, OR-combine them
+    # so the user sees the union of rows visible under each role.
+    for rule in matched_rules:
+        condition = getattr(rule, "condition", None)
+        predicate = getattr(rule, "predicate", None)
 
-            return {}  # predicate set but no fk_graph — treat as no filter
+        # ---- Predicate-compiler path ----------------------------------------
+        if predicate is not None and fk_graph is not None:
+            return _resolve_predicate_filters(
+                predicate, entity_name, fk_graph, user_id, auth_context
+            )
 
-    return None  # No scope rule matched — default-deny
+        # ---- Legacy condition-tree path (fallback) --------------------------
+        if condition is not None:
+            filters: dict[str, Any] = {}
+            _extract_condition_filters(
+                condition,
+                user_id,
+                filters,
+                logging.getLogger(__name__),
+                auth_context,
+                ref_targets,
+            )
+            return filters
+
+    return {}  # Matched but no resolvable condition — treat as no filter
 
 
 def _resolve_predicate_filters(
