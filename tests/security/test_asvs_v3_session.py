@@ -54,12 +54,13 @@ class TestCSRFProtection:
         config = configure_csrf_for_profile("standard")
         assert config.enabled is True
 
-    def test_csrf_disabled_on_basic(self):
-        """V3.5.2: CSRF can be disabled for internal tools (basic profile)."""
+    def test_csrf_enabled_on_all_profiles(self):
+        """V3.5.2: CSRF is enabled for all profiles including basic (#597)."""
         from dazzle_back.runtime.csrf import configure_csrf_for_profile
 
-        config = configure_csrf_for_profile("basic")
-        assert config.enabled is False
+        for profile in ("basic", "standard", "strict"):
+            config = configure_csrf_for_profile(profile)
+            assert config.enabled is True, f"CSRF must be enabled for {profile} profile"
 
     def test_csrf_token_length(self):
         """V3.5.3: CSRF tokens must have sufficient entropy."""

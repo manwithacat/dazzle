@@ -49,10 +49,9 @@ def configure_csrf_for_profile(profile: str) -> CSRFConfig:
     Returns:
         CSRFConfig for the profile
     """
-    if profile == "basic":
-        return CSRFConfig(enabled=False)
-    else:  # standard or strict
-        return CSRFConfig(enabled=True)
+    # CSRF is enabled for all profiles — mutations must always be protected.
+    # The middleware exempts Bearer-auth and webhook paths automatically.
+    return CSRFConfig(enabled=True)
 
 
 def create_csrf_middleware(config: CSRFConfig) -> Any:
