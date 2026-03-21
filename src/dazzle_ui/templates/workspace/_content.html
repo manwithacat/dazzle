@@ -1,4 +1,4 @@
-<div class="p-4">
+<div class="p-4" x-data="dzWorkspaceEditor('{{ workspace.name }}', {{ layout_json }})">
   {% if workspace.purpose %}
   <p class="text-sm opacity-60 mb-4">{{ workspace.purpose }}</p>
   {% endif %}
@@ -49,23 +49,85 @@
   </script>
   {% endif %}
 
+  <div class="flex items-center justify-end mb-4">
+    <button @click="toggleEdit()" class="btn btn-sm btn-ghost gap-1" x-show="!editing" x-transition>
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+      </svg>
+      Customize
+    </button>
+  </div>
+
   <div class="grid grid-cols-12 gap-4"
+       x-sort="onReorder"
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>
     {% for region in workspace.regions %}
     {% if region.source_tabs %}
     {# Multi-source tabbed region: render tabs inline, each panel lazy-loads independently #}
-    <div class="col-span-12 md:col-span-{{ region.col_span }}" id="region-{{ region.name }}">
+    <div class="col-span-12 md:col-span-{{ region.col_span }} transition-all duration-200"
+         :class="['md:col-span-' + (regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
+         x-show="!regions.find(r => r.name === '{{ region.name }}')?.hidden || editing"
+         data-region-name="{{ region.name }}"
+         id="region-{{ region.name }}">
+      {# Edit mode controls #}
+      <div x-show="editing" x-transition class="mb-1 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="cursor-grab active:cursor-grabbing" x-sort:handle>
+            <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
+          </span>
+          <div class="join">
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 4}" @click="setWidth('{{ region.name }}', 4)">1/3</button>
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 6}" @click="setWidth('{{ region.name }}', 6)">1/2</button>
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 8}" @click="setWidth('{{ region.name }}', 8)">2/3</button>
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 12}" @click="setWidth('{{ region.name }}', 12)">Full</button>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-xs" @click="toggleVisibility('{{ region.name }}')">
+          <template x-if="!regions.find(r => r.name === '{{ region.name }}')?.hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </template>
+          <template x-if="regions.find(r => r.name === '{{ region.name }}')?.hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/></svg>
+          </template>
+        </button>
+      </div>
       {% include 'workspace/regions/tabbed_list.html' with context %}
     </div>
     {% else %}
-    <div class="col-span-12 md:col-span-{{ region.col_span }}"
+    <div class="col-span-12 md:col-span-{{ region.col_span }} transition-all duration-200"
+         :class="['md:col-span-' + (regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
+         x-show="!regions.find(r => r.name === '{{ region.name }}')?.hidden || editing"
+         data-region-name="{{ region.name }}"
          id="region-{{ region.name }}"
          {% if region.endpoint %}
          hx-get="{{ region.endpoint }}"
-         hx-trigger="{% if loop.index <= workspace.fold_count %}load{% else %}intersect once{% endif %}{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
+         hx-trigger="{% if not region.hidden and loop.index <= workspace.fold_count %}load{% else %}intersect once{% endif %}{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
          hx-swap="innerHTML"
          {% endif %}>
+      {# Edit mode controls #}
+      <div x-show="editing" x-transition class="mb-1 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="cursor-grab active:cursor-grabbing" x-sort:handle>
+            <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
+          </span>
+          <div class="join">
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 4}" @click="setWidth('{{ region.name }}', 4)">1/3</button>
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 6}" @click="setWidth('{{ region.name }}', 6)">1/2</button>
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 8}" @click="setWidth('{{ region.name }}', 8)">2/3</button>
+            <button class="btn btn-xs join-item" :class="{'btn-primary': regions.find(r => r.name === '{{ region.name }}')?.col_span === 12}" @click="setWidth('{{ region.name }}', 12)">Full</button>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-xs" @click="toggleVisibility('{{ region.name }}')">
+          <template x-if="!regions.find(r => r.name === '{{ region.name }}')?.hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </template>
+          <template x-if="regions.find(r => r.name === '{{ region.name }}')?.hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/></svg>
+          </template>
+        </button>
+      </div>
       {# Skeleton placeholder while loading #}
       <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
@@ -85,6 +147,14 @@
     </div>
     {% endif %}
     {% endfor %}
+  </div>
+
+  {# Floating toolbar — edit mode only #}
+  <div x-show="editing" x-transition
+       class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-base-100 shadow-xl rounded-lg border border-base-300 px-4 py-3 flex items-center gap-3">
+    <button @click="save()" class="btn btn-primary btn-sm">Save layout</button>
+    <button @click="cancel()" class="btn btn-ghost btn-sm">Cancel</button>
+    <button @click="reset()" class="btn btn-ghost btn-sm text-error">Reset to default</button>
   </div>
 </div>
 
