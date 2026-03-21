@@ -27,6 +27,7 @@ async def _resolve_workspace_user(
     request: Any,
     auth_middleware: Any,
     repositories: dict[str, Any] | None,
+    user_entity_name: str = "User",
 ) -> tuple[str | None, dict[str, Any] | None]:
     """Resolve the current authenticated user to a DSL User entity UUID and attributes dict.
 
@@ -43,10 +44,11 @@ async def _resolve_workspace_user(
         logger.debug("Failed to resolve current user for filter context", exc_info=True)
         return None, None
 
-    # Try to find the User entity record by email so filters use entity IDs
+    # Try to find the user entity record by email so filters use entity IDs.
+    # Uses the DSL user entity name (may be "Student", "Member", etc.) (#588).
     email = getattr(auth.user, "email", None)
     if email and repositories:
-        user_repo = repositories.get("User")
+        user_repo = repositories.get(user_entity_name)
         if user_repo:
             try:
                 user_result = await user_repo.list(filters={"email": email}, page_size=1)
@@ -284,6 +286,8 @@ class WorkspaceRegionContext:
     # Entity access spec for scope predicate enforcement (#574)
     cedar_access_spec: Any = None
     fk_graph: Any = None
+    # DSL user entity name for current_user resolution (#588)
+    user_entity_name: str = "User"
 
 
 def _resolve_display_name(value: Any) -> str:
@@ -450,7 +454,7 @@ async def _workspace_region_handler(
     # Always attempt resolution when middleware is available, even in test mode
     # where require_auth is False — the user may still be authenticated (#483).
     _current_user_id, _current_user_entity = await _resolve_workspace_user(
-        request, ctx.auth_middleware, ctx.repositories
+        request, ctx.auth_middleware, ctx.repositories, ctx.user_entity_name
     )
 
     # Build auth_context for _extract_condition_filters (shared with entity scope path)
@@ -1029,6 +1033,7 @@ async def _workspace_batch_handler(
         request,
         _first_ctx.auth_middleware if _first_ctx else None,
         _first_ctx.repositories if _first_ctx else None,
+        _first_ctx.user_entity_name if _first_ctx else "User",
     )
 
     # Build auth_context for _extract_condition_filters

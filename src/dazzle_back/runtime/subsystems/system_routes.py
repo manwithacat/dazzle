@@ -47,6 +47,13 @@ class SystemRoutesSubsystem:
             db_manager=ctx.db_manager,
             fragment_sources=ctx.config.fragment_sources,
         )
+        # Derive user entity name from auth config so workspace region
+        # filters using current_user resolve against the correct entity (#588).
+        _user_entity_name = "User"
+        if ctx.auth_config:
+            _ue_name = getattr(ctx.auth_config, "user_entity_name", None)
+            if _ue_name:
+                _user_entity_name = _ue_name
         ctx.workspace_builder = WorkspaceRouteBuilder(
             app=ctx.app,
             appspec=ctx.appspec,
@@ -56,6 +63,7 @@ class SystemRoutesSubsystem:
             enable_auth=ctx.enable_auth,
             enable_test_mode=ctx.enable_test_mode,
             entity_auto_includes=ctx.config.entity_auto_includes,
+            user_entity_name=_user_entity_name,
         )
 
         # Debug routes

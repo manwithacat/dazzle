@@ -1038,6 +1038,34 @@ class TestCurrentUserTestMode:
             "for current_user.<field> dot-notation resolution"
         )
 
+    def test_resolve_workspace_user_uses_entity_name_param(self) -> None:
+        """_resolve_workspace_user must use user_entity_name, not hardcoded 'User' (#588).
+
+        When the DSL user entity is named something other than 'User'
+        (e.g. 'Student'), the function must look up that entity name
+        in the repositories dict.
+        """
+        import inspect
+        import textwrap
+
+        from dazzle_back.runtime.workspace_rendering import _resolve_workspace_user
+
+        source = textwrap.dedent(inspect.getsource(_resolve_workspace_user))
+
+        # Must accept user_entity_name parameter
+        assert "user_entity_name" in source, (
+            "_resolve_workspace_user must accept user_entity_name parameter "
+            "to support non-'User' entity names (#588)"
+        )
+        # Must use the parameter for repo lookup, not hardcoded "User"
+        assert 'repositories.get("User")' not in source, (
+            "_resolve_workspace_user must use user_entity_name param for repo lookup, "
+            "not hardcoded 'User' (#588)"
+        )
+        assert "repositories.get(user_entity_name)" in source, (
+            "_resolve_workspace_user must look up repositories.get(user_entity_name)"
+        )
+
 
 class TestCurrentUserDotNotation:
     """Tests for current_user.<field> dot-notation in condition evaluator (#486)."""
