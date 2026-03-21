@@ -612,7 +612,8 @@ async def _workspace_region_handler(
                     include=include_rels or None,
                 )
             if isinstance(result, dict):
-                raw_items = result.get("items", [])
+                _result: dict[str, Any] = result
+                raw_items = _result.get("items", [])
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
                 # Resolve FK dicts to display strings (#571)
                 items = [_inject_display_names(item) for item in items]
@@ -968,8 +969,9 @@ async def _fetch_region_json(
                     include=include_rels,
                 )
             if isinstance(result, dict):
-                raw_items = result.get("items", [])
-                total = result.get("total", 0)
+                _result: dict[str, Any] = result
+                raw_items = _result.get("items", [])
+                total = _result.get("total", 0)
                 items = [i.model_dump() if hasattr(i, "model_dump") else dict(i) for i in raw_items]
                 items = [_inject_display_names(item) for item in items]
 

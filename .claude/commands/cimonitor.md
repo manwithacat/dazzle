@@ -53,7 +53,7 @@ The CI workflow has these jobs (all must pass for a green badge):
 - `e2e-runtime` — CRUD + DSL tests against PostgreSQL
 - `homebrew-validation` — Formula syntax + version consistency
 
-## 5. Diagnose failures
+## 5. Diagnose and fix failures
 
 For each failed job:
 
@@ -64,7 +64,8 @@ For each failed job:
    - **Test failure** → identify the test, run locally with `pytest <test_file> -x -v`
    - **Security failure** (bandit) → check the flagged code
    - **Flaky/infra** (timeout, network) → note as transient, suggest re-run
-3. If the failure is in code we can fix, fix it, commit, push, and re-poll.
+3. **Fix ALL errors — including pre-existing ones.** The goal is a green badge, not just validating your own changes. If the CI was already red before your push, fix those errors too. Pre-existing mypy errors, lint warnings, or test failures should be fixed in a separate commit with a message like `fix: resolve pre-existing mypy errors in <file>`.
+4. Commit, push, and re-poll until the badge is green.
 
 ## 6. Report summary
 
