@@ -1315,6 +1315,38 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        # =====================================================================
+        # Conformance (DSL conformance testing)
+        # =====================================================================
+        Tool(
+            name="conformance",
+            description=(
+                "DSL conformance testing operations. "
+                "summary: run derivation pipeline and return coverage metrics (total cases, per-entity counts, scope types). "
+                "cases: return all conformance cases for a specific entity (requires entity_name). "
+                "gaps: find entities that have permit rules but no scope blocks (authorization without row filtering)."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["summary", "cases", "gaps"],
+                        "description": "Operation to perform",
+                    },
+                    "entity_name": {
+                        "type": "string",
+                        "description": "Entity name (required for cases)",
+                    },
+                    "auth_enabled": {
+                        "type": "boolean",
+                        "description": "Include unauthenticated (401) cases (default: true)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 
