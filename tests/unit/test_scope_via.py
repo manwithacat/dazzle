@@ -407,6 +407,127 @@ class TestExtractViaCheckFilters:
 
 
 # ---------------------------------------------------------------------------
+# Null FK / __RBAC_DENY__ guard tests (#580)
+# ---------------------------------------------------------------------------
+
+
+class TestViaDenyOnNullFK:
+    """When _resolve_user_attribute returns __RBAC_DENY__ (null FK), the via
+    subquery must return zero rows cleanly instead of crashing with a 500."""
+
+    def test_build_via_subquery_returns_empty_on_deny(self) -> None:
+        from unittest.mock import patch
+
+        from dazzle_back.runtime.route_generator import _build_via_subquery
+
+        bindings = [
+            {"junction_field": "agent", "target": "current_user.school", "operator": "="},
+            {"junction_field": "contact", "target": "id", "operator": "="},
+        ]
+
+        with patch(
+            "dazzle_back.runtime.route_generator._resolve_user_attribute",
+            return_value="__RBAC_DENY__",
+        ):
+            entity_field, sql, params = _build_via_subquery(
+                junction_entity="AgentAssignment",
+                bindings=bindings,
+                user_id="user-456",
+                auth_context=MagicMock(),
+            )
+
+        assert sql == "SELECT NULL WHERE FALSE"
+        assert params == []
+        assert entity_field == "id"
+
+    def test_build_via_subquery_deny_entity_field_before_user_binding(self) -> None:
+        """Entity binding listed after user binding — entity_field found from bindings scan."""
+        from unittest.mock import patch
+
+        from dazzle_back.runtime.route_generator import _build_via_subquery
+
+        # user binding first, entity binding second
+        bindings = [
+            {"junction_field": "agent", "target": "current_user.school", "operator": "="},
+            {"junction_field": "team", "target": "team_id", "operator": "="},
+        ]
+
+        with patch(
+            "dazzle_back.runtime.route_generator._resolve_user_attribute",
+            return_value="__RBAC_DENY__",
+        ):
+            entity_field, sql, params = _build_via_subquery(
+                junction_entity="TeamMembership",
+                bindings=bindings,
+                user_id="user-789",
+                auth_context=MagicMock(),
+            )
+
+        assert sql == "SELECT NULL WHERE FALSE"
+        assert params == []
+        assert entity_field == "team_id"
+
+    def test_extract_condition_filters_via_deny_produces_empty_subquery(self) -> None:
+        from unittest.mock import patch
+
+        from dazzle_back.runtime.route_generator import _extract_condition_filters
+
+        condition = MagicMock()
+        condition.kind = "via_check"
+        condition.via_junction_entity = "AgentAssignment"
+        condition.via_bindings = [
+            {"junction_field": "agent", "target": "current_user.school", "operator": "="},
+            {"junction_field": "contact", "target": "id", "operator": "="},
+        ]
+
+        import logging
+
+        filters: dict = {}
+        with patch(
+            "dazzle_back.runtime.route_generator._resolve_user_attribute",
+            return_value="__RBAC_DENY__",
+        ):
+            _extract_condition_filters(
+                condition, "user-456", filters, logging.getLogger(), MagicMock()
+            )
+
+        subquery_keys = [k for k in filters if k.endswith("__in_subquery")]
+        assert len(subquery_keys) == 1
+        sql, params = filters[subquery_keys[0]]
+        assert sql == "SELECT NULL WHERE FALSE"
+        assert params == []
+
+    def test_set_filter_deny_produces_impossible_subquery(self) -> None:
+        """Regular (non-via) scope clause with __RBAC_DENY__ uses impossible subquery."""
+        from dazzle_back.runtime.route_generator import _extract_condition_filters
+
+        condition = MagicMock()
+        condition.kind = "comparison"
+        condition.field = "school_id"
+        condition.value = "current_user.school"
+        condition.comparison_op = MagicMock(value="=")
+
+        import logging
+
+        auth_context = MagicMock()
+        auth_context.user = MagicMock(spec=[])  # no .school attribute
+        auth_context.preferences = {}  # no school in preferences
+
+        filters: dict = {}
+        _extract_condition_filters(
+            condition, "user-456", filters, logging.getLogger(), auth_context
+        )
+
+        # Should produce an impossible subquery, not a raw __RBAC_DENY__ string
+        if "school_id__in_subquery" in filters:
+            sql, params = filters["school_id__in_subquery"]
+            assert sql == "SELECT NULL WHERE FALSE"
+        else:
+            # Should NOT have the sentinel as a plain value
+            assert filters.get("school_id") != "__RBAC_DENY__"
+
+
+# ---------------------------------------------------------------------------
 # RBAC matrix integration tests
 # ---------------------------------------------------------------------------
 

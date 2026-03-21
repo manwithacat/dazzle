@@ -304,6 +304,18 @@ def _build_via_subquery(
             else:
                 attr_name = target[len("current_user.") :]
                 resolved = _resolve_user_attribute(attr_name, auth_context)
+                if resolved == "__RBAC_DENY__":
+                    # Null FK on the user — no possible junction match.
+                    # Return an impossible subquery so the caller gets zero
+                    # rows instead of a 500 from a type-mismatch (#580).
+                    # Find entity_field from remaining bindings if not yet set.
+                    ef = entity_field
+                    if ef is None:
+                        for b in bindings:
+                            if not b["target"].startswith("current_user") and b["target"] != "null":
+                                ef = b["target"]
+                                break
+                    return ef or "id", "SELECT NULL WHERE FALSE", []
             where_clauses.append(f"{jf} = %s")  # nosemgrep
             params.append(resolved)
         else:
@@ -394,6 +406,11 @@ def _extract_condition_filters(
 
     # Helper: assign a filter, using subquery if field is a dotted FK path (#556)
     def _set_filter(fld: str, val: Any) -> None:
+        if val == "__RBAC_DENY__":
+            # Null FK / missing attribute — use impossible subquery so the
+            # query returns zero rows instead of crashing with a type error (#580).
+            filters[f"{fld}__in_subquery"] = ("SELECT NULL WHERE FALSE", [])
+            return
         if "." in fld and ref_targets:
             result = _build_fk_path_subquery(fld, val, ref_targets)
             if result:
@@ -1237,7 +1254,11 @@ def _resolve_predicate_filters(
             resolved = _resolve_user_attribute("entity_id", auth_context)
             resolved_params.append(user_id if resolved == "__RBAC_DENY__" else resolved)
         elif isinstance(p, UserAttrRef):
-            resolved_params.append(_resolve_user_attribute(p.attr_name, auth_context))
+            resolved = _resolve_user_attribute(p.attr_name, auth_context)
+            if resolved == "__RBAC_DENY__":
+                # Null FK — deny cleanly instead of passing sentinel to SQL (#580)
+                return None  # type: ignore[return-value]
+            resolved_params.append(resolved)
         else:
             resolved_params.append(p)
 

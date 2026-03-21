@@ -1085,7 +1085,7 @@ class TestExtractConditionFiltersDottedAttr:
         assert filters == {"school": "school-abc"}
 
     def test_comparison_condition_injects_deny_when_attr_missing(self) -> None:
-        """Missing user attribute produces __RBAC_DENY__ filter — secure by default."""
+        """Missing user attribute produces impossible subquery — secure by default (#580)."""
         from dazzle_back.runtime.route_generator import _extract_condition_filters
         from dazzle_back.specs.auth import AccessComparisonKind, AccessConditionSpec
 
@@ -1100,7 +1100,11 @@ class TestExtractConditionFiltersDottedAttr:
         filters: dict = {}
         _extract_condition_filters(condition, "user-1", filters, None, auth_ctx)
 
-        assert filters == {"school": "__RBAC_DENY__"}
+        # Should produce an impossible subquery instead of raw sentinel (#580)
+        assert "school__in_subquery" in filters
+        sql, params = filters["school__in_subquery"]
+        assert sql == "SELECT NULL WHERE FALSE"
+        assert params == []
 
     def test_and_logical_condition_threads_auth_context(self) -> None:
         """AND logical condition threads auth_context through to child comparisons."""
