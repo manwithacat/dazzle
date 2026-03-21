@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from typing import Any
 from uuid import UUID, uuid5
 
 CONFORMANCE_NS = UUID("d4221300-0f07-4a0c-b3e5-000000000000")
@@ -40,9 +41,9 @@ class ConformanceCase:
 
 @dataclass
 class ConformanceFixtures:
-    users: dict[str, dict] = field(default_factory=dict)
-    entity_rows: dict[str, list[dict]] = field(default_factory=dict)
-    junction_rows: dict[str, list[dict]] = field(default_factory=dict)
+    users: dict[str, dict[str, Any]] = field(default_factory=dict)
+    entity_rows: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    junction_rows: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     expected_counts: dict[tuple[str, str], int] = field(default_factory=dict)
 
 
