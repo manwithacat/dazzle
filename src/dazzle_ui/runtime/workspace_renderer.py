@@ -326,6 +326,59 @@ def build_workspace_context(
     )
 
 
+def apply_layout_preferences(
+    ctx: WorkspaceContext,
+    user_prefs: dict[str, str],
+) -> WorkspaceContext:
+    """Merge user layout preferences with DSL defaults.
+
+    Reads ``workspace.{name}.layout`` from *user_prefs* and applies
+    ordering, visibility, and width overrides.  Returns *ctx* unchanged
+    if no preference exists.
+    """
+    import json
+
+    pref_key = f"workspace.{ctx.name}.layout"
+    raw = user_prefs.get(pref_key)
+    if not raw:
+        return ctx
+
+    try:
+        layout = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        return ctx
+
+    saved_order: list[str] = layout.get("order", [])
+    hidden_set: set[str] = set(layout.get("hidden", []))
+    widths: dict[str, int] = layout.get("widths", {})
+
+    # Deep-copy regions to avoid mutating the shared startup context
+    region_map = {r.name: r.model_copy(deep=True) for r in ctx.regions}
+
+    # Reorder: saved order first (skip deleted), then append new DSL regions
+    ordered: list[RegionContext] = []
+    seen: set[str] = set()
+    for name in saved_order:
+        if name in region_map:
+            ordered.append(region_map[name])
+            seen.add(name)
+    for r in ctx.regions:
+        if r.name not in seen:
+            ordered.append(region_map[r.name])
+
+    # Apply hidden flag and width overrides
+    for r in ordered:
+        if r.name in hidden_set:
+            r.hidden = True
+        if r.name in widths:
+            span = widths[r.name]
+            if span in (4, 6, 8, 12):
+                r.col_span = span
+
+    # Return a new context to avoid mutating the shared startup object
+    return ctx.model_copy(update={"regions": ordered})
+
+
 def _resolve_fk_field(
     source_entity: str,
     target_entity: str,

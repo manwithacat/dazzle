@@ -63,6 +63,123 @@ class TestColSpanDefaults:
             assert r.col_span == 12
 
 
+class TestApplyLayoutPreferences:
+    """apply_layout_preferences merges user layout delta with DSL defaults."""
+
+    def _make_ctx(self, region_count: int = 3) -> object:
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = _make_workspace("scanner_table", region_count=region_count)
+        return build_workspace_context(ws)
+
+    def test_no_preference_returns_unchanged(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        result = apply_layout_preferences(ctx, {})
+        assert result is ctx
+
+    def test_reorder_regions(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        original_names = [r.name for r in ctx.regions]
+        reversed_order = list(reversed(original_names))
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps({"order": reversed_order})}
+        result = apply_layout_preferences(ctx, prefs)
+        assert [r.name for r in result.regions] == reversed_order
+
+    def test_hidden_regions_flagged(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps({"hidden": ["region_1"]})}
+        result = apply_layout_preferences(ctx, prefs)
+        assert result.regions[0].hidden is False
+        assert result.regions[1].hidden is True
+        assert result.regions[2].hidden is False
+
+    def test_width_overrides(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        prefs = {
+            f"workspace.{ctx.name}.layout": json.dumps({"widths": {"region_0": 4, "region_1": 8}})
+        }
+        result = apply_layout_preferences(ctx, prefs)
+        assert result.regions[0].col_span == 4
+        assert result.regions[1].col_span == 8
+        assert result.regions[2].col_span == 12  # scanner_table default
+
+    def test_deleted_dsl_region_dropped(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(2)
+        prefs = {
+            f"workspace.{ctx.name}.layout": json.dumps(
+                {"order": ["region_0", "ghost_region", "region_1"]}
+            )
+        }
+        result = apply_layout_preferences(ctx, prefs)
+        assert [r.name for r in result.regions] == ["region_0", "region_1"]
+
+    def test_new_dsl_region_appended(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps({"order": ["region_0", "region_1"]})}
+        result = apply_layout_preferences(ctx, prefs)
+        assert [r.name for r in result.regions] == ["region_0", "region_1", "region_2"]
+
+    def test_fold_count_skips_hidden_regions(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps({"hidden": ["region_0"]})}
+        result = apply_layout_preferences(ctx, prefs)
+        # hidden regions should not affect fold_count (fold_count is unchanged)
+        assert result.fold_count == ctx.fold_count
+
+    def test_round_trip_json(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        layout = {
+            "order": ["region_2", "region_0", "region_1"],
+            "hidden": ["region_1"],
+            "widths": {"region_0": 6, "region_2": 4},
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+
+        # Verify order
+        assert [r.name for r in result.regions] == ["region_2", "region_0", "region_1"]
+        # Verify hidden
+        assert result.regions[2].hidden is True
+        # Verify widths
+        assert result.regions[1].col_span == 6
+        assert result.regions[0].col_span == 4
+
+        # Serialize and deserialize — result must be JSON-serialisable via Pydantic
+        serialised = result.model_dump_json()
+        restored = result.__class__.model_validate_json(serialised)
+        assert [r.name for r in restored.regions] == ["region_2", "region_0", "region_1"]
+
+
 def _make_workspace(stage: str, region_count: int = 3) -> object:
     from types import SimpleNamespace
 
