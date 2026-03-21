@@ -756,13 +756,14 @@ async def _workspace_region_handler(
     if hasattr(_ir_thresholds, "key"):  # ParamRef in IR
         from dazzle_back.runtime.param_store import resolve_value
 
+        _resolved = resolve_value(
+            _ir_thresholds,
+            getattr(ctx, "param_resolver", None),
+            tenant_id=getattr(ctx, "tenant_id", None),
+        )
+        # Fall back to ctx_region defaults when runtime has no override (#586)
         heatmap_thresholds: list[float] = list(
-            resolve_value(
-                _ir_thresholds,
-                getattr(ctx, "param_resolver", None),
-                tenant_id=getattr(ctx, "tenant_id", None),
-            )
-            or []
+            _resolved or getattr(ctx.ctx_region, "heatmap_thresholds", None) or []
         )
     else:
         heatmap_thresholds = list(getattr(ctx.ctx_region, "heatmap_thresholds", None) or [])
@@ -771,27 +772,41 @@ async def _workspace_region_handler(
         hm_cols_field = getattr(ctx.ctx_region, "heatmap_columns", "") or ""
         hm_value_field = getattr(ctx.ctx_region, "heatmap_value", "") or ""
         # Collect unique column values and build pivot
+        # Use _display sibling keys injected by _inject_display_names() (#586)
         col_set: set[str] = set()
         for item in items:
-            cv = _resolve_display_name(item.get(hm_cols_field, ""))
+            cv = str(item.get(f"{hm_cols_field}_display", "")) or _resolve_display_name(
+                item.get(hm_cols_field, "")
+            )
             if cv:
                 col_set.add(cv)
         heatmap_col_values = sorted(col_set)
-        # Group by row → column → value
+        # Group by row → column → value; track raw row IDs for action URLs
         row_map: dict[str, dict[str, float]] = {}
+        row_ids: dict[str, str] = {}
         for item in items:
-            rv = _resolve_display_name(item.get(hm_rows_field, ""))
-            cv = _resolve_display_name(item.get(hm_cols_field, ""))
+            rv = str(item.get(f"{hm_rows_field}_display", "")) or _resolve_display_name(
+                item.get(hm_rows_field, "")
+            )
+            cv = str(item.get(f"{hm_cols_field}_display", "")) or _resolve_display_name(
+                item.get(hm_cols_field, "")
+            )
             val = float(item.get(hm_value_field, 0) or 0)
             if rv not in row_map:
                 row_map[rv] = {}
             row_map[rv][cv] = val
+            # Store raw row ID for action URL interpolation
+            raw_row = item.get(hm_rows_field)
+            row_id = str(raw_row.get("id", "") if isinstance(raw_row, dict) else item.get("id", ""))
+            row_ids[rv] = row_id
         for row_label in sorted(row_map.keys()):
             cells: list[dict[str, Any]] = []
             for col_label in heatmap_col_values:
                 cell_val = row_map[row_label].get(col_label, 0.0)
                 cells.append({"value": cell_val, "column": col_label})
-            heatmap_matrix.append({"row": row_label, "cells": cells})
+            heatmap_matrix.append(
+                {"row": row_label, "row_id": row_ids.get(row_label, ""), "cells": cells}
+            )
 
     # Progress: count items per stage and compute percentage (v0.44.0)
     progress_stage_counts: list[dict[str, Any]] = []

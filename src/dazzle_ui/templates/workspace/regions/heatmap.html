@@ -28,7 +28,7 @@
                 {%- else %} bg-success/20
                 {%- endif -%}
               {%- endif -%}"
-              {% if action_url %}hx-get="{{ action_url }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+              {% if action_url %}hx-get="{{ action_url | replace('{id}', row.row_id) }}" hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
               {{ "%.1f"|format(cell.value) }}
             </td>
             {% endfor %}
