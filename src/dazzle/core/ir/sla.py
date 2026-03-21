@@ -25,8 +25,11 @@ DSL Syntax (v0.25.0):
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field
 
+from .params import ParamRef
 from .process import FieldAssignment
 
 
@@ -34,7 +37,7 @@ class SLATierSpec(BaseModel):
     """A single SLA tier with name and duration."""
 
     name: str = ""
-    duration_value: int = 0
+    duration_value: int | ParamRef = 0  # int | ParamRef
     duration_unit: str = "hours"
 
     model_config = ConfigDict(frozen=True)
@@ -43,8 +46,8 @@ class SLATierSpec(BaseModel):
 class BusinessHoursSpec(BaseModel):
     """Business hours schedule for SLA calculation."""
 
-    schedule: str = ""
-    timezone: str = "UTC"
+    schedule: Any = ""  # str | ParamRef
+    timezone: Any = "UTC"  # str | ParamRef
 
     model_config = ConfigDict(frozen=True)
 

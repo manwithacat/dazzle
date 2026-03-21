@@ -39,6 +39,28 @@ class ParamParserMixin:
         file: Any
         _source_location: Any
 
+    def _parse_string_or_param(
+        self, param_type: str = "str", default: Any = ""
+    ) -> str | ir.ParamRef:
+        """Parse a string literal or param("key") reference."""
+        if self.match(TokenType.PARAM):
+            self.advance()
+            self.expect(TokenType.LPAREN)
+            ref_key = self.expect(TokenType.STRING).value
+            self.expect(TokenType.RPAREN)
+            return ir.ParamRef(key=ref_key, param_type=param_type, default=default)
+        return str(self.expect(TokenType.STRING).value)
+
+    def _parse_int_or_param(self, default: int = 0) -> int | ir.ParamRef:
+        """Parse an integer literal or param("key") reference."""
+        if self.match(TokenType.PARAM):
+            self.advance()
+            self.expect(TokenType.LPAREN)
+            ref_key = self.expect(TokenType.STRING).value
+            self.expect(TokenType.RPAREN)
+            return ir.ParamRef(key=ref_key, param_type="int", default=default)
+        return int(self.expect(TokenType.NUMBER).value)
+
     def parse_param(self) -> ir.ParamSpec:
         """
         Parse a param declaration.
@@ -91,7 +113,7 @@ class ParamParserMixin:
 
             token = self.current_token()
 
-            # type: <type_expr>
+            # Handle type: <type_expr>
             if token.value == "type":
                 self.advance()
                 self.expect(TokenType.COLON)

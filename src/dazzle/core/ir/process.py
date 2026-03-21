@@ -438,9 +438,11 @@ class ScheduleSpec(BaseModel):
     )
 
     # Schedule configuration
-    cron: str | None = Field(default=None, description="Cron expression (e.g., '0 8 * * *')")
+    cron: Any = Field(
+        default=None, description="Cron expression (e.g., '0 8 * * *')"
+    )  # str | ParamRef | None
     interval_seconds: int | None = Field(default=None, description="Run every N seconds")
-    timezone: str = Field(default="UTC")
+    timezone: Any = Field(default="UTC")  # str | ParamRef
 
     # Run policies
     catch_up: bool = Field(
@@ -456,7 +458,7 @@ class ScheduleSpec(BaseModel):
     steps: list[ProcessStepSpec] = Field(default_factory=list)
 
     # Timeouts
-    timeout_seconds: int = Field(default=3600)
+    timeout_seconds: Any = Field(default=3600)  # int | ParamRef
 
     # Event emission
     events: ProcessEventEmission = Field(default_factory=ProcessEventEmission)

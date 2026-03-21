@@ -134,7 +134,7 @@ class GrantParserMixin:
         approved_by: ir.ConditionExpr | None = None
         approval = GrantApprovalMode.REQUIRED
         expiry = GrantExpiryMode.REQUIRED
-        max_duration: str | None = None
+        max_duration: str | ir.ParamRef | None = None
         granted_by_token = None
 
         while not self.match(TokenType.DEDENT):
@@ -199,7 +199,14 @@ class GrantParserMixin:
             elif field_name == "max_duration":
                 self.advance()
                 self.expect(TokenType.COLON)
-                max_duration = self.advance().value
+                if self.match(TokenType.PARAM):
+                    self.advance()
+                    self.expect(TokenType.LPAREN)
+                    ref_key = self.expect(TokenType.STRING).value
+                    self.expect(TokenType.RPAREN)
+                    max_duration = ir.ParamRef(key=ref_key, param_type="str", default="")
+                else:
+                    max_duration = self.advance().value
                 self.skip_newlines()
 
             else:

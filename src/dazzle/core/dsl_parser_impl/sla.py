@@ -42,6 +42,8 @@ class SLAParserMixin:
         current_token: Any
         file: Any
         _parse_construct_header: Any
+        _parse_string_or_param: Any
+        _parse_int_or_param: Any
 
     def parse_sla(self) -> ir.SLASpec:
         """Parse an SLA block."""
@@ -158,7 +160,7 @@ class SLAParserMixin:
 
             tier_name = self.expect_identifier_or_keyword().value
             self.expect(TokenType.COLON)
-            duration_value = int(self.expect(TokenType.NUMBER).value)
+            duration_value = self._parse_int_or_param(default=0)
             duration_unit = self.expect_identifier_or_keyword().value
 
             tiers.append(
@@ -177,8 +179,8 @@ class SLAParserMixin:
 
     def _parse_sla_business_hours(self) -> ir.BusinessHoursSpec:
         """Parse business hours block."""
-        schedule = ""
-        timezone = "UTC"
+        schedule: str | ir.ParamRef = ""
+        timezone: str | ir.ParamRef = "UTC"
 
         while not self.match(TokenType.DEDENT, TokenType.EOF):
             self.skip_newlines()
@@ -189,12 +191,12 @@ class SLAParserMixin:
             if tok.value == "schedule":
                 self.advance()
                 self.expect(TokenType.COLON)
-                schedule = str(self.expect(TokenType.STRING).value)
+                schedule = self._parse_string_or_param(param_type="str", default="")
                 self.skip_newlines()
             elif tok.value == "timezone":
                 self.advance()
                 self.expect(TokenType.COLON)
-                timezone = str(self.expect(TokenType.STRING).value)
+                timezone = self._parse_string_or_param(param_type="str", default="UTC")
                 self.skip_newlines()
             else:
                 self.advance()

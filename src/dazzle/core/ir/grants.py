@@ -17,6 +17,7 @@ DSL Syntax (v0.42.0):
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -47,7 +48,7 @@ class GrantRelationSpec(BaseModel):
     approved_by: ConditionExpr | None = None
     approval: GrantApprovalMode = GrantApprovalMode.REQUIRED
     expiry: GrantExpiryMode = GrantExpiryMode.REQUIRED
-    max_duration: str | None = None
+    max_duration: Any = None  # str | ParamRef | None
     source_location: SourceLocation | None = None
 
     model_config = ConfigDict(frozen=True)

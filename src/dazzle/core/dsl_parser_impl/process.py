@@ -150,6 +150,7 @@ class ProcessParserMixin:
         file: Any
         _source_location: Any
         _parse_construct_header: Any
+        _parse_string_or_param: Any
 
     def parse_process(self) -> ir.ProcessSpec:
         """
@@ -306,13 +307,13 @@ class ProcessParserMixin:
 
         # Initialize fields
         implements: list[str] = []
-        cron: str | None = None
+        cron: str | ir.ParamRef | None = None
         interval_seconds: int | None = None
-        timezone: str = "UTC"
+        timezone: str | ir.ParamRef = "UTC"
         catch_up: bool = False
         overlap: ir.OverlapPolicy = ir.OverlapPolicy.SKIP
         steps: list[ir.ProcessStepSpec] = []
-        timeout_seconds: int = 3600  # Default 1h
+        timeout_seconds: int | ir.ParamRef = 3600  # Default 1h
         events: ir.ProcessEventEmission = ir.ProcessEventEmission()
 
         # Parse schedule fields
@@ -330,7 +331,7 @@ class ProcessParserMixin:
             elif self.match(TokenType.CRON):
                 self.advance()
                 self.expect(TokenType.COLON)
-                cron = str(self.expect(TokenType.STRING).value)
+                cron = self._parse_string_or_param(param_type="str", default="")
                 self.skip_newlines()
 
             elif self.match(TokenType.INTERVAL):
@@ -343,7 +344,7 @@ class ProcessParserMixin:
             elif self.match(TokenType.TIMEZONE):
                 self.advance()
                 self.expect(TokenType.COLON)
-                timezone = str(self.expect(TokenType.STRING).value)
+                timezone = self._parse_string_or_param(param_type="str", default="UTC")
                 self.skip_newlines()
 
             elif self.match(TokenType.CATCH_UP):
@@ -369,8 +370,15 @@ class ProcessParserMixin:
             elif self.match(TokenType.TIMEOUT):
                 self.advance()
                 self.expect(TokenType.COLON)
-                timeout_str = self._parse_duration_value()
-                timeout_seconds = parse_duration(timeout_str)
+                if self.match(TokenType.PARAM):
+                    self.advance()
+                    self.expect(TokenType.LPAREN)
+                    ref_key = self.expect(TokenType.STRING).value
+                    self.expect(TokenType.RPAREN)
+                    timeout_seconds = ir.ParamRef(key=ref_key, param_type="int", default=3600)
+                else:
+                    timeout_str = self._parse_duration_value()
+                    timeout_seconds = parse_duration(timeout_str)
                 self.skip_newlines()
 
             elif self.match(TokenType.EMITS):
