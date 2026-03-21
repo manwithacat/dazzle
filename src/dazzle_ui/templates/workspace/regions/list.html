@@ -67,11 +67,12 @@
                 {{ item[col.key] | currency }}
               {% elif col.type == "ref" %}
                 {% set ref = item[col.key] %}
+                {% set display_name = item.get(col.key ~ "_display", "") or (ref | ref_display) %}
                 {% if ref is mapping and col.ref_route and ref.get("id") %}
                   <a hx-get="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}"
                      hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"
-                     class="link link-hover link-primary" onclick="event.stopPropagation()">{{ ref | ref_display }}</a>
-                {% else %}{{ ref | ref_display }}{% endif %}
+                     class="link link-hover link-primary" onclick="event.stopPropagation()">{{ display_name }}</a>
+                {% else %}{{ display_name }}{% endif %}
               {% else %}
                 {{ item[col.key] | default("") | truncate_text }}
               {% endif %}

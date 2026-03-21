@@ -33,7 +33,7 @@
       {% set raw = item[col.key] | default("") | string %}
       {% if raw | length > 4 %}{{ "****" ~ raw[-4:] }}{% elif raw %}****{% else %}{% endif %}
     {% elif col.type == "ref" %}
-      {{ item[col.key] | ref_display }}
+      {{ item.get(col.key ~ "_display", "") or (item[col.key] | ref_display) }}
     {% elif col.type == "percentage" %}
       {{ item[col.key] | default("") }}%
     {% else %}

@@ -16,12 +16,13 @@
           {{ item[col.key] | currency }}
         {% elif col.type == "ref" %}
           {% set ref = item[col.key] %}
+          {% set display_name = item.get(col.key ~ "_display", "") %}
           {% if ref is mapping %}
-            {% set ref_display = ref.get("name") or ref.get("company_name") or ((ref.get("first_name", "") ~ " " ~ ref.get("last_name", "")) | trim) or ref.get("title") or ref.get("label") or ref.get("email") or ref.get("id", "—") %}
+            {% set display_name = display_name or (ref | ref_display) %}
             {% if col.ref_route and ref.get("id") %}
-              <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary">{{ ref_display }}</a>
-            {% else %}{{ ref_display }}{% endif %}
-          {% elif ref %}{{ ref }}{% else %}—{% endif %}
+              <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary">{{ display_name }}</a>
+            {% else %}{{ display_name }}{% endif %}
+          {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}—{% endif %}
         {% else %}
           {{ item[col.key] | default("—") }}
         {% endif %}
