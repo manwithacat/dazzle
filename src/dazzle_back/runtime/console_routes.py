@@ -116,7 +116,11 @@ def _render(
     """
     ctx: dict[str, Any] = {
         "nav_items": NAV_ITEMS,
-        "app_name": "Dazzle Console",
+        "app_name": (
+            (deps.appspec.title or deps.appspec.name.replace("_", " ").title()) + " Console"
+            if deps.appspec
+            else "Dazzle Console"
+        ),
         **(context or {}),
     }
     if request is not None:

@@ -21,7 +21,7 @@
     <p class="text-xs opacity-50 mt-2">{{ complete_count }} of {{ progress_total }} complete</p>
     {% endif %}
     {% else %}
-    <p class="text-sm opacity-50">{{ empty_message | default("No data available.") }}</p>
+    <p class="text-sm opacity-50">{{ empty_message | default("No " + (entity_name|default("data"))|lower + " available.") }}</p>
     {% endif %}
   </div>
 </div>

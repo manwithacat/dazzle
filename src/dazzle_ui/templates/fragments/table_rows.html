@@ -72,7 +72,7 @@
 {% else %}
 <tr>
   <td colspan="{{ (table.columns | length) + 1 if table else 1 }}" class="text-center py-8 text-base-content/50">
-    {{ table.empty_message | default("No items found.") if table else "No items found." }}
+    {{ table.empty_message | default("No " + (table.entity_name|default("items"))|lower + " found.") if table else "No items found." }}
   </td>
 </tr>
 {% endif %}

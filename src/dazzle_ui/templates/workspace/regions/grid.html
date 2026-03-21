@@ -10,7 +10,7 @@
            {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
            hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
         <div class="card-body">
-          <h4 class="card-title text-sm">{{ item[display_key] | default(item.get("name", "Item")) }}</h4>
+          <h4 class="card-title text-sm">{{ item[display_key] | default(item.get("name", (entity_name|default("Item")))) }}</h4>
           {% for col in columns %}
           {% if col.key != display_key %}
           <p class="text-xs">

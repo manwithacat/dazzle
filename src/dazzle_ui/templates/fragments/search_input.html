@@ -1,6 +1,6 @@
 {# Reusable search input with debounced HTMX search — no Alpine #}
 {# Parameters: endpoint, target (CSS selector), placeholder (optional) #}
-{% set placeholder = placeholder | default('Search...') %}
+{% set placeholder = placeholder | default('Search ' + (table.entity_name|default("") |lower) + '...' if table else 'Search...') %}
 {% set target = target | default('#' + (table.table_id or 'dt-table') + '-body' if table else '#search-results') %}
 {% set search_id = 'dz-search-' + (table.table_id or 'search') if table else 'dz-search' %}
 <div data-dz-search class="form-control">

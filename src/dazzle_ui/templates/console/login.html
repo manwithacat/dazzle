@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Login - Dazzle Console{% endblock %}
+{% block title %}Login - {{ app_name | default("Dazzle Console") }}{% endblock %}
 
 {% block body %}
 <div class="min-h-screen flex items-center justify-center bg-base-200">
   <div class="card w-96 bg-base-100 shadow-xl">
     <div class="card-body">
       <h2 class="card-title text-2xl font-bold text-center w-full justify-center mb-2">
-        Dazzle Console
+        {{ app_name | default("Dazzle Console") }}
       </h2>
       <p class="text-center text-sm opacity-70 mb-4">
         {% if setup_required %}

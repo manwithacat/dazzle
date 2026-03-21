@@ -29,7 +29,7 @@
 
   {# Footer #}
   <footer class="footer footer-center p-4 bg-base-100 text-base-content border-t border-base-300">
-    <p>Powered by Dazzle</p>
+    <p>Powered by {{ app_name | default("Dazzle") }}</p>
   </footer>
 </div>
 {% endblock %}
