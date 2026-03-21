@@ -49,17 +49,17 @@
   </script>
   {% endif %}
 
-  <div class="{{ workspace.grid_class }}"
+  <div class="grid grid-cols-12 gap-4"
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>
     {% for region in workspace.regions %}
     {% if region.source_tabs %}
     {# Multi-source tabbed region: render tabs inline, each panel lazy-loads independently #}
-    <div class="{{ region.grid_class }}" id="region-{{ region.name }}">
+    <div class="col-span-12 md:col-span-{{ region.col_span }}" id="region-{{ region.name }}">
       {% include 'workspace/regions/tabbed_list.html' with context %}
     </div>
     {% else %}
-    <div class="{{ region.grid_class }}"
+    <div class="col-span-12 md:col-span-{{ region.col_span }}"
          id="region-{{ region.name }}"
          {% if region.endpoint %}
          hx-get="{{ region.endpoint }}"

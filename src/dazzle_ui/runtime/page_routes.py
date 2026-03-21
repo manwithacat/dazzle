@@ -886,21 +886,41 @@ async def _workspace_handler(
 
         effective_route = urlparse(htmx.current_url).path
 
-    ws_title = ws_context.title or ws_context.name.replace("_", " ").title()
+    # Apply per-user workspace layout preferences (order, visibility, widths)
+    from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+    render_ws_ctx = apply_layout_preferences(ws_context, user_preferences)
+
+    layout_json = json.dumps(
+        {
+            "regions": [
+                {
+                    "name": r.name,
+                    "title": r.title,
+                    "col_span": r.col_span,
+                    "hidden": r.hidden,
+                }
+                for r in render_ws_ctx.regions
+            ]
+        }
+    )
+
+    ws_title = render_ws_ctx.title or render_ws_ctx.name.replace("_", " ").title()
 
     # Fragment targeting: return only the workspace content
     if htmx.wants_fragment:
         html = render_fragment(
             "workspace/_content.html",
-            workspace=ws_context,
+            workspace=render_ws_ctx,
             user_preferences=user_preferences,
+            layout_json=layout_json,
         )
         headers = {"HX-Trigger": json.dumps({"dz:titleUpdate": ws_title})}
         return HTMLResponse(content=html, headers=headers)  # nosemgrep
 
     html = render_fragment(
         "workspace/workspace.html",
-        workspace=ws_context,
+        workspace=render_ws_ctx,
         nav_items=visible_nav,
         nav_groups=ws_groups,
         app_name=ws_app_name,
@@ -909,6 +929,7 @@ async def _workspace_handler(
         user_email=user_email,
         user_name=user_name,
         user_preferences=user_preferences,
+        layout_json=layout_json,
         _htmx_partial=htmx.is_htmx and not htmx.is_history_restore,
     )
     return HTMLResponse(content=html)  # nosemgrep
