@@ -941,10 +941,10 @@ class TestViewportLazyLoading:
         assert ctx.fold_count == 4
 
     def test_stage_fold_count_map_keys(self) -> None:
-        """All stages in STAGE_GRID_MAP have a corresponding fold count."""
-        from dazzle_ui.runtime.workspace_renderer import STAGE_FOLD_COUNTS, STAGE_GRID_MAP
+        """All stages in STAGE_DEFAULT_SPANS have a corresponding fold count."""
+        from dazzle_ui.runtime.workspace_renderer import STAGE_DEFAULT_SPANS, STAGE_FOLD_COUNTS
 
-        for stage in STAGE_GRID_MAP:
+        for stage in STAGE_DEFAULT_SPANS:
             assert stage in STAGE_FOLD_COUNTS, f"Missing fold count for stage: {stage}"
 
 

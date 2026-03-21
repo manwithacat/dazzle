@@ -74,8 +74,8 @@ class RegionContext(BaseModel):
     # Date range filtering (v0.44.0)
     date_field: str = ""
     date_range: bool = False
-    # CSS
-    grid_class: str = ""  # col-span/row-span classes
+    col_span: int = 12  # Resolved column span (4, 6, 8, or 12)
+    hidden: bool = False  # User has hidden this region
     template: str = "workspace/regions/list.html"  # Region display template
 
 
@@ -86,7 +86,6 @@ class WorkspaceContext(BaseModel):
     title: str = ""
     purpose: str = ""
     stage: str = ""
-    grid_class: str = "grid grid-cols-1 gap-4"  # Outer grid CSS
     regions: list[RegionContext] = Field(default_factory=list)
     endpoint: str = ""  # Base API endpoint for workspace data
     sse_url: str = ""  # SSE stream URL (empty = no live updates)
@@ -99,13 +98,23 @@ class WorkspaceContext(BaseModel):
 # Stage → Grid Mapping
 # =============================================================================
 
-STAGE_GRID_MAP: dict[str, str] = {
-    "focus_metric": "grid grid-cols-1 gap-4",
-    "dual_pane_flow": "grid grid-cols-1 md:grid-cols-2 gap-4",
-    "scanner_table": "grid grid-cols-1 gap-4",
-    "monitor_wall": "grid grid-cols-2 lg:grid-cols-3 gap-4",
-    "command_center": "grid grid-cols-12 gap-4",
+STAGE_DEFAULT_SPANS: dict[str, list[int] | int] = {
+    "focus_metric": [12, 6],
+    "dual_pane_flow": 6,
+    "scanner_table": 12,
+    "monitor_wall": 6,
+    "command_center": [12, 6, 6, 4, 4, 4],
 }
+
+
+def _default_col_span(stage: str, index: int) -> int:
+    pattern = STAGE_DEFAULT_SPANS.get(stage)
+    if pattern is None:
+        return 12
+    if isinstance(pattern, int):
+        return pattern
+    return pattern[min(index, len(pattern) - 1)]
+
 
 DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "LIST": "workspace/regions/list.html",
@@ -133,16 +142,6 @@ STAGE_FOLD_COUNTS: dict[str, int] = {
     "monitor_wall": 6,
     "command_center": 6,
 }
-
-# Region span classes for command_center stage
-COMMAND_CENTER_SPANS: list[str] = [
-    "col-span-12",
-    "col-span-6",
-    "col-span-6",
-    "col-span-4",
-    "col-span-4",
-    "col-span-4",
-]
 
 
 # =============================================================================
@@ -185,7 +184,6 @@ def build_workspace_context(
         WorkspaceContext ready for Jinja2 template rendering.
     """
     stage = (workspace.stage or "").lower()
-    grid_class = STAGE_GRID_MAP.get(stage, STAGE_GRID_MAP["focus_metric"])
     fold_count = getattr(workspace, "fold_count", None) or STAGE_FOLD_COUNTS.get(stage, 3)
 
     # Build entity name → display title lookup from app spec (#358)
@@ -205,15 +203,7 @@ def build_workspace_context(
 
         template = DISPLAY_TEMPLATE_MAP.get(display_mode, "workspace/regions/list.html")
 
-        # Build region grid class based on stage
-        region_grid = ""
-        if stage == "command_center":
-            span_idx = min(idx, len(COMMAND_CENTER_SPANS) - 1)
-            region_grid = COMMAND_CENTER_SPANS[span_idx]
-        elif stage == "focus_metric" and idx == 0:
-            region_grid = "col-span-full"
-        elif stage == "dual_pane_flow":
-            region_grid = ""  # Grid handles 2-col automatically
+        col_span = _default_col_span(stage, idx)
 
         # Serialise sort specs
         sort_specs = []
@@ -310,7 +300,7 @@ def build_workspace_context(
                 progress_complete_at=getattr(region, "progress_complete_at", None) or "",
                 date_field=getattr(region, "date_field", None) or "",
                 date_range=bool(getattr(region, "date_range", False)),
-                grid_class=region_grid,
+                col_span=col_span,
                 template=template,
             )
         )
@@ -328,7 +318,6 @@ def build_workspace_context(
         title=workspace.title or workspace.name.replace("_", " ").title(),
         purpose=workspace.purpose or "",
         stage=stage,
-        grid_class=grid_class,
         regions=regions,
         endpoint=f"/api/workspaces/{workspace.name}",
         fold_count=fold_count,

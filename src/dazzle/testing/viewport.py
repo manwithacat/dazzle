@@ -293,7 +293,7 @@ ALL_PATTERNS: dict[str, ComponentPattern] = {
 }
 
 # ---------------------------------------------------------------------------
-# Stage → pattern mapping (derived from STAGE_GRID_MAP)
+# Stage → pattern mapping (derived from STAGE_DEFAULT_SPANS)
 # ---------------------------------------------------------------------------
 
 # Maps workspace stage names to the grid patterns they imply.

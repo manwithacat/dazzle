@@ -402,7 +402,7 @@ class TestDerivePatterns:
 
 
 class TestGridPatternDerivation:
-    """STAGE_GRID_MAP classes → correct grid column assertions."""
+    """Stage grid patterns → correct grid column assertions."""
 
     def test_grid_1_2_3_mobile_single_col(self) -> None:
         mobile = [a for a in GRID_1_2_3_PATTERN.assertions if a.viewport == "mobile"]
