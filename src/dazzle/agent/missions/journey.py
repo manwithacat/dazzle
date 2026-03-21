@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from dazzle.agent.journey_models import JourneyStep, NavigationTarget, Verdict
+from dazzle.agent.models import Step
 
 if TYPE_CHECKING:
     from dazzle.agent.journey_writer import SessionWriter
@@ -389,7 +390,6 @@ async def run_phase2_verification(
     observer = PlaywrightObserver(page)
     executor = PlaywrightExecutor(page)
     agent = DazzleAgent(
-        mission=mission,
         observer=observer,
         executor=executor,
     )
@@ -398,10 +398,10 @@ async def run_phase2_verification(
     verify_steps: list[JourneyStep] = []
     step_offset = max((s.step_number for s in phase1_steps), default=0)
 
-    def on_agent_step(step: Any) -> None:
+    def on_agent_step(step_number: int, step: Step) -> None:
         """Callback to convert agent steps to JourneySteps."""
         nonlocal step_offset
-        step_offset += 1
+        step_offset = step_number
 
         # Determine story_id from context if possible
         story_id = None
@@ -412,14 +412,19 @@ async def run_phase2_verification(
                     story_id = sid
                     break
 
+        # Get action type string safely
+        action_type_val = getattr(step.action, "type", "observe")
+        if hasattr(action_type_val, "value"):
+            action_type_str = action_type_val.value
+        else:
+            action_type_str = str(action_type_val)
+
         js = JourneyStep(
             persona=persona,
             story_id=story_id,
             phase="verify",
             step_number=step_offset,
-            action=getattr(step.action, "type", "observe").value
-            if hasattr(getattr(step.action, "type", None), "value")
-            else str(getattr(step.action, "type", "observe")),
+            action=action_type_str,
             target=getattr(step.action, "target", "") or "",
             url_before=getattr(step.state, "url", ""),
             url_after=getattr(step.state, "url", ""),
@@ -434,7 +439,7 @@ async def run_phase2_verification(
 
     # Run the agent
     try:
-        await agent.run(on_step=on_agent_step)
+        await agent.run(mission=mission, on_step=on_agent_step)
     except Exception as exc:
         logger.warning("Phase 2 agent error for %s: %s", persona, exc)
 

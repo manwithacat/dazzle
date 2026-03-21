@@ -136,7 +136,9 @@ class TestListHandlerSearch:
         handler = create_list_handler(service)
 
         request = _make_request()
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search="foo")
+        await handler(
+            request=request, page=1, page_size=20, sort=None, dir="asc", search="foo", q=None
+        )
 
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["search"] == "foo"
@@ -147,7 +149,9 @@ class TestListHandlerSearch:
         handler = create_list_handler(service)
 
         request = _make_request()
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+        await handler(
+            request=request, page=1, page_size=20, sort=None, dir="asc", search=None, q=None
+        )
 
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["search"] is None
@@ -162,7 +166,9 @@ class TestListHandlerBackwardCompat:
         handler = create_list_handler(service)
 
         request = _make_request()
-        await handler(request=request, page=1, page_size=20, sort=None, dir="asc", search=None)
+        await handler(
+            request=request, page=1, page_size=20, sort=None, dir="asc", search=None, q=None
+        )
 
         call_kwargs = service.execute.call_args.kwargs
         assert call_kwargs["sort"] is None

@@ -237,8 +237,7 @@ class TestFormTemplateRendering:
 
     def test_no_sections_renders_flat_form(self) -> None:
         html = self._render_form()
-        assert "data-dz-wizard" not in html
-        assert "data-dz-stepper" not in html
+        assert "dzWizard" not in html
         assert "data-dz-stage" not in html
         # Should still have submit button
         assert "Create" in html
@@ -283,8 +282,7 @@ class TestFormTemplateRendering:
             ),
         ]
         html = self._render_form(sections)
-        assert "data-dz-wizard" in html
-        assert "data-dz-stepper" in html
+        assert "dzWizard(2)" in html
         assert 'data-dz-stage="0"' in html
         assert 'data-dz-stage="1"' in html
         assert "Basic Info" in html
@@ -330,11 +328,12 @@ class TestFormTemplateRendering:
             ),
         ]
         html = self._render_form(sections)
-        assert "data-dz-wizard-prev" in html
-        assert "data-dz-wizard-next" in html
-        assert "data-dz-wizard-submit" in html
+        # Alpine wizard uses @click="prev()" / @click="next()" instead of data-dz-wizard-*
+        assert "prev()" in html
+        assert "next()" in html
+        assert 'type="submit"' in html
 
-    def test_second_stage_hidden_initially(self) -> None:
+    def test_second_stage_uses_alpine_x_show(self) -> None:
         sections = [
             self._make_section(
                 "s1",
@@ -374,17 +373,9 @@ class TestFormTemplateRendering:
             ),
         ]
         html = self._render_form(sections)
-        # First stage should NOT have display:none
-        import re
-
-        stage0 = re.search(r'data-dz-stage="0"[^>]*>', html)
-        assert stage0 is not None
-        assert "display:none" not in stage0.group(0)
-
-        # Second stage should have display:none
-        stage1 = re.search(r'data-dz-stage="1"[^>]*>', html)
-        assert stage1 is not None
-        assert "display:none" in stage1.group(0)
+        # Alpine uses x-show="isCurrent(N)" instead of style="display:none"
+        assert "isCurrent(0)" in html
+        assert "isCurrent(1)" in html
 
     def test_stepper_shows_step_labels(self) -> None:
         sections = [
@@ -447,6 +438,7 @@ class TestFormTemplateRendering:
         assert "Contact Info" in html
         assert "Address" in html
         assert "Review" in html
-        assert 'data-dz-step="0"' in html
-        assert 'data-dz-step="1"' in html
-        assert 'data-dz-step="2"' in html
+        # Alpine stepper uses :class="isActive(N)" and @click="goToStep(N)"
+        assert "isActive(0)" in html
+        assert "isActive(1)" in html
+        assert "isActive(2)" in html
