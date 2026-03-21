@@ -309,6 +309,20 @@ def validate_entities(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
                         f"unknown field '{exp_f}'"
                     )
 
+        # v0.45.0: Entities with permit: blocks must also have scope: blocks (#595).
+        # Without scope: blocks, the API list endpoint default-denies all rows.
+        # Use `scope: all for: *` for intentionally public entities.
+        access = getattr(entity, "access", None)
+        if access is not None:
+            has_permits = bool(getattr(access, "permissions", None))
+            has_scopes = bool(getattr(access, "scopes", None))
+            if has_permits and not has_scopes:
+                warnings.append(
+                    f"Entity '{entity.name}' has permit: rules but no scope: blocks — "
+                    f"API list endpoint will default-deny (return 0 rows). "
+                    f"Add scope: blocks or use 'scope: all for: *' for public access."
+                )
+
     return errors, warnings
 
 

@@ -1179,7 +1179,10 @@ def _resolve_scope_filters(
 
     scopes = getattr(cedar_access_spec, "scopes", None)
     if not scopes:
-        return {}  # No scope rules defined — backward compat (no filtering)
+        # No scope rules defined — default-deny.  Entities with permit:
+        # blocks MUST also have scope: blocks to define row visibility.
+        # Use `scope: all for: *` for intentionally public entities (#595).
+        return None
 
     op_val = operation if isinstance(operation, str) else operation.value
 

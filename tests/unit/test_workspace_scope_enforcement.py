@@ -109,8 +109,8 @@ class TestApplyWorkspaceScopeFilters:
         assert denied is False
         assert result_filters == {"status": "open"}
 
-    def test_no_scopes_returns_filters_unchanged(self) -> None:
-        """Access spec without scopes means no filtering."""
+    def test_no_scopes_denies_by_default(self) -> None:
+        """Access spec with permits but no scopes defaults to deny (#595)."""
         from dazzle_back.runtime.workspace_rendering import (
             _apply_workspace_scope_filters,
         )
@@ -121,8 +121,7 @@ class TestApplyWorkspaceScopeFilters:
 
         result_filters, denied = _apply_workspace_scope_filters(ctx, auth, "user-1", None)
 
-        assert denied is False
-        assert result_filters is None
+        assert denied is True
 
     def test_no_user_id_skips_enforcement(self) -> None:
         """Without a user ID, scope enforcement is skipped."""

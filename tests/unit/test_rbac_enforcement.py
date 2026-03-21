@@ -1272,8 +1272,8 @@ class TestScopeEnforcement:
 
         assert result == {}
 
-    def test_resolve_scope_filters_empty_scopes_is_backward_compat(self) -> None:
-        """Empty scopes list returns {} (no filtering, backward compat)."""
+    def test_resolve_scope_filters_empty_scopes_denies(self) -> None:
+        """Empty scopes list returns None (default-deny) (#595)."""
         from dazzle_back.runtime.route_generator import _resolve_scope_filters
         from dazzle_back.specs.auth import EntityAccessSpec
 
@@ -1281,7 +1281,7 @@ class TestScopeEnforcement:
 
         result = _resolve_scope_filters(cedar_spec, "list", {"admin"}, "user-1")
 
-        assert result == {}
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_list_handler_returns_empty_when_no_scope_matches(self) -> None:
