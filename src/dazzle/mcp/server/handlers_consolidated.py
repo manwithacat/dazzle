@@ -908,7 +908,9 @@ def _handle_graph_topology(arguments: dict[str, Any]) -> str:
                         "field": field.name,
                         "target": field.type.ref_entity,
                         "kind": str(field.type.kind),
-                        "required": "required" in [str(m) for m in field.modifiers],
+                        "required": "yes"
+                        if "required" in [str(m) for m in field.modifiers]
+                        else "no",
                     }
                 )
         entities_map[entity.name] = {

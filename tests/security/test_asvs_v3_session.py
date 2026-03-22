@@ -72,7 +72,7 @@ class TestCSRFProtection:
 
     def test_csrf_bearer_exempt(self):
         """V3.5.4: Bearer-authenticated requests are exempt from CSRF."""
-        from dazzle_back.runtime.csrf import create_csrf_middleware
+        from dazzle_back.runtime.csrf import CSRFMiddleware
 
-        source = inspect.getsource(create_csrf_middleware)
+        source = inspect.getsource(CSRFMiddleware)
         assert "Bearer" in source
