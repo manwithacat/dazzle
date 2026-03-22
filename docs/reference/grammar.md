@@ -258,6 +258,8 @@ entity_decl   ::= "entity" IDENT STRING? ":" NEWLINE
                     audit_directive?
                     examples_block?
                     publish_directive*
+                    graph_edge_block?
+                    graph_node_block?
                   DEDENT ;
 
 entity_metadata ::= "intent" ":" STRING NEWLINE
@@ -482,6 +484,26 @@ examples_block ::= "examples" ":" NEWLINE
 example_entry ::= "-" key_value_list NEWLINE ;
 
 key_value_list ::= IDENT ":" literal ("," IDENT ":" literal)* ;
+
+(* =============================================================================
+   Graph Semantics (v0.46.0)
+   ============================================================================= *)
+
+graph_edge_block ::= "graph_edge" ":" NEWLINE
+                     INDENT
+                       "source" ":" IDENT NEWLINE
+                       "target" ":" IDENT NEWLINE
+                       ("type" ":" IDENT NEWLINE)?
+                       ("weight" ":" IDENT NEWLINE)?
+                       ("directed" ":" BOOLEAN NEWLINE)?
+                       ("acyclic" ":" BOOLEAN NEWLINE)?
+                     DEDENT ;
+
+graph_node_block ::= "graph_node" ":" NEWLINE
+                     INDENT
+                       "edges" ":" IDENT NEWLINE
+                       ("display" ":" IDENT NEWLINE)?
+                     DEDENT ;
 
 (* =============================================================================
    Surface Definitions
@@ -1794,6 +1816,57 @@ llm_intent classify_ticket "Classify Support Ticket":
     max_attempts: 3
     backoff: exponential
 ```
+
+### Graph Semantics (v0.46.0)
+
+#### `graph_edge:` (on entity)
+
+Declares that this entity represents edges in a directed property graph.
+
+```dsl
+entity NodeEdge "Edge":
+  id: uuid pk
+  source_node: ref Node required
+  target_node: ref Node required
+  relationship: enum[sequel,fork,reference,adaptation]
+  importance: int optional
+
+  graph_edge:
+    source: source_node
+    target: target_node
+    type: relationship
+    weight: importance
+    directed: true
+    acyclic: false
+```
+
+| Property | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `source` | yes | — | ref field pointing to the source node entity |
+| `target` | yes | — | ref field pointing to the target node entity |
+| `type` | no | — | field used as edge type discriminator |
+| `weight` | no | — | numeric field (int or decimal) for graph algorithms |
+| `directed` | no | `true` | whether edges are directed |
+| `acyclic` | no | `false` | whether cycles are prohibited (advisory) |
+
+#### `graph_node:` (on entity)
+
+Optional annotation declaring this entity as a node in a graph.
+
+```dsl
+entity Node "Node":
+  id: uuid pk
+  title: str(200) required
+
+  graph_node:
+    edges: NodeEdge
+    display: title
+```
+
+| Property | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `edges` | yes | — | the edge entity (must declare `graph_edge:`) |
+| `display` | no | — | field used as the node label |
 
 ### v0.25.0 Constructs
 
