@@ -280,7 +280,7 @@ handle_mock: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 _MOD_DB = "dazzle.mcp.server.handlers.db"
 
-handle_db: Callable[[dict[str, Any]], str] = _make_project_handler(
+handle_db: Callable[[dict[str, Any]], Any] = _make_project_handler_async(
     "db",
     {
         "status": f"{_MOD_DB}:db_status_handler",
@@ -826,7 +826,7 @@ def _handle_graph_triggers(arguments: dict[str, Any]) -> str:
     if not project_root:
         return error_response("No active project")
 
-    from .common import load_project_appspec
+    from .handlers.common import load_project_appspec
 
     appspec = load_project_appspec(project_root)
 
@@ -891,7 +891,7 @@ def _handle_graph_topology(arguments: dict[str, Any]) -> str:
     if not project_root:
         return error_response("No active project")
 
-    from .common import load_project_appspec
+    from .handlers.common import load_project_appspec
 
     appspec = load_project_appspec(project_root)
 

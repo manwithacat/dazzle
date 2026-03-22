@@ -377,7 +377,19 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
             "found": True,
             "type": "concept" if entity.entity_type == "concept" else "pattern",
         }
-        for key in ("category", "definition", "syntax", "example", "description"):
+        for key in (
+            "category",
+            "definition",
+            "syntax",
+            "example",
+            "description",
+            "runtime_behaviour",
+            "limitations",
+            "implemented_by",
+            "known_issues",
+            "important_notes",
+            "related",
+        ):
             if key in meta and meta[key]:
                 result[key] = meta[key]
         return result

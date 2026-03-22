@@ -1227,7 +1227,9 @@ def _resolve_scope_filters(
     for rule in matched_rules:
         condition = getattr(rule, "condition", None)
         predicate = getattr(rule, "predicate", None)
-        if condition is None and predicate is None:
+        # scope: all produces either predicate=None or predicate=Tautology()
+        is_tautology = getattr(predicate, "kind", None) == "tautology"
+        if (condition is None and predicate is None) or is_tautology:
             return {}  # scope: all — no filter
 
     # All matched rules have conditions — apply the first one that resolves.
