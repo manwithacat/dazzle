@@ -559,7 +559,7 @@ class EventBusProcessAdapter(ProcessAdapter):
 
     def _execute_process_sync(self, run_id: str) -> None:
         """Execute a process synchronously (called from thread pool)."""
-        from dazzle_back.runtime.process_step_executor import execute_process_steps, fail_run
+        from dazzle.core.process.step_executor import execute_process_steps, fail_run
 
         run = self._store.get_run(run_id)
         if not run:
