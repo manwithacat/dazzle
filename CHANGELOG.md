@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.4] - 2026-03-22
+
+### Added
+- Neighborhood endpoint: `GET /{entity}/{id}/graph?depth=N&format=cytoscape|d3` (#619 Phase 3)
+- `NeighborhoodQueryBuilder` — PostgreSQL recursive CTE for graph traversal
+- Directed and undirected traversal with automatic cycle prevention via UNION
+- Scope predicate injection into CTE WHERE clauses
+- Configurable depth bound (1–3 hops)
+
 ## [0.45.3] - 2026-03-22
 
 ### Added
