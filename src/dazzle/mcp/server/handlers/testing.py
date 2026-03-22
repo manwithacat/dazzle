@@ -23,6 +23,19 @@ from .common import (
 logger = logging.getLogger("dazzle.mcp.testing")
 
 
+def _resolve_project_root(project_path: str | None) -> Path | str:
+    """Resolve project root from explicit path, active project, or auto-detect.
+
+    Returns Path on success, or JSON error string on failure.
+    """
+    if project_path:
+        return Path(project_path)
+    root = get_active_project_path() or get_project_root()
+    if root is None:
+        return json.dumps({"error": "No project path specified and no active project set"})
+    return root
+
+
 # ---------------------------------------------------------------------------
 # check_infra
 # ---------------------------------------------------------------------------
@@ -261,25 +274,10 @@ def run_e2e_tests_handler(
     """
     progress = extract_progress(None)
     progress.log_sync("Running E2E tests...")
-    # Resolve project path
-    root: Path
-    if project_path:
-        root = Path(project_path)
-    else:
-        active = get_active_project_path()
-        if active:
-            root = active
-        else:
-            project = get_project_root()
-            if project:
-                root = project
-            else:
-                return json.dumps(
-                    {
-                        "error": "No project path specified and no active project set",
-                        "status": "error",
-                    }
-                )
+    resolved = _resolve_project_root(project_path)
+    if isinstance(resolved, str):
+        return resolved
+    root = resolved
 
     result = run_e2e_tests_impl(
         project_path=root,
@@ -369,24 +367,10 @@ def get_e2e_test_coverage_handler(
     """
     progress = extract_progress(None)
     progress.log_sync("Analyzing E2E test coverage...")
-    # Resolve project path
-    root: Path
-    if project_path:
-        root = Path(project_path)
-    else:
-        active = get_active_project_path()
-        if active:
-            root = active
-        else:
-            project = get_project_root()
-            if project:
-                root = project
-            else:
-                return json.dumps(
-                    {
-                        "error": "No project path specified and no active project set",
-                    }
-                )
+    resolved = _resolve_project_root(project_path)
+    if isinstance(resolved, str):
+        return resolved
+    root = resolved
 
     coverage = get_e2e_test_coverage_impl(root)
     return json.dumps(coverage, indent=2)
@@ -468,24 +452,10 @@ def list_e2e_flows_handler(
     """
     progress = extract_progress(None)
     progress.log_sync("Listing E2E test flows...")
-    # Resolve project path
-    root: Path
-    if project_path:
-        root = Path(project_path)
-    else:
-        active = get_active_project_path()
-        if active:
-            root = active
-        else:
-            project = get_project_root()
-            if project:
-                root = project
-            else:
-                return json.dumps(
-                    {
-                        "error": "No project path specified and no active project set",
-                    }
-                )
+    resolved = _resolve_project_root(project_path)
+    if isinstance(resolved, str):
+        return resolved
+    root = resolved
 
     result = list_e2e_flows_impl(
         project_path=root,
@@ -578,25 +548,10 @@ async def run_agent_e2e_tests_handler(
     progress = extract_progress(None)
     progress.log_sync("Running agent E2E tests...")
     try:
-        # Resolve project path
-        root: Path
-        if project_path:
-            root = Path(project_path)
-        else:
-            active = get_active_project_path()
-            if active:
-                root = active
-            else:
-                project = get_project_root()
-                if project:
-                    root = project
-                else:
-                    return json.dumps(
-                        {
-                            "error": "No project path specified and no active project set",
-                            "status": "error",
-                        }
-                    )
+        resolved = _resolve_project_root(project_path)
+        if isinstance(resolved, str):
+            return resolved
+        root = resolved
 
         test_ids = [test_id] if test_id else None
 
