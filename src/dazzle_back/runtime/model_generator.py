@@ -211,6 +211,13 @@ def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
 # =============================================================================
 
 
+def _create_typed_model(name: str, doc: str, fields: dict[str, Any]) -> type[BaseModel]:
+    """Create a Pydantic model from dynamic field definitions."""
+    model = create_model(name, __doc__=doc, **fields)
+    assert issubclass(model, BaseModel)
+    return model  # type: ignore[no-any-return]
+
+
 def generate_entity_model(
     entity: EntitySpec,
     entity_models: dict[str, type] | None = None,
@@ -248,14 +255,11 @@ def generate_entity_model(
         field_definitions[field.name] = _build_field_info(field)
 
     # Create the model
-    model = create_model(
+    return _create_typed_model(
         entity.name,
-        __doc__=entity.description or f"Generated model for {entity.name}",
-        **field_definitions,
+        entity.description or f"Generated model for {entity.name}",
+        field_definitions,
     )
-
-    assert issubclass(model, BaseModel)
-    return model  # type: ignore[no-any-return]
 
 
 def generate_all_entity_models(
@@ -329,14 +333,11 @@ def generate_create_schema(
         field_definitions[field.name] = _build_field_info(field)
 
     # Create the model
-    model = create_model(
+    return _create_typed_model(
         f"{entity.name}{name_suffix}",
-        __doc__=f"Create schema for {entity.name}",
-        **field_definitions,
+        f"Create schema for {entity.name}",
+        field_definitions,
     )
-
-    assert issubclass(model, BaseModel)
-    return model  # type: ignore[no-any-return]
 
 
 def generate_update_schema(
@@ -370,14 +371,11 @@ def generate_update_schema(
         field_definitions[field.name] = (python_type | None, None)
 
     # Create the model
-    model = create_model(
+    return _create_typed_model(
         f"{entity.name}{name_suffix}",
-        __doc__=f"Update schema for {entity.name}",
-        **field_definitions,
+        f"Update schema for {entity.name}",
+        field_definitions,
     )
-
-    assert issubclass(model, BaseModel)
-    return model  # type: ignore[no-any-return]
 
 
 def generate_list_response_schema(
@@ -401,11 +399,8 @@ def generate_list_response_schema(
         "page_size": (int, Field(default=20, description="Items per page")),
     }
 
-    model = create_model(
+    return _create_typed_model(
         f"{entity.name}ListResponse",
-        __doc__=f"Paginated list response for {entity.name}",
-        **field_definitions,
+        f"Paginated list response for {entity.name}",
+        field_definitions,
     )
-
-    assert issubclass(model, BaseModel)
-    return model  # type: ignore[no-any-return]
