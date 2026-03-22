@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.4] - 2026-03-22
+
+### Fixed
+- Suppress misleading "permit without scope" linter warning on framework-generated entities (e.g. AIJob from `llm_intent` blocks)
+
+## [0.46.3] - 2026-03-22
+
 ### Added
 - `--production` flag on `dazzle serve` — binds 0.0.0.0, reads PORT env var, requires DATABASE_URL, structured JSON logging, disables dev features
 - `dazzle deploy dockerfile` — generates production Dockerfile + requirements.txt
@@ -19,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Container runtime (`dazzle_ui.runtime.container`) — replaced by `dazzle serve --production`
 - `DockerRunner` and Docker template generation — replaced by `dazzle deploy`
 - `dazzle rebuild` command — prints migration message directing to `dazzle deploy dockerfile`
+
+### Fixed
+- `float` type missing from frontend spec export `FIELD_TYPE_MAP`
+- `target:` keyword not recognized in integration transform block parser
+- Stale test snapshots for graph semantics and streamspec error types
+- Content negotiation test mocks returning truthy MagicMock for `query_params.get()`
 
 ## [0.46.2] - 2026-03-22
 
