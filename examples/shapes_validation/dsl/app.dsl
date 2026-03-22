@@ -23,9 +23,11 @@ enum Material "Material":
 
 persona oracle "Oracle":
   description: "Platform admin — sees everything across all realms"
+  default_workspace: shapes_dashboard
 
 persona sovereign "Sovereign":
   description: "Tenant admin — sees everything in own realm only"
+  default_workspace: shapes_dashboard
 
 persona architect "Architect":
   description: "Scoped viewer — sees shapes in own realm"
@@ -44,3 +46,28 @@ persona guardian "Guardian":
 
 persona outsider "Outsider":
   description: "Deny-all baseline — proves complete mediation"
+
+workspace shapes_dashboard "Shapes Dashboard":
+  access: persona(oracle, sovereign, architect, chromat, forgemaster, witness, guardian)
+  purpose: "Browse and manage shapes, realms, and inscriptions"
+
+  realms:
+    source: Realm
+    sort: name asc
+    display: list
+    action: realm_list
+    empty: "No realms"
+
+  shapes:
+    source: Shape
+    sort: name asc
+    display: grid
+    action: shape_detail
+    empty: "No shapes"
+
+  inscriptions:
+    source: Inscription
+    sort: created_at desc
+    display: list
+    action: inscription_list
+    empty: "No inscriptions"
