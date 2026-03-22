@@ -1241,9 +1241,19 @@ def _resolve_scope_filters(
 
         # ---- Predicate-compiler path ----------------------------------------
         if predicate is not None and fk_graph is not None:
-            return _resolve_predicate_filters(
-                predicate, entity_name, fk_graph, user_id, auth_context
-            )
+            try:
+                return _resolve_predicate_filters(
+                    predicate, entity_name, fk_graph, user_id, auth_context
+                )
+            except Exception:
+                # Predicate compilation/resolution failed (e.g. null FK in
+                # EXISTS binding) — deny cleanly rather than 500 (#617)
+                logging.getLogger(__name__).warning(
+                    "Scope predicate resolution failed for %s — denying",
+                    entity_name,
+                    exc_info=True,
+                )
+                return None
 
         # ---- Legacy condition-tree path (fallback) --------------------------
         if condition is not None:
