@@ -796,6 +796,23 @@ class DazzleBackendApp:
                             node_specs[ir_field.type.ref_entity] = ref_ent.graph_node
                 entity_graph_specs[ir_entity.name] = (ir_entity.graph_edge, node_specs)
 
+        # Build node graph metadata for neighborhood endpoints (#619 Phase 3)
+        node_graph_specs: dict[str, dict] = {}
+        for ir_entity in self._appspec.domain.entities:
+            if ir_entity.graph_node is not None:
+                edge_entity_name = ir_entity.graph_node.edge_entity
+                edge_ir = next(
+                    (e for e in self._appspec.domain.entities if e.name == edge_entity_name),
+                    None,
+                )
+                if edge_ir and edge_ir.graph_edge:
+                    node_graph_specs[ir_entity.name] = {
+                        "graph_edge": edge_ir.graph_edge,
+                        "graph_node": ir_entity.graph_node,
+                        "node_table": ir_entity.name,
+                        "edge_table": edge_entity_name,
+                    }
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -816,6 +833,8 @@ class DazzleBackendApp:
             entity_ref_targets=self._entity_ref_targets,
             fk_graph=_fk_graph,
             entity_graph_specs=entity_graph_specs,
+            node_graph_specs=node_graph_specs,
+            db_manager=self._db_manager,
         )
         router = route_generator.generate_all_routes(
             self._endpoint_specs,
