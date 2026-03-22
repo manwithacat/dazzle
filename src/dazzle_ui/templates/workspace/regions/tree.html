@@ -6,7 +6,7 @@
     {% macro render_node(node, depth=0) %}
     <details class="collapse collapse-arrow bg-base-200/30 rounded-lg mb-1" {% if depth == 0 %}open{% endif %}>
       <summary class="collapse-title text-sm py-1 px-3 min-h-0 flex items-center gap-2"
-               {% if action_url %}hx-get="{{ action_url | replace('{id}', node.id|string) }}"
+               {% if action_url %}hx-get="{{ action_url | replace('{id}', node[action_id_field|default('id')]|string) }}"
                hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
         <span class="font-medium">{{ node.get(display_key, node.get('name', node.get('title', ''))) }}</span>
         {% if node._children %}

@@ -32,7 +32,14 @@ JS_SOURCES = [
     STATIC / "vendor" / "htmx-ext-response-targets.js",
     STATIC / "vendor" / "htmx-ext-loading-states.js",
     STATIC / "vendor" / "htmx-ext-sse.js",
-    STATIC / "js" / "dz.js",
+    # Alpine.js + plugins + components (order matters: plugins before core)
+    STATIC / "vendor" / "sortable.min.js",
+    STATIC / "vendor" / "alpine-sort.min.js",
+    STATIC / "vendor" / "alpine-persist.min.js",
+    STATIC / "js" / "dz-alpine.js",
+    STATIC / "js" / "workspace-editor.js",
+    STATIC / "vendor" / "alpine.min.js",
+    # Dazzle runtime (a11y + islands)
     STATIC / "js" / "dz-a11y.js",
     STATIC / "js" / "dz-islands.js",
     SITE_STATIC / "js" / "site.js",
@@ -43,7 +50,7 @@ ICONS_SOURCES = [
 ]
 
 # Framework JS files get comment stripping; vendor files are left as-is.
-FRAMEWORK_JS = {"dz.js", "dz-a11y.js", "dz-islands.js", "site.js"}
+FRAMEWORK_JS = {"dz-alpine.js", "workspace-editor.js", "dz-a11y.js", "dz-islands.js", "site.js"}
 
 
 def read_version() -> str:

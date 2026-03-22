@@ -60,6 +60,7 @@ class RegionContext(BaseModel):
     aggregates: dict[str, str] = Field(default_factory=dict)
     action: str = ""  # Surface name for row-click navigation
     action_url: str = ""  # Resolved URL pattern for the action surface
+    action_id_field: str = "id"  # Field on the item to use as the URL ID (#614)
     # Multi-source (v0.33.0)
     sources: list[str] = Field(default_factory=list)
     source_tabs: list[SourceTabContext] = Field(default_factory=list)
@@ -228,6 +229,7 @@ def build_workspace_context(
         # Resolve action surface → URL pattern (must use /app/ prefix for app shell)
         action_name = region.action or ""
         action_url = ""
+        action_id_field = "id"
         if action_name and app_spec:
             surfaces = app_spec.surfaces
             for s in surfaces:
@@ -241,8 +243,8 @@ def build_workspace_context(
                             # Cross-entity — find FK field in source entity
                             fk_field = _resolve_fk_field(source_name, entity_ref, app_spec)
                             if fk_field:
-                                slug = entity_ref.lower().replace("_", "-")
-                                action_url = f"/app/{slug}/{{{fk_field}}}"
+                                action_url = _entity_to_app_url(entity_ref)
+                                action_id_field = fk_field
                             else:
                                 # Fallback: use row id
                                 action_url = _entity_to_app_url(entity_ref)
@@ -290,6 +292,7 @@ def build_workspace_context(
                 aggregates=dict(region.aggregates or {}),
                 action=action_name,
                 action_url=action_url,
+                action_id_field=action_id_field,
                 sources=region_sources,
                 source_tabs=source_tabs,
                 heatmap_rows=getattr(region, "heatmap_rows", None) or "",

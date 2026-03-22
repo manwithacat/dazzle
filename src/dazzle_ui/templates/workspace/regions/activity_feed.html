@@ -17,7 +17,7 @@
           </svg>
         </div>
         <div class="timeline-end timeline-box text-sm py-1 px-2{% if action_url %} cursor-pointer hover:bg-base-200{% endif %}"
-             {% if action_url %}hx-get="{{ action_url | replace('{id}', item.id|string) }}"
+             {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
           {% if item.actor or item.get('actor') %}
             <span class="font-medium">{{ item.actor or item.get('user', '') }}</span>
