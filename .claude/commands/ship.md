@@ -5,7 +5,7 @@ Commit all current changes and push to the remote. Follow these steps exactly:
 - Run `git status` (never use `-uall`) and `git diff --stat` to understand what changed.
 - If the worktree is already clean and there is nothing to commit, say so and stop.
 - Run `ruff check src/ tests/ --fix && ruff format src/ tests/` to auto-fix lint issues.
-- Run `mypy src/dazzle` to catch type errors.
+- Run `mypy src/dazzle/core src/dazzle/cli src/dazzle/mcp --ignore-missing-imports --exclude 'eject' && mypy src/dazzle_back/ --ignore-missing-imports` to catch type errors (matches CI).
 - If lint or type errors remain after auto-fix, fix them before proceeding. Do NOT commit code that fails lint or type checks.
 
 ## 2. Commit
