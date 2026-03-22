@@ -35,6 +35,16 @@ else:
 APIRouter = _APIRouter
 
 
+def _set_handler_annotations(fn: Any, *, with_id: bool = False, with_auth: bool = False) -> None:
+    """Set FastAPI-compatible type annotations on a dynamic handler function."""
+    ann: dict[str, Any] = {"request": Request, "return": Any}
+    if with_id:
+        ann["id"] = UUID
+    if with_auth:
+        ann["auth_context"] = AuthContext
+    fn.__annotations__ = ann
+
+
 def _is_htmx_request(request: Any) -> bool:
     """Check if this is a genuine HTMX request (HX-Request header present)."""
     from dazzle_back.runtime.htmx_response import HtmxDetails
@@ -874,11 +884,7 @@ def _build_cedar_handler(
         ) -> Any:
             return await _cedar_impl(None, request, auth_context)
 
-        _cedar_create.__annotations__ = {
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
+        _set_handler_annotations(_cedar_create, with_auth=True)
         return _cedar_create
 
     async def _cedar_with_id(
@@ -886,12 +892,7 @@ def _build_cedar_handler(
     ) -> Any:
         return await _cedar_impl(id, request, auth_context)
 
-    _cedar_with_id.__annotations__ = {
-        "id": UUID,
-        "request": Request,
-        "auth_context": AuthContext,
-        "return": Any,
-    }
+    _set_handler_annotations(_cedar_with_id, with_id=True, with_auth=True)
     return _cedar_with_id
 
 
@@ -959,11 +960,7 @@ def _build_auth_handler(
         ) -> Any:
             return await _auth_impl(None, request, auth_context)
 
-        _auth_create.__annotations__ = {
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
+        _set_handler_annotations(_auth_create, with_auth=True)
         return _auth_create
 
     async def _auth_with_id(
@@ -971,12 +968,7 @@ def _build_auth_handler(
     ) -> Any:
         return await _auth_impl(id, request, auth_context)
 
-    _auth_with_id.__annotations__ = {
-        "id": UUID,
-        "request": Request,
-        "auth_context": AuthContext,
-        "return": Any,
-    }
+    _set_handler_annotations(_auth_with_id, with_id=True, with_auth=True)
     return _auth_with_id
 
 
@@ -991,13 +983,13 @@ def _build_noauth_handler(
         async def _noauth_create(request: Request) -> Any:
             return await core_fn(None, request, current_user=None, existing=None)
 
-        _noauth_create.__annotations__ = {"request": Request, "return": Any}
+        _set_handler_annotations(_noauth_create)
         return _noauth_create
 
     async def _noauth_with_id(id: UUID, request: Request) -> Any:
         return await core_fn(id, request, current_user=None, existing=None)
 
-    _noauth_with_id.__annotations__ = {"id": UUID, "request": Request, "return": Any}
+    _set_handler_annotations(_noauth_with_id, with_id=True)
     return _noauth_with_id
 
 
@@ -1801,12 +1793,7 @@ def create_read_handler(
             html = _render_detail_html(request, result, entity_name)
             return html if html is not None else result
 
-        _read_cedar.__annotations__ = {
-            "id": UUID,
-            "request": Request,
-            "auth_context": AuthContext,
-            "return": Any,
-        }
+        _set_handler_annotations(_read_cedar, with_id=True, with_auth=True)
         return _read_cedar
 
     # Non-cedar: use the generic wrapper (no pre-read needed)
@@ -1995,7 +1982,7 @@ def create_custom_handler(
             return result
 
         # Override annotations with the proper type so FastAPI recognizes it
-        handler_with_input.__annotations__ = {"request": Request, "return": Any}
+        _set_handler_annotations(handler_with_input)
 
         return handler_with_input
     else:
