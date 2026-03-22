@@ -120,3 +120,14 @@ class TestProductionFlagOnServe:
             )
             assert result.exit_code != 0
             assert "No DSL files" in result.output or "No DSL files" in (result.stderr or "")
+
+
+class TestRebuildDeprecation:
+    """Tests for rebuild command deprecation."""
+
+    def test_rebuild_prints_deprecation_and_exits(self) -> None:
+        from dazzle.cli import app
+
+        result = runner.invoke(app, ["rebuild"])
+        assert result.exit_code != 0
+        assert "dazzle deploy dockerfile" in (result.output + (result.stderr or ""))

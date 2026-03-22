@@ -85,84 +85,13 @@ def stop_command(
         raise typer.Exit(code=1)
 
 
-def rebuild_command(
-    manifest: str = typer.Option("dazzle.toml", "--manifest", "-m"),
-    port: int = typer.Option(3000, "--port", "-p", help="Frontend port"),
-    api_port: int = typer.Option(8000, "--api-port", help="Backend API port"),
-    test_mode: bool = typer.Option(
-        False,
-        "--test-mode",
-        help="Enable test endpoints (/__test__/seed, /__test__/reset, etc.)",
-    ),
-    attach: bool = typer.Option(
-        False,
-        "--attach",
-        "-a",
-        help="Run Docker container attached (stream logs to terminal)",
-    ),
-) -> None:
-    """
-    Rebuild the Docker image and restart the container.
-
-    Stops any running container, rebuilds the Docker image from the current
-    DSL files, and starts a fresh container.
-
-    Examples:
-        dazzle rebuild              # Rebuild and restart (detached)
-        dazzle rebuild --attach     # Rebuild and restart with logs
-        dazzle rebuild --test-mode  # Rebuild with test endpoints
-    """
-    manifest_path = Path(manifest).resolve()
-    project_root = manifest_path.parent
-
-    # Load manifest to get project name
-    try:
-        mf = load_manifest(manifest_path)
-        project_name = mf.name
-    except Exception:
-        project_name = None
-
-    container_name = get_container_name(project_root, project_name)
-
-    # Stop existing container if running
-    if is_container_running(container_name):
-        typer.echo(f"Stopping existing container: {container_name}")
-        subprocess.run(
-            ["docker", "stop", container_name],
-            capture_output=True,
-            timeout=30,
-        )
-        subprocess.run(
-            ["docker", "rm", container_name],
-            capture_output=True,
-            timeout=10,
-        )
-        typer.echo("Stopped existing container")
-
-    # Now start with rebuild flag
-    typer.echo("Rebuilding Docker image from DSL...")
-
-    try:
-        from dazzle_ui.runtime import is_docker_available, run_in_docker
-
-        if not is_docker_available():
-            typer.echo("Docker is not available", err=True)
-            raise typer.Exit(code=1)
-
-        detach = not attach
-        exit_code = run_in_docker(
-            project_path=project_root,
-            frontend_port=port,
-            api_port=api_port,
-            test_mode=test_mode,
-            rebuild=True,  # Force rebuild
-            detach=detach,
-        )
-        raise typer.Exit(code=exit_code)
-
-    except ImportError as e:
-        typer.echo(f"Dazzle runtime not available: {e}", err=True)
-        raise typer.Exit(code=1)
+def rebuild_command() -> None:
+    """Deprecated: container mode has been removed."""
+    typer.echo(
+        "--rebuild has been removed. Run 'dazzle deploy dockerfile' to generate deployment files.",
+        err=True,
+    )
+    raise typer.Exit(code=1)
 
 
 def logs_command(
