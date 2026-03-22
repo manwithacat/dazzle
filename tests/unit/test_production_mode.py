@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -76,3 +78,45 @@ class TestConfigureProductionLogging:
         logger.info("test message")
         # Clean up
         logging.getLogger().handlers.clear()
+
+
+from typer.testing import CliRunner  # noqa: E402
+
+runner = CliRunner()
+
+
+class TestProductionFlagOnServe:
+    """Tests for --production flag integration in serve_command."""
+
+    def test_production_parameter_exists(self) -> None:
+        """serve_command should accept --production."""
+        from dazzle.cli.runtime_impl.serve import serve_command
+
+        sig = inspect.signature(serve_command)
+        assert "production" in sig.parameters
+
+    def test_production_fails_without_database_url(self) -> None:
+        """--production without DATABASE_URL should exit 1."""
+        from dazzle.cli import app
+
+        with patch.dict(os.environ, {}, clear=True):
+            result = runner.invoke(app, ["serve", "--production"])
+            assert result.exit_code != 0
+            assert "DATABASE_URL" in result.output or "DATABASE_URL" in (result.stderr or "")
+
+    def test_production_fails_without_dsl_files(self, tmp_path: Path) -> None:
+        """--production with DATABASE_URL but no DSL files should exit 1."""
+        from dazzle.cli import app
+
+        # Create minimal dazzle.toml but no .dsl files
+        (tmp_path / "dazzle.toml").write_text('[project]\nname = "test"\n')
+        with patch.dict(
+            os.environ,
+            {"DATABASE_URL": "postgresql://localhost/db"},
+            clear=True,
+        ):
+            result = runner.invoke(
+                app, ["serve", "--production", "--manifest", str(tmp_path / "dazzle.toml")]
+            )
+            assert result.exit_code != 0
+            assert "No DSL files" in result.output or "No DSL files" in (result.stderr or "")

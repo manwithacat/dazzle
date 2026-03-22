@@ -38,6 +38,7 @@ from .ports import (
     find_available_ports,
     write_runtime_file,
 )
+from .production import configure_production_logging, validate_production_env
 
 
 def _validate_infrastructure() -> tuple[str, str]:
@@ -155,6 +156,11 @@ def serve_command(
         "--workers",
         help="Number of uvicorn workers (default: 1).",
     ),
+    production: bool = typer.Option(
+        False,
+        "--production",
+        help="Production mode: bind 0.0.0.0, require DATABASE_URL, JSON logging, no dev features.",
+    ),
 ) -> None:
     """
     Serve Dazzle app (backend API + UI with live data).
@@ -211,32 +217,77 @@ def serve_command(
         auth_enabled = False
         project_name = project_root.name
 
-    # Resolve dev_mode and test_mode based on:
-    # 1. CLI option (if explicitly set)
-    # 2. Manifest [dev] section (if set)
-    # 3. Environment defaults (based on DAZZLE_ENV)
-    # (v0.24.0 - environment-aware dev features)
-    env = get_dazzle_env()
+    # Production mode: override settings for deployment
+    if production:
+        configure_production_logging()
+        database_url_prod, redis_url_prod = validate_production_env()
 
-    if dev_mode is None:
-        # CLI not set - enable in development env
-        enable_dev_mode = env.value == "development"
+        # Check for DSL files
+        from dazzle.core.fileset import discover_dsl_files as _discover
+
+        try:
+            mf_check = load_manifest(manifest_path)
+            dsl_files = _discover(project_root, mf_check)
+        except Exception:
+            dsl_files = []
+        if not dsl_files:
+            typer.echo(
+                "No DSL files found in current directory. "
+                "Run dazzle serve --production from your project root.",
+                err=True,
+            )
+            raise typer.Exit(code=1)
+
+        # Override settings
+        host = "0.0.0.0"
+        port_env = os.environ.get("PORT")
+        if port_env:
+            try:
+                port = int(port_env)
+            except ValueError:
+                pass
+        database_url = database_url_prod
+        redis_url = redis_url_prod or ""
+        os.environ["DATABASE_URL"] = database_url
+        if redis_url:
+            os.environ["REDIS_URL"] = redis_url
+
+        # Disable dev features
+        local = True  # Skip Docker infrastructure management
+        watch = False
+        watch_source = False
+        enable_dev_mode = False
+        enable_test_mode = False
+        auto_mock = False
+
+        env = get_dazzle_env()
     else:
-        # CLI explicitly set - honor it
-        enable_dev_mode = dev_mode
+        # Resolve dev_mode and test_mode based on:
+        # 1. CLI option (if explicitly set)
+        # 2. Manifest [dev] section (if set)
+        # 3. Environment defaults (based on DAZZLE_ENV)
+        # (v0.24.0 - environment-aware dev features)
+        env = get_dazzle_env()
 
-    if test_mode is None:
-        # CLI not set - use manifest or environment default
-        enable_test_mode = should_enable_test_endpoints(dev_config_override_test)
-    else:
-        # CLI explicitly set - honor it
-        enable_test_mode = test_mode
+        if dev_mode is None:
+            # CLI not set - enable in development env
+            enable_dev_mode = env.value == "development"
+        else:
+            # CLI explicitly set - honor it
+            enable_dev_mode = dev_mode
 
-    # Resolve DATABASE_URL: CLI flag → env → dazzle.toml → default
-    from dazzle.core.manifest import resolve_database_url
+        if test_mode is None:
+            # CLI not set - use manifest or environment default
+            enable_test_mode = should_enable_test_endpoints(dev_config_override_test)
+        else:
+            # CLI explicitly set - honor it
+            enable_test_mode = test_mode
 
-    database_url = resolve_database_url(mf, explicit_url=database_url)
-    redis_url = os.environ.get("REDIS_URL", "")
+        # Resolve DATABASE_URL: CLI flag → env → dazzle.toml → default
+        from dazzle.core.manifest import resolve_database_url
+
+        database_url = resolve_database_url(mf, explicit_url=database_url)
+        redis_url = os.environ.get("REDIS_URL", "")
 
     # Allocate ports based on project name (deterministic hashing)
     # This prevents collisions when running multiple Dazzle instances
