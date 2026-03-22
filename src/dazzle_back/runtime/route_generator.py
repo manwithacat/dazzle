@@ -2000,6 +2000,175 @@ def create_custom_handler(
 
 
 # =============================================================================
+# Neighborhood graph handler (#619 Phase 3)
+# =============================================================================
+
+_VALID_GRAPH_FORMATS = {"cytoscape", "d3", "raw"}
+
+
+async def _neighborhood_handler_body(
+    seed_id: UUID,
+    depth: int,
+    format: str,
+    entity_name: str,
+    graph_edge_spec: Any,
+    graph_node_spec: Any | None,
+    node_table: str,
+    edge_table: str,
+    db_manager: Any,
+    node_service: Any,
+) -> Any:
+    """Core logic for the neighborhood graph endpoint."""
+    from starlette.responses import JSONResponse
+
+    from dazzle_back.runtime.graph_serializer import GraphSerializer
+    from dazzle_back.runtime.neighborhood import NeighborhoodQueryBuilder
+
+    # 1. Validate format
+    if format not in _VALID_GRAPH_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid format '{format}'. Must be one of: {', '.join(sorted(_VALID_GRAPH_FORMATS))}",
+        )
+
+    # 2. Check seed node exists
+    seed_record = await node_service.execute(operation="read", id=seed_id)
+    if seed_record is None:
+        raise HTTPException(status_code=404, detail=f"{entity_name} not found")
+
+    # 3. Build CTE
+    builder = NeighborhoodQueryBuilder(
+        node_table=node_table,
+        edge_table=edge_table,
+        graph_edge=graph_edge_spec,
+    )
+    cte_sql, cte_params = builder.cte_query(str(seed_id), depth)
+
+    # 4. Execute: CTE → node fetch → edge fetch
+    with db_manager.connection() as conn:
+        cursor = conn.cursor()
+
+        # Discover reachable node IDs
+        cursor.execute(cte_sql, cte_params)
+        cte_rows = cursor.fetchall()
+        node_ids = [str(row["node_id"]) for row in cte_rows]
+
+        if not node_ids:
+            # Seed exists but has no connections — return it alone
+            node_ids = [str(seed_id)]
+
+        # Fetch full node records
+        node_sql, node_params = builder.node_fetch_query(node_ids)
+        cursor.execute(node_sql, node_params)
+        nodes = cursor.fetchall()
+
+        # Fetch edges between discovered nodes
+        edge_sql, edge_params = builder.edge_fetch_query(node_ids)
+        cursor.execute(edge_sql, edge_params)
+        edges = cursor.fetchall()
+
+    # 5. Serialize UUIDs to strings
+    def _stringify_uuids(rows: list[dict]) -> list[dict]:
+        result = []
+        for row in rows:
+            out = {}
+            for k, v in row.items():
+                out[k] = str(v) if isinstance(v, UUID) else v
+            result.append(out)
+        return result
+
+    nodes = _stringify_uuids(nodes)
+    edges = _stringify_uuids(edges)
+
+    # 6. Return via GraphSerializer or raw
+    if format == "raw":
+        return JSONResponse(content={"nodes": nodes, "edges": edges})
+
+    serializer = GraphSerializer(
+        graph_edge=graph_edge_spec,
+        graph_node=graph_node_spec,
+    )
+    if format == "cytoscape":
+        return JSONResponse(content=serializer.to_cytoscape(edges, nodes))
+    else:
+        return JSONResponse(content=serializer.to_d3(edges, nodes))
+
+
+def create_neighborhood_handler(
+    entity_name: str,
+    graph_edge_spec: Any,
+    graph_node_spec: Any | None,
+    node_table: str,
+    edge_table: str,
+    db_manager: Any,
+    node_service: Any,
+    optional_auth_dep: Callable[..., Any] | None = None,
+    cedar_access_spec: Any | None = None,
+    fk_graph: Any | None = None,
+    ref_targets: dict[str, str] | None = None,
+) -> Callable[..., Any]:
+    """Create a handler for graph neighborhood traversal (#619 Phase 3).
+
+    Returns reachable nodes and edges from a seed node up to a given depth.
+    """
+    if optional_auth_dep is not None:
+
+        async def _auth_handler(
+            id: UUID,
+            auth_context: AuthContext = Depends(optional_auth_dep),
+            depth: int = Query(1, ge=1, le=3, description="Traversal depth"),
+            format: str = Query("cytoscape", description="Response format: cytoscape, d3, or raw"),
+        ) -> Any:
+            return await _neighborhood_handler_body(
+                seed_id=id,
+                depth=depth,
+                format=format,
+                entity_name=entity_name,
+                graph_edge_spec=graph_edge_spec,
+                graph_node_spec=graph_node_spec,
+                node_table=node_table,
+                edge_table=edge_table,
+                db_manager=db_manager,
+                node_service=node_service,
+            )
+
+        _auth_handler.__annotations__ = {
+            "id": UUID,
+            "auth_context": AuthContext,
+            "depth": int,
+            "format": str,
+            "return": Any,
+        }
+        return _auth_handler
+
+    async def _noauth_handler(
+        id: UUID,
+        depth: int = Query(1, ge=1, le=3, description="Traversal depth"),
+        format: str = Query("cytoscape", description="Response format: cytoscape, d3, or raw"),
+    ) -> Any:
+        return await _neighborhood_handler_body(
+            seed_id=id,
+            depth=depth,
+            format=format,
+            entity_name=entity_name,
+            graph_edge_spec=graph_edge_spec,
+            graph_node_spec=graph_node_spec,
+            node_table=node_table,
+            edge_table=edge_table,
+            db_manager=db_manager,
+            node_service=node_service,
+        )
+
+    _noauth_handler.__annotations__ = {
+        "id": UUID,
+        "depth": int,
+        "format": str,
+        "return": Any,
+    }
+    return _noauth_handler
+
+
+# =============================================================================
 # Route Generator
 # =============================================================================
 
@@ -2032,6 +2201,8 @@ class RouteGenerator:
         entity_ref_targets: dict[str, dict[str, str]] | None = None,
         fk_graph: Any | None = None,
         entity_graph_specs: dict[str, tuple[Any, Any | None]] | None = None,
+        node_graph_specs: dict[str, dict] | None = None,
+        db_manager: Any | None = None,
     ):
         """
         Initialize the route generator.
@@ -2054,6 +2225,8 @@ class RouteGenerator:
             entity_ref_targets: Optional dict mapping entity_name -> {fk_field: target_entity} for
                 dotted-path scope resolution (#556)
             fk_graph: Optional FKGraph from the linked AppSpec for predicate compilation
+            node_graph_specs: Optional dict mapping node entity names to graph metadata (#619)
+            db_manager: Optional database manager for neighborhood queries (#619)
         """
         if not FASTAPI_AVAILABLE:
             raise RuntimeError("FastAPI is not installed. Install with: pip install fastapi")
@@ -2077,6 +2250,8 @@ class RouteGenerator:
         self.entity_ref_targets = entity_ref_targets or {}
         self.fk_graph = fk_graph
         self.entity_graph_specs = entity_graph_specs or {}
+        self.node_graph_specs = node_graph_specs or {}
+        self.db_manager = db_manager
         self._router = _APIRouter()
 
     def generate_route(
@@ -2228,6 +2403,31 @@ class RouteGenerator:
                 all_services=self.services,
             )
             self._add_route(endpoint, handler, response_model=None)
+
+            # Register /graph neighborhood endpoint for graph_node entities (#619)
+            _node_graph = self.node_graph_specs.get(entity_name or "")
+            if _node_graph:
+                _graph_path = endpoint.path.rstrip("/") + "/{id}/graph"
+                _graph_handler = create_neighborhood_handler(
+                    entity_name=entity_name or "Item",
+                    graph_edge_spec=_node_graph["graph_edge"],
+                    graph_node_spec=_node_graph.get("graph_node"),
+                    node_table=_node_graph["node_table"],
+                    edge_table=_node_graph["edge_table"],
+                    db_manager=self.db_manager,
+                    node_service=service,
+                    optional_auth_dep=self.optional_auth_dep,
+                    cedar_access_spec=_cedar_spec,
+                    fk_graph=self.fk_graph,
+                    ref_targets=self.entity_ref_targets.get(entity_name or ""),
+                )
+                self._router.add_api_route(
+                    _graph_path,
+                    _graph_handler,
+                    methods=["GET"],
+                    tags=[entity_name or "Item"],
+                    summary=f"Neighborhood graph for {entity_name}",
+                )
 
         # PUT/PATCH -> UPDATE
         elif (
