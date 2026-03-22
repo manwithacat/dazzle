@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .common import error_response, extract_progress, wrap_handler_errors
 
+if TYPE_CHECKING:
+    from dazzle.testing.vendor_mock.orchestrator import MockOrchestrator
 
-def _get_orchestrator() -> Any:
+
+def _get_orchestrator() -> MockOrchestrator | None:
     """Get the mock orchestrator from server state."""
     from dazzle.mcp.server.state import get_mock_orchestrator
 

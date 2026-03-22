@@ -10,11 +10,14 @@ from __future__ import annotations
 import secrets
 import string
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from ..state import get_active_project_path
 from .common import extract_progress
+
+if TYPE_CHECKING:
+    from dazzle_back.runtime.auth.store import AuthStore
 
 
 def _generate_temp_password(length: int = 16) -> str:
@@ -23,7 +26,7 @@ def _generate_temp_password(length: int = 16) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
-def _get_auth_store(project_path: Path | None = None) -> Any:
+def _get_auth_store(project_path: Path | None = None) -> AuthStore:
     """
     Get an AuthStore instance for the project.
 

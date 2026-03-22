@@ -14,14 +14,17 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .common import error_response, wrap_handler_errors
+
+if TYPE_CHECKING:
+    from dazzle.mcp.knowledge_graph import KnowledgeGraph
 
 logger = logging.getLogger("dazzle.mcp")
 
 
-def _get_graph() -> Any:
+def _get_graph() -> KnowledgeGraph | None:
     """Get the knowledge graph, or None."""
     from ..state import get_knowledge_graph
 

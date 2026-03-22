@@ -22,6 +22,7 @@ from dazzle.core.paths import (
 if TYPE_CHECKING:
     from dazzle.mcp.knowledge_graph import KnowledgeGraph
     from dazzle.mcp.server.activity_log import ActivityLog, ActivityStore
+    from dazzle.testing.vendor_mock.orchestrator import MockOrchestrator
 
 logger = logging.getLogger("dazzle.mcp")
 
@@ -49,7 +50,7 @@ class ServerState:
         self.graph_db_path: Path | None = None
         self.activity_log: ActivityLog | None = None
         self.activity_store: ActivityStore | None = None
-        self.mock_orchestrator: Any = None
+        self.mock_orchestrator: MockOrchestrator | None = None
 
     def reset(self) -> None:
         """Reset all state to defaults."""
@@ -435,12 +436,12 @@ def get_activity_store() -> ActivityStore | None:
     return _state.activity_store
 
 
-def get_mock_orchestrator() -> Any:
+def get_mock_orchestrator() -> MockOrchestrator | None:
     """Get the mock orchestrator instance (if running)."""
     return _state.mock_orchestrator
 
 
-def set_mock_orchestrator(orch: Any) -> None:
+def set_mock_orchestrator(orch: MockOrchestrator | None) -> None:
     """Store the mock orchestrator for MCP tool access."""
     _state.mock_orchestrator = orch
 
