@@ -112,7 +112,13 @@ If verification fails: increment attempts, log the failure, retry from ENHANCE (
    - `git add examples/{app}/` (and any changed src/ files)
    - Commit: `fix({app}): {description} — auto-verified`
    - Do NOT push — accumulate commits for human review
-4. Move to next gap (return to OBSERVE)
+4. **Check for new issues:**
+   - Run `gh issue list --state open --limit 5 --json number,title,labels --jq '.[] | "#\(.number) \(.title)"'`
+   - If new issues exist that weren't there at cycle start:
+     - Log them in `dev_docs/improve-log.md` under a `### New Issues Detected` section
+     - If any are labelled `needs-triage` or look like bugs from the three teams (CyFuture, AegisMark, Penny Dreadful), **interrupt the backlog** and switch to `/issues` mode: investigate, implement, ship, close — then resume the improvement backlog
+     - If they're feature requests or discussion issues, note them and continue the backlog
+5. Move to next gap (return to OBSERVE)
 
 ## Failure Policy
 
