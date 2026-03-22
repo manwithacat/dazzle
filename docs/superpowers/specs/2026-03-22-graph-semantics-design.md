@@ -80,7 +80,7 @@ entity Node "Node":
 | `source` | yes | — | Name of a `ref` field on this entity — the edge's origin node |
 | `target` | yes | — | Name of a `ref` field on this entity — the edge's destination node |
 | `type` | no | — | Name of a field (typically `enum`) that discriminates edge types |
-| `weight` | no | — | Name of a numeric field (`int`, `decimal`, `float`) for weighted graph algorithms |
+| `weight` | no | — | Name of a numeric field (`int`, `decimal`) for weighted graph algorithms |
 | `directed` | no | `true` | Whether the edge is directed. `false` means bidirectional traversal. |
 | `acyclic` | no | `false` | When `true`, the validator checks for potential cycles. Useful for DAGs. |
 
@@ -88,7 +88,7 @@ entity Node "Node":
 
 | Field | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `edges` | no | inferred from FK graph | Name of the edge entity that connects these nodes |
+| `edges` | yes | — | Name of the edge entity that connects these nodes |
 | `display` | no | standard fallback chain | Field to use as the node label in graph serialization |
 
 ### Heterogeneous Graphs
@@ -119,7 +119,7 @@ This creates a bipartite graph — authors and works as different node types, co
 | `source:` / `target:` field doesn't exist on entity | `graph_edge source 'x' is not a field on EntityName` |
 | `source:` / `target:` field isn't a `ref` type | `graph_edge source must be a ref field, got 'str'` |
 | `weight:` field doesn't exist | `graph_edge weight 'x' is not a field on EntityName` |
-| `weight:` field isn't numeric | `graph_edge weight must be int, decimal, or float` |
+| `weight:` field isn't numeric | `graph_edge weight must be int or decimal` |
 | `type:` field doesn't exist | `graph_edge type 'x' is not a field on EntityName` |
 | `graph_node: edges:` references non-existent entity | `graph_node edges 'X' is not a defined entity` |
 | `graph_node: edges:` entity has no `graph_edge:` block | `graph_node edges 'X' does not declare graph_edge:` |
