@@ -153,7 +153,7 @@ def _field_to_column(
         kwargs["nullable"] = not field.required
 
     # Unique
-    if field.unique:
+    if getattr(field, "is_unique", False) or getattr(field, "unique", False):
         kwargs["unique"] = True
 
     # Default

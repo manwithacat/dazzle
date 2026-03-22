@@ -84,8 +84,8 @@ class RelationRegistry:
         registry = cls()
 
         for entity in entities:
-            # Register explicit relations
-            for rel in entity.relations:
+            # Register explicit relations (if EntitySpec has .relations)
+            for rel in getattr(entity, "relations", []):
                 info = RelationInfo(
                     name=rel.name,
                     from_entity=entity.name,
