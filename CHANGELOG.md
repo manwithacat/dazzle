@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.2] - 2026-03-22
+
+### Fixed
+- Legacy scope condition path (via clauses) now catches exceptions instead of 500 (#617)
+- Graph materialization SQL uses `quote_identifier` for defense-in-depth
+
 ## [0.46.1] - 2026-03-22
 
 ### Added
