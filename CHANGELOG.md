@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.5] - 2026-03-22
+
+### Added
+- Graph algorithms: shortest path + connected components endpoints (#619 Phase 4)
+- `GraphMaterializer` — on-demand DB → NetworkX graph materialization
+- Domain-scoped algorithms via filter params (`?work_id=uuid`) for partitioned graphs
+- NetworkX as optional dependency (`pip install dazzle-dsl[graph]`)
+
 ## [0.45.4] - 2026-03-22
 
 ### Added
