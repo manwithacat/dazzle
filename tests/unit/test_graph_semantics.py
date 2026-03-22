@@ -454,3 +454,193 @@ class TestGraphValidationErrors:
         )
         errors, _ = validate_graph_declarations(_make_appspec([node, edge]))
         assert errors == []
+
+
+class TestGraphValidationWarnings:
+    """Advisory warnings (non-blocking)."""
+
+    def test_heterogeneous_graph_warning(self) -> None:
+        edge = _make_entity(
+            "AuthorWork",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="author",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Author"),
+                ),
+                ir.FieldSpec(
+                    name="work",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Work"),
+                ),
+            ],
+            graph_edge=ir.GraphEdgeSpec(source="author", target="work"),
+        )
+        author = _make_entity("Author")
+        work = _make_entity("Work")
+        _, warnings = validate_graph_declarations(_make_appspec([author, work, edge]))
+        assert any("Heterogeneous graph" in w for w in warnings)
+
+    def test_no_access_control_warning(self) -> None:
+        edge = _make_entity(
+            "Edge",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="src",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+                ir.FieldSpec(
+                    name="tgt",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+            ],
+            graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
+        )
+        node = _make_entity("Node")
+        _, warnings = validate_graph_declarations(_make_appspec([node, edge]))
+        assert any("no access control" in w for w in warnings)
+
+    def test_graph_node_no_display_warning(self) -> None:
+        edge = _make_entity(
+            "Edge",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="src",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+                ir.FieldSpec(
+                    name="tgt",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+            ],
+            graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
+        )
+        node = _make_entity(
+            "Node",
+            graph_node=ir.GraphNodeSpec(edge_entity="Edge"),
+        )
+        _, warnings = validate_graph_declarations(_make_appspec([node, edge]))
+        assert any("no display field" in w for w in warnings)
+
+    def test_acyclic_warning(self) -> None:
+        edge = _make_entity(
+            "Edge",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="src",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+                ir.FieldSpec(
+                    name="tgt",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+            ],
+            graph_edge=ir.GraphEdgeSpec(source="src", target="tgt", acyclic=True),
+        )
+        node = _make_entity("Node")
+        _, warnings = validate_graph_declarations(_make_appspec([node, edge]))
+        assert any("acyclic declared" in w for w in warnings)
+
+
+class TestGraphLintHints:
+    """Extended lint suggestions for graph patterns."""
+
+    def test_entity_looks_like_edge_hint(self) -> None:
+        """Entity with 2+ refs to the same entity should suggest graph_edge:."""
+        from dazzle.core.validator import extended_lint
+
+        entity = _make_entity(
+            "NodeEdge",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="source_node",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+                ir.FieldSpec(
+                    name="target_node",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+            ],
+        )
+        node = _make_entity("Node")
+        appspec = _make_appspec([node, entity])
+        warnings = extended_lint(appspec)
+        assert any("looks like a graph edge" in w for w in warnings)
+
+    def test_no_hint_when_graph_edge_present(self) -> None:
+        """No suggestion if entity already has graph_edge:."""
+        from dazzle.core.validator import extended_lint
+
+        entity = _make_entity(
+            "NodeEdge",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="source_node",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+                ir.FieldSpec(
+                    name="target_node",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+            ],
+            graph_edge=ir.GraphEdgeSpec(source="source_node", target="target_node"),
+        )
+        node = _make_entity("Node")
+        appspec = _make_appspec([node, entity])
+        warnings = extended_lint(appspec)
+        assert not any("looks like a graph edge" in w for w in warnings)
+
+    def test_suggest_graph_node_on_target(self) -> None:
+        """Edge entity targeting Node without graph_node: triggers hint."""
+        from dazzle.core.validator import extended_lint
+
+        edge = _make_entity(
+            "NodeEdge",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="src",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+                ir.FieldSpec(
+                    name="tgt",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+            ],
+            graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
+        )
+        node = _make_entity("Node")  # no graph_node
+        appspec = _make_appspec([node, edge])
+        warnings = extended_lint(appspec)
+        assert any("consider adding graph_node:" in w for w in warnings)
+
+    def test_no_graph_node_hint_when_present(self) -> None:
+        """No suggestion if target entity already has graph_node:."""
+        from dazzle.core.validator import extended_lint
+
+        edge = _make_entity(
+            "NodeEdge",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="src",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+                ir.FieldSpec(
+                    name="tgt",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Node"),
+                ),
+            ],
+            graph_edge=ir.GraphEdgeSpec(source="src", target="tgt"),
+        )
+        node = _make_entity(
+            "Node",
+            graph_node=ir.GraphNodeSpec(edge_entity="NodeEdge"),
+        )
+        appspec = _make_appspec([node, edge])
+        warnings = extended_lint(appspec)
+        assert not any("consider adding graph_node:" in w for w in warnings)

@@ -1692,6 +1692,50 @@ def _lint_modeling_anti_patterns(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def _lint_graph_edge_suggestions(appspec: ir.AppSpec) -> list[str]:
+    """Suggest graph_edge: for entities with 2+ ref fields to the same entity."""
+    warnings: list[str] = []
+    for entity in appspec.domain.entities:
+        if entity.graph_edge is not None:
+            continue
+        ref_targets: dict[str, int] = {}
+        for field in entity.fields:
+            if field.type.kind == ir.FieldTypeKind.REF and field.type.ref_entity:
+                ref_targets[field.type.ref_entity] = ref_targets.get(field.type.ref_entity, 0) + 1
+        for target, count in ref_targets.items():
+            if count >= 2:
+                warnings.append(
+                    f"Entity '{entity.name}' looks like a graph edge — "
+                    f"has {count} ref fields to '{target}'. "
+                    f"Consider adding graph_edge:"
+                )
+                break
+    return warnings
+
+
+def _lint_graph_node_suggestions(appspec: ir.AppSpec) -> list[str]:
+    """Suggest graph_node: for entities targeted by graph_edge: declarations."""
+    warnings: list[str] = []
+    entity_map = {e.name: e for e in appspec.domain.entities}
+    # Track which entities we've already warned about
+    warned: set[str] = set()
+    for entity in appspec.domain.entities:
+        if entity.graph_edge is None:
+            continue
+        field_map = {f.name: f for f in entity.fields}
+        for field_name in (entity.graph_edge.source, entity.graph_edge.target):
+            field = field_map.get(field_name)
+            if field and field.type.ref_entity:
+                target_ent = entity_map.get(field.type.ref_entity)
+                if target_ent and target_ent.graph_node is None and target_ent.name not in warned:
+                    warnings.append(
+                        f"'{entity.name}' targets '{target_ent.name}' — "
+                        f"consider adding graph_node: for discoverability"
+                    )
+                    warned.add(target_ent.name)
+    return warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """Extended lint rules for code quality.
 
@@ -1710,6 +1754,8 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_integration_bindings(appspec))
     warnings.extend(_lint_process_effects(appspec))
     warnings.extend(_lint_modeling_anti_patterns(appspec))
+    warnings.extend(_lint_graph_edge_suggestions(appspec))
+    warnings.extend(_lint_graph_node_suggestions(appspec))
     return warnings
 
 
