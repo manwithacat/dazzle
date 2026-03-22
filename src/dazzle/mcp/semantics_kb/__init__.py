@@ -251,9 +251,21 @@ ALIASES = {
     "rbac_runtime": "permit_runtime",
     "visible": "visible_directive",
     "field_visibility": "visible_directive",
+    "visible_runtime": "visible_runtime",
+    "visible_enforcement": "visible_runtime",
+    "section_visibility": "visible_runtime",
+    "workspace_rendering": "workspace_rendering",
+    "workspace_regions": "workspace_rendering",
+    "region_rendering": "workspace_rendering",
+    "region_context": "workspace_rendering",
+    "htmx_regions": "workspace_rendering",
     "template_variables": "template_context",
     "template_context": "template_context",
     "jinja_context": "template_context",
+    "template_flow": "template_variable_flow",
+    "variable_availability": "template_variable_flow",
+    "jinja_variables": "template_variable_flow",
+    "include_context": "template_variable_flow",
 }
 
 

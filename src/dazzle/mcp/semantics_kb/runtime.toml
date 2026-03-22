@@ -35,8 +35,8 @@ limitations = """
   display_field, never FK fields.
 """
 implemented_by = [
-    "dazzle_back.runtime.relation_loader._resolve_display_name",
-    "dazzle_back.runtime.relation_loader.expand_relations",
+    {fn = "dazzle_back.runtime.relation_loader._resolve_display_name", purpose = "resolves display_field to a scalar value via the fallback chain"},
+    {fn = "dazzle_back.runtime.relation_loader.expand_relations", purpose = "expands FK references on query results, calling _resolve_display_name"},
 ]
 known_issues = ["#590: FK display_field resolves to UUID at depth > 1"]
 syntax = """
@@ -87,16 +87,16 @@ limitations = """
   is not yet implemented — only scope:all override works for dual-role
 """
 implemented_by = [
-    "dazzle_back.runtime.route_generator._resolve_scope_filters",
-    "dazzle_back.runtime.route_generator._resolve_predicate_filters",
-    "dazzle_back.runtime.route_generator._list_handler_body",
-    "dazzle_back.runtime.workspace_rendering._apply_workspace_scope_filters",
-    "dazzle_back.runtime.predicate_compiler.compile_predicate",
-    "dazzle.core.ir.predicate_builder.build_scope_predicate",
+    {fn = "dazzle_back.runtime.route_generator._resolve_scope_filters", purpose = "collects matching scope rules, returns most-permissive filter or None for deny"},
+    {fn = "dazzle_back.runtime.route_generator._resolve_predicate_filters", purpose = "compiles ScopePredicate to SQL and resolves UserAttrRef markers"},
+    {fn = "dazzle_back.runtime.route_generator._list_handler_body", purpose = "applies scope filters to entity list API queries"},
+    {fn = "dazzle_back.runtime.workspace_rendering._apply_workspace_scope_filters", purpose = "applies scope filters to workspace region data queries"},
+    {fn = "dazzle_back.runtime.predicate_compiler.compile_predicate", purpose = "converts ScopePredicate tree to (sql, params) WHERE fragment"},
+    {fn = "dazzle.core.ir.predicate_builder.build_scope_predicate", purpose = "converts DSL ConditionExpr to typed ScopePredicate algebra"},
 ]
 known_issues = [
     "#595: Scope predicates not applied on API list (fixed: _noauth_handler)",
-    "#604: Dual-role users get wrong scope (fixed: most-permissive-wins)",
+    "#604: Dual-role users get wrong scope (fixed: most-permissive-wins + Tautology detection)",
     "#607: No scope: blocks returned 0 rows (fixed: pass-through)",
     "#591: Null FK poisoning in scope evaluation",
 ]
@@ -490,4 +490,174 @@ Backward compatibility:
 implemented_by = [
     "dazzle_ui.runtime.static.js.dz-alpine.js",
     "dazzle_ui.templates.base.html (script loading order)",
+]
+
+# =============================================================================
+# Visible Directive (3 code paths)
+# =============================================================================
+
+[concepts.visible_runtime]
+category = "Runtime Contract"
+definition = """
+The `visible:` directive has THREE completely different code paths depending
+on where it appears. This is the most common source of confusion in the
+RBAC/UI layer — each path has different evaluation timing and enforcement.
+"""
+runtime_behaviour = """
+Path 1 — Field-level visible: on form/detail surfaces
+  Where: `visible: role(teacher)` on a surface element (field)
+  Evaluated by: template_compiler._should_show_element()
+  When: at template compilation time (server-side render)
+  Effect: field is omitted from the rendered HTML
+  Bypass: API JSON response still includes the field — visible: is UI-only
+
+Path 2 — Section-level visible: on surface sections
+  Where: `visible: role(admin)` on a surface section
+  Evaluated by: template_compiler._compile_form_surface() section loop
+  When: at template compilation time
+  Effect: entire section heading + all fields in section are omitted
+
+Path 3 — List column visible: on list surface elements
+  Where: `visible: role(viewer)` on a column in a list surface
+  Evaluated by: page_routes._build_table_columns()
+  When: at page route setup time (not per-request — cached)
+  Effect: column is excluded from table.columns passed to template
+  IMPORTANT: once columns are built, they're the same for all users.
+  Per-role column filtering requires the condition to be checked at
+  render time, not at route setup time.
+"""
+limitations = """
+- visible: is UI-only. It does NOT hide data from API responses.
+- For API-level field hiding, use view-based projections (select_fields).
+- List column visible: was not enforced per-role until #585 fix.
+- The evaluation context varies: form/detail have the current user's
+  roles available, but list column setup may not (route setup vs request).
+"""
+implemented_by = [
+    {fn = "dazzle_ui.converters.template_compiler._should_show_element", purpose = "evaluates visible: condition on individual form/detail fields"},
+    {fn = "dazzle_ui.runtime.page_routes._build_table_columns", purpose = "filters list columns by visible: condition at route setup"},
+    {fn = "dazzle_ui.converters.template_compiler._compile_form_surface", purpose = "iterates sections and calls _should_show_element per field"},
+]
+known_issues = [
+    "#585: visible: on list columns rendered for all roles (not enforced)",
+    "#587: visible: evaluates to False for ALL roles (regression)",
+]
+
+# =============================================================================
+# Workspace Region Rendering
+# =============================================================================
+
+[concepts.workspace_rendering]
+category = "Runtime Contract"
+definition = """
+How workspace regions are built, data is fetched, and templates are rendered.
+Workspaces are the primary UX surface for authenticated users.
+"""
+runtime_behaviour = """
+Build phase (server startup / page request):
+  1. workspace_renderer.build_workspace_context(workspace_spec, appspec)
+     → builds RegionContext for each region
+  2. For each region:
+     a. Resolves data source → entity endpoint URL
+     b. Resolves action surface → action_url pattern (/{slug}/{id})
+     c. For cross-entity actions, stores FK field name in action_id_field
+     d. Builds source tabs for multi-source tabbed regions
+
+Render phase (HTMX request to region endpoint):
+  1. workspace_rendering._apply_workspace_scope_filters()
+     → applies scope predicates (same logic as entity list API)
+  2. Repository.list() with scope filters → paginated data
+  3. Jinja2 template renders region type (list, grid, kanban, etc.)
+
+Action URL interpolation:
+  Templates use: action_url | replace('{id}', item[action_id_field])
+  For same-entity actions: action_id_field = "id" (default)
+  For cross-entity actions: action_id_field = FK field name
+
+HTMX loading pattern:
+  Each region has hx-get="{endpoint}" hx-trigger="load" — regions
+  load their data asynchronously after the workspace shell renders.
+  This means workspace load is fast (shell only) but each region
+  makes a separate HTTP request.
+"""
+limitations = """
+- Region data is fetched per-region (N+1 HTTP requests for N regions)
+- Scope filters on regions must match entity list API scope filters
+  (same _resolve_scope_filters function) — if they diverge, workspace
+  shows different data than entity list page
+- Action URLs for cross-entity navigations require the source entity
+  to have a FK field pointing at the target entity
+"""
+implemented_by = [
+    {fn = "dazzle_ui.runtime.workspace_renderer.build_workspace_context", purpose = "builds RegionContext list from workspace spec and appspec"},
+    {fn = "dazzle_ui.runtime.workspace_renderer._entity_to_app_url", purpose = "generates /app/{slug}/{id} URL pattern for entity detail"},
+    {fn = "dazzle_ui.runtime.workspace_renderer._resolve_fk_field", purpose = "finds FK field linking source entity to target for cross-entity actions"},
+    {fn = "dazzle_back.runtime.workspace_rendering._apply_workspace_scope_filters", purpose = "applies scope predicates to region data queries"},
+    {fn = "dazzle_back.runtime.workspace_rendering._fetch_region_data", purpose = "fetches paginated data for a single region"},
+]
+known_issues = [
+    "#614: action URLs showed {manuscript} literal (fixed: action_id_field)",
+    "#600: Alpine JS regression broke workspace editor save",
+    "#615: CDN bundle missing workspace-editor.js",
+]
+
+# =============================================================================
+# Template Variable Flow
+# =============================================================================
+
+[concepts.template_variable_flow]
+category = "Runtime Contract"
+definition = """
+How variables flow from Python route handlers through Jinja2 template
+rendering. Understanding this is essential for debugging 'variable not
+found' errors and template rendering issues.
+"""
+runtime_behaviour = """
+Variable sources (in priority order — later overrides earlier):
+  1. Global template context (template_context.py PageContext):
+     app_name, is_authenticated, user_name, user_email, current_route
+
+  2. Route handler context (added per-route):
+     Entity list: table (TableContext with columns, rows, pagination)
+     Entity detail: detail (DetailContext with item, fields, related_tabs)
+     Entity form: form (FormContext with fields, sections, action_url)
+     Workspace: regions (list of RegionContext)
+
+  3. Jinja2 {% include %} context:
+     When templates use {% include 'fragment.html' with context %}, the
+     parent's variables are available in the child. When using
+     {% include 'fragment.html' %} (without 'with context'), only
+     explicitly passed variables are available.
+
+  4. Template macro arguments:
+     {% from 'macros/form_field.html' import render_field %}
+     {{ render_field(field, initial_values) }}
+     Only the passed arguments are available inside the macro.
+
+Common variable availability by template:
+  base.html:           app_name, _htmx_partial, _dazzle_version
+  app_shell.html:      + nav_items, nav_groups, is_authenticated
+  filterable_table:    + table (TableContext)
+  detail_view:         + detail (DetailContext)
+  form:                + form (FormContext)
+  workspace regions:   + items, columns, action_url, action_id_field,
+                         entity_name, empty_message, display_key
+  form_field macro:    field, values (explicitly passed)
+"""
+limitations = """
+- Workspace region templates receive variables from the HTMX endpoint
+  response, not from the page load. If a variable is missing, check
+  the region endpoint handler, not the workspace page handler.
+- Template inheritance ({% extends %}) passes all parent blocks but
+  not template variables. Variables must be set in the child template's
+  render context.
+- HTMX partial responses (_htmx_partial=True) skip the <html><head>
+  wrapper — variables set in <head> blocks are not available.
+"""
+implemented_by = [
+    {fn = "dazzle_ui.runtime.template_context.PageContext", purpose = "base template context with app-wide variables"},
+    {fn = "dazzle_ui.runtime.page_routes._build_table_context", purpose = "builds TableContext for entity list pages"},
+    {fn = "dazzle_ui.runtime.page_routes._build_detail_context", purpose = "builds DetailContext for entity detail pages"},
+    {fn = "dazzle_ui.converters.template_compiler._compile_form_surface", purpose = "builds FormContext for create/edit pages"},
+    {fn = "dazzle_back.runtime.workspace_rendering._build_region_template_context", purpose = "builds variable dict for individual region HTMX responses"},
 ]
