@@ -67,6 +67,9 @@ class EntityParserMixin:
         seed_template: ir.SeedTemplateSpec | None = None
         # v0.44.0: Explicit display field for FK references
         display_field: str | None = None
+        # v0.46.0: Graph semantics (#619)
+        graph_edge: ir.GraphEdgeSpec | None = None
+        graph_node: ir.GraphNodeSpec | None = None
 
         fields: list[ir.FieldSpec] = []
         computed_fields: list[ir.ComputedFieldSpec] = []
@@ -429,6 +432,146 @@ class EntityParserMixin:
                 self.skip_newlines()
                 continue
 
+            # v0.46.0: Check for graph_edge: block (#619)
+            if self.match(TokenType.GRAPH_EDGE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                ge_source: str | None = None
+                ge_target: str | None = None
+                ge_type: str | None = None
+                ge_weight: str | None = None
+                ge_directed: bool = True
+                ge_acyclic: bool = False
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+
+                    if self.match(TokenType.SOURCE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        ge_source = self.expect_identifier_or_keyword().value
+                    elif self.match(TokenType.TARGET):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        ge_target = self.expect_identifier_or_keyword().value
+                    elif self.match(TokenType.IDENTIFIER) and self.current_token().value == "type":
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        ge_type = self.expect_identifier_or_keyword().value
+                    elif self.match(TokenType.WEIGHT):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        ge_weight = self.expect_identifier_or_keyword().value
+                    elif self.match(TokenType.DIRECTED):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        if self.match(TokenType.TRUE):
+                            self.advance()
+                            ge_directed = True
+                        elif self.match(TokenType.FALSE):
+                            self.advance()
+                            ge_directed = False
+                        else:
+                            raise make_parse_error(
+                                "Expected true or false for directed",
+                                self.file,
+                                self.current_token().line,
+                            )
+                    elif self.match(TokenType.ACYCLIC):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        if self.match(TokenType.TRUE):
+                            self.advance()
+                            ge_acyclic = True
+                        elif self.match(TokenType.FALSE):
+                            self.advance()
+                            ge_acyclic = False
+                        else:
+                            raise make_parse_error(
+                                "Expected true or false for acyclic",
+                                self.file,
+                                self.current_token().line,
+                            )
+                    else:
+                        raise make_parse_error(
+                            f"Unexpected token in graph_edge: block: {self.current_token().value}",
+                            self.file,
+                            self.current_token().line,
+                        )
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+
+                if ge_source is None or ge_target is None:
+                    raise make_parse_error(
+                        "graph_edge: requires both source and target fields",
+                        self.file,
+                        self.current_token().line,
+                    )
+
+                graph_edge = ir.GraphEdgeSpec(
+                    source=ge_source,
+                    target=ge_target,
+                    type_field=ge_type,
+                    weight_field=ge_weight,
+                    directed=ge_directed,
+                    acyclic=ge_acyclic,
+                )
+                self.skip_newlines()
+                continue
+
+            # v0.46.0: Check for graph_node: block (#619)
+            if self.match(TokenType.GRAPH_NODE):
+                self.advance()
+                self.expect(TokenType.COLON)
+                self.skip_newlines()
+                self.expect(TokenType.INDENT)
+
+                gn_edges: str | None = None
+                gn_display: str | None = None
+
+                while not self.match(TokenType.DEDENT):
+                    self.skip_newlines()
+                    if self.match(TokenType.DEDENT):
+                        break
+
+                    if self.match(TokenType.EDGES):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        gn_edges = self.expect_identifier_or_keyword().value
+                    elif self.match(TokenType.DISPLAY):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        gn_display = self.expect_identifier_or_keyword().value
+                    else:
+                        raise make_parse_error(
+                            f"Unexpected token in graph_node: block: {self.current_token().value}",
+                            self.file,
+                            self.current_token().line,
+                        )
+                    self.skip_newlines()
+
+                self.expect(TokenType.DEDENT)
+
+                if gn_edges is None:
+                    raise make_parse_error(
+                        "graph_node: requires an edges field",
+                        self.file,
+                        self.current_token().line,
+                    )
+
+                graph_node = ir.GraphNodeSpec(
+                    edge_entity=gn_edges,
+                    display=gn_display,
+                )
+                self.skip_newlines()
+                continue
+
             # Check for transitions: block (state machines)
             if self.match(TokenType.TRANSITIONS):
                 self.advance()
@@ -593,6 +736,8 @@ class EntityParserMixin:
             publishes=publishes,
             seed_template=seed_template,
             display_field=display_field,
+            graph_edge=graph_edge,
+            graph_node=graph_node,
             source=loc,
         )
 
