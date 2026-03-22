@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.2] - 2026-03-22
+
+### Added
+- `graph_edge:` and `graph_node:` blocks on entities — formal graph semantics declarations (#619)
+- Graph validation: field references, type checks, cross-entity consistency
+- Lint hints: suggest `graph_edge:` for entities with 2+ refs to same entity, suggest `graph_node:` for targeted entities
+- Grammar reference updated with graph semantics BNF
+
 ## [0.45.1] - 2026-03-22
 
 ### Fixed
