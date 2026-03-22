@@ -1021,6 +1021,8 @@ def create_list_handler(
     filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
     fk_graph: Any | None = None,
+    graph_spec: tuple[Any, Any | None] | None = None,
+    all_services: dict[str, Any] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for list operations with optional access control.
 
@@ -1101,6 +1103,8 @@ def create_list_handler(
                 filter_fields=filter_fields,
                 ref_targets=ref_targets,
                 fk_graph=fk_graph,
+                graph_spec=graph_spec,
+                all_services=all_services,
             )
 
         _auth_handler.__annotations__ = {
@@ -1150,6 +1154,8 @@ def create_list_handler(
             filter_fields=filter_fields,
             ref_targets=ref_targets,
             fk_graph=fk_graph,
+            graph_spec=graph_spec,
+            all_services=all_services,
         )
 
     _noauth_handler.__annotations__ = {
@@ -1358,6 +1364,8 @@ async def _list_handler_body(
     filter_fields: list[str] | None = None,
     ref_targets: dict[str, str] | None = None,
     fk_graph: Any | None = None,
+    graph_spec: tuple[Any, Any | None] | None = None,
+    all_services: dict[str, Any] | None = None,
 ) -> Any:
     """Shared list handler logic for both auth and no-auth paths."""
     from dazzle_back.runtime.condition_evaluator import (
@@ -1952,6 +1960,7 @@ class RouteGenerator:
         entity_audit_configs: dict[str, Any] | None = None,
         entity_ref_targets: dict[str, dict[str, str]] | None = None,
         fk_graph: Any | None = None,
+        entity_graph_specs: dict[str, tuple[Any, Any | None]] | None = None,
     ):
         """
         Initialize the route generator.
@@ -1996,6 +2005,7 @@ class RouteGenerator:
         self.entity_audit_configs = entity_audit_configs or {}
         self.entity_ref_targets = entity_ref_targets or {}
         self.fk_graph = fk_graph
+        self.entity_graph_specs = entity_graph_specs or {}
         self._router = _APIRouter()
 
     def generate_route(
@@ -2121,6 +2131,8 @@ class RouteGenerator:
             includes = self.entity_auto_includes.get(entity_name or "")
             # Get HTMX rendering metadata (columns, detail URL, etc.)
             _htmx = self.entity_htmx_meta.get(entity_name or "", {})
+            # Get graph metadata for edge entities (#619 Phase 2)
+            _graph_spec = self.entity_graph_specs.get(entity_name or "")
             handler = create_list_handler(
                 service,
                 model,
@@ -2141,6 +2153,8 @@ class RouteGenerator:
                 filter_fields=_filter_fields,
                 ref_targets=self.entity_ref_targets.get(entity_name or ""),
                 fk_graph=self.fk_graph,
+                graph_spec=_graph_spec,
+                all_services=self.services,
             )
             self._add_route(endpoint, handler, response_model=None)
 

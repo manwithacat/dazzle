@@ -776,6 +776,26 @@ class DazzleBackendApp:
         if _fk_graph is not None:
             self._verify_scope_predicates(cedar_access_specs, _fk_graph)
 
+        # Build graph metadata for edge entities (#619 Phase 2)
+        entity_graph_specs: dict = {}
+        for ir_entity in self._appspec.domain.entities:
+            if ir_entity.graph_edge is not None:
+                node_specs: dict = {}
+                for field_name in (ir_entity.graph_edge.source, ir_entity.graph_edge.target):
+                    ir_field = next((f for f in ir_entity.fields if f.name == field_name), None)
+                    if ir_field and ir_field.type.ref_entity:
+                        ref_ent = next(
+                            (
+                                e
+                                for e in self._appspec.domain.entities
+                                if e.name == ir_field.type.ref_entity
+                            ),
+                            None,
+                        )
+                        if ref_ent and ref_ent.graph_node:
+                            node_specs[ir_field.type.ref_entity] = ref_ent.graph_node
+                entity_graph_specs[ir_entity.name] = (ir_entity.graph_edge, node_specs)
+
         route_generator = RouteGenerator(
             services=self._services,
             models=self._models,
@@ -795,6 +815,7 @@ class DazzleBackendApp:
             entity_audit_configs=entity_audit_configs,
             entity_ref_targets=self._entity_ref_targets,
             fk_graph=_fk_graph,
+            entity_graph_specs=entity_graph_specs,
         )
         router = route_generator.generate_all_routes(
             self._endpoint_specs,
