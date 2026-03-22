@@ -1492,6 +1492,77 @@ async def _list_handler_body(
         result["items"] = filtered_items
         result["total"] = len(filtered_items)
 
+    # Graph format serialization (#619 Phase 2)
+    format_param = request.query_params.get("format")
+    if format_param and format_param != "raw":
+        from starlette.responses import JSONResponse
+
+        if format_param not in ("cytoscape", "d3"):
+            return JSONResponse(
+                {"detail": "Invalid format. Supported: cytoscape, d3, raw"},
+                status_code=400,
+            )
+        if graph_spec is None:
+            return JSONResponse(
+                {"detail": f"Entity '{entity_name}' does not declare graph_edge:"},
+                status_code=400,
+            )
+
+        from dazzle_back.runtime.graph_serializer import GraphSerializer
+
+        graph_edge_spec, node_specs = graph_spec
+
+        # Extract items as dicts
+        items = result.get("items", []) if isinstance(result, dict) else []
+        edge_dicts = []
+        for item in items:
+            if hasattr(item, "model_dump"):
+                edge_dicts.append(item.model_dump(mode="json"))
+            elif isinstance(item, dict):
+                edge_dicts.append(item)
+
+        # Collect node IDs grouped by target entity type
+        node_ids_by_entity: dict[str, set[str]] = {}
+        for edge in edge_dicts:
+            for field_name in (graph_edge_spec.source, graph_edge_spec.target):
+                ref_id = edge.get(field_name)
+                if ref_id is None:
+                    continue
+                ref_entity = (ref_targets or {}).get(field_name, "")
+                if ref_entity:
+                    node_ids_by_entity.setdefault(ref_entity, set()).add(str(ref_id))
+
+        # Batch-fetch nodes per entity type
+        all_nodes: list[dict] = []
+        for ref_entity_name, ids in node_ids_by_entity.items():
+            node_service = (all_services or {}).get(ref_entity_name)
+            if node_service is None:
+                continue
+            try:
+                node_result = await node_service.execute(
+                    operation="list",
+                    page=1,
+                    page_size=len(ids),
+                    filters={"id__in": list(ids)},
+                )
+                node_items = node_result.get("items", []) if isinstance(node_result, dict) else []
+                for ni in node_items:
+                    if hasattr(ni, "model_dump"):
+                        all_nodes.append(ni.model_dump(mode="json"))
+                    elif isinstance(ni, dict):
+                        all_nodes.append(ni)
+            except Exception:
+                pass  # Node fetch failure — edges returned, nodes omitted
+
+        # Pick graph_node spec (first available for the serializer)
+        gn_spec = next(iter(node_specs.values()), None) if node_specs else None
+        serializer = GraphSerializer(graph_edge=graph_edge_spec, graph_node=gn_spec)
+
+        if format_param == "cytoscape":
+            return serializer.to_cytoscape(edge_dicts, all_nodes)
+        else:
+            return serializer.to_d3(edge_dicts, all_nodes)
+
     # Browser navigation: redirect to UI list page (#356)
     if _wants_html(request) and not _is_htmx_request(request):
         from starlette.responses import RedirectResponse
