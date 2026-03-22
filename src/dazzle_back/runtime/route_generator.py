@@ -1263,16 +1263,24 @@ def _resolve_scope_filters(
 
         # ---- Legacy condition-tree path (fallback) --------------------------
         if condition is not None:
-            filters: dict[str, Any] = {}
-            _extract_condition_filters(
-                condition,
-                user_id,
-                filters,
-                logging.getLogger(__name__),
-                auth_context,
-                ref_targets,
-            )
-            return filters
+            try:
+                filters: dict[str, Any] = {}
+                _extract_condition_filters(
+                    condition,
+                    user_id,
+                    filters,
+                    logging.getLogger(__name__),
+                    auth_context,
+                    ref_targets,
+                )
+                return filters
+            except Exception:
+                logging.getLogger(__name__).warning(
+                    "Legacy scope condition resolution failed for %s — denying",
+                    entity_name,
+                    exc_info=True,
+                )
+                return None
 
     return {}  # Matched but no resolvable condition — treat as no filter
 
@@ -2053,6 +2061,7 @@ async def _materialize_graph(
     Returns (nx_graph, node_dicts, edge_dicts).
     """
     from dazzle_back.runtime.graph_materializer import GraphMaterializer
+    from dazzle_back.runtime.query_builder import quote_identifier
 
     filter_sql = ""
     filter_params: dict[str, Any] = {}
@@ -2060,17 +2069,22 @@ async def _materialize_graph(
         clauses = []
         for i, (key, value) in enumerate(filters.items()):
             param_name = f"filter_{i}"
-            clauses.append(f'"{key}" = %({param_name})s')
+            clauses.append(f"{quote_identifier(key)} = %({param_name})s")
             filter_params[param_name] = value
         filter_sql = " WHERE " + " AND ".join(clauses)
 
     src = graph_edge_spec.source
     tgt = graph_edge_spec.target
 
+    # Table names are DSL-derived identifiers (not user input), but we
+    # quote them properly via quote_identifier for defense-in-depth.
+    edge_tbl = quote_identifier(edge_table)
+    node_tbl = quote_identifier(node_table)
+
     with db_manager.connection() as conn:
         cursor = conn.cursor()
 
-        edge_sql = f'SELECT * FROM "{edge_table}"{filter_sql}'
+        edge_sql = f"SELECT * FROM {edge_tbl}{filter_sql}"  # nosemgrep
         cursor.execute(edge_sql, filter_params)
         edges = cursor.fetchall()
 
@@ -2083,7 +2097,7 @@ async def _materialize_graph(
 
         nodes: list[dict[str, Any]] = []
         if node_ids:
-            node_sql = f'SELECT * FROM "{node_table}" WHERE "id" IN %(node_ids)s'
+            node_sql = f'SELECT * FROM {node_tbl} WHERE "id" IN %(node_ids)s'  # nosemgrep
             cursor.execute(node_sql, {"node_ids": tuple(node_ids)})
             nodes = cursor.fetchall()
 
