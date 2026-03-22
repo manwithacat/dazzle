@@ -32,13 +32,6 @@ from dazzle_ui.runtime.dev_server import (
     run_dev_server_from_dict,
     run_dev_server_from_json,
 )
-from dazzle_ui.runtime.docker import (
-    DockerRunConfig,
-    DockerRunner,
-    is_docker_available,
-    run_in_docker,
-    stop_docker_container,
-)
 from dazzle_ui.runtime.realtime_client import (
     generate_realtime_init_js,
     get_realtime_client_js,
@@ -79,10 +72,4 @@ __all__ = [
     # Unified server (single-port FastAPI)
     "run_unified_server",
     "run_backend_only",
-    # Docker runner (docker-first infrastructure)
-    "DockerRunner",
-    "DockerRunConfig",
-    "is_docker_available",
-    "run_in_docker",
-    "stop_docker_container",
 ]
