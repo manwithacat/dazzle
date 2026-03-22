@@ -83,10 +83,19 @@ entity Ticket "Support Ticket":
   invariant: status != resolved or resolution != null
   invariant: status != closed or resolution != null
 
-  # Access control: customers see own tickets, agents see all
-  access:
-    read: created_by = current_user or role(agent) or role(manager)
-    write: role(agent) or role(manager)
+  # Access control
+  permit:
+    list: role(customer) or role(agent) or role(manager)
+    read: role(customer) or role(agent) or role(manager)
+    create: role(customer) or role(agent) or role(manager)
+    update: role(agent) or role(manager)
+    delete: role(manager)
+
+  scope:
+    list: created_by = current_user
+      for: customer
+    list: all
+      for: agent, manager
 
   index status, priority
   index created_by
@@ -105,10 +114,17 @@ entity Comment "Comment":
   is_internal: bool = false
   created_at: datetime auto_add
 
-  # Access: internal comments only visible to agents/managers
-  access:
-    read: is_internal = false or role(agent) or role(manager)
-    write: role(agent) or role(manager)
+  # Access control
+  permit:
+    list: role(customer) or role(agent) or role(manager)
+    read: role(customer) or role(agent) or role(manager)
+    create: role(customer) or role(agent) or role(manager)
+    update: role(agent) or role(manager)
+    delete: role(manager)
+
+  scope:
+    list: all
+      for: agent, manager, customer
 
 # ============================================================================
 # USER SURFACES

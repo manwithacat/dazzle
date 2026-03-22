@@ -41,10 +41,17 @@ entity System "System":
   invariant: memory_usage >= 0 and memory_usage <= 100
   invariant: error_rate >= 0 and error_rate <= 100
 
-  # Access: only operators and admins can modify
-  access:
+  # Access control
+  permit:
+    list: role(operator) or role(admin)
     read: role(operator) or role(admin)
-    write: role(admin)
+    create: role(admin)
+    update: role(admin)
+    delete: role(admin)
+
+  scope:
+    list: all
+      for: operator, admin
 
 entity Alert "Alert":
   id: uuid pk
@@ -61,10 +68,17 @@ entity Alert "Alert":
   # Invariant: acknowledged alerts must have acknowledger
   invariant: acknowledged = false or acknowledged_by != null
 
-  # Access: operators can acknowledge, admins can modify
-  access:
+  # Access control
+  permit:
+    list: role(operator) or role(admin)
     read: role(operator) or role(admin)
-    write: role(operator) or role(admin)
+    create: role(operator) or role(admin)
+    update: role(operator) or role(admin)
+    delete: role(admin)
+
+  scope:
+    list: all
+      for: operator, admin
 
 # =============================================================================
 # Persona
