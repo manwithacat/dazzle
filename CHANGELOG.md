@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-03-22
+
+### Fixed
+- CDN bundle at v0.45.0 tag missing Alpine + workspace editor — rebuilt with all components (#615, #618)
+- CSRF middleware rewritten as pure ASGI to fix body consumption (#606)
+- Scope predicate resolution: most-permissive-wins for dual-role users (#604), pass-through for no-scope entities (#607), Tautology detection (#604)
+- Graceful handling of null FK in EXISTS scope bindings (#617)
+- MCP db handlers converted to async (#609), topology/triggers import path fixed
+- `/create` guard routes registered before `/{id}` routes (#598)
+- Circular FK references demoted to warning (#608), decimal parse error improved (#610)
+- EntitySpec.relations and FieldSpec.unique API mismatches in migrate (#616)
+- Workspace action URL interpolation with cross-entity FK fields (#614)
+- Lucide sourcemap 404 in Safari stripped
+- Security test updated for CSRF middleware class rename
+- `/check` and `/ship` mypy targets aligned with CI (src/dazzle_back/)
+
+### Added
+- 15 runtime contract KB entries (display_field, scope, CSRF, request lifecycle, etc.)
+- Purpose-annotated `implemented_by` on KB concepts
+- `graph topology` operation — derive project structure from DSL
+- Knowledge effectiveness metrics in telemetry
+- `/improve` autonomous improvement loop (BDD pattern)
+- Alpine.js `$persist` plugin for localStorage state
+- Example app DSL quality improvements across 6 apps (scope blocks, workspace wiring, ux blocks)
+
+### Changed
+- dz.js fully retired — all UI state managed by Alpine.js components in dz-alpine.js
+
 ## [0.45.0] - 2026-03-21
 
 ### Added
