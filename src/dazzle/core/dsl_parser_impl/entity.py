@@ -440,6 +440,7 @@ class EntityParserMixin:
                 self.expect(TokenType.INDENT)
 
                 ge_block_line = self.current_token().line
+                ge_block_column = self.current_token().column
                 ge_source: str | None = None
                 ge_target: str | None = None
                 ge_type: str | None = None
@@ -482,6 +483,7 @@ class EntityParserMixin:
                                 "Expected true or false for directed",
                                 self.file,
                                 self.current_token().line,
+                                self.current_token().column,
                             )
                     elif self.match(TokenType.ACYCLIC):
                         self.advance()
@@ -497,12 +499,14 @@ class EntityParserMixin:
                                 "Expected true or false for acyclic",
                                 self.file,
                                 self.current_token().line,
+                                self.current_token().column,
                             )
                     else:
                         raise make_parse_error(
                             f"Unexpected token in graph_edge: block: {self.current_token().value}",
                             self.file,
                             self.current_token().line,
+                            self.current_token().column,
                         )
                     self.skip_newlines()
 
@@ -513,6 +517,7 @@ class EntityParserMixin:
                         "graph_edge: requires both source and target fields",
                         self.file,
                         ge_block_line,
+                        ge_block_column,
                     )
 
                 graph_edge = ir.GraphEdgeSpec(
@@ -534,6 +539,7 @@ class EntityParserMixin:
                 self.expect(TokenType.INDENT)
 
                 gn_block_line = self.current_token().line
+                gn_block_column = self.current_token().column
                 gn_edges: str | None = None
                 gn_display: str | None = None
 
@@ -555,6 +561,7 @@ class EntityParserMixin:
                             f"Unexpected token in graph_node: block: {self.current_token().value}",
                             self.file,
                             self.current_token().line,
+                            self.current_token().column,
                         )
                     self.skip_newlines()
 
@@ -565,6 +572,7 @@ class EntityParserMixin:
                         "graph_node: requires an edges field",
                         self.file,
                         gn_block_line,
+                        gn_block_column,
                     )
 
                 graph_node = ir.GraphNodeSpec(
