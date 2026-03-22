@@ -2000,8 +2000,107 @@ def create_custom_handler(
 
 
 # =============================================================================
-# Neighborhood graph handler (#619 Phase 3)
+# Graph helpers (#619 Phase 3–4)
 # =============================================================================
+
+
+def _check_networkx() -> bool:
+    """Return True if NetworkX is available."""
+    try:
+        import networkx  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _extract_domain_filters(request: Any, filter_fields: list[str] | None) -> dict[str, Any]:
+    """Extract domain-scope filters from query params for graph algorithms."""
+    filters: dict[str, Any] = {}
+    if not filter_fields:
+        return filters
+    reserved = {
+        "format",
+        "to",
+        "weighted",
+        "depth",
+        "page",
+        "page_size",
+        "sort",
+        "dir",
+        "search",
+        "q",
+    }
+    for key, value in request.query_params.items():
+        if key in filter_fields and key not in reserved and value:
+            filters[key] = value
+        elif key.startswith("filter[") and key.endswith("]"):
+            field = key[7:-1]
+            if field in filter_fields and value:
+                filters[field] = value
+    return filters
+
+
+async def _materialize_graph(
+    db_manager: Any,
+    node_table: str,
+    edge_table: str,
+    graph_edge_spec: Any,
+    filters: dict[str, Any] | None = None,
+) -> tuple[Any, list[dict], list[dict]]:
+    """Load nodes + edges from DB and build a NetworkX graph.
+
+    Returns (nx_graph, node_dicts, edge_dicts).
+    """
+    from dazzle_back.runtime.graph_materializer import GraphMaterializer
+
+    filter_sql = ""
+    filter_params: dict[str, Any] = {}
+    if filters:
+        clauses = []
+        for i, (key, value) in enumerate(filters.items()):
+            param_name = f"filter_{i}"
+            clauses.append(f'"{key}" = %({param_name})s')
+            filter_params[param_name] = value
+        filter_sql = " WHERE " + " AND ".join(clauses)
+
+    src = graph_edge_spec.source
+    tgt = graph_edge_spec.target
+
+    with db_manager.connection() as conn:
+        cursor = conn.cursor()
+
+        edge_sql = f'SELECT * FROM "{edge_table}"{filter_sql}'
+        cursor.execute(edge_sql, filter_params)
+        edges = cursor.fetchall()
+
+        node_ids: set[str] = set()
+        for edge in edges:
+            if edge.get(src):
+                node_ids.add(str(edge[src]))
+            if edge.get(tgt):
+                node_ids.add(str(edge[tgt]))
+
+        nodes: list[dict[str, Any]] = []
+        if node_ids:
+            node_sql = f'SELECT * FROM "{node_table}" WHERE "id" IN %(node_ids)s'
+            cursor.execute(node_sql, {"node_ids": tuple(node_ids)})
+            nodes = cursor.fetchall()
+
+    def _stringify(rows: list) -> list[dict]:  # type: ignore[type-arg]
+        result = []
+        for row in rows:
+            out = {}
+            for k, v in row.items():
+                out[k] = str(v) if hasattr(v, "hex") else v
+            result.append(out)
+        return result
+
+    str_nodes = _stringify(nodes)
+    str_edges = _stringify(edges)
+    materializer = GraphMaterializer(graph_edge=graph_edge_spec)
+    return materializer.build(str_nodes, str_edges), str_nodes, str_edges
+
 
 _VALID_GRAPH_FORMATS = {"cytoscape", "d3", "raw"}
 
@@ -2166,6 +2265,139 @@ def create_neighborhood_handler(
         "return": Any,
     }
     return _noauth_handler
+
+
+# =============================================================================
+# Algorithm endpoint handlers (#619 Phase 4)
+# =============================================================================
+
+
+def create_shortest_path_handler(
+    entity_name: str,
+    graph_edge_spec: Any,
+    graph_node_spec: Any | None,
+    node_table: str,
+    edge_table: str,
+    db_manager: Any,
+    filter_fields: list[str] | None = None,
+    optional_auth_dep: Callable[..., Any] | None = None,
+) -> Callable[..., Any]:
+    """Create handler for GET /{entity}/{id}/graph/shortest-path?to={target_id}."""
+
+    async def _handler(
+        request: Request,
+        id: UUID,
+        to: UUID = Query(..., description="Target node ID"),
+        format: str = Query("cytoscape", description="Response format"),
+        weighted: bool = Query(False, description="Use edge weights"),
+    ) -> Any:
+        from starlette.responses import JSONResponse
+
+        from dazzle_back.runtime.graph_algorithms import shortest_path
+        from dazzle_back.runtime.graph_serializer import GraphSerializer
+
+        if format not in _VALID_GRAPH_FORMATS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid format. Supported: {', '.join(sorted(_VALID_GRAPH_FORMATS))}",
+            )
+
+        filters = _extract_domain_filters(request, filter_fields)
+        g, all_nodes, all_edges = await _materialize_graph(
+            db_manager,
+            node_table,
+            edge_table,
+            graph_edge_spec,
+            filters,
+        )
+
+        result = shortest_path(g, source=str(id), target=str(to), weighted=weighted)
+
+        if format == "raw":
+            return JSONResponse(content=result)
+
+        path_ids = set(result.get("path", []))
+        serializer = GraphSerializer(graph_edge=graph_edge_spec, graph_node=graph_node_spec)
+
+        if not path_ids:
+            empty = (
+                serializer.to_cytoscape([], [])
+                if format == "cytoscape"
+                else serializer.to_d3([], [])
+            )
+            empty["shortest_path"] = result
+            return JSONResponse(content=empty)
+
+        path_nodes = [n for n in all_nodes if str(n.get("id")) in path_ids]
+        path_edges = [
+            e
+            for e in all_edges
+            if str(e.get(graph_edge_spec.source)) in path_ids
+            and str(e.get(graph_edge_spec.target)) in path_ids
+        ]
+
+        if format == "cytoscape":
+            out = serializer.to_cytoscape(path_edges, path_nodes)
+        else:
+            out = serializer.to_d3(path_edges, path_nodes)
+        out["shortest_path"] = result
+        return JSONResponse(content=out)
+
+    _handler.__name__ = f"shortest_path_{entity_name.lower()}"
+    return _handler
+
+
+def create_components_handler(
+    entity_name: str,
+    graph_edge_spec: Any,
+    graph_node_spec: Any | None,
+    node_table: str,
+    edge_table: str,
+    db_manager: Any,
+    filter_fields: list[str] | None = None,
+    optional_auth_dep: Callable[..., Any] | None = None,
+) -> Callable[..., Any]:
+    """Create handler for GET /{entity}/graph/components."""
+
+    async def _handler(
+        request: Request,
+        format: str = Query("raw", description="Response format"),
+    ) -> Any:
+        from starlette.responses import JSONResponse
+
+        from dazzle_back.runtime.graph_algorithms import connected_components
+        from dazzle_back.runtime.graph_serializer import GraphSerializer
+
+        if format not in _VALID_GRAPH_FORMATS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid format. Supported: {', '.join(sorted(_VALID_GRAPH_FORMATS))}",
+            )
+
+        filters = _extract_domain_filters(request, filter_fields)
+        g, all_nodes, all_edges = await _materialize_graph(
+            db_manager,
+            node_table,
+            edge_table,
+            graph_edge_spec,
+            filters,
+        )
+
+        result = connected_components(g)
+
+        if format == "raw":
+            return JSONResponse(content=result)
+
+        serializer = GraphSerializer(graph_edge=graph_edge_spec, graph_node=graph_node_spec)
+        if format == "cytoscape":
+            out = serializer.to_cytoscape(all_edges, all_nodes)
+        else:
+            out = serializer.to_d3(all_edges, all_nodes)
+        out["components"] = result
+        return JSONResponse(content=out)
+
+    _handler.__name__ = f"components_{entity_name.lower()}"
+    return _handler
 
 
 # =============================================================================
@@ -2427,6 +2659,50 @@ class RouteGenerator:
                     methods=["GET"],
                     tags=[entity_name or "Item"],
                     summary=f"Neighborhood graph for {entity_name}",
+                )
+
+            # Register algorithm endpoints for graph_node entities (#619 Phase 4)
+            if _node_graph and _check_networkx():
+                _alg_filter_fields = self.entity_filter_fields.get(entity_name or "")
+
+                # Shortest path: /{entity}/{id}/graph/shortest-path
+                _sp_path = endpoint.path.rstrip("/") + "/{id}/graph/shortest-path"
+                _sp_handler = create_shortest_path_handler(
+                    entity_name=entity_name or "Item",
+                    graph_edge_spec=_node_graph["graph_edge"],
+                    graph_node_spec=_node_graph.get("graph_node"),
+                    node_table=_node_graph["node_table"],
+                    edge_table=_node_graph["edge_table"],
+                    db_manager=self.db_manager,
+                    filter_fields=_alg_filter_fields,
+                    optional_auth_dep=self.optional_auth_dep,
+                )
+                self._router.add_api_route(
+                    _sp_path,
+                    _sp_handler,
+                    methods=["GET"],
+                    tags=[entity_name or "Item"],
+                    summary=f"Shortest path for {entity_name}",
+                )
+
+                # Connected components: /{entity}/graph/components
+                _cc_path = endpoint.path.rstrip("/") + "/graph/components"
+                _cc_handler = create_components_handler(
+                    entity_name=entity_name or "Item",
+                    graph_edge_spec=_node_graph["graph_edge"],
+                    graph_node_spec=_node_graph.get("graph_node"),
+                    node_table=_node_graph["node_table"],
+                    edge_table=_node_graph["edge_table"],
+                    db_manager=self.db_manager,
+                    filter_fields=_alg_filter_fields,
+                    optional_auth_dep=self.optional_auth_dep,
+                )
+                self._router.add_api_route(
+                    _cc_path,
+                    _cc_handler,
+                    methods=["GET"],
+                    tags=[entity_name or "Item"],
+                    summary=f"Connected components for {entity_name}",
                 )
 
         # PUT/PATCH -> UPDATE
