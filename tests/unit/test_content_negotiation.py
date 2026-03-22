@@ -108,9 +108,17 @@ def _mock_request(accept: str = "", hx_request: bool = False, query: str = "") -
     req.url = url
 
     # query_params (truthy when non-empty)
+    # Parse query string into a dict so .get() returns None for unknown keys
+    _query_dict: dict[str, str] = {}
+    if query:
+        for part in query.split("&"):
+            if "=" in part:
+                k, _, v = part.partition("=")
+                _query_dict[k] = v
     req.query_params = MagicMock()
     req.query_params.__bool__ = lambda _self: bool(query)
     req.query_params.items = lambda: []
+    req.query_params.get = lambda key, default=None: _query_dict.get(key, default)
 
     # state (used by HTMX rendering)
     req.state = SimpleNamespace()
