@@ -90,6 +90,7 @@ persona ops_engineer "Operations Engineer":
     - "Respond quickly to alerts"
   proficiency_level: expert
   session_style: deep_work
+  default_workspace: command_center
 
 # =============================================================================
 # Workspace - COMMAND_CENTER Stage

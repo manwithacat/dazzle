@@ -64,10 +64,17 @@ entity Device "Device":
     recalled -> active: role(engineer)
     retired -> prototype: role(engineer)
 
-  # Access: engineers can modify, testers can view assigned
-  access:
-    read: role(engineer) or role(manager) or assigned_tester_id = current_user
-    write: role(engineer)
+  permit:
+    list: role(engineer) or role(manager) or role(tester)
+    read: role(engineer) or role(manager) or role(tester)
+    create: role(engineer)
+    update: role(engineer)
+    delete: role(engineer)
+  scope:
+    list: assigned_tester_id = current_user
+      for: tester
+    list: all
+      for: engineer, manager
 
   index batch_number
   index status
@@ -88,10 +95,15 @@ entity Tester "Tester":
   # Invariant: testers must have valid email
   invariant: email != null
 
-  # Access: engineers can manage testers
-  access:
-    read: role(engineer) or role(manager) or id = current_user
-    write: role(engineer)
+  permit:
+    list: role(engineer) or role(manager) or role(tester)
+    read: role(engineer) or role(manager) or role(tester)
+    create: role(engineer)
+    update: role(engineer)
+    delete: role(engineer)
+  scope:
+    list: all
+      for: engineer, manager, tester
 
   index email
   index location
@@ -130,10 +142,17 @@ entity IssueReport "Issue Report":
   invariant: status != fixed or resolution != null
   invariant: status != closed or resolution != null
 
-  # Access: testers see own issues, engineers see all
-  access:
-    read: reported_by_id = current_user or role(engineer) or role(manager)
-    write: role(engineer)
+  permit:
+    list: role(engineer) or role(manager) or role(tester)
+    read: role(engineer) or role(manager) or role(tester)
+    create: role(tester) or role(engineer)
+    update: role(engineer)
+    delete: role(engineer)
+  scope:
+    list: reported_by_id = current_user
+      for: tester
+    list: all
+      for: engineer, manager
 
   index device_id
   index severity, status
@@ -155,10 +174,17 @@ entity TestSession "Test Session":
   # Invariant: duration must be positive
   invariant: duration_minutes > 0
 
-  # Access: testers see own sessions
-  access:
-    read: tester_id = current_user or role(engineer) or role(manager)
-    write: tester_id = current_user or role(engineer)
+  permit:
+    list: role(engineer) or role(manager) or role(tester)
+    read: role(engineer) or role(manager) or role(tester)
+    create: role(tester) or role(engineer)
+    update: role(tester) or role(engineer)
+    delete: role(engineer)
+  scope:
+    list: tester_id = current_user
+      for: tester
+    list: all
+      for: engineer, manager
 
   index device_id
   index tester_id
@@ -184,10 +210,15 @@ entity FirmwareRelease "Firmware Release":
   # Invariant: released firmware must have release notes
   invariant: status != released or release_notes != null
 
-  # Access: only engineers can manage firmware
-  access:
+  permit:
+    list: role(engineer) or role(manager) or role(tester)
     read: role(engineer) or role(manager) or role(tester)
-    write: role(engineer)
+    create: role(engineer)
+    update: role(engineer)
+    delete: role(engineer)
+  scope:
+    list: all
+      for: engineer, manager, tester
 
   index status
   index version
@@ -217,10 +248,17 @@ entity Task "Task":
   # Invariant: in_progress tasks must be assigned
   invariant: status != in_progress or assigned_to_id != null
 
-  # Access: engineers can manage all tasks
-  access:
-    read: role(engineer) or role(manager) or assigned_to_id = current_user
-    write: role(engineer) or assigned_to_id = current_user
+  permit:
+    list: role(engineer) or role(manager) or role(tester)
+    read: role(engineer) or role(manager) or role(tester)
+    create: role(engineer) or role(manager)
+    update: role(engineer) or role(tester)
+    delete: role(engineer)
+  scope:
+    list: assigned_to_id = current_user
+      for: tester
+    list: all
+      for: engineer, manager
 
   index status
   index assigned_to_id
