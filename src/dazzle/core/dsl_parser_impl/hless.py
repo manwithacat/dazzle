@@ -47,7 +47,7 @@ DSL syntax examples:
         allowed: false
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, NoReturn
 
 from .. import ir
 from ..lexer import TokenType
@@ -74,7 +74,9 @@ class HLESSParserMixin:
         file: Any
         parse_type_spec: Any
         parse_field_modifiers: Any
-        error: Any
+
+        def error(self, message: str) -> NoReturn: ...
+
         _is_keyword_as_identifier: Any
 
     # =========================================================================
@@ -271,21 +273,21 @@ class HLESSParserMixin:
 
         # Build TimeSemantics
         time_semantics = ir.TimeSemantics(
-            t_event_field=t_event_field,  # type: ignore
+            t_event_field=t_event_field,
             t_log_field=t_log_field,
             t_process_field=t_process_field,
         )
 
         # Fill in default idempotency if not specified
         if idempotency is None:
-            idempotency = ir.get_default_idempotency(record_kind)  # type: ignore
+            idempotency = ir.get_default_idempotency(record_kind)
 
         return ir.StreamSpec(
             name=name,
-            record_kind=record_kind,  # type: ignore
+            record_kind=record_kind,
             schemas=schemas,
-            partition_key=partition_key,  # type: ignore
-            ordering_scope=ordering_scope,  # type: ignore
+            partition_key=partition_key,
+            ordering_scope=ordering_scope,
             time_semantics=time_semantics,
             idempotency=idempotency,
             causality_fields=causality_fields,
@@ -333,9 +335,6 @@ class HLESSParserMixin:
                 )
         else:
             self.error("Expected record kind (INTENT, FACT, OBSERVATION, DERIVATION)")
-
-        # Unreachable, but needed for type checker
-        return ir.RecordKind.FACT
 
     def _parse_stream_schema(self) -> ir.StreamSchema:
         """Parse a schema definition within a stream.

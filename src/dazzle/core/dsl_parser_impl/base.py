@@ -5,7 +5,7 @@ Provides common token manipulation and utility methods used by all parser mixins
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, NoReturn, Protocol, runtime_checkable
 
 from ..errors import make_parse_error
 from ..ir.location import SourceLocation
@@ -36,6 +36,7 @@ class ParserProtocol(Protocol):
     def _source_location(self, token: Token | None = None) -> SourceLocation: ...
     def expect_identifier_or_keyword(self) -> Token: ...
     def match(self, *token_types: TokenType) -> bool: ...
+    def error(self, message: str) -> NoReturn: ...
     def skip_newlines(self) -> None: ...
     def _parse_construct_header(
         self,
@@ -255,6 +256,11 @@ class BaseParser:
         """Skip any NEWLINE tokens."""
         while self.match(TokenType.NEWLINE):
             self.advance()
+
+    def error(self, message: str) -> NoReturn:
+        """Raise a ParseError at the current token position."""
+        token = self.current_token()
+        raise make_parse_error(message, self.file, token.line, token.column)
 
     def collect_line_as_expr(self) -> "Expr | None":
         """Collect remaining tokens on current line and parse as typed expression.
