@@ -286,7 +286,7 @@ def _generate_field_element(
         # Handle enum fields -> Select component
         if type_kind == "enum" and field_type.enum_values:
             return ElementNode(
-                **{"as": "Select"},  # type: ignore[arg-type]
+                as_="Select",
                 props={
                     "placeholder": LiteralBinding(value=f"Select {field_label}"),
                     "options": LiteralBinding(value=field_type.enum_values),
@@ -297,7 +297,7 @@ def _generate_field_element(
         # Handle boolean fields -> Checkbox component
         if type_kind == "bool":
             return ElementNode(
-                **{"as": "Checkbox"},  # type: ignore[arg-type]
+                as_="Checkbox",
                 props={
                     "label": LiteralBinding(value=field_label),
                     "dazzle": LiteralBinding(value=dazzle_attrs),
@@ -307,7 +307,7 @@ def _generate_field_element(
         # Handle date/datetime fields -> Input with type
         if type_kind == "date":
             return ElementNode(
-                **{"as": "Input"},  # type: ignore[arg-type]
+                as_="Input",
                 props={
                     "fieldType": LiteralBinding(value="date"),
                     "placeholder": LiteralBinding(value=field_label),
@@ -317,7 +317,7 @@ def _generate_field_element(
 
         if type_kind == "datetime":
             return ElementNode(
-                **{"as": "Input"},  # type: ignore[arg-type]
+                as_="Input",
                 props={
                     "fieldType": LiteralBinding(value="datetime"),
                     "placeholder": LiteralBinding(value=field_label),
@@ -328,7 +328,7 @@ def _generate_field_element(
         # Handle numeric fields
         if type_kind in ("int", "float", "decimal"):
             return ElementNode(
-                **{"as": "Input"},  # type: ignore[arg-type]
+                as_="Input",
                 props={
                     "fieldType": LiteralBinding(value=type_kind),
                     "placeholder": LiteralBinding(value=field_label),
@@ -339,7 +339,7 @@ def _generate_field_element(
         # Handle text fields (multiline)
         if type_kind == "text":
             return ElementNode(
-                **{"as": "Input"},  # type: ignore[arg-type]
+                as_="Input",
                 props={
                     "fieldType": LiteralBinding(value="text"),
                     "multiline": LiteralBinding(value=True),
@@ -351,7 +351,7 @@ def _generate_field_element(
         # Handle file/image fields
         if type_kind in ("file", "image"):
             return ElementNode(
-                **{"as": "Input"},  # type: ignore[arg-type]
+                as_="Input",
                 props={
                     "fieldType": LiteralBinding(value="file"),
                     "placeholder": LiteralBinding(value=field_label),
@@ -361,7 +361,7 @@ def _generate_field_element(
 
     # Default: standard text input
     return ElementNode(
-        **{"as": "Input"},  # type: ignore[arg-type]
+        as_="Input",
         props={
             "placeholder": LiteralBinding(value=field_label),
             "dazzle": LiteralBinding(value=dazzle_attrs),
@@ -409,7 +409,7 @@ def _generate_form_fields(
             # Create label element
             children.append(
                 ElementNode(
-                    **{"as": "Text"},  # type: ignore[arg-type]
+                    as_="Text",
                     props={
                         "variant": LiteralBinding(value="label"),
                         "dazzle": LiteralBinding(value={"label": f"{entity_name}.{field_name}"}),
@@ -477,7 +477,7 @@ def _generate_form_actions(
     # Save/Submit button
     action_children.append(
         ElementNode(
-            **{"as": "Button"},  # type: ignore[arg-type]
+            as_="Button",
             props={
                 "variant": LiteralBinding(value="primary"),
                 "type": LiteralBinding(value="submit"),
@@ -495,7 +495,7 @@ def _generate_form_actions(
     # Cancel button
     action_children.append(
         ElementNode(
-            **{"as": "Button"},  # type: ignore[arg-type]
+            as_="Button",
             props={
                 "variant": LiteralBinding(value="secondary"),
                 "type": LiteralBinding(value="button"),
@@ -513,7 +513,7 @@ def _generate_form_actions(
     # Wrap in Stack
     children.append(
         ElementNode(
-            **{"as": "Stack"},  # type: ignore[arg-type]
+            as_="Stack",
             props={
                 "direction": LiteralBinding(value="row"),
                 "gap": LiteralBinding(value="sm"),
@@ -540,7 +540,7 @@ def _generate_view(
         api_endpoint = f"/{to_api_plural(entity_name)}" if entity_name else None
 
         return ElementNode(
-            **{"as": component_type},  # type: ignore[arg-type]
+            as_=component_type,
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "entity": LiteralBinding(value=entity_name),
@@ -552,7 +552,7 @@ def _generate_view(
 
     elif surface.mode == ir.SurfaceMode.VIEW:
         return ElementNode(
-            **{"as": "Card"},  # type: ignore[arg-type]
+            as_="Card",
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "dazzle": LiteralBinding(value=dazzle_attrs),
@@ -565,7 +565,7 @@ def _generate_view(
         form_actions = _generate_form_actions(surface, entity)
 
         return ElementNode(
-            **{"as": "Form"},  # type: ignore[arg-type]
+            as_="Form",
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "entity": LiteralBinding(value=dazzle_attrs.get("entity")),
@@ -577,7 +577,7 @@ def _generate_view(
 
     else:
         return ElementNode(
-            **{"as": "Page"},  # type: ignore[arg-type]
+            as_="Page",
             props={
                 "title": LiteralBinding(value=surface.title or surface.name),
                 "dazzle": LiteralBinding(value=dazzle_attrs),
