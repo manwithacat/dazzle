@@ -1,7 +1,7 @@
 # Graph Algorithms (Phase 4) — Design Spec
 
 **Date:** 2026-03-22
-**Status:** Speculative (not scheduled for implementation)
+**Status:** Approved
 **Issue:** #619
 **Depends on:** Phase 1–3 (parser, serializer, neighborhood endpoint)
 
@@ -77,20 +77,22 @@ graph = ["networkx>=3.0"]
 
 ## Scope enforcement
 
-Same as Phase 3 — the graph is built from scoped queries. Users only see paths and components within their authorized subset. This means two users may get different shortest paths or different component counts, which is correct behavior.
+Two layers of scoping:
 
-## Why not now
+**Authorization scope** (from `permit:` / `scope:` blocks): Same as Phase 3 — the graph is built from scoped queries. Users only see paths and components within their authorized subset. This means two users may get different shortest paths or different component counts, which is correct behavior.
 
-- Phases 1–3 cover the core graph workflow (declare, serialize, traverse)
-- No current user has requested computed graph properties
-- NetworkX dependency adds weight — should be justified by demand
-- The on-demand materialization approach is simple but may need caching for production scale, which is design work that benefits from real usage data
+**Domain scope** (from query filters): Algorithm endpoints accept the same filter parameters as list endpoints (`?filter[work_id]=uuid` or bare `?work_id=uuid` when the field is in the filter list). This is critical for apps where the graph is logically partitioned — e.g., Penny Dreadful where each Work has its own independent node graph. The materialization query includes these filters alongside scope predicates, so the algorithm operates on the correct subgraph.
 
-## When to revisit
+Both layers compose: authorization scope limits what the user can see, domain filters select which partition to analyze. The materialized `nx.Graph` reflects both.
 
-- A user builds a graph-heavy app and asks for shortest path or component detection
-- The Penny Dreadful project (knowledge graph) matures enough to need computed properties
-- Someone proposes a graph algorithm for a non-graph use case (e.g., dependency resolution for processes)
+For cached materialization, the cache key includes the domain filter values — `(entity_name, frozenset(filters))` — so each partition gets its own cached graph.
+
+## Implementation notes
+
+- Start with on-demand materialization (approach A) — no caching
+- Penny Dreadful is the first consumer — they need domain-scoped algorithms (per-work graphs)
+- NetworkX as optional extra: `pip install dazzle-dsl[graph]`
+- Endpoints only register when NetworkX is importable — zero cost for apps that don't use it
 
 ## References
 
