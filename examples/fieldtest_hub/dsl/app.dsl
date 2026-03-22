@@ -21,6 +21,7 @@ persona engineer "Engineer":
     - "Coordinate testers"
   proficiency_level: expert
   session_style: deep_work
+  default_workspace: engineering_dashboard
 
 persona tester "Field Tester":
   goals:
@@ -29,6 +30,7 @@ persona tester "Field Tester":
     - "Track assigned devices"
   proficiency_level: intermediate
   session_style: task_based
+  default_workspace: tester_dashboard
 
 persona manager "Manager":
   goals:
@@ -36,6 +38,7 @@ persona manager "Manager":
     - "Monitor critical issues"
   proficiency_level: intermediate
   session_style: quick_check
+  default_workspace: engineering_dashboard
 
 # =============================================================================
 # ENTITIES WITH v0.7 BUSINESS LOGIC
@@ -827,14 +830,38 @@ workspace engineering_dashboard "Engineering Dashboard":
       critical: count(IssueReport where severity = critical)
       open: count(IssueReport where status = open)
 
+  firmware_releases:
+    source: FirmwareRelease
+    sort: release_date desc
+    limit: 10
+    display: list
+    action: firmware_release_detail
+    empty: "No firmware releases"
+
+  all_tasks:
+    source: Task
+    sort: created_at desc
+    limit: 20
+    display: list
+    action: task_detail
+    empty: "No tasks"
+
+  all_testers:
+    source: Tester
+    filter: active = true
+    sort: name asc
+    display: list
+    action: tester_detail
+    empty: "No active testers"
+
   ux:
     for engineer:
       purpose: "Monitor field testing quality and issues"
-      focus: critical_issues, metrics, recent_reports
+      focus: critical_issues, metrics, firmware_releases, all_tasks
 
     for manager:
       purpose: "Track product quality and field performance"
-      focus: metrics, critical_issues
+      focus: metrics, critical_issues, all_testers
 
 # Workspace: Tester Dashboard
 workspace tester_dashboard "Tester Dashboard":
@@ -872,7 +899,16 @@ workspace tester_dashboard "Tester Dashboard":
       total_reports: count(IssueReport where reported_by_id = current_user)
       critical_found: count(IssueReport where reported_by_id = current_user and severity = critical)
 
+  my_tasks:
+    source: Task
+    filter: assigned_to_id = current_user
+    sort: created_at desc
+    limit: 10
+    display: list
+    action: task_detail
+    empty: "No tasks assigned to you"
+
   ux:
     for tester:
       purpose: "Your field testing activity"
-      focus: my_devices, my_issues
+      focus: my_devices, my_tasks, my_issues
