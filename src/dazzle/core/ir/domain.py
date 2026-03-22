@@ -229,6 +229,36 @@ class ExampleRecord(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
+class GraphEdgeSpec(BaseModel):
+    """Formal graph edge declaration on an entity.
+
+    Declares that this entity represents edges in a property graph.
+    source and target must name ref fields on the same entity.
+    """
+
+    source: str
+    target: str
+    type_field: str | None = None
+    weight_field: str | None = None
+    directed: bool = True
+    acyclic: bool = False
+
+    model_config = ConfigDict(frozen=True)
+
+
+class GraphNodeSpec(BaseModel):
+    """Optional graph node annotation on an entity.
+
+    Declares that this entity represents nodes connected by a specific
+    edge entity.
+    """
+
+    edge_entity: str
+    display: str | None = None
+
+    model_config = ConfigDict(frozen=True)
+
+
 class EntitySpec(BaseModel):
     """
     Specification for a domain entity.
@@ -283,6 +313,9 @@ class EntitySpec(BaseModel):
     seed_template: SeedTemplateSpec | None = None
     # v0.44.0: Explicit display field for FK references
     display_field: str | None = None
+    # v0.46.0: Graph semantics (#619)
+    graph_edge: GraphEdgeSpec | None = None
+    graph_node: GraphNodeSpec | None = None
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
 

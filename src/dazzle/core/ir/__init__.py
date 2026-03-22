@@ -84,6 +84,8 @@ from .domain import (
     DomainSpec,
     EntitySpec,
     ExampleRecord,
+    GraphEdgeSpec,
+    GraphNodeSpec,
     PermissionKind,
     PermissionRule,
     PolicyEffect,
@@ -756,6 +758,8 @@ __all__ = [
     "AccessSpec",
     "ScopeRule",
     "ExampleRecord",
+    "GraphEdgeSpec",
+    "GraphNodeSpec",
     "EntitySpec",
     "DomainSpec",
     # UX
