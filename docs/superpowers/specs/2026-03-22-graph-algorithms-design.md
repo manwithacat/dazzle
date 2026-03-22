@@ -62,7 +62,7 @@ Simple, no caching complexity, but O(V + E) per request. Acceptable for graphs u
 
 **B) Cached materialization (future):**
 - Materialize on first request, cache with TTL
-- Invalidate on edge/node mutations
+- Invalidate on edge/node mutations via the event system (v0.18.0) — Dazzle already knows when entities change, so cache invalidation is "edge or node entity mutated → drop the cached `nx.Graph`." This is the kind of thing that's hard in general but trivial when the framework owns the full stack from DSL to runtime.
 - More complex, needed only for large graphs or frequent algorithm calls
 
 ### Dependency
