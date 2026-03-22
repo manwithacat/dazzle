@@ -61,6 +61,7 @@ def _scalar_type_to_sa(scalar_type: ScalarType) -> Any:
         ScalarType.TEXT: sa.Text(),
         ScalarType.INT: sa.Integer(),
         ScalarType.DECIMAL: sa.Float(),
+        ScalarType.FLOAT: sa.Float(),
         ScalarType.BOOL: sa.Boolean(),
         ScalarType.DATE: sa.Text(),
         ScalarType.DATETIME: sa.Text(),

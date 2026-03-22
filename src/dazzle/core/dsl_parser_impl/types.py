@@ -98,6 +98,7 @@ class TypeParserMixin:
             "text": self._parse_text_type,
             "int": self._parse_int_type,
             "decimal": self._parse_decimal_type,
+            "float": self._parse_float_type,
             "bool": self._parse_bool_type,
             "date": self._parse_date_type,
             "datetime": self._parse_datetime_type,
@@ -161,6 +162,11 @@ class TypeParserMixin:
         """Parse int type."""
         self.advance()
         return ir.FieldType(kind=ir.FieldTypeKind.INT)
+
+    def _parse_float_type(self) -> ir.FieldType:
+        """Parse float type (IEEE 754 double precision)."""
+        self.advance()
+        return ir.FieldType(kind=ir.FieldTypeKind.FLOAT)
 
     def _parse_decimal_type(self) -> ir.FieldType:
         """Parse decimal(P,S) type."""

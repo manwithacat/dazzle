@@ -2098,6 +2098,7 @@ _NUMERIC_FIELD_TYPES = frozenset(
     {
         ir.FieldTypeKind.INT,
         ir.FieldTypeKind.DECIMAL,
+        ir.FieldTypeKind.FLOAT,
     }
 )
 
@@ -2166,7 +2167,7 @@ def _validate_graph_edge(
         else:
             wf = field_map[ge.weight_field]
             if wf.type.kind not in _NUMERIC_FIELD_TYPES:
-                errors.append("graph_edge weight must be int or decimal")
+                errors.append("graph_edge weight must be int, decimal, or float")
 
     # Warnings: heterogeneous graph
     if ge.source in field_map and ge.target in field_map:

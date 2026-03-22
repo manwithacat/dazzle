@@ -366,7 +366,7 @@ class TestGraphValidationErrors:
         )
         node = _make_entity("Node")
         errors, _ = validate_graph_declarations(_make_appspec([node, entity]))
-        assert any("weight must be int or decimal" in e for e in errors)
+        assert any("weight must be int, decimal, or float" in e for e in errors)
 
     def test_type_field_not_found(self) -> None:
         entity = _make_entity(

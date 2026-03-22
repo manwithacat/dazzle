@@ -63,6 +63,7 @@ def _map_field_type(dazzle_type: ir.FieldType) -> FieldType:
         ir.FieldTypeKind.TEXT: ScalarType.TEXT,
         ir.FieldTypeKind.INT: ScalarType.INT,
         ir.FieldTypeKind.DECIMAL: ScalarType.DECIMAL,
+        ir.FieldTypeKind.FLOAT: ScalarType.FLOAT,
         ir.FieldTypeKind.BOOL: ScalarType.BOOL,
         ir.FieldTypeKind.DATE: ScalarType.DATE,
         ir.FieldTypeKind.DATETIME: ScalarType.DATETIME,

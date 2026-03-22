@@ -23,6 +23,7 @@ class ScalarType(StrEnum):
     TEXT = "text"
     INT = "int"
     DECIMAL = "decimal"
+    FLOAT = "float"
     BOOL = "bool"
     DATE = "date"
     DATETIME = "datetime"

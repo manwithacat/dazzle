@@ -24,6 +24,7 @@ class FieldTypeKind(StrEnum):
     TEXT = "text"
     INT = "int"
     DECIMAL = "decimal"
+    FLOAT = "float"  # v0.46.0: IEEE 754 double precision (sensors, weights, scores)
     BOOL = "bool"
     DATE = "date"
     DATETIME = "datetime"

@@ -86,6 +86,7 @@ def _scalar_type_to_postgres(scalar_type: ScalarType) -> str:
         ScalarType.TEXT: "TEXT",
         ScalarType.INT: "INTEGER",
         ScalarType.DECIMAL: "DOUBLE PRECISION",
+        ScalarType.FLOAT: "DOUBLE PRECISION",
         ScalarType.BOOL: "BOOLEAN",
         ScalarType.DATE: "TEXT",
         ScalarType.DATETIME: "TEXT",
