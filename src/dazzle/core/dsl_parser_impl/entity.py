@@ -439,6 +439,7 @@ class EntityParserMixin:
                 self.skip_newlines()
                 self.expect(TokenType.INDENT)
 
+                ge_block_line = self.current_token().line
                 ge_source: str | None = None
                 ge_target: str | None = None
                 ge_type: str | None = None
@@ -511,7 +512,7 @@ class EntityParserMixin:
                     raise make_parse_error(
                         "graph_edge: requires both source and target fields",
                         self.file,
-                        self.current_token().line,
+                        ge_block_line,
                     )
 
                 graph_edge = ir.GraphEdgeSpec(
@@ -532,6 +533,7 @@ class EntityParserMixin:
                 self.skip_newlines()
                 self.expect(TokenType.INDENT)
 
+                gn_block_line = self.current_token().line
                 gn_edges: str | None = None
                 gn_display: str | None = None
 
@@ -562,7 +564,7 @@ class EntityParserMixin:
                     raise make_parse_error(
                         "graph_node: requires an edges field",
                         self.file,
-                        self.current_token().line,
+                        gn_block_line,
                     )
 
                 graph_node = ir.GraphNodeSpec(

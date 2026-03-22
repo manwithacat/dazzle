@@ -491,19 +491,27 @@ key_value_list ::= IDENT ":" literal ("," IDENT ":" literal)* ;
 
 graph_edge_block ::= "graph_edge" ":" NEWLINE
                      INDENT
-                       "source" ":" IDENT NEWLINE
-                       "target" ":" IDENT NEWLINE
-                       ("type" ":" IDENT NEWLINE)?
-                       ("weight" ":" IDENT NEWLINE)?
-                       ("directed" ":" BOOLEAN NEWLINE)?
-                       ("acyclic" ":" BOOLEAN NEWLINE)?
+                       graph_edge_field+
                      DEDENT ;
+
+graph_edge_field ::= "source" ":" IDENT NEWLINE
+                   | "target" ":" IDENT NEWLINE
+                   | "type" ":" IDENT NEWLINE
+                   | "weight" ":" IDENT NEWLINE
+                   | "directed" ":" BOOLEAN NEWLINE
+                   | "acyclic" ":" BOOLEAN NEWLINE ;
+
+(* source and target are required; validator enforces this *)
 
 graph_node_block ::= "graph_node" ":" NEWLINE
                      INDENT
-                       "edges" ":" IDENT NEWLINE
-                       ("display" ":" IDENT NEWLINE)?
+                       graph_node_field+
                      DEDENT ;
+
+graph_node_field ::= "edges" ":" IDENT NEWLINE
+                   | "display" ":" IDENT NEWLINE ;
+
+(* edges is required; validator enforces this *)
 
 (* =============================================================================
    Surface Definitions
