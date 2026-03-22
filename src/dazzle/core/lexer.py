@@ -506,6 +506,15 @@ class TokenType(Enum):
     # v0.44.0 Runtime Parameters
     PARAM = "param"
 
+    # v0.46.0 Graph Semantics Keywords (#619)
+    GRAPH_EDGE = "graph_edge"
+    GRAPH_NODE = "graph_node"
+    TARGET = "target"
+    WEIGHT = "weight"
+    DIRECTED = "directed"
+    ACYCLIC = "acyclic"
+    EDGES = "edges"
+
     # Comparison operators (for condition expressions)
     DOUBLE_EQUALS = "=="
     NOT_EQUALS = "!="

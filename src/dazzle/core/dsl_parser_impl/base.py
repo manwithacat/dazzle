@@ -782,4 +782,12 @@ KEYWORD_AS_IDENTIFIER_TYPES = (
     TokenType.THRESHOLDS,
     TokenType.STAGES,
     TokenType.COMPLETE_AT,
+    # v0.46.0 Graph Semantics keywords (can be field names)
+    TokenType.GRAPH_EDGE,
+    TokenType.GRAPH_NODE,
+    TokenType.TARGET,
+    TokenType.WEIGHT,
+    TokenType.DIRECTED,
+    TokenType.ACYCLIC,
+    TokenType.EDGES,
 )
