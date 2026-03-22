@@ -3,8 +3,10 @@
   dict({
     'diagnostics': list([
       dict({
-        'error_type': 'UnexpectedError',
-        'message': "'Parser' object has no attribute 'error'",
+        'column': 1,
+        'error_type': 'ParseError',
+        'line': 15,
+        'message': "Stream must specify 'kind: INTENT|FACT|OBSERVATION|DERIVATION'",
         'severity': 'error',
       }),
     ]),
@@ -18,8 +20,10 @@
   dict({
     'diagnostics': list([
       dict({
-        'error_type': 'UnexpectedError',
-        'message': "'Parser' object has no attribute 'error'",
+        'column': 1,
+        'error_type': 'ParseError',
+        'line': 15,
+        'message': "Stream must specify 'ordering_scope'",
         'severity': 'error',
       }),
     ]),
@@ -33,8 +37,10 @@
   dict({
     'diagnostics': list([
       dict({
-        'error_type': 'UnexpectedError',
-        'message': "'Parser' object has no attribute 'error'",
+        'column': 1,
+        'error_type': 'ParseError',
+        'line': 15,
+        'message': "Stream must specify 'partition_key'",
         'severity': 'error',
       }),
     ]),
@@ -48,8 +54,10 @@
   dict({
     'diagnostics': list([
       dict({
-        'error_type': 'UnexpectedError',
-        'message': "'Parser' object has no attribute 'error'",
+        'column': 1,
+        'error_type': 'ParseError',
+        'line': 15,
+        'message': "Stream must specify 't_event' (domain occurrence time field)",
         'severity': 'error',
       }),
     ]),
@@ -63,8 +71,10 @@
   dict({
     'diagnostics': list([
       dict({
-        'error_type': 'UnexpectedError',
-        'message': "'Parser' object has no attribute 'error'",
+        'column': 14,
+        'error_type': 'ParseError',
+        'line': 7,
+        'message': "Invalid record kind 'EVENT'. Must be INTENT, FACT, OBSERVATION, or DERIVATION.",
         'severity': 'error',
       }),
     ]),

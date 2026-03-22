@@ -141,6 +141,8 @@
               }),
             }),
           ]),
+          'graph_edge': None,
+          'graph_node': None,
           'intent': None,
           'invariants': list([
           ]),
