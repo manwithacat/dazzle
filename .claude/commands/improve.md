@@ -1,102 +1,146 @@
-Proactively discover bugs and quality issues across Dazzle's example apps by orchestrating existing analysis tools. Read-only — no commits, no issues filed.
+Autonomous improvement loop for Dazzle example apps. Each cycle: find a gap, fix it, verify, commit, move on.
 
-**This command uses parallel subagents** — one per app — for ~Nx faster scanning.
+Adapted from the BDD improvement loop pattern (Penny Dreadful, 2026-03-22).
 
 ARGUMENTS: $ARGUMENTS
 
-## 1. Discover apps
-
-Find all example apps that have a `dazzle.toml`:
-
-```bash
-ls examples/*/dazzle.toml
-```
-
-If `$ARGUMENTS` is provided, filter to only that app name (e.g. `support_tickets`). If the app doesn't exist or lacks `dazzle.toml`, report the error and stop.
-
-## 2. Scan apps in parallel
-
-For each app, **dispatch a background subagent** using the Agent tool with `run_in_background: true`. Each subagent scans one app independently.
-
-**Dispatch ALL app subagents in a single message** (multiple Agent tool calls) so they run concurrently. Use `model: "haiku"` for each subagent to keep cost low — these are mechanical checks, not judgment calls.
-
-Each subagent prompt should be:
+## Overview
 
 ```
-Scan Dazzle example app "<app_name>" for quality issues. Return findings as a JSON object.
-
-Steps (run sequentially within this app):
-
-1. **Validate**: Run `cd examples/<app_name> && dazzle validate`. If this fails, return: {"app": "<app_name>", "critical": true, "findings": [{"severity": "critical", "source": "validate", "detail": "<error>"}]}
-
-2. **Lint**: Run `cd examples/<app_name> && dazzle lint`. Record any violations as severity "warning", source "lint".
-
-3. **Fidelity**: Call mcp__dazzle__select_project with project_name "examples/<app_name>", then call mcp__dazzle__dsl with operation "fidelity". Record gaps as severity "warning", source "fidelity". On error, record as severity "info".
-
-4. **Sentinel**: Call mcp__dazzle__sentinel with operation "scan". Map high/critical → "warning", medium/low → "info", source "sentinel". On error, record as severity "info".
-
-5. **Pulse**: Call mcp__dazzle__pulse with operation "run". Extract health score and per-axis scores. Axis below 60 → "warning". Axis 60-79 → "info". Source "pulse". Record the overall health score. On error, record as severity "info".
-
-6. **Coherence**: Call mcp__dazzle__discovery with operation "coherence". Record gaps as severity "warning", source "coherence". On error, record as severity "info".
-
-Return your results as a structured summary in this exact format:
-APP: <app_name>
-HEALTH: <score>/100 (axis1: X, axis2: Y, ...)
-FINDINGS:
-- [severity] [source] description
-- [severity] [source] description
-(or "FINDINGS: none" if clean)
-
-Do NOT make any changes. Read-only analysis.
+OBSERVE → ENHANCE → BUILD → VERIFY → REPORT
+    ↑                         │
+    │  ┌── green ─────────────┤
+    │  │                      │
+    │  │    red (≤3): fix → retry from BUILD
+    │  │    red (>3) → DIAGNOSE → file issue → next gap
+    └──┘──────────────────────┘
 ```
 
-**While waiting** for subagents, print: `Dispatched N parallel scans...`
+One cycle per invocation (~15 minutes). Run with `/loop 15m /improve` for continuous improvement.
 
-## 3. Collect and report
+## State Files
 
-As each subagent completes, collect its findings. Once ALL are done, compile the report.
+| File | Purpose |
+|------|---------|
+| `dev_docs/improve-backlog.md` | Gap status: PENDING / IN_PROGRESS / DONE / BLOCKED |
+| `dev_docs/improve-log.md` | Append-only cycle log |
 
-### Per-app sections
+Both in `dev_docs/` (gitignored).
 
-For each app (ordered by finding count, descending):
+## Step 0: INIT (first run only)
 
-```
-### N. app_name (K findings)
+If `dev_docs/improve-backlog.md` does not exist:
 
-**Health:** score/100 (Security: X, Compliance: Y, UX: Z, ...)
+1. Create `dev_docs/` directory if needed
+2. Discover all example apps: `ls examples/*/dazzle.toml`
+3. For each app, run gap analysis to seed the backlog:
+   - `cd examples/{app} && dazzle validate 2>&1` — record any validation errors
+   - `cd examples/{app} && dazzle lint 2>&1` — record lint violations
+   - Use `mcp__dazzle__conformance` with `operation=summary` — record conformance gaps
+   - Use `mcp__dazzle__dsl` with `operation=fidelity` — record fidelity gaps
+4. Write `dev_docs/improve-backlog.md` with all discovered gaps as PENDING items
+5. Write `dev_docs/improve-log.md` with header
+6. Continue to OBSERVE
 
-| # | Severity | Source | Finding |
-|---|----------|--------|---------|
-| 1 | warning | lint | Description of issue |
-| 2 | info | sentinel | Description of issue |
-```
+**Backlog format:**
 
-If an app has 0 findings, show: `Clean.`
-
-### Cross-app summary
-
-```
-## Cross-App Summary
-
-**Apps scanned:** N | **Total findings:** N | **Critical:** N | **Warning:** N | **Info:** N
-
-**Systemic patterns:**
-- (any finding that appears in 2+ apps — these likely indicate framework-level issues)
-
-**Recommended next steps:**
-1. (prioritized action items based on severity and frequency)
+```markdown
+| # | App | Gap Type | Description | Status | Attempts | Notes |
+|---|-----|----------|-------------|--------|----------|-------|
+| 1 | simple_task | lint | Missing search_fields on task_list | PENDING | 0 | |
 ```
 
-### Severity definitions
+If `$ARGUMENTS` is provided, filter to only that app name.
 
-| Level | Criteria |
-|-------|----------|
-| **critical** | Parse/validate failures (app won't boot) |
-| **warning** | Lint violations, sentinel findings (high/critical), coherence gaps, pulse axis below 60 |
-| **info** | Pulse axis below 80, sentinel findings (medium/low), tool errors |
+## Step 1: OBSERVE
 
-## 4. Prompt
+1. Read `dev_docs/improve-backlog.md`
+2. If a gap is IN_PROGRESS with attempts < 3: resume it
+3. If a gap is IN_PROGRESS with attempts >= 3: mark BLOCKED, file issue if framework-related, pick next PENDING
+4. If all gaps DONE or BLOCKED: re-scan for new gaps (DSL may have changed), update backlog, report completion
+5. Pick next PENDING gap (priority: critical > warning > info, then by app alphabetical)
+6. Mark IN_PROGRESS
 
-End with: **"Would you like me to fix any of these findings?"**
+## Step 2: ENHANCE
 
-Do NOT commit, create issues, or make any changes. This is a read-only analysis.
+Based on gap type:
+
+**Lint violation** → Fix the DSL in `examples/{app}/dsl/*.dsl`
+**Validation error** → Fix the DSL syntax/structure
+**Conformance gap** → Add missing `scope:` or `permit:` blocks
+**Fidelity gap** → Add missing surface fields, entity fields, or UX blocks
+**Missing surface** → Add a new surface definition
+
+**Gate:** Run `cd examples/{app} && dazzle validate 2>&1`. Must pass with zero new errors/warnings beyond the known baseline.
+
+## Step 3: BUILD
+
+For most gaps, ENHANCE is sufficient — the DSL change IS the fix. But for gaps that require code changes:
+
+1. Update test fixtures if DSL changes affect conformance cases
+2. Update template expectations if surface structure changed
+3. Run `ruff check src/ tests/ --fix && ruff format src/ tests/`
+
+**Gate:** `python -m pytest tests/unit/ -m "not e2e" -x -q --timeout=60` — must pass. Only run tests relevant to the changed app/code, not the full suite (speed matters in the loop).
+
+## Step 4: VERIFY
+
+Run verification appropriate to the gap type:
+
+| Gap Type | Verification |
+|----------|-------------|
+| Lint | `cd examples/{app} && dazzle lint 2>&1` — violation should be gone |
+| Validation | `cd examples/{app} && dazzle validate 2>&1` — must pass |
+| Conformance | `mcp__dazzle__conformance operation=summary` — case count should increase or gap should close |
+| Fidelity | `mcp__dazzle__dsl operation=fidelity` — gap should be resolved |
+| Surface | `mcp__dazzle__dsl operation=inspect_surface entity_name={entity}` — surface should exist |
+
+If verification fails: increment attempts, log the failure, retry from ENHANCE (if < 3 attempts).
+
+## Step 5: REPORT
+
+1. Update `dev_docs/improve-backlog.md` — mark DONE or increment attempts
+2. Append to `dev_docs/improve-log.md`:
+   ```
+   ## Cycle {N} — {timestamp}
+   **App:** {app_name}
+   **Gap:** {description}
+   **Action:** {what was done}
+   **Result:** PASS / FAIL ({details})
+   ```
+3. If verified green:
+   - `git add examples/{app}/` (and any changed src/ files)
+   - Commit: `fix({app}): {description} — auto-verified`
+   - Do NOT push — accumulate commits for human review
+4. Move to next gap (return to OBSERVE)
+
+## Failure Policy
+
+| Condition | Action |
+|-----------|--------|
+| `dazzle validate` fails | Fix DSL, retry from ENHANCE |
+| Tests fail on changed code | Fix code, retry from BUILD |
+| Verification still shows gap | Check if gap definition is stale, retry |
+| Same failure 3 times | DIAGNOSE: root-cause analysis. If framework bug → file at manwithacat/dazzle. Mark BLOCKED. |
+| All gaps done | Re-scan for new gaps. If clean → report completion. |
+
+## Scope
+
+**What this command improves:**
+- DSL quality in example apps (lint, validation, fidelity)
+- RBAC completeness (conformance gaps — missing scope/permit blocks)
+- Surface coverage (entities without surfaces)
+- UX completeness (missing search/filter/sort/empty directives)
+
+**What it does NOT do:**
+- Modify framework source code (src/dazzle/, src/dazzle_back/, src/dazzle_ui/)
+- Create new example apps
+- Make changes that require human judgment (architecture decisions, new features)
+
+## Success Criteria
+
+After a full `/loop` run:
+- At least 5-10 gaps resolved per hour
+- All example apps pass `dazzle validate`
+- Conformance coverage increases
+- `dev_docs/improve-log.md` has a clear audit trail of every change
