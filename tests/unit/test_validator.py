@@ -273,6 +273,47 @@ class TestValidateEntities:
         errors, warnings = validate_entities(appspec)
         assert any("nonexistent_field" in e for e in errors)
 
+    def test_permit_without_scope_warns(self) -> None:
+        """Entity with permit: rules but no scope: blocks should warn."""
+        entity = ir.EntitySpec(
+            name="Task",
+            title="Task",
+            fields=[make_id_field()],
+            access=ir.AccessSpec(
+                permissions=[
+                    ir.PermissionRule(
+                        operation=ir.PermissionKind.READ,
+                        require_auth=True,
+                        effect=ir.PolicyEffect.PERMIT,
+                    )
+                ]
+            ),
+        )
+        appspec = make_appspec(entities=[entity])
+        errors, warnings = validate_entities(appspec)
+        assert any("no scope: blocks" in w for w in warnings)
+
+    def test_system_entity_skips_scope_warning(self) -> None:
+        """Framework-generated entities (patterns=['system']) skip the scope warning."""
+        entity = ir.EntitySpec(
+            name="AIJob",
+            title="AI Job",
+            fields=[make_id_field()],
+            patterns=["system", "audit"],
+            access=ir.AccessSpec(
+                permissions=[
+                    ir.PermissionRule(
+                        operation=ir.PermissionKind.READ,
+                        require_auth=True,
+                        effect=ir.PolicyEffect.PERMIT,
+                    )
+                ]
+            ),
+        )
+        appspec = make_appspec(entities=[entity])
+        errors, warnings = validate_entities(appspec)
+        assert not any("no scope: blocks" in w for w in warnings)
+
 
 # =============================================================================
 # Surface Validation Tests
