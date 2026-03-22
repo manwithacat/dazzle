@@ -281,7 +281,7 @@ class IntegrationParserMixin:
                 self.skip_newlines()
 
             # target: EntityName (v0.33.1)
-            elif tok.type == TokenType.IDENTIFIER and tok.value == "target":
+            elif self.match(TokenType.TARGET):
                 self.advance()
                 self.expect(TokenType.COLON)
                 entity_ref = self.expect(TokenType.IDENTIFIER).value
