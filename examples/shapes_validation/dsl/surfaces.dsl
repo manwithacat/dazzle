@@ -10,6 +10,11 @@ surface realm_list "Realms":
     field name "Name"
     field sigil "Sigil"
 
+  ux:
+    sort: name asc
+    search: name
+    empty: "No realms found."
+
 surface shape_list "Shapes":
   uses entity Shape
   mode: list
@@ -19,6 +24,12 @@ surface shape_list "Shapes":
     field form "Form"
     field colour "Colour"
     field material "Material"
+
+  ux:
+    sort: name asc
+    search: name
+    filter: form, colour, material
+    empty: "No shapes found."
 
 surface shape_detail "Shape Detail":
   uses entity Shape
@@ -40,3 +51,8 @@ surface inscription_list "Inscriptions":
     field text "Text"
     field shape "Shape"
     field author "Author"
+
+  ux:
+    sort: created_at desc
+    search: text
+    empty: "No inscriptions found."

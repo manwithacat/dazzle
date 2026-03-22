@@ -32,6 +32,9 @@ entity Patient "Patient":
     update: role(receptionist) or role(nurse) or role(doctor) or role(admin)
     delete: role(admin)
     list: role(receptionist) or role(nurse) or role(doctor) or role(admin)
+  scope:
+    list: all
+      for: *
 
   forbid:
     delete: role(receptionist) or role(nurse) or role(doctor) or role(pharmacist) or role(lab_tech) or role(billing_clerk) or role(intern)
@@ -63,6 +66,9 @@ entity MedicalRecord "Medical Record":
     update: role(doctor) or role(admin)
     delete: role(admin)
     list: role(nurse) or role(doctor) or role(admin)
+  scope:
+    list: all
+      for: *
 
   forbid:
     read: role(receptionist) or role(pharmacist) or role(billing_clerk) or role(intern)
@@ -101,6 +107,9 @@ entity Prescription "Prescription":
     update: role(pharmacist) or role(admin)
     delete: role(admin)
     list: role(doctor) or role(pharmacist) or role(nurse) or role(admin)
+  scope:
+    list: all
+      for: *
 
   forbid:
     create: role(pharmacist) or role(intern)
@@ -134,6 +143,9 @@ entity Appointment "Appointment":
     update: role(receptionist) or role(nurse) or role(doctor) or role(admin)
     delete: role(admin)
     list: role(receptionist) or role(nurse) or role(doctor) or role(admin)
+  scope:
+    list: all
+      for: *
 
   forbid:
     delete: role(receptionist) or role(nurse) or role(doctor) or role(pharmacist) or role(lab_tech) or role(billing_clerk) or role(intern)
@@ -167,6 +179,9 @@ entity LabResult "Lab Result":
     update: role(lab_tech) or role(doctor) or role(admin)
     delete: role(admin)
     list: role(lab_tech) or role(doctor) or role(nurse) or role(admin)
+  scope:
+    list: all
+      for: *
 
   forbid:
     create: role(doctor) or role(nurse) or role(receptionist) or role(pharmacist) or role(billing_clerk) or role(intern)
@@ -200,6 +215,9 @@ entity BillingRecord "Billing Record":
     update: role(billing_clerk) or role(admin)
     delete: role(admin)
     list: role(billing_clerk) or role(admin)
+  scope:
+    list: all
+      for: *
 
   forbid:
     read: role(doctor) or role(nurse) or role(lab_tech) or role(intern)
@@ -234,6 +252,9 @@ entity Staff "Staff":
     update: role(admin)
     delete: role(admin)
     list: authenticated
+  scope:
+    list: all
+      for: *
 
   forbid:
     create: role(doctor) or role(nurse) or role(receptionist) or role(pharmacist) or role(lab_tech) or role(billing_clerk) or role(intern)
@@ -264,6 +285,9 @@ entity AuditLog "Audit Log":
     create: authenticated
     read: role(admin)
     list: role(admin)
+  scope:
+    list: all
+      for: *
 
   forbid:
     create: role(intern)

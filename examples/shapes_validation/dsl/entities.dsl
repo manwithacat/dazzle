@@ -18,6 +18,10 @@ entity User "User":
     update: role(oracle)
     delete: role(oracle)
 
+  scope:
+    list: all
+      for: oracle
+
 entity Realm "Realm":
   id: uuid pk
   name: str(100) required unique
@@ -30,6 +34,10 @@ entity Realm "Realm":
     read: role(sovereign)
     list: role(architect)
     read: role(architect)
+
+  scope:
+    list: all
+      for: oracle, sovereign, architect
 
 entity Shape "Shape":
   id: uuid pk
