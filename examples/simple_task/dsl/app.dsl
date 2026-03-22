@@ -279,6 +279,8 @@ surface task_comments "Task Comments":
   ux:
     purpose: "View and add comments on a task"
     sort: created_at desc
+    search: content
+    filter: author
     empty: "No comments yet. Start the discussion!"
 
 # Task Create Form
@@ -374,11 +376,19 @@ surface user_create "Add Team Member":
 # =============================================================================
 
 workspace task_board "Task Board":
+  access: persona(admin, manager, member)
   purpose: "Manage tasks visually"
   tasks:
     source: Task
     display: kanban
     group_by: status
+
+  recent_comments:
+    source: TaskComment
+    display: list
+    sort: created_at desc
+    limit: 10
+    empty: "No comments yet"
 
 workspace admin_dashboard "Admin Dashboard":
   access: persona(admin)
