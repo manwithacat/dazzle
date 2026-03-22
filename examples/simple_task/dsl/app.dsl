@@ -32,9 +32,16 @@ entity User "Team Member":
   is_active: bool=true
   created_at: datetime auto_add
 
-  access:
+  permit:
+    list: role(admin) or role(manager) or role(member)
     read: role(admin) or role(manager) or role(member)
-    write: role(admin)
+    create: role(admin)
+    update: role(admin)
+    delete: role(admin)
+
+  scope:
+    list: all
+      for: admin, manager, member
 
 # =============================================================================
 # Task Entity - with proper user relationships
@@ -68,9 +75,18 @@ entity Task "Task":
   invariant: priority != "urgent" or due_date != null
 
   # Access control
-  access:
-    read: role(admin) or role(manager) or assigned_to = current_user or created_by = current_user
-    write: role(admin) or role(manager) or assigned_to = current_user
+  permit:
+    list: role(admin) or role(manager) or role(member)
+    read: role(admin) or role(manager) or role(member)
+    create: role(admin) or role(manager) or role(member)
+    update: role(admin) or role(manager) or role(member)
+    delete: role(admin)
+
+  scope:
+    list: assigned_to = current_user or created_by = current_user
+      for: member
+    list: all
+      for: admin, manager
 
   # Event publishing (see events.dsl for event definitions)
   # TODO: Enable when publish syntax is implemented in parser
@@ -93,10 +109,17 @@ entity TaskComment "Task Comment":
   # TODO: Enable when publish syntax is implemented in parser
   # publish CommentAdded when created
 
-  # Access: anyone who can read the task can read comments
-  access:
-    read: role(admin) or role(manager) or task.assigned_to = current_user or task.created_by = current_user
-    write: author = current_user or role(admin)
+  # Access control
+  permit:
+    list: role(admin) or role(manager) or role(member)
+    read: role(admin) or role(manager) or role(member)
+    create: role(admin) or role(manager) or role(member)
+    update: role(admin)
+    delete: role(admin)
+
+  scope:
+    list: all
+      for: admin, manager, member
 
 # =============================================================================
 # Personas - role-based variants for the UI
