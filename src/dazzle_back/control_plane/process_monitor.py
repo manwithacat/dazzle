@@ -12,7 +12,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from redis import Redis
@@ -121,7 +121,7 @@ class ProcessMonitor:
     # Redis key prefix (matches CeleryProcessAdapter)
     PREFIX = "dazzle:"
 
-    def __init__(self, redis: Redis[Any]):
+    def __init__(self, redis: Redis):
         self._redis = redis
 
     def _key(self, *parts: str) -> str:
@@ -135,7 +135,7 @@ class ProcessMonitor:
         # Count runs by status
         for status in ProcessStatus:
             key = self._key("runs_by_status", status.value)
-            count = self._redis.scard(key) or 0
+            count = cast(int, self._redis.scard(key)) or 0
             stats.total_runs += count
 
             if status == ProcessStatus.RUNNING:
@@ -148,10 +148,14 @@ class ProcessMonitor:
                 stats.failed = count
 
         # Count pending tasks
-        stats.pending_tasks = self._redis.scard(self._key("tasks_by_status", "pending")) or 0
+        stats.pending_tasks = (
+            cast(int, self._redis.scard(self._key("tasks_by_status", "pending"))) or 0
+        )
 
         # Count overdue tasks (approximate - scan pending tasks)
-        pending_task_ids = self._redis.smembers(self._key("tasks_by_status", "pending")) or set()
+        pending_task_ids: set[Any] = (
+            cast(set[Any], self._redis.smembers(self._key("tasks_by_status", "pending"))) or set()
+        )
         time.time()
         for task_id in list(pending_task_ids)[:100]:  # Limit scan
             task = self.get_task(task_id)
@@ -172,10 +176,14 @@ class ProcessMonitor:
             List of ProcessRunInfo, newest first
         """
         if status:
-            run_ids = self._redis.smembers(self._key("runs_by_status", status)) or set()
-            run_ids = list(run_ids)[:count]
+            run_ids: list[Any] = list(
+                cast(set[Any], self._redis.smembers(self._key("runs_by_status", status))) or set()
+            )[:count]
         else:
-            run_ids = self._redis.zrevrange(self._key("runs_by_time"), 0, count - 1) or []
+            run_ids = (
+                cast(list[Any], self._redis.zrevrange(self._key("runs_by_time"), 0, count - 1))
+                or []
+            )
 
         runs = []
         for run_id in run_ids:
@@ -189,7 +197,7 @@ class ProcessMonitor:
 
     def get_run(self, run_id: str) -> ProcessRunInfo | None:
         """Get a single process run by ID."""
-        data = self._redis.get(self._key("process_run", run_id))
+        data: Any = cast(Any, self._redis.get(self._key("process_run", run_id)))
         if not data:
             return None
 
@@ -222,7 +230,7 @@ class ProcessMonitor:
 
     def get_task(self, task_id: str) -> HumanTaskInfo | None:
         """Get a single human task by ID."""
-        data = self._redis.get(self._key("process_task", task_id))
+        data: Any = cast(Any, self._redis.get(self._key("process_task", task_id)))
         if not data:
             return None
 
@@ -243,8 +251,9 @@ class ProcessMonitor:
 
     def get_pending_tasks(self, count: int = 20) -> list[HumanTaskInfo]:
         """Get pending human tasks."""
-        task_ids = self._redis.smembers(self._key("tasks_by_status", "pending")) or set()
-        task_ids = list(task_ids)[:count]
+        task_ids: list[Any] = list(
+            cast(set[Any], self._redis.smembers(self._key("tasks_by_status", "pending"))) or set()
+        )[:count]
 
         tasks = []
         for task_id in task_ids:
@@ -258,7 +267,9 @@ class ProcessMonitor:
 
     def get_tasks_for_run(self, run_id: str) -> list[HumanTaskInfo]:
         """Get all tasks for a process run."""
-        task_ids = self._redis.smembers(self._key("tasks_by_run", run_id)) or set()
+        task_ids: set[Any] = (
+            cast(set[Any], self._redis.smembers(self._key("tasks_by_run", run_id))) or set()
+        )
 
         tasks = []
         for task_id in task_ids:

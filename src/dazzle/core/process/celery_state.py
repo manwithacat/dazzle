@@ -19,7 +19,7 @@ import os
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     import redis
@@ -114,7 +114,7 @@ class ProcessStateStore:
     def get_process_spec(self, name: str) -> dict[str, Any] | None:
         """Get a process specification by name."""
         key = f"process:spec:{name}"
-        data = self._redis.get(key)
+        data: Any = cast(Any, self._redis.get(key))
         if not data:
             return None
         # Return raw dict - caller will need to handle reconstruction
@@ -161,7 +161,7 @@ class ProcessStateStore:
     def get_schedule_spec(self, name: str) -> dict[str, Any] | None:
         """Get a schedule specification by name."""
         key = f"schedule:spec:{name}"
-        data = self._redis.get(key)
+        data: Any = cast(Any, self._redis.get(key))
         if not data:
             return None
         result: dict[str, Any] = json.loads(data)
@@ -170,10 +170,10 @@ class ProcessStateStore:
     def list_schedule_specs(self) -> list[dict[str, Any]]:
         """List all registered schedules."""
         pattern = "schedule:spec:*"
-        keys = self._redis.keys(pattern)
+        keys: list[Any] = cast(list[Any], self._redis.keys(pattern))
         specs = []
         for key in keys:
-            data = self._redis.get(key)
+            data: Any = cast(Any, self._redis.get(key))
             if data:
                 specs.append(json.loads(data))
         return specs
@@ -225,7 +225,7 @@ class ProcessStateStore:
     def get_run(self, run_id: str) -> ProcessRun | None:
         """Get a process run by ID."""
         key = f"run:{run_id}"
-        data = self._redis.get(key)
+        data: Any = cast(Any, self._redis.get(key))
         if not data:
             return None
         return self._deserialize_run(json.loads(data))
@@ -260,9 +260,11 @@ class ProcessStateStore:
     ) -> list[ProcessRun]:
         """List process runs with optional filters."""
         if process_name:
-            run_ids = self._redis.smembers(f"run:idx:process:{process_name}")
+            run_ids: set[Any] = cast(
+                set[Any], self._redis.smembers(f"run:idx:process:{process_name}")
+            )
         elif status:
-            run_ids = self._redis.smembers(f"run:idx:status:{status.value}")
+            run_ids = cast(set[Any], self._redis.smembers(f"run:idx:status:{status.value}"))
         else:
             # Get all runs - scan for run:* keys
             run_ids = set()
@@ -271,10 +273,10 @@ class ProcessStateStore:
                     run_ids.add(key.replace("run:", ""))
 
         # Apply offset and limit
-        run_ids = sorted(run_ids)[offset : offset + limit]
+        sorted_ids: list[Any] = sorted(run_ids)[offset : offset + limit]
 
         runs = []
-        for run_id in run_ids:
+        for run_id in sorted_ids:
             run = self.get_run(run_id)
             if run:
                 # Apply status filter if both filters specified
@@ -346,7 +348,7 @@ class ProcessStateStore:
     def get_task(self, task_id: str) -> ProcessTask | None:
         """Get a human task by ID."""
         key = f"task:{task_id}"
-        data = self._redis.get(key)
+        data: Any = cast(Any, self._redis.get(key))
         if not data:
             return None
         return self._deserialize_task(json.loads(data))
@@ -384,17 +386,17 @@ class ProcessStateStore:
     ) -> list[ProcessTask]:
         """List human tasks with optional filters."""
         if run_id:
-            task_ids = self._redis.smembers(f"task:idx:run:{run_id}")
+            task_id_set: set[Any] = cast(set[Any], self._redis.smembers(f"task:idx:run:{run_id}"))
         elif assignee_id:
-            task_ids = self._redis.smembers(f"task:idx:assignee:{assignee_id}")
+            task_id_set = cast(set[Any], self._redis.smembers(f"task:idx:assignee:{assignee_id}"))
         else:
             # Get all tasks
-            task_ids = set()
+            task_id_set = set()
             for key in self._redis.scan_iter("task:*"):
                 if key.startswith("task:") and not key.startswith("task:idx:"):
-                    task_ids.add(key.replace("task:", ""))
+                    task_id_set.add(key.replace("task:", ""))
 
-        task_ids = sorted(task_ids)[:limit]
+        task_ids: list[Any] = sorted(task_id_set)[:limit]
 
         tasks = []
         for task_id in task_ids:
@@ -416,7 +418,7 @@ class ProcessStateStore:
     def get_entity_meta(self, entity_name: str) -> dict[str, Any] | None:
         """Get entity metadata by name."""
         key = f"entity:meta:{entity_name}"
-        data = self._redis.get(key)
+        data: Any = cast(Any, self._redis.get(key))
         if not data:
             return None
         result: dict[str, Any] = json.loads(data)

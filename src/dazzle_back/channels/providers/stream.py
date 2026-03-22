@@ -115,7 +115,7 @@ class RedisDetector(ProviderDetector):
 
             client = redis.from_url(result.connection_url)
             try:
-                await client.ping()
+                await client.ping()  # type: ignore[misc]
                 return True
             finally:
                 await client.close()

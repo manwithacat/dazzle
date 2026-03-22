@@ -13,7 +13,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from redis import Redis
@@ -65,7 +65,7 @@ class LogStore:
 
     def __init__(
         self,
-        redis: Redis[Any],
+        redis: Redis,
         max_entries: int = 10000,
     ):
         self._redis = redis
@@ -155,7 +155,7 @@ class LogStore:
         else:
             key = self._log_key(source_type)
 
-        raw_entries = self._redis.lrange(key, 0, count - 1)
+        raw_entries: list[Any] = cast(list[Any], self._redis.lrange(key, 0, count - 1))
 
         entries = []
         for raw in raw_entries:

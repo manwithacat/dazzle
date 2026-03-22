@@ -153,7 +153,7 @@ class RedisBus(BaseEventBus):
             decode_responses=False,  # We handle encoding ourselves
         )
         # Test connection
-        await self._redis.ping()
+        await self._redis.ping()  # type: ignore[misc]
 
     async def close(self) -> None:
         """Close the Redis connection and stop consumers."""
@@ -187,7 +187,10 @@ class RedisBus(BaseEventBus):
         stream_key = self._stream_key(topic)
 
         # Serialize envelope to Redis hash fields
-        fields = {
+        fields: dict[
+            bytes | bytearray | memoryview | str | int | float,
+            bytes | bytearray | memoryview | str | int | float,
+        ] = {
             b"id": str(envelope.event_id).encode(),
             b"event_type": envelope.event_type.encode(),
             b"event_version": envelope.event_version.encode(),
@@ -268,14 +271,14 @@ class RedisBus(BaseEventBus):
         # Store mapping when consuming, or search for it
         # For now, we'll track this in metadata
         offset_key = self._offset_key(topic, group_id)
-        msg_id = await redis.hget(offset_key, f"msg:{event_id}")
+        msg_id = await redis.hget(offset_key, f"msg:{event_id}")  # type: ignore[misc]
 
         if msg_id:
             await redis.xack(stream_key, group_id, msg_id)
-            await redis.hdel(offset_key, f"msg:{event_id}")
+            await redis.hdel(offset_key, f"msg:{event_id}")  # type: ignore[misc]
 
             # Update last processed timestamp and refresh TTL
-            await redis.hset(offset_key, "last_processed_at", datetime.now(UTC).isoformat())
+            await redis.hset(offset_key, "last_processed_at", datetime.now(UTC).isoformat())  # type: ignore[misc]
             await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
 
     async def nack(
@@ -292,13 +295,13 @@ class RedisBus(BaseEventBus):
         offset_key = self._offset_key(topic, group_id)
 
         # Get message ID
-        msg_id = await redis.hget(offset_key, f"msg:{event_id}")
+        msg_id = await redis.hget(offset_key, f"msg:{event_id}")  # type: ignore[misc]
         if not msg_id:
             return
 
         # Get retry count
         retry_key = f"retry:{event_id}"
-        retry_count = await redis.hget(offset_key, retry_key)
+        retry_count = await redis.hget(offset_key, retry_key)  # type: ignore[misc]
         retry_count = int(retry_count) if retry_count else 0
 
         if not reason.retryable or retry_count >= self._config.retry_count:
@@ -320,10 +323,10 @@ class RedisBus(BaseEventBus):
 
             # Acknowledge to remove from pending
             await redis.xack(stream_key, group_id, msg_id)
-            await redis.hdel(offset_key, f"msg:{event_id}", retry_key)
+            await redis.hdel(offset_key, f"msg:{event_id}", retry_key)  # type: ignore[misc]
         else:
             # Increment retry count - message will be redelivered
-            await redis.hset(offset_key, retry_key, str(retry_count + 1))
+            await redis.hset(offset_key, retry_key, str(retry_count + 1))  # type: ignore[misc]
 
         # Refresh TTL on offset hash
         await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
@@ -414,7 +417,7 @@ class RedisBus(BaseEventBus):
             last_offset = 0
 
         # Get last processed timestamp
-        last_processed = await redis.hget(offset_key, "last_processed_at")
+        last_processed = await redis.hget(offset_key, "last_processed_at")  # type: ignore[misc]
         last_processed_at = None
         if last_processed:
             try:
@@ -614,7 +617,7 @@ class RedisBus(BaseEventBus):
                         envelope = self._fields_to_envelope(fields)
 
                         # Store message ID mapping for ack/nack
-                        await redis.hset(offset_key, f"msg:{envelope.event_id}", msg_id)
+                        await redis.hset(offset_key, f"msg:{envelope.event_id}", msg_id)  # type: ignore[misc]
                         await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
 
                         try:
@@ -667,13 +670,13 @@ class RedisBus(BaseEventBus):
                     msg_id = msg_id.decode()
 
                 # Claim if idle longer than timeout
-                if idle_time and idle_time > self._config.consumer_timeout_ms:
+                if msg_id and idle_time and idle_time > self._config.consumer_timeout_ms:
                     claimed = await redis.xclaim(
                         stream_key,
                         group_id,
                         consumer_name,
                         min_idle_time=self._config.consumer_timeout_ms,
-                        message_ids=[msg_id],
+                        message_ids=[str(msg_id)],
                     )
                     if claimed:
                         logger.info("Claimed pending message %s for %s", msg_id, topic)

@@ -44,11 +44,11 @@ class MetricsCollector:
 
     def __init__(self, config: CollectorConfig):
         self._config = config
-        self._redis: Redis[Any] | None = None
+        self._redis: Redis | None = None
         self._store: MetricsStore | None = None
         self._running = False
 
-    def _get_redis(self) -> Redis[Any]:
+    def _get_redis(self) -> Redis:
         """Get or create Redis connection."""
         if self._redis is None:
             import redis

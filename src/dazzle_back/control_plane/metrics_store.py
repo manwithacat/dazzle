@@ -14,7 +14,7 @@ import json
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from redis import Redis
@@ -74,7 +74,7 @@ class MetricsStore:
 
     PREFIX = "dazzle:metrics"
 
-    def __init__(self, redis: Redis[Any]):
+    def __init__(self, redis: Redis):
         self._redis = redis
 
     def _bucket_timestamp(self, ts: float, resolution: Resolution) -> int:
@@ -113,7 +113,9 @@ class MetricsStore:
             key = self._metric_key(name, resolution, tags)
 
             # Use a sorted set with score=timestamp, member=JSON with sum/count
-            existing_members = self._redis.zrangebyscore(key, bucket_ts, bucket_ts)
+            existing_members: list[Any] = cast(
+                list[Any], self._redis.zrangebyscore(key, bucket_ts, bucket_ts)
+            )
 
             if existing_members:
                 # Update existing bucket - increment count and sum
@@ -176,7 +178,9 @@ class MetricsStore:
         key = self._metric_key(name, resolution, tags)
 
         # Query sorted set by score range
-        raw_points = self._redis.zrangebyscore(key, start, end, withscores=True)
+        raw_points: list[Any] = cast(
+            list[Any], self._redis.zrangebyscore(key, start, end, withscores=True)
+        )
 
         points = []
         for member, _score in raw_points:
@@ -197,7 +201,7 @@ class MetricsStore:
 
     def get_metric_names(self) -> list[str]:
         """Get all known metric names."""
-        keys = self._redis.keys(f"{self.PREFIX}:*:1m*")
+        keys: list[Any] = cast(list[Any], self._redis.keys(f"{self.PREFIX}:*:1m*"))
         names = set()
         for key in keys:
             key_str = key if isinstance(key, str) else key.decode()
@@ -209,7 +213,7 @@ class MetricsStore:
     def get_latest(self, name: str, tags: dict[str, str] | None = None) -> float | None:
         """Get the most recent value for a metric."""
         key = self._metric_key(name, Resolution.MINUTE, tags)
-        results = self._redis.zrevrange(key, 0, 0)
+        results: list[Any] = cast(list[Any], self._redis.zrevrange(key, 0, 0))
         if results:
             data = json.loads(results[0])
             return float(data["value"])
@@ -228,7 +232,7 @@ class MetricsStore:
 
         # Find all keys matching this metric name (with any tags)
         pattern = f"{self.PREFIX}:{name}:{Resolution.MINUTE.label}*"
-        keys = self._redis.keys(pattern)
+        keys: list[Any] = cast(list[Any], self._redis.keys(pattern))
 
         all_values: list[float] = []
         all_counts: list[int] = []
@@ -237,7 +241,9 @@ class MetricsStore:
 
         for key in keys:
             key_str = key if isinstance(key, str) else key.decode()
-            raw_points = self._redis.zrangebyscore(key_str, start, now, withscores=True)
+            raw_points: list[Any] = cast(
+                list[Any], self._redis.zrangebyscore(key_str, start, now, withscores=True)
+            )
 
             for member, _score in raw_points:
                 data = json.loads(member)
