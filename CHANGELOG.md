@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-03-22
+
+### Added
+- `float` field type — IEEE 754 double precision for sensors, weights, and scores (#620)
+
+### Fixed
+- Float type included in tagged release (v0.46.0 tag predated the float commit)
+
 ## [0.46.0] - 2026-03-22
 
 ### Added
