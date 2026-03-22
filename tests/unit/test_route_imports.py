@@ -30,8 +30,6 @@ ROUTE_MODULES = [
     "dazzle_back.runtime.task_routes",
     "dazzle_back.runtime.test_routes",
     "dazzle_ui.runtime.page_routes",
-    "dazzle_ui.runtime.container.auth",
-    "dazzle_ui.runtime.container.test_routes",
 ]
 
 
