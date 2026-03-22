@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-03-22
+
+### Added
+- **Graph Semantics** — full directed property multigraph support in the DSL (#619)
+  - Phase 1: `graph_edge:` and `graph_node:` blocks on entities with validation and lint hints
+  - Phase 2: `?format=cytoscape|d3` on edge entity list endpoints via `GraphSerializer`
+  - Phase 3: `GET /{entity}/{id}/graph?depth=N` neighborhood traversal via PostgreSQL recursive CTE
+  - Phase 4: Shortest path and connected components via optional NetworkX integration
+- Domain-scoped graph algorithms (per-work graph partitioning via filter params)
+- `networkx>=3.0` as optional `[graph]` extra
+
 ## [0.45.5] - 2026-03-22
 
 ### Added
