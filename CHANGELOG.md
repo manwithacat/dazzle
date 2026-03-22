@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.3] - 2026-03-22
+
+### Added
+- Graph serializer: `?format=cytoscape|d3` on edge entity list endpoints (#619 Phase 2)
+- `GraphSerializer` class for Cytoscape.js and D3 force-graph JSON output
+- Heterogeneous graph support (bipartite graphs with different node entity types)
+- Node batch-fetch with scope/permit enforcement
+
 ## [0.45.2] - 2026-03-22
 
 ### Added
