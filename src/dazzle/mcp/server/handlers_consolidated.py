@@ -817,14 +817,15 @@ def _handle_graph_import(graph: Any, arguments: dict[str, Any]) -> str:
 
 def _handle_graph_triggers(arguments: dict[str, Any]) -> str:
     """Show everything that triggers when an entity event fires."""
-    from .state import get_active_project_path
+    from .state import resolve_project_path
 
     entity = arguments.get("entity") or arguments.get("name")
     event = arguments.get("event", "created")
 
-    project_root = get_active_project_path()
-    if not project_root:
-        return error_response("No active project")
+    try:
+        project_root = resolve_project_path(arguments.get("project_path"))
+    except ValueError as exc:
+        return error_response(str(exc))
 
     from .handlers.common import load_project_appspec
 
@@ -885,11 +886,12 @@ def _handle_graph_topology(arguments: dict[str, Any]) -> str:
     Returns entity relationships, surface→entity mapping, workspace composition,
     and dead construct detection. All derived from the DSL — no separate indexing.
     """
-    from .state import get_active_project_path
+    from .state import resolve_project_path
 
-    project_root = get_active_project_path()
-    if not project_root:
-        return error_response("No active project")
+    try:
+        project_root = resolve_project_path(arguments.get("project_path"))
+    except ValueError as exc:
+        return error_response(str(exc))
 
     from .handlers.common import load_project_appspec
 
