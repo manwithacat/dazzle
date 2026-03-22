@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `--production` flag on `dazzle serve` — binds 0.0.0.0, reads PORT env var, requires DATABASE_URL, structured JSON logging, disables dev features
+- `dazzle deploy dockerfile` — generates production Dockerfile + requirements.txt
+- `dazzle deploy heroku` — generates Procfile, runtime.txt, requirements.txt
+- `dazzle deploy compose` — generates production docker-compose.yml
+
+### Removed
+- Container runtime (`dazzle_ui.runtime.container`) — replaced by `dazzle serve --production`
+- `DockerRunner` and Docker template generation — replaced by `dazzle deploy`
+- `dazzle rebuild` command — prints migration message directing to `dazzle deploy dockerfile`
+
 ## [0.46.2] - 2026-03-22
 
 ### Fixed
