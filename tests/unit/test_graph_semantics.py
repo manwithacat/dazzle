@@ -644,3 +644,87 @@ class TestGraphLintHints:
         appspec = _make_appspec([node, edge])
         warnings = extended_lint(appspec)
         assert not any("consider adding graph_node:" in w for w in warnings)
+
+
+class TestGraphRoundTrip:
+    """Full DSL -> parse -> validate round-trip."""
+
+    def test_full_graph_declaration(self) -> None:
+        """Penny Dreadful-style graph: nodes + edges + heterogeneous."""
+        dsl = """
+module test
+app g "G"
+
+entity Node "Node":
+  id: uuid pk
+  title: str(200) required
+  content: text
+
+  graph_node:
+    edges: NodeEdge
+    display: title
+
+entity NodeEdge "Edge":
+  id: uuid pk
+  source_node: ref Node required
+  target_node: ref Node required
+  relationship: enum[sequel,fork,reference,adaptation]
+  importance: int optional
+
+  graph_edge:
+    source: source_node
+    target: target_node
+    type: relationship
+    weight: importance
+    directed: true
+    acyclic: false
+"""
+        appspec = _parse(dsl)
+
+        # Parse check
+        node_e = next(e for e in appspec.domain.entities if e.name == "Node")
+        edge_e = next(e for e in appspec.domain.entities if e.name == "NodeEdge")
+        assert node_e.graph_node is not None
+        assert edge_e.graph_edge is not None
+        assert edge_e.graph_edge.type_field == "relationship"
+        assert edge_e.graph_edge.weight_field == "importance"
+        assert node_e.graph_node.display == "title"
+
+        # Validate — should produce no errors
+        errors, _ = validate_graph_declarations(appspec)
+        assert errors == []
+
+    def test_bipartite_graph(self) -> None:
+        """Heterogeneous graph with different node types."""
+        dsl = """
+module test
+app g "G"
+
+entity Author "Author":
+  id: uuid pk
+  name: str(200) required
+
+entity Work "Work":
+  id: uuid pk
+  title: str(200) required
+
+entity AuthorWork "Author-Work Link":
+  id: uuid pk
+  author: ref Author required
+  work: ref Work required
+  role: enum[creator,editor,contributor]
+
+  graph_edge:
+    source: author
+    target: work
+    type: role
+"""
+        appspec = _parse(dsl)
+        aw = next(e for e in appspec.domain.entities if e.name == "AuthorWork")
+        assert aw.graph_edge is not None
+        assert aw.graph_edge.source == "author"
+        assert aw.graph_edge.target == "work"
+
+        errors, warnings = validate_graph_declarations(appspec)
+        assert errors == []
+        assert any("Heterogeneous graph" in w for w in warnings)
