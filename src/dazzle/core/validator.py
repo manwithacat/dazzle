@@ -2041,3 +2041,123 @@ def _validate_predicate_node(
                 warnings,
             )
         return
+
+
+# =============================================================================
+# Graph semantics validation (v0.46.0 — #619)
+# =============================================================================
+
+# Numeric field types for graph weight validation
+_NUMERIC_FIELD_TYPES = frozenset(
+    {
+        ir.FieldTypeKind.INT,
+        ir.FieldTypeKind.DECIMAL,
+    }
+)
+
+
+def validate_graph_declarations(appspec: ir.AppSpec) -> tuple[list[str], list[str]]:
+    """Validate graph_edge: and graph_node: declarations.
+
+    Checks field references, types, and cross-entity consistency.
+
+    Returns:
+        Tuple of (errors, warnings)
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    entity_map = {e.name: e for e in appspec.domain.entities}
+
+    for entity in appspec.domain.entities:
+        if entity.graph_edge is not None:
+            _validate_graph_edge(entity, entity_map, errors, warnings)
+        if entity.graph_node is not None:
+            _validate_graph_node(entity, entity_map, errors, warnings)
+
+    return errors, warnings
+
+
+def _validate_graph_edge(
+    entity: ir.EntitySpec,
+    entity_map: dict[str, ir.EntitySpec],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate a single entity's graph_edge: block."""
+    ge = entity.graph_edge
+    assert ge is not None
+    field_map = {f.name: f for f in entity.fields}
+
+    # source field
+    if ge.source not in field_map:
+        errors.append(f"graph_edge source '{ge.source}' is not a field on {entity.name}")
+    else:
+        src_field = field_map[ge.source]
+        if src_field.type.kind != ir.FieldTypeKind.REF:
+            errors.append(
+                f"graph_edge source must be a ref field, got '{src_field.type.kind.value}'"
+            )
+
+    # target field
+    if ge.target not in field_map:
+        errors.append(f"graph_edge target '{ge.target}' is not a field on {entity.name}")
+    else:
+        tgt_field = field_map[ge.target]
+        if tgt_field.type.kind != ir.FieldTypeKind.REF:
+            errors.append(
+                f"graph_edge target must be a ref field, got '{tgt_field.type.kind.value}'"
+            )
+
+    # type_field (optional)
+    if ge.type_field is not None:
+        if ge.type_field not in field_map:
+            errors.append(f"graph_edge type '{ge.type_field}' is not a field on {entity.name}")
+
+    # weight_field (optional)
+    if ge.weight_field is not None:
+        if ge.weight_field not in field_map:
+            errors.append(f"graph_edge weight '{ge.weight_field}' is not a field on {entity.name}")
+        else:
+            wf = field_map[ge.weight_field]
+            if wf.type.kind not in _NUMERIC_FIELD_TYPES:
+                errors.append("graph_edge weight must be int or decimal")
+
+    # Warnings: heterogeneous graph
+    if ge.source in field_map and ge.target in field_map:
+        src_ref = field_map[ge.source].type.ref_entity
+        tgt_ref = field_map[ge.target].type.ref_entity
+        if src_ref and tgt_ref and src_ref != tgt_ref:
+            warnings.append(f"Heterogeneous graph: source refs {src_ref}, target refs {tgt_ref}")
+
+    # Warning: no access control on edge entity
+    if entity.access is None or not entity.access.permissions:
+        warnings.append(f"Edge entity '{entity.name}' has no access control")
+
+    # Warning: acyclic only detectable in seed data
+    if ge.acyclic:
+        warnings.append("acyclic declared but cycles only detected in seed data")
+
+
+def _validate_graph_node(
+    entity: ir.EntitySpec,
+    entity_map: dict[str, ir.EntitySpec],
+    errors: list[str],
+    warnings: list[str],
+) -> None:
+    """Validate a single entity's graph_node: block."""
+    gn = entity.graph_node
+    assert gn is not None
+
+    if gn.edge_entity not in entity_map:
+        errors.append(f"graph_node edges '{gn.edge_entity}' is not a defined entity")
+    else:
+        edge_ent = entity_map[gn.edge_entity]
+        if edge_ent.graph_edge is None:
+            errors.append(f"graph_node edges '{gn.edge_entity}' does not declare graph_edge:")
+
+    if gn.display is not None:
+        field_map = {f.name: f for f in entity.fields}
+        if gn.display not in field_map:
+            errors.append(f"graph_node display '{gn.display}' is not a field on {entity.name}")
+    else:
+        warnings.append("graph_node has no display field — labels use default fallback")

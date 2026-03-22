@@ -8,6 +8,7 @@ from .validator import (
     validate_experiences,
     validate_foreign_models,
     validate_governance_policies,
+    validate_graph_declarations,
     validate_integrations,
     validate_ledgers,
     validate_money_fields,
@@ -132,6 +133,11 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
 
     # Scope predicate validation (FK path integrity)
     errors, warnings = validate_scope_predicates(appspec)
+    all_errors.extend(errors)
+    all_warnings.extend(warnings)
+
+    # Graph semantics validation (v0.46.0 — #619)
+    errors, warnings = validate_graph_declarations(appspec)
     all_errors.extend(errors)
     all_warnings.extend(warnings)
 
