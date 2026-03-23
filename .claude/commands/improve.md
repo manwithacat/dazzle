@@ -57,7 +57,10 @@ If `$ARGUMENTS` is provided, filter to only that app name.
 1. Read `dev_docs/improve-backlog.md`
 2. If a gap is IN_PROGRESS with attempts < 3: resume it
 3. If a gap is IN_PROGRESS with attempts >= 3: mark BLOCKED, file issue if framework-related, pick next PENDING
-4. If all gaps DONE or BLOCKED: re-scan for new gaps (DSL may have changed), update backlog, report completion
+4. If all gaps DONE or BLOCKED:
+   a. Re-scan for new gaps (DSL may have changed), update backlog
+   b. If new PENDING gaps found: pick the first one and continue
+   c. **If still no PENDING gaps: fall through to TRIAGE (Step 6)**
 5. Pick next PENDING gap (priority: critical > warning > info, then by app alphabetical)
 6. Mark IN_PROGRESS
 
@@ -120,6 +123,18 @@ If verification fails: increment attempts, log the failure, retry from ENHANCE (
      - If they're feature requests or discussion issues, note them and continue the backlog
 5. Move to next gap (return to OBSERVE)
 
+## Step 6: TRIAGE (when backlog is clean)
+
+When all backlog gaps are DONE or BLOCKED and no new gaps found from re-scan, automatically check for open GitHub issues and handle them:
+
+1. Run `gh issue list --state open --limit 20 --json number,title,labels,author`
+2. If **no open issues**: report "All clear — backlog clean, no open issues" and stop
+3. If **open issues exist**: invoke the `/issues` skill to triage and resolve them
+   - The `/issues` skill handles the full cycle: investigate, implement, ship, close
+   - After `/issues` completes, the improve loop is done for this invocation
+
+This makes `/improve` a unified maintenance command: fix example app gaps first, then handle reported issues when the backlog is clean.
+
 ## Failure Policy
 
 | Condition | Action |
@@ -128,7 +143,8 @@ If verification fails: increment attempts, log the failure, retry from ENHANCE (
 | Tests fail on changed code | Fix code, retry from BUILD |
 | Verification still shows gap | Check if gap definition is stale, retry |
 | Same failure 3 times | DIAGNOSE: root-cause analysis. If framework bug → file at manwithacat/dazzle. Mark BLOCKED. |
-| All gaps done | Re-scan for new gaps. If clean → report completion. |
+| All gaps done, no issues | Report completion and stop |
+| All gaps done, issues exist | Fall through to TRIAGE (Step 6) |
 
 ## Scope
 
@@ -137,9 +153,9 @@ If verification fails: increment attempts, log the failure, retry from ENHANCE (
 - RBAC completeness (conformance gaps — missing scope/permit blocks)
 - Surface coverage (entities without surfaces)
 - UX completeness (missing search/filter/sort/empty directives)
+- **Open GitHub issues** (when backlog is clean — delegates to `/issues`)
 
 **What it does NOT do:**
-- Modify framework source code (src/dazzle/, src/dazzle_back/, src/dazzle_ui/)
 - Create new example apps
 - Make changes that require human judgment (architecture decisions, new features)
 
@@ -149,4 +165,5 @@ After a full `/loop` run:
 - At least 5-10 gaps resolved per hour
 - All example apps pass `dazzle validate`
 - Conformance coverage increases
+- Open issues triaged and resolved where possible
 - `dev_docs/improve-log.md` has a clear audit trail of every change
