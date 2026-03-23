@@ -796,6 +796,7 @@ surface task_edit "Edit Task":
 # Workspace: Engineering Dashboard
 workspace engineering_dashboard "Engineering Dashboard":
   purpose: "Comprehensive field testing oversight"
+  access: persona(engineer, manager)
 
   critical_issues:
     source: IssueReport
@@ -866,6 +867,7 @@ workspace engineering_dashboard "Engineering Dashboard":
 # Workspace: Tester Dashboard
 workspace tester_dashboard "Tester Dashboard":
   purpose: "Personal field testing hub"
+  access: persona(tester)
 
   my_devices:
     source: Device

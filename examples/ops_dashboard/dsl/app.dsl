@@ -99,6 +99,7 @@ persona ops_engineer "Operations Engineer":
 workspace command_center "Command Center":
   purpose: "Real-time operations monitoring and incident response"
   stage: "command_center"
+  access: persona(ops_engineer)
 
   # Alert Feed - Shows active alerts
   active_alerts:

@@ -13,6 +13,7 @@ surface realm_list "Realms":
   ux:
     sort: name asc
     search: name
+    filter: sigil
     empty: "No realms found."
 
 surface shape_list "Shapes":
@@ -55,4 +56,5 @@ surface inscription_list "Inscriptions":
   ux:
     sort: created_at desc
     search: text
+    filter: shape, author
     empty: "No inscriptions found."
