@@ -802,9 +802,17 @@ async def _workspace_region_handler(
             if rv not in row_map:
                 row_map[rv] = {}
             row_map[rv][cv] = val
-            # Store raw row ID for action URL interpolation
+            # Store raw row ID for action URL interpolation.
+            # When the FK is expanded (dict), use its "id"; when it's a plain
+            # UUID string, that IS the target entity ID — don't fall back to
+            # the source item's own id (#633).
             raw_row = item.get(hm_rows_field)
-            row_id = str(raw_row.get("id", "") if isinstance(raw_row, dict) else item.get("id", ""))
+            if isinstance(raw_row, dict):
+                row_id = str(raw_row.get("id", ""))
+            elif raw_row:
+                row_id = str(raw_row)
+            else:
+                row_id = str(item.get("id", ""))
             row_ids[rv] = row_id
         for row_label in sorted(row_map.keys()):
             cells: list[dict[str, Any]] = []
