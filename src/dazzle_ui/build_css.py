@@ -128,6 +128,10 @@ def _create_input_css(tmp_dir: Path) -> Path:
         """\
 @import "tailwindcss";
 @plugin "daisyui";
+
+/* Safelist: classes constructed at runtime by Alpine.js that the static
+   scanner cannot detect (workspace card width customisation, #631). */
+@source inline("col-span-4 col-span-6 col-span-8 col-span-12 md:col-span-4 md:col-span-6 md:col-span-8 md:col-span-12 lg:col-span-4 lg:col-span-6 lg:col-span-8 lg:col-span-12");
 """
     )
     return input_css
