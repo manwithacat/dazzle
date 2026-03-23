@@ -1,0 +1,1000 @@
+framework:
+  id: iso27001
+  name: "ISO/IEC 27001:2022"
+  jurisdiction: international
+  body: "ISO/IEC JTC 1/SC 27"
+  version: "2022"
+
+  themes:
+    # =========================================================================
+    # A.5 - Organisational Controls (37 controls)
+    # =========================================================================
+    - id: organisational
+      name: "Organisational Controls"
+      controls:
+        - id: "A.5.1"
+          name: "Policies for information security"
+          objective: "Ensure management direction and support for information security in accordance with business requirements and relevant laws and regulations."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [governance]
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives encode data classification policy"
+            - construct: permit
+              description: "permit blocks encode access control policy"
+            - construct: processes
+              description: "Documented operational procedures implement policy"
+            - construct: transitions
+              description: "State machine guards enforce policy compliance"
+
+        - id: "A.5.2"
+          name: "Information security roles and responsibilities"
+          objective: "Establish a defined, approved and understood set of information security roles and responsibilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [governance]
+          dsl_evidence:
+            - construct: persona
+              description: "Persona definitions assign security roles"
+            - construct: workspace
+              description: "Role-specific workspaces enforce responsibility boundaries"
+
+        - id: "A.5.3"
+          name: "Segregation of duties"
+          objective: "Reduce the risk of fraud, error and bypassing of information security controls through segregation of conflicting duties."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [governance]
+          dsl_evidence:
+            - construct: permit
+              description: "Role-based permit blocks enforce duty segregation"
+            - construct: transitions
+              description: "Transition guards require different roles for different steps"
+
+        - id: "A.5.4"
+          name: "Management responsibilities"
+          objective: "Ensure that management requires all personnel to apply information security in accordance with the established policies."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [governance]
+          dsl_evidence:
+            - construct: persona
+              description: "Management personas have oversight responsibilities defined"
+
+        - id: "A.5.5"
+          name: "Contact with authorities"
+          objective: "Maintain appropriate contacts with relevant authorities."
+          attributes:
+            control_type: [preventive, corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [governance]
+          dsl_evidence: []
+
+        - id: "A.5.6"
+          name: "Contact with special interest groups"
+          objective: "Maintain appropriate contacts with special interest groups or other specialist security forums."
+          attributes:
+            control_type: [preventive, corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [governance]
+          dsl_evidence: []
+
+        - id: "A.5.7"
+          name: "Threat intelligence"
+          objective: "Collect and analyse information about information security threats to produce threat intelligence."
+          attributes:
+            control_type: [preventive, detective, corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [threat_and_vulnerability_management]
+          dsl_evidence: []
+
+        - id: "A.5.8"
+          name: "Information security in project management"
+          objective: "Integrate information security into project management to ensure information security risks are addressed."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [governance]
+          dsl_evidence:
+            - construct: stories
+              description: "User stories include security acceptance criteria"
+
+        - id: "A.5.9"
+          name: "Inventory of information and other associated assets"
+          objective: "Identify information and other associated assets, define appropriate protection responsibilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [asset_management]
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives create an inventory of data assets and their categories"
+
+        - id: "A.5.10"
+          name: "Acceptable use of information and other associated assets"
+          objective: "Ensure information and other associated assets are appropriately protected, used and handled."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [asset_management]
+          dsl_evidence:
+            - construct: classify
+              description: "Classification directives define acceptable handling per data category"
+            - construct: permit
+              description: "Access rules enforce acceptable use by role"
+
+        - id: "A.5.11"
+          name: "Return of assets"
+          objective: "Protect the organisation's assets as part of the process of changing or terminating employment, contract or agreement."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [asset_management]
+          dsl_evidence: []
+
+        - id: "A.5.12"
+          name: "Classification of information"
+          objective: "Ensure that information receives an appropriate level of protection in accordance with its importance to the organisation."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_protection]
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives assign sensitivity categories to entity fields"
+            - construct: visible
+              description: "visible directives restrict display of classified fields by role"
+
+        - id: "A.5.13"
+          name: "Labelling of information"
+          objective: "Facilitate the communication of information classification using an appropriate set of labelling procedures."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_protection]
+          dsl_evidence:
+            - construct: classify
+              description: "classify labels propagate through UI and API responses"
+
+        - id: "A.5.14"
+          name: "Information transfer"
+          objective: "Maintain the security of information transferred within the organisation and with any external entity."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_protection]
+          dsl_evidence: []
+
+        - id: "A.5.15"
+          name: "Access control"
+          objective: "Ensure authorised access and prevent unauthorised access to information and other associated assets."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [identity_and_access_management]
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks define role-based CRUD access rules"
+            - construct: scope
+              description: "scope blocks enforce row-level data filtering"
+
+        - id: "A.5.16"
+          name: "Identity management"
+          objective: "Enable unique identification of individuals and systems accessing organisational assets and assign appropriate access rights."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [identity_and_access_management]
+          dsl_evidence:
+            - construct: permit
+              description: "Access rules require authenticated identity"
+
+        - id: "A.5.17"
+          name: "Authentication information"
+          objective: "Ensure proper authentication of users and prevent compromise of authentication information."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [identity_and_access_management]
+          dsl_evidence: []
+
+        - id: "A.5.18"
+          name: "Access rights"
+          objective: "Ensure access to information and other associated assets is authorised and restricted to defined business and security requirements."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [identity_and_access_management]
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks assign CRUD rights per role"
+            - construct: grant_schema
+              description: "grant_schema enables delegated, time-bounded access"
+
+        - id: "A.5.19"
+          name: "Information security in supplier relationships"
+          objective: "Maintain an agreed level of information security in supplier relationships."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [supplier_relationships_security]
+          dsl_evidence: []
+
+        - id: "A.5.20"
+          name: "Addressing information security within supplier agreements"
+          objective: "Establish and agree relevant information security requirements with each supplier based on the type of supplier relationship."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [supplier_relationships_security]
+          dsl_evidence: []
+
+        - id: "A.5.21"
+          name: "Managing information security in the ICT supply chain"
+          objective: "Maintain an agreed level of information security in relationships with ICT supply chain participants."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [supplier_relationships_security]
+          dsl_evidence: []
+
+        - id: "A.5.22"
+          name: "Monitoring, review and change management of supplier services"
+          objective: "Maintain an agreed level of information security and service delivery in line with supplier agreements."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [supplier_relationships_security]
+          dsl_evidence: []
+
+        - id: "A.5.23"
+          name: "Information security for use of cloud services"
+          objective: "Specify and manage information security for the use of cloud services."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [supplier_relationships_security]
+          dsl_evidence: []
+
+        - id: "A.5.24"
+          name: "Information security incident management planning and preparation"
+          objective: "Ensure a quick, effective and orderly response to information security incidents."
+          attributes:
+            control_type: [corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: scenarios
+              description: "Incident response scenarios validate end-to-end control flow"
+            - construct: processes
+              description: "Documented incident management procedures"
+
+        - id: "A.5.25"
+          name: "Assessment and decision on information security events"
+          objective: "Ensure information security events are assessed and decided upon to classify them as information security incidents."
+          attributes:
+            control_type: [detective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: transitions
+              description: "State machine gates control incident triage decisions"
+
+        - id: "A.5.26"
+          name: "Response to information security incidents"
+          objective: "Ensure information security incidents are responded to in accordance with the documented procedures."
+          attributes:
+            control_type: [corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: scenarios
+              description: "Incident response scenarios validate response workflows"
+            - construct: processes
+              description: "Documented response procedures with SLAs"
+
+        - id: "A.5.27"
+          name: "Learning from information security incidents"
+          objective: "Use knowledge gained from information security incidents to strengthen and improve information security controls."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence: []
+
+        - id: "A.5.28"
+          name: "Collection of evidence"
+          objective: "Ensure the identification, collection, acquisition and preservation of evidence related to information security events."
+          attributes:
+            control_type: [detective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: archetype
+              description: "Audit trail fields (created_at, updated_at, created_by) preserve evidence"
+
+        - id: "A.5.29"
+          name: "Information security during disruption"
+          objective: "Plan how to maintain information security at an appropriate level during disruption."
+          attributes:
+            control_type: [preventive, corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [business_continuity]
+          dsl_evidence:
+            - construct: scenarios
+              description: "Disruption scenarios validate continuity controls"
+
+        - id: "A.5.30"
+          name: "ICT readiness for business continuity"
+          objective: "Ensure the availability of ICT services based on business continuity objectives."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [availability]
+            operational_capabilities: [business_continuity]
+          dsl_evidence: []
+
+        - id: "A.5.31"
+          name: "Legal, statutory, regulatory and contractual requirements"
+          objective: "Ensure compliance with legal, statutory, regulatory and contractual requirements related to information security."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [legal_and_compliance]
+          dsl_evidence:
+            - construct: classify
+              description: "Classification categories align with regulatory data handling requirements"
+
+        - id: "A.5.32"
+          name: "Intellectual property rights"
+          objective: "Ensure compliance with legal, statutory, regulatory and contractual requirements related to intellectual property rights."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity]
+            operational_capabilities: [legal_and_compliance]
+          dsl_evidence: []
+
+        - id: "A.5.33"
+          name: "Protection of records"
+          objective: "Ensure protection of records from loss, destruction, falsification, unauthorised access and unauthorised release."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [legal_and_compliance]
+          dsl_evidence:
+            - construct: permit
+              description: "Delete restrictions protect records from unauthorised destruction"
+            - construct: archetype
+              description: "Audit trail fields preserve record integrity"
+
+        - id: "A.5.34"
+          name: "Privacy and protection of personal identifiable information (PII)"
+          objective: "Ensure compliance with legal, statutory, regulatory and contractual requirements related to the privacy and protection of PII."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality]
+            operational_capabilities: [legal_and_compliance]
+          dsl_evidence:
+            - construct: classify
+              description: "PII and sensitive-PII classifications identify personal data"
+            - construct: visible
+              description: "Field visibility restrictions minimise PII exposure"
+            - construct: llm_config
+              description: "LLM PII redaction configuration protects personal data in AI processing"
+
+        - id: "A.5.35"
+          name: "Independent review of information security"
+          objective: "Ensure the suitability, adequacy and effectiveness of the approach to managing information security is independently reviewed."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [legal_and_compliance]
+          dsl_evidence: []
+
+        - id: "A.5.36"
+          name: "Compliance with policies, rules and standards for information security"
+          objective: "Ensure information security is implemented and operated in accordance with the organisation's policies and procedures."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [legal_and_compliance]
+          dsl_evidence:
+            - construct: permit
+              description: "Automated policy enforcement via access rules"
+
+        - id: "A.5.37"
+          name: "Documented operating procedures"
+          objective: "Ensure correct and secure operations of information processing facilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [asset_management]
+          dsl_evidence:
+            - construct: processes
+              description: "Process specifications document operational procedures with SLAs"
+
+    # =========================================================================
+    # A.6 - People Controls (8 controls)
+    # =========================================================================
+    - id: people
+      name: "People Controls"
+      controls:
+        - id: "A.6.1"
+          name: "Screening"
+          objective: "Ensure all candidates are thoroughly screened before joining the organisation and on an ongoing basis."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [human_resource_security]
+          dsl_evidence: []
+
+        - id: "A.6.2"
+          name: "Terms and conditions of employment"
+          objective: "Ensure personnel understand their information security responsibilities through contractual obligations."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [human_resource_security]
+          dsl_evidence: []
+
+        - id: "A.6.3"
+          name: "Information security awareness, education and training"
+          objective: "Ensure all personnel are aware of and fulfil their information security responsibilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [human_resource_security]
+          dsl_evidence: []
+
+        - id: "A.6.4"
+          name: "Disciplinary process"
+          objective: "Ensure there is a formal and communicated disciplinary process for personnel who have committed an information security policy violation."
+          attributes:
+            control_type: [corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [human_resource_security]
+          dsl_evidence: []
+
+        - id: "A.6.5"
+          name: "Responsibilities after termination or change of employment"
+          objective: "Protect the organisation's interests as part of the process of changing or terminating employment."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [human_resource_security]
+          dsl_evidence: []
+
+        - id: "A.6.6"
+          name: "Confidentiality or non-disclosure agreements"
+          objective: "Maintain confidentiality of information accessible by personnel or external parties."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality]
+            operational_capabilities: [human_resource_security]
+          dsl_evidence: []
+
+        - id: "A.6.7"
+          name: "Remote working"
+          objective: "Ensure the security of information when personnel are working remotely."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [human_resource_security]
+          dsl_evidence: []
+
+        - id: "A.6.8"
+          name: "Information security event reporting"
+          objective: "Support timely, consistent and effective reporting of information security events."
+          attributes:
+            control_type: [detective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: transitions
+              description: "SafeguardingConcern and BehaviourIncident state machines model security event reporting workflows"
+
+    # =========================================================================
+    # A.7 - Physical Controls (14 controls)
+    # =========================================================================
+    - id: physical
+      name: "Physical Controls"
+      controls:
+        - id: "A.7.1"
+          name: "Physical security perimeters"
+          objective: "Prevent unauthorised physical access, damage and interference to the organisation's information and other associated assets."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.2"
+          name: "Physical entry"
+          objective: "Ensure only authorised physical access to the organisation's information and other associated assets."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.3"
+          name: "Securing offices, rooms and facilities"
+          objective: "Prevent unauthorised physical access, damage and interference to the organisation's information and other associated assets in offices, rooms and facilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.4"
+          name: "Physical security monitoring"
+          objective: "Detect and deter unauthorised physical access."
+          attributes:
+            control_type: [preventive, detective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.5"
+          name: "Protecting against physical and environmental threats"
+          objective: "Prevent or reduce the consequences of events originating from physical and environmental threats."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.6"
+          name: "Working in secure areas"
+          objective: "Protect information and other associated assets in secure areas from damage and unauthorised interference by personnel."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.7"
+          name: "Clear desk and clear screen"
+          objective: "Reduce the risks of unauthorised access to, or loss of and damage to, information on desks, screens and in other accessible locations."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.8"
+          name: "Equipment siting and protection"
+          objective: "Reduce the risks from physical and environmental threats and from unauthorised access and damage."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.9"
+          name: "Security of assets off-premises"
+          objective: "Prevent loss, damage, theft or compromise of off-site assets and interruption to the organisation's operations."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security, asset_management]
+          dsl_evidence: []
+
+        - id: "A.7.10"
+          name: "Storage media"
+          objective: "Ensure authorised disclosure, modification, removal or destruction of information on storage media."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security, asset_management]
+          dsl_evidence: []
+
+        - id: "A.7.11"
+          name: "Supporting utilities"
+          objective: "Prevent loss, damage or compromise of information and other associated assets due to failure or disruption of supporting utilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.12"
+          name: "Cabling security"
+          objective: "Prevent loss, damage, theft or compromise of information and other associated assets and interruption to the organisation's operations related to power and communications cabling."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.13"
+          name: "Equipment maintenance"
+          objective: "Prevent loss, damage, theft or compromise of information and other associated assets and interruption to the organisation's operations caused by lack of maintenance."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [physical_security]
+          dsl_evidence: []
+
+        - id: "A.7.14"
+          name: "Secure disposal or re-use of equipment"
+          objective: "Prevent information leakage from equipment that is to be disposed of or re-used."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality]
+            operational_capabilities: [physical_security, asset_management]
+          dsl_evidence: []
+
+    # =========================================================================
+    # A.8 - Technological Controls (34 controls)
+    # =========================================================================
+    - id: technological
+      name: "Technological Controls"
+      controls:
+        - id: "A.8.1"
+          name: "User endpoint devices"
+          objective: "Protect information stored on, processed by or accessible via user endpoint devices."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [asset_management]
+          dsl_evidence: []
+
+        - id: "A.8.2"
+          name: "Privileged access rights"
+          objective: "Ensure only authorised users, software components and services are provided with privileged access rights."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [identity_and_access_management]
+          dsl_evidence:
+            - construct: permit
+              description: "Privileged operations restricted to specific roles"
+            - construct: grant_schema
+              description: "Delegated privilege grants with time bounds"
+
+        - id: "A.8.3"
+          name: "Information access restriction"
+          objective: "Ensure only authorised access to information and other associated assets in accordance with the access control policy."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [identity_and_access_management]
+          dsl_evidence:
+            - construct: permit
+              description: "Role-based CRUD access restrictions"
+            - construct: scope
+              description: "Row-level filtering enforces data access boundaries"
+            - construct: visible
+              description: "Field-level visibility restricts information access"
+
+        - id: "A.8.4"
+          name: "Access to source code"
+          objective: "Prevent unauthorised access to source code."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity]
+            operational_capabilities: [application_security]
+          dsl_evidence: []
+
+        - id: "A.8.5"
+          name: "Secure authentication"
+          objective: "Ensure a user or entity is securely authenticated when access to systems, applications and services is granted."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [identity_and_access_management]
+          dsl_evidence: []
+
+        - id: "A.8.6"
+          name: "Capacity management"
+          objective: "Ensure adequate capacity of information processing facilities, human resources, offices and other facilities."
+          attributes:
+            control_type: [preventive, detective]
+            security_concepts: [integrity, availability]
+            operational_capabilities: [continuity]
+          dsl_evidence: []
+
+        - id: "A.8.7"
+          name: "Protection against malware"
+          objective: "Ensure information and other associated assets are protected against malware."
+          attributes:
+            control_type: [preventive, detective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [system_and_network_security]
+          dsl_evidence: []
+
+        - id: "A.8.8"
+          name: "Management of technical vulnerabilities"
+          objective: "Prevent exploitation of technical vulnerabilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [threat_and_vulnerability_management]
+          dsl_evidence: []
+
+        - id: "A.8.9"
+          name: "Configuration management"
+          objective: "Ensure hardware, software, services and networks function correctly with required security settings and that configuration is not altered by unauthorised or incorrect changes."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [secure_configuration]
+          dsl_evidence:
+            - construct: transitions
+              description: "State machine guards enforce configuration change approval"
+            - construct: processes
+              description: "Configuration management procedures documented"
+
+        - id: "A.8.10"
+          name: "Information deletion"
+          objective: "Prevent unnecessary exposure of sensitive information and to comply with legal, statutory, regulatory and contractual requirements for information deletion."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality]
+            operational_capabilities: [information_protection]
+          dsl_evidence:
+            - construct: permit
+              description: "Delete permissions controlled per role and entity"
+
+        - id: "A.8.11"
+          name: "Data masking"
+          objective: "Limit the exposure of sensitive data including PII, in accordance with the organisation's topic-specific policy on access control and business requirements."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality]
+            operational_capabilities: [information_protection]
+          dsl_evidence:
+            - construct: visible
+              description: "Field-level visibility rules mask sensitive data per role"
+            - construct: classify
+              description: "Classification identifies fields requiring masking"
+
+        - id: "A.8.12"
+          name: "Data leakage prevention"
+          objective: "Detect and prevent the unauthorised disclosure and extraction of information by individuals or systems."
+          attributes:
+            control_type: [preventive, detective]
+            security_concepts: [confidentiality]
+            operational_capabilities: [information_protection]
+          dsl_evidence:
+            - construct: scope
+              description: "Row-level scoping prevents data leakage across organisational boundaries"
+            - construct: visible
+              description: "Field-level visibility prevents exposure of sensitive fields"
+
+        - id: "A.8.13"
+          name: "Information backup"
+          objective: "Allow recovery of data and systems in the event of loss of data or systems."
+          attributes:
+            control_type: [corrective]
+            security_concepts: [integrity, availability]
+            operational_capabilities: [continuity]
+          dsl_evidence: []
+
+        - id: "A.8.14"
+          name: "Redundancy of information processing facilities"
+          objective: "Ensure the continuous operation of information processing facilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [availability]
+            operational_capabilities: [continuity]
+          dsl_evidence: []
+
+        - id: "A.8.15"
+          name: "Logging"
+          objective: "Record events, generate evidence, ensure the integrity of log information, prevent against unauthorised access, identify information security events."
+          attributes:
+            control_type: [detective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: archetype
+              description: "Audit trail fields (created_at, updated_at, created_by) provide entity-level logging"
+            - construct: llm_config
+              description: "LLM logging configuration captures AI interaction audit trail"
+            - construct: processes
+              description: "Process execution logs record operational events"
+
+        - id: "A.8.16"
+          name: "Monitoring activities"
+          objective: "Detect anomalous behaviour and potential information security incidents."
+          attributes:
+            control_type: [detective, corrective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: llm_config
+              description: "LLM monitoring configuration tracks AI usage patterns"
+            - construct: processes
+              description: "Process monitoring tracks operational health"
+
+        - id: "A.8.17"
+          name: "Clock synchronisation"
+          objective: "Enable the correlation of events and evidence by using synchronised clock sources."
+          attributes:
+            control_type: [detective]
+            security_concepts: [integrity]
+            operational_capabilities: [information_security_event_management]
+          dsl_evidence:
+            - construct: archetype
+              description: "Timestamp fields use server-synchronised UTC clocks"
+
+        - id: "A.8.18"
+          name: "Use of privileged utility programs"
+          objective: "Prevent the unauthorised use of utility programs that might be capable of overriding system and application controls."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [secure_configuration]
+          dsl_evidence: []
+
+        - id: "A.8.19"
+          name: "Installation of software on operational systems"
+          objective: "Ensure the integrity of operational systems and prevent exploitation of technical vulnerabilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [secure_configuration]
+          dsl_evidence: []
+
+        - id: "A.8.20"
+          name: "Networks security"
+          objective: "Protect information in networks and supporting information processing facilities."
+          attributes:
+            control_type: [preventive, detective]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [system_and_network_security]
+          dsl_evidence: []
+
+        - id: "A.8.21"
+          name: "Security of network services"
+          objective: "Ensure security of network services and their use."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [system_and_network_security]
+          dsl_evidence: []
+
+        - id: "A.8.22"
+          name: "Segregation of networks"
+          objective: "Divide the network into security groups and manage the traffic between them."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [system_and_network_security]
+          dsl_evidence: []
+
+        - id: "A.8.23"
+          name: "Web filtering"
+          objective: "Protect systems from being compromised by malware and prevent access to unauthorised web resources."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [system_and_network_security]
+          dsl_evidence: []
+
+        - id: "A.8.24"
+          name: "Use of cryptography"
+          objective: "Ensure proper and effective use of cryptography to protect the confidentiality, authenticity and integrity of information."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity]
+            operational_capabilities: [secure_configuration]
+          dsl_evidence: []
+
+        - id: "A.8.25"
+          name: "Secure development life cycle"
+          objective: "Ensure information security is designed and implemented within the secure development life cycle of software and systems."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [application_security]
+          dsl_evidence:
+            - construct: transitions
+              description: "Development workflow gates enforce security review steps"
+            - construct: stories
+              description: "Security acceptance criteria in user stories"
+            - construct: processes
+              description: "SDLC process documentation"
+
+        - id: "A.8.26"
+          name: "Application security requirements"
+          objective: "Ensure all information security requirements are identified and addressed when developing or acquiring applications."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [application_security]
+          dsl_evidence:
+            - construct: permit
+              description: "Access control requirements specified declaratively in DSL"
+            - construct: classify
+              description: "Data protection requirements specified via classification"
+
+        - id: "A.8.27"
+          name: "Secure system architecture and engineering principles"
+          objective: "Ensure information systems are securely designed, implemented and operated within the development life cycle."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [application_security]
+          dsl_evidence:
+            - construct: permit
+              description: "Least-privilege architecture enforced by design"
+            - construct: scope
+              description: "Multi-tenancy isolation via row-level scoping"
+
+        - id: "A.8.28"
+          name: "Secure coding"
+          objective: "Ensure software is written securely to reduce the number of potential information security vulnerabilities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [application_security]
+          dsl_evidence: []
+
+        - id: "A.8.29"
+          name: "Security testing in development and acceptance"
+          objective: "Validate that information security requirements are met when applications or code are deployed to the production environment."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [application_security]
+          dsl_evidence:
+            - construct: stories
+              description: "Acceptance criteria include security test requirements"
+            - construct: scenarios
+              description: "End-to-end test scenarios validate security controls"
+
+        - id: "A.8.30"
+          name: "Outsourced development"
+          objective: "Ensure information security measures are implemented for outsourced system development."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [application_security]
+          dsl_evidence: []
+
+        - id: "A.8.31"
+          name: "Separation of development, test and production environments"
+          objective: "Protect the operational environment and its data from compromise by development and test activities."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [application_security]
+          dsl_evidence: []
+
+        - id: "A.8.32"
+          name: "Change management"
+          objective: "Ensure information security is maintained when changes to information processing facilities and information systems are implemented."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [secure_configuration]
+          dsl_evidence:
+            - construct: transitions
+              description: "State machine guards enforce change approval workflows"
+            - construct: processes
+              description: "Change management procedures documented"
+
+        - id: "A.8.33"
+          name: "Test information"
+          objective: "Ensure appropriateness and protection of information used for testing."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality]
+            operational_capabilities: [information_protection]
+          dsl_evidence: []
+
+        - id: "A.8.34"
+          name: "Protection of information systems during audit testing"
+          objective: "Minimise the impact of audit and other assurance activities on operational systems and business processes."
+          attributes:
+            control_type: [preventive]
+            security_concepts: [confidentiality, integrity, availability]
+            operational_capabilities: [information_security_assurance]
+          dsl_evidence: []
