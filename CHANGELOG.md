@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Database migrations now use Alembic instead of hand-rolled `MigrationPlanner`
+- `dazzle db migrate` generates and applies migrations in one step
+- `dazzle db rollback` reverts migrations with optional revision target
+- Type changes detected automatically via `compare_type=True`
+- `dazzle serve --production` refuses to start with pending migrations
+
+### Added
+- Safe cast registry: text→uuid, text→date, text→timestamptz, text→jsonb applied automatically with USING clauses
+- `dazzle db migrate --check` dry-run to preview schema changes
+- `dazzle db migrate --tenant <slug>` for per-tenant schema migration
+
+### Removed
+- `MigrationPlanner`, `MigrationExecutor`, `MigrationHistory` classes (~400 lines)
+- `auto_migrate()` / `plan_migrations()` functions — replaced by Alembic
+
 ## [0.46.5] - 2026-03-23
 
 ### Fixed
