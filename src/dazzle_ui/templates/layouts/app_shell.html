@@ -91,6 +91,24 @@
       {% block sidebar_nav %}
       <nav aria-label="Main navigation">
       <ul class="menu p-4 gap-1 flex-1">
+        {# Ungrouped nav items first — workspace home link sorts above groups (#630) #}
+        {% for nav_item in nav_items | default([]) %}
+        <li>
+          <a href="{{ nav_item.route }}"
+             hx-get="{{ nav_item.route }}"
+             hx-target="#main-content"
+             hx-swap="morph:innerHTML transition:true"
+             hx-push-url="true"
+             preload="mousedown"
+             class="{% if current_route == nav_item.route %}active{% endif %}"
+             {% if current_route == nav_item.route %}aria-current="page"{% endif %}
+             data-dazzle-nav="{{ nav_item.route }}">
+            {% if nav_item.icon %}<i data-lucide="{{ nav_item.icon }}" class="w-4 h-4"></i>{% endif %}
+            {{ nav_item.label }}
+          </a>
+        </li>
+        {% endfor %}
+
         {# Collapsible nav groups (v0.38.0) #}
         {% for group in nav_groups | default([]) %}
         <li>
@@ -118,24 +136,6 @@
               {% endfor %}
             </ul>
           </details>
-        </li>
-        {% endfor %}
-
-        {# Ungrouped nav items #}
-        {% for nav_item in nav_items | default([]) %}
-        <li>
-          <a href="{{ nav_item.route }}"
-             hx-get="{{ nav_item.route }}"
-             hx-target="#main-content"
-             hx-swap="morph:innerHTML transition:true"
-             hx-push-url="true"
-             preload="mousedown"
-             class="{% if current_route == nav_item.route %}active{% endif %}"
-             {% if current_route == nav_item.route %}aria-current="page"{% endif %}
-             data-dazzle-nav="{{ nav_item.route }}">
-            {% if nav_item.icon %}<i data-lucide="{{ nav_item.icon }}" class="w-4 h-4"></i>{% endif %}
-            {{ nav_item.label }}
-          </a>
         </li>
         {% endfor %}
       </ul>
