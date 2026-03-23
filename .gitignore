@@ -104,3 +104,4 @@ src/*.dist-info/
 dev_docs/
 .dazzle/session-log.txt
 .worktrees/
+.claude/projects/
