@@ -885,6 +885,17 @@ class DazzleBackendApp:
             )
             self._app.include_router(audit_router)
 
+        # Grant management routes (#629)
+        if self._appspec and self._appspec.grant_schemas and self._db_manager:
+            from dazzle_back.runtime.grant_routes import create_grant_routes
+
+            grant_router = create_grant_routes(
+                conn_factory=self._db_manager.get_persistent_connection,
+                appspec=self._appspec,
+                auth_dep=auth_dep,
+            )
+            self._app.include_router(grant_router)
+
         # File uploads
         if self._enable_files:
             from dazzle_back.runtime.file_storage import (
