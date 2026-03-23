@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.5] - 2026-03-23
+
+### Fixed
+- 77 mypy type errors across `dazzle_back` and `dazzle.core` (Redis async unions, bare `dict` params, missing `column` arg in `make_parse_error`, missing `_build_graph_filter_sql`)
+- Gitignore `.claude/projects/` local session data
+
 ## [0.46.4] - 2026-03-22
 
 ### Fixed
