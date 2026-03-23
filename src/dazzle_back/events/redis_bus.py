@@ -153,7 +153,7 @@ class RedisBus(BaseEventBus):
             decode_responses=False,  # We handle encoding ourselves
         )
         # Test connection
-        await self._redis.ping()  # type: ignore[misc]
+        await self._redis.ping()  # type: ignore[misc,unused-ignore]
 
     async def close(self) -> None:
         """Close the Redis connection and stop consumers."""
@@ -271,14 +271,14 @@ class RedisBus(BaseEventBus):
         # Store mapping when consuming, or search for it
         # For now, we'll track this in metadata
         offset_key = self._offset_key(topic, group_id)
-        msg_id = await redis.hget(offset_key, f"msg:{event_id}")  # type: ignore[misc]
+        msg_id = await redis.hget(offset_key, f"msg:{event_id}")  # type: ignore[misc,unused-ignore]
 
         if msg_id:
             await redis.xack(stream_key, group_id, msg_id)
-            await redis.hdel(offset_key, f"msg:{event_id}")  # type: ignore[misc]
+            await redis.hdel(offset_key, f"msg:{event_id}")  # type: ignore[misc,unused-ignore]
 
             # Update last processed timestamp and refresh TTL
-            await redis.hset(offset_key, "last_processed_at", datetime.now(UTC).isoformat())  # type: ignore[misc]
+            await redis.hset(offset_key, "last_processed_at", datetime.now(UTC).isoformat())  # type: ignore[misc,unused-ignore]
             await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
 
     async def nack(
@@ -295,13 +295,13 @@ class RedisBus(BaseEventBus):
         offset_key = self._offset_key(topic, group_id)
 
         # Get message ID
-        msg_id = await redis.hget(offset_key, f"msg:{event_id}")  # type: ignore[misc]
+        msg_id = await redis.hget(offset_key, f"msg:{event_id}")  # type: ignore[misc,unused-ignore]
         if not msg_id:
             return
 
         # Get retry count
         retry_key = f"retry:{event_id}"
-        retry_count = await redis.hget(offset_key, retry_key)  # type: ignore[misc]
+        retry_count = await redis.hget(offset_key, retry_key)  # type: ignore[misc,unused-ignore]
         retry_count = int(retry_count) if retry_count else 0
 
         if not reason.retryable or retry_count >= self._config.retry_count:
@@ -323,10 +323,10 @@ class RedisBus(BaseEventBus):
 
             # Acknowledge to remove from pending
             await redis.xack(stream_key, group_id, msg_id)
-            await redis.hdel(offset_key, f"msg:{event_id}", retry_key)  # type: ignore[misc]
+            await redis.hdel(offset_key, f"msg:{event_id}", retry_key)  # type: ignore[misc,unused-ignore]
         else:
             # Increment retry count - message will be redelivered
-            await redis.hset(offset_key, retry_key, str(retry_count + 1))  # type: ignore[misc]
+            await redis.hset(offset_key, retry_key, str(retry_count + 1))  # type: ignore[misc,unused-ignore]
 
         # Refresh TTL on offset hash
         await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
@@ -417,7 +417,7 @@ class RedisBus(BaseEventBus):
             last_offset = 0
 
         # Get last processed timestamp
-        last_processed = await redis.hget(offset_key, "last_processed_at")  # type: ignore[misc]
+        last_processed = await redis.hget(offset_key, "last_processed_at")  # type: ignore[misc,unused-ignore]
         last_processed_at = None
         if last_processed:
             try:
@@ -617,7 +617,7 @@ class RedisBus(BaseEventBus):
                         envelope = self._fields_to_envelope(fields)
 
                         # Store message ID mapping for ack/nack
-                        await redis.hset(offset_key, f"msg:{envelope.event_id}", msg_id)  # type: ignore[misc]
+                        await redis.hset(offset_key, f"msg:{envelope.event_id}", msg_id)  # type: ignore[misc,unused-ignore]
                         await redis.expire(offset_key, _OFFSET_TTL_SECONDS)
 
                         try:
