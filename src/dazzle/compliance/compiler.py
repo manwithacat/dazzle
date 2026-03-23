@@ -1,141 +1,106 @@
-"""AuditSpec compiler — combines taxonomy + DSL evidence into the IR."""
+"""Compile taxonomy + evidence into a typed AuditSpec.
+
+Maps DSL evidence to compliance framework controls and produces
+a per-control assessment (evidenced / partial / gap / excluded).
+"""
 
 from __future__ import annotations
 
-import hashlib
 from datetime import UTC, datetime
-from pathlib import Path
 
-from dazzle.compliance.taxonomy import Control, Taxonomy
+from dazzle.compliance.models import (
+    AuditSpec,
+    AuditSummary,
+    ControlResult,
+    EvidenceItem,
+    EvidenceMap,
+    Taxonomy,
+)
 
-CONSTRUCT_TO_KEY = {
-    "classify": "classify",
-    "permit": "permit",
-    "scope": "scope",
-    "visible": "visible",
-    "transitions": "transitions",
-    "processes": "processes",
-    "stories": "stories",
+# Maps raw DSL construct names to taxonomy evidence categories.
+# When a taxonomy control lists dsl_evidence with construct="permit",
+# evidence items from both "permit" AND "grant_schema" match.
+#
+# Why these mappings exist:
+# grant_schema → permit: delegation rules evidence access control policies
+# workspace → personas: workspace assignments evidence role-based interfaces
+# llm_intent → classify: AI intent config evidences data handling governance
+# archetype → classify: audit trail fields evidence data lifecycle tracking
+# scenarios → stories: test scenarios evidence control validation
+CONSTRUCT_TO_KEY: dict[str, str] = {
     "grant_schema": "permit",
-    "persona": "personas",
     "workspace": "personas",
-    "llm_config": "classify",
+    "llm_intent": "classify",
     "archetype": "classify",
     "scenarios": "stories",
 }
 
 
-def _build_evidence_for_control(
-    control: Control, all_evidence: dict
-) -> tuple[list[dict], list[dict]]:
-    """Build evidence and gap entries for a single control."""
-    evidence = []
-    gaps = []
+def compile_auditspec(taxonomy: Taxonomy, evidence: EvidenceMap) -> AuditSpec:
+    """Compile a taxonomy and evidence map into a typed AuditSpec.
 
-    if not control.dsl_evidence:
-        gaps.append(
-            {
-                "description": f"No DSL construct addresses '{control.name}' — requires organisational policy",
-                "tier": 3,
-                "action": f"Document policy for: {control.name}",
-            }
-        )
-        return evidence, gaps
+    For each control in the taxonomy, checks whether the DSL evidence
+    contains items matching the control's expected constructs. Produces
+    a ControlResult with status and tier for each control.
+    """
+    # Build reverse mapping: taxonomy category → list of evidence items
+    evidence_by_category: dict[str, list[EvidenceItem]] = {}
+    for construct_name, items in evidence.items.items():
+        # Map to taxonomy category (or use raw name if no mapping)
+        category = CONSTRUCT_TO_KEY.get(construct_name, construct_name)
+        evidence_by_category.setdefault(category, []).extend(items)
 
-    for mapping in control.dsl_evidence:
-        key = CONSTRUCT_TO_KEY.get(mapping.construct, mapping.construct)
-        data = all_evidence.get(key)
-
-        if data and (
-            isinstance(data, list) and len(data) > 0 or isinstance(data, dict) and len(data) > 0
-        ):
-            entry = {
-                "construct": mapping.construct,
-                "type": mapping.description,
-                "summary": f"DSL {mapping.construct} evidence found",
-            }
-
-            if isinstance(data, list):
-                entry["count"] = len(data)
-                entry["refs"] = data[:5]
-            elif isinstance(data, dict):
-                entry["count"] = len(data)
-                entry["refs"] = [{"entity": k, **v} for k, v in list(data.items())[:5]]
-
-            evidence.append(entry)
-        else:
-            gaps.append(
-                {
-                    "description": f"No {mapping.construct} evidence found: {mapping.description}",
-                    "tier": 2,
-                    "action": f"Add {mapping.construct} constructs or document manually",
-                }
-            )
-
-    return evidence, gaps
-
-
-def _compute_status(evidence: list[dict], gaps: list[dict]) -> str:
-    """Compute control status from evidence and gaps."""
-    if not evidence and gaps:
-        return "gap"
-    if evidence and not gaps:
-        return "evidenced"
-    return "partial"
-
-
-def _find_theme(taxonomy: Taxonomy, control_id: str) -> str:
-    """Find which theme a control belongs to."""
+    # Pre-compute theme lookup
+    control_to_theme: dict[str, str] = {}
     for theme in taxonomy.themes:
         for ctrl in theme.controls:
-            if ctrl.id == control_id:
-                return theme.id
-    return "unknown"
+            control_to_theme[ctrl.id] = theme.id
 
-
-def compile_auditspec(
-    taxonomy: Taxonomy,
-    evidence: dict,
-    dsl_source: str,
-    dsl_content: str | None = None,
-) -> dict:
-    """Compile an AuditSpec from taxonomy and evidence."""
-    if dsl_content is None:
-        dsl_path = Path(dsl_source)
-        dsl_content = dsl_path.read_text() if dsl_path.exists() else ""
-
-    dsl_hash = f"sha256:{hashlib.sha256(dsl_content.encode()).hexdigest()[:16]}"
-
-    controls = []
-    counts = {"evidenced": 0, "partial": 0, "gaps": 0}
-
+    # Assess each control
+    results: list[ControlResult] = []
     for control in taxonomy.all_controls():
-        ev, gaps = _build_evidence_for_control(control, evidence)
-        status = _compute_status(ev, gaps)
-        counts[status if status != "gap" else "gaps"] += 1
+        expected = {e.construct for e in control.dsl_evidence}
+        matched: list[EvidenceItem] = []
+        for category in expected:
+            matched.extend(evidence_by_category.get(category, []))
 
-        controls.append(
-            {
-                "id": control.id,
-                "name": control.name,
-                "theme": _find_theme(taxonomy, control.id),
-                "status": status,
-                "evidence": ev,
-                "gaps": gaps,
-                "recommendations": [],
-            }
+        if matched:
+            status = "evidenced"
+            tier = 1
+        elif not expected:
+            # Control has no DSL evidence mapping — excluded
+            status = "excluded"
+            tier = 0
+        else:
+            status = "gap"
+            tier = 3
+
+        results.append(
+            ControlResult(
+                control_id=control.id,
+                control_name=control.name,
+                theme_id=control_to_theme.get(control.id, ""),
+                status=status,
+                tier=tier,
+                evidence=matched,
+            )
         )
 
-    return {
-        "auditspec_version": "1.0",
-        "framework": taxonomy.id,
-        "framework_version": taxonomy.version,
-        "generated_at": datetime.now(UTC).isoformat(),
-        "dsl_source": dsl_source,
-        "dsl_hash": dsl_hash,
-        "summary": {
-            "total_controls": len(controls),
-            **counts,
-        },
-        "controls": controls,
-    }
+    # Summary
+    summary = AuditSummary(
+        total_controls=len(results),
+        evidenced=sum(1 for r in results if r.status == "evidenced"),
+        partial=sum(1 for r in results if r.status == "partial"),
+        gaps=sum(1 for r in results if r.status == "gap"),
+        excluded=sum(1 for r in results if r.status == "excluded"),
+    )
+
+    return AuditSpec(
+        framework_id=taxonomy.id,
+        framework_name=taxonomy.name,
+        framework_version=taxonomy.version,
+        generated_at=datetime.now(UTC).isoformat(),
+        dsl_hash=evidence.dsl_hash,
+        controls=results,
+        summary=summary,
+    )

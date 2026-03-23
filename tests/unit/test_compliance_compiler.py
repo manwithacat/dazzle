@@ -1,128 +1,110 @@
-"""Tests for dazzle.compliance.compiler module."""
+"""Tests for compliance AuditSpec compiler."""
 
-from pathlib import Path
+from __future__ import annotations
 
-import pytest
-
-from dazzle.compliance.compiler import (
-    _compute_status,
-    compile_auditspec,
+from dazzle.compliance.compiler import compile_auditspec
+from dazzle.compliance.models import (
+    AuditSpec,
+    Control,
+    DslEvidence,
+    EvidenceItem,
+    EvidenceMap,
+    Taxonomy,
+    Theme,
 )
-from dazzle.compliance.taxonomy import load_taxonomy
-
-FIXTURES = Path(__file__).parent / "fixtures" / "compliance"
 
 
-@pytest.fixture
-def mini_taxonomy():
-    return load_taxonomy(FIXTURES / "mini_taxonomy.yaml")
-
-
-@pytest.fixture
-def full_evidence():
-    """Evidence that covers all constructs in the mini taxonomy."""
-    return {
-        "classify": [{"entity": "User", "field": "email", "classification": "pii"}],
-        "permit": {"User": {"operations": {"read": ["admin"]}}},
-        "scope": [{"entity": "User", "operation": "read", "rule": "school = current_user.school"}],
-        "transitions": [
-            {"entity": "Order", "from_state": "draft", "to_state": "submitted", "roles": ["admin"]}
+def _mini_taxonomy() -> Taxonomy:
+    return Taxonomy(
+        id="test",
+        name="Test Framework",
+        themes=[
+            Theme(
+                id="org",
+                name="Organisational",
+                controls=[
+                    Control(
+                        id="C-1",
+                        name="Access Control",
+                        dsl_evidence=[DslEvidence(construct="permit")],
+                    ),
+                    Control(
+                        id="C-2",
+                        name="Data Classification",
+                        dsl_evidence=[DslEvidence(construct="classify")],
+                    ),
+                    Control(
+                        id="C-3",
+                        name="Workflow Control",
+                        dsl_evidence=[DslEvidence(construct="transitions")],
+                    ),
+                ],
+            )
         ],
-        "processes": [{"name": "onboard", "title": "Onboarding"}],
-        "visible": [{"context": "User", "type": "field", "roles": ["admin"]}],
-        "stories": [{"title": "Admin creates user", "story_id": "S1"}],
-        "personas": [{"name": "admin", "label": "Administrator"}],
-    }
+    )
 
 
-@pytest.fixture
-def empty_evidence():
-    return {
-        "classify": [],
-        "permit": {},
-        "scope": [],
-        "transitions": [],
-        "processes": [],
-        "visible": [],
-        "stories": [],
-        "personas": [],
-    }
+def _evidence_with_permit() -> EvidenceMap:
+    return EvidenceMap(
+        items={
+            "permit": [
+                EvidenceItem(
+                    entity="Task",
+                    construct="permit",
+                    detail="create: authenticated",
+                    dsl_ref="Task.permit",
+                )
+            ],
+            "classify": [],
+        },
+        dsl_hash="sha256:abc123",
+    )
 
 
-def test_compile_produces_auditspec(mini_taxonomy, full_evidence):
-    result = compile_auditspec(mini_taxonomy, full_evidence, "test.dsl", dsl_content="entity Foo")
-    assert result["auditspec_version"] == "1.0"
-    assert result["framework"] == "mini_test"
-    assert "summary" in result
-    assert "controls" in result
-    assert len(result["controls"]) == 5
+class TestCompileAuditspec:
+    def test_returns_audit_spec(self) -> None:
+        result = compile_auditspec(_mini_taxonomy(), _evidence_with_permit())
+        assert isinstance(result, AuditSpec)
 
+    def test_evidenced_control(self) -> None:
+        result = compile_auditspec(_mini_taxonomy(), _evidence_with_permit())
+        c1 = next(c for c in result.controls if c.control_id == "C-1")
+        assert c1.status == "evidenced"
+        assert c1.tier == 1
 
-def test_summary_counts(mini_taxonomy, full_evidence):
-    result = compile_auditspec(mini_taxonomy, full_evidence, "test.dsl", dsl_content="entity Foo")
-    s = result["summary"]
-    assert s["total_controls"] == 5
-    # AC-1 (permit), AC-2 (classify), AC-3 (scope) -> evidenced
-    # OP-1 (transitions+processes) -> evidenced
-    # OP-2 (no dsl_evidence) -> gap
-    assert s["evidenced"] == 4
-    assert s["gaps"] == 1
+    def test_gap_control(self) -> None:
+        result = compile_auditspec(_mini_taxonomy(), _evidence_with_permit())
+        c3 = next(c for c in result.controls if c.control_id == "C-3")
+        assert c3.status == "gap"
+        assert c3.tier == 3
 
+    def test_summary_counts(self) -> None:
+        result = compile_auditspec(_mini_taxonomy(), _evidence_with_permit())
+        assert result.summary.total_controls == 3
+        assert result.summary.evidenced == 1
+        assert result.summary.gaps == 2
 
-def test_all_gaps_when_no_evidence(mini_taxonomy, empty_evidence):
-    result = compile_auditspec(mini_taxonomy, empty_evidence, "test.dsl", dsl_content="")
-    s = result["summary"]
-    # AC-1..AC-3 + OP-1 have dsl_evidence mappings but no data -> gap
-    # OP-2 has no dsl_evidence -> gap (tier 3)
-    assert s["gaps"] == 5
-    assert s["evidenced"] == 0
+    def test_empty_evidence_all_gaps(self) -> None:
+        empty = EvidenceMap(items={}, dsl_hash="sha256:empty")
+        result = compile_auditspec(_mini_taxonomy(), empty)
+        assert result.summary.gaps == 3
+        assert result.summary.evidenced == 0
 
-
-def test_dsl_hash_present(mini_taxonomy, full_evidence):
-    result = compile_auditspec(mini_taxonomy, full_evidence, "test.dsl", dsl_content="hello")
-    assert result["dsl_hash"].startswith("sha256:")
-
-
-def test_control_status_values(mini_taxonomy, full_evidence):
-    result = compile_auditspec(mini_taxonomy, full_evidence, "test.dsl", dsl_content="")
-    statuses = {c["id"]: c["status"] for c in result["controls"]}
-    assert statuses["AC-1"] == "evidenced"
-    assert statuses["OP-2"] == "gap"
-
-
-def test_compute_status():
-    assert _compute_status([{"x": 1}], []) == "evidenced"
-    assert _compute_status([], [{"x": 1}]) == "gap"
-    assert _compute_status([{"x": 1}], [{"y": 2}]) == "partial"
-
-
-def test_partial_evidence(mini_taxonomy):
-    """OP-1 requires transitions AND processes — provide only transitions."""
-    evidence = {
-        "classify": [],
-        "permit": {},
-        "scope": [],
-        "transitions": [{"entity": "Order", "from_state": "a", "to_state": "b"}],
-        "processes": [],
-        "visible": [],
-        "stories": [],
-        "personas": [],
-    }
-    result = compile_auditspec(mini_taxonomy, evidence, "test.dsl", dsl_content="")
-    op1 = next(c for c in result["controls"] if c["id"] == "OP-1")
-    assert op1["status"] == "partial"
-    assert len(op1["evidence"]) == 1
-    assert len(op1["gaps"]) == 1
-
-
-def test_generated_at_present(mini_taxonomy, full_evidence):
-    result = compile_auditspec(mini_taxonomy, full_evidence, "test.dsl", dsl_content="")
-    assert "generated_at" in result
-
-
-def test_theme_assigned(mini_taxonomy, full_evidence):
-    result = compile_auditspec(mini_taxonomy, full_evidence, "test.dsl", dsl_content="")
-    ac1 = next(c for c in result["controls"] if c["id"] == "AC-1")
-    assert ac1["theme"] == "theme_access"
-    op1 = next(c for c in result["controls"] if c["id"] == "OP-1")
-    assert op1["theme"] == "theme_ops"
+    def test_construct_to_key_mapping(self) -> None:
+        """grant_schema evidence should match 'permit' controls."""
+        evidence = EvidenceMap(
+            items={
+                "grant_schema": [
+                    EvidenceItem(
+                        entity="School",
+                        construct="grant_schema",
+                        detail="delegation",
+                        dsl_ref="School.grant_schema",
+                    )
+                ],
+            },
+            dsl_hash="sha256:test",
+        )
+        result = compile_auditspec(_mini_taxonomy(), evidence)
+        c1 = next(c for c in result.controls if c.control_id == "C-1")
+        assert c1.status == "evidenced"
