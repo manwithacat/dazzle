@@ -1,0 +1,46 @@
+@page {
+    size: A4;
+    margin: 25mm 25mm 25mm 30mm;
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #718096; }
+}
+
+body {
+    font-family: 'Inter', 'Helvetica Neue', sans-serif;
+    font-size: 11pt;
+    color: #1a202c;
+    line-height: 1.6;
+}
+
+h1 {
+    font-size: 16pt;
+    color: var(--colour-primary, #1a365d);
+    font-weight: 600;
+    margin-top: 18pt;
+    page-break-before: always;
+}
+
+h1:first-of-type { page-break-before: avoid; }
+
+h2 {
+    font-size: 13pt;
+    color: var(--colour-secondary, #2b6cb0);
+    font-weight: 600;
+    margin-top: 12pt;
+}
+
+h3 { font-size: 11pt; color: #1a202c; font-weight: 600; }
+
+table { width: 100%; border-collapse: collapse; margin: 12pt 0; font-size: 9pt; }
+th { background-color: var(--colour-primary, #1a365d); color: #ffffff; padding: 6pt 8pt; text-align: left; font-weight: 600; }
+td { padding: 5pt 8pt; border-bottom: 1px solid #e2e8f0; }
+tr:nth-child(even) td { background-color: #f7fafc; }
+
+.title-page { text-align: center; padding-top: 200pt; page-break-after: always; }
+.title-page h1 { font-size: 24pt; page-break-before: avoid; }
+.title-page .subtitle { font-size: 14pt; color: var(--colour-secondary, #2b6cb0); margin-top: 12pt; }
+.title-page .metadata { margin-top: 60pt; font-size: 10pt; color: #718096; }
+
+.doc-control { page-break-after: always; }
+.doc-control table { font-size: 10pt; }
+
+.classification-banner { text-align: center; font-size: 9pt; font-weight: 600; color: var(--colour-accent, #38a169); letter-spacing: 2pt; margin-bottom: 12pt; }

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        :root {
+            --colour-primary: {{ colours.primary }};
+            --colour-secondary: {{ colours.secondary }};
+            --colour-accent: {{ colours.accent }};
+        }
+    </style>
+    <link rel="stylesheet" href="{{ css_path }}">
+</head>
+<body>
+    <div class="classification-banner">{{ classification }}</div>
+
+    <div class="title-page">
+        <h1>{{ document_title }}</h1>
+        <div class="subtitle">{{ organisation_name }}</div>
+        <div class="metadata">
+            <p>Document ID: {{ document_id }}</p>
+            <p>Version: {{ version }}</p>
+            <p>Date: {{ date }}</p>
+            <p>Classification: {{ classification }}</p>
+        </div>
+    </div>
+
+    <div class="doc-control">
+        <h2>Document Control</h2>
+        <table>
+            <tr><th>Field</th><th>Value</th></tr>
+            <tr><td>Author</td><td>{{ author }}</td></tr>
+            <tr><td>Reviewer</td><td>{{ reviewer }}</td></tr>
+            <tr><td>Approver</td><td>{{ approver }}</td></tr>
+            <tr><td>Classification</td><td>{{ classification }}</td></tr>
+        </table>
+    </div>
+
+    {{ content }}
+</body>
+</html>
