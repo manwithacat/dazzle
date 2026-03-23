@@ -344,23 +344,31 @@ class WorkspaceRouteBuilder:
                                     pass  # Fall through to unscoped if auth fails
 
                             # Apply scope_field filter: restrict options by
-                            # matching FK field to current user's attribute (#634)
+                            # matching FK field to current user's domain attribute (#634, #639).
+                            # Domain attributes (school, department, trust) are loaded into
+                            # auth_ctx.preferences by _load_domain_user_attributes(), not
+                            # onto the UserRecord which only carries auth fields.
                             if sel_scope_field and sel_auth_mw:
                                 try:
-                                    auth_ctx = (
-                                        auth_ctx
-                                        if "auth_ctx" in dir()
-                                        else sel_auth_mw.get_auth_context(request)
-                                    )
-                                    user_obj = getattr(auth_ctx, "user", None) if auth_ctx else None
-                                    if user_obj:
-                                        user_val = getattr(user_obj, sel_scope_field, None)
-                                        if user_val is None and isinstance(user_obj, dict):
-                                            user_val = user_obj.get(sel_scope_field)
-                                        if user_val:
-                                            sf = scope_filters or {}
-                                            sf[sel_scope_field] = str(user_val)
-                                            scope_filters = sf
+                                    if scope_filters is None:
+                                        _sf_ctx = sel_auth_mw.get_auth_context(request)
+                                    else:
+                                        _sf_ctx = (
+                                            auth_ctx
+                                            if "auth_ctx" in locals()
+                                            else sel_auth_mw.get_auth_context(request)
+                                        )
+                                    prefs = getattr(_sf_ctx, "preferences", {}) or {}
+                                    user_val = prefs.get(sel_scope_field)
+                                    if not user_val:
+                                        # Fallback: check user object for simple attributes
+                                        user_obj = getattr(_sf_ctx, "user", None)
+                                        if user_obj:
+                                            user_val = getattr(user_obj, sel_scope_field, None)
+                                    if user_val:
+                                        sf = scope_filters or {}
+                                        sf[sel_scope_field] = str(user_val)
+                                        scope_filters = sf
                                 except Exception:
                                     pass
 
