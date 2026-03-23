@@ -1,5 +1,5 @@
 {# Layout JSON embedded as a data island to avoid JSON-in-HTML-attribute escaping (#635) #}
-<script type="application/json" id="dz-workspace-layout">{{ layout_json }}</script>
+<script type="application/json" id="dz-workspace-layout">{{ layout_json | safe }}</script>
 <div class="p-4" x-data="dzWorkspaceEditor('{{ workspace.name }}')">
   {% if workspace.purpose %}
   <p class="text-sm opacity-60 mb-4">{{ workspace.purpose }}</p>
