@@ -190,6 +190,7 @@ dazzle = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "src/dazzle_back/tests"]
+pythonpath = ["src"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
