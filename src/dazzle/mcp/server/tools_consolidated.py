@@ -1350,6 +1350,33 @@ def get_consolidated_tools() -> list[Tool]:
                 "required": ["operation"],
             },
         ),
+        Tool(
+            name="compliance",
+            description=(
+                "Compliance documentation operations. "
+                "compile: compile taxonomy + evidence into AuditSpec. "
+                "evidence: extract DSL evidence summary. "
+                "gaps: list controls with gaps or partial evidence. "
+                "summary: quick compliance posture summary. "
+                "review: generate review data for gap remediation."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["compile", "evidence", "gaps", "summary", "review"],
+                        "description": "Operation to perform",
+                    },
+                    "framework": {
+                        "type": "string",
+                        "description": "Framework ID (default: iso27001)",
+                    },
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
     ]
 
 

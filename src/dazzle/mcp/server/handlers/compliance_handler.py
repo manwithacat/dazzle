@@ -1,74 +1,54 @@
-"""MCP handler for compliance operations."""
+"""Compliance MCP handler — read-only compliance pipeline operations."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
-from dazzle.compliance.coordinator import compile_full_pipeline, write_outputs
-from dazzle.compliance.evidence import extract_all_evidence
-from dazzle.compliance.review import generate_review_yaml
+
+def compile_compliance(project_path: Path, args: dict[str, Any]) -> str:
+    """Compile taxonomy + evidence → AuditSpec JSON."""
+    from dazzle.compliance.coordinator import compile_full_pipeline
+
+    framework = args.get("framework", "iso27001")
+    auditspec = compile_full_pipeline(project_path, framework=framework)
+    return json.dumps(auditspec.model_dump(), indent=2)
 
 
-async def handle_compliance(operation: str, project_path: str, **kwargs: Any) -> dict:
-    """Handle compliance MCP tool operations.
+def extract_evidence_op(project_path: Path, args: dict[str, Any]) -> str:
+    """Extract evidence only → EvidenceMap JSON."""
+    from dazzle.compliance.evidence import extract_evidence_from_project
 
-    Operations:
-        compile: Compile AuditSpec from taxonomy + DSL evidence
-        evidence: Extract DSL evidence summary
-        gaps: List controls with gaps
-        review: Generate review.yaml for human-in-the-loop
-        summary: Quick compliance posture summary
-    """
-    pp = Path(project_path)
+    evidence = extract_evidence_from_project(project_path)
+    return json.dumps(evidence.model_dump(), indent=2)
 
-    if operation == "compile":
-        framework = kwargs.get("framework", "iso27001")
-        auditspec = compile_full_pipeline(pp, framework=framework)
-        output_dir = write_outputs(pp, auditspec, framework=framework)
-        return {
-            "status": "compiled",
-            "output_dir": str(output_dir),
-            "summary": auditspec["summary"],
-        }
 
-    elif operation == "evidence":
-        evidence = extract_all_evidence(pp)
-        return {
-            "constructs": {
-                k: len(v) if isinstance(v, list) else len(v) for k, v in evidence.items()
-            }
-        }
+def compliance_gaps(project_path: Path, args: dict[str, Any]) -> str:
+    """Compile + filter to gaps/partial → ControlResult list JSON."""
+    from dazzle.compliance.coordinator import compile_full_pipeline
 
-    elif operation == "gaps":
-        framework = kwargs.get("framework", "iso27001")
-        auditspec = compile_full_pipeline(pp, framework=framework)
-        gaps = [
-            {"id": c["id"], "name": c["name"], "gaps": c["gaps"]}
-            for c in auditspec["controls"]
-            if c["status"] in ("gap", "partial")
-        ]
-        return {"gap_count": len(gaps), "gaps": gaps}
+    framework = args.get("framework", "iso27001")
+    auditspec = compile_full_pipeline(project_path, framework=framework)
+    gaps = [c.model_dump() for c in auditspec.controls if c.status in ("gap", "partial")]
+    return json.dumps({"gaps": gaps, "count": len(gaps)}, indent=2)
 
-    elif operation == "review":
-        framework = kwargs.get("framework", "iso27001")
-        auditspec = compile_full_pipeline(pp, framework=framework)
-        return generate_review_yaml(auditspec)
 
-    elif operation == "summary":
-        framework = kwargs.get("framework", "iso27001")
-        auditspec = compile_full_pipeline(pp, framework=framework)
-        s = auditspec["summary"]
-        return {
-            "framework": framework,
-            "total_controls": s["total_controls"],
-            "evidenced": s["evidenced"],
-            "partial": s["partial"],
-            "gaps": s["gaps"],
-            "coverage_pct": round((s["evidenced"] + s["partial"]) / s["total_controls"] * 100, 1)
-            if s["total_controls"] > 0
-            else 0,
-        }
+def compliance_summary(project_path: Path, args: dict[str, Any]) -> str:
+    """Compile → AuditSummary JSON."""
+    from dazzle.compliance.coordinator import compile_full_pipeline
 
-    else:
-        return {"error": f"Unknown operation: {operation}"}
+    framework = args.get("framework", "iso27001")
+    auditspec = compile_full_pipeline(project_path, framework=framework)
+    return json.dumps(auditspec.summary.model_dump(), indent=2)
+
+
+def compliance_review(project_path: Path, args: dict[str, Any]) -> str:
+    """Compile + generate review data → review items JSON."""
+    from dazzle.compliance.coordinator import compile_full_pipeline
+    from dazzle.compliance.review import generate_review_data
+
+    framework = args.get("framework", "iso27001")
+    auditspec = compile_full_pipeline(project_path, framework=framework)
+    review = generate_review_data(auditspec.model_dump())
+    return json.dumps(review, indent=2)

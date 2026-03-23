@@ -1188,6 +1188,24 @@ handle_conformance: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# Compliance Operations Handler
+# =============================================================================
+
+_MOD_COMPLIANCE = "dazzle.mcp.server.handlers.compliance_handler"
+
+handle_compliance: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "compliance",
+    {
+        "compile": f"{_MOD_COMPLIANCE}:compile_compliance",
+        "evidence": f"{_MOD_COMPLIANCE}:extract_evidence_op",
+        "gaps": f"{_MOD_COMPLIANCE}:compliance_gaps",
+        "summary": f"{_MOD_COMPLIANCE}:compliance_summary",
+        "review": f"{_MOD_COMPLIANCE}:compliance_review",
+    },
+)
+
+
+# =============================================================================
 # Main Dispatcher
 # =============================================================================
 
@@ -1220,6 +1238,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "llm": handle_llm,
     "param": handle_param,
     "conformance": handle_conformance,
+    "compliance": handle_compliance,
 }
 
 
