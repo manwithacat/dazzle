@@ -65,15 +65,11 @@ def minimal_appspec() -> AppSpec:
 # Shared decorator stack for tests that call .build() with auth enabled
 _MOCK_BUILD_AUTH = [
     patch("dazzle_back.runtime.auth.AuthStore._init_db"),
-    patch("alembic.command.revision"),
-    patch("alembic.command.upgrade"),
     patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
 ]
 
 # Shared decorator stack for tests that call .build() without auth
 _MOCK_BUILD = [
-    patch("alembic.command.revision"),
-    patch("alembic.command.upgrade"),
     patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
 ]
 
@@ -82,14 +78,10 @@ class TestSocialAuthWiring:
     """Tests for social auth route wiring."""
 
     @patch("dazzle_back.runtime.auth.AuthStore._init_db")
-    @patch("alembic.command.revision")
-    @patch("alembic.command.upgrade")
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_no_oauth_config_no_social_routes(
         self,
         _mock_pg,
-        _mock_upgrade,
-        _mock_revision,
         _mock_auth_init,
         minimal_appspec: AppSpec,
         tmp_path,
@@ -111,14 +103,10 @@ class TestSocialAuthWiring:
         assert len(social_routes) == 0, "Social routes should not be present"
 
     @patch("dazzle_back.runtime.auth.AuthStore._init_db")
-    @patch("alembic.command.revision")
-    @patch("alembic.command.upgrade")
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_empty_oauth_providers_no_social_routes(
         self,
         _mock_pg,
-        _mock_upgrade,
-        _mock_revision,
         _mock_auth_init,
         minimal_appspec: AppSpec,
         tmp_path,
@@ -146,14 +134,10 @@ class TestSocialAuthWiring:
 
     @patch("dazzle_back.runtime.token_store.TokenStore._init_db")
     @patch("dazzle_back.runtime.auth.AuthStore._init_db")
-    @patch("alembic.command.revision")
-    @patch("alembic.command.upgrade")
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_oauth_config_with_env_vars_creates_social_routes(
         self,
         _mock_pg,
-        _mock_upgrade,
-        _mock_revision,
         _mock_auth_init,
         _mock_token_init,
         minimal_appspec: AppSpec,
@@ -190,14 +174,10 @@ class TestSocialAuthWiring:
 
     @patch("dazzle_back.runtime.token_store.TokenStore._init_db")
     @patch("dazzle_back.runtime.auth.AuthStore._init_db")
-    @patch("alembic.command.revision")
-    @patch("alembic.command.upgrade")
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_missing_env_vars_logs_warning_but_does_not_crash(
         self,
         _mock_pg,
-        _mock_upgrade,
-        _mock_revision,
         _mock_auth_init,
         _mock_token_init,
         minimal_appspec: AppSpec,
@@ -235,14 +215,10 @@ class TestSocialAuthWiring:
 
     @patch("dazzle_back.runtime.token_store.TokenStore._init_db")
     @patch("dazzle_back.runtime.auth.AuthStore._init_db")
-    @patch("alembic.command.revision")
-    @patch("alembic.command.upgrade")
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_multiple_providers_configured(
         self,
         _mock_pg,
-        _mock_upgrade,
-        _mock_revision,
         _mock_auth_init,
         _mock_token_init,
         minimal_appspec: AppSpec,
@@ -287,11 +263,9 @@ class TestSocialAuthWiring:
             social_routes = [r for r in routes if "/auth/social" in r]
             assert len(social_routes) > 0, "Social routes should be present"
 
-    @patch("alembic.command.revision")
-    @patch("alembic.command.upgrade")
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
     def test_auth_disabled_no_social_routes(
-        self, _mock_pg, _mock_upgrade, _mock_revision, minimal_appspec: AppSpec, tmp_path
+        self, _mock_pg, minimal_appspec: AppSpec, tmp_path
     ) -> None:
         """When auth is disabled, no social routes even if OAuth is configured."""
         from dazzle_back.runtime.server import DazzleBackendApp

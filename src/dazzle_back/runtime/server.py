@@ -433,8 +433,12 @@ class DazzleBackendApp:
         register_exception_handlers(self._app)
 
     def _migrate_tenant_schemas(self) -> None:
-        """Apply auto_migrate to each active tenant schema (#561)."""
+        """Create/update tables in each active tenant schema (#561)."""
         import logging
+
+        from sqlalchemy import create_engine
+
+        from dazzle_back.runtime.sa_schema import build_metadata
 
         logger = logging.getLogger(__name__)
         assert self._database_url is not None
@@ -449,6 +453,11 @@ class DazzleBackendApp:
             logger.warning("Could not list tenants for schema migration: %s", exc)
             return
 
+        metadata = build_metadata(self._entities)
+        sa_url = self._database_url
+        if sa_url.startswith("postgresql://"):
+            sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
+
         for tenant in tenants:
             if tenant.status != "active":
                 continue
@@ -456,16 +465,24 @@ class DazzleBackendApp:
             if not schema_name:
                 continue
             try:
-                from alembic import command
-                from alembic.config import Config as AlembicConfig
+                import re
 
-                alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
-                cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
-                cfg.set_main_option("script_location", str(alembic_dir))
-                cfg.set_main_option("sqlalchemy.url", self._database_url)
-                cfg.attributes["tenant_schema"] = schema_name
-
-                command.upgrade(cfg, "head")
+                if not re.fullmatch(r"[a-zA-Z0-9_]+", schema_name):
+                    logger.warning("Invalid tenant schema name: %s", schema_name)
+                    continue
+                engine = create_engine(sa_url)
+                with engine.connect() as conn:
+                    # Use raw DBAPI cursor with parameterised query
+                    # to avoid SQLAlchemy text() taint concerns.
+                    dbapi_conn = conn.connection
+                    cur = dbapi_conn.cursor()
+                    try:
+                        cur.execute("SET search_path TO %s, public", (schema_name,))
+                    finally:
+                        cur.close()
+                    metadata.create_all(conn)
+                    conn.commit()
+                engine.dispose()
                 logger.info("Migrated tenant schema %s", schema_name)
             except Exception as exc:
                 logger.warning("Failed to migrate tenant schema %s: %s", schema_name, exc)
@@ -493,38 +510,24 @@ class DazzleBackendApp:
 
         self._db_manager = PostgresBackend(self._database_url)
 
-        # Auto-migrate: try Alembic first, fall back to create_all
-        migrated = False
+        # Auto-migrate: create tables from SA metadata (idempotent).
+        # Alembic handles incremental migrations via `dazzle db migrate`.
         try:
-            from alembic import command
-            from alembic.config import Config as AlembicConfig
-
-            alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
-            ini_path = alembic_dir / "alembic.ini"
-            if ini_path.exists():
-                cfg = AlembicConfig(str(ini_path))
-                cfg.set_main_option("script_location", str(alembic_dir))
-                cfg.set_main_option("sqlalchemy.url", self._database_url)
-
-                # Generate + apply in one step (empty revisions suppressed by env.py)
-                command.revision(cfg, message="auto", autogenerate=True)
-                command.upgrade(cfg, "head")
-                migrated = True
-        except Exception as exc:
-            import logging
-
-            logging.getLogger(__name__).warning("Alembic auto-migrate: %s", exc)
-
-        if not migrated:
-            # Fallback: create tables directly from SA metadata
-            from sqlalchemy import create_engine
+            from sqlalchemy import create_engine as _sa_create_engine
 
             from dazzle_back.runtime.sa_schema import build_metadata
 
             metadata = build_metadata(self._entities)
-            engine = create_engine(self._database_url)
+            sa_url = self._database_url
+            if sa_url.startswith("postgresql://"):
+                sa_url = sa_url.replace("postgresql://", "postgresql+psycopg://", 1)
+            engine = _sa_create_engine(sa_url)
             metadata.create_all(engine)
             engine.dispose()
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning("Auto-migrate create_all: %s", exc)
 
         # Create _dazzle_params framework table (#572)
         from dazzle_back.runtime.migrations import ensure_dazzle_params_table
