@@ -149,6 +149,103 @@ def history_command(
         raise typer.Exit(1)
 
 
+@db_app.command(name="migrate")
+def migrate_command(
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    tenant: str = typer.Option("", "--tenant", help="Tenant slug (when isolation=schema)"),
+    check: bool = typer.Option(
+        False,
+        "--check",
+        help="Dry-run: show what would change without applying",
+    ),
+    sql: bool = typer.Option(
+        False,
+        "--sql",
+        help="Print SQL without applying",
+    ),
+) -> None:
+    """Generate and apply pending migrations.
+
+    Diffs the DSL-derived schema against the live database and applies
+    safe changes automatically. Use --check for a dry-run preview.
+
+    Examples:
+        dazzle db migrate              # Generate + apply
+        dazzle db migrate --check      # Preview changes
+        dazzle db migrate --tenant X   # Apply to tenant schema
+    """
+    from alembic import command
+    from alembic.util.exc import CommandError
+
+    cfg = _get_alembic_cfg()
+    url = _resolve_url(database_url)
+    if url:
+        cfg.set_main_option("sqlalchemy.url", url)
+
+    schema = _resolve_tenant_schema(tenant) if tenant else ""
+    if schema:
+        cfg.attributes["tenant_schema"] = schema
+
+    if check:
+        console.print("[bold]Migration check (dry-run):[/bold]\n")
+        try:
+            command.check(cfg)
+            console.print("[green]No pending changes.[/green]")
+        except CommandError as e:
+            console.print(f"[yellow]Pending changes detected:[/yellow] {e}")
+        return
+
+    if sql:
+        command.upgrade(cfg, "head", sql=True)
+        return
+
+    try:
+        # Generate revision from current DSL diff.
+        # process_revision_directives in env.py suppresses empty revisions,
+        # so revision() returns None when there are no changes.
+        rev = command.revision(cfg, message="auto", autogenerate=True)
+        if rev is None:
+            console.print("[green]No schema changes detected.[/green]")
+            return
+
+        # Apply the new revision (and any other pending)
+        command.upgrade(cfg, "head")
+        console.print("[green]Migration applied successfully.[/green]")
+    except Exception as e:
+        console.print(f"[red]Migration failed: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@db_app.command(name="rollback")
+def rollback_command_wrapper(
+    revision: str = typer.Argument(
+        "-1",
+        help="Target revision or steps back (default: -1)",
+    ),
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+) -> None:
+    """Revert the last migration (or to a specific revision).
+
+    Examples:
+        dazzle db rollback             # Undo last migration
+        dazzle db rollback -2          # Undo last 2 migrations
+        dazzle db rollback abc123      # Downgrade to specific revision
+    """
+    from alembic import command
+
+    cfg = _get_alembic_cfg()
+    url = _resolve_url(database_url)
+    if url:
+        cfg.set_main_option("sqlalchemy.url", url)
+
+    try:
+        command.downgrade(cfg, revision)
+        console.print(f"[green]Rolled back to: {revision}[/green]")
+    except Exception as e:
+        console.print(f"[red]Rollback failed: {e}[/red]")
+        raise typer.Exit(1)
+
+
 async def _run_with_connection(
     project_root: Path,
     database_url: str,
