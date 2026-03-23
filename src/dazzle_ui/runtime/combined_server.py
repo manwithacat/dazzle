@@ -131,6 +131,7 @@ def run_unified_server(
     redis_url: str = "",
     workers: int | None = None,
     tenant_config: Any = None,
+    local_assets: bool = False,
     *,
     config: UnifiedServerConfig | None = None,
 ) -> None:
@@ -269,6 +270,15 @@ def run_unified_server(
         bundled_css=bundled_css,
     )
 
+    # Apply --local-assets / --cdn-assets toggle (#637)
+    if local_assets:
+        try:
+            from dazzle_ui.runtime.template_renderer import get_jinja_env
+
+            get_jinja_env().globals["_use_cdn"] = False
+        except Exception:
+            pass
+
     # ---- Print startup info ----
     base_url = f"http://{host}:{port}"
     docs_url = f"{base_url}/docs"
@@ -278,6 +288,7 @@ def run_unified_server(
     print(
         f"[Dazzle] Database: PostgreSQL ({database_url[:40] + '...' if len(database_url) > 40 else database_url or 'not configured'})"
     )
+    print(f"[Dazzle] Assets:   {'local (static/)' if local_assets else 'CDN (jsdelivr)'}")
     if enable_test_mode:
         print("[Dazzle] Test endpoints: /__test__/* (enabled)")
     if enable_auth:

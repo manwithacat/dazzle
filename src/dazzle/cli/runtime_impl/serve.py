@@ -156,6 +156,11 @@ def serve_command(
         "--workers",
         help="Number of uvicorn workers (default: 1).",
     ),
+    local_assets: bool | None = typer.Option(
+        None,
+        "--local-assets/--cdn-assets",
+        help="Serve JS/CSS from local installation instead of CDN. Default: local in dev, CDN in --production.",
+    ),
     production: bool = typer.Option(
         False,
         "--production",
@@ -621,6 +626,16 @@ def serve_command(
     if mf.theme.custom:
         theme_overrides["custom"] = mf.theme.custom
 
+    # Resolve local_assets: env var > CLI flag > default (local in dev, CDN in prod)
+    if local_assets is None:
+        env_val = os.environ.get("DAZZLE_LOCAL_ASSETS")
+        if env_val is not None:
+            use_local_assets = env_val == "1"
+        else:
+            use_local_assets = not production
+    else:
+        use_local_assets = local_assets
+
     run_unified_server(
         appspec=appspec,
         ui_spec=ui_spec,
@@ -641,4 +656,5 @@ def serve_command(
         redis_url=redis_url,
         workers=workers,
         tenant_config=mf.tenant if mf.tenant.isolation != "none" else None,
+        local_assets=use_local_assets,
     )
