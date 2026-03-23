@@ -17,6 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `dazzle serve --production` refuses to start with pending migrations
 
 ### Added
+- Compliance documentation compiler: maps DSL metadata to framework controls
+- `dazzle compliance compile` / `evidence` / `gaps` CLI commands
+- MCP `compliance` tool with 5 operations (compile, evidence, gaps, summary, review)
+- ISO 27001:2022 taxonomy (93 controls, 4 themes)
+- Pydantic models for Taxonomy, EvidenceMap, AuditSpec IR
+- `[compliance]` optional extra in pyproject.toml
 - Safe cast registry: text→uuid, text→date, text→timestamptz, text→jsonb applied automatically with USING clauses
 - `dazzle db migrate --check` dry-run to preview schema changes
 - `dazzle db migrate --tenant <slug>` for per-tenant schema migration

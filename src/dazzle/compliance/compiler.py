@@ -7,6 +7,7 @@ a per-control assessment (evidenced / partial / gap / excluded).
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Literal
 
 from dazzle.compliance.models import (
     AuditSpec,
@@ -64,6 +65,7 @@ def compile_auditspec(taxonomy: Taxonomy, evidence: EvidenceMap) -> AuditSpec:
         for category in expected:
             matched.extend(evidence_by_category.get(category, []))
 
+        status: Literal["evidenced", "partial", "gap", "excluded"]
         if matched:
             status = "evidenced"
             tier = 1

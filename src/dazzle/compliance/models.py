@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 class DslEvidence(BaseModel):
     """Maps a DSL construct to a compliance control."""
 
-    construct: str  # classify, permit, scope, etc.
+    construct: str  # type: ignore[assignment]  # shadows deprecated BaseModel.construct
     description: str = ""
 
 
@@ -70,7 +70,7 @@ class EvidenceItem(BaseModel):
     """A single piece of compliance evidence found in the DSL."""
 
     entity: str  # which entity/persona/process this was found on
-    construct: str  # raw construct name: classify, permit, scope, etc.
+    construct: str  # type: ignore[assignment]  # shadows deprecated BaseModel.construct
     detail: str  # human-readable summary
     dsl_ref: str  # "EntityName.construct" for citation validation
 

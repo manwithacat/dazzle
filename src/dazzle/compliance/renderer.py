@@ -13,7 +13,7 @@ from typing import Any
 import yaml
 
 try:
-    import markdown
+    import markdown  # type: ignore[import-untyped]
     import weasyprint
     from jinja2 import Template
 
