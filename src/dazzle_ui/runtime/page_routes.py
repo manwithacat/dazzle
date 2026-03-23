@@ -19,8 +19,6 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import Any
 
-from markupsafe import Markup
-
 from dazzle.core import ir
 
 logger = logging.getLogger(__name__)
@@ -895,22 +893,21 @@ async def _workspace_handler(
 
     render_ws_ctx = apply_layout_preferences(ws_context, user_preferences)
 
-    # Markup() prevents Jinja2 autoescaping from HTML-encoding the JSON
-    # double-quotes, which would break Alpine.js x-data parsing (#632).
-    layout_json = Markup(
-        json.dumps(
-            {
-                "regions": [
-                    {
-                        "name": r.name,
-                        "title": r.title,
-                        "col_span": r.col_span,
-                        "hidden": r.hidden,
-                    }
-                    for r in render_ws_ctx.regions
-                ]
-            }
-        )
+    # Layout JSON is embedded in a <script type="application/json"> data
+    # island rather than inlined in an x-data HTML attribute.  This avoids
+    # the JSON-in-HTML-attribute escaping conflict (#632, #635).
+    layout_json = json.dumps(
+        {
+            "regions": [
+                {
+                    "name": r.name,
+                    "title": r.title,
+                    "col_span": r.col_span,
+                    "hidden": r.hidden,
+                }
+                for r in render_ws_ctx.regions
+            ]
+        }
     )
 
     ws_title = render_ws_ctx.title or render_ws_ctx.name.replace("_", " ").title()

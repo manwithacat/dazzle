@@ -6,9 +6,19 @@
  */
 
 document.addEventListener("alpine:init", () => {
-  Alpine.data("dzWorkspaceEditor", (workspaceName, initialLayout) => ({
+  Alpine.data("dzWorkspaceEditor", (workspaceName) => ({
     editing: false,
-    regions: JSON.parse(JSON.stringify(initialLayout.regions)),
+    // Read layout from <script type="application/json"> data island to avoid
+    // JSON-in-HTML-attribute escaping issues (#635).
+    regions: (() => {
+      const el = document.getElementById("dz-workspace-layout");
+      if (!el) return [];
+      try {
+        return JSON.parse(el.textContent).regions || [];
+      } catch {
+        return [];
+      }
+    })(),
     _snapshot: null,
 
     toggleEdit() {
