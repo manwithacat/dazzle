@@ -396,7 +396,8 @@ class TestWorkspaceAuthEnforcement:
         )
         with (
             patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle_back.runtime.server.auto_migrate"),
+            patch("alembic.command.revision"),
+            patch("alembic.command.upgrade"),
             patch("dazzle_back.runtime.auth.AuthStore._init_db"),
         ):
             builder = DazzleBackendApp(self._make_spec(), config=config)
@@ -416,7 +417,8 @@ class TestWorkspaceAuthEnforcement:
         )
         with (
             patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle_back.runtime.server.auto_migrate"),
+            patch("alembic.command.revision"),
+            patch("alembic.command.upgrade"),
         ):
             builder = DazzleBackendApp(self._make_spec(), config=config)
             return builder.build()
@@ -1782,7 +1784,8 @@ class TestWorkspaceBatchEndpoint:
         )
         with (
             patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle_back.runtime.server.auto_migrate"),
+            patch("alembic.command.revision"),
+            patch("alembic.command.upgrade"),
         ):
             builder = DazzleBackendApp(self._make_spec_with_aggregates(), config=config)
             return builder.build()

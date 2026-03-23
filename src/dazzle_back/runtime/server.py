@@ -26,7 +26,7 @@ from dazzle_back.runtime.auth import (
 from dazzle_back.runtime.file_routes import create_file_routes, create_static_file_routes
 from dazzle_back.runtime.file_storage import FileService
 from dazzle_back.runtime.integration_manager import IntegrationManager, _convert_channels
-from dazzle_back.runtime.migrations import MigrationPlan, auto_migrate
+from dazzle_back.runtime.migrations import MigrationPlan
 from dazzle_back.runtime.model_generator import (
     generate_all_entity_models,
     generate_create_schema,
@@ -456,15 +456,17 @@ class DazzleBackendApp:
             if not schema_name:
                 continue
             try:
-                plan = auto_migrate(
-                    self._db_manager,
-                    self._entities,
-                    record_history=False,
-                    schema=schema_name,
-                )
-                if not plan.is_empty:
-                    safe_count = len(plan.safe_steps)
-                    logger.info("Migrated tenant schema %s: %d steps", schema_name, safe_count)
+                from alembic import command
+                from alembic.config import Config as AlembicConfig
+
+                alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
+                cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
+                cfg.set_main_option("script_location", str(alembic_dir))
+                cfg.set_main_option("sqlalchemy.url", self._database_url)
+                cfg.attributes["tenant_schema"] = schema_name
+
+                command.upgrade(cfg, "head")
+                logger.info("Migrated tenant schema %s", schema_name)
             except Exception as exc:
                 logger.warning("Failed to migrate tenant schema %s: %s", schema_name, exc)
 
@@ -490,11 +492,24 @@ class DazzleBackendApp:
         from dazzle_back.runtime.pg_backend import PostgresBackend
 
         self._db_manager = PostgresBackend(self._database_url)
-        self._last_migration = auto_migrate(
-            self._db_manager,
-            self._entities,
-            record_history=True,
-        )
+
+        # Auto-migrate via Alembic
+        try:
+            from alembic import command
+            from alembic.config import Config as AlembicConfig
+
+            alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
+            cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
+            cfg.set_main_option("script_location", str(alembic_dir))
+            cfg.set_main_option("sqlalchemy.url", self._database_url)
+
+            # Generate + apply in one step (empty revisions suppressed by env.py)
+            command.revision(cfg, message="auto", autogenerate=True)
+            command.upgrade(cfg, "head")
+        except Exception as exc:
+            import logging
+
+            logging.getLogger(__name__).warning("Alembic auto-migrate: %s", exc)
 
         # Create _dazzle_params framework table (#572)
         from dazzle_back.runtime.migrations import ensure_dazzle_params_table

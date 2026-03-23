@@ -260,6 +260,29 @@ def serve_command(
         enable_test_mode = False
         auto_mock = False
 
+        # Production mode: refuse to start with pending migrations
+        try:
+            from alembic import command
+            from alembic.config import Config as AlembicConfig
+            from alembic.util.exc import CommandError
+
+            alembic_dir = Path(__file__).resolve().parents[3] / "dazzle_back" / "alembic"
+            cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
+            cfg.set_main_option("script_location", str(alembic_dir))
+            cfg.set_main_option("sqlalchemy.url", database_url)
+
+            try:
+                command.check(cfg)
+            except CommandError:
+                typer.echo(
+                    "Cannot start in production mode: pending migrations detected. "
+                    "Run 'dazzle db migrate' first.",
+                    err=True,
+                )
+                raise typer.Exit(code=1)
+        except ImportError:
+            pass  # Alembic not installed, skip check
+
         env = get_dazzle_env()
     else:
         # Resolve dev_mode and test_mode based on:

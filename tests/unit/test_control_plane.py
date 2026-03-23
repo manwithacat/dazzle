@@ -160,7 +160,8 @@ class TestControlPlaneIntegration:
 
         with (
             patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle_back.runtime.server.auto_migrate"),
+            patch("alembic.command.revision"),
+            patch("alembic.command.upgrade"),
         ):
             app = create_app(
                 appspec,
@@ -311,7 +312,8 @@ class TestDevModeDisabled:
 
         with (
             patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
-            patch("dazzle_back.runtime.server.auto_migrate"),
+            patch("alembic.command.revision"),
+            patch("alembic.command.upgrade"),
         ):
             app = create_app(
                 appspec,

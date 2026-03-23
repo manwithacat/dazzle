@@ -101,9 +101,10 @@ class TestDazzleBackendAppSitespec:
         assert app_builder._sitespec_data is None
 
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
-    @patch("dazzle_back.runtime.migrations.auto_migrate")
+    @patch("alembic.command.upgrade")
+    @patch("alembic.command.revision")
     def test_site_routes_registered_when_sitespec_provided(
-        self, mock_migrate: MagicMock, mock_pg: MagicMock
+        self, mock_revision: MagicMock, mock_upgrade: MagicMock, mock_pg: MagicMock
     ) -> None:
         """Test that /_site/* routes are registered when sitespec_data provided."""
         spec = _create_minimal_appspec()
@@ -129,9 +130,10 @@ class TestDazzleBackendAppSitespec:
         assert "/_site/page/{route:path}" in route_paths, "/_site/page route should be registered"
 
     @patch("dazzle_back.runtime.pg_backend.PostgresBackend")
-    @patch("dazzle_back.runtime.migrations.auto_migrate")
+    @patch("alembic.command.upgrade")
+    @patch("alembic.command.revision")
     def test_site_routes_not_registered_when_no_sitespec(
-        self, mock_migrate: MagicMock, mock_pg: MagicMock
+        self, mock_revision: MagicMock, mock_upgrade: MagicMock, mock_pg: MagicMock
     ) -> None:
         """Test that /_site/* routes are NOT registered when no sitespec_data."""
         spec = _create_minimal_appspec()
