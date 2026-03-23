@@ -33,16 +33,19 @@
     sel.addEventListener('change', function() {
       var val = sel.value;
       if (window.dzPrefs) { if (val) window.dzPrefs.set(prefKey, val); else window.dzPrefs.del(prefKey); }
-      // Refresh all region endpoints with context_id param
+      // Refresh all region endpoints with context_id param (#634)
       document.querySelectorAll('[id^="region-"][hx-get]').forEach(function(el) {
         var url = el.getAttribute('hx-get');
         var base = url.split('?')[0];
         var params = new URLSearchParams(url.split('?')[1] || '');
         if (val) params.set('context_id', val); else params.delete('context_id');
         var qs = params.toString();
-        el.setAttribute('hx-get', base + (qs ? '?' + qs : ''));
+        var newUrl = base + (qs ? '?' + qs : '');
+        el.setAttribute('hx-get', newUrl);
         htmx.process(el);
-        htmx.trigger(el, 'load');
+        // Force an unconditional request — htmx.trigger('load') does not
+        // re-fire 'intersect once' triggers on below-fold regions.
+        htmx.ajax('GET', newUrl, {target: '#' + el.id, swap: 'innerHTML'});
       });
     });
   })();

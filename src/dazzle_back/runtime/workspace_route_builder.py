@@ -298,6 +298,7 @@ class WorkspaceRouteBuilder:
                         sel_auth_mw: Any = None,
                         sel_entity_name: str = "",
                         sel_fk_graph: Any = None,
+                        sel_scope_field: str | None = None,
                     ) -> Any:
                         async def context_options(request: Request) -> Any:
                             from fastapi.responses import JSONResponse
@@ -342,6 +343,27 @@ class WorkspaceRouteBuilder:
                                 except Exception:
                                     pass  # Fall through to unscoped if auth fails
 
+                            # Apply scope_field filter: restrict options by
+                            # matching FK field to current user's attribute (#634)
+                            if sel_scope_field and sel_auth_mw:
+                                try:
+                                    auth_ctx = (
+                                        auth_ctx
+                                        if "auth_ctx" in dir()
+                                        else sel_auth_mw.get_auth_context(request)
+                                    )
+                                    user_obj = getattr(auth_ctx, "user", None) if auth_ctx else None
+                                    if user_obj:
+                                        user_val = getattr(user_obj, sel_scope_field, None)
+                                        if user_val is None and isinstance(user_obj, dict):
+                                            user_val = user_obj.get(sel_scope_field)
+                                        if user_val:
+                                            sf = scope_filters or {}
+                                            sf[sel_scope_field] = str(user_val)
+                                            scope_filters = sf
+                                except Exception:
+                                    pass
+
                             result = await sel_repo.list(
                                 page=1, page_size=500, filters=scope_filters
                             )
@@ -370,6 +392,7 @@ class WorkspaceRouteBuilder:
                             sel_auth_mw=auth_middleware,
                             sel_entity_name=_ctx_sel.entity,
                             sel_fk_graph=self._fk_graph,
+                            sel_scope_field=_ctx_sel.scope_field,
                         )
                     )
 
