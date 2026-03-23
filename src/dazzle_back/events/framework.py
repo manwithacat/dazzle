@@ -161,7 +161,9 @@ class EventFramework:
                 import psycopg
                 from psycopg.rows import dict_row
 
-                return await psycopg.AsyncConnection.connect(url, row_factory=dict_row)
+                return await psycopg.AsyncConnection.connect(
+                    url, row_factory=dict_row, connect_timeout=10
+                )
 
             return _pg_connect
         else:

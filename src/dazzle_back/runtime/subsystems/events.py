@@ -8,6 +8,7 @@ on CRUD services.  Falls back to ``NullEventFramework`` when the optional
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from dazzle_back.runtime.subsystems import SubsystemContext
@@ -32,6 +33,7 @@ class EventsSubsystem:
                     auto_start_publisher=True,
                     auto_start_consumers=True,
                     database_url=ctx.config.database_url,
+                    redis_url=os.environ.get("REDIS_URL"),
                 )
                 self._framework = EventFramework(config)
             except Exception as exc:

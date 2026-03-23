@@ -189,8 +189,10 @@ class PostgresBus(BaseEventBus):
             min_size=self._config.pool_min_size,
             max_size=self._config.pool_max_size,
             kwargs={"row_factory": dict_row, "autocommit": True},
+            open=False,
         )
-        await self._pool.wait()
+        # Open lazily so slow remote Postgres doesn't block startup (#636)
+        await self._pool.open(wait=False)
         await self._create_tables()
         await self._setup_listen()
 
