@@ -339,6 +339,7 @@ class ProjectManifest:
     tenant: TenantConfig = field(default_factory=TenantConfig)
     framework_version: str | None = None
     cdn: bool = True  # Serve assets from jsDelivr CDN; set [ui] cdn = false for air-gapped
+    favicon: str | None = None  # Override favicon path; set [ui] favicon = "/static/my-icon.svg"
 
 
 def check_framework_version(manifest: ProjectManifest) -> None:
@@ -537,6 +538,7 @@ def load_manifest(path: Path) -> ProjectManifest:
     # Parse [ui] config
     ui_data = data.get("ui", {})
     cdn_enabled = ui_data.get("cdn", True)
+    favicon_path = ui_data.get("favicon")
 
     return ProjectManifest(
         name=project.get("name", "unnamed"),
@@ -554,6 +556,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         tenant=tenant_config,
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
+        favicon=favicon_path,
     )
 
 

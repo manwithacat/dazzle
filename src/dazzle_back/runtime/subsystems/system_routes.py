@@ -487,6 +487,8 @@ class SystemRoutesSubsystem:
 
                     mf = load_manifest(manifest_path)
                     get_jinja_env().globals["_use_cdn"] = mf.cdn
+                    if mf.favicon:
+                        get_jinja_env().globals["_favicon"] = mf.favicon
 
                     # Build override registry if project has declaration headers
                     try:

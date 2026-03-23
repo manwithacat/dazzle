@@ -15,7 +15,9 @@ import json
 from dazzle_ui.runtime.task_context import TaskContext
 
 
-def get_shared_head_html(title: str, *, custom_css: bool = False) -> str:
+def get_shared_head_html(
+    title: str, *, custom_css: bool = False, favicon: str | None = None
+) -> str:
     """
     Return shared <head> content for all DNR pages.
 
@@ -39,7 +41,7 @@ def get_shared_head_html(title: str, *, custom_css: bool = False) -> str:
     return f"""<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title}</title>
-    <link rel="icon" href="/static/assets/dazzle-favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="{favicon or "/static/assets/dazzle-favicon.svg"}" type="image/svg+xml">
     <!-- Inter font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
