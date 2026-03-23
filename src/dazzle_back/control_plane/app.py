@@ -10,7 +10,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Handle Heroku/AWS Redis SSL
     ssl_cert_reqs = None if "amazonaws.com" in redis_url else "required"
-    redis_client: redis.Redis[Any] = redis.from_url(
+    redis_client: redis.Redis = redis.from_url(
         redis_url,
         decode_responses=True,
         ssl_cert_reqs=ssl_cert_reqs,

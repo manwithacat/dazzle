@@ -7,7 +7,7 @@ from typing import Any
 try:
     import networkx as nx
 except ImportError:
-    nx = None  # type: ignore[assignment]
+    nx = None  # type: ignore[assignment,unused-ignore]
 
 
 def shortest_path(g: Any, source: str, target: str, weighted: bool = False) -> dict[str, Any]:

@@ -777,10 +777,10 @@ class DazzleBackendApp:
             self._verify_scope_predicates(cedar_access_specs, _fk_graph)
 
         # Build graph metadata for edge entities (#619 Phase 2)
-        entity_graph_specs: dict = {}
+        entity_graph_specs: dict[str, Any] = {}
         for ir_entity in self._appspec.domain.entities:
             if ir_entity.graph_edge is not None:
-                node_specs: dict = {}
+                node_specs: dict[str, Any] = {}
                 for field_name in (ir_entity.graph_edge.source, ir_entity.graph_edge.target):
                     ir_field = next((f for f in ir_entity.fields if f.name == field_name), None)
                     if ir_field and ir_field.type.ref_entity:
@@ -797,7 +797,7 @@ class DazzleBackendApp:
                 entity_graph_specs[ir_entity.name] = (ir_entity.graph_edge, node_specs)
 
         # Build node graph metadata for neighborhood endpoints (#619 Phase 3)
-        node_graph_specs: dict[str, dict] = {}
+        node_graph_specs: dict[str, dict[str, Any]] = {}
         for ir_entity in self._appspec.domain.entities:
             if ir_entity.graph_node is not None:
                 edge_entity_name = ir_entity.graph_node.edge_entity

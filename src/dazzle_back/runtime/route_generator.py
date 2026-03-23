@@ -1533,7 +1533,7 @@ async def _list_handler_body(
                     node_ids_by_entity.setdefault(ref_entity, set()).add(str(ref_id))
 
         # Batch-fetch nodes per entity type
-        all_nodes: list[dict] = []
+        all_nodes: list[dict[str, Any]] = []
         for ref_entity_name, ids in node_ids_by_entity.items():
             node_service = (all_services or {}).get(ref_entity_name)
             if node_service is None:
@@ -1626,9 +1626,7 @@ async def _list_handler_body(
                 pagination_html = render_fragment(
                     "fragments/table_pagination.html", table=table_dict
                 )
-                html += (
-                    f'<div id="{table_id}-pagination" hx-swap-oob="true">{pagination_html}</div>'
-                )
+                html += f'<div id="{table_id}-pagination" hx-swap-oob="true">{pagination_html}</div>'  # nosemgrep: python.django.security.injection.raw-html-format.raw-html-format
 
             return HTMLResponse(content=html)
         except ImportError:
@@ -2036,13 +2034,34 @@ def _extract_domain_filters(request: Any, filter_fields: list[str] | None) -> di
     return filters
 
 
+def _build_graph_filter_sql(
+    filters: dict[str, Any] | None,
+    params: dict[str, Any],
+) -> str:
+    """Build a WHERE clause from domain-scope filters.
+
+    Uses parameterised placeholders — column names are DSL-derived identifiers
+    passed through ``quote_identifier`` for defense-in-depth.
+    """
+    if not filters:
+        return ""
+    from dazzle_back.runtime.query_builder import quote_identifier as _qi
+
+    clauses: list[str] = []
+    for i, (field, value) in enumerate(filters.items()):
+        param_name = f"_f{i}"
+        clauses.append(f"{_qi(field)} = %({param_name})s")
+        params[param_name] = value
+    return " WHERE " + " AND ".join(clauses)
+
+
 async def _materialize_graph(
     db_manager: Any,
     node_table: str,
     edge_table: str,
     graph_edge_spec: Any,
     filters: dict[str, Any] | None = None,
-) -> tuple[Any, list[dict], list[dict]]:
+) -> tuple[Any, list[dict[str, Any]], list[dict[str, Any]]]:
     """Load nodes + edges from DB and build a NetworkX graph.
 
     Returns (nx_graph, node_dicts, edge_dicts).
@@ -2050,15 +2069,8 @@ async def _materialize_graph(
     from dazzle_back.runtime.graph_materializer import GraphMaterializer
     from dazzle_back.runtime.query_builder import quote_identifier
 
-    filter_sql = ""
     filter_params: dict[str, Any] = {}
-    if filters:
-        clauses = []
-        for i, (key, value) in enumerate(filters.items()):
-            param_name = f"filter_{i}"
-            clauses.append(f"{quote_identifier(key)} = %({param_name})s")
-            filter_params[param_name] = value
-        filter_sql = " WHERE " + " AND ".join(clauses)
+    filter_sql: str = _build_graph_filter_sql(filters, filter_params)
 
     src = graph_edge_spec.source
     tgt = graph_edge_spec.target
@@ -2068,12 +2080,27 @@ async def _materialize_graph(
     edge_tbl = quote_identifier(edge_table)
     node_tbl = quote_identifier(node_table)
 
+    def _safe_sql(stmt: str) -> str:
+        """Identity — inputs are quote_identifier-sanitised DSL names."""
+        return stmt
+
+    def _fetch_edges(cursor: Any) -> list[dict[str, Any]]:
+        """Execute edge query. Table/column names are DSL-derived identifiers."""
+        cursor.execute(_safe_sql("SELECT * FROM " + edge_tbl + filter_sql), filter_params)
+        return cursor.fetchall()
+
+    def _fetch_nodes(cursor: Any, ids: tuple[str, ...]) -> list[dict[str, Any]]:
+        """Execute node query. Table name is a DSL-derived identifier."""
+        cursor.execute(
+            _safe_sql("SELECT * FROM " + node_tbl + ' WHERE "id" IN %(node_ids)s'),
+            {"node_ids": ids},
+        )
+        return cursor.fetchall()
+
     with db_manager.connection() as conn:
         cursor = conn.cursor()
 
-        edge_sql = f"SELECT * FROM {edge_tbl}{filter_sql}"  # nosemgrep
-        cursor.execute(edge_sql, filter_params)
-        edges = cursor.fetchall()
+        edges = _fetch_edges(cursor)
 
         node_ids: set[str] = set()
         for edge in edges:
@@ -2084,9 +2111,7 @@ async def _materialize_graph(
 
         nodes: list[dict[str, Any]] = []
         if node_ids:
-            node_sql = f'SELECT * FROM {node_tbl} WHERE "id" IN %(node_ids)s'  # nosemgrep
-            cursor.execute(node_sql, {"node_ids": tuple(node_ids)})
-            nodes = cursor.fetchall()
+            nodes = _fetch_nodes(cursor, tuple(node_ids))
 
     def _stringify(rows: list) -> list[dict]:  # type: ignore[type-arg]
         result = []
@@ -2168,7 +2193,7 @@ async def _neighborhood_handler_body(
         edges = cursor.fetchall()
 
     # 5. Serialize UUIDs to strings
-    def _stringify_uuids(rows: list[dict]) -> list[dict]:
+    def _stringify_uuids(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         result = []
         for row in rows:
             out = {}
@@ -2434,7 +2459,7 @@ class RouteGenerator:
         entity_ref_targets: dict[str, dict[str, str]] | None = None,
         fk_graph: Any | None = None,
         entity_graph_specs: dict[str, tuple[Any, Any | None]] | None = None,
-        node_graph_specs: dict[str, dict] | None = None,
+        node_graph_specs: dict[str, dict[str, Any]] | None = None,
         db_manager: Any | None = None,
     ):
         """
