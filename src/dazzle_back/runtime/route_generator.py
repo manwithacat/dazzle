@@ -1294,8 +1294,10 @@ def _resolve_predicate_filters(
         UserAttrRef,
         compile_predicate,
     )
+    from dazzle_back.runtime.tenant_isolation import get_current_tenant_schema
 
-    sql, raw_params = compile_predicate(predicate, entity_name, fk_graph)
+    schema = get_current_tenant_schema()
+    sql, raw_params = compile_predicate(predicate, entity_name, fk_graph, schema=schema)
 
     if not sql:
         return {}  # Tautology — no filter needed

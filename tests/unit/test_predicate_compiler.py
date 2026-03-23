@@ -160,3 +160,48 @@ class TestTerminals:
         sql, params = compile_predicate(Contradiction(), "Task", _simple_graph())
         assert "FALSE" in sql
         assert params == []
+
+
+class TestSchemaQualification:
+    """Test schema-qualified table names for tenant isolation (#621)."""
+
+    def test_exists_check_unqualified_by_default(self) -> None:
+        p = ExistsCheck(
+            target_entity="CompanyContact",
+            bindings=[ExistsBinding(junction_field="contact", target="current_user", operator="=")],
+        )
+        sql, _ = compile_predicate(p, "Company", _simple_graph())
+        assert 'FROM "CompanyContact"' in sql
+        assert "tenant" not in sql
+
+    def test_exists_check_schema_qualified(self) -> None:
+        p = ExistsCheck(
+            target_entity="CompanyContact",
+            bindings=[ExistsBinding(junction_field="contact", target="current_user", operator="=")],
+        )
+        sql, _ = compile_predicate(p, "Company", _simple_graph(), schema="tenant_abc")
+        assert 'FROM "tenant_abc"."CompanyContact"' in sql
+
+    def test_path_check_schema_qualified(self) -> None:
+        p = PathCheck(
+            path=["manuscript", "assessment_event", "school_id"],
+            op=CompOp.EQ,
+            value=ValueRef(user_attr="school"),
+        )
+        sql, _ = compile_predicate(p, "Feedback", _simple_graph(), schema="tenant_xyz")
+        assert '"tenant_xyz"."AssessmentEvent"' in sql
+        assert '"tenant_xyz"."Manuscript"' in sql
+
+    def test_bool_composite_threads_schema(self) -> None:
+        left = ExistsCheck(
+            target_entity="JunctionA",
+            bindings=[ExistsBinding(junction_field="user", target="current_user", operator="=")],
+        )
+        right = ExistsCheck(
+            target_entity="JunctionB",
+            bindings=[ExistsBinding(junction_field="user", target="current_user", operator="=")],
+        )
+        p = BoolComposite(op=BoolOp.OR, children=[left, right])
+        sql, _ = compile_predicate(p, "Root", _simple_graph(), schema="tenant_t")
+        assert '"tenant_t"."JunctionA"' in sql
+        assert '"tenant_t"."JunctionB"' in sql

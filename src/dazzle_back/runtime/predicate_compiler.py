@@ -161,8 +161,24 @@ def _compile_user_attr_check(predicate: UserAttrCheck) -> tuple[str, list[Any]]:
     return f"{col} {op_sql} %s", [UserAttrRef(predicate.user_attr)]
 
 
+def _qualify_table(name: str, schema: str | None) -> str:
+    """Return a possibly schema-qualified table identifier.
+
+    With schema: ``"tenant_abc"."CompanyContact"``
+    Without:     ``"CompanyContact"``
+    """
+    ident = quote_identifier(name)
+    if schema:
+        return f"{quote_identifier(schema)}.{ident}"
+    return ident
+
+
 def _compile_path_check(
-    predicate: PathCheck, entity_name: str, fk_graph: FKGraph
+    predicate: PathCheck,
+    entity_name: str,
+    fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
 ) -> tuple[str, list[Any]]:
     """Compile a PathCheck to a nested IN (SELECT …) expression.
 
@@ -230,7 +246,7 @@ def _compile_path_check(
     # Innermost: SELECT terminal_field FROM final_entity WHERE <condition>
     inner_sql = (
         f"SELECT {quote_identifier(terminal_field)} "
-        f"FROM {quote_identifier(last_target_entity)} "
+        f"FROM {_qualify_table(last_target_entity, schema)} "
         f"WHERE {innermost_condition}"
     )
     # The FK column in the preceding entity that we need to match against
@@ -241,7 +257,7 @@ def _compile_path_check(
     for _from_entity, fk_field, target_entity in reversed(hops[:-1]):
         inner_sql = (
             f"SELECT {quote_identifier(fk_field)} "
-            f"FROM {quote_identifier(target_entity)} "
+            f"FROM {_qualify_table(target_entity, schema)} "
             f"WHERE {quote_identifier(inner_match_fk)} IN ({inner_sql})"
         )
         inner_match_fk = fk_field
@@ -252,9 +268,14 @@ def _compile_path_check(
     return sql, params
 
 
-def _compile_exists_check(predicate: ExistsCheck, entity_name: str) -> tuple[str, list[Any]]:
+def _compile_exists_check(
+    predicate: ExistsCheck,
+    entity_name: str,
+    *,
+    schema: str | None = None,
+) -> tuple[str, list[Any]]:
     """Compile an ExistsCheck to an [NOT] EXISTS (SELECT 1 FROM …) expression."""
-    target = quote_identifier(predicate.target_entity)
+    target = _qualify_table(predicate.target_entity, schema)
     conditions: list[str] = []
     params: list[Any] = []
 
@@ -293,18 +314,22 @@ def _compile_bool_composite(
     predicate: BoolComposite,
     entity_name: str,
     fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
 ) -> tuple[str, list[Any]]:
     """Compile a BoolComposite (AND / OR / NOT) node."""
     if predicate.op is BoolOp.NOT:
         assert len(predicate.children) == 1
-        child_sql, child_params = compile_predicate(predicate.children[0], entity_name, fk_graph)
+        child_sql, child_params = compile_predicate(
+            predicate.children[0], entity_name, fk_graph, schema=schema
+        )
         return f"NOT ({child_sql})", child_params
 
     joiner = " AND " if predicate.op is BoolOp.AND else " OR "
     parts: list[str] = []
     all_params: list[Any] = []
     for child in predicate.children:
-        child_sql, child_params = compile_predicate(child, entity_name, fk_graph)
+        child_sql, child_params = compile_predicate(child, entity_name, fk_graph, schema=schema)
         parts.append(f"({child_sql})")
         all_params.extend(child_params)
 
@@ -320,6 +345,8 @@ def compile_predicate(
     predicate: ScopePredicate,
     entity_name: str,
     fk_graph: FKGraph,
+    *,
+    schema: str | None = None,
 ) -> tuple[str, list[Any]]:
     """Compile a :class:`ScopePredicate` tree to a parameterised SQL fragment.
 
@@ -329,6 +356,8 @@ def compile_predicate(
             bindings that reference ``id`` and for PathCheck traversal).
         fk_graph: The FK graph for the current app spec (used for PathCheck
             path resolution).
+        schema: Optional schema name for tenant isolation (e.g. ``tenant_abc``).
+            When set, all table references in subqueries are schema-qualified.
 
     Returns:
         A ``(sql, params)`` tuple where *sql* is a WHERE fragment (no leading
@@ -350,13 +379,13 @@ def compile_predicate(
             return _compile_user_attr_check(predicate)
 
         case PathCheck():
-            return _compile_path_check(predicate, entity_name, fk_graph)
+            return _compile_path_check(predicate, entity_name, fk_graph, schema=schema)
 
         case ExistsCheck():
-            return _compile_exists_check(predicate, entity_name)
+            return _compile_exists_check(predicate, entity_name, schema=schema)
 
         case BoolComposite():
-            return _compile_bool_composite(predicate, entity_name, fk_graph)
+            return _compile_bool_composite(predicate, entity_name, fk_graph, schema=schema)
 
         case _:
             raise TypeError(f"Unknown predicate type: {type(predicate)!r}")
