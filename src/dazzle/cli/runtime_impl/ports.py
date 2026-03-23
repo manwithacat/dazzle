@@ -95,9 +95,13 @@ def is_port_available(port: int, host: str = "127.0.0.1") -> bool:
     Returns:
         True if port is available, False if in use
     """
+    # Always bind on loopback when checking availability to avoid exposing
+    # a temporary listening socket on all interfaces (e.g., 0.0.0.0).
+    bind_host = "127.0.0.1" if host in ("0.0.0.0", "") else host
+
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         try:
-            s.bind((host, port))
+            s.bind((bind_host, port))
             return True
         except OSError:
             return False
