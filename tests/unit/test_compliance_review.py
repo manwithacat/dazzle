@@ -2,7 +2,7 @@
 
 import pytest
 
-from dazzle.compliance.review import generate_review_yaml
+from dazzle.compliance.review import generate_review_data, generate_review_yaml
 
 
 @pytest.fixture
@@ -95,3 +95,8 @@ def test_no_gaps():
     }
     result = generate_review_yaml(auditspec)
     assert result["pending_reviews"] == []
+
+
+def test_alias_works(sample_auditspec):
+    """generate_review_yaml is an alias for generate_review_data."""
+    assert generate_review_yaml is generate_review_data

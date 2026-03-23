@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -26,7 +27,7 @@ CSS_PATH = PACKAGE_DIR / "css" / "compliance.css"
 TEMPLATE_PATH = PACKAGE_DIR / "templates" / "document.html"
 
 # Minimal brandspec for projects without one
-DEFAULT_BRANDSPEC = {
+DEFAULT_BRANDSPEC: dict[str, Any] = {
     "brand": {
         "identity": {"name": "Untitled Project", "legal_name": "Untitled Project"},
         "colours": {
@@ -46,18 +47,20 @@ DEFAULT_BRANDSPEC = {
 }
 
 
-def load_brandspec(path: Path | None = None, project_path: Path | None = None) -> dict:
+def load_brandspec(path: Path | None = None, project_path: Path | None = None) -> dict[str, Any]:
     """Load brandspec.yaml from explicit path or project root.
 
     Falls back to DEFAULT_BRANDSPEC if not found.
     """
     if path and path.exists():
-        return yaml.safe_load(path.read_text())
+        result: dict[str, Any] = yaml.safe_load(path.read_text())
+        return result
 
     if project_path:
-        candidate = project_path / "brandspec.yaml"
+        candidate = project_path / ".dazzle" / "compliance" / "brandspec.yaml"
         if candidate.exists():
-            return yaml.safe_load(candidate.read_text())
+            result = yaml.safe_load(candidate.read_text())
+            return result
 
     return DEFAULT_BRANDSPEC
 
@@ -65,7 +68,7 @@ def load_brandspec(path: Path | None = None, project_path: Path | None = None) -
 def render_document(
     markdown_path: Path,
     output_path: Path,
-    brandspec: dict,
+    brandspec: dict[str, Any],
     document_title: str,
     document_id: str,
     version: str = "1.0",
@@ -95,6 +98,11 @@ def render_document(
         extensions=["tables", "toc", "fenced_code"],
     )
 
+    if not TEMPLATE_PATH.exists():
+        raise FileNotFoundError(f"Template not found: {TEMPLATE_PATH}")
+    if not CSS_PATH.exists():
+        raise FileNotFoundError(f"CSS not found: {CSS_PATH}")
+
     template = Template(TEMPLATE_PATH.read_text())
     html_str = template.render(
         content=content_html,
@@ -113,6 +121,6 @@ def render_document(
     )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    weasyprint.HTML(string=html_str, base_url=str(Path.cwd())).write_pdf(str(output_path))
+    weasyprint.HTML(string=html_str, base_url=str(PACKAGE_DIR)).write_pdf(str(output_path))
 
     return output_path

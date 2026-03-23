@@ -80,3 +80,16 @@ def test_empty_filter(sample_auditspec):
     result = slice_auditspec(sample_auditspec, controls=["NONEXISTENT"])
     assert len(result["controls"]) == 0
     assert result["summary"]["total_controls"] == 0
+
+
+def test_combined_status_and_tier(sample_auditspec):
+    """Combined filters should work together."""
+    result = slice_auditspec(sample_auditspec, status_filter=["gap", "partial"], tier_filter=[3])
+    assert len(result["controls"]) == 1
+    assert result["controls"][0]["id"] == "C-3"
+
+
+def test_excluded_count(sample_auditspec):
+    """Summary should include excluded count."""
+    result = slice_auditspec(sample_auditspec, status_filter=["gap"])
+    assert result["summary"]["excluded"] == 2
