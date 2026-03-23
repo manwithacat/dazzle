@@ -23,7 +23,7 @@
   {% if _use_cdn | default(true) %}
   {# Dazzle framework CSS + JS — jsDelivr CDN #}
   <link rel="stylesheet" href="{{ _cdn_base }}/dazzle.min.css">
-  <script src="{{ _cdn_base }}/dazzle.min.js"></script>
+  <script defer src="{{ _cdn_base }}/dazzle.min.js"></script>
   {% else %}
   {# HTMX + extensions (vendored) #}
   <script src="/static/vendor/htmx.min.js"></script>
