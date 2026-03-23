@@ -80,6 +80,8 @@ DAZZLE intentionally limits computational expressiveness to ensure:
 
 **v0.25.0 Construct Keywords**: `enum`, `webhook`, `approval`, `sla` (top-level keywords). Sub-keywords (`events`, `payload`, `approver_role`, `quorum`, `threshold`, `escalation`, `auto_approve`, `starts_when`, `pauses_when`, `completes_when`, `tiers`, `business_hours`, `on_breach`, `notify`) are matched as identifiers to avoid conflicts with existing DSL usage.
 
+**Feedback Widget Keyword**: `feedback_widget` (top-level keyword). Sub-keys (`position`, `shortcut`, `categories`, `severities`, `capture`) are matched as identifiers.
+
 ## Field Types
 
 All field types supported by the DSL (from `FieldTypeKind` enum):
@@ -1939,6 +1941,27 @@ sla TicketResponse "Ticket Response SLA":
     set: escalated = true
 ```
 
+### Feedback Widget
+
+```dsl
+feedback_widget: enabled
+  position: bottom-right
+  shortcut: backtick
+  categories: [bug, ux, visual, behaviour, enhancement, other]
+  severities: [blocker, annoying, minor]
+  capture: [url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]
+```
+
+All sub-keys are optional — `feedback_widget: enabled` with no configuration uses all defaults. When enabled, the framework auto-generates a `FeedbackReport` entity (unless one is explicitly declared) and injects a client-side widget into every authenticated page.
+
+| Sub-key | Default | Values |
+|---------|---------|--------|
+| `position` | `bottom-right` | Any hyphenated position string |
+| `shortcut` | `backtick` | Key name for toggle shortcut |
+| `categories` | `[bug, ux, visual, behaviour, enhancement, other]` | List of category values |
+| `severities` | `[blocker, annoying, minor]` | List of severity values |
+| `capture` | `[url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]` | List of auto-captured context fields |
+
 ## Parser Mixin Coverage
 
 The grammar above is derived from these parser mixin modules:
@@ -1970,3 +1993,4 @@ The grammar above is derived from these parser mixin modules:
 | `ledger.py` | `LedgerParserMixin` | Financial |
 | `governance.py` | `GovernanceParserMixin` | Governance |
 | `llm.py` | `LLMParserMixin` | LLM |
+| `feedback_widget.py` | `FeedbackWidgetParserMixin` | Framework |

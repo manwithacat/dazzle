@@ -160,6 +160,9 @@ class SymbolTable:
     # Track LLM config (only one per app, from root module)
     llm_config: ir.LLMConfigSpec | None = None  # v0.21.0
 
+    # Track feedback widget config
+    feedback_widget: ir.FeedbackWidgetSpec | None = None
+
     # --- Delegated properties for backward compatibility ---
 
     @property
@@ -523,6 +526,10 @@ def build_symbol_table(modules: list[ir.ModuleIR]) -> SymbolTable:
         # Set LLM config if present (v0.21.0)
         if module.fragment.llm_config is not None:
             symbols.set_llm_config(module.fragment.llm_config, module.name)
+
+        # Set feedback widget config if present
+        if module.fragment.feedback_widget is not None:
+            symbols.feedback_widget = module.fragment.feedback_widget
 
         # Add processes (v0.23.0)
         for process in module.fragment.processes:
@@ -1232,4 +1239,5 @@ def merge_fragments(modules: list[ir.ModuleIR], symbols: SymbolTable) -> ir.Modu
         slas=list(symbols.slas.values()),  # v0.25.0
         islands=list(symbols.islands.values()),  # UI Islands
         grant_schemas=list(symbols.grant_schemas.values()),  # v0.42.0
+        feedback_widget=symbols.feedback_widget,  # Feedback Widget
     )

@@ -23,6 +23,7 @@ from .eventing import (
     SubscribeSpec,
 )
 from .experiences import ExperienceSpec
+from .feedback_widget import FeedbackWidgetSpec
 from .foreign_models import ForeignModelSpec
 from .governance import (
     DataProductsSpec,
@@ -192,6 +193,8 @@ class ModuleFragment(BaseModel):
     grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
     # Runtime Parameters (v0.44.0)
     params: list[ParamSpec] = Field(default_factory=list)
+    # Feedback Widget
+    feedback_widget: FeedbackWidgetSpec | None = None
 
     model_config = ConfigDict(frozen=True)
 

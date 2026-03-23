@@ -113,6 +113,13 @@
   <script type="application/json" id="dz-user-prefs">{{ user_preferences | tojson }}</script>
   {% endif %}
 
+  {# Feedback widget — injected when feedback_widget is enabled in DSL #}
+  {% if _feedback_widget_enabled | default(false) %}
+  <link rel="stylesheet" href="/static/css/feedback-widget.css">
+  <script src="/static/js/feedback-widget.js"></script>
+  <script>document.body.dataset.userRole = "{{ user_roles[0] if user_roles else '' }}";</script>
+  {% endif %}
+
   {% block scripts_extra %}{% endblock %}
 </body>
 {% if not _htmx_partial | default(false) %}

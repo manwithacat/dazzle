@@ -22,6 +22,7 @@ from .eventing import (
     SubscribeSpec,
 )
 from .experiences import ExperienceSpec
+from .feedback_widget import FeedbackWidgetSpec
 from .fields import FieldType
 from .foreign_models import ForeignModelSpec
 from .governance import (
@@ -179,6 +180,8 @@ class AppSpec(BaseModel):
     grant_schemas: list[GrantSchemaSpec] = Field(default_factory=list)
     # Runtime Parameters (v0.44.0)
     params: list[ParamSpec] = Field(default_factory=list)
+    # Feedback Widget
+    feedback_widget: FeedbackWidgetSpec | None = None
     # Global audit trail (v0.34.0) — when True, all entities are audited by default
     audit_trail: bool = False
     # FK graph built at link time (Task 5 predicate algebra).

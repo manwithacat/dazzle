@@ -506,6 +506,9 @@ class TokenType(Enum):
     # v0.44.0 Runtime Parameters
     PARAM = "param"
 
+    # Feedback Widget
+    FEEDBACK_WIDGET = "feedback_widget"
+
     # v0.46.0 Graph Semantics Keywords (#619)
     GRAPH_EDGE = "graph_edge"
     GRAPH_NODE = "graph_node"

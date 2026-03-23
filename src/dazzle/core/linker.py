@@ -1,6 +1,7 @@
 from . import ir
 from .archetype_expander import expand_archetypes, generate_archetype_surfaces
 from .errors import LinkError
+from .ir.feedback_widget import FEEDBACK_REPORT_FIELDS
 from .ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from .ir.llm import AI_JOB_FIELDS
 from .ir.security import SecurityConfig, SecurityProfile
@@ -112,6 +113,11 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     if merged_fragment.llm_config is not None and not any(e.name == "AIJob" for e in entities):
         entities = [*entities, _build_ai_job_entity()]
 
+    # 9b. Auto-generate FeedbackReport entity when feedback_widget is enabled
+    fw = merged_fragment.feedback_widget
+    if fw is not None and fw.enabled and not any(e.name == "FeedbackReport" for e in entities):
+        entities = [*entities, _build_feedback_report_entity()]
+
     # 10. Build FK graph and compile scope predicates
     from .ir.fk_graph import FKGraph
     from .ir.predicate_builder import build_scope_predicate
@@ -155,6 +161,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         islands=merged_fragment.islands,  # UI Islands
         grant_schemas=merged_fragment.grant_schemas,  # v0.42.0 Runtime RBAC
         params=merged_fragment.params,  # v0.44.0 Runtime Parameters
+        feedback_widget=merged_fragment.feedback_widget,  # Feedback Widget
         audit_trail=root_module.app_config.audit_trail if root_module.app_config else False,
         metadata={
             "modules": [m.name for m in sorted_modules],
@@ -263,6 +270,11 @@ def _parse_field_type(type_str: str) -> FieldType:
     if type_str.startswith("money(") and type_str.endswith(")"):
         currency = type_str[6:-1].strip()
         return FieldType(kind=FieldTypeKind.MONEY, currency_code=currency)
+    if type_str.startswith("ref "):
+        ref_entity = type_str[4:].strip()
+        return FieldType(kind=FieldTypeKind.REF, ref_entity=ref_entity)
+    if type_str == "float":
+        return FieldType(kind=FieldTypeKind.FLOAT)
     raise ValueError(f"Unknown field type: {type_str}")
 
 
@@ -299,4 +311,63 @@ def _build_ai_job_entity() -> ir.EntitySpec:
         patterns=["system", "audit"],
         fields=fields,
         access=access,
+    )
+
+
+def _build_feedback_report_entity() -> ir.EntitySpec:
+    """Build the auto-generated FeedbackReport entity for in-app feedback."""
+    fields: list[FieldSpec] = []
+    for name, type_str, modifiers, default in FEEDBACK_REPORT_FIELDS:
+        field_type = _parse_field_type(type_str)
+        mods = [_MODIFIER_MAP[m] for m in modifiers]
+        fields.append(FieldSpec(name=name, type=field_type, modifiers=mods, default=default))
+
+    # Any authenticated user can create/read; only admins can update/delete.
+    access = ir.AccessSpec(
+        permissions=[
+            ir.PermissionRule(
+                operation=ir.PermissionKind.CREATE, require_auth=True, effect=ir.PolicyEffect.PERMIT
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.READ, require_auth=True, effect=ir.PolicyEffect.PERMIT
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.LIST, require_auth=True, effect=ir.PolicyEffect.PERMIT
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.UPDATE, require_auth=True, effect=ir.PolicyEffect.PERMIT
+            ),
+            ir.PermissionRule(
+                operation=ir.PermissionKind.DELETE, require_auth=True, effect=ir.PolicyEffect.PERMIT
+            ),
+        ]
+    )
+
+    # State machine: new → triaged → in_progress → resolved → verified
+    #                                  ↓ wont_fix / duplicate
+    transitions = [
+        ir.StateTransition(from_state="new", to_state="triaged"),
+        ir.StateTransition(from_state="triaged", to_state="in_progress"),
+        ir.StateTransition(from_state="triaged", to_state="wont_fix"),
+        ir.StateTransition(from_state="triaged", to_state="duplicate"),
+        ir.StateTransition(from_state="in_progress", to_state="resolved"),
+        ir.StateTransition(from_state="in_progress", to_state="wont_fix"),
+        ir.StateTransition(from_state="resolved", to_state="verified"),
+        ir.StateTransition(from_state="resolved", to_state="in_progress"),
+    ]
+    state_machine = ir.StateMachineSpec(
+        status_field="status",
+        states=["new", "triaged", "in_progress", "resolved", "verified", "wont_fix", "duplicate"],
+        transitions=transitions,
+    )
+
+    return ir.EntitySpec(
+        name="FeedbackReport",
+        title="Feedback Report",
+        intent="In-app feedback from any user — issues, impressions, improvement suggestions",
+        domain="platform",
+        patterns=["lifecycle", "feedback", "audit"],
+        fields=fields,
+        access=access,
+        state_machine=state_machine,
     )

@@ -189,6 +189,12 @@ from .expressions import (
 from .expressions import (
     UnaryOp as ExprUnaryOp,
 )
+
+# Feedback Widget
+from .feedback_widget import (
+    FEEDBACK_REPORT_FIELDS,
+    FeedbackWidgetSpec,
+)
 from .fidelity import (
     FidelityGap,
     FidelityGapCategory,
@@ -1124,6 +1130,9 @@ __all__ = [
     "TypographyRatioPreset",
     "TypographySpec",
     "VisualTreatment",
+    # Feedback Widget
+    "FEEDBACK_REPORT_FIELDS",
+    "FeedbackWidgetSpec",
     # Shared Enums (v0.25.0)
     "EnumSpec",
     "EnumValueSpec",

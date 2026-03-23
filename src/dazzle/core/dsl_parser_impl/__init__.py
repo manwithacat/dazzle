@@ -25,6 +25,7 @@ from .conditions import ConditionParserMixin
 from .entity import EntityParserMixin
 from .enum import EnumParserMixin
 from .eventing import EventingParserMixin
+from .feedback_widget import FeedbackWidgetParserMixin
 from .flow import FlowParserMixin
 from .governance import GovernanceParserMixin
 from .grant import GrantParserMixin
@@ -86,6 +87,7 @@ class Parser(
     NotificationParserMixin,
     GrantParserMixin,
     ParamParserMixin,
+    FeedbackWidgetParserMixin,
 ):
     """
     Complete DAZZLE DSL Parser.
@@ -559,6 +561,16 @@ class Parser(
             }
         )
 
+    def _dispatch_feedback_widget(self, fragment: "ir.ModuleFragment") -> "ir.ModuleFragment":
+        self.advance()  # consume 'feedback_widget' token
+        spec = self.parse_feedback_widget()
+        return ir.ModuleFragment(
+            **{
+                **{f: getattr(fragment, f) for f in ir.ModuleFragment.model_fields},
+                "feedback_widget": spec,
+            }
+        )
+
     def _build_parse_dispatch(self) -> dict:  # type: ignore[type-arg]
         """Build the token-type → handler dispatch table."""
         from ..lexer import TokenType
@@ -610,6 +622,7 @@ class Parser(
             TokenType.NOTIFICATION: self._dispatch_notification,
             TokenType.GRANT_SCHEMA: self._dispatch_grant_schema,
             TokenType.PARAM: self._dispatch_param,
+            TokenType.FEEDBACK_WIDGET: self._dispatch_feedback_widget,
         }
 
     def parse(self) -> ir.ModuleFragment:

@@ -1,0 +1,224 @@
+/* Feedback Widget — framework-level in-app feedback collection.
+ * Uses DaisyUI oklch colour tokens for theme consistency. */
+
+/* Floating button */
+.dz-feedback-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 9999px;
+  background: oklch(var(--p));
+  color: oklch(var(--pc));
+  border: none;
+  cursor: pointer;
+  z-index: 9998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px oklch(0 0 0 / 0.15);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.dz-feedback-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 16px oklch(0 0 0 / 0.2);
+}
+.dz-feedback-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* Slide-out panel */
+.dz-feedback-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 24rem;
+  max-width: 100vw;
+  height: 100vh;
+  background: oklch(var(--b1));
+  border-left: 1px solid oklch(var(--b3));
+  z-index: 9999;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.dz-feedback-panel.open {
+  transform: translateX(0);
+}
+
+/* Panel header */
+.dz-feedback-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid oklch(var(--b3));
+}
+.dz-feedback-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: oklch(var(--bc));
+}
+.dz-feedback-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: oklch(var(--bc));
+  font-size: 1.25rem;
+  padding: 0.25rem;
+}
+
+/* Panel body */
+.dz-feedback-body {
+  padding: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Category buttons */
+.dz-feedback-categories {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+.dz-feedback-cat-btn {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid oklch(var(--b3));
+  border-radius: 0.375rem;
+  background: oklch(var(--b2));
+  color: oklch(var(--bc));
+  cursor: pointer;
+  font-size: 0.8125rem;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dz-feedback-cat-btn:hover {
+  border-color: oklch(var(--p));
+}
+.dz-feedback-cat-btn.selected {
+  background: oklch(var(--p));
+  color: oklch(var(--pc));
+  border-color: oklch(var(--p));
+}
+
+/* Severity toggles */
+.dz-feedback-severities {
+  display: flex;
+  gap: 0.5rem;
+}
+.dz-feedback-sev-btn {
+  flex: 1;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid oklch(var(--b3));
+  border-radius: 0.375rem;
+  background: oklch(var(--b2));
+  color: oklch(var(--bc));
+  cursor: pointer;
+  font-size: 0.75rem;
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dz-feedback-sev-btn.selected[data-severity="blocker"] {
+  background: oklch(var(--er));
+  color: oklch(var(--erc));
+  border-color: oklch(var(--er));
+}
+.dz-feedback-sev-btn.selected[data-severity="annoying"] {
+  background: oklch(var(--wa));
+  color: oklch(var(--wac));
+  border-color: oklch(var(--wa));
+}
+.dz-feedback-sev-btn.selected[data-severity="minor"] {
+  background: oklch(var(--su));
+  color: oklch(var(--suc));
+  border-color: oklch(var(--su));
+}
+
+/* Description textarea */
+.dz-feedback-description {
+  width: 100%;
+  min-height: 6rem;
+  padding: 0.75rem;
+  border: 1px solid oklch(var(--b3));
+  border-radius: 0.375rem;
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+  font-family: inherit;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+.dz-feedback-description:focus {
+  outline: 2px solid oklch(var(--p));
+  outline-offset: -1px;
+}
+
+/* Submit button */
+.dz-feedback-submit {
+  width: 100%;
+  padding: 0.625rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: oklch(var(--p));
+  color: oklch(var(--pc));
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.dz-feedback-submit:hover {
+  opacity: 0.9;
+}
+.dz-feedback-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Label */
+.dz-feedback-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: oklch(var(--bc));
+}
+
+/* Toast notification */
+.dz-feedback-toast {
+  position: fixed;
+  bottom: 5rem;
+  right: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.375rem;
+  background: oklch(var(--su));
+  color: oklch(var(--suc));
+  font-size: 0.875rem;
+  z-index: 10000;
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.dz-feedback-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Backdrop overlay */
+.dz-feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  background: oklch(0 0 0 / 0.3);
+  z-index: 9998;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.dz-feedback-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
