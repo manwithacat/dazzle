@@ -63,12 +63,12 @@ def _scalar_type_to_sa(scalar_type: ScalarType) -> Any:
         ScalarType.DECIMAL: sa.Float(),
         ScalarType.FLOAT: sa.Float(),
         ScalarType.BOOL: sa.Boolean(),
-        ScalarType.DATE: sa.Text(),
-        ScalarType.DATETIME: sa.Text(),
-        ScalarType.UUID: sa.Text(),
+        ScalarType.DATE: sa.Date(),
+        ScalarType.DATETIME: sa.DateTime(timezone=True),
+        ScalarType.UUID: sa.Uuid(),
         ScalarType.EMAIL: sa.Text(),
         ScalarType.URL: sa.Text(),
-        ScalarType.JSON: sa.Text(),
+        ScalarType.JSON: sa.JSON(),
     }
     return mapping.get(scalar_type, sa.Text())
 
@@ -78,7 +78,9 @@ def _field_type_to_sa(field_type: FieldType) -> Any:
     sa = _ensure_sa()
     if field_type.kind == "scalar" and field_type.scalar_type:
         return _scalar_type_to_sa(field_type.scalar_type)
-    # enum and ref both store as TEXT in the current implementation
+    if field_type.kind == "ref":
+        return sa.Uuid()
+    # enum stored as TEXT
     return sa.Text()
 
 

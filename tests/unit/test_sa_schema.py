@@ -6,7 +6,7 @@ Verifies type mapping, FK handling, self-references, and topological ordering.
 
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Float, Integer, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, Integer, Text, Uuid
 
 from dazzle_back.runtime.sa_schema import (
     _field_type_to_sa,
@@ -58,20 +58,20 @@ class TestScalarTypeMapping:
     def test_bool_maps_to_boolean(self):
         assert isinstance(_scalar_type_to_sa(ScalarType.BOOL), Boolean)
 
-    def test_date_maps_to_text(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.DATE), Text)
+    def test_date_maps_to_date(self):
+        assert isinstance(_scalar_type_to_sa(ScalarType.DATE), Date)
 
-    def test_datetime_maps_to_text(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.DATETIME), Text)
+    def test_datetime_maps_to_datetime(self):
+        assert isinstance(_scalar_type_to_sa(ScalarType.DATETIME), DateTime)
 
-    def test_uuid_maps_to_text(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.UUID), Text)
+    def test_uuid_maps_to_uuid(self):
+        assert isinstance(_scalar_type_to_sa(ScalarType.UUID), Uuid)
 
     def test_email_maps_to_text(self):
         assert isinstance(_scalar_type_to_sa(ScalarType.EMAIL), Text)
 
-    def test_json_maps_to_text(self):
-        assert isinstance(_scalar_type_to_sa(ScalarType.JSON), Text)
+    def test_json_maps_to_json(self):
+        assert isinstance(_scalar_type_to_sa(ScalarType.JSON), JSON)
 
 
 class TestFieldTypeMapping:
@@ -81,9 +81,9 @@ class TestFieldTypeMapping:
         ft = FieldType(kind="enum", enum_values=["a", "b"])
         assert isinstance(_field_type_to_sa(ft), Text)
 
-    def test_ref_maps_to_text(self):
+    def test_ref_maps_to_uuid(self):
         ft = FieldType(kind="ref", ref_entity="Foo")
-        assert isinstance(_field_type_to_sa(ft), Text)
+        assert isinstance(_field_type_to_sa(ft), Uuid)
 
     def test_scalar_str(self):
         ft = FieldType(kind="scalar", scalar_type=ScalarType.STR)

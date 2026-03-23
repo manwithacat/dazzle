@@ -367,7 +367,7 @@ class MigrationPlanner:
         # Check if entity has an id field
         has_id = any(f.name == "id" for f in entity.fields)
         if not has_id:
-            columns.append('"id" TEXT PRIMARY KEY')
+            columns.append('"id" UUID PRIMARY KEY')
 
         for field in entity.fields:
             col_def = self._generate_column_def(field)

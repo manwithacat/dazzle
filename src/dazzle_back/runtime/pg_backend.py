@@ -88,12 +88,12 @@ def _scalar_type_to_postgres(scalar_type: ScalarType) -> str:
         ScalarType.DECIMAL: "DOUBLE PRECISION",
         ScalarType.FLOAT: "DOUBLE PRECISION",
         ScalarType.BOOL: "BOOLEAN",
-        ScalarType.DATE: "TEXT",
-        ScalarType.DATETIME: "TEXT",
-        ScalarType.UUID: "TEXT",
+        ScalarType.DATE: "DATE",
+        ScalarType.DATETIME: "TIMESTAMPTZ",
+        ScalarType.UUID: "UUID",
         ScalarType.EMAIL: "TEXT",
         ScalarType.URL: "TEXT",
-        ScalarType.JSON: "TEXT",
+        ScalarType.JSON: "JSONB",
     }
     return mapping.get(scalar_type, "TEXT")
 
@@ -105,7 +105,7 @@ def _field_type_to_postgres(field_type: FieldType) -> str:
     elif field_type.kind == "enum":
         return "TEXT"
     elif field_type.kind == "ref":
-        return "TEXT"
+        return "UUID"
     else:
         return "TEXT"
 
