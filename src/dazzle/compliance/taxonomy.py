@@ -1,64 +1,40 @@
-"""Load and validate compliance framework taxonomy YAML files."""
+"""Compliance framework taxonomy loader.
+
+Loads and validates YAML taxonomy files (e.g. ISO 27001).
+Types are defined in models.py.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
 
+from dazzle.compliance.models import Control, DslEvidence, Taxonomy, Theme
+
 
 class TaxonomyError(Exception):
-    """Raised when a taxonomy file is missing, malformed, or invalid."""
-
-
-@dataclass
-class DslEvidence:
-    construct: str
-    description: str
-
-
-@dataclass
-class Control:
-    id: str
-    name: str
-    objective: str
-    attributes: dict = field(default_factory=dict)
-    dsl_evidence: list[DslEvidence] = field(default_factory=list)
-
-
-@dataclass
-class Theme:
-    id: str
-    name: str
-    controls: list[Control] = field(default_factory=list)
-
-
-@dataclass
-class Taxonomy:
-    id: str
-    name: str
-    jurisdiction: str
-    body: str
-    version: str
-    themes: list[Theme] = field(default_factory=list)
-
-    def all_controls(self) -> list[Control]:
-        """Return flat list of all controls across all themes."""
-        return [c for t in self.themes for c in t.controls]
-
-    def controls_by_id(self) -> dict[str, Control]:
-        """Return dict mapping control ID to Control."""
-        return {c.id: c for c in self.all_controls()}
+    """Error loading or validating a compliance taxonomy."""
 
 
 def load_taxonomy(path: Path) -> Taxonomy:
-    """Load a framework taxonomy from a YAML file."""
+    """Load a compliance framework taxonomy from a YAML file.
+
+    Args:
+        path: Path to the framework YAML file.
+
+    Returns:
+        Parsed and validated Taxonomy.
+
+    Raises:
+        TaxonomyError: If the file is missing, malformed, or invalid.
+    """
     if not path.exists():
         raise TaxonomyError(f"Taxonomy file not found: {path}")
 
     try:
-        raw = yaml.safe_load(path.read_text())
+        with path.open() as f:
+            raw = yaml.safe_load(f)
     except yaml.YAMLError as e:
         raise TaxonomyError(f"Invalid YAML in {path}: {e}") from e
 
@@ -66,30 +42,37 @@ def load_taxonomy(path: Path) -> Taxonomy:
         raise TaxonomyError(f"Missing 'framework' key in {path}")
 
     fw = raw["framework"]
-    themes = []
-    for t in fw.get("themes", []):
-        controls = []
-        for c in t.get("controls", []):
-            evidence = [
-                DslEvidence(construct=e["construct"], description=e["description"])
-                for e in c.get("dsl_evidence", [])
-            ]
-            controls.append(
-                Control(
-                    id=c["id"],
-                    name=c["name"],
-                    objective=c.get("objective", ""),
-                    attributes=c.get("attributes", {}),
-                    dsl_evidence=evidence,
+
+    try:
+        themes = []
+        for theme_data in fw.get("themes", []):
+            controls = []
+            for ctrl_data in theme_data.get("controls", []):
+                evidence = [DslEvidence(**e) for e in ctrl_data.get("dsl_evidence", [])]
+                controls.append(
+                    Control(
+                        id=ctrl_data["id"],
+                        name=ctrl_data["name"],
+                        objective=ctrl_data.get("objective", ""),
+                        dsl_evidence=evidence,
+                        attributes=ctrl_data.get("attributes", {}),
+                    )
+                )
+            themes.append(
+                Theme(
+                    id=theme_data["id"],
+                    name=theme_data["name"],
+                    controls=controls,
                 )
             )
-        themes.append(Theme(id=t["id"], name=t["name"], controls=controls))
 
-    return Taxonomy(
-        id=fw["id"],
-        name=fw["name"],
-        jurisdiction=fw.get("jurisdiction", ""),
-        body=fw.get("body", ""),
-        version=fw.get("version", ""),
-        themes=themes,
-    )
+        return Taxonomy(
+            id=fw["id"],
+            name=fw["name"],
+            version=fw.get("version", ""),
+            jurisdiction=fw.get("jurisdiction", ""),
+            body=fw.get("body", ""),
+            themes=themes,
+        )
+    except KeyError as e:
+        raise TaxonomyError(f"Missing required field {e} in {path}") from e
