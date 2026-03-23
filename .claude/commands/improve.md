@@ -128,12 +128,14 @@ If verification fails: increment attempts, log the failure, retry from ENHANCE (
 When all backlog gaps are DONE or BLOCKED and no new gaps found from re-scan, automatically check for open GitHub issues and handle them:
 
 1. Run `gh issue list --state open --limit 20 --json number,title,labels,author`
-2. If **no open issues**: report "All clear — backlog clean, no open issues" and stop
-3. If **open issues exist**: invoke the `/issues` skill to triage and resolve them
+2. If **open issues exist**: invoke the `/issues` skill to triage and resolve them
    - The `/issues` skill handles the full cycle: investigate, implement, ship, close
-   - After `/issues` completes, the improve loop is done for this invocation
+   - After `/issues` completes, continue to step 3
+3. **After issues are resolved (or if none existed):**
+   - Check if a `/loop` cron is active for `/improve`. If so, report "Backlog clean, issues resolved. Waiting for next cycle." and stop — the loop scheduler will re-invoke `/improve` which will re-check for new issues.
+   - If NO loop is active (manual `/improve` invocation), report "All clear — backlog clean, no open issues. Run `/loop 5m /improve` to watch for new issues automatically." and stop.
 
-This makes `/improve` a unified maintenance command: fix example app gaps first, then handle reported issues when the backlog is clean.
+This makes `/improve` a unified maintenance command: fix example app gaps first, then handle reported issues, then wait for more work.
 
 ## Failure Policy
 
@@ -143,8 +145,8 @@ This makes `/improve` a unified maintenance command: fix example app gaps first,
 | Tests fail on changed code | Fix code, retry from BUILD |
 | Verification still shows gap | Check if gap definition is stale, retry |
 | Same failure 3 times | DIAGNOSE: root-cause analysis. If framework bug → file at manwithacat/dazzle. Mark BLOCKED. |
-| All gaps done, no issues | Report completion and stop |
-| All gaps done, issues exist | Fall through to TRIAGE (Step 6) |
+| All gaps done, no issues | Report "all clear", wait for next loop cycle |
+| All gaps done, issues exist | Fall through to TRIAGE → `/issues` → wait for next cycle |
 
 ## Scope
 
