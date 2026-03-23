@@ -9,12 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-03-23
+
+### Added
+- `feedback_widget` DSL keyword with parser mixin, IR model (`FeedbackWidgetSpec`), and auto-entity generation
+- Auto-generated `FeedbackReport` entity with lifecycle state machine (new → triaged → in_progress → resolved → verified) when `feedback_widget: enabled` is declared
+- Client-side feedback widget (JS/CSS) injected into authenticated pages — safe DOM construction, idempotency keys, rate limiting, offline retry
+- Apps can override auto-entity by declaring their own `FeedbackReport` entity
+
 ### Changed
 - Database migrations now use Alembic instead of hand-rolled `MigrationPlanner`
 - `dazzle db migrate` generates and applies migrations in one step
 - `dazzle db rollback` reverts migrations with optional revision target
 - Type changes detected automatically via `compare_type=True`
 - `dazzle serve --production` refuses to start with pending migrations
+- Linker `_parse_field_type` now supports `ref <Entity>` and `float` types
 
 ### Added
 - Compliance documentation compiler: maps DSL metadata to framework controls
