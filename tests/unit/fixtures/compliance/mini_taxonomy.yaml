@@ -1,0 +1,42 @@
+framework:
+  id: mini_test
+  name: Mini Test Framework
+  jurisdiction: UK
+  body: Test Body
+  version: "1.0"
+  themes:
+    - id: theme_access
+      name: Access Control
+      controls:
+        - id: AC-1
+          name: Access Policy
+          objective: Ensure access is controlled by policy
+          dsl_evidence:
+            - construct: permit
+              description: RBAC permit rules on entities
+        - id: AC-2
+          name: Data Classification
+          objective: Classify data by sensitivity
+          dsl_evidence:
+            - construct: classify
+              description: Data classification directives
+        - id: AC-3
+          name: Row-Level Security
+          objective: Filter data by user context
+          dsl_evidence:
+            - construct: scope
+              description: Scope predicates for row filtering
+    - id: theme_ops
+      name: Operations
+      controls:
+        - id: OP-1
+          name: Change Management
+          objective: Manage changes through defined processes
+          dsl_evidence:
+            - construct: transitions
+              description: State machine transition guards
+            - construct: processes
+              description: Defined operational processes
+        - id: OP-2
+          name: Organisational Policy
+          objective: Document organisational security policy
