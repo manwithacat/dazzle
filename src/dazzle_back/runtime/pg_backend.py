@@ -334,13 +334,19 @@ class PostgresBackend:
             parts.append("UNIQUE")
 
         if field.default is not None:
-            default_val = _python_to_postgres(field.default, field.type)
-            if isinstance(default_val, str):
-                parts.append(f"DEFAULT '{default_val}'")
-            elif isinstance(default_val, bool):
-                parts.append(f"DEFAULT {'TRUE' if default_val else 'FALSE'}")
-            else:
-                parts.append(f"DEFAULT {default_val}")
+            from dazzle.core.ir.params import ParamRef
+
+            raw_default = (
+                field.default.default if isinstance(field.default, ParamRef) else field.default
+            )
+            if raw_default is not None:
+                default_val = _python_to_postgres(raw_default, field.type)
+                if isinstance(default_val, str):
+                    parts.append(f"DEFAULT '{default_val}'")
+                elif isinstance(default_val, bool):
+                    parts.append(f"DEFAULT {'TRUE' if default_val else 'FALSE'}")
+                else:
+                    parts.append(f"DEFAULT {default_val}")
 
         return " ".join(parts)
 

@@ -239,10 +239,17 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         # Apply default values for fields not provided (v0.14.2)
         if self.entity_spec:
+            from dazzle.core.ir.params import ParamRef
+
             for field in self.entity_spec.fields:
                 if field.name not in entity_data or entity_data[field.name] is None:
                     if field.default is not None:
-                        entity_data[field.name] = field.default
+                        # ParamRef: use the declared default, not the ref object (#641)
+                        default = field.default
+                        if isinstance(default, ParamRef):
+                            default = default.default
+                        if default is not None:
+                            entity_data[field.name] = default
 
         # Validate invariants (v0.14.2)
         if self.entity_spec and self.entity_spec.invariants:

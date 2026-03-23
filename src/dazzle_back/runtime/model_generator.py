@@ -183,11 +183,16 @@ def _build_field_info(field: FieldSpec) -> tuple[type, Any]:
 
     # Handle default value
     if field.default is not None:
+        from dazzle.core.ir.params import ParamRef
+
+        raw_default = (
+            field.default.default if isinstance(field.default, ParamRef) else field.default
+        )
         # v0.10.2: Check for date expression (dictionary with 'kind')
-        if _is_date_expr(field.default):
-            field_kwargs["default_factory"] = _create_date_factory(field.default)
-        else:
-            field_kwargs["default"] = field.default
+        if raw_default is not None and _is_date_expr(raw_default):
+            field_kwargs["default_factory"] = _create_date_factory(raw_default)
+        elif raw_default is not None:
+            field_kwargs["default"] = raw_default
     elif not field.required:
         field_kwargs["default"] = None
         # Make type Optional
