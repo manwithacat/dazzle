@@ -10,7 +10,7 @@ from dazzle.tenant.provisioner import TenantProvisioner
 class TestSchemaCreation:
     @patch("dazzle.tenant.provisioner.psycopg")
     @patch("dazzle.tenant.provisioner.pgsql")
-    def test_creates_schema_and_runs_auto_migrate(
+    def test_creates_schema_and_runs_alembic_upgrade(
         self, mock_pgsql: MagicMock, mock_psycopg: MagicMock
     ) -> None:
         mock_conn = MagicMock()
@@ -35,26 +35,18 @@ class TestSchemaCreation:
 
         provisioner = TenantProvisioner("postgresql://localhost/test", appspec)
 
-        mock_plan = MagicMock()
-        mock_plan.steps = [MagicMock(action="create_table"), MagicMock(action="create_table")]
-
-        with (
-            patch(
-                "dazzle_back.runtime.migrations.auto_migrate", return_value=mock_plan
-            ) as mock_migrate,
-            patch("dazzle_back.converters.entity_converter.convert_entities", return_value=[]),
-            patch("dazzle_back.runtime.pg_backend.PostgresBackend"),
-        ):
+        with patch("alembic.command.upgrade") as mock_upgrade:
             provisioner.provision("tenant_cyfuture")
 
             # Schema creation SQL was executed
             assert mock_cursor.execute.call_count >= 1
 
-            # auto_migrate was called with the tenant schema
-            mock_migrate.assert_called_once()
-            call_kwargs = mock_migrate.call_args
-            assert call_kwargs.kwargs.get("schema") == "tenant_cyfuture"
-            assert call_kwargs.kwargs.get("record_history") is False
+            # Alembic upgrade was called
+            mock_upgrade.assert_called_once()
+            call_args = mock_upgrade.call_args
+            cfg = call_args[0][0]
+            assert call_args[0][1] == "head"
+            assert cfg.attributes["tenant_schema"] == "tenant_cyfuture"
 
     @patch("dazzle.tenant.provisioner.psycopg")
     def test_schema_exists_true(self, mock_psycopg: MagicMock) -> None:

@@ -39,13 +39,8 @@ from dazzle_back.runtime.app_factory import create_app, run_app
 from dazzle_back.runtime.migrations import (
     MigrationAction,
     MigrationError,
-    MigrationExecutor,
-    MigrationHistory,
     MigrationPlan,
-    MigrationPlanner,
     MigrationStep,
-    auto_migrate,
-    plan_migrations,
 )
 from dazzle_back.runtime.model_generator import (
     generate_all_entity_models,
@@ -117,10 +112,5 @@ __all__ = [
     "MigrationAction",
     "MigrationStep",
     "MigrationPlan",
-    "MigrationPlanner",
-    "MigrationExecutor",
-    "MigrationHistory",
     "MigrationError",
-    "auto_migrate",
-    "plan_migrations",
 ]

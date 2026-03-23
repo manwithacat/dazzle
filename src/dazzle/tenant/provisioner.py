@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 try:
@@ -38,10 +39,10 @@ class TenantProvisioner:
         return psycopg.connect(self._db_url, row_factory=dict_row)
 
     def provision(self, schema_name: str) -> None:
-        """Create schema and run full auto_migrate within it.
+        """Create schema and run Alembic migrations within it.
 
-        Creates the PostgreSQL schema, then delegates to auto_migrate to
-        generate complete table definitions matching the AppSpec entities.
+        Creates the PostgreSQL schema, then delegates to Alembic to
+        apply all migrations matching the AppSpec entities.
         Identifiers are composed via psycopg.sql.Identifier (never string-formatted).
         """
         # Step 1: Create the schema
@@ -55,27 +56,18 @@ class TenantProvisioner:
                 )
             conn.commit()
 
-        # Step 2: Run auto_migrate to create full table definitions
-        from dazzle_back.converters.entity_converter import convert_entities
-        from dazzle_back.runtime.migrations import auto_migrate
-        from dazzle_back.runtime.pg_backend import PostgresBackend
+        # Step 2: Run Alembic migrations for the tenant schema
+        from alembic import command
+        from alembic.config import Config as AlembicConfig
 
-        db_manager = PostgresBackend(self._db_url)
-        entities = convert_entities(self._appspec.domain.entities)
-        plan = auto_migrate(
-            db_manager,
-            entities,
-            record_history=False,
-            schema=schema_name,
-        )
+        alembic_dir = Path(__file__).resolve().parents[2] / "dazzle_back" / "alembic"
+        cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
+        cfg.set_main_option("script_location", str(alembic_dir))
+        cfg.set_main_option("sqlalchemy.url", self._db_url)
+        cfg.attributes["tenant_schema"] = schema_name
+        command.upgrade(cfg, "head")
 
-        table_count = sum(1 for s in plan.steps if s.action == "create_table")
-        logger.info(
-            "Provisioned schema %s — %d tables created, %d total migration steps",
-            schema_name,
-            table_count,
-            len(plan.steps),
-        )
+        logger.info("Provisioned schema %s via Alembic", schema_name)
 
     def schema_exists(self, schema_name: str) -> bool:
         """Check if a schema exists in the database."""

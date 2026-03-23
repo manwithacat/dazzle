@@ -31,8 +31,6 @@ if TYPE_CHECKING:
     from dazzle_back.graphql.integration import print_schema as print_schema
     from dazzle_back.runtime.auth import AuthStore as AuthStore
     from dazzle_back.runtime.migrations import MigrationAction as MigrationAction
-    from dazzle_back.runtime.migrations import auto_migrate as auto_migrate
-    from dazzle_back.runtime.migrations import plan_migrations as plan_migrations
     from dazzle_back.runtime.pg_backend import PostgresBackend as PostgresBackend
     from dazzle_back.runtime.sa_schema import build_metadata as build_metadata
 
@@ -49,22 +47,10 @@ def _get_create_bus() -> object:
     return create_bus
 
 
-def _get_auto_migrate() -> object:
-    from dazzle_back.runtime.migrations import auto_migrate
-
-    return auto_migrate
-
-
 def _get_MigrationAction() -> object:  # noqa: N802
     from dazzle_back.runtime.migrations import MigrationAction
 
     return MigrationAction
-
-
-def _get_plan_migrations() -> object:
-    from dazzle_back.runtime.migrations import plan_migrations
-
-    return plan_migrations
 
 
 def _get_PostgresBackend() -> object:  # noqa: N802
@@ -106,9 +92,7 @@ def _get_print_schema() -> object:
 _LOADERS: dict[str, object] = {
     "AuthStore": _get_AuthStore,
     "create_bus": _get_create_bus,
-    "auto_migrate": _get_auto_migrate,
     "MigrationAction": _get_MigrationAction,
-    "plan_migrations": _get_plan_migrations,
     "PostgresBackend": _get_PostgresBackend,
     "build_metadata": _get_build_metadata,
     "convert_appspec_to_backend": _get_convert_appspec_to_backend,

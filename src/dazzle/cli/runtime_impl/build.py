@@ -222,13 +222,6 @@ def migrate_command(
 
     from dazzle.cli.services.build_service import BuildService
 
-    try:
-        from dazzle_back import MigrationAction
-    except ImportError as e:
-        typer.echo(f"Dazzle packages not available: {e}", err=True)
-        typer.echo("Install with: pip install dazzle-dsl[serve]", err=True)
-        raise typer.Exit(code=1)
-
     # Load and build AppSpec
     manifest_path = Path(manifest).resolve()
     svc = BuildService(manifest_path)
@@ -268,90 +261,30 @@ def migrate_command(
         raise typer.Exit(code=1)
 
     if dry_run:
-        # Plan only, don't apply
-        entities = appspec.domain.entities
+        # Check for pending migrations
         typer.echo(f"Analyzing database: {database_url}")
-        typer.echo(f"Entities: {len(entities)}")
         typer.echo()
 
-        plan = svc.plan_migrations(database_url, entities)
+        has_changes = svc.plan_migrations(database_url, appspec.domain.entities)
 
-        if plan.is_empty:
+        if has_changes is None:
             typer.echo("No migrations needed. Database is up to date.")
-            return
-
-        typer.echo("Planned migrations:")
-        typer.echo()
-
-        for step in plan.steps:
-            icon = "⚠️ " if step.is_destructive else "  "
-            if step.action == MigrationAction.CREATE_TABLE:
-                typer.echo(f"{icon}CREATE TABLE {step.table}")
-            elif step.action == MigrationAction.ADD_COLUMN:
-                typer.echo(f"{icon}ADD COLUMN {step.table}.{step.column}")
-            elif step.action == MigrationAction.ADD_INDEX:
-                typer.echo(f"{icon}ADD INDEX on {step.table}.{step.column}")
-            elif step.action == MigrationAction.DROP_COLUMN:
-                typer.echo(f"{icon}DROP COLUMN {step.table}.{step.column} (destructive)")
-            elif step.action == MigrationAction.CHANGE_TYPE:
-                typer.echo(f"{icon}CHANGE TYPE {step.table}.{step.column} (destructive)")
-
-        if plan.warnings:
-            typer.echo()
-            typer.echo("Warnings:")
-            for warning in plan.warnings:
-                typer.echo(f"  ⚠️  {warning}")
-
-        if plan.has_destructive:
-            typer.echo()
-            typer.echo("⚠️  Destructive changes detected!")
-            typer.echo("   Use --force to apply, or handle manually.")
-
-        typer.echo()
-        typer.echo(f"Total: {len(plan.steps)} migration steps")
-        if plan.safe_steps:
-            typer.echo(f"  Safe: {len(plan.safe_steps)}")
-        if plan.has_destructive:
-            typer.echo(
-                f"  Destructive: {len(plan.steps) - len(plan.safe_steps)} (requires --force)"
-            )
+        else:
+            typer.echo("Pending Alembic migrations detected.")
+            typer.echo("Run 'dazzle migrate' (without --dry-run) to apply.")
 
     else:
-        # Apply migrations
+        # Apply migrations via Alembic
         typer.echo(f"Migrating database: {database_url}")
         typer.echo()
 
-        # Note: auto_migrate only applies safe migrations by default
-        # Force mode would require extending the migrations API
-        if force:
-            typer.echo("Warning: --force is noted but destructive migrations", err=True)
-            typer.echo("  require manual SQL execution for safety.", err=True)
-            typer.echo()
-
-        plan = svc.auto_migrate(
+        svc.auto_migrate(
             database_url,
             appspec.domain.entities,
             record_history=True,
         )
 
-        if plan.is_empty:
-            typer.echo("✓ No migrations needed. Database is up to date.")
-            return
-
-        applied = len(plan.safe_steps)
-        skipped = len(plan.steps) - len(plan.safe_steps) if not force else 0
-
-        typer.echo(f"✓ Applied {applied} migration(s)")
-
-        if plan.warnings:
-            typer.echo()
-            for warning in plan.warnings:
-                typer.echo(f"  ⚠️  {warning}")
-
-        if skipped > 0:
-            typer.echo()
-            typer.echo(f"⚠️  {skipped} destructive change(s) skipped")
-            typer.echo("   Use --force to apply, or handle manually.")
+        typer.echo("Alembic migrations applied successfully.")
 
 
 def build_command(

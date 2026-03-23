@@ -30,18 +30,33 @@ class BuildService:
         return lint_appspec(appspec)
 
     def plan_migrations(self, database_url: str, entities: Any) -> Any:
-        """Plan migrations without applying. Returns MigrationPlan."""
-        from dazzle_back import PostgresBackend, plan_migrations
+        """Check for pending migrations. Returns True if changes detected."""
+        from alembic import command
+        from alembic.util.exc import CommandError
 
-        db_manager = PostgresBackend(database_url)
-        return plan_migrations(db_manager, entities)
+        cfg = self._alembic_cfg(database_url)
+        try:
+            command.check(cfg)
+            return None  # No changes
+        except CommandError:
+            return True  # Changes detected
 
     def auto_migrate(self, database_url: str, entities: Any, *, record_history: bool = True) -> Any:
-        """Apply safe migrations automatically. Returns MigrationPlan."""
-        from dazzle_back import PostgresBackend, auto_migrate
+        """Apply safe migrations automatically via Alembic."""
+        from alembic import command
 
-        db_manager = PostgresBackend(database_url)
-        return auto_migrate(db_manager, entities, record_history=record_history)
+        cfg = self._alembic_cfg(database_url)
+        command.upgrade(cfg, "head")
+
+    def _alembic_cfg(self, database_url: str) -> Any:
+        """Build Alembic config pointing to dazzle_back's alembic directory."""
+        from alembic.config import Config as AlembicConfig
+
+        alembic_dir = Path(__file__).resolve().parents[3] / "dazzle_back" / "alembic"
+        cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
+        cfg.set_main_option("script_location", str(alembic_dir))
+        cfg.set_main_option("sqlalchemy.url", database_url)
+        return cfg
 
     def generate_preview_files(self, appspec: Any, output_dir: str) -> list[str]:
         """Generate static preview HTML files from AppSpec."""
