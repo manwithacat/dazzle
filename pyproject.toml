@@ -61,6 +61,10 @@ lsp = [
 graph = [
     "networkx>=3.0",
 ]
+compliance = [
+    "weasyprint>=60.0",
+    "markdown>=3.5",
+]
 dev = [
     "pytest>=7.4",
     "pytest-asyncio>=0.23",
@@ -181,6 +185,7 @@ namespaces = false
 [tool.setuptools.package-data]
 dazzle = ["py.typed"]
 "dazzle.examples" = ["**/*"]
+"dazzle.compliance" = ["css/*.css", "templates/*.html", "frameworks/*.yaml"]
 "dazzle.lsp" = ["grammars/*.json"]
 # Dazzle UI templates (Jinja2 HTML templates for site pages, components, etc.)
 # Note: templates/ is a data directory, not a Python package, so include from parent

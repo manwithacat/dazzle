@@ -1,4 +1,4 @@
-"""CLI commands for compliance compiler."""
+"""Dazzle compliance documentation CLI commands."""
 
 from __future__ import annotations
 
@@ -6,67 +6,91 @@ import json
 from pathlib import Path
 
 import typer
+from rich.console import Console
 
-compliance_app = typer.Typer(help="Compliance documentation compiler")
+compliance_app = typer.Typer(
+    help="Compliance documentation tools",
+    no_args_is_help=True,
+)
+
+console = Console()
 
 
-@compliance_app.command("compile")
+@compliance_app.command(name="compile")
 def compile_cmd(
-    framework: str = typer.Option("iso27001", help="Compliance framework ID"),
-    project_path: str | None = typer.Option(None, help="Project path (default: current dir)"),
-    output: str | None = typer.Option(None, "-o", help="Output file for AuditSpec JSON"),
-):
-    """Compile AuditSpec from DSL evidence against a compliance framework."""
-    from dazzle.compliance.coordinator import compile_full_pipeline, write_outputs
-
-    pp = Path(project_path) if project_path else Path.cwd()
-    typer.echo(f"Compiling {framework} AuditSpec from {pp}...")
-
-    auditspec = compile_full_pipeline(pp, framework=framework)
-    output_dir = write_outputs(pp, auditspec, framework=framework)
-
-    s = auditspec["summary"]
-    typer.echo(
-        f"  {s['total_controls']} controls: {s['evidenced']} evidenced, {s['partial']} partial, {s['gaps']} gaps"
-    )
-    typer.echo(f"  Coverage: {(s['evidenced'] + s['partial']) / s['total_controls'] * 100:.1f}%")
-    typer.echo(f"  Output: {output_dir}")
-
-    if output:
-        Path(output).write_text(json.dumps(auditspec, indent=2))
-        typer.echo(f"  AuditSpec written to {output}")
-
-
-@compliance_app.command("evidence")
-def evidence_cmd(
-    project_path: str | None = typer.Option(None, help="Project path"),
-):
-    """Show DSL evidence summary for compliance assessment."""
-    from dazzle.compliance.evidence import extract_all_evidence
-
-    pp = Path(project_path) if project_path else Path.cwd()
-    evidence = extract_all_evidence(pp)
-
-    typer.echo("DSL Evidence Summary:")
-    for construct, data in sorted(evidence.items()):
-        count = len(data) if isinstance(data, (list, dict)) else 0
-        typer.echo(f"  {construct:<15} {count:>5} items")
-
-
-@compliance_app.command("gaps")
-def gaps_cmd(
-    framework: str = typer.Option("iso27001", help="Compliance framework ID"),
-    project_path: str | None = typer.Option(None, help="Project path"),
-):
-    """List compliance control gaps."""
+    framework: str = typer.Option("iso27001", "--framework", "-f", help="Framework ID"),
+    output: str = typer.Option("", "--output", "-o", help="Output path for auditspec JSON"),
+) -> None:
+    """Compile compliance audit spec from DSL evidence."""
     from dazzle.compliance.coordinator import compile_full_pipeline
 
-    pp = Path(project_path) if project_path else Path.cwd()
-    auditspec = compile_full_pipeline(pp, framework=framework)
+    project_root = Path.cwd().resolve()
+    auditspec = compile_full_pipeline(project_root, framework=framework)
+    s = auditspec.summary
 
-    for control in auditspec["controls"]:
-        if control["status"] in ("gap", "partial"):
-            status_icon = "●" if control["status"] == "gap" else "◐"
-            typer.echo(f"  {status_icon} {control['id']} {control['name']}")
-            for gap in control["gaps"]:
-                typer.echo(f"      tier {gap['tier']}: {gap['description']}")
+    # Write outputs
+    out_dir = project_root / ".dazzle" / "compliance" / "output" / framework
+    out_dir.mkdir(parents=True, exist_ok=True)
+    auditspec_path = out_dir / "auditspec.json"
+    auditspec_path.write_text(json.dumps(auditspec.model_dump(), indent=2))
+
+    if output:
+        Path(output).write_text(json.dumps(auditspec.model_dump(), indent=2))
+
+    # Display summary
+    console.print(f"\n[bold]Compliance: {auditspec.framework_name}[/bold]")
+    console.print(f"  Controls: {s.total_controls}")
+    console.print(f"  Evidenced: {s.evidenced}")
+    console.print(f"  Partial: {s.partial}")
+    console.print(f"  Gaps: {s.gaps}")
+    console.print(f"  Excluded: {s.excluded}")
+    if s.total_controls > 0:
+        coverage = (s.evidenced + s.partial) / s.total_controls * 100
+        console.print(f"  Coverage: {coverage:.1f}%")
+    console.print(f"\n  Output: {auditspec_path}")
+
+
+@compliance_app.command(name="evidence")
+def evidence_cmd(
+    framework: str = typer.Option("iso27001", "--framework", "-f", help="Framework ID"),
+) -> None:
+    """Show DSL evidence extracted from the current project."""
+    from dazzle.compliance.evidence import extract_evidence_from_project
+
+    project_root = Path.cwd().resolve()
+    evidence = extract_evidence_from_project(project_root)
+
+    console.print("\n[bold]DSL Evidence[/bold]")
+    for construct, items in sorted(evidence.items.items()):
+        if items:
+            console.print(f"  [green]{construct}[/green]: {len(items)} items")
+        else:
+            console.print(f"  [dim]{construct}[/dim]: 0 items")
+
+
+@compliance_app.command(name="gaps")
+def gaps_cmd(
+    framework: str = typer.Option("iso27001", "--framework", "-f", help="Framework ID"),
+    tier: str = typer.Option("2,3", "--tier", help="Tiers to show (comma-separated)"),
+) -> None:
+    """Show compliance gaps and partial controls."""
+    from dazzle.compliance.coordinator import compile_full_pipeline
+
+    project_root = Path.cwd().resolve()
+    auditspec = compile_full_pipeline(project_root, framework=framework)
+
+    tiers = {int(t.strip()) for t in tier.split(",")}
+    gaps = [c for c in auditspec.controls if c.tier in tiers]
+
+    if not gaps:
+        console.print("[green]No gaps found for selected tiers.[/green]")
+        return
+
+    console.print(f"\n[bold]Compliance Gaps ({len(gaps)} controls)[/bold]")
+    for g in gaps:
+        status_color = "yellow" if g.status == "partial" else "red"
+        console.print(
+            f"  [{status_color}]{g.control_id}[/{status_color}] {g.control_name} (tier {g.tier})"
+        )
+        if g.gap_description:
+            console.print(f"    {g.gap_description}")
