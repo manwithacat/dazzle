@@ -493,23 +493,38 @@ class DazzleBackendApp:
 
         self._db_manager = PostgresBackend(self._database_url)
 
-        # Auto-migrate via Alembic
+        # Auto-migrate: try Alembic first, fall back to create_all
+        migrated = False
         try:
             from alembic import command
             from alembic.config import Config as AlembicConfig
 
             alembic_dir = Path(__file__).resolve().parent.parent / "alembic"
-            cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
-            cfg.set_main_option("script_location", str(alembic_dir))
-            cfg.set_main_option("sqlalchemy.url", self._database_url)
+            ini_path = alembic_dir / "alembic.ini"
+            if ini_path.exists():
+                cfg = AlembicConfig(str(ini_path))
+                cfg.set_main_option("script_location", str(alembic_dir))
+                cfg.set_main_option("sqlalchemy.url", self._database_url)
 
-            # Generate + apply in one step (empty revisions suppressed by env.py)
-            command.revision(cfg, message="auto", autogenerate=True)
-            command.upgrade(cfg, "head")
+                # Generate + apply in one step (empty revisions suppressed by env.py)
+                command.revision(cfg, message="auto", autogenerate=True)
+                command.upgrade(cfg, "head")
+                migrated = True
         except Exception as exc:
             import logging
 
             logging.getLogger(__name__).warning("Alembic auto-migrate: %s", exc)
+
+        if not migrated:
+            # Fallback: create tables directly from SA metadata
+            from sqlalchemy import create_engine
+
+            from dazzle_back.runtime.sa_schema import build_metadata
+
+            metadata = build_metadata(self._entities)
+            engine = create_engine(self._database_url)
+            metadata.create_all(engine)
+            engine.dispose()
 
         # Create _dazzle_params framework table (#572)
         from dazzle_back.runtime.migrations import ensure_dazzle_params_table

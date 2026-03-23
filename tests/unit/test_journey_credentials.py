@@ -64,7 +64,7 @@ class TestLoadCredentials:
     def test_filter_missing_persona_logs_warning(
         self, creds_toml: Path, caplog: pytest.LogCaptureFixture
     ) -> None:
-        with caplog.at_level(logging.WARNING):
+        with caplog.at_level(logging.WARNING, logger="dazzle.agent.journey_credentials"):
             result = load_credentials(creds_toml, persona_filter=["teacher", "student"])
 
         assert "student" not in result
