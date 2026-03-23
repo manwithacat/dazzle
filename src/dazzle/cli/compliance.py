@@ -51,9 +51,7 @@ def compile_cmd(
 
 
 @compliance_app.command(name="evidence")
-def evidence_cmd(
-    framework: str = typer.Option("iso27001", "--framework", "-f", help="Framework ID"),
-) -> None:
+def evidence_cmd() -> None:
     """Show DSL evidence extracted from the current project."""
     from dazzle.compliance.evidence import extract_evidence_from_project
 

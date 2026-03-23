@@ -8,7 +8,6 @@ Modules:
     compiler    — Core compilation pipeline (taxonomy + evidence → AuditSpec)
     taxonomy    — Framework taxonomy loading and normalisation
     evidence    — DSL evidence extraction from AppSpec IR
-    matching    — Control-to-evidence matching engine
     slicer      — AuditSpec slicing for per-document agent context
     citation    — Deterministic citation validation
     review      — Human-in-the-loop review data generation

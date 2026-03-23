@@ -90,6 +90,45 @@ def test_combined_status_and_tier(sample_auditspec):
 
 
 def test_excluded_count(sample_auditspec):
-    """Summary should include excluded count."""
+    """Summary should include excluded count (controls with status=excluded)."""
     result = slice_auditspec(sample_auditspec, status_filter=["gap"])
-    assert result["summary"]["excluded"] == 2
+    # No controls have status="excluded" in the fixture
+    assert result["summary"]["excluded"] == 0
+
+
+def test_new_schema_slice_by_control_id():
+    """New typed AuditSpec schema uses control_id instead of id."""
+    auditspec = {
+        "controls": [
+            {
+                "control_id": "C-1",
+                "control_name": "Ctrl 1",
+                "status": "evidenced",
+                "tier": 1,
+                "evidence": [],
+            },
+            {
+                "control_id": "C-2",
+                "control_name": "Ctrl 2",
+                "status": "gap",
+                "tier": 3,
+                "evidence": [],
+            },
+        ],
+    }
+    result = slice_auditspec(auditspec, controls=["C-1"])
+    assert len(result["controls"]) == 1
+    assert result["controls"][0]["control_id"] == "C-1"
+
+
+def test_new_schema_tier_filter():
+    """New schema uses tier as direct field for filtering."""
+    auditspec = {
+        "controls": [
+            {"control_id": "C-1", "status": "evidenced", "tier": 1, "evidence": []},
+            {"control_id": "C-2", "status": "gap", "tier": 3, "evidence": []},
+        ],
+    }
+    result = slice_auditspec(auditspec, tier_filter=[3])
+    assert len(result["controls"]) == 1
+    assert result["controls"][0]["control_id"] == "C-2"

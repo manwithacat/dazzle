@@ -24,12 +24,17 @@ def slice_auditspec(
     extract: list[str] | None = None,
     tier_filter: list[int] | None = None,
 ) -> dict[str, Any]:
-    """Slice an AuditSpec to a subset of controls."""
+    """Slice an AuditSpec to a subset of controls.
+
+    Accepts either the new typed AuditSpec schema (control_id, tier as field)
+    or the legacy dict schema (id, gaps list).
+    """
     all_controls = auditspec["controls"]
     filtered = list(all_controls)
 
     if controls != "all":
-        filtered = [c for c in filtered if c["id"] in controls]
+        # Support both new schema (control_id) and legacy (id)
+        filtered = [c for c in filtered if c.get("control_id", c.get("id")) in controls]
 
     if status_filter:
         filtered = [c for c in filtered if c["status"] in status_filter]
@@ -41,17 +46,18 @@ def slice_auditspec(
 
     if tier_filter:
         filtered = [
-            c for c in filtered if any(g.get("tier") in tier_filter for g in c.get("gaps", []))
+            c
+            for c in filtered
+            if c.get("tier") in tier_filter
+            or any(g.get("tier") in tier_filter for g in c.get("gaps", []))
         ]
 
-    excluded = len(all_controls) - len(filtered)
-
-    summary = {
+    summary: dict[str, Any] = {
         "total_controls": len(filtered),
         "evidenced": sum(1 for c in filtered if c["status"] == "evidenced"),
         "partial": sum(1 for c in filtered if c["status"] == "partial"),
         "gaps": sum(1 for c in filtered if c["status"] == "gap"),
-        "excluded": excluded,
+        "excluded": sum(1 for c in filtered if c.get("status") == "excluded"),
     }
 
     return {**auditspec, "controls": filtered, "summary": summary}

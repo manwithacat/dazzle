@@ -16,16 +16,25 @@ def validate_citations(text: str, auditspec: dict[str, Any]) -> list[str]:
     Where ``EntityName`` is the DSL entity name and ``construct`` is the
     evidence construct type (e.g. permit, classify, scope).
 
+    Accepts either the new typed AuditSpec schema (evidence items with
+    entity/construct/dsl_ref fields) or the legacy dict schema (evidence
+    items with construct + refs list).
+
     Returns list of issue descriptions for invalid citations. Empty if all valid.
     """
     valid_refs: set[tuple[str, str]] = set()
     for control in auditspec.get("controls", []):
         for ev in control.get("evidence", []):
             construct = ev.get("construct", "")
+            # New schema: each evidence item has entity and dsl_ref directly
+            entity = ev.get("entity", "")
+            if entity:
+                valid_refs.add((entity, construct))
+            # Legacy schema: evidence has refs list
             for ref in ev.get("refs", []):
-                entity = ref.get("entity", "")
-                if entity:
-                    valid_refs.add((entity, construct))
+                ref_entity = ref.get("entity", "")
+                if ref_entity:
+                    valid_refs.add((ref_entity, construct))
 
     issues: list[str] = []
     for match in CITATION_PATTERN.finditer(text):
