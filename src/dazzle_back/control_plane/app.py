@@ -11,6 +11,7 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 from fastapi import FastAPI
 
@@ -32,8 +33,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Initialize Redis connection
     redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
 
-    # Handle Heroku/AWS Redis SSL
-    ssl_cert_reqs = None if "amazonaws.com" in redis_url else "required"
+    # Handle Heroku/AWS Redis SSL based on parsed hostname
+    parsed_url = urlparse(redis_url)
+    host = parsed_url.hostname or ""
+    is_aws_redis = host == "amazonaws.com" or host.endswith(".amazonaws.com")
+    ssl_cert_reqs = None if is_aws_redis else "required"
     redis_client: redis.Redis = redis.from_url(
         redis_url,
         decode_responses=True,
