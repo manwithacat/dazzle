@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-03-23
+
+### Fixed
+- Workspace layout JSON now embedded as `<script type="application/json">` data island instead of inlined in `x-data` HTML attribute — eliminates JSON/HTML escaping conflict (#632, #635)
+- Nav: workspace home link now renders above collapsible nav_groups (#630)
+- Heatmap region click-through uses FK target entity ID instead of source item ID (#633)
+- Tailwind safelist for `col-span-{4,6,8,12}` at responsive breakpoints — workspace card width customisation now takes effect (#631)
+- Context selector: `scope_field` wired into options route + `htmx.ajax()` for unconditional region refresh (#634)
+- Event framework startup hang with remote Postgres: added `connect_timeout=10` + lazy pool open + REDIS_URL forwarding (#636)
+
+### Added
+- Grant management API: `POST/GET/DELETE /api/grants/*` endpoints wrapping existing `GrantStore` — unblocks `has_grant()` transition guards (#629)
+- `dazzle serve --local-assets/--cdn-assets` flag — serve JS/CSS from local installation instead of CDN; defaults local in dev, CDN in production (#637)
+
 ## [0.47.0] - 2026-03-23
 
 ### Added
