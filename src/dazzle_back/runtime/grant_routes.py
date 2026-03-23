@@ -46,7 +46,7 @@ def create_grant_routes(
     def _get_store() -> Any:
         from dazzle_back.runtime.grant_store import GrantStore
 
-        return GrantStore(conn_factory())
+        return GrantStore(conn_factory(), placeholder="%s")
 
     def _get_user_id(auth_context: AuthContext) -> str:
         if not auth_context or not auth_context.is_authenticated:

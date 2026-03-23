@@ -8,7 +8,6 @@ with status transitions and audit event logging.
 from __future__ import annotations
 
 import json
-import sqlite3
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
@@ -25,11 +24,24 @@ class GrantStatus(StrEnum):
 
 
 class GrantStore:
-    """Synchronous grant store backed by SQLite."""
+    """Synchronous grant store backed by SQLite or PostgreSQL.
 
-    def __init__(self, conn: sqlite3.Connection) -> None:
+    Args:
+        conn: Database connection (sqlite3 or psycopg).
+        placeholder: Parameter placeholder style — ``?`` for SQLite (default),
+            ``%s`` for PostgreSQL.
+    """
+
+    def __init__(self, conn: Any, placeholder: str = "?") -> None:
         self._conn = conn
+        self._ph = placeholder
         self._ensure_tables()
+
+    def _sql(self, query: str) -> str:
+        """Replace ``?`` placeholders with the configured style (``%s`` for Postgres)."""
+        if self._ph == "?":
+            return query
+        return query.replace("?", self._ph)
 
     def _ensure_tables(self) -> None:
         cursor = self._conn.cursor()
@@ -76,8 +88,8 @@ class GrantStore:
         metadata: dict[str, Any] | None = None,
     ) -> None:
         self._conn.execute(
-            """INSERT INTO _grant_events (id, grant_id, event_type, actor_id, timestamp, metadata)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            self._sql("""INSERT INTO _grant_events (id, grant_id, event_type, actor_id, timestamp, metadata)
+               VALUES (?, ?, ?, ?, ?, ?)"""),
             (
                 str(uuid4()),
                 grant_id,
@@ -89,7 +101,9 @@ class GrantStore:
         )
 
     def _get_grant(self, grant_id: str) -> dict[str, Any]:
-        row = self._conn.execute("SELECT * FROM _grants WHERE id = ?", (grant_id,)).fetchone()
+        row = self._conn.execute(
+            self._sql("SELECT * FROM _grants WHERE id = ?"), (grant_id,)
+        ).fetchone()
         if row is None:
             raise ValueError(f"Grant {grant_id} not found")
         return dict(row)
@@ -114,10 +128,10 @@ class GrantStore:
             status = GrantStatus.ACTIVE
 
         self._conn.execute(
-            """INSERT INTO _grants
+            self._sql("""INSERT INTO _grants
                (id, schema_name, relation, principal_id, scope_entity, scope_id,
                 status, granted_by_id, granted_at, expires_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""),
             (
                 grant_id,
                 schema_name,
@@ -141,9 +155,9 @@ class GrantStore:
             raise ValueError(f"Cannot approve grant in status '{grant['status']}'")
         now = datetime.now(UTC).isoformat()
         self._conn.execute(
-            """UPDATE _grants
+            self._sql("""UPDATE _grants
                SET status = ?, approved_by_id = ?, approved_at = ?
-               WHERE id = ?""",
+               WHERE id = ?"""),
             (GrantStatus.ACTIVE, approved_by_id, now, grant_id),
         )
         self._record_event(grant_id, "approved", approved_by_id)
@@ -157,7 +171,7 @@ class GrantStore:
         if grant["status"] != GrantStatus.PENDING_APPROVAL:
             raise ValueError(f"Cannot reject grant in status '{grant['status']}'")
         self._conn.execute(
-            "UPDATE _grants SET status = ? WHERE id = ?",
+            self._sql("UPDATE _grants SET status = ? WHERE id = ?"),
             (GrantStatus.REJECTED, grant_id),
         )
         metadata = {"reason": reason} if reason else None
@@ -171,9 +185,9 @@ class GrantStore:
             raise ValueError(f"Cannot revoke grant in status '{grant['status']}'")
         now = datetime.now(UTC).isoformat()
         self._conn.execute(
-            """UPDATE _grants
+            self._sql("""UPDATE _grants
                SET status = ?, revoked_at = ?, revoked_by_id = ?
-               WHERE id = ?""",
+               WHERE id = ?"""),
             (GrantStatus.REVOKED, now, revoked_by_id, grant_id),
         )
         self._record_event(grant_id, "revoked", revoked_by_id)
@@ -183,11 +197,11 @@ class GrantStore:
     def has_active_grant(self, principal_id: str, relation: str, scope_id: str) -> bool:
         now = datetime.now(UTC).isoformat()
         row = self._conn.execute(
-            """SELECT 1 FROM _grants
+            self._sql("""SELECT 1 FROM _grants
                WHERE principal_id = ? AND relation = ? AND scope_id = ?
                AND status = ?
                AND (expires_at IS NULL OR expires_at > ?)
-               LIMIT 1""",
+               LIMIT 1"""),
             (principal_id, relation, scope_id, GrantStatus.ACTIVE, now),
         ).fetchone()
         return row is not None
@@ -204,12 +218,12 @@ class GrantStore:
         # never varies; passing NULL for a parameter means "no filter" for that
         # column.  All values flow through bound parameters only.
         rows = self._conn.execute(
-            """SELECT * FROM _grants
+            self._sql("""SELECT * FROM _grants
                WHERE (? IS NULL OR scope_entity = ?)
                  AND (? IS NULL OR scope_id = ?)
                  AND (? IS NULL OR principal_id = ?)
                  AND (? IS NULL OR status = ?)
-               ORDER BY granted_at DESC""",
+               ORDER BY granted_at DESC"""),
             (
                 scope_entity,
                 scope_entity,
@@ -226,14 +240,14 @@ class GrantStore:
     def expire_stale_grants(self) -> int:
         now = datetime.now(UTC).isoformat()
         cursor = self._conn.execute(
-            """SELECT id FROM _grants
-               WHERE status = ? AND expires_at IS NOT NULL AND expires_at <= ?""",
+            self._sql("""SELECT id FROM _grants
+               WHERE status = ? AND expires_at IS NOT NULL AND expires_at <= ?"""),
             (GrantStatus.ACTIVE, now),
         )
         expired_ids = [row[0] for row in cursor.fetchall()]
         for gid in expired_ids:
             self._conn.execute(
-                "UPDATE _grants SET status = ? WHERE id = ?",
+                self._sql("UPDATE _grants SET status = ? WHERE id = ?"),
                 (GrantStatus.EXPIRED, gid),
             )
             self._record_event(gid, "expired", "system")
