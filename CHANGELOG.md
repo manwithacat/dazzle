@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.2] - 2026-03-23
+
+### Fixed
+- Rebuilt `dist/dazzle.min.js` CDN bundle — stale `dzWorkspaceEditor` signature caused Alpine init failure (#638)
+- Context selector `scope_field` now reads domain attributes from `auth_ctx.preferences` instead of `user_obj` (#639)
+- Data island `layout_json` uses `| safe` filter to prevent Jinja2 entity-encoding inside `<script>` tags (#635 follow-up)
+
 ## [0.47.1] - 2026-03-23
 
 ### Fixed
