@@ -148,10 +148,18 @@ class RedisBus(BaseEventBus):
 
     async def connect(self) -> None:
         """Connect to Redis."""
-        self._redis = aioredis.from_url(
-            self._config.url,
-            decode_responses=False,  # We handle encoding ourselves
-        )
+        import ssl as _ssl
+
+        kwargs: dict[str, Any] = {
+            "decode_responses": False,  # We handle encoding ourselves
+        }
+        # Heroku Redis uses self-signed certs — skip verification for rediss:// URLs
+        if self._config.url.startswith("rediss://"):
+            ctx = _ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = _ssl.CERT_NONE
+            kwargs["ssl"] = ctx
+        self._redis = aioredis.from_url(self._config.url, **kwargs)
         # Test connection
         await self._redis.ping()  # type: ignore[misc,unused-ignore]
 
