@@ -51,18 +51,6 @@ def _eval_comparison_op(
             return resolved_val is not None
         return False
 
-    # Bool coercion — SQLite stores bools as 0/1 integers
-    if isinstance(resolved_val, bool):
-        if isinstance(record_val, (int, float)):
-            record_val = bool(record_val)
-        elif isinstance(record_val, str):
-            record_val = record_val.lower() in ("true", "1", "yes")
-    elif isinstance(record_val, bool):
-        if isinstance(resolved_val, (int, float)):
-            resolved_val = bool(resolved_val)
-        elif isinstance(resolved_val, str):
-            resolved_val = resolved_val.lower() in ("true", "1", "yes")
-
     if op in ("eq", "=", "=="):
         if isinstance(record_val, bool) and isinstance(resolved_val, bool):
             return record_val == resolved_val

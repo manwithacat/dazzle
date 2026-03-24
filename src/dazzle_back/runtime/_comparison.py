@@ -46,7 +46,6 @@ def eval_comparison_op(
     Handles the full operator set shared across runtime evaluators:
     - UUID normalization (UUID → str)
     - None guards (early returns for null comparisons)
-    - Bool coercion (SQLite stores bools as 0/1 integers)
     - Operator dispatch: eq, ne, gt, lt, ge, le, in, not_in
 
     Operator aliases accepted:
@@ -90,20 +89,6 @@ def eval_comparison_op(
         if op in ("ne", "!=", "<>"):
             return resolved_val is not None
         return False
-
-    # Bool coercion — SQLite stores bools as 0/1 integers
-    if isinstance(resolved_val, bool):
-        # Coerce record side to bool for comparison
-        if isinstance(record_val, int | float):
-            record_val = bool(record_val)
-        elif isinstance(record_val, str):
-            record_val = record_val.lower() in ("true", "1", "yes")
-    elif isinstance(record_val, bool):
-        # Coerce resolved side to bool for comparison
-        if isinstance(resolved_val, int | float):
-            resolved_val = bool(resolved_val)
-        elif isinstance(resolved_val, str):
-            resolved_val = resolved_val.lower() in ("true", "1", "yes")
 
     # Operator dispatch
     if op in ("eq", "=", "=="):
