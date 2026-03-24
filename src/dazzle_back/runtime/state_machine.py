@@ -292,6 +292,21 @@ def _eval_func(node: dict[str, Any], data: dict[str, Any]) -> Any:
             return 0
     if name == "all_true":
         return all(bool(a) for a in args)
+    if name == "has_grant" and len(args) >= 2:
+        grant_store = data.get("_grant_store")
+        principal_id = data.get("current_user")
+        relation = args[0]
+        scope_id = args[1]
+        if grant_store and principal_id and relation and scope_id:
+            from uuid import UUID
+
+            try:
+                return grant_store.has_active_grant(
+                    UUID(str(principal_id)), str(relation), UUID(str(scope_id))
+                )
+            except (ValueError, AttributeError):
+                return False
+        return False
     return None
 
 
@@ -342,6 +357,7 @@ class TransitionValidator:
         user_roles: list[str] | None = None,
         current_user: str | None = None,
         is_superuser: bool = False,
+        grant_store: Any | None = None,
     ) -> TransitionValidationResult:
         """
         Validate a state transition.
@@ -405,10 +421,14 @@ class TransitionValidator:
 
             # Check expression guard
             if guard.guard_expr:
-                # Inject current_user into data for guard evaluation
+                # Inject current_user and grant_store into data for guard evaluation
                 eval_data = entity_data
-                if current_user is not None:
-                    eval_data = {**entity_data, "current_user": current_user}
+                if current_user is not None or grant_store is not None:
+                    eval_data = {**entity_data}
+                    if current_user is not None:
+                        eval_data["current_user"] = current_user
+                    if grant_store is not None:
+                        eval_data["_grant_store"] = grant_store
 
                 try:
                     result = evaluate_guard_expr(guard.guard_expr, eval_data)
@@ -484,6 +504,7 @@ def validate_status_update(
     user_roles: list[str] | None = None,
     current_user: str | None = None,
     is_superuser: bool = False,
+    grant_store: Any | None = None,
 ) -> TransitionValidationResult | None:
     """
     Validate a status field update against a state machine.
@@ -538,4 +559,5 @@ def validate_status_update(
         user_roles,
         current_user,
         is_superuser=is_superuser,
+        grant_store=grant_store,
     )

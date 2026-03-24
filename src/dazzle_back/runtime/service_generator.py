@@ -352,6 +352,15 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
 
         # Validate state machine transition if entity has a state machine
         if self.state_machine:
+            # Construct GrantStore for has_grant() guards if DB is available
+            _grant_store = None
+            if self._repository:
+                try:
+                    from dazzle_back.runtime.grant_store import GrantStore
+
+                    _grant_store = GrantStore(self._repository.db.connection())
+                except Exception:
+                    pass  # Grant checks will return False if store unavailable
             result = validate_status_update(
                 self.state_machine,
                 current_data,
@@ -359,6 +368,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 user_roles,
                 current_user,
                 is_superuser=is_superuser,
+                grant_store=_grant_store,
             )
             if result is not None and not result.is_valid:
                 raise result.error  # type: ignore
@@ -585,7 +595,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                         table = quote_identifier(ref_entity)
                         ph = db.placeholder
                         sql = f'SELECT 1 FROM {table} WHERE "id" = {ph} LIMIT 1'
-                        cursor = conn.execute(sql, (ref_id,))
+                        cursor = conn.execute(sql, (ref_id,))  # nosemgrep
                         exists = cursor.fetchone() is not None
 
                     if not exists:

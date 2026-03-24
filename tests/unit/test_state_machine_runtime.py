@@ -1,12 +1,16 @@
-"""Tests for state machine runtime validation (issue #403).
+"""Tests for state machine runtime validation (issue #403 + #653).
 
 Verifies that TransitionValidator correctly handles:
 - Role normalization (role_ prefix stripping)
 - Superuser bypass of role guards
 - validate_status_update integration
+- has_grant() expression guard evaluation (#653)
 """
 
 from __future__ import annotations
+
+from unittest.mock import MagicMock
+from uuid import uuid4
 
 from dazzle_back.runtime.state_machine import (
     GuardNotSatisfiedError,
@@ -219,3 +223,56 @@ class TestValidateStatusUpdate:
         )
         assert result is not None
         assert result.is_valid
+
+
+# ---------------------------------------------------------------------------
+# has_grant() in _eval_func (#653)
+# ---------------------------------------------------------------------------
+
+
+class TestEvalFuncHasGrant:
+    """Test has_grant() evaluation in state machine guard expressions (#653)."""
+
+    @staticmethod
+    def _expr(relation: str, scope_id: str) -> dict:
+        """Build a has_grant() FuncCall expression AST node."""
+        return {
+            "name": "has_grant",
+            "args": [
+                {"value": relation},
+                {"value": scope_id},
+            ],
+        }
+
+    def test_has_grant_returns_true_when_active(self) -> None:
+        from dazzle_back.runtime.state_machine import evaluate_guard_expr
+
+        store = MagicMock()
+        store.has_active_grant.return_value = True
+        scope = uuid4()
+        data = {"current_user": str(uuid4()), "_grant_store": store}
+
+        result = evaluate_guard_expr(self._expr("approve_letter", str(scope)), data)
+        assert result is True
+        store.has_active_grant.assert_called_once()
+
+    def test_has_grant_returns_false_when_no_store(self) -> None:
+        from dazzle_back.runtime.state_machine import evaluate_guard_expr
+
+        scope = uuid4()
+        result = evaluate_guard_expr(
+            self._expr("approve_letter", str(scope)),
+            {"current_user": str(uuid4())},
+        )
+        assert result is False
+
+    def test_has_grant_returns_false_when_no_active_grant(self) -> None:
+        from dazzle_back.runtime.state_machine import evaluate_guard_expr
+
+        store = MagicMock()
+        store.has_active_grant.return_value = False
+        scope = uuid4()
+        data = {"current_user": str(uuid4()), "_grant_store": store}
+
+        result = evaluate_guard_expr(self._expr("approve_letter", str(scope)), data)
+        assert result is False
