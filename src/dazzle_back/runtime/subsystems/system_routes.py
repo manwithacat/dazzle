@@ -430,7 +430,12 @@ class SystemRoutesSubsystem:
         import hashlib
         import time
 
-        _dsl_hash = hashlib.sha256(appspec.model_dump_json().encode()).hexdigest()[:8]
+        try:
+            _spec_bytes = appspec.model_dump_json().encode()
+        except (TypeError, ValueError):
+            # ParamRef or other non-serializable IR nodes — fall back to repr
+            _spec_bytes = repr(appspec.model_dump(mode="python")).encode()
+        _dsl_hash = hashlib.sha256(_spec_bytes).hexdigest()[:8]
         _start_time = time.monotonic()
 
         try:
