@@ -1,7 +1,16 @@
-"""Runtime parameter specification types for DAZZLE IR."""
+"""Runtime parameter specification types for DAZZLE IR.
+
+ParamRef is globally JSON-serializable: stdlib ``json.dumps()`` will
+never crash on a ParamRef object, regardless of where it appears in
+the object graph.  This is achieved by patching ``json.JSONEncoder.default``
+at import time — a deliberate design choice so that every code path
+(Pydantic, FastAPI, spec versioning, pg_backend) handles ParamRef
+transparently without ``default=str`` annotations.
+"""
 
 from __future__ import annotations
 
+import json
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -41,8 +50,9 @@ class ParamSpec(BaseModel):
 class ParamRef(BaseModel):
     """Reference to a runtime parameter, used in place of literal values.
 
-    JSON-serializable: resolves to ``{"$param": key, "default": default}``
-    so that ``json.dumps(model.model_dump())`` never crashes.
+    Globally JSON-serializable: the module-level encoder patch ensures
+    ``json.dumps(obj_containing_paramref)`` always works, serializing
+    ParamRef as ``{"$param": key, "default": default}``.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -51,6 +61,22 @@ class ParamRef(BaseModel):
     param_type: str
     default: Any
 
-    def __json__(self) -> dict[str, Any]:
-        """Custom JSON hook — resolve to a dict for stdlib json.dumps."""
-        return {"$param": self.key, "default": self.default}
+    def resolve(self) -> Any:
+        """Return the default value — use when a concrete value is needed."""
+        return self.default
+
+
+# ---------------------------------------------------------------------------
+# Global JSON encoder patch — makes ParamRef serializable everywhere
+# ---------------------------------------------------------------------------
+_original_default = json.JSONEncoder.default
+
+
+def _paramref_aware_default(self: json.JSONEncoder, o: Any) -> Any:
+    """Extended JSON encoder that handles ParamRef (and falls through for others)."""
+    if isinstance(o, ParamRef):
+        return {"$param": o.key, "default": o.default}
+    return _original_default(self, o)
+
+
+json.JSONEncoder.default = _paramref_aware_default  # type: ignore[method-assign,unused-ignore]

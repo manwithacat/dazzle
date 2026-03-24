@@ -189,3 +189,63 @@ class TestParamSpecInAppSpec:
         assert PC is ParamConstraints
         assert PR is ParamRef
         assert PS is ParamSpec
+
+
+# ---------------------------------------------------------------------------
+# ParamRef global JSON serialization (#658)
+# ---------------------------------------------------------------------------
+
+
+class TestParamRefJsonSerialization:
+    """ParamRef must be serializable by stdlib json.dumps in any context."""
+
+    def test_json_dumps_direct(self) -> None:
+        """json.dumps(ParamRef) works without default= or custom encoder."""
+        import json
+
+        pr = ParamRef(key="sla.timeout", param_type="int", default=3600)
+        result = json.loads(json.dumps(pr))
+        assert result == {"$param": "sla.timeout", "default": 3600}
+
+    def test_json_dumps_nested_in_dict(self) -> None:
+        """ParamRef inside a plain dict serializes correctly."""
+        import json
+
+        pr = ParamRef(key="grant.max_duration", param_type="str", default="90d")
+        result = json.loads(json.dumps({"config": pr, "other": 42}))
+        assert result["config"]["$param"] == "grant.max_duration"
+        assert result["other"] == 42
+
+    def test_json_dumps_nested_in_list(self) -> None:
+        """ParamRef inside a list serializes correctly."""
+        import json
+
+        pr = ParamRef(key="thresholds", param_type="list[float]", default=[0.5, 0.8])
+        result = json.loads(json.dumps([pr, "literal"]))
+        assert result[0]["$param"] == "thresholds"
+        assert result[1] == "literal"
+
+    def test_model_dump_then_json_dumps(self) -> None:
+        """ParamRef survives model_dump() → json.dumps() chain."""
+        import json
+
+        from dazzle.core.ir.conditions import ConditionExpr, RoleCheck
+        from dazzle.core.ir.grants import GrantRelationSpec
+
+        pr = ParamRef(key="grant.max_duration", param_type="str", default="90d")
+        rel = GrantRelationSpec(
+            name="test",
+            label="Test",
+            granted_by=ConditionExpr(role_check=RoleCheck(role_name="admin")),
+            max_duration=pr,
+        )
+        # model_dump() converts ParamRef to dict via Pydantic
+        d = rel.model_dump()
+        # json.dumps() should work on the result (ParamRef already a dict)
+        serialized = json.dumps(d)
+        assert "grant.max_duration" in serialized
+
+    def test_resolve_returns_default(self) -> None:
+        """ParamRef.resolve() returns the default value."""
+        pr = ParamRef(key="timeout", param_type="int", default=3600)
+        assert pr.resolve() == 3600

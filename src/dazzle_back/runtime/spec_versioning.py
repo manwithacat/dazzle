@@ -152,8 +152,8 @@ class SpecVersionStore:
                     sv.id,
                     sv.version_label,
                     sv.content_hash,
-                    json.dumps(sv.spec_snapshot, default=str),
-                    json.dumps(sv.diff.to_dict(), default=str) if sv.diff else None,
+                    json.dumps(sv.spec_snapshot),
+                    json.dumps(sv.diff.to_dict()) if sv.diff else None,
                     sv.created_at.isoformat(),
                 ),
             )

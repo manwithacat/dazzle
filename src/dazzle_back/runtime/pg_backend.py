@@ -130,9 +130,9 @@ def _python_to_postgres(value: Any, field_type: FieldType | None = None) -> Any:
     elif isinstance(value, bool):
         return value  # Postgres has native bool
     elif isinstance(value, dict):
-        return json.dumps(value, default=str)
+        return json.dumps(value)
     elif isinstance(value, list):
-        return json.dumps(value, default=str)
+        return json.dumps(value)
     else:
         return value
 
