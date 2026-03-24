@@ -138,6 +138,7 @@ document.addEventListener("alpine:init", () => {
     ),
     selected: new Set(),
     bulkCount: 0,
+    colMenuOpen: false,
 
     init() {
       this.applyColumnVisibility();

@@ -12,19 +12,19 @@
     <div class="flex gap-2">
       {# Column visibility toggle #}
       {% if table.columns | length > 3 %}
-      <div x-data="{ open: false }" @click.outside="open = false" class="relative">
-        <button @click="open = !open" class="btn btn-ghost btn-sm" aria-label="Toggle column visibility">
+      <div @click.outside="colMenuOpen = false" class="relative">
+        <button @click="colMenuOpen = !colMenuOpen" class="btn btn-ghost btn-sm" aria-label="Toggle column visibility">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18"/></svg>
           Columns
         </button>
-        <div x-show="open" x-transition
+        <div x-show="colMenuOpen" x-transition
              class="absolute right-0 mt-2 w-48 bg-base-100 shadow-lg rounded-box p-2 z-50">
           {% for col in table.columns %}
           {% if not col.hidden %}
           <label class="flex items-center gap-2 py-1 px-2 hover:bg-base-200 rounded cursor-pointer">
             <input type="checkbox" class="checkbox checkbox-xs"
-                   :checked="$root.isColumnVisible('{{ col.key }}')"
-                   @change="$root.toggleColumn('{{ col.key }}')" />
+                   :checked="isColumnVisible('{{ col.key }}')"
+                   @change="toggleColumn('{{ col.key }}')" />
             <span class="text-sm">{{ col.label }}</span>
           </label>
           {% endif %}
