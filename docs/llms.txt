@@ -1,143 +1,180 @@
-# Dazzle - LLM Agent Index
+# Dazzle — LLM Agent Index
 
-> This file helps AI agents navigate Dazzle documentation.
-> For full content export, see llms-full.txt
+> Declarative SaaS framework with built-in compliance, provable RBAC, and graph features.
+> This file helps AI agents evaluate and navigate Dazzle before installing or connecting to the MCP server.
 
-## Quick Facts
+## What Dazzle Is
 
-- **What**: DSL-first toolkit for building apps from specifications
-- **Language**: Python 3.12+, HTMX/Jinja2 templates, vanilla JS
-- **Repository**: https://github.com/manwithacat/dazzle
-- **Docs Site**: https://manwithacat.github.io/dazzle/
+Dazzle is a declarative framework for building SaaS applications. You describe your business — data models, users, permissions, workflows, state machines — in structured `.dsl` files. Dazzle gives you a running web app with database, API, UI, auth, RBAC, and compliance evidence. No code generation, no build step.
 
-## Key Commands
+**Key differentiators:**
+- **Compliance by construction** — automated evidence extraction for ISO 27001 and SOC 2 TSC
+- **Provable RBAC** — access rules compile to a formal predicate algebra, statically verifiable
+- **Graph features** — entity relationships with CTE traversal, PageRank, community detection
+- **Double-entry ledgers** — TigerBeetle-backed financial transactions
+- **AI-assisted development** — 26 MCP tools with 170+ operations for the full development lifecycle
+
+## Quick Start
 
 ```bash
-dazzle init my_app        # Create new project
-dazzle validate           # Validate DSL files
-dazzle serve              # Run development server (Docker)
-dazzle serve --local      # Run without Docker
+brew install manwithacat/tap/dazzle   # or: pip install dazzle-dsl
+cd examples/simple_task && dazzle serve
+# UI: http://localhost:3000 | API: http://localhost:8000/docs
 ```
 
-## Essential Pages
+## Repository Structure
 
-### Getting Started
-- /getting-started/installation/  - Install Dazzle
-- /getting-started/quickstart/    - 5-minute guide
-- /getting-started/first-app/     - Tutorial
+| Path | Contents |
+|------|----------|
+| `src/dazzle/core/` | Parser, IR types, linker, validation |
+| `src/dazzle/mcp/` | MCP server — 26 tools, knowledge graph |
+| `src/dazzle/agent/` | Mission-driven agent framework |
+| `src/dazzle/compliance/` | ISO 27001 + SOC 2 compliance pipeline |
+| `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail |
+| `src/dazzle_back/` | FastAPI runtime (CRUD, auth, events, grants) |
+| `src/dazzle_ui/` | HTMX + DaisyUI frontend runtime |
+| `docs/reference/` | DSL reference documentation |
+| `examples/` | Runnable example applications |
 
-### DSL Reference
-- /reference/entities/     - Data models (entity, fields, types)
-- /reference/surfaces/     - UI views (list, detail, create, edit)
-- /reference/workspaces/   - Layout composition
-- /reference/services/     - Business logic
-- /reference/integrations/ - External APIs
+## DSL Quick Reference
 
-### Architecture
-- /architecture/overview/       - How DNR works
-- /architecture/dsl-to-appspec/ - Pipeline explanation
-- /architecture/mcp-server/     - AI integration
-
-### Examples
-- /examples/simple-task/      - Beginner CRUD app
-- /examples/contact-manager/  - Relationships
-- /examples/ops-dashboard/    - Dashboards, metrics
-
-## Core DSL Concepts
-
-### Entity (Data Model)
+### Entity (data model)
 ```dsl
 entity Task "Task":
   id: uuid pk
   title: str(200) required
-  status: enum[todo, done] = todo
+  status: enum[todo, in_progress, done] = todo
+  assignee: User.id
+  created_at: datetime auto_add
 ```
 
-### Surface (UI View)
+### Access Control (Cedar-style RBAC)
 ```dsl
-surface task_list "Tasks" -> Task list:
-  section main:
-    field title "Title"
-    field status "Status"
+permit:
+  read: role(viewer) or role(admin)
+  write: role(admin)
+  delete: role(admin) and status != archived
+
+scope:
+  school_id = current_user.school
+  for: teacher, student
 ```
 
-### Workspace (Layout)
+### State Machine
 ```dsl
-workspace dashboard "Dashboard":
-  region main:
-    surface task_list
-  region panel:
-    surface task_detail
+state_machine:
+  field: status
+  states: [draft, submitted, approved, rejected]
+  transitions:
+    submit: draft -> submitted
+      when: role(author)
+    approve: submitted -> approved
+      when: role(reviewer) and has_grant(review_access)
 ```
 
-## MCP Tools
-
-When working with Dazzle projects, 24 consolidated MCP tools are available:
-
-| Tool | Purpose |
-|------|---------|
-| dsl | DSL operations: validate, inspect_entity, inspect_surface, lint, analyze, fidelity |
-| knowledge | Concept lookup, examples, workflow guides, inference |
-| story | Story-driven development: propose, save, get, generate_tests, coverage |
-| process | Workflow processes: propose, save, list, inspect, diagram, coverage |
-| test_design | UX test coverage: propose_persona, gaps, save, auto_populate |
-| dsl_test | API test generation: generate, run, run_all, coverage, verify_story |
-| e2e_test | E2E testing: check_infra, run, run_agent, coverage, run_viewport |
-| discovery | Capability discovery: run, report, compile, emit, status, coherence |
-| pipeline | Full deterministic quality audit in one call |
-| pulse | Project health report: run, radar, persona, timeline, decisions |
-| graph | Knowledge graph: query, dependencies, neighbourhood, concept, inference |
-| sitespec | Site specification: get, validate, scaffold, coherence, themes |
-| semantics | Event-first analysis: extract, validate_events, tenancy, compliance |
-| composition | Visual composition: audit, capture, analyze, report, inspect_styles |
-| policy | RBAC analysis: analyze, conflicts, coverage, simulate |
-| demo_data | Demo data: propose, save, get, generate |
-| api_pack | External APIs: list, search, get, generate_dsl |
-| bootstrap | Entry point for "build me an app" requests |
-| spec_analyze | Analyze narrative specs: discover_entities, identify_lifecycles |
-| pitch | Investor pitch materials: scaffold, generate, validate, review |
-| contribution | Package contributions: templates, create, validate, examples |
-| user_management | Manage auth users: list, create, get, update, deactivate |
-| user_profile | Adaptive persona inference |
-| status | MCP status: mcp, logs, telemetry, activity |
-
-## File Locations
-
-| Path | Contents |
-|------|----------|
-| dsl/*.dsl | DSL source files |
-| dazzle.toml | Project configuration |
-| .dazzle/ | Generated artifacts |
-
-## Common Patterns
-
-### Full CRUD Entity
+### Grant Schema (delegated access)
 ```dsl
-entity Item:
-  id: uuid pk
-  name: str(200) required
-
-surface item_list -> Item list
-surface item_detail -> Item view
-surface item_create -> Item create
-surface item_edit -> Item edit
+grant_schema document_access:
+  scope: Document
+  relation review_access "Review Access":
+    granted_by: role(admin) or role(manager)
+    approval: required
+    approved_by: role(compliance_officer)
+    max_duration: param("grant.review_duration", "90d")
 ```
 
-### Relationship
+### Graph Relationships
 ```dsl
-entity Order:
-  customer: Customer.id required  # FK reference
+entity Follows "Follow Relationship":
+  follower: Person.id required
+  following: Person.id required
+  graph_edge:
+    source: follower
+    target: following
+    type: "follows"
+    directed: true
 ```
 
-### Computed Field
-```dsl
-entity Order:
-  subtotal: decimal(10,2)
-  tax: decimal(10,2)
-  total: computed = subtotal + tax
+### Compliance
+```bash
+dazzle compliance compile --framework soc2    # SOC 2 audit report
+dazzle compliance compile --framework iso27001 # ISO 27001 audit report
+dazzle compliance gaps --framework soc2        # Show unmet controls
+dazzle rbac matrix                             # Generate access matrix
+dazzle rbac verify                             # Verify runtime matches matrix
 ```
+
+## Documentation Pages
+
+### Getting Started
+- /getting-started/installation/ — Install Dazzle
+- /getting-started/quickstart/ — 5-minute guide
+- /getting-started/first-app/ — Tutorial
+
+### DSL Reference
+- /reference/entities/ — Data models, fields, types, relationships
+- /reference/access-control/ — Cedar-style RBAC, grant schemas, scope predicates
+- /reference/surfaces/ — UI views (list, detail, create, review)
+- /reference/workspaces/ — Role-based dashboards with filtered regions
+- /reference/processes/ — Multi-step durable workflows
+- /reference/graphs/ — Entity graph relationships, CTE traversal, algorithms
+- /reference/compliance/ — ISO 27001 + SOC 2 evidence pipeline
+- /reference/rbac-verification/ — Three-layer provable RBAC
+- /reference/ledgers/ — TigerBeetle double-entry accounting
+- /reference/llm/ — Declarative LLM job definitions
+- /reference/governance/ — SLAs, approval workflows, organisational policy
+- /reference/runtime-capabilities/ — Health endpoints, feedback widget, system diagnostics
+
+### Architecture
+- /architecture/overview/ — DSL-to-AppSpec pipeline
+- /architecture/mcp-server/ — MCP tool integration
+- /architecture/event-semantics/ — PostgreSQL event system
+
+## MCP Tools (26 tools, 170+ operations)
+
+When connected via Claude Code, these tools are available:
+
+| Tool | Key Operations | Category |
+|------|---------------|----------|
+| `bootstrap` | entry point for "build me an app" | Spec → DSL |
+| `spec_analyze` | discover_entities, identify_lifecycles, extract_personas | Spec → DSL |
+| `dsl` | validate, lint, inspect_entity, inspect_surface, fidelity | Validation |
+| `story` | propose, save, get, coverage | Stories & Testing |
+| `test_design` | propose_persona, gaps, auto_populate, improve_coverage | Stories & Testing |
+| `test_intelligence` | summary, failures, regression, coverage, context | Stories & Testing |
+| `rhythm` | propose, evaluate, coverage, get, list | Stories & Testing |
+| `demo_data` | propose, save, get, generate | Stories & Testing |
+| `discovery` | run, report, compile, emit, coherence | Analysis |
+| `sentinel` | scan, findings, suppress, status, history | Analysis |
+| `composition` | audit, capture, analyze, report, inspect_styles | Analysis |
+| `semantics` | extract, validate_events, tenancy, compliance, analytics | Analysis |
+| `policy` | analyze, conflicts, coverage, simulate | Analysis |
+| `compliance` | compile, evidence, gaps, summary, review | Compliance |
+| `conformance` | (compliance conformance checks) | Compliance |
+| `graph` | query, dependencies, neighbourhood, concept, inference | Knowledge |
+| `knowledge` | concept, examples, workflow, inference | Knowledge |
+| `sitespec` | get, validate, scaffold, coherence, themes, copy, tokens | Site & Brand |
+| `pitch` | scaffold, generate, validate, review, enrich | Stakeholder |
+| `status` | mcp, logs, telemetry, activity | Operations |
+| `db` | status, verify | Operations |
+| `mock` | status, request_log | Operations |
+| `api_pack` | list, search, get, generate_dsl | Integrations |
+| `user_management` | list, create, get, update, deactivate | User Admin |
+| `user_profile` | observe, observe_message, get, reset | User Admin |
+| `param` | (runtime parameter management) | Configuration |
+
+## Supported Compliance Frameworks
+
+| Framework | Controls | Coverage |
+|-----------|----------|----------|
+| ISO/IEC 27001:2022 | 93 controls across 4 themes | ~60 evidenced from DSL |
+| SOC 2 TSC (2017/2022) | 63 controls across 5 categories | ~53 evidenced from DSL |
+
+Evidence is extracted automatically from DSL constructs: access rules → access control policies, state machines → change management, data classification → confidentiality, processes → operational procedures.
 
 ## Getting Help
 
-- GitHub Issues: https://github.com/manwithacat/dazzle/issues
+- Repository: https://github.com/manwithacat/dazzle
 - Documentation: https://manwithacat.github.io/dazzle/
+- Issues: https://github.com/manwithacat/dazzle/issues
+- PyPI: https://pypi.org/project/dazzle-dsl/

@@ -26,8 +26,10 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle/cli/` | CLI commands (`dazzle serve`, `dazzle mcp`, etc.) |
 | `src/dazzle/lsp/` | LSP server (diagnostics, hover, completion) |
 | `src/dazzle/specs/` | OpenAPI and AsyncAPI specification generators |
+| `src/dazzle/compliance/` | Compliance pipeline — ISO 27001 + SOC 2 evidence extraction, taxonomy, compiler |
+| `src/dazzle/rbac/` | Provable RBAC — static matrix, dynamic verification, audit trail, compliance report |
 | `src/dazzle/testing/` | Test infrastructure (agent E2E wrapper, browser gate) |
-| `src/dazzle_back/` | FastAPI runtime (API, auth, channels, events) |
+| `src/dazzle_back/` | FastAPI runtime (API, auth, channels, events, grants) |
 | `src/dazzle_ui/` | UI runtime — Python/Jinja2 templates rendered server-side, static JS/CSS assets |
 
 ## Backward Compatibility Policy
@@ -283,4 +285,4 @@ The `status activity` MCP operation provides the same data for programmatic poll
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.48.3 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.48.4 | **Python**: 3.12+ | **Status**: Production Ready

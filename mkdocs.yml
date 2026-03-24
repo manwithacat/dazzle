@@ -59,8 +59,12 @@ nav:
       - Integrations: reference/integrations.md
       - Processes: reference/processes.md
       - Stories: reference/stories.md
+      - Rhythms: reference/rhythms.md
       - Ledgers: reference/ledgers.md
+      - Graphs: reference/graphs.md
       - LLM Models & Intents: reference/llm.md
+      - Compliance: reference/compliance.md
+      - RBAC Verification: reference/rbac-verification.md
       - Testing: reference/testing.md
       - Frontend & Templates: reference/frontend.md
       - Messaging: reference/messaging.md
@@ -75,6 +79,10 @@ nav:
       - Workshop: reference/workshop.md
       - CLI: reference/cli.md
       - Grammar: reference/grammar.md
+  - Guides:
+      - Heroku Deployment: guides/heroku.md
+      - Operations: guides/operations.md
+      - Scaling: guides/scaling.md
   - Examples:
       - Overview: examples/index.md
       - Simple Task: examples/simple-task.md
@@ -125,6 +133,10 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+exclude_docs: |
+  superpowers/
+  proposals/
 
 plugins:
   - search

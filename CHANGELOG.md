@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.4] - 2026-03-24
+
+### Added
+- SOC 2 Trust Services Criteria taxonomy — 63 controls across 5 categories with DSL evidence mappings (#657)
+- Reference documentation for graph features (CTE neighborhood, NetworkX algorithms, domain-scoped graphs) (#656)
+- Reference documentation for compliance framework (ISO 27001 + SOC 2 pipeline, CLI, evidence mapping) (#656)
+- Grant-based RBAC section in access-control reference (grant_schema, has_grant, four-eyes approval) (#656)
+- System endpoints (/health, /_diagnostics) and feedback widget in runtime-capabilities reference (#656)
+
 ## [0.48.3] - 2026-03-24
 
 ### Fixed
