@@ -1,4 +1,4 @@
-/* dazzle v0.48.0 | MIT License | https://github.com/manwithacat/dazzle */
+/* dazzle v0.48.4 | MIT License | https://github.com/manwithacat/dazzle */
 [data-dz-show] {
 transition: opacity 150ms ease-in, transform 150ms ease-in;
 }
@@ -1550,6 +1550,7 @@ margin: 0;
 .dz-auth-page {
 background: linear-gradient(135deg, var(--dz-hero-bg-from, oklch(0.50 0.18 270)) 0%, var(--dz-hero-bg-to, oklch(0.45 0.18 270)) 100%);
 display: flex;
+flex-direction: row;
 align-items: center;
 justify-content: center;
 min-height: 100vh;
