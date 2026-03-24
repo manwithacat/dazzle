@@ -426,9 +426,27 @@ class SystemRoutesSubsystem:
         appspec = ctx.appspec
         entities = ctx.entities
 
+        # Compute DSL hash and capture startup time for /health
+        import hashlib
+        import time
+
+        _dsl_hash = hashlib.sha256(appspec.model_dump_json().encode()).hexdigest()[:8]
+        _start_time = time.monotonic()
+
+        try:
+            from dazzle import __version__ as _dz_version
+        except ImportError:
+            _dz_version = "unknown"
+
         @ctx.app.get("/health", tags=["System"])
-        async def health_check() -> dict[str, str]:
-            return {"status": "healthy", "app": appspec.name}
+        async def health_check() -> dict[str, Any]:
+            return {
+                "status": "healthy",
+                "app": appspec.name,
+                "version": _dz_version,
+                "dsl_hash": _dsl_hash,
+                "uptime_seconds": round(time.monotonic() - _start_time, 1),
+            }
 
         @ctx.app.get("/spec", tags=["System"])
         async def get_spec() -> dict[str, Any]:
@@ -466,6 +484,49 @@ class SystemRoutesSubsystem:
                 "files_enabled": files_enabled,
                 "files_path": files_path_str,
             }
+
+        # Authenticated diagnostics endpoint
+        if ctx.auth_dep:
+            from dazzle_back.runtime._fastapi_compat import Depends
+
+            @ctx.app.get("/_diagnostics", tags=["System"])  # type: ignore[misc,untyped-decorator,unused-ignore]
+            async def diagnostics(
+                auth_context: Any = Depends(ctx.auth_dep),
+            ) -> dict[str, Any]:
+                user_roles = {
+                    r if isinstance(r, str) else getattr(r, "name", str(r))
+                    for r in getattr(getattr(auth_context, "user", None), "roles", [])
+                }
+                admin_roles = {"super_admin", "trust_admin", "admin"}
+                if not user_roles.intersection(admin_roles):
+                    raise HTTPException(status_code=403, detail="Admin role required")
+
+                surfaces = getattr(appspec, "surfaces", []) or []
+                workspaces = getattr(appspec, "workspaces", []) or []
+                features = {
+                    "auth": auth_enabled,
+                    "files": files_enabled,
+                    "feedback_widget": bool(
+                        appspec.feedback_widget and appspec.feedback_widget.enabled
+                    )
+                    if getattr(appspec, "feedback_widget", None)
+                    else False,
+                }
+                migration_pending = 0
+                if last_migration and last_migration.has_destructive:
+                    migration_pending = len(list(getattr(last_migration, "destructive_steps", [])))
+                return {
+                    "entities": len(entities),
+                    "surfaces": len(surfaces),
+                    "workspaces": len(workspaces),
+                    "features": features,
+                    "database": {
+                        "connected": True,
+                        "pending_migrations": migration_pending,
+                    },
+                    "dsl_hash": _dsl_hash,
+                    "version": _dz_version,
+                }
 
         # Configure project-level template overrides (v0.29.0)
         try:
