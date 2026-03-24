@@ -156,20 +156,12 @@ class TestRelationLoaderPlaceholder:
 
 
 class TestEventInboxPlaceholder:
-    """Verify EventInbox uses configurable placeholder."""
+    """Verify EventInbox always uses %s placeholders (PostgreSQL-only)."""
 
-    def test_default_placeholder_is_question_mark(self) -> None:
-        """Default placeholder is ? for SQLite compat."""
+    def test_inbox_sql_uses_percent_s(self) -> None:
+        """EventInbox SQL statements use %s (PostgreSQL placeholder)."""
         from dazzle_back.events.inbox import EventInbox
 
         inbox = EventInbox()
-        assert inbox._ph == "?"
-        assert inbox._backend_type == "sqlite"
-
-    def test_custom_placeholder_and_backend(self) -> None:
-        """Placeholder and backend_type can be set for Postgres."""
-        from dazzle_back.events.inbox import EventInbox
-
-        inbox = EventInbox(placeholder="%s", backend_type="postgres")
-        assert inbox._ph == "%s"
-        assert inbox._backend_type == "postgres"
+        assert "%s" in inbox._sql_mark_processed
+        assert "?" not in inbox._sql_mark_processed

@@ -123,14 +123,14 @@ class TestVersionManagerPgConnect:
     @pytest.mark.asyncio
     async def test_connect_returns_aiosqlite_connection(self) -> None:
         """Test that _connect returns aiosqlite connection in SQLite mode."""
+        aiosqlite = pytest.importorskip("aiosqlite")
+
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test.db"
             vm = VersionManager(db_path=db_path)
 
             conn = await vm._connect()
             try:
-                import aiosqlite
-
                 assert isinstance(conn, aiosqlite.Connection)
             finally:
                 await conn.close()
@@ -142,6 +142,7 @@ class TestVersionManagerPgInitialize:
     @pytest.mark.asyncio
     async def test_initialize_sqlite_still_works(self) -> None:
         """Test that SQLite initialize path still works correctly."""
+        pytest.importorskip("aiosqlite")
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = Path(tmpdir) / "test.db"
             vm = VersionManager(db_path=db_path)

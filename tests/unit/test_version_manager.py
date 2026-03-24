@@ -16,7 +16,9 @@ from pathlib import Path
 
 import pytest
 
-from dazzle.core.process import (
+aiosqlite = pytest.importorskip("aiosqlite")
+
+from dazzle.core.process import (  # noqa: E402
     DrainWatcher,
     DrainWatcherConfig,
     VersionManager,
@@ -45,8 +47,6 @@ class TestVersionManager:
     @pytest.mark.asyncio
     async def test_initialize_creates_tables(self, temp_db_path: Path) -> None:
         """Test that initialize creates required tables."""
-        import aiosqlite
-
         vm = VersionManager(db_path=temp_db_path)
         await vm.initialize()
 

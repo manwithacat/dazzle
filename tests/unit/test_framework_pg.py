@@ -30,23 +30,9 @@ class TestEventFrameworkConfigPg:
         config = EventFrameworkConfig()
         assert config.database_url is None
 
-    def test_config_with_db_path_and_database_url(self) -> None:
-        """Test that config can hold both db_path and database_url."""
-        config = EventFrameworkConfig(
-            db_path="app.db",
-            database_url="postgresql://localhost/test",
-        )
-        assert config.db_path == "app.db"
-        assert config.database_url == "postgresql://localhost/test"
-
 
 class TestEventFrameworkPgMode:
     """Tests for EventFramework PostgreSQL mode selection."""
-
-    def test_framework_sqlite_mode_default(self) -> None:
-        """Test framework defaults to SQLite mode."""
-        framework = EventFramework()
-        assert not framework._use_postgres
 
     def test_framework_postgres_mode_with_url(self) -> None:
         """Test framework enters Postgres mode with database_url."""
@@ -54,9 +40,9 @@ class TestEventFrameworkPgMode:
         framework = EventFramework(config)
         assert framework._use_postgres
 
-    def test_framework_sqlite_mode_without_url(self) -> None:
-        """Test framework stays SQLite when database_url is None."""
-        config = EventFrameworkConfig(db_path="test.db")
+    def test_framework_no_postgres_without_url(self) -> None:
+        """Test framework has _use_postgres=False when database_url is None."""
+        config = EventFrameworkConfig()
         framework = EventFramework(config)
         assert not framework._use_postgres
 
@@ -114,31 +100,6 @@ class TestEventFrameworkPgMode:
                 sys.modules["psycopg.rows"] = saved_rows
 
     @pytest.mark.asyncio
-    async def test_start_without_database_url_uses_memory(self) -> None:
-        """Test that start without database_url uses in-memory bus."""
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            db_path = str(Path(tmpdir) / "test.db")
-            framework = EventFramework(
-                EventFrameworkConfig(
-                    db_path=db_path,
-                    auto_start_publisher=False,
-                    auto_start_consumers=False,
-                )
-            )
-
-            await framework.start()
-
-            assert not framework._use_postgres
-            from dazzle_back.events.bus import EventBus
-
-            assert isinstance(framework._bus, EventBus)
-
-            await framework.stop()
-
-    @pytest.mark.asyncio
     async def test_get_connection_postgres_mode(self) -> None:
         """Test get_connection returns psycopg connection in pg mode."""
         config = EventFrameworkConfig(database_url="postgresql://localhost/test")
@@ -171,8 +132,8 @@ class TestEventFrameworkPgMode:
                 sys.modules["psycopg.rows"] = saved_rows
 
     @pytest.mark.asyncio
-    async def test_outbox_created_with_use_postgres(self) -> None:
-        """Test that EventOutbox is created with use_postgres=True in pg mode."""
+    async def test_outbox_and_inbox_created_on_start(self) -> None:
+        """Test that EventOutbox and EventInbox are created on framework start."""
         config = EventFrameworkConfig(database_url="postgresql://localhost/test")
         framework = EventFramework(config)
 
@@ -204,10 +165,7 @@ class TestEventFrameworkPgMode:
                 await framework.start()
 
                 assert framework._outbox is not None
-                assert framework._outbox._use_postgres is True
-
                 assert framework._inbox is not None
-                assert framework._inbox._backend_type == "postgres"
 
                 await framework.stop()
         finally:
