@@ -32,7 +32,7 @@ from dazzle_back.events.service_mixin import (
     EventEmittingMixin,
 )
 
-# --- Heavy imports (require aiosqlite and other extras) ---
+# --- Heavy imports (require psycopg and other extras) ---
 if EVENTS_AVAILABLE:
     from dazzle_back.events.base_event_bus import BaseEventBus
     from dazzle_back.events.consumer import (

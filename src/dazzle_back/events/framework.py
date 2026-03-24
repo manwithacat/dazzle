@@ -10,7 +10,7 @@ functionality in a Dazzle application. It coordinates:
 - Lifecycle management (startup/shutdown)
 
 Usage:
-    framework = EventFramework(db_path="app.db")
+    framework = EventFramework(config=EventFrameworkConfig(database_url="postgresql://..."))
     await framework.start()
 
     # Application runs...
@@ -18,7 +18,7 @@ Usage:
     await framework.stop()
 
 Or as context manager:
-    async with EventFramework(db_path="app.db") as framework:
+    async with EventFramework(config=EventFrameworkConfig(database_url="postgresql://...")) as framework:
         # Application runs...
         pass
 """
@@ -32,7 +32,6 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    import aiosqlite
     import psycopg
 
 from dazzle_back.events.bus import EventBus, EventHandler
@@ -52,10 +51,7 @@ logger = logging.getLogger(__name__)
 class EventFrameworkConfig:
     """Configuration for the event framework."""
 
-    # Database path for SQLite event storage
-    db_path: str = "app.db"
-
-    # PostgreSQL connection URL (takes precedence over db_path when set)
+    # PostgreSQL connection URL (required)
     database_url: str | None = None
 
     # Redis connection URL (enables Redis event bus tier)
@@ -95,7 +91,7 @@ class EventFramework:
 
     Example:
         # Create and start framework
-        framework = EventFramework(db_path="app.db")
+        framework = EventFramework(config=EventFrameworkConfig(database_url="postgresql://..."))
         await framework.start()
 
         # Publish events (through outbox for transactional safety)
@@ -114,19 +110,14 @@ class EventFramework:
     def __init__(
         self,
         config: EventFrameworkConfig | None = None,
-        *,
-        db_path: str | None = None,
     ) -> None:
         """
         Initialize the event framework.
 
         Args:
             config: Framework configuration
-            db_path: Shorthand for config.db_path
         """
         self._config = config or EventFrameworkConfig()
-        if db_path:
-            self._config.db_path = db_path
 
         self._use_postgres = bool(self._config.database_url)
 
@@ -150,31 +141,23 @@ class EventFramework:
 
     def _make_connect_fn(self) -> ConnectFn:
         """Build an async connection factory based on the configured backend."""
-        if self._use_postgres:
-            database_url = self._config.database_url
-            assert database_url is not None
-            url = database_url
-            if url.startswith("postgres://"):
-                url = url.replace("postgres://", "postgresql://", 1)
+        database_url = self._config.database_url
+        if database_url is None:
+            raise ValueError("database_url is required for event system")
 
-            async def _pg_connect() -> psycopg.AsyncConnection[dict[str, Any]]:
-                import psycopg
-                from psycopg.rows import dict_row
+        url = database_url
+        if url.startswith("postgres://"):
+            url = url.replace("postgres://", "postgresql://", 1)
 
-                return await psycopg.AsyncConnection.connect(
-                    url, row_factory=dict_row, connect_timeout=10
-                )
+        async def _pg_connect() -> psycopg.AsyncConnection[dict[str, Any]]:
+            import psycopg
+            from psycopg.rows import dict_row
 
-            return _pg_connect
-        else:
-            db_path = self._config.db_path
+            return await psycopg.AsyncConnection.connect(
+                url, row_factory=dict_row, connect_timeout=10
+            )
 
-            async def _sqlite_connect() -> aiosqlite.Connection:
-                import aiosqlite
-
-                return await aiosqlite.connect(db_path)
-
-            return _sqlite_connect
+        return _pg_connect
 
     @property
     def bus(self) -> EventBus:
@@ -212,18 +195,12 @@ class EventFramework:
         if self._stats.is_running:
             return
 
-        logger.info("Starting event framework", extra={"db_path": self._config.db_path})
+        logger.info("Starting event framework")
 
         connect_fn = self._make_connect_fn()
 
-        # ConnectFn always uses PostgreSQL when database_url is set
-        # (outbox/inbox DB connections are always PostgreSQL regardless of event bus tier)
-        if self._use_postgres:
-            self._outbox = EventOutbox(use_postgres=True)
-            self._inbox = EventInbox(backend_type="postgres", placeholder="%s")
-        else:
-            self._outbox = EventOutbox()
-            self._inbox = EventInbox()
+        self._outbox = EventOutbox()
+        self._inbox = EventInbox()
 
         # Connect to database and create tables
         self._conn = await connect_fn()
@@ -236,10 +213,8 @@ class EventFramework:
         # Determine tier from config values (don't rely on env detection alone)
         if self._config.redis_url:
             explicit_tier = EventTier.REDIS
-        elif self._use_postgres:
-            explicit_tier = EventTier.POSTGRES
         else:
-            explicit_tier = EventTier.AUTO  # Let detect_tier() decide from env
+            explicit_tier = EventTier.POSTGRES
 
         tier_config = TierConfig(
             tier=explicit_tier,
@@ -271,9 +246,7 @@ class EventFramework:
         self._stats.started_at = datetime.now(UTC)
 
         bus_type = type(self._bus).__name__
-        tier = (
-            "redis" if self._config.redis_url else ("postgres" if self._use_postgres else "sqlite")
-        )
+        tier = "redis" if self._config.redis_url else "postgres"
         logger.info(
             "Event framework started",
             extra={
@@ -492,9 +465,7 @@ class EventFramework:
 
         publisher_stats = self._publisher.stats if self._publisher else None
 
-        tier = (
-            "redis" if self._config.redis_url else ("postgres" if self._use_postgres else "sqlite")
-        )
+        tier = "redis" if self._config.redis_url else "postgres"
 
         result: dict[str, Any] = {
             "tier": tier,
@@ -552,15 +523,12 @@ def get_framework() -> EventFramework:
 
 async def init_framework(
     config: EventFrameworkConfig | None = None,
-    *,
-    db_path: str | None = None,
 ) -> EventFramework:
     """
     Initialize and start the global event framework.
 
     Args:
         config: Framework configuration
-        db_path: Shorthand for config.db_path
 
     Returns:
         The initialized framework
@@ -570,7 +538,7 @@ async def init_framework(
     if _framework is not None and _framework.is_running:
         return _framework
 
-    _framework = EventFramework(config, db_path=db_path)
+    _framework = EventFramework(config)
     await _framework.start()
     return _framework
 

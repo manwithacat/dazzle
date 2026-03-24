@@ -14,10 +14,10 @@ Tests the core event infrastructure:
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
-import aiosqlite
 import pytest
 
 from dazzle_back.events import (
@@ -35,6 +35,33 @@ from dazzle_back.events import (
     ProcessingResult,
     PublisherConfig,
 )
+
+
+def _mock_cursor(rows: list[Any] | None = None, one: Any = None) -> MagicMock:
+    """Create a mock psycopg-style cursor."""
+    cursor = MagicMock()
+    cursor.fetchall = AsyncMock(return_value=rows if rows is not None else [])
+    cursor.fetchone = AsyncMock(return_value=one)
+    cursor.description = []
+    cursor.rowcount = 0
+    # Support async iteration (for inbox.get_stats etc.)
+    cursor.__aiter__ = MagicMock(return_value=iter([]))
+    cursor.__anext__ = AsyncMock(side_effect=StopAsyncIteration)
+    return cursor
+
+
+def _mock_pg_conn() -> Any:
+    """Create a mock psycopg-style async connection for unit tests."""
+    conn = AsyncMock()
+    default_cursor = _mock_cursor()
+    conn.execute = AsyncMock(return_value=default_cursor)
+    conn.cursor.return_value.__aenter__ = AsyncMock(return_value=default_cursor)
+    conn.cursor.return_value.__aexit__ = AsyncMock(return_value=None)
+    conn.commit = AsyncMock()
+    conn.close = AsyncMock()
+    conn.rollback = AsyncMock()
+    return conn
+
 
 # =============================================================================
 # EventEnvelope Tests
@@ -402,7 +429,7 @@ class TestDevBusMemory:
 
 
 class TestEventOutbox:
-    """Tests for transactional outbox."""
+    """Tests for transactional outbox using mock connections."""
 
     @pytest.fixture
     def outbox(self) -> EventOutbox:
@@ -410,105 +437,166 @@ class TestEventOutbox:
         return EventOutbox()
 
     @pytest.mark.asyncio
-    async def test_append_and_fetch(self, outbox: EventOutbox, tmp_path: Path) -> None:
-        """Test appending and fetching pending events."""
-        db_path = str(tmp_path / "test.db")
+    async def test_append_and_fetch(self, outbox: EventOutbox) -> None:
+        """Test appending and fetching pending events via mock connection."""
+        envelope = EventEnvelope.create(
+            event_type="app.Order.created",
+            key="order-123",
+            payload={"amount": 100},
+        )
 
-        async with aiosqlite.connect(db_path) as conn:
-            await outbox.create_table(conn)
+        conn = _mock_pg_conn()
 
-            # Append event
-            envelope = EventEnvelope.create(
-                event_type="app.Order.created",
-                key="order-123",
-                payload={"amount": 100},
-            )
-            await outbox.append(conn, envelope, "app.Order")
-            await conn.commit()
+        # After append, fetch_pending should return the row we appended.
+        # Build a fake row dict that _row_to_entry can parse.
+        fake_row = {
+            "id": str(envelope.event_id),
+            "topic": "app.Order",
+            "event_type": envelope.event_type,
+            "key": envelope.key,
+            "envelope_json": envelope.to_json(),
+            "status": "pending",
+            "created_at": datetime.now(UTC).isoformat(),
+            "published_at": None,
+            "attempts": 0,
+            "last_error": None,
+            "lock_token": None,
+            "lock_expires_at": None,
+        }
 
-            # Fetch pending
-            pending = await outbox.fetch_pending(conn, limit=10)
+        fetch_cursor = MagicMock()
+        fetch_cursor.fetchall = AsyncMock(return_value=[fake_row])
+
+        # execute returns different cursors depending on call order:
+        # first call → append (no return value used), second call → fetch
+        conn.execute = AsyncMock(side_effect=[MagicMock(), fetch_cursor])
+
+        await outbox.append(conn, envelope, "app.Order")
+        pending = await outbox.fetch_pending(conn, limit=10)
 
         assert len(pending) == 1
         assert pending[0].topic == "app.Order"
         assert pending[0].status == OutboxStatus.PENDING
 
     @pytest.mark.asyncio
-    async def test_mark_published(self, outbox: EventOutbox, tmp_path: Path) -> None:
-        """Test marking events as published."""
-        db_path = str(tmp_path / "test.db")
+    async def test_mark_published(self, outbox: EventOutbox) -> None:
+        """Test marking an event as published via mock connection."""
+        envelope = EventEnvelope.create(
+            event_type="app.Order.created",
+            key="order-123",
+            payload={},
+        )
+        entry_id = envelope.event_id
 
-        async with aiosqlite.connect(db_path) as conn:
-            await outbox.create_table(conn)
+        conn = _mock_pg_conn()
 
-            envelope = EventEnvelope.create(
-                event_type="app.Order.created",
-                key="order-123",
-                payload={},
-            )
-            await outbox.append(conn, envelope, "app.Order")
-            await conn.commit()
+        # fetch_pending returns one row; after mark_published returns nothing
+        fake_row = {
+            "id": str(entry_id),
+            "topic": "app.Order",
+            "event_type": envelope.event_type,
+            "key": envelope.key,
+            "envelope_json": envelope.to_json(),
+            "status": "pending",
+            "created_at": datetime.now(UTC).isoformat(),
+            "published_at": None,
+            "attempts": 0,
+            "last_error": None,
+            "lock_token": None,
+            "lock_expires_at": None,
+        }
 
-            pending = await outbox.fetch_pending(conn)
-            await outbox.mark_published(conn, pending[0].id)
-            await conn.commit()
+        fetch_cursor = MagicMock()
+        fetch_cursor.fetchall = AsyncMock(return_value=[fake_row])
 
-            # Should not appear in pending anymore
-            pending_after = await outbox.fetch_pending(conn)
+        empty_cursor = MagicMock()
+        empty_cursor.fetchall = AsyncMock(return_value=[])
+
+        # calls: append, fetch_pending, mark_published (UPDATE), fetch_pending again
+        conn.execute = AsyncMock(side_effect=[MagicMock(), fetch_cursor, MagicMock(), empty_cursor])
+
+        await outbox.append(conn, envelope, "app.Order")
+        pending = await outbox.fetch_pending(conn)
+        await outbox.mark_published(conn, pending[0].id)
+        pending_after = await outbox.fetch_pending(conn)
 
         assert len(pending_after) == 0
 
     @pytest.mark.asyncio
-    async def test_mark_failed_with_retry(self, outbox: EventOutbox, tmp_path: Path) -> None:
-        """Test marking events as failed with retry."""
-        db_path = str(tmp_path / "test.db")
+    async def test_mark_failed_with_retry(self, outbox: EventOutbox) -> None:
+        """Test marking an event as failed with retry via mock connection."""
+        envelope = EventEnvelope.create(
+            event_type="app.Order.created",
+            key="order-123",
+            payload={},
+        )
+        entry_id = envelope.event_id
 
-        async with aiosqlite.connect(db_path) as conn:
-            await outbox.create_table(conn)
+        conn = _mock_pg_conn()
 
-            envelope = EventEnvelope.create(
-                event_type="app.Order.created",
-                key="order-123",
-                payload={},
-            )
-            await outbox.append(conn, envelope, "app.Order")
-            await conn.commit()
+        # fetch_pending returns one row
+        fake_row = {
+            "id": str(entry_id),
+            "topic": "app.Order",
+            "event_type": envelope.event_type,
+            "key": envelope.key,
+            "envelope_json": envelope.to_json(),
+            "status": "pending",
+            "created_at": datetime.now(UTC).isoformat(),
+            "published_at": None,
+            "attempts": 0,
+            "last_error": None,
+            "lock_token": None,
+            "lock_expires_at": None,
+        }
 
-            pending = await outbox.fetch_pending(conn)
-            entry_id = pending[0].id
+        fetch_cursor = MagicMock()
+        fetch_cursor.fetchall = AsyncMock(return_value=[fake_row])
 
-            # Mark failed (returns True if should retry)
-            should_retry = await outbox.mark_failed(conn, entry_id, "Connection error")
+        # mark_failed does SELECT attempts then UPDATE
+        attempts_cursor = MagicMock()
+        attempts_cursor.fetchone = AsyncMock(return_value={"attempts": 0})
 
-            # Should be retryable (attempts < max_attempts)
-            assert should_retry is True
+        # fetch_pending after mark_failed returns same row with attempts=1
+        fake_row_after = {**fake_row, "attempts": 1}
+        fetch_cursor2 = MagicMock()
+        fetch_cursor2.fetchall = AsyncMock(return_value=[fake_row_after])
 
-            # Entry should still be fetchable (status stays pending for retry)
-            pending_after = await outbox.fetch_pending(conn)
+        conn.execute = AsyncMock(
+            side_effect=[
+                MagicMock(),  # append INSERT
+                fetch_cursor,  # fetch_pending SELECT
+                attempts_cursor,  # mark_failed SELECT attempts
+                MagicMock(),  # mark_failed UPDATE
+                fetch_cursor2,  # fetch_pending after mark_failed
+            ]
+        )
 
+        await outbox.append(conn, envelope, "app.Order")
+        pending = await outbox.fetch_pending(conn)
+        entry_id_fetched = pending[0].id
+
+        should_retry = await outbox.mark_failed(conn, entry_id_fetched, "Connection error")
+        assert should_retry is True
+
+        pending_after = await outbox.fetch_pending(conn)
         assert len(pending_after) == 1
         assert pending_after[0].attempts == 1
 
     @pytest.mark.asyncio
-    async def test_get_stats(self, outbox: EventOutbox, tmp_path: Path) -> None:
-        """Test getting outbox statistics."""
-        db_path = str(tmp_path / "test.db")
+    async def test_get_stats(self, outbox: EventOutbox) -> None:
+        """Test getting outbox statistics via mock connection."""
+        conn = _mock_pg_conn()
 
-        async with aiosqlite.connect(db_path) as conn:
-            await outbox.create_table(conn)
+        stats_cursor = MagicMock()
+        stats_cursor.fetchall = AsyncMock(
+            return_value=[
+                {"status": "pending", "count": 3, "oldest": None, "newest": None},
+            ]
+        )
+        conn.execute = AsyncMock(return_value=stats_cursor)
 
-            # Add some events
-            for i in range(3):
-                envelope = EventEnvelope.create(
-                    event_type="app.Order.created",
-                    key=f"order-{i}",
-                    payload={},
-                )
-                await outbox.append(conn, envelope, "app.Order")
-            await conn.commit()
-
-            stats = await outbox.get_stats(conn)
-
+        stats = await outbox.get_stats(conn)
         assert stats["pending"] == 3
 
 
@@ -518,7 +606,7 @@ class TestEventOutbox:
 
 
 class TestEventInbox:
-    """Tests for idempotent consumer inbox."""
+    """Tests for idempotent consumer inbox using mock connections."""
 
     @pytest.fixture
     def inbox(self) -> EventInbox:
@@ -526,63 +614,97 @@ class TestEventInbox:
         return EventInbox()
 
     @pytest.mark.asyncio
-    async def test_idempotency_check(self, inbox: EventInbox, tmp_path: Path) -> None:
+    async def test_idempotency_check(self, inbox: EventInbox) -> None:
         """Test idempotency check prevents duplicate processing."""
-        db_path = str(tmp_path / "test.db")
+        event_id = uuid4()
+        conn = _mock_pg_conn()
 
-        async with aiosqlite.connect(db_path) as conn:
-            await inbox.create_table(conn)
+        # First should_process: fetchone returns None (not yet processed)
+        not_found_cursor = MagicMock()
+        not_found_cursor.fetchone = AsyncMock(return_value=None)
+        not_found_cursor.rowcount = 1
 
-            event_id = uuid4()
+        # mark_processed INSERT cursor
+        insert_cursor = MagicMock()
+        insert_cursor.rowcount = 1
 
-            # First check should allow processing
-            should_process = await inbox.should_process(conn, event_id, "test_consumer")
-            assert should_process is True
+        # Second should_process: fetchone returns a row (already processed)
+        found_cursor = MagicMock()
+        found_cursor.fetchone = AsyncMock(return_value={"event_id": str(event_id)})
 
-            # Mark as processed
-            await inbox.mark_processed(conn, event_id, "test_consumer")
-            await conn.commit()
+        conn.execute = AsyncMock(
+            side_effect=[
+                not_found_cursor,  # should_process (is_processed SELECT)
+                insert_cursor,  # mark_processed INSERT
+                found_cursor,  # should_process again (is_processed SELECT)
+            ]
+        )
 
-            # Second check should block processing
-            should_process_again = await inbox.should_process(conn, event_id, "test_consumer")
+        should_process = await inbox.should_process(conn, event_id, "test_consumer")
+        assert should_process is True
 
+        await inbox.mark_processed(conn, event_id, "test_consumer")
+
+        should_process_again = await inbox.should_process(conn, event_id, "test_consumer")
         assert should_process_again is False
 
     @pytest.mark.asyncio
-    async def test_different_consumers_independent(self, inbox: EventInbox, tmp_path: Path) -> None:
+    async def test_different_consumers_independent(self, inbox: EventInbox) -> None:
         """Test that different consumers track independently."""
-        db_path = str(tmp_path / "test.db")
+        event_id = uuid4()
+        conn = _mock_pg_conn()
 
-        async with aiosqlite.connect(db_path) as conn:
-            await inbox.create_table(conn)
+        # mark_processed for consumer1
+        insert_cursor = MagicMock()
+        insert_cursor.rowcount = 1
 
-            event_id = uuid4()
+        # should_process for consumer2: not found
+        not_found_cursor = MagicMock()
+        not_found_cursor.fetchone = AsyncMock(return_value=None)
 
-            # Consumer 1 processes
-            await inbox.mark_processed(conn, event_id, "consumer1")
-            await conn.commit()
+        conn.execute = AsyncMock(
+            side_effect=[
+                insert_cursor,  # mark_processed consumer1 INSERT
+                not_found_cursor,  # should_process consumer2 SELECT
+            ]
+        )
 
-            # Consumer 2 should still be able to process
-            should_process = await inbox.should_process(conn, event_id, "consumer2")
-
+        await inbox.mark_processed(conn, event_id, "consumer1")
+        should_process = await inbox.should_process(conn, event_id, "consumer2")
         assert should_process is True
 
     @pytest.mark.asyncio
-    async def test_mark_error_blocks_reprocessing(self, inbox: EventInbox, tmp_path: Path) -> None:
+    async def test_mark_error_blocks_reprocessing(self, inbox: EventInbox) -> None:
         """Test that marking error still marks as processed (for DLQ handling)."""
-        db_path = str(tmp_path / "test.db")
+        import json
 
-        async with aiosqlite.connect(db_path) as conn:
-            await inbox.create_table(conn)
+        event_id = uuid4()
+        conn = _mock_pg_conn()
 
-            event_id = uuid4()
+        # mark_error calls mark_processed which calls INSERT
+        insert_cursor = MagicMock()
+        insert_cursor.rowcount = 1
 
-            # Mark error (this records error but still marks as processed)
-            await inbox.mark_error(conn, event_id, "test_consumer", "Processing failed")
-            await conn.commit()
+        # get_entry returns the error row
+        error_row = {
+            "event_id": str(event_id),
+            "consumer_name": "test_consumer",
+            "processed_at": datetime.now(UTC).isoformat(),
+            "result": "error",
+            "result_data": json.dumps({"error": "Processing failed"}),
+        }
+        get_cursor = MagicMock()
+        get_cursor.fetchone = AsyncMock(return_value=error_row)
 
-            # Check the entry exists with error result
-            entry = await inbox.get_entry(conn, event_id, "test_consumer")
+        conn.execute = AsyncMock(
+            side_effect=[
+                insert_cursor,  # mark_error → mark_processed INSERT
+                get_cursor,  # get_entry SELECT
+            ]
+        )
+
+        await inbox.mark_error(conn, event_id, "test_consumer", "Processing failed")
+        entry = await inbox.get_entry(conn, event_id, "test_consumer")
 
         assert entry is not None
         assert entry.result == ProcessingResult.ERROR
@@ -598,21 +720,46 @@ class TestIdempotentConsumer:
     """Tests for idempotent consumer wrapper."""
 
     @pytest.mark.asyncio
-    async def test_handler_decorator(self, tmp_path: Path) -> None:
+    async def test_handler_decorator(self) -> None:
         """Test handler decorator for idempotent processing."""
-        db_path = str(tmp_path / "test.db")
         inbox = EventInbox()
         bus = DevBusMemory()
 
-        # Create table
-        async with aiosqlite.connect(db_path) as conn:
-            await inbox.create_table(conn)
+        mock_conn = _mock_pg_conn()
+
+        # Connect calls create_table (3 executes for CREATE TABLE + 2 indexes)
+        # Then: should_process (not found) → mark_processed (INSERT)
+        # Then: should_process again (found) → skip
+        not_found_cursor = MagicMock()
+        not_found_cursor.fetchone = AsyncMock(return_value=None)
+        not_found_cursor.rowcount = 0
+
+        insert_cursor = MagicMock()
+        insert_cursor.rowcount = 1
+
+        found_cursor = MagicMock()
+        found_cursor.fetchone = AsyncMock(return_value={"event_id": "x"})
+
+        # create_table: 3 executes (CREATE TABLE + 2 indexes) → each returns a generic cursor
+        create_cursors = [MagicMock() for _ in range(3)]
+
+        mock_conn.execute = AsyncMock(
+            side_effect=[
+                *create_cursors,  # create_table
+                not_found_cursor,  # first should_process
+                insert_cursor,  # mark_processed
+                found_cursor,  # second should_process (duplicate)
+            ]
+        )
+
+        async def _connect() -> Any:
+            return mock_conn
 
         consumer = IdempotentConsumer(
-            db_path,
-            inbox,
-            ConsumerConfig(consumer_name="test_consumer"),
+            inbox=inbox,
+            config=ConsumerConfig(consumer_name="test_consumer"),
             bus=bus,
+            connect=_connect,
         )
         await consumer.connect()
 
@@ -653,32 +800,74 @@ class TestOutboxPublisher:
     """Tests for outbox publisher."""
 
     @pytest.mark.asyncio
-    async def test_drain_outbox(self, tmp_path: Path) -> None:
+    async def test_drain_outbox(self) -> None:
         """Test draining events from outbox."""
-        db_path = str(tmp_path / "test.db")
         bus = DevBusMemory()
         outbox = EventOutbox()
 
-        # Setup outbox
-        async with aiosqlite.connect(db_path) as conn:
-            await outbox.create_table(conn)
+        # Build 3 envelopes that will appear in the outbox
+        envelopes = [
+            EventEnvelope.create(
+                event_type="app.Order.created",
+                key=f"order-{i}",
+                payload={},
+            )
+            for i in range(3)
+        ]
 
-            # Add events
-            for i in range(3):
-                envelope = EventEnvelope.create(
-                    event_type="app.Order.created",
-                    key=f"order-{i}",
-                    payload={},
-                )
-                await outbox.append(conn, envelope, "app.Order")
-            await conn.commit()
+        mock_conn = _mock_pg_conn()
 
-        # Create publisher and drain
+        # fetch_pending returns the 3 entries, then empty on second call
+        fake_rows = [
+            {
+                "id": str(e.event_id),
+                "topic": "app.Order",
+                "event_type": e.event_type,
+                "key": e.key,
+                "envelope_json": e.to_json(),
+                "status": "pending",
+                "created_at": datetime.now(UTC).isoformat(),
+                "published_at": None,
+                "attempts": 0,
+                "last_error": None,
+                "lock_token": None,
+                "lock_expires_at": None,
+            }
+            for e in envelopes
+        ]
+
+        # drain calls _process_batch which calls fetch_pending (with lock)
+        # The lock path does 2 executes: UPDATE then SELECT
+        first_update = MagicMock()  # UPDATE to lock
+        first_fetch = MagicMock()
+        first_fetch.fetchall = AsyncMock(return_value=fake_rows)
+
+        # After publishing each entry mark_published is called (3 times)
+        mark_cursors = [MagicMock() for _ in range(3)]
+
+        # Second _process_batch: lock UPDATE then SELECT returns empty
+        second_update = MagicMock()
+        second_fetch = MagicMock()
+        second_fetch.fetchall = AsyncMock(return_value=[])
+
+        mock_conn.execute = AsyncMock(
+            side_effect=[
+                first_update,
+                first_fetch,
+                *mark_cursors,
+                second_update,
+                second_fetch,
+            ]
+        )
+
+        async def _connect() -> Any:
+            return mock_conn
+
         publisher = OutboxPublisher(
-            db_path,
-            bus,
-            outbox,
+            bus=bus,
+            outbox=outbox,
             config=PublisherConfig(poll_interval=0.1),
+            connect=_connect,
         )
 
         count = await publisher.drain(timeout=5.0)
@@ -699,81 +888,97 @@ class TestEventFramework:
     """Tests for event framework orchestration."""
 
     @pytest.mark.asyncio
-    async def test_framework_lifecycle(self, tmp_path: Path) -> None:
+    async def test_framework_lifecycle(self) -> None:
         """Test framework start and stop."""
-        db_path = str(tmp_path / "test.db")
+        mock_conn = _mock_pg_conn()
 
         config = EventFrameworkConfig(
-            db_path=db_path,
-            auto_start_publisher=False,  # Don't start background tasks for test
+            database_url="postgresql://test:test@localhost/test",
+            auto_start_publisher=False,
+            auto_start_consumers=False,
+        )
+
+        framework = EventFramework(config)
+        assert not framework.is_running
+
+        with (
+            patch("dazzle_back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch.object(
+                framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
+            ),
+        ):
+            await framework.start()
+            assert framework.is_running
+
+            await framework.stop()
+            assert not framework.is_running
+
+    @pytest.mark.asyncio
+    async def test_framework_context_manager(self) -> None:
+        """Test framework as context manager."""
+        mock_conn = _mock_pg_conn()
+
+        config = EventFrameworkConfig(
+            database_url="postgresql://test:test@localhost/test",
+            auto_start_publisher=False,
+            auto_start_consumers=False,
+        )
+
+        framework = EventFramework(config)
+        with (
+            patch("dazzle_back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch.object(
+                framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
+            ),
+        ):
+            async with framework:
+                assert framework.is_running
+                assert framework.bus is not None
+
+            assert not framework.is_running
+
+    @pytest.mark.asyncio
+    async def test_emit_event(self) -> None:
+        """Test emitting events through framework."""
+        mock_conn = _mock_pg_conn()
+
+        config = EventFrameworkConfig(
+            database_url="postgresql://test:test@localhost/test",
+            auto_start_publisher=False,
             auto_start_consumers=False,
         )
 
         framework = EventFramework(config)
 
-        assert not framework.is_running
+        with (
+            patch("dazzle_back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch.object(
+                framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
+            ),
+        ):
+            await framework.start()
 
-        await framework.start()
-        assert framework.is_running
-
-        await framework.stop()
-        assert not framework.is_running
-
-    @pytest.mark.asyncio
-    async def test_framework_context_manager(self, tmp_path: Path) -> None:
-        """Test framework as context manager."""
-        db_path = str(tmp_path / "test.db")
-
-        config = EventFrameworkConfig(
-            db_path=db_path,
-            auto_start_publisher=False,
-            auto_start_consumers=False,
-        )
-
-        async with EventFramework(config) as framework:
-            assert framework.is_running
-            assert framework.bus is not None
-
-        assert not framework.is_running
-
-    @pytest.mark.asyncio
-    async def test_emit_event(self, tmp_path: Path) -> None:
-        """Test emitting events through framework."""
-        db_path = str(tmp_path / "test.db")
-
-        config = EventFrameworkConfig(
-            db_path=db_path,
-            auto_start_publisher=False,
-            auto_start_consumers=False,
-        )
-
-        async with EventFramework(config) as framework:
-            # Get a connection
-            conn = await framework.get_connection()
-
-            # Emit event
+            # Emit event through framework using a separate mock connection
             envelope = EventEnvelope.create(
                 event_type="app.Order.created",
                 key="order-123",
                 payload={"amount": 100},
             )
+            emit_conn = _mock_pg_conn()
+            await framework.emit_event(emit_conn, envelope, "app.Order")
 
-            await framework.emit_event(conn, envelope, "app.Order")
-            await conn.commit()
-            await conn.close()
-
-            # Check outbox stats
             status = await framework.get_status()
+            await framework.stop()
 
         assert status["events_published"] == 1
 
     @pytest.mark.asyncio
-    async def test_handler_registration(self, tmp_path: Path) -> None:
+    async def test_handler_registration(self) -> None:
         """Test registering event handlers."""
-        db_path = str(tmp_path / "test.db")
+        mock_conn = _mock_pg_conn()
 
         config = EventFrameworkConfig(
-            db_path=db_path,
+            database_url="postgresql://test:test@localhost/test",
             auto_start_publisher=False,
             auto_start_consumers=False,
         )
@@ -784,11 +989,17 @@ class TestEventFramework:
         async def handle_order(event: EventEnvelope) -> None:
             pass
 
-        await framework.start()
+        with (
+            patch("dazzle_back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch.object(
+                framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
+            ),
+        ):
+            await framework.start()
 
-        assert framework._stats.active_subscriptions == 1
+            assert framework._stats.active_subscriptions == 1
 
-        await framework.stop()
+            await framework.stop()
 
 
 # =============================================================================
@@ -800,16 +1011,14 @@ class TestConnectFnInjection:
     """Tests for ConnectFn-based connection injection in Publisher and Consumer."""
 
     @pytest.mark.asyncio
-    async def test_publisher_with_connect_fn(self, tmp_path: Path) -> None:
+    async def test_publisher_with_connect_fn(self) -> None:
         """Verify OutboxPublisher works with connect= kwarg."""
-        db_path = str(tmp_path / "test.db")
         bus = DevBusMemory()
         outbox = EventOutbox()
+        mock_conn = _mock_pg_conn()
 
-        async def _connect() -> aiosqlite.Connection:
-            conn = await aiosqlite.connect(db_path)
-            await outbox.create_table(conn)
-            return conn
+        async def _connect() -> Any:
+            return mock_conn
 
         publisher = OutboxPublisher(
             bus=bus,
@@ -824,14 +1033,14 @@ class TestConnectFnInjection:
         assert not publisher.is_running
 
     @pytest.mark.asyncio
-    async def test_consumer_with_connect_fn(self, tmp_path: Path) -> None:
+    async def test_consumer_with_connect_fn(self) -> None:
         """Verify IdempotentConsumer works with connect= kwarg."""
-        db_path = str(tmp_path / "test.db")
         bus = DevBusMemory()
         inbox = EventInbox()
+        mock_conn = _mock_pg_conn()
 
-        async def _connect() -> aiosqlite.Connection:
-            return await aiosqlite.connect(db_path)
+        async def _connect() -> Any:
+            return mock_conn
 
         consumer = IdempotentConsumer(
             inbox=inbox,
@@ -844,69 +1053,53 @@ class TestConnectFnInjection:
         assert consumer._conn is not None
         await consumer.close()
 
-    def test_publisher_db_path_deprecation(self) -> None:
-        """Verify OutboxPublisher(db_path=...) emits DeprecationWarning."""
-        import warnings
-
-        bus = DevBusMemory()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            OutboxPublisher(db_path="test.db", bus=bus)
-            assert len(w) == 1
-            assert issubclass(w[0].category, DeprecationWarning)
-            assert "deprecated" in str(w[0].message).lower()
-
-    def test_consumer_db_path_deprecation(self) -> None:
-        """Verify IdempotentConsumer(db_path=...) emits DeprecationWarning."""
-        import warnings
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            IdempotentConsumer(db_path="test.db")
-            assert len(w) == 1
-            assert issubclass(w[0].category, DeprecationWarning)
-            assert "deprecated" in str(w[0].message).lower()
-
     def test_publisher_requires_connect_or_db_path(self) -> None:
-        """Verify OutboxPublisher raises if neither connect nor db_path provided."""
+        """Verify OutboxPublisher raises if connect not provided."""
         bus = DevBusMemory()
-        with pytest.raises(ValueError, match="connect or db_path"):
+        with pytest.raises(ValueError, match="connect is required"):
             OutboxPublisher(bus=bus)
 
     def test_consumer_requires_connect_or_db_path(self) -> None:
-        """Verify IdempotentConsumer raises if neither connect nor db_path provided."""
-        with pytest.raises(ValueError, match="connect or db_path"):
+        """Verify IdempotentConsumer raises if connect not provided."""
+        with pytest.raises(ValueError, match="connect is required"):
             IdempotentConsumer()
 
     @pytest.mark.asyncio
-    async def test_framework_health_check(self, tmp_path: Path) -> None:
+    async def test_framework_health_check(self) -> None:
         """Verify health_check() returns expected structure."""
-        db_path = str(tmp_path / "test.db")
+        mock_conn = _mock_pg_conn()
 
         config = EventFrameworkConfig(
-            db_path=db_path,
+            database_url="postgresql://test:test@localhost/test",
             auto_start_publisher=False,
             auto_start_consumers=False,
         )
 
-        async with EventFramework(config) as framework:
-            health = await framework.health_check()
+        framework = EventFramework(config)
+        with (
+            patch("dazzle_back.events.tier.create_bus", return_value=DevBusMemory()),
+            patch.object(
+                framework, "_make_connect_fn", return_value=AsyncMock(return_value=mock_conn)
+            ),
+        ):
+            async with framework:
+                health = await framework.health_check()
 
-            assert health["tier"] in ("sqlite", "memory", "postgres")
-            assert health["bus_type"] in ("DevBusMemory", "PostgresBus")
-            assert health["publisher_running"] is False
-            assert health["consumer_count"] == 0
-            assert "outbox_depth" in health
-            assert "last_publish_at" in health
-            assert "last_error" in health
+                assert health["tier"] in ("memory", "postgres", "redis")
+                assert health["bus_type"] in ("DevBusMemory", "PostgresBus", "RedisBus")
+                assert health["publisher_running"] is False
+                assert health["consumer_count"] == 0
+                assert "outbox_depth" in health
+                assert "last_publish_at" in health
+                assert "last_error" in health
 
     @pytest.mark.asyncio
-    async def test_connect_fn_failure_logged(self, tmp_path: Path) -> None:
+    async def test_connect_fn_failure_logged(self) -> None:
         """Verify that when connect() raises, an error is logged (not swallowed)."""
         bus = DevBusMemory()
         outbox = EventOutbox()
 
-        async def _failing_connect() -> aiosqlite.Connection:
+        async def _failing_connect() -> Any:
             raise ConnectionError("test connection failure")
 
         publisher = OutboxPublisher(

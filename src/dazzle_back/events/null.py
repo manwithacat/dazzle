@@ -2,7 +2,7 @@
 No-op event system implementations.
 
 Provides NullBus and NullEventFramework for use when the full event system
-dependencies (aiosqlite, etc.) are not installed. These implementations
+dependencies (psycopg, etc.) are not installed. These implementations
 silently accept all operations, allowing application code to use the event
 API without conditional checks.
 """
@@ -23,9 +23,9 @@ from dazzle_back.events.bus import (
 )
 from dazzle_back.events.envelope import EventEnvelope
 
-# Probe for aiosqlite — the canary dependency for the full event system.
+# Probe for psycopg — the canary dependency for the full event system.
 try:
-    import aiosqlite  # noqa: F401
+    import psycopg  # noqa: F401
 
     EVENTS_AVAILABLE: bool = True
 except ImportError:

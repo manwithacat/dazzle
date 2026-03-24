@@ -37,25 +37,8 @@ class InboxEntry:
     result_data: dict[str, Any] | None = None
 
 
-# SQL statements for inbox table
-CREATE_INBOX_TABLE = """
-CREATE TABLE IF NOT EXISTS _dazzle_event_inbox (
-    event_id TEXT NOT NULL,
-    consumer_name TEXT NOT NULL,
-    processed_at TEXT NOT NULL DEFAULT (datetime('now')),
-    result TEXT NOT NULL DEFAULT 'success',
-    result_data TEXT,
-    PRIMARY KEY (event_id, consumer_name)
-);
-"""
-
-CREATE_INBOX_INDEXES = """
-CREATE INDEX IF NOT EXISTS idx_inbox_consumer ON _dazzle_event_inbox(consumer_name);
-CREATE INDEX IF NOT EXISTS idx_inbox_processed ON _dazzle_event_inbox(processed_at);
-"""
-
 # SQL statements for inbox table (PostgreSQL)
-CREATE_INBOX_TABLE_POSTGRES = """
+CREATE_INBOX_TABLE = """
 CREATE TABLE IF NOT EXISTS _dazzle_event_inbox (
     event_id TEXT NOT NULL,
     consumer_name TEXT NOT NULL,
@@ -66,7 +49,7 @@ CREATE TABLE IF NOT EXISTS _dazzle_event_inbox (
 );
 """
 
-CREATE_INBOX_INDEXES_POSTGRES = (
+CREATE_INBOX_INDEXES = (
     "CREATE INDEX IF NOT EXISTS idx_inbox_consumer ON _dazzle_event_inbox(consumer_name)",
     "CREATE INDEX IF NOT EXISTS idx_inbox_processed ON _dazzle_event_inbox(processed_at)",
 )
@@ -101,31 +84,42 @@ class EventInbox:
     def __init__(
         self,
         table_name: str = "_dazzle_event_inbox",
-        placeholder: str = "?",
-        backend_type: str = "sqlite",
     ) -> None:
         """
         Initialize the inbox.
 
         Args:
-            table_name: Name of the inbox table
-            placeholder: SQL placeholder style ("?" for SQLite, "%s" for Postgres)
-            backend_type: Database backend type ("sqlite" or "postgres")
+            table_name: Name of the inbox table (internal constant, never user input)
         """
         self._table = table_name
-        self._ph = placeholder
-        self._backend_type = backend_type
+        # Pre-build all SQL strings from the trusted internal table name so
+        # that no f-strings appear at query-execution sites.
+        t = table_name
+        self._sql_is_processed = f"SELECT 1 FROM {t} WHERE event_id = %s AND consumer_name = %s"
+        self._sql_mark_processed = (
+            f"INSERT INTO {t}"
+            " (event_id, consumer_name, processed_at, result, result_data)"
+            " VALUES (%s, %s, %s, %s, %s)"
+            " ON CONFLICT DO NOTHING"
+        )
+        self._sql_get_entry = f"SELECT * FROM {t} WHERE event_id = %s AND consumer_name = %s"
+        self._sql_delete_entry = f"DELETE FROM {t} WHERE event_id = %s AND consumer_name = %s"
+        self._sql_stats_filtered = (
+            f"SELECT result, COUNT(*) as count FROM {t} WHERE consumer_name = %s GROUP BY result"
+        )
+        self._sql_stats_all = f"SELECT result, COUNT(*) as count FROM {t} GROUP BY result"
+        self._sql_cleanup = f"DELETE FROM {t} WHERE processed_at < %s"
+        self._sql_recent = (
+            f"SELECT * FROM {t} WHERE consumer_name = %s ORDER BY processed_at DESC LIMIT %s"
+        )
+        self._sql_list_consumers = f"SELECT DISTINCT consumer_name FROM {t} ORDER BY consumer_name"
 
     async def create_table(self, conn: Any) -> None:
         """Create the inbox table if it doesn't exist."""
-        if self._backend_type == "postgres":
-            await conn.execute(CREATE_INBOX_TABLE_POSTGRES)
-            for idx_sql in CREATE_INBOX_INDEXES_POSTGRES:
-                await conn.execute(idx_sql)
-            await conn.commit()
-        else:
-            await conn.executescript(CREATE_INBOX_TABLE + CREATE_INBOX_INDEXES)
-            await conn.commit()
+        await conn.execute(CREATE_INBOX_TABLE)
+        for idx_sql in CREATE_INBOX_INDEXES:
+            await conn.execute(idx_sql)
+        await conn.commit()
 
     async def is_processed(
         self,
@@ -144,12 +138,8 @@ class EventInbox:
         Returns:
             True if already processed, False otherwise
         """
-        ph = self._ph
         cursor = await conn.execute(
-            f"""
-            SELECT 1 FROM {self._table}
-            WHERE event_id = {ph} AND consumer_name = {ph}
-            """,
+            self._sql_is_processed,
             (str(event_id), consumer_name),
         )
         row = await cursor.fetchone()
@@ -204,24 +194,9 @@ class EventInbox:
         import json
 
         result_json = json.dumps(result_data) if result_data else None
-        ph = self._ph
-
-        if self._backend_type == "postgres":
-            sql = f"""
-                INSERT INTO {self._table}
-                (event_id, consumer_name, processed_at, result, result_data)
-                VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
-                ON CONFLICT DO NOTHING
-            """
-        else:
-            sql = f"""
-                INSERT OR IGNORE INTO {self._table}
-                (event_id, consumer_name, processed_at, result, result_data)
-                VALUES ({ph}, {ph}, {ph}, {ph}, {ph})
-            """
 
         cursor = await conn.execute(
-            sql,
+            self._sql_mark_processed,
             (
                 str(event_id),
                 consumer_name,
@@ -273,19 +248,8 @@ class EventInbox:
         """Get an inbox entry if it exists."""
         import json
 
-        try:
-            import aiosqlite
-
-            conn.row_factory = aiosqlite.Row
-        except ImportError:
-            pass
-
-        ph = self._ph
         cursor = await conn.execute(
-            f"""
-            SELECT * FROM {self._table}
-            WHERE event_id = {ph} AND consumer_name = {ph}
-            """,
+            self._sql_get_entry,
             (str(event_id), consumer_name),
         )
         row = await cursor.fetchone()
@@ -315,12 +279,8 @@ class EventInbox:
         Returns:
             True if entry was deleted, False if not found
         """
-        ph = self._ph
         cursor = await conn.execute(
-            f"""
-            DELETE FROM {self._table}
-            WHERE event_id = {ph} AND consumer_name = {ph}
-            """,
+            self._sql_delete_entry,
             (str(event_id), consumer_name),
         )
         await conn.commit()
@@ -341,32 +301,13 @@ class EventInbox:
         Returns:
             Statistics dict with counts by result
         """
-        try:
-            import aiosqlite
-
-            conn.row_factory = aiosqlite.Row
-        except ImportError:
-            pass
-
-        ph = self._ph
         if consumer_name:
             cursor = await conn.execute(
-                f"""
-                SELECT result, COUNT(*) as count
-                FROM {self._table}
-                WHERE consumer_name = {ph}
-                GROUP BY result
-                """,
+                self._sql_stats_filtered,
                 (consumer_name,),
             )
         else:
-            cursor = await conn.execute(
-                f"""
-                SELECT result, COUNT(*) as count
-                FROM {self._table}
-                GROUP BY result
-                """
-            )
+            cursor = await conn.execute(self._sql_stats_all)
 
         stats: dict[str, Any] = {
             "success": 0,
@@ -400,14 +341,7 @@ class EventInbox:
         from datetime import timedelta
 
         cutoff = (datetime.now(UTC) - timedelta(days=older_than_days)).isoformat()
-        ph = self._ph
-        cursor = await conn.execute(
-            f"""
-            DELETE FROM {self._table}
-            WHERE processed_at < {ph}
-            """,
-            (cutoff,),
-        )
+        cursor = await conn.execute(self._sql_cleanup, (cutoff,))
         await conn.commit()
         return int(cursor.rowcount)
 
@@ -421,21 +355,8 @@ class EventInbox:
         """Get recent entries for a consumer."""
         import json
 
-        try:
-            import aiosqlite
-
-            conn.row_factory = aiosqlite.Row
-        except ImportError:
-            pass
-
-        ph = self._ph
         cursor = await conn.execute(
-            f"""
-            SELECT * FROM {self._table}
-            WHERE consumer_name = {ph}
-            ORDER BY processed_at DESC
-            LIMIT {ph}
-            """,
+            self._sql_recent,
             (consumer_name, limit),
         )
 
@@ -458,7 +379,5 @@ class EventInbox:
         conn: Any,
     ) -> list[str]:
         """Get list of all consumer names that have processed events."""
-        cursor = await conn.execute(
-            f"SELECT DISTINCT consumer_name FROM {self._table} ORDER BY consumer_name"
-        )
+        cursor = await conn.execute(self._sql_list_consumers)
         return [row[0] async for row in cursor]

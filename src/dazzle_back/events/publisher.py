@@ -19,20 +19,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import warnings
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
-
-if TYPE_CHECKING:
-    import aiosqlite
 
 from dazzle_back.events.bus import EventBus, PublishError
 from dazzle_back.events.outbox import EventOutbox, OutboxEntry
 
-# Connection factory type: async callable returning a connection (aiosqlite or psycopg)
+# Connection factory type: async callable returning a psycopg connection
 ConnectFn = Callable[[], Awaitable[Any]]
 
 logger = logging.getLogger(__name__)
@@ -95,7 +91,6 @@ class OutboxPublisher:
 
     def __init__(
         self,
-        db_path: str | None = None,
         bus: EventBus | None = None,
         outbox: EventOutbox | None = None,
         config: PublisherConfig | None = None,
@@ -106,33 +101,17 @@ class OutboxPublisher:
         Initialize the publisher.
 
         Args:
-            db_path: Path to SQLite database (deprecated — use connect)
             bus: Event bus to publish to
             outbox: Outbox instance (creates default if None)
             config: Publisher configuration
             connect: Async callable returning a database connection
         """
-        if connect is not None:
-            self._connect_fn = connect
-        elif db_path is not None:
-            warnings.warn(
-                "OutboxPublisher(db_path=...) is deprecated, use connect= instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-
-            async def _aiosqlite_connect() -> aiosqlite.Connection:
-                import aiosqlite
-
-                return await aiosqlite.connect(db_path)
-
-            self._connect_fn = _aiosqlite_connect
-        else:
-            raise ValueError("Either connect or db_path must be provided")
+        if connect is None:
+            raise ValueError("connect is required")
+        self._connect_fn = connect
 
         if bus is None:
             raise ValueError("bus is required")
-        self._db_path = db_path
         self._bus = bus
         self._outbox = outbox or EventOutbox()
         self._config = config or PublisherConfig()
@@ -171,7 +150,7 @@ class OutboxPublisher:
                 "publisher_id": self._config.publisher_id,
                 "poll_interval": self._config.poll_interval,
                 "batch_size": self._config.batch_size,
-                "backend": "postgres" if self._db_path is None else "sqlite",
+                "backend": "postgres",
             },
         )
 

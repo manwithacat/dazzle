@@ -11,7 +11,6 @@ Rule 2: At-least-once delivery is assumed; consumers must be idempotent
 from __future__ import annotations
 
 import logging
-import warnings
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -22,7 +21,7 @@ from dazzle_back.events.bus import EventBus, NackReason
 from dazzle_back.events.envelope import EventEnvelope
 from dazzle_back.events.inbox import EventInbox, ProcessingResult
 
-# Connection factory type: async callable returning a connection (aiosqlite or psycopg)
+# Connection factory type: async callable returning a psycopg connection
 ConnectFn = Callable[[], Awaitable[Any]]
 
 logger = logging.getLogger(__name__)
@@ -71,9 +70,9 @@ class IdempotentConsumer:
     Usage:
         inbox = EventInbox()
         consumer = IdempotentConsumer(
-            db_path="app.db",
             inbox=inbox,
             config=ConsumerConfig(consumer_name="order-processor"),
+            connect=connect_fn,
         )
 
         @consumer.handler
@@ -87,7 +86,6 @@ class IdempotentConsumer:
 
     def __init__(
         self,
-        db_path: str | None = None,
         inbox: EventInbox | None = None,
         config: ConsumerConfig | None = None,
         *,
@@ -98,31 +96,15 @@ class IdempotentConsumer:
         Initialize the idempotent consumer.
 
         Args:
-            db_path: Path to SQLite database (deprecated — use connect)
             inbox: Inbox instance (creates default if None)
             config: Consumer configuration
             bus: Optional event bus for ack/nack
             connect: Async callable returning a database connection
         """
-        if connect is not None:
-            self._connect_fn = connect
-        elif db_path is not None:
-            warnings.warn(
-                "IdempotentConsumer(db_path=...) is deprecated, use connect= instead",
-                DeprecationWarning,
-                stacklevel=2,
-            )
+        if connect is None:
+            raise ValueError("connect is required")
+        self._connect_fn = connect
 
-            async def _aiosqlite_connect() -> Any:
-                import aiosqlite
-
-                return await aiosqlite.connect(db_path)
-
-            self._connect_fn = _aiosqlite_connect
-        else:
-            raise ValueError("Either connect or db_path must be provided")
-
-        self._db_path = db_path
         self._inbox = inbox or EventInbox()
         self._config = config or ConsumerConfig(consumer_name="default")
         self._bus = bus
@@ -310,7 +292,6 @@ class IdempotentConsumer:
 def idempotent(
     consumer_name: str,
     *,
-    db_path: str | None = None,
     connect: ConnectFn | None = None,
 ) -> Callable[[EventHandler], EventHandler]:
     """
@@ -324,23 +305,9 @@ def idempotent(
             # Process event
             pass
     """
-    if connect is not None:
-        connect_fn = connect
-    elif db_path is not None:
-        warnings.warn(
-            "idempotent(db_path=...) is deprecated, use connect= instead",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        async def _aiosqlite_connect() -> Any:
-            import aiosqlite
-
-            return await aiosqlite.connect(db_path)
-
-        connect_fn = _aiosqlite_connect
-    else:
-        raise ValueError("Either connect or db_path must be provided")
+    if connect is None:
+        raise ValueError("connect is required")
+    connect_fn = connect
 
     inbox = EventInbox()
     _conn: Any = None

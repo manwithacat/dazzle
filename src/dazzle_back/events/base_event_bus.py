@@ -203,7 +203,7 @@ class BaseEventBus(EventBus):
         Args:
             topic: Optional topic filter.
             group_id: Optional group_id filter.
-            placeholder: SQL parameter placeholder ("?" for SQLite, "%s" for PG).
+            placeholder: SQL parameter placeholder ("%s" for PostgreSQL).
 
         Returns:
             (where_clause, params) — clause is empty string when no filters.
