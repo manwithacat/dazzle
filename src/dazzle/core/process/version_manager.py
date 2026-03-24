@@ -36,9 +36,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 try:
-    import aiosqlite
+    import aiosqlite  # type: ignore[import-untyped]
 except ImportError:
-    aiosqlite = None  # type: ignore[assignment]
+    aiosqlite = None  # type: ignore[assignment,unused-ignore]
 
 if TYPE_CHECKING:
     from .adapter import ProcessAdapter
