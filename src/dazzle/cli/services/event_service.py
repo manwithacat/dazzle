@@ -105,7 +105,7 @@ class EventService:
 
         conn = await self._get_outbox_connection()
         try:
-            outbox = EventOutbox(use_postgres=True)
+            outbox = EventOutbox()
             await outbox.create_table(conn)
             return await outbox.get_stats(conn)
         finally:
@@ -117,7 +117,7 @@ class EventService:
 
         conn = await self._get_outbox_connection()
         try:
-            outbox = EventOutbox(use_postgres=True)
+            outbox = EventOutbox()
             return await outbox.get_failed_entries(conn, limit=limit)
         finally:
             await conn.close()
@@ -130,7 +130,7 @@ class EventService:
         if not db_url:
             raise RuntimeError("DATABASE_URL not set. Cannot drain outbox.")
 
-        outbox = EventOutbox(use_postgres=True)
+        outbox = EventOutbox()
         async with self._broker() as bus:
             import psycopg
             from psycopg.rows import dict_row

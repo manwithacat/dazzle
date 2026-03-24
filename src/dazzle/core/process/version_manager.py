@@ -35,7 +35,10 @@ from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import aiosqlite
+try:
+    import aiosqlite
+except ImportError:
+    aiosqlite = None  # type: ignore[assignment]
 
 if TYPE_CHECKING:
     from .adapter import ProcessAdapter
