@@ -153,3 +153,64 @@ class GrantStore:
         self._record_event(grant_id, "created", granted_by_id)
         self._conn.commit()
         return self._get_grant(grant_id)
+
+    def _check_rowcount(self, rowcount: int, grant_id: UUID, event_type: str) -> None:
+        """Raise ValueError if an atomic UPDATE matched zero rows."""
+        if rowcount == 0:
+            row = self._conn.execute(
+                "SELECT status FROM _grants WHERE id = %s", (grant_id,)
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"Grant {grant_id} not found")
+            raise ValueError(f"Cannot {event_type} grant in status '{row['status']}'")
+
+    def approve_grant(self, grant_id: UUID, approved_by_id: UUID) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        cursor = self._conn.execute(
+            """UPDATE _grants
+               SET status = %s, approved_by_id = %s, approved_at = %s
+               WHERE id = %s AND status = %s""",
+            (GrantStatus.ACTIVE, approved_by_id, now, grant_id, GrantStatus.PENDING_APPROVAL),
+        )
+        self._check_rowcount(cursor.rowcount, grant_id, "approve")
+        self._record_event(grant_id, "approved", approved_by_id)
+        self._conn.commit()
+        return self._get_grant(grant_id)
+
+    def reject_grant(
+        self, grant_id: UUID, rejected_by_id: UUID, reason: str | None = None
+    ) -> dict[str, Any]:
+        cursor = self._conn.execute(
+            """UPDATE _grants SET status = %s
+               WHERE id = %s AND status = %s""",
+            (GrantStatus.REJECTED, grant_id, GrantStatus.PENDING_APPROVAL),
+        )
+        self._check_rowcount(cursor.rowcount, grant_id, "reject")
+        metadata = {"reason": reason} if reason else None
+        self._record_event(grant_id, "rejected", rejected_by_id, metadata)
+        self._conn.commit()
+        return self._get_grant(grant_id)
+
+    def cancel_grant(self, grant_id: UUID, cancelled_by_id: UUID) -> dict[str, Any]:
+        cursor = self._conn.execute(
+            """UPDATE _grants SET status = %s
+               WHERE id = %s AND status = %s""",
+            (GrantStatus.CANCELLED, grant_id, GrantStatus.PENDING_APPROVAL),
+        )
+        self._check_rowcount(cursor.rowcount, grant_id, "cancel")
+        self._record_event(grant_id, "cancelled", cancelled_by_id)
+        self._conn.commit()
+        return self._get_grant(grant_id)
+
+    def revoke_grant(self, grant_id: UUID, revoked_by_id: UUID) -> dict[str, Any]:
+        now = datetime.now(UTC)
+        cursor = self._conn.execute(
+            """UPDATE _grants
+               SET status = %s, revoked_at = %s, revoked_by_id = %s
+               WHERE id = %s AND status = %s""",
+            (GrantStatus.REVOKED, now, revoked_by_id, grant_id, GrantStatus.ACTIVE),
+        )
+        self._check_rowcount(cursor.rowcount, grant_id, "revoke")
+        self._record_event(grant_id, "revoked", revoked_by_id)
+        self._conn.commit()
+        return self._get_grant(grant_id)

@@ -1,6 +1,7 @@
 # tests/unit/test_grant_store.py
 """Tests for runtime grant store (PostgreSQL)."""
 
+import json
 import os
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
@@ -143,3 +144,155 @@ class TestCreateGrant:
         ).fetchall()
         assert len(events) == 1
         assert events[0]["event_type"] == "created"
+
+
+class TestApproveGrant:
+    def test_approve_pending_grant(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        updated = store.approve_grant(grant["id"], uuid4())
+        assert updated["status"] == GrantStatus.ACTIVE
+        assert updated["approved_by_id"] is not None
+        assert updated["approved_at"] is not None
+
+    def test_approve_non_pending_raises(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        with pytest.raises(ValueError, match="Cannot approve"):
+            store.approve_grant(grant["id"], uuid4())
+
+    def test_approve_nonexistent_raises(self, pg_conn):
+        store = GrantStore(pg_conn)
+        with pytest.raises(ValueError, match="not found"):
+            store.approve_grant(uuid4(), uuid4())
+
+
+class TestRejectGrant:
+    def test_reject_pending_grant(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        updated = store.reject_grant(grant["id"], uuid4(), reason="Not needed")
+        assert updated["status"] == GrantStatus.REJECTED
+
+    def test_reject_active_raises(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        with pytest.raises(ValueError, match="Cannot reject"):
+            store.reject_grant(grant["id"], uuid4())
+
+    def test_reject_records_reason_metadata(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        store.reject_grant(grant["id"], uuid4(), reason="Not needed")
+        events = pg_conn.execute(
+            "SELECT * FROM _grant_events WHERE grant_id = %s AND event_type = 'rejected'",
+            (grant["id"],),
+        ).fetchall()
+        assert len(events) == 1
+        meta = events[0]["metadata"]
+        if isinstance(meta, str):
+            meta = json.loads(meta)
+        assert meta["reason"] == "Not needed"
+
+
+class TestCancelGrant:
+    def test_cancel_pending_grant(self, pg_conn):
+        store = GrantStore(pg_conn)
+        granter = uuid4()
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=granter,
+            approval_mode="required",
+        )
+        updated = store.cancel_grant(grant["id"], granter)
+        assert updated["status"] == GrantStatus.CANCELLED
+
+    def test_cancel_active_raises(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        with pytest.raises(ValueError, match="Cannot cancel"):
+            store.cancel_grant(grant["id"], uuid4())
+
+
+class TestRevokeGrant:
+    def test_revoke_active_grant(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        updated = store.revoke_grant(grant["id"], uuid4())
+        assert updated["status"] == GrantStatus.REVOKED
+        assert updated["revoked_at"] is not None
+        assert updated["revoked_by_id"] is not None
+
+    def test_revoke_pending_raises(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        with pytest.raises(ValueError, match="Cannot revoke"):
+            store.revoke_grant(grant["id"], uuid4())
