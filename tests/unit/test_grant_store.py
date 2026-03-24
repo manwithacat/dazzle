@@ -296,3 +296,183 @@ class TestRevokeGrant:
         )
         with pytest.raises(ValueError, match="Cannot revoke"):
             store.revoke_grant(grant["id"], uuid4())
+
+
+class TestHasActiveGrant:
+    def test_has_active_grant_true(self, pg_conn):
+        store = GrantStore(pg_conn)
+        pid, sid = uuid4(), uuid4()
+        store.create_grant(
+            schema_name="x",
+            relation="acting_hod",
+            principal_id=pid,
+            scope_entity="Department",
+            scope_id=sid,
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        assert store.has_active_grant(pid, "acting_hod", sid) is True
+
+    def test_has_active_grant_false_pending(self, pg_conn):
+        store = GrantStore(pg_conn)
+        pid, sid = uuid4(), uuid4()
+        store.create_grant(
+            schema_name="x",
+            relation="acting_hod",
+            principal_id=pid,
+            scope_entity="Department",
+            scope_id=sid,
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        assert store.has_active_grant(pid, "acting_hod", sid) is False
+
+    def test_has_active_grant_false_expired(self, pg_conn):
+        store = GrantStore(pg_conn)
+        pid, sid = uuid4(), uuid4()
+        store.create_grant(
+            schema_name="x",
+            relation="acting_hod",
+            principal_id=pid,
+            scope_entity="Department",
+            scope_id=sid,
+            granted_by_id=uuid4(),
+            approval_mode="none",
+            expires_at=datetime.now(UTC) - timedelta(hours=1),
+        )
+        assert store.has_active_grant(pid, "acting_hod", sid) is False
+
+    def test_has_active_grant_false_revoked(self, pg_conn):
+        store = GrantStore(pg_conn)
+        pid, sid = uuid4(), uuid4()
+        grant = store.create_grant(
+            schema_name="x",
+            relation="acting_hod",
+            principal_id=pid,
+            scope_entity="Department",
+            scope_id=sid,
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        store.revoke_grant(grant["id"], uuid4())
+        assert store.has_active_grant(pid, "acting_hod", sid) is False
+
+
+class TestListGrants:
+    def test_list_by_scope(self, pg_conn):
+        store = GrantStore(pg_conn)
+        sid = uuid4()
+        store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="Department",
+            scope_id=sid,
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        grants = store.list_grants(scope_entity="Department", scope_id=sid)
+        assert len(grants) == 1
+
+    def test_list_by_principal(self, pg_conn):
+        store = GrantStore(pg_conn)
+        pid = uuid4()
+        store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=pid,
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        grants = store.list_grants(principal_id=pid)
+        assert len(grants) == 1
+
+    def test_list_by_status(self, pg_conn):
+        store = GrantStore(pg_conn)
+        store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        assert len(store.list_grants(status=GrantStatus.PENDING_APPROVAL)) == 1
+        assert len(store.list_grants(status=GrantStatus.ACTIVE)) == 0
+
+    def test_list_no_filters(self, pg_conn):
+        store = GrantStore(pg_conn)
+        store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        store.create_grant(
+            schema_name="y",
+            relation="s",
+            principal_id=uuid4(),
+            scope_entity="F",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        assert len(store.list_grants()) == 2
+
+
+class TestExpireStaleGrants:
+    def test_expire_stale(self, pg_conn):
+        store = GrantStore(pg_conn)
+        pid = uuid4()
+        store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=pid,
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+            expires_at=datetime.now(UTC) - timedelta(hours=1),
+        )
+        count = store.expire_stale_grants()
+        assert count == 1
+        assert len(store.list_grants(principal_id=pid, status=GrantStatus.EXPIRED)) == 1
+
+    def test_expire_does_not_touch_future(self, pg_conn):
+        store = GrantStore(pg_conn)
+        store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+            expires_at=datetime.now(UTC) + timedelta(days=30),
+        )
+        assert store.expire_stale_grants() == 0
+
+    def test_expire_records_events(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+            expires_at=datetime.now(UTC) - timedelta(hours=1),
+        )
+        store.expire_stale_grants()
+        events = pg_conn.execute(
+            "SELECT * FROM _grant_events WHERE grant_id = %s AND event_type = 'expired'",
+            (grant["id"],),
+        ).fetchall()
+        assert len(events) == 1

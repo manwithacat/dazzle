@@ -214,3 +214,58 @@ class GrantStore:
         self._record_event(grant_id, "revoked", revoked_by_id)
         self._conn.commit()
         return self._get_grant(grant_id)
+
+    def has_active_grant(self, principal_id: UUID, relation: str, scope_id: UUID) -> bool:
+        now = datetime.now(UTC)
+        row = self._conn.execute(
+            """SELECT 1 FROM _grants
+               WHERE principal_id = %s AND relation = %s AND scope_id = %s
+               AND status = %s
+               AND (expires_at IS NULL OR expires_at > %s)
+               LIMIT 1""",
+            (principal_id, relation, scope_id, GrantStatus.ACTIVE, now),
+        ).fetchone()
+        return row is not None
+
+    def list_grants(
+        self,
+        scope_entity: str | None = None,
+        scope_id: UUID | None = None,
+        principal_id: UUID | None = None,
+        status: str | None = None,
+    ) -> list[dict[str, Any]]:
+        rows = self._conn.execute(
+            """SELECT * FROM _grants
+               WHERE (%s IS NULL OR scope_entity = %s)
+                 AND (%s IS NULL OR scope_id = %s)
+                 AND (%s IS NULL OR principal_id = %s)
+                 AND (%s IS NULL OR status = %s)
+               ORDER BY granted_at DESC""",
+            (
+                scope_entity,
+                scope_entity,
+                scope_id,
+                scope_id,
+                principal_id,
+                principal_id,
+                status,
+                status,
+            ),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def expire_stale_grants(self) -> int:
+        now = datetime.now(UTC)
+        cursor = self._conn.execute(
+            """UPDATE _grants SET status = %s
+               WHERE status = %s AND expires_at IS NOT NULL AND expires_at <= %s
+               RETURNING id""",
+            (GrantStatus.EXPIRED, GrantStatus.ACTIVE, now),
+        )
+        expired = cursor.fetchall()
+        system_actor = UUID(int=0)
+        for row in expired:
+            self._record_event(row["id"], "expired", system_actor)
+        if expired:
+            self._conn.commit()
+        return len(expired)
