@@ -36,7 +36,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 try:
-    import aiosqlite  # type: ignore[import-untyped]
+    import aiosqlite  # type: ignore[import-untyped,unused-ignore]
 except ImportError:
     aiosqlite = None  # type: ignore[assignment,unused-ignore]
 
