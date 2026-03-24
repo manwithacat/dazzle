@@ -9,8 +9,11 @@ Requires: psycopg >= 3.2
 
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
+from uuid import UUID, uuid4
 
 
 class GrantStatus(StrEnum):
@@ -83,3 +86,70 @@ class GrantStore:
             ON _grant_events (grant_id)
         """)
         self._conn.commit()
+
+    def _record_event(
+        self,
+        grant_id: UUID,
+        event_type: str,
+        actor_id: UUID,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        self._conn.execute(
+            """INSERT INTO _grant_events (id, grant_id, event_type, actor_id, timestamp, metadata)
+               VALUES (%s, %s, %s, %s, %s, %s)""",
+            (
+                uuid4(),
+                grant_id,
+                event_type,
+                actor_id,
+                datetime.now(UTC),
+                json.dumps(metadata) if metadata else None,
+            ),
+        )
+
+    def _get_grant(self, grant_id: UUID) -> dict[str, Any]:
+        row = self._conn.execute("SELECT * FROM _grants WHERE id = %s", (grant_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"Grant {grant_id} not found")
+        return dict(row)
+
+    def create_grant(
+        self,
+        schema_name: str,
+        relation: str,
+        principal_id: UUID,
+        scope_entity: str,
+        scope_id: UUID,
+        granted_by_id: UUID,
+        approval_mode: str = "required",
+        expires_at: datetime | None = None,
+    ) -> dict[str, Any]:
+        grant_id = uuid4()
+        now = datetime.now(UTC)
+
+        if approval_mode == "required":
+            status = GrantStatus.PENDING_APPROVAL
+        else:
+            status = GrantStatus.ACTIVE
+
+        self._conn.execute(
+            """INSERT INTO _grants
+               (id, schema_name, relation, principal_id, scope_entity, scope_id,
+                status, granted_by_id, granted_at, expires_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (
+                grant_id,
+                schema_name,
+                relation,
+                principal_id,
+                scope_entity,
+                scope_id,
+                status,
+                granted_by_id,
+                now,
+                expires_at,
+            ),
+        )
+        self._record_event(grant_id, "created", granted_by_id)
+        self._conn.commit()
+        return self._get_grant(grant_id)

@@ -2,13 +2,14 @@
 """Tests for runtime grant store (PostgreSQL)."""
 
 import os
-from uuid import uuid4
+from datetime import UTC, datetime, timedelta
+from uuid import UUID, uuid4
 
 import psycopg
 import pytest
 from psycopg.rows import dict_row
 
-from dazzle_back.runtime.grant_store import GrantStore
+from dazzle_back.runtime.grant_store import GrantStatus, GrantStore
 
 
 @pytest.fixture(scope="session")
@@ -81,3 +82,64 @@ class TestGrantStoreInit:
                 (grant_id,),
             )
         pg_conn.rollback()
+
+
+class TestCreateGrant:
+    def test_create_grant_pending(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="dept_delegation",
+            relation="acting_hod",
+            principal_id=uuid4(),
+            scope_entity="Department",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        assert grant["status"] == GrantStatus.PENDING_APPROVAL
+        assert isinstance(grant["id"], UUID)
+
+    def test_create_grant_immediate(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="dept_delegation",
+            relation="acting_hod",
+            principal_id=uuid4(),
+            scope_entity="Department",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="immediate",
+        )
+        assert grant["status"] == GrantStatus.ACTIVE
+
+    def test_create_grant_with_expiry(self, pg_conn):
+        store = GrantStore(pg_conn)
+        expires = datetime.now(UTC) + timedelta(days=90)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+            expires_at=expires,
+        )
+        assert grant["expires_at"] is not None
+
+    def test_create_grant_records_event(self, pg_conn):
+        store = GrantStore(pg_conn)
+        grant = store.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="none",
+        )
+        events = pg_conn.execute(
+            "SELECT * FROM _grant_events WHERE grant_id = %s", (grant["id"],)
+        ).fetchall()
+        assert len(events) == 1
+        assert events[0]["event_type"] == "created"
