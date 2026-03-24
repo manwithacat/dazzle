@@ -234,23 +234,25 @@ class GrantStore:
         principal_id: UUID | None = None,
         status: str | None = None,
     ) -> list[dict[str, Any]]:
-        rows = self._conn.execute(
-            """SELECT * FROM _grants
-               WHERE (%s IS NULL OR scope_entity = %s)
-                 AND (%s IS NULL OR scope_id = %s)
-                 AND (%s IS NULL OR principal_id = %s)
-                 AND (%s IS NULL OR status = %s)
-               ORDER BY granted_at DESC""",
-            (
-                scope_entity,
-                scope_entity,
-                scope_id,
-                scope_id,
-                principal_id,
-                principal_id,
-                status,
-                status,
-            ),
+        clauses: list[str] = []
+        params: list[Any] = []
+        if scope_entity is not None:
+            clauses.append("scope_entity = %s")
+            params.append(scope_entity)
+        if scope_id is not None:
+            clauses.append("scope_id = %s")
+            params.append(scope_id)
+        if principal_id is not None:
+            clauses.append("principal_id = %s")
+            params.append(principal_id)
+        if status is not None:
+            clauses.append("status = %s")
+            params.append(status)
+        where = " AND ".join(clauses) if clauses else "TRUE"
+        # Column names in `where` are hardcoded literals above, not user input.
+        rows = self._conn.execute(  # nosemgrep
+            f"SELECT * FROM _grants WHERE {where} ORDER BY granted_at DESC",
+            params,
         ).fetchall()
         return [dict(r) for r in rows]
 
