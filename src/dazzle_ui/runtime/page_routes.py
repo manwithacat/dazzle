@@ -829,10 +829,12 @@ async def _workspace_handler(
     # Unauthenticated default: only public workspaces are visible.
     # Entity items (entity surface links) have no access_level, so
     # they are treated as authenticated-only and hidden until login.
+    # Exclude routes already covered by nav_groups to avoid duplication (#661).
+    _grouped_routes = {child["route"] for g in ws_groups for child in g.get("children", [])}
     visible_nav = [
         {"label": item["label"], "route": item["route"]}
         for item in ws_nav_items + ws_entity_items
-        if item.get("access_level") == "public"
+        if item["route"] not in _grouped_routes and item.get("access_level") == "public"
     ]
     is_authenticated = False
     user_email = ""
@@ -854,11 +856,18 @@ async def _workspace_handler(
                 # Filter nav by persona access.
                 # Roles use "role_" prefix; persona IDs don't.
                 normalized_roles = [r.removeprefix("role_") for r in user_roles]
+                # Exclude entity routes that are already in nav_groups
+                grouped_routes = {
+                    child["route"] for g in ws_groups for child in g.get("children", [])
+                }
                 visible_nav = [
                     {"label": item["label"], "route": item["route"]}
                     for item in ws_nav_items + ws_entity_items
-                    if not item["allow_personas"]
-                    or any(r in item["allow_personas"] for r in normalized_roles)
+                    if item["route"] not in grouped_routes
+                    and (
+                        not item.get("allow_personas")
+                        or any(r in item["allow_personas"] for r in normalized_roles)
+                    )
                 ]
         except Exception:
             logger.debug("Failed to resolve auth for workspace nav", exc_info=True)
