@@ -292,11 +292,11 @@ def _eval_func(node: dict[str, Any], data: dict[str, Any]) -> Any:
             return 0
     if name == "all_true":
         return all(bool(a) for a in args)
-    if name == "has_grant" and len(args) >= 2:
+    if name == "has_grant" and len(args) >= 1:
         grant_store = data.get("_grant_store")
         principal_id = data.get("current_user")
         relation = args[0]
-        scope_id = args[1]
+        scope_id = args[1] if len(args) >= 2 else data.get("id")
         if grant_store and principal_id and relation and scope_id:
             from uuid import UUID
 

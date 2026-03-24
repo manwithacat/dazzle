@@ -276,3 +276,26 @@ class TestEvalFuncHasGrant:
 
         result = evaluate_guard_expr(self._expr("approve_letter", str(scope)), data)
         assert result is False
+
+    def test_has_grant_single_arg_infers_scope_from_entity_id(self) -> None:
+        """DSL guard: has_grant(approve_letter) — 1 arg, scope_id from data['id']."""
+        from dazzle_back.runtime.state_machine import evaluate_guard_expr
+
+        store = MagicMock()
+        store.has_active_grant.return_value = True
+        entity_id = uuid4()
+        principal = uuid4()
+        data = {
+            "current_user": str(principal),
+            "_grant_store": store,
+            "id": str(entity_id),
+        }
+
+        # Single-arg expression (DSL: guard: has_grant(approve_letter))
+        expr = {"name": "has_grant", "args": [{"value": "approve_letter"}]}
+        result = evaluate_guard_expr(expr, data)
+        assert result is True
+        store.has_active_grant.assert_called_once()
+        # Verify scope_id came from data["id"]
+        call_args = store.has_active_grant.call_args
+        assert str(call_args[0][2]) == str(entity_id)
