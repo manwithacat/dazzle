@@ -420,6 +420,97 @@ This was the lesson of PR #503: a LIST gate that evaluated all `permit:` rules a
 
 ---
 
+## Grant-Based RBAC
+
+Runtime-configurable delegation permissions that layer over Cedar-style static access rules (v0.42.0). Static `permit:` rules define the ceiling of what is possible; grant schemas define which of those permissions can be delegated at runtime, by whom, and under what constraints.
+
+### `grant_schema` — declaring a delegation domain
+
+```dsl
+grant_schema department_delegation "Department Delegation":
+  description: "Delegation of department-level responsibilities"
+  scope: Department
+
+  relation acting_hod "Assign covering HoD":
+    granted_by: role(senior_leadership)
+    approval: required
+    expiry: required
+    max_duration: 90d
+```
+
+A `grant_schema` ties a set of delegation rules to a **scope entity** — the object instance the grant is attached to (here, a `Department` row). Every relation within the schema becomes a named grant type that can be created, approved, and revoked at runtime.
+
+### `grant_relation` fields
+
+| Field | Values | Description |
+|-------|--------|-------------|
+| `granted_by` | `role(name)` or condition | Who may create a grant of this type |
+| `approved_by` | `role(name)` or condition | Who must approve (if `approval: required`) |
+| `approval` | `required` \| `immediate` \| `none` | Approval workflow for new grants |
+| `expiry` | `required` \| `optional` \| `none` | Whether an expiry date must be set |
+| `max_duration` | e.g. `90d`, or `param("key")` | Upper bound on expiry duration |
+| `principal_label` | string | UI label for the grantee field |
+| `confirmation` | string | Confirmation prompt shown before granting |
+| `revoke_verb` | string | Label for the revoke action |
+
+`granted_by` is mandatory. All other fields are optional.
+
+### `has_grant()` in state machine guards
+
+Grant status is available inside state machine transition guards via `has_grant()`:
+
+```dsl
+transition approve:
+  from: pending
+  to: approved
+  guard: has_grant("acting_hod", department_id)
+```
+
+The function signature is `has_grant(relation_name, scope_id)`. The runtime checks whether the current user holds an active (non-expired, approved) grant of that relation type for the given scope instance. `has_grant()` is evaluated at transition time; if the grant has expired or was revoked, the guard fails and the transition is blocked.
+
+### Four-eyes approval workflows
+
+Set `approval: required` and `approved_by` to a different role than `granted_by` to enforce separation of duties:
+
+```dsl
+relation payment_approver "Payment Approver":
+  granted_by: role(finance_manager)
+  approved_by: role(cfo)
+  approval: required
+  expiry: required
+  max_duration: 30d
+```
+
+The grant is created by a `finance_manager` but only becomes active once a `cfo` approves it. This prevents unilateral escalation of privileges and satisfies four-eyes controls for regulated workflows.
+
+### DSL example
+
+```dsl
+grant_schema school_cover "School Cover Arrangements":
+  description: "Temporary cover assignments within a school"
+  scope: School
+
+  relation acting_head "Acting Headteacher":
+    principal_label: "Cover headteacher"
+    granted_by: role(trust_admin)
+    approved_by: role(ceo)
+    approval: required
+    expiry: required
+    max_duration: param("max_acting_head_days")
+    confirmation: "This grants full headteacher access. Confirm?"
+    revoke_verb: "End cover arrangement"
+
+  relation cover_senco "Cover SENCO":
+    granted_by: role(headteacher) or role(acting_head)
+    approval: immediate
+    expiry: optional
+    max_duration: 14d
+```
+
+**Related:** [Access Rules](access-control.md#access-rules), [Runtime Evaluation Model](access-control.md#runtime-evaluation-model), [Cedar Rbac](patterns.md#cedar-rbac)
+
+---
+
 ## Authentication
 
 Session-based authentication system in Dazzle. Uses cookie-based sessions with SQLite storage. Auth is optional and can be enabled/disabled per project.

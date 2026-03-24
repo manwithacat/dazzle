@@ -20,5 +20,7 @@
 | [Testing](testing.md) | DAZZLE provides a comprehensive testing toolkit including E2E testing with Playwright, FlowSpec test generation, semantic DOM conventions, capability discovery, CRUD completeness analysis, workflow coherence checks, and RBAC validation. |
 | [Frontend & Templates](frontend.md) | The Dazzle frontend uses server-rendered Jinja2 templates with HTMX for declarative HTTP interactions. |
 | [Messaging & Events](messaging.md) | Messaging and events enable asynchronous communication between components and users. |
+| [Graphs](graphs.md) | Define entity relationships as graph edges, query neighborhoods via CTE, and run graph algorithms (PageRank, community detection, shortest paths). |
+| [Compliance](compliance.md) | Automated compliance evidence extraction from DSL constructs. Supports ISO 27001 and SOC 2 Trust Services Criteria. |
 | [Governance](governance.md) | Governance constructs enforce organisational policies, approval workflows, and service-level agreements. |
 | [Patterns](patterns.md) | Patterns are reusable DSL recipes that combine multiple constructs into proven solutions. |

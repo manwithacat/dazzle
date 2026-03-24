@@ -184,3 +184,83 @@ Workspaces group surfaces into navigable sections. The runtime renders:
 - **Active state highlighting** on current route
 - **Collapsible sidebar** on mobile
 - App name and branding in the header
+
+## System Endpoints
+
+### `/health`
+
+Always-public endpoint. Returns a JSON object with the current health status of the running app:
+
+```json
+{
+  "status": "healthy",
+  "app": "my_app",
+  "version": "0.48.2",
+  "dsl_hash": "a3f9c1e2",
+  "uptime_seconds": 142.3
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `status` | Always `"healthy"` when the server is up |
+| `app` | The `module` name from your DSL |
+| `version` | Dazzle framework version |
+| `dsl_hash` | First 8 hex chars of the SHA-256 of the compiled IR — changes whenever the DSL changes |
+| `uptime_seconds` | Seconds since server startup |
+
+Use `dsl_hash` in deployment pipelines to confirm a new DSL has been loaded without downtime.
+
+### `/_diagnostics`
+
+Admin-only endpoint (requires a session with `admin`, `super_admin`, or `trust_admin` role). Returns a richer snapshot for operational use:
+
+```json
+{
+  "entities": 12,
+  "surfaces": 8,
+  "workspaces": 3,
+  "features": {
+    "auth": true,
+    "files": false,
+    "feedback_widget": true
+  },
+  "database": {
+    "connected": true,
+    "pending_migrations": 0
+  },
+  "dsl_hash": "a3f9c1e2",
+  "version": "0.48.2"
+}
+```
+
+Returns HTTP 403 for any authenticated user without an admin role. Returns HTTP 401 when no session is present.
+
+## Feedback Widget
+
+When `feedback_widget: enabled` is declared at the module level, the runtime:
+
+1. **Auto-generates** a `FeedbackReport` entity with fields for category, severity, description, and auto-captured context (URL, persona, viewport, user agent, console errors, navigation history, page snapshot, screenshot, and annotation data).
+2. **Injects** the widget JavaScript and CSS into every authenticated page via the base template.
+3. **Exposes** the widget status in `/_diagnostics` under `features.feedback_widget`.
+
+```dsl
+feedback_widget: enabled
+  position: bottom-right
+  shortcut: backtick
+  categories: [bug, ux, visual, behaviour, enhancement, other]
+  severities: [blocker, annoying, minor]
+  capture: [url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]
+```
+
+All fields except `enabled` are optional — the defaults above are used when omitted.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `position` | `bottom-right` | Screen corner for the floating button |
+| `shortcut` | `backtick` | Keyboard shortcut to open the panel |
+| `categories` | 6 values | Dropdown options for feedback type |
+| `severities` | 3 values | Dropdown options for severity |
+| `capture` | 7 fields | Context automatically attached to each report |
+
+The widget is only injected on authenticated pages. Public surfaces (declared with `access: public`) do not receive the widget.
