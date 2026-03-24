@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.3] - 2026-03-24
+
+### Fixed
+- Connection pool auto-rollback on failed transactions — prevents cascading 500s from poisoned connections (#664)
+- `RedisBus.start_consumer_loop()` accepts `poll_interval` kwarg to match base class signature (#662)
+- FK fields on detail pages now resolve to `display_field` values instead of showing raw UUIDs (#663)
+- ParamRef resolved to its default value before use as field default in `_build_column` (#641)
+- GrantStore supports PostgreSQL `%s` placeholders (#640)
+
+### Changed
+- Pool `open_pool()` passes a `reset` callback to rollback aborted transactions on connection return
+- Detail view template checks `{relation_name}_display` key for ref fields, matching list surface behaviour
+- Nav group route dedup prevents entity items appearing in both flat nav and grouped accordion (#661)
+- Feedback widget CSS uses oklch fallback values for opaque backgrounds (#660)
+
 ## [0.48.2] - 2026-03-24
 
 ### Changed
