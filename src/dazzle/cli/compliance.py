@@ -18,7 +18,9 @@ console = Console()
 
 @compliance_app.command(name="compile")
 def compile_cmd(
-    framework: str = typer.Option("iso27001", "--framework", "-f", help="Framework ID"),
+    framework: str = typer.Option(
+        "iso27001", "--framework", "-f", help="Framework ID (iso27001 or soc2)"
+    ),
     output: str = typer.Option("", "--output", "-o", help="Output path for auditspec JSON"),
 ) -> None:
     """Compile compliance audit spec from DSL evidence."""
@@ -68,7 +70,9 @@ def evidence_cmd() -> None:
 
 @compliance_app.command(name="gaps")
 def gaps_cmd(
-    framework: str = typer.Option("iso27001", "--framework", "-f", help="Framework ID"),
+    framework: str = typer.Option(
+        "iso27001", "--framework", "-f", help="Framework ID (iso27001 or soc2)"
+    ),
     tier: str = typer.Option("2,3", "--tier", help="Tiers to show (comma-separated)"),
 ) -> None:
     """Show compliance gaps and partial controls."""

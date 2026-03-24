@@ -1,0 +1,57 @@
+framework:
+  id: soc2_test
+  name: "SOC 2 Test Taxonomy"
+  version: "test"
+  jurisdiction: united_states
+  body: "AICPA"
+  themes:
+    - id: security
+      name: "Common Criteria (Security)"
+      controls:
+        - id: "CC6.1"
+          name: "Logical and Physical Access Controls"
+          objective: "The entity implements logical access security software."
+          attributes:
+            control_type: [preventive]
+            points_of_focus:
+              - "Restricts Access"
+              - "Protects Encryption Keys"
+              - "Uses Encryption to Protect Data"
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks define role-based access rules"
+            - construct: scope
+              description: "scope rules enforce row-level data isolation"
+
+        - id: "CC1.1"
+          name: "COSO Principle 1"
+          objective: "The entity demonstrates a commitment to integrity and ethical values."
+          dsl_evidence: []
+
+        - id: "CC8.1"
+          name: "Changes to Infrastructure and Software"
+          objective: "The entity authorises, designs, develops, configures, documents, tests, approves, and implements changes."
+          attributes:
+            control_type: [preventive, detective]
+          dsl_evidence:
+            - construct: transitions
+              description: "state machine transitions enforce change approval workflows"
+            - construct: processes
+              description: "process definitions model change management procedures"
+
+    - id: privacy
+      name: "Privacy"
+      controls:
+        - id: "P6.1"
+          name: "Disclosure to Third Parties"
+          objective: "The entity discloses personal information to third parties only for identified purposes."
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks restrict data disclosure operations"
+            - construct: visible
+              description: "visible rules control field-level data exposure"
+
+        - id: "P8.1"
+          name: "Monitoring and Enforcement"
+          objective: "The entity has a process for monitoring compliance with privacy commitments."
+          dsl_evidence: []

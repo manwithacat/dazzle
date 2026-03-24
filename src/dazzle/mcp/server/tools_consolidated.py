@@ -1370,7 +1370,7 @@ def get_consolidated_tools() -> list[Tool]:
                     },
                     "framework": {
                         "type": "string",
-                        "description": "Framework ID (default: iso27001)",
+                        "description": "Framework ID: iso27001 or soc2 (default: iso27001)",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },

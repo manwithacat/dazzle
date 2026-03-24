@@ -1,0 +1,758 @@
+framework:
+  id: soc2
+  name: "SOC 2 Type II — Trust Services Criteria"
+  version: "2017-revised-2022"
+  jurisdiction: united_states
+  body: "AICPA"
+
+  themes:
+    # =========================================================================
+    # Security — Common Criteria (CC)
+    # =========================================================================
+    - id: security
+      name: "Security — Common Criteria"
+      controls:
+
+        # CC1: Control Environment
+        - id: "CC1.1"
+          name: "COSO Principle 1 — Integrity and Ethical Values"
+          objective: "The entity demonstrates a commitment to integrity and ethical values, setting the tone at the top and establishing standards of conduct that are communicated and enforced."
+          attributes:
+            points_of_focus:
+              - "Sets the tone at the top"
+              - "Establishes standards of conduct"
+              - "Evaluates adherence to standards of conduct"
+          dsl_evidence: []
+
+        - id: "CC1.2"
+          name: "COSO Principle 2 — Board Independence and Oversight"
+          objective: "The board of directors demonstrates independence from management and exercises oversight over the design and operation of internal controls, including controls related to security."
+          attributes:
+            points_of_focus:
+              - "Establishes oversight responsibilities"
+              - "Applies relevant expertise"
+              - "Operates independently"
+          dsl_evidence: []
+
+        - id: "CC1.3"
+          name: "COSO Principle 3 — Organisational Structure and Accountability"
+          objective: "Management establishes, with board oversight, structures, reporting lines, and appropriate authorities and responsibilities in the pursuit of objectives."
+          attributes:
+            points_of_focus:
+              - "Considers all structures of the entity"
+              - "Establishes reporting lines"
+              - "Defines, assigns, and limits authorities and responsibilities"
+          dsl_evidence:
+            - construct: persona
+              description: "Persona definitions encode organisational roles and reporting responsibilities"
+
+        - id: "CC1.4"
+          name: "COSO Principle 4 — Commitment to Competence"
+          objective: "The entity demonstrates a commitment to attract, develop, and retain competent individuals in alignment with its security objectives."
+          attributes:
+            points_of_focus:
+              - "Establishes policies and practices for competence"
+              - "Evaluates competence and addresses identified shortcomings"
+              - "Plans and prepares for succession"
+          dsl_evidence: []
+
+        - id: "CC1.5"
+          name: "COSO Principle 5 — Accountability for Internal Control"
+          objective: "The entity holds individuals accountable for their internal control responsibilities in the pursuit of security objectives."
+          attributes:
+            points_of_focus:
+              - "Enforces accountability through structures, authorities, and responsibilities"
+              - "Establishes performance measures, incentives, and rewards"
+              - "Evaluates performance measures, incentives, and rewards for ongoing relevance"
+          dsl_evidence:
+            - construct: persona
+              description: "Personas define accountability boundaries for security controls"
+            - construct: permit
+              description: "permit blocks enforce accountability by restricting actions to authorised roles"
+
+        # CC2: Communication and Information
+        - id: "CC2.1"
+          name: "COSO Principle 13 — Use of Relevant Information"
+          objective: "The entity obtains or generates and uses relevant, quality information to support the functioning of internal controls related to security."
+          attributes:
+            points_of_focus:
+              - "Identifies information requirements"
+              - "Captures internal and external sources of data"
+              - "Processes relevant data into information"
+          dsl_evidence:
+            - construct: processes
+              description: "Process definitions capture how information flows through security-relevant workflows"
+
+        - id: "CC2.2"
+          name: "COSO Principle 14 — Internal Communication"
+          objective: "The entity internally communicates information, including objectives and responsibilities for internal control, necessary to support the functioning of security controls."
+          attributes:
+            points_of_focus:
+              - "Communicates internal control information"
+              - "Communicates with the board of directors"
+              - "Provides separate communication lines"
+          dsl_evidence:
+            - construct: stories
+              description: "Stories document expected security behaviour communicated to development teams"
+
+        - id: "CC2.3"
+          name: "COSO Principle 15 — External Communication"
+          objective: "The entity communicates with external parties regarding matters affecting the functioning of security controls, including commitments made in system descriptions and trust service agreements."
+          attributes:
+            points_of_focus:
+              - "Communicates to external parties"
+              - "Enables inbound communications"
+              - "Communicates with the board of directors"
+          dsl_evidence: []
+
+        # CC3: Risk Assessment
+        - id: "CC3.1"
+          name: "COSO Principle 6 — Specification of Objectives"
+          objective: "The entity specifies objectives with sufficient clarity to enable the identification and assessment of risks relating to security, availability, processing integrity, confidentiality, and privacy."
+          attributes:
+            points_of_focus:
+              - "Reflects management's choices"
+              - "Considers tolerances for risk"
+              - "Includes operations and financial reporting objectives"
+          dsl_evidence:
+            - construct: stories
+              description: "Stories articulate security and functional objectives against which risks are assessed"
+
+        - id: "CC3.2"
+          name: "COSO Principle 7 — Risk Identification and Analysis"
+          objective: "The entity identifies risks to the achievement of its security objectives and analyses those risks as a basis for determining how the risks should be managed."
+          attributes:
+            points_of_focus:
+              - "Includes entity, subsidiary, division, and functional levels"
+              - "Analyses internal and external factors"
+              - "Involves appropriate levels of management"
+          dsl_evidence:
+            - construct: processes
+              description: "Process definitions surface operational risks through workflow modelling"
+
+        - id: "CC3.3"
+          name: "COSO Principle 8 — Fraud Risk Assessment"
+          objective: "The entity considers the potential for fraud in assessing risks to the achievement of security objectives, including the risk of management override of controls."
+          attributes:
+            points_of_focus:
+              - "Considers various types of fraud"
+              - "Assesses incentives and pressures"
+              - "Assesses opportunities"
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks limit the blast radius of individual actors, reducing fraud opportunity"
+            - construct: transitions
+              description: "Transition guards enforce multi-step approval flows that prevent unilateral override"
+
+        - id: "CC3.4"
+          name: "COSO Principle 9 — Change Risk Identification and Analysis"
+          objective: "The entity identifies and assesses changes that could significantly impact the system of internal controls related to security."
+          attributes:
+            points_of_focus:
+              - "Assesses changes in the external environment"
+              - "Assesses changes in the business model"
+              - "Assesses changes in leadership"
+          dsl_evidence:
+            - construct: processes
+              description: "Change management processes document impact assessment steps"
+
+        # CC4: Monitoring Activities
+        - id: "CC4.1"
+          name: "COSO Principle 16 — Conduct Ongoing and Separate Evaluations"
+          objective: "The entity selects, develops, and performs ongoing and separate evaluations to ascertain whether the components of internal control relating to security are present and functioning."
+          attributes:
+            points_of_focus:
+              - "Considers a mix of ongoing and separate evaluations"
+              - "Considers rate of change"
+              - "Uses knowledgeable personnel"
+          dsl_evidence:
+            - construct: stories
+              description: "Stories encode acceptance criteria that serve as automated security evaluations"
+
+        - id: "CC4.2"
+          name: "COSO Principle 17 — Evaluate and Communicate Deficiencies"
+          objective: "The entity evaluates and communicates internal control deficiencies in a timely manner to those parties responsible for taking corrective action, including management and the board of directors."
+          attributes:
+            points_of_focus:
+              - "Assesses results of evaluations"
+              - "Communicates deficiencies"
+              - "Monitors corrective actions"
+          dsl_evidence:
+            - construct: processes
+              description: "Deficiency remediation workflows capture corrective action steps and owners"
+
+        # CC5: Control Activities
+        - id: "CC5.1"
+          name: "COSO Principle 10 — Select and Develop Control Activities"
+          objective: "The entity selects and develops control activities that contribute to the mitigation of risks to the achievement of security objectives to acceptable levels."
+          attributes:
+            points_of_focus:
+              - "Integrates with risk assessment"
+              - "Considers entity-specific factors"
+              - "Determines relevant business processes"
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks implement preventive control activities at the data layer"
+            - construct: transitions
+              description: "State machine transitions implement detective and preventive control activities"
+            - construct: processes
+              description: "Process definitions implement manual and automated control activities"
+
+        - id: "CC5.2"
+          name: "COSO Principle 11 — General Technology Controls"
+          objective: "The entity also selects and develops general control activities over technology to support the achievement of security objectives."
+          attributes:
+            points_of_focus:
+              - "Determines dependency between use of technology and control activities"
+              - "Establishes relevant technology infrastructure control activities"
+              - "Establishes relevant security management process control activities"
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks implement technology-level access control activities"
+            - construct: scope
+              description: "scope rules enforce row-level data isolation at the database layer"
+
+        - id: "CC5.3"
+          name: "COSO Principle 12 — Policies and Procedures"
+          objective: "The entity deploys control activities through policies that establish what is expected and procedures that put policies into action."
+          attributes:
+            points_of_focus:
+              - "Establishes policies and procedures to support deployment of management's directives"
+              - "Establishes responsibility and accountability for executing policies and procedures"
+              - "Performs in a timely manner"
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives deploy data handling policy through formal declarations"
+            - construct: permit
+              description: "permit blocks deploy access control policy as executable procedures"
+            - construct: processes
+              description: "Process definitions put operational policies into structured, auditable procedures"
+
+        # CC6: Logical and Physical Access Controls
+        - id: "CC6.1"
+          name: "Logical Access Security — Registration and Authorisation"
+          objective: "The entity implements logical access security software, infrastructure, and architectures over protected information assets to protect them from security events by authorising only internal and external users with a need to access the information asset."
+          attributes:
+            points_of_focus:
+              - "Identifies and manages the inventory of information assets"
+              - "Restricts logical access to information assets"
+              - "Identifies and authenticates users"
+              - "Considers network segmentation"
+              - "Manages points of access"
+              - "Restricts access to information assets, including databases"
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks define authorised roles for each surface and entity operation"
+            - construct: scope
+              description: "scope rules restrict row-level access to information assets by tenant, user, or attribute"
+            - construct: persona
+              description: "Personas enumerate the principal types that may be registered and authorised"
+            - construct: grant_schema
+              description: "grant_schema governs delegated authorisation and time-bounded privileges"
+
+        - id: "CC6.2"
+          name: "Logical Access Security — User Provisioning and De-provisioning"
+          objective: "Prior to issuing system credentials and granting system access, the entity registers and authorises new internal and external users, and removes user access for terminated users in a timely manner."
+          attributes:
+            points_of_focus:
+              - "Controls access credentials to protected assets"
+              - "Removes access to protected assets when no longer required"
+              - "Reviews appropriateness of access credentials"
+          dsl_evidence:
+            - construct: grant_schema
+              description: "grant_schema defines lifecycle rules for issuing and revoking delegated access"
+            - construct: transitions
+              description: "State machine transitions model provisioning and de-provisioning workflows"
+
+        - id: "CC6.3"
+          name: "Logical Access Security — Role-Based Access and Least Privilege"
+          objective: "The entity authorises, modifies, or removes access to data, software, functions, and other protected information assets based on roles, responsibilities, or the system design and changes, giving consideration to the concepts of least privilege and segregation of duties."
+          attributes:
+            points_of_focus:
+              - "Creates or modifies access to protected information assets"
+              - "Removes access to protected information assets"
+              - "Uses role-based access controls"
+              - "Reviews appropriateness of access roles and rules"
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks implement least-privilege role-based access at the surface and entity level"
+            - construct: persona
+              description: "Personas define the minimum set of roles needed for each function"
+            - construct: scope
+              description: "scope rules apply per-persona data filters enforcing principle of least privilege"
+            - construct: visible
+              description: "visible directives limit field-level exposure to the minimum required per role"
+
+        - id: "CC6.4"
+          name: "Logical Access Security — Physical Access Restrictions"
+          objective: "The entity restricts physical access to facilities and protected information assets, such as data centres and server rooms, to authorised personnel."
+          attributes:
+            points_of_focus:
+              - "Restricts physical access to facilities"
+              - "Controls physical access to information assets"
+              - "Monitors physical access"
+          dsl_evidence: []
+
+        - id: "CC6.5"
+          name: "Logical Access Security — Disposal and Reuse of Assets"
+          objective: "The entity discontinues logical and physical protections over physical assets only after the ability to read or recover data and software from those assets has been diminished and the assets are subject to disposal procedures."
+          attributes:
+            points_of_focus:
+              - "Identifies data and software for disposal"
+              - "Removes data and software before disposal"
+              - "Destroys data and software on disposal"
+          dsl_evidence: []
+
+        - id: "CC6.6"
+          name: "Logical Access Security — Transmission and External Threat Protections"
+          objective: "The entity implements controls to prevent or detect and act upon the introduction of unauthorised or malicious software, and protects information assets from external threats including the use of encryption in transit."
+          attributes:
+            points_of_focus:
+              - "Restricts access to information from outside the boundaries of the system"
+              - "Implements controls to prevent, detect, and mitigate malicious software threats"
+              - "Protects transmitted information"
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives flag fields requiring encryption in transit and at rest"
+
+        - id: "CC6.7"
+          name: "Logical Access Security — Transmission Integrity and Confidentiality"
+          objective: "The entity restricts the transmission, movement, and removal of information to authorised internal and external users and processes, and protects it during transmission."
+          attributes:
+            points_of_focus:
+              - "Restricts the ability to move sensitive information"
+              - "Protects mobile media"
+              - "Encrypts data in transit"
+              - "Protects data during transmission"
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives designate data sensitivity, driving transport security requirements"
+            - construct: permit
+              description: "permit blocks restrict which roles may export or transmit sensitive data"
+
+        - id: "CC6.8"
+          name: "Logical Access Security — Unauthorised Software Prevention"
+          objective: "The entity implements controls to prevent or detect and act upon the introduction of unauthorised or malicious software, maintaining integrity of software and related information assets."
+          attributes:
+            points_of_focus:
+              - "Restricts installation of unauthorised software"
+              - "Detects unauthorised changes to software and infrastructure"
+              - "Uses a defined change management process"
+          dsl_evidence:
+            - construct: processes
+              description: "Change management processes gate software deployments through defined approval steps"
+            - construct: transitions
+              description: "State machine guards enforce approval workflows before changes take effect"
+
+        # CC7: System Operations
+        - id: "CC7.1"
+          name: "System Operations — Vulnerability and Configuration Management"
+          objective: "To meet its objectives, the entity uses detection and monitoring procedures to identify changes to configurations that introduce new vulnerabilities, and susceptibilities to allow malicious or unauthorised entities access."
+          attributes:
+            points_of_focus:
+              - "Uses defined configuration standards"
+              - "Monitors infrastructure and software for noncompliance with standards"
+              - "Implements change-detection mechanisms"
+          dsl_evidence:
+            - construct: processes
+              description: "Configuration review processes encode infrastructure baseline checks"
+
+        - id: "CC7.2"
+          name: "System Operations — Threat and Vulnerability Monitoring"
+          objective: "The entity monitors system components and the operation of those components for anomalies that are indicative of malicious acts, natural disasters, and errors affecting the entity's ability to meet its objectives."
+          attributes:
+            points_of_focus:
+              - "Implements detection policies, procedures, and tools"
+              - "Designs detection measures"
+              - "Implements filters to analyse anomalies"
+              - "Monitors detection tools"
+          dsl_evidence: []
+
+        - id: "CC7.3"
+          name: "System Operations — Incident Evaluation and Response"
+          objective: "The entity evaluates security events to determine whether they could or have resulted in a failure of the entity to meet its objectives and, if so, takes actions to prevent or address such failures."
+          attributes:
+            points_of_focus:
+              - "Responds to security incidents"
+              - "Communicates and reviews detected security events"
+              - "Develops and implements procedures for the response to detected or identified security events"
+          dsl_evidence:
+            - construct: processes
+              description: "Incident response processes define evaluation and escalation workflows"
+            - construct: transitions
+              description: "State machine transitions enforce incident lifecycle stages through to resolution"
+
+        - id: "CC7.4"
+          name: "System Operations — Incident Containment, Remediation, and Recovery"
+          objective: "The entity responds to identified security incidents by executing a defined incident-response program to understand, contain, remediate, and recover from the incident."
+          attributes:
+            points_of_focus:
+              - "Assigns roles and responsibilities"
+              - "Contains security incidents"
+              - "Mitigates ongoing security incidents"
+              - "Ends the threat posed by security incidents"
+              - "Restores operations"
+              - "Develops and implements communication protocols"
+          dsl_evidence:
+            - construct: processes
+              description: "Incident remediation and recovery workflows are modelled as named processes"
+            - construct: persona
+              description: "Personas assign incident-response roles and responsibilities"
+
+        - id: "CC7.5"
+          name: "System Operations — Post-Incident Activities"
+          objective: "The entity identifies, develops, and implements activities to recover from identified security incidents and communicates information about the incident to management and those affected."
+          attributes:
+            points_of_focus:
+              - "Develops corrective actions"
+              - "Communicates corrective action"
+              - "Implements changes to prevent and detect recurrence"
+          dsl_evidence:
+            - construct: processes
+              description: "Post-incident review processes encode lessons-learned and corrective action steps"
+
+        # CC8: Change Management
+        - id: "CC8.1"
+          name: "Change Management"
+          objective: "The entity authorises, designs, develops or acquires, configures, documents, tests, approves, and implements changes to infrastructure, data, software, and procedures to meet its security objectives."
+          attributes:
+            points_of_focus:
+              - "Manages changes throughout the system lifecycle"
+              - "Authorises changes"
+              - "Designs and develops changes"
+              - "Documents changes"
+              - "Tracks system changes"
+              - "Configures software"
+              - "Tests system changes"
+              - "Approves system changes"
+              - "Deploys system changes"
+              - "Identifies and evaluates system changes"
+              - "Creates baseline configurations of IT technology"
+          dsl_evidence:
+            - construct: processes
+              description: "Change management processes define authorisation, testing, and deployment steps"
+            - construct: transitions
+              description: "State machine guards enforce multi-stage approval before changes are promoted"
+            - construct: stories
+              description: "Stories provide acceptance criteria that must pass before a change is approved"
+
+        # CC9: Risk Mitigation
+        - id: "CC9.1"
+          name: "Risk Mitigation — Business Disruption Risk"
+          objective: "The entity identifies, selects, and develops risk mitigation activities for risks arising from potential business disruptions to achieve security-related objectives."
+          attributes:
+            points_of_focus:
+              - "Considers mitigation of risks of business disruption"
+              - "Considers risk of vendor and business partner disruptions"
+          dsl_evidence:
+            - construct: processes
+              description: "Business continuity and failover processes model disruption mitigation procedures"
+
+        - id: "CC9.2"
+          name: "Risk Mitigation — Vendor and Business Partner Risk"
+          objective: "The entity assesses and manages risks associated with vendors and business partners to achieve its security-related objectives."
+          attributes:
+            points_of_focus:
+              - "Establishes requirements for vendor and business partner engagements"
+              - "Assesses vendor and business partner risks"
+              - "Assigns responsibility for vendor and business partner oversight"
+              - "Monitors vendor and business partner compliance"
+          dsl_evidence: []
+
+    # =========================================================================
+    # Availability
+    # =========================================================================
+    - id: availability
+      name: "Availability"
+      controls:
+
+        - id: "A1.1"
+          name: "Capacity Management"
+          objective: "The entity maintains, monitors, and evaluates current processing capacity and use of system components including infrastructure, data, and software to manage capacity demand and to enable the implementation of additional capacity to help meet its availability objectives."
+          dsl_evidence:
+            - construct: processes
+              description: "Capacity review processes define monitoring cadence and scaling decision steps"
+
+        - id: "A1.2"
+          name: "Environmental and Technological Controls"
+          objective: "The entity authorises, designs, develops or acquires, implements, operates, approves, maintains, and monitors environmental protections, software, data back-up processes, and recovery infrastructure to meet its availability objectives."
+          dsl_evidence: []
+
+        - id: "A1.3"
+          name: "Recovery and Restoration"
+          objective: "The entity tests recovery plan procedures and documents and evaluates the results, including the effectiveness of the tested recovery procedures to support meeting availability commitments and system requirements."
+          dsl_evidence:
+            - construct: processes
+              description: "Disaster recovery and restoration test processes are modelled as named processes with defined steps and owners"
+
+    # =========================================================================
+    # Confidentiality
+    # =========================================================================
+    - id: confidentiality
+      name: "Confidentiality"
+      controls:
+
+        - id: "C1.1"
+          name: "Identification and Classification of Confidential Information"
+          objective: "The entity identifies and maintains confidential information to meet the entity's objectives related to confidentiality."
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives identify and tag entity fields as confidential"
+            - construct: visible
+              description: "visible directives restrict display of confidential fields to authorised roles"
+            - construct: permit
+              description: "permit blocks control which roles may read or write confidential information"
+
+        - id: "C1.2"
+          name: "Disposal and Destruction of Confidential Information"
+          objective: "The entity disposes of confidential information to meet the entity's objectives related to confidentiality."
+          dsl_evidence:
+            - construct: processes
+              description: "Data retention and disposal processes encode schedules and procedures for confidential data destruction"
+            - construct: transitions
+              description: "State machine transitions model the lifecycle of confidential records through to secure deletion"
+
+    # =========================================================================
+    # Processing Integrity
+    # =========================================================================
+    - id: processing_integrity
+      name: "Processing Integrity"
+      controls:
+
+        - id: "PI1.1"
+          name: "Processing Integrity — Policies and Procedures"
+          objective: "The entity obtains or generates, uses, and communicates relevant, quality information regarding the objectives related to processing, including definitions of data items, transaction definitions, and processing rules to support the use of products and services."
+          dsl_evidence:
+            - construct: processes
+              description: "Process definitions encode transaction rules and processing procedures"
+            - construct: stories
+              description: "Stories validate that processing produces expected outputs against defined acceptance criteria"
+
+        - id: "PI1.2"
+          name: "Processing Integrity — System Inputs"
+          objective: "The entity implements policies and procedures over system inputs, including controls over completeness and accuracy, to result in products, services, and reporting to meet the entity's objectives."
+          dsl_evidence:
+            - construct: processes
+              description: "Input validation processes define completeness and accuracy checks"
+            - construct: transitions
+              description: "Transition guards enforce input validation rules before state changes are permitted"
+            - construct: stories
+              description: "Stories include acceptance criteria for input completeness and accuracy"
+
+        - id: "PI1.3"
+          name: "Processing Integrity — System Processing"
+          objective: "The entity implements policies and procedures over system processing to result in products, services, and reporting to meet the entity's objectives."
+          dsl_evidence:
+            - construct: processes
+              description: "Process definitions model processing logic as auditable, step-by-step workflows"
+            - construct: transitions
+              description: "State machine guards enforce that processing steps are executed in the correct sequence"
+
+        - id: "PI1.4"
+          name: "Processing Integrity — System Outputs"
+          objective: "The entity implements policies and procedures to make available or deliver output completely, accurately, and timely in accordance with specifications to meet the entity's objectives."
+          dsl_evidence:
+            - construct: processes
+              description: "Output delivery processes define completeness checks and delivery confirmation steps"
+            - construct: stories
+              description: "Stories include acceptance criteria for output accuracy and completeness"
+
+        - id: "PI1.5"
+          name: "Processing Integrity — Stored Information"
+          objective: "The entity implements policies and procedures to store inputs, items in processing, and outputs completely, accurately, and timely in accordance with system specifications to meet the entity's objectives."
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives define storage requirements and sensitivity handling for persisted data"
+            - construct: transitions
+              description: "State machine transitions ensure data is only stored after integrity checks pass"
+
+    # =========================================================================
+    # Privacy
+    # =========================================================================
+    - id: privacy
+      name: "Privacy"
+      controls:
+
+        # P1: Notice
+        - id: "P1.1"
+          name: "Privacy Notice — Notification of Purpose"
+          objective: "The entity provides notice to data subjects about its privacy practices, including the purposes for which personal information is collected, used, retained, disclosed, and disposed."
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives identify personal data fields requiring notice disclosures"
+
+        - id: "P1.2"
+          name: "Privacy Notice — Notification of Changes"
+          objective: "The entity provides notice to data subjects when there are changes to its privacy practices, consent requirements, or types of personal information collected, used, retained, disclosed, or disposed."
+          dsl_evidence:
+            - construct: processes
+              description: "Privacy notice change processes define how updates are communicated to data subjects"
+
+        # P2: Choice and Consent
+        - id: "P2.1"
+          name: "Choice and Consent"
+          objective: "The entity communicates choices available regarding the collection, use, retention, disclosure, and disposal of personal information and obtains the explicit consent of the individual, where required by law, prior to the collection, use, retention, disclosure, and disposal of personal information."
+          dsl_evidence:
+            - construct: transitions
+              description: "Consent capture workflows enforce explicit opt-in before personal data is collected or processed"
+            - construct: processes
+              description: "Consent management processes document how choices are recorded and honoured"
+            - construct: classify
+              description: "classify directives flag fields requiring explicit consent under applicable law"
+
+        # P3: Collection
+        - id: "P3.1"
+          name: "Personal Information Collection Consistent with Objectives"
+          objective: "The entity collects personal information only for the purposes identified in the notice and only when consent has been obtained, where required."
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives identify personal data fields and bind them to stated collection purposes"
+            - construct: permit
+              description: "permit blocks limit collection actions to authorised personas and use cases"
+
+        - id: "P3.2"
+          name: "Collection of Sensitive Personal Information"
+          objective: "For sensitive personal information, the entity obtains explicit consent at or before the time of collection, and the information is used only for the purpose for which consent was given."
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives mark sensitive personal information with heightened handling requirements"
+            - construct: transitions
+              description: "Transition guards enforce explicit consent capture before sensitive data may be stored"
+            - construct: visible
+              description: "visible directives restrict access to sensitive personal information to explicitly authorised roles"
+
+        # P4: Use, Retention, Disposal
+        - id: "P4.1"
+          name: "Use of Personal Information Consistent with Objectives"
+          objective: "The entity limits the use of personal information to the purposes identified in the notice and for which consent was obtained, or as required by law."
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks enforce that personal information may only be used in authorised contexts"
+            - construct: scope
+              description: "scope rules restrict query and display of personal information to stated purposes per role"
+            - construct: classify
+              description: "classify directives bind personal data to permitted use categories"
+
+        - id: "P4.2"
+          name: "Retention of Personal Information"
+          objective: "The entity retains personal information consistent with the entity's objectives related to privacy and for no longer than necessary to fulfil the stated purposes."
+          dsl_evidence:
+            - construct: processes
+              description: "Retention policy processes define schedules and trigger conditions for personal data deletion"
+            - construct: transitions
+              description: "State machine transitions model personal data lifecycle through active, archived, and deleted states"
+
+        - id: "P4.3"
+          name: "Disposal of Personal Information"
+          objective: "The entity disposes of personal information in a manner consistent with the entity's objectives related to privacy at the earlier of when it is no longer needed or upon request of the data subject."
+          dsl_evidence:
+            - construct: processes
+              description: "Data disposal processes define secure deletion procedures and right-to-erasure fulfilment steps"
+            - construct: transitions
+              description: "Deletion state transitions enforce irreversible disposal and confirmation of erasure"
+
+        # P5: Access
+        - id: "P5.1"
+          name: "Access to Personal Information"
+          objective: "The entity provides data subjects with access to their personal information for review and update when it is practical or required."
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks grant data subjects access to read their own personal information"
+            - construct: scope
+              description: "scope rules ensure data subjects see only their own records"
+            - construct: visible
+              description: "visible directives surface personal data fields to the owning data subject"
+
+        - id: "P5.2"
+          name: "Correction of Personal Information"
+          objective: "The entity corrects or amends personal information, based on request from the individual and where warranted, or disposes of the information."
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks grant data subjects the right to update their personal information"
+            - construct: transitions
+              description: "Correction request workflows route amendments through defined review and confirmation steps"
+            - construct: processes
+              description: "Amendment processes define how correction requests are evaluated and applied"
+
+        # P6: Disclosure and Notification
+        - id: "P6.1"
+          name: "Disclosure of Personal Information — Authorisation"
+          objective: "The entity discloses personal information only to third parties with the consent of the data subject, as required by law, or as specified in the entity's privacy notice."
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks restrict disclosure actions to explicitly authorised roles and contexts"
+            - construct: classify
+              description: "classify directives flag personal data requiring consent verification before third-party disclosure"
+
+        - id: "P6.2"
+          name: "Disclosure of Personal Information — Record of Requests"
+          objective: "The entity creates and retains a complete, accurate, and timely record of authorised disclosures of personal information."
+          dsl_evidence:
+            - construct: processes
+              description: "Disclosure logging processes capture who requested and who authorised each disclosure event"
+
+        - id: "P6.3"
+          name: "Disclosure of Personal Information — Third-Party Agreements"
+          objective: "The entity presents disclosures regarding privacy to third parties prior to disclosure and obtains their agreement to applicable privacy commitments and obligations."
+          dsl_evidence: []
+
+        - id: "P6.4"
+          name: "Disclosure of Personal Information — Notification of Breaches"
+          objective: "The entity notifies affected data subjects, regulators, and others of personal data breaches in a timely manner in accordance with applicable laws and regulations."
+          dsl_evidence:
+            - construct: processes
+              description: "Breach notification processes define timelines, communication templates, and regulatory reporting steps"
+
+        - id: "P6.5"
+          name: "Disclosure of Personal Information — Notification of Non-Authorised Use"
+          objective: "The entity informs data subjects about uses of their personal information that were not authorised under the original consent, giving them the opportunity to withhold consent for such uses."
+          dsl_evidence:
+            - construct: processes
+              description: "Consent amendment notification processes document how data subjects are informed of new uses"
+
+        - id: "P6.6"
+          name: "Disclosure of Personal Information — Security of Delivery"
+          objective: "The entity employs reasonable safeguards for the secure delivery or transmission of personal information to third parties and data subjects."
+          dsl_evidence:
+            - construct: classify
+              description: "classify directives specify transmission security requirements for personal data"
+            - construct: permit
+              description: "permit blocks restrict which roles may initiate personal data transmissions"
+
+        - id: "P6.7"
+          name: "Disclosure of Personal Information — Accuracy of Disclosures"
+          objective: "The entity provides accurate and complete personal information in accordance with its obligations to data subjects when responding to access requests."
+          dsl_evidence:
+            - construct: processes
+              description: "Subject access request fulfilment processes enforce accuracy and completeness checks before disclosure"
+
+        # P7: Quality
+        - id: "P7.1"
+          name: "Data Quality — Accuracy and Completeness"
+          objective: "The entity collects and maintains accurate, up-to-date, complete, and relevant personal information for the purposes identified in the notice."
+          dsl_evidence:
+            - construct: processes
+              description: "Data quality review processes define schedules and procedures for verifying personal data accuracy"
+            - construct: stories
+              description: "Stories encode acceptance criteria for personal data completeness and accuracy at collection points"
+
+        - id: "P7.2"
+          name: "Data Quality — Correction of Inaccurate Information"
+          objective: "The entity provides data subjects with the ability to correct inaccurate personal information and implements procedures to review, update, and dispose of personal information accordingly."
+          dsl_evidence:
+            - construct: permit
+              description: "permit blocks grant data subjects the right to submit corrections to their personal data"
+            - construct: transitions
+              description: "Correction workflows enforce review and confirmation before amended data is persisted"
+            - construct: processes
+              description: "Data quality correction processes define how inaccuracies are identified, verified, and remediated"
+
+        # P8: Monitoring and Enforcement
+        - id: "P8.1"
+          name: "Monitoring and Enforcement of Privacy Commitments"
+          objective: "The entity monitors compliance with its privacy commitments and has procedures to address privacy-related complaints and disputes."
+          dsl_evidence:
+            - construct: processes
+              description: "Privacy compliance monitoring processes define audit cadence, complaint intake, and resolution workflows"
+            - construct: stories
+              description: "Stories validate that privacy controls operate as committed across all data-handling surfaces"
