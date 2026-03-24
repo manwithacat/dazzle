@@ -884,7 +884,10 @@ async def _workspace_region_handler(
         columns=columns,
         metrics=metrics,
         empty_message=ctx.surface_empty_message or ctx.ctx_region.empty_message,
-        display_key=columns[0]["key"] if columns else "name",
+        display_key=next(
+            (c["key"] for c in columns if c.get("type") not in ("badge", "ref")),
+            columns[0]["key"] if columns else "name",
+        ),
         item=items[0] if items else None,
         action_url=ctx.ctx_region.action_url,
         sort_field=sort or "",
