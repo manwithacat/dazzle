@@ -9,6 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.2] - 2026-03-24
+
+### Changed
+- Event system is now PostgreSQL-only — removed all aiosqlite/SQLite code paths from outbox, inbox, consumer, publisher, and framework (#644)
+- `OutboxPublisher`, `IdempotentConsumer`, `idempotent()`: `db_path` parameter removed — use `connect=` instead
+- `EventFrameworkConfig`: `db_path` field removed — use `database_url` instead
+- `EventOutbox`: `use_postgres` parameter removed — always PostgreSQL
+- `EventInbox`: `placeholder`/`backend_type` parameters removed — always PostgreSQL
+- Canary dependency probe changed from `aiosqlite` to `psycopg` in `null.py`
+
+### Fixed
+- Feedback widget Jinja global set after `configure_project_templates()` to survive env replacement (#649)
+- Workspace grid uses CSS columns for masonry-style card layout — eliminates whitespace gaps (#648)
+- `/health` endpoint now reports `version`, `dsl_hash`, and `uptime_seconds` (#651)
+- Queue display uses `_display` sibling key for FK ref columns instead of raw dict repr (#654)
+- `_eval_func` implements `has_grant()` for state machine transition guards (#653)
+- `grant_routes`: `_check_granted_by` reads from `GrantRelationSpec`, not `GrantSchemaSpec` (#650)
+
+### Added
+- `/_diagnostics` endpoint (admin-only) returning entity/surface/workspace counts and feature flags (#651)
+- Lint warning for FK-target entities missing `display_field` (#652)
+- `_extract_roles` helper for compound `ConditionExpr` trees in grant routes (#650)
+
+### Removed
+- `aiosqlite` dependency from `events` and `dev` extras in pyproject.toml (#644)
+- SQLite DDL constants from outbox.py and inbox.py (#644)
+- All `db_path` deprecation shims from event system (#644)
+
 ## [0.48.1] - 2026-03-24
 
 ### Fixed
