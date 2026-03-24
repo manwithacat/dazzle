@@ -476,3 +476,73 @@ class TestExpireStaleGrants:
             (grant["id"],),
         ).fetchall()
         assert len(events) == 1
+
+
+class TestConcurrency:
+    def test_concurrent_approve_one_wins(self, pg_grant_conn_factory):
+        """Two connections approve the same grant — exactly one succeeds."""
+        conn1 = pg_grant_conn_factory()
+        conn1.execute("DROP TABLE IF EXISTS _grant_events, _grants")
+        conn1.commit()
+        store1 = GrantStore(conn1)
+
+        grant = store1.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        grant_id = grant["id"]
+
+        conn2 = pg_grant_conn_factory()
+        store2 = GrantStore.__new__(GrantStore)
+        store2._conn = conn2
+
+        results = []
+        for s in [store1, store2]:
+            try:
+                s.approve_grant(grant_id, uuid4())
+                results.append("ok")
+            except ValueError:
+                results.append("conflict")
+
+        assert results.count("ok") == 1
+        assert results.count("conflict") == 1
+
+        conn1.close()
+        conn2.close()
+
+    def test_concurrent_approve_and_reject(self, pg_grant_conn_factory):
+        """One approve + one reject — exactly one succeeds."""
+        conn1 = pg_grant_conn_factory()
+        conn1.execute("DROP TABLE IF EXISTS _grant_events, _grants")
+        conn1.commit()
+        store1 = GrantStore(conn1)
+
+        grant = store1.create_grant(
+            schema_name="x",
+            relation="r",
+            principal_id=uuid4(),
+            scope_entity="E",
+            scope_id=uuid4(),
+            granted_by_id=uuid4(),
+            approval_mode="required",
+        )
+        grant_id = grant["id"]
+
+        conn2 = pg_grant_conn_factory()
+        store2 = GrantStore.__new__(GrantStore)
+        store2._conn = conn2
+
+        # store1 approves first
+        store1.approve_grant(grant_id, uuid4())
+
+        # store2 tries to reject — should fail
+        with pytest.raises(ValueError, match="Cannot reject"):
+            store2.reject_grant(grant_id, uuid4())
+
+        conn1.close()
+        conn2.close()
