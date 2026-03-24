@@ -426,12 +426,6 @@ class SystemRoutesSubsystem:
         appspec = ctx.appspec
         entities = ctx.entities
 
-        # Feedback widget: set template global when enabled in DSL
-        if appspec and appspec.feedback_widget and appspec.feedback_widget.enabled:
-            from dazzle_ui.runtime.template_renderer import get_jinja_env as _get_env
-
-            _get_env().globals["_feedback_widget_enabled"] = True
-
         @ctx.app.get("/health", tags=["System"])
         async def health_check() -> dict[str, str]:
             return {"status": "healthy", "app": appspec.name}
@@ -520,6 +514,16 @@ class SystemRoutesSubsystem:
                         logger.debug("Override registry build skipped", exc_info=True)
         except ImportError:
             pass  # dazzle_ui not installed
+
+        # Feedback widget: set template global when enabled in DSL.
+        # Must run AFTER configure_project_templates() which replaces the env singleton.
+        if appspec and appspec.feedback_widget and appspec.feedback_widget.enabled:
+            try:
+                from dazzle_ui.runtime.template_renderer import get_jinja_env as _get_env
+
+                _get_env().globals["_feedback_widget_enabled"] = True
+            except ImportError:
+                pass
 
         # Mount static files from project dir + framework dir
         try:
