@@ -2,7 +2,7 @@
 Audit logging for access control decisions.
 
 Provides async, non-blocking audit trail for all authorization decisions,
-following the _dazzle_event_outbox pattern for SQLite/PostgreSQL dual support.
+following the _dazzle_event_outbox pattern. PostgreSQL only.
 """
 
 from __future__ import annotations
@@ -50,6 +50,8 @@ class AuditLogger:
     Writes access control decisions to the _dazzle_audit_log table.
     Non-blocking — entries are queued and flushed in background.
     Dropped entries are counted and logged to stderr.
+
+    Requires PostgreSQL (psycopg). Raises RuntimeError if unavailable.
     """
 
     def __init__(
@@ -67,29 +69,31 @@ class AuditLogger:
         self._stopped = False
         self._init_db()
 
-    def _get_connection(self) -> tuple[Any, str]:
-        """Get a database connection."""
+    def _get_connection(self) -> Any:
+        """Get a PostgreSQL database connection.
+
+        Raises RuntimeError if psycopg is not installed or connection fails.
+        """
         try:
             import psycopg
             from psycopg.rows import dict_row
-
-            conn = psycopg.connect(self._database_url, row_factory=dict_row)
-            return conn, "postgresql"
         except ImportError:
-            logger.info("psycopg not installed, falling back to SQLite")
-        except Exception:
-            logger.warning("PostgreSQL connection failed, falling back to SQLite", exc_info=True)
+            raise RuntimeError(
+                "psycopg is required for audit logging. "
+                "Install it with: pip install psycopg[binary]"
+            )
 
-        import sqlite3
+        try:
+            conn = psycopg.connect(self._database_url, row_factory=dict_row)
+        except Exception as exc:
+            raise RuntimeError(f"Failed to connect to PostgreSQL for audit logging: {exc}") from exc
 
-        sq_conn = sqlite3.connect(self._database_url.replace("sqlite:///", ""))
-        sq_conn.row_factory = sqlite3.Row
-        return sq_conn, "sqlite"
+        return conn
 
     def _init_db(self) -> None:
         """Create the audit log table if it doesn't exist."""
         try:
-            conn, db_type = self._get_connection()
+            conn = self._get_connection()
             try:
                 cursor = conn.cursor()
                 cursor.execute("""
@@ -259,36 +263,22 @@ class AuditLogger:
             return
 
         try:
-            conn, db_type = self._get_connection()
+            conn = self._get_connection()
             try:
                 cursor = conn.cursor()
                 for entry in entries:
-                    if db_type == "postgresql":
-                        cursor.execute(
-                            """
-                            INSERT INTO _dazzle_audit_log
-                                (id, timestamp, user_id, user_email, user_roles,
-                                 operation, entity_name, entity_id, decision,
-                                 matched_policy, policy_effect, ip_address,
-                                 request_path, request_method, tenant_id,
-                                 evaluation_time_us, field_changes)
-                            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                            """,
-                            tuple(entry.values()),
-                        )
-                    else:
-                        cursor.execute(
-                            """
-                            INSERT INTO _dazzle_audit_log
-                                (id, timestamp, user_id, user_email, user_roles,
-                                 operation, entity_name, entity_id, decision,
-                                 matched_policy, policy_effect, ip_address,
-                                 request_path, request_method, tenant_id,
-                                 evaluation_time_us, field_changes)
-                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                            """,
-                            tuple(entry.values()),
-                        )
+                    cursor.execute(
+                        """
+                        INSERT INTO _dazzle_audit_log
+                            (id, timestamp, user_id, user_email, user_roles,
+                             operation, entity_name, entity_id, decision,
+                             matched_policy, policy_effect, ip_address,
+                             request_path, request_method, tenant_id,
+                             evaluation_time_us, field_changes)
+                        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                        """,
+                        tuple(entry.values()),
+                    )
                 conn.commit()
             finally:
                 conn.close()
@@ -316,35 +306,10 @@ class AuditLogger:
         Returns:
             List of audit log entries
         """
-        conn, db_type = self._get_connection()
+        conn = self._get_connection()
         try:
-            conditions: list[str] = []
-            params: list[Any] = []
-            placeholder = "%s" if db_type == "postgresql" else "?"
-
-            if entity_name:
-                conditions.append(f"entity_name = {placeholder}")
-                params.append(entity_name)
-            if operation:
-                conditions.append(f"operation = {placeholder}")
-                params.append(operation)
-            if user_id:
-                conditions.append(f"user_id = {placeholder}")
-                params.append(user_id)
-            if since:
-                conditions.append(f"timestamp >= {placeholder}")
-                params.append(since)
-
-            where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-            query = (
-                f"SELECT * FROM _dazzle_audit_log{where} "
-                f"ORDER BY timestamp DESC LIMIT {placeholder}"
-            )
-            params.append(limit)
-
             cursor = conn.cursor()
-            cursor.execute(query, tuple(params))
-            rows = cursor.fetchall()
+            rows = _execute_query_logs(cursor, entity_name, operation, user_id, since, limit)
             return [dict(row) for row in rows]
         finally:
             conn.close()
@@ -356,16 +321,15 @@ class AuditLogger:
         limit: int = 100,
     ) -> list[dict[str, Any]]:
         """Query all audit entries for a specific record."""
-        conn, db_type = self._get_connection()
+        conn = self._get_connection()
         try:
-            placeholder = "%s" if db_type == "postgresql" else "?"
-            query = (
-                f"SELECT * FROM _dazzle_audit_log "
-                f"WHERE entity_name = {placeholder} AND entity_id = {placeholder} "
-                f"ORDER BY timestamp DESC LIMIT {placeholder}"
-            )
             cursor = conn.cursor()
-            cursor.execute(query, (entity_name, entity_id, limit))
+            cursor.execute(
+                "SELECT * FROM _dazzle_audit_log "
+                "WHERE entity_name = %s AND entity_id = %s "
+                "ORDER BY timestamp DESC LIMIT %s",
+                (entity_name, entity_id, limit),
+            )
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
         finally:
@@ -384,35 +348,41 @@ class AuditLogger:
         from datetime import UTC, datetime, timedelta
 
         since = (datetime.now(UTC) - timedelta(hours=window_hours)).isoformat()
-        conn, db_type = self._get_connection()
+        conn = self._get_connection()
         try:
-            placeholder = "%s" if db_type == "postgresql" else "?"
-            conditions = [f"timestamp >= {placeholder}"]
-            params: list[Any] = [since]
-
-            if entity_name:
-                conditions.append(f"entity_name = {placeholder}")
-                params.append(entity_name)
-
-            where = f" WHERE {' AND '.join(conditions)}"
-
             cursor = conn.cursor()
 
-            # Total counts by decision
-            cursor.execute(
-                f"SELECT decision, COUNT(*) as count FROM _dazzle_audit_log{where} "
-                f"GROUP BY decision",
-                tuple(params),
-            )
-            by_decision = {row["decision"]: row["count"] for row in cursor.fetchall()}
-
-            # Counts by operation
-            cursor.execute(
-                f"SELECT operation, COUNT(*) as count FROM _dazzle_audit_log{where} "
-                f"GROUP BY operation",
-                tuple(params),
-            )
-            by_operation = {row["operation"]: row["count"] for row in cursor.fetchall()}
+            if entity_name:
+                params: tuple[Any, ...] = (since, entity_name)
+                cursor.execute(
+                    "SELECT decision, COUNT(*) as count FROM _dazzle_audit_log "
+                    "WHERE timestamp >= %s AND entity_name = %s "
+                    "GROUP BY decision",
+                    params,
+                )
+                by_decision = {row["decision"]: row["count"] for row in cursor.fetchall()}
+                cursor.execute(
+                    "SELECT operation, COUNT(*) as count FROM _dazzle_audit_log "
+                    "WHERE timestamp >= %s AND entity_name = %s "
+                    "GROUP BY operation",
+                    params,
+                )
+                by_operation = {row["operation"]: row["count"] for row in cursor.fetchall()}
+            else:
+                cursor.execute(
+                    "SELECT decision, COUNT(*) as count FROM _dazzle_audit_log "
+                    "WHERE timestamp >= %s "
+                    "GROUP BY decision",
+                    (since,),
+                )
+                by_decision = {row["decision"]: row["count"] for row in cursor.fetchall()}
+                cursor.execute(
+                    "SELECT operation, COUNT(*) as count FROM _dazzle_audit_log "
+                    "WHERE timestamp >= %s "
+                    "GROUP BY operation",
+                    (since,),
+                )
+                by_operation = {row["operation"]: row["count"] for row in cursor.fetchall()}
 
             return {
                 "window_hours": window_hours,
@@ -422,6 +392,106 @@ class AuditLogger:
             }
         finally:
             conn.close()
+
+
+# Static query lookup for query_logs — every combination of the 4 optional
+# filters is a pre-built literal string so no SQL concatenation happens at
+# runtime.  Bits: entity_name=8, operation=4, user_id=2, since=1.
+_QUERY_LOGS: dict[int, str] = {
+    0b0000: ("SELECT * FROM _dazzle_audit_log ORDER BY timestamp DESC LIMIT %s"),
+    0b1000: (
+        "SELECT * FROM _dazzle_audit_log WHERE entity_name = %s ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b0100: (
+        "SELECT * FROM _dazzle_audit_log WHERE operation = %s ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b1100: (
+        "SELECT * FROM _dazzle_audit_log WHERE entity_name = %s AND operation = %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b0010: ("SELECT * FROM _dazzle_audit_log WHERE user_id = %s ORDER BY timestamp DESC LIMIT %s"),
+    0b1010: (
+        "SELECT * FROM _dazzle_audit_log WHERE entity_name = %s AND user_id = %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b0110: (
+        "SELECT * FROM _dazzle_audit_log WHERE operation = %s AND user_id = %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b1110: (
+        "SELECT * FROM _dazzle_audit_log"
+        " WHERE entity_name = %s AND operation = %s AND user_id = %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b0001: (
+        "SELECT * FROM _dazzle_audit_log WHERE timestamp >= %s ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b1001: (
+        "SELECT * FROM _dazzle_audit_log WHERE entity_name = %s AND timestamp >= %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b0101: (
+        "SELECT * FROM _dazzle_audit_log WHERE operation = %s AND timestamp >= %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b1101: (
+        "SELECT * FROM _dazzle_audit_log"
+        " WHERE entity_name = %s AND operation = %s AND timestamp >= %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b0011: (
+        "SELECT * FROM _dazzle_audit_log WHERE user_id = %s AND timestamp >= %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b1011: (
+        "SELECT * FROM _dazzle_audit_log"
+        " WHERE entity_name = %s AND user_id = %s AND timestamp >= %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b0111: (
+        "SELECT * FROM _dazzle_audit_log"
+        " WHERE operation = %s AND user_id = %s AND timestamp >= %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+    0b1111: (
+        "SELECT * FROM _dazzle_audit_log"
+        " WHERE entity_name = %s AND operation = %s AND user_id = %s AND timestamp >= %s"
+        " ORDER BY timestamp DESC LIMIT %s"
+    ),
+}
+
+
+def _execute_query_logs(
+    cursor: Any,
+    entity_name: str | None,
+    operation: str | None,
+    user_id: str | None,
+    since: str | None,
+    limit: int,
+) -> list[Any]:
+    """Execute a filtered query on _dazzle_audit_log.
+
+    Uses a static query lookup keyed by a bitmask of which filters are active.
+    All SQL strings are pre-built literals — no concatenation at call time.
+    """
+    key = 0
+    params: list[Any] = []
+    if entity_name:
+        key |= 0b1000
+        params.append(entity_name)
+    if operation:
+        key |= 0b0100
+        params.append(operation)
+    if user_id:
+        key |= 0b0010
+        params.append(user_id)
+    if since:
+        key |= 0b0001
+        params.append(since)
+    params.append(limit)
+
+    cursor.execute(_QUERY_LOGS[key], tuple(params))
+    return cursor.fetchall()  # type: ignore[no-any-return]
 
 
 def create_audit_context_from_request(request: Any) -> dict[str, Any]:

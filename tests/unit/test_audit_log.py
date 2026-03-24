@@ -1,13 +1,13 @@
 """Tests for audit log infrastructure.
 
 Tests AuditLogger queue behavior, writing, query methods, and helpers.
+All database tests use mocked psycopg connections (PostgreSQL only).
 """
 
 from __future__ import annotations
 
 import asyncio
-import sqlite3
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -22,16 +22,69 @@ from dazzle_back.runtime.audit_log import (
 # =============================================================================
 
 
-@pytest.fixture
-def db_path(tmp_path):
-    """Create a temporary SQLite database path."""
-    return f"sqlite:///{tmp_path / 'test_audit.db'}"
+def _make_mock_cursor() -> MagicMock:
+    """Create a mock cursor that tracks executed SQL and inserted rows."""
+    cursor = MagicMock()
+    cursor._rows: list[dict] = []  # type: ignore[attr-defined]
+    cursor._executed: list[tuple] = []  # type: ignore[attr-defined]
+
+    def _execute(sql: str, params: tuple | None = None) -> None:
+        cursor._executed.append((sql, params))  # type: ignore[attr-defined]
+        if sql.strip().startswith("INSERT"):
+            # Store the row as a dict using known column order
+            cols = [
+                "id",
+                "timestamp",
+                "user_id",
+                "user_email",
+                "user_roles",
+                "operation",
+                "entity_name",
+                "entity_id",
+                "decision",
+                "matched_policy",
+                "policy_effect",
+                "ip_address",
+                "request_path",
+                "request_method",
+                "tenant_id",
+                "evaluation_time_us",
+                "field_changes",
+            ]
+            if params:
+                cursor._rows.append(dict(zip(cols, params, strict=False)))  # type: ignore[attr-defined]
+
+    cursor.execute = MagicMock(side_effect=_execute)
+    cursor.fetchall = MagicMock(return_value=[])
+    cursor.fetchone = MagicMock(return_value=None)
+    return cursor
+
+
+def _make_mock_connection(cursor: MagicMock | None = None) -> MagicMock:
+    """Create a mock psycopg connection."""
+    conn = MagicMock()
+    if cursor is None:
+        cursor = _make_mock_cursor()
+    conn.cursor.return_value = cursor
+    conn.commit = MagicMock()
+    conn.close = MagicMock()
+    return conn
 
 
 @pytest.fixture
-def logger(db_path):
-    """Create an AuditLogger with a temp database."""
-    return AuditLogger(database_url=db_path, flush_interval=0.1)
+def mock_conn():
+    """Provide a mock psycopg connection with patched connect."""
+    cursor = _make_mock_cursor()
+    conn = _make_mock_connection(cursor)
+
+    with patch("psycopg.connect", return_value=conn), patch("psycopg.rows.dict_row", create=True):
+        yield conn, cursor
+
+
+@pytest.fixture
+def audit_logger(mock_conn):
+    """Create an AuditLogger with mocked PostgreSQL."""
+    return AuditLogger(database_url="postgresql://localhost/test", flush_interval=0.1)
 
 
 # =============================================================================
@@ -40,30 +93,40 @@ def logger(db_path):
 
 
 class TestAuditLoggerInit:
-    def test_creates_table(self, db_path, tmp_path) -> None:
-        """Logger should create the audit log table on init."""
-        AuditLogger(database_url=db_path)
-        db_file = tmp_path / "test_audit.db"
-        conn = sqlite3.connect(str(db_file))
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='_dazzle_audit_log'"
-        )
-        assert cursor.fetchone() is not None
-        conn.close()
+    def test_creates_table(self, mock_conn) -> None:
+        """Logger should issue CREATE TABLE on init."""
+        conn, cursor = mock_conn
+        AuditLogger(database_url="postgresql://localhost/test")
+        executed_sqls = [call[0] for call in cursor._executed]
+        assert any("CREATE TABLE IF NOT EXISTS _dazzle_audit_log" in sql for sql in executed_sqls)
 
-    def test_creates_indexes(self, db_path, tmp_path) -> None:
+    def test_creates_indexes(self, mock_conn) -> None:
         """Logger should create indexes on init."""
-        AuditLogger(database_url=db_path)
-        db_file = tmp_path / "test_audit.db"
-        conn = sqlite3.connect(str(db_file))
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='index'")
-        indexes = {row[0] for row in cursor.fetchall()}
-        conn.close()
-        assert "idx_audit_entity" in indexes
-        assert "idx_audit_user" in indexes
-        assert "idx_audit_timestamp" in indexes
+        conn, cursor = mock_conn
+        AuditLogger(database_url="postgresql://localhost/test")
+        executed_sqls = [call[0] for call in cursor._executed]
+        assert any("idx_audit_entity" in sql for sql in executed_sqls)
+        assert any("idx_audit_user" in sql for sql in executed_sqls)
+        assert any("idx_audit_timestamp" in sql for sql in executed_sqls)
+
+    def test_raises_on_missing_psycopg(self) -> None:
+        """Logger should raise RuntimeError if psycopg is not installed."""
+        with patch.dict("sys.modules", {"psycopg": None, "psycopg.rows": None}):
+            with pytest.raises(RuntimeError, match="psycopg is required"):
+                AuditLogger(database_url="postgresql://localhost/test")
+
+    def test_raises_on_connection_failure(self) -> None:
+        """Logger should raise RuntimeError if PostgreSQL connection fails."""
+        with (
+            patch("psycopg.connect", side_effect=ConnectionError("refused")),
+            patch("psycopg.rows.dict_row", create=True),
+        ):
+            # _init_db catches all exceptions and logs a warning, so no raise
+            # But _get_connection itself raises RuntimeError
+            logger_obj = AuditLogger.__new__(AuditLogger)
+            logger_obj._database_url = "postgresql://localhost/test"
+            with pytest.raises(RuntimeError, match="Failed to connect"):
+                logger_obj._get_connection()
 
 
 # =============================================================================
@@ -73,9 +136,10 @@ class TestAuditLoggerInit:
 
 class TestAuditLogging:
     @pytest.mark.asyncio
-    async def test_log_and_flush(self, logger) -> None:
+    async def test_log_and_flush(self, audit_logger, mock_conn) -> None:
         """Entries queued via log_decision should be flushed to DB."""
-        await logger.log_decision(
+        conn, cursor = mock_conn
+        await audit_logger.log_decision(
             operation="create",
             entity_name="Task",
             entity_id="task-1",
@@ -86,20 +150,28 @@ class TestAuditLogging:
             user_email="admin@example.com",
             user_roles=["admin"],
         )
-        # Manually flush
-        await logger._flush()
+        await audit_logger._flush()
 
-        logs = logger.query_logs(entity_name="Task")
-        assert len(logs) == 1
-        assert logs[0]["entity_name"] == "Task"
-        assert logs[0]["decision"] == "allow"
-        assert logs[0]["operation"] == "create"
+        # Verify INSERT was executed
+        insert_calls = [
+            (sql, params)
+            for sql, params in cursor._executed
+            if isinstance(sql, str) and "INSERT" in sql
+        ]
+        assert len(insert_calls) == 1
+        _sql, params = insert_calls[0]
+        assert params is not None
+        # params is a tuple — entity_name is at index 6
+        assert params[6] == "Task"
+        assert params[8] == "allow"
+        assert params[5] == "create"
 
     @pytest.mark.asyncio
-    async def test_multiple_entries(self, logger) -> None:
+    async def test_multiple_entries(self, audit_logger, mock_conn) -> None:
         """Multiple entries should all be flushed."""
+        conn, cursor = mock_conn
         for i in range(5):
-            await logger.log_decision(
+            await audit_logger.log_decision(
                 operation="read",
                 entity_name="Task",
                 entity_id=f"task-{i}",
@@ -107,51 +179,47 @@ class TestAuditLogging:
                 matched_policy="authenticated",
                 policy_effect="permit",
             )
-        await logger._flush()
-        logs = logger.query_logs(entity_name="Task")
-        assert len(logs) == 5
+        await audit_logger._flush()
+        insert_calls = [c for c in cursor._executed if isinstance(c[0], str) and "INSERT" in c[0]]
+        assert len(insert_calls) == 5
 
     @pytest.mark.asyncio
-    async def test_queue_full_drops(self) -> None:
+    async def test_queue_full_drops(self, mock_conn) -> None:
         """When queue is full, entries should be dropped."""
-        import tempfile
-        from pathlib import Path
-
-        with tempfile.TemporaryDirectory() as td:
-            db_url = f"sqlite:///{Path(td) / 'test.db'}"
-            small_logger = AuditLogger(database_url=db_url, max_queue_size=2)
-            # Fill queue
-            await small_logger.log_decision(
-                operation="read",
-                entity_name="A",
-                entity_id="1",
-                decision="allow",
-                matched_policy="p",
-                policy_effect="permit",
-            )
-            await small_logger.log_decision(
-                operation="read",
-                entity_name="B",
-                entity_id="2",
-                decision="allow",
-                matched_policy="p",
-                policy_effect="permit",
-            )
-            # This should be dropped
-            await small_logger.log_decision(
-                operation="read",
-                entity_name="C",
-                entity_id="3",
-                decision="allow",
-                matched_policy="p",
-                policy_effect="permit",
-            )
-            assert small_logger._dropped_count >= 1
+        small_logger = AuditLogger(database_url="postgresql://localhost/test", max_queue_size=2)
+        # Fill queue
+        await small_logger.log_decision(
+            operation="read",
+            entity_name="A",
+            entity_id="1",
+            decision="allow",
+            matched_policy="p",
+            policy_effect="permit",
+        )
+        await small_logger.log_decision(
+            operation="read",
+            entity_name="B",
+            entity_id="2",
+            decision="allow",
+            matched_policy="p",
+            policy_effect="permit",
+        )
+        # This should be dropped
+        await small_logger.log_decision(
+            operation="read",
+            entity_name="C",
+            entity_id="3",
+            decision="allow",
+            matched_policy="p",
+            policy_effect="permit",
+        )
+        assert small_logger._dropped_count >= 1
 
     @pytest.mark.asyncio
-    async def test_deny_entries(self, logger) -> None:
+    async def test_deny_entries(self, audit_logger, mock_conn) -> None:
         """Deny decisions should also be logged."""
-        await logger.log_decision(
+        conn, cursor = mock_conn
+        await audit_logger.log_decision(
             operation="delete",
             entity_name="Invoice",
             entity_id="inv-1",
@@ -160,11 +228,13 @@ class TestAuditLogging:
             policy_effect="forbid",
             user_id="user-2",
         )
-        await logger._flush()
-        logs = logger.query_logs(entity_name="Invoice")
-        assert len(logs) == 1
-        assert logs[0]["decision"] == "deny"
-        assert logs[0]["policy_effect"] == "forbid"
+        await audit_logger._flush()
+        insert_calls = [c for c in cursor._executed if isinstance(c[0], str) and "INSERT" in c[0]]
+        assert len(insert_calls) == 1
+        params = insert_calls[0][1]
+        assert params is not None
+        assert params[8] == "deny"
+        assert params[10] == "forbid"
 
 
 # =============================================================================
@@ -173,127 +243,59 @@ class TestAuditLogging:
 
 
 class TestAuditQueries:
-    @pytest.mark.asyncio
-    async def test_query_by_operation(self, logger) -> None:
-        await logger.log_decision(
-            operation="create",
-            entity_name="Task",
-            entity_id="1",
-            decision="allow",
-            matched_policy="p",
-            policy_effect="permit",
-        )
-        await logger.log_decision(
-            operation="delete",
-            entity_name="Task",
-            entity_id="2",
-            decision="deny",
-            matched_policy="p",
-            policy_effect="forbid",
-        )
-        await logger._flush()
+    def test_query_by_entity(self, audit_logger, mock_conn) -> None:
+        conn, cursor = mock_conn
+        cursor.fetchall.return_value = []
+        audit_logger.query_logs(entity_name="Task")
+        # Should have executed a SELECT with entity_name filter
+        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
+        assert any("entity_name = %s" in c[0] for c in select_calls)
 
-        creates = logger.query_logs(operation="create")
-        assert len(creates) == 1
-        assert creates[0]["operation"] == "create"
+    def test_query_by_operation(self, audit_logger, mock_conn) -> None:
+        conn, cursor = mock_conn
+        cursor.fetchall.return_value = []
+        audit_logger.query_logs(operation="create")
+        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
+        assert any("operation = %s" in c[0] for c in select_calls)
 
-    @pytest.mark.asyncio
-    async def test_query_by_user(self, logger) -> None:
-        await logger.log_decision(
-            operation="read",
-            entity_name="Task",
-            entity_id="1",
-            decision="allow",
-            matched_policy="p",
-            policy_effect="permit",
-            user_id="alice",
-        )
-        await logger.log_decision(
-            operation="read",
-            entity_name="Task",
-            entity_id="2",
-            decision="allow",
-            matched_policy="p",
-            policy_effect="permit",
-            user_id="bob",
-        )
-        await logger._flush()
+    def test_query_by_user(self, audit_logger, mock_conn) -> None:
+        conn, cursor = mock_conn
+        cursor.fetchall.return_value = []
+        audit_logger.query_logs(user_id="alice")
+        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
+        assert any("user_id = %s" in c[0] for c in select_calls)
 
-        alice_logs = logger.query_logs(user_id="alice")
-        assert len(alice_logs) == 1
+    def test_query_entity_logs(self, audit_logger, mock_conn) -> None:
+        conn, cursor = mock_conn
+        cursor.fetchall.return_value = []
+        audit_logger.query_entity_logs("Task", "task-42")
+        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
+        assert any("entity_name = %s AND entity_id = %s" in c[0] for c in select_calls)
 
-    @pytest.mark.asyncio
-    async def test_query_entity_logs(self, logger) -> None:
-        await logger.log_decision(
-            operation="read",
-            entity_name="Task",
-            entity_id="task-42",
-            decision="allow",
-            matched_policy="p",
-            policy_effect="permit",
-        )
-        await logger.log_decision(
-            operation="update",
-            entity_name="Task",
-            entity_id="task-42",
-            decision="allow",
-            matched_policy="p",
-            policy_effect="permit",
-        )
-        await logger.log_decision(
-            operation="read",
-            entity_name="Task",
-            entity_id="task-99",
-            decision="allow",
-            matched_policy="p",
-            policy_effect="permit",
-        )
-        await logger._flush()
+    def test_query_stats(self, audit_logger, mock_conn) -> None:
+        conn, cursor = mock_conn
+        cursor.fetchall.return_value = []
+        stats = audit_logger.query_stats()
+        assert stats["total"] == 0
+        assert stats["by_decision"] == {}
+        assert stats["by_operation"] == {}
 
-        logs = logger.query_entity_logs("Task", "task-42")
-        assert len(logs) == 2
+    def test_query_stats_with_entity(self, audit_logger, mock_conn) -> None:
+        conn, cursor = mock_conn
+        cursor.fetchall.return_value = []
+        stats = audit_logger.query_stats(entity_name="Task")
+        assert stats["total"] == 0
+        # Should have used the entity_name filter branch
+        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
+        assert any("entity_name = %s" in c[0] for c in select_calls)
 
-    @pytest.mark.asyncio
-    async def test_query_stats(self, logger) -> None:
-        for _ in range(3):
-            await logger.log_decision(
-                operation="read",
-                entity_name="Task",
-                entity_id="1",
-                decision="allow",
-                matched_policy="p",
-                policy_effect="permit",
-            )
-        await logger.log_decision(
-            operation="delete",
-            entity_name="Task",
-            entity_id="1",
-            decision="deny",
-            matched_policy="p",
-            policy_effect="forbid",
-        )
-        await logger._flush()
-
-        stats = logger.query_stats()
-        assert stats["total"] == 4
-        assert stats["by_decision"]["allow"] == 3
-        assert stats["by_decision"]["deny"] == 1
-        assert stats["by_operation"]["read"] == 3
-
-    @pytest.mark.asyncio
-    async def test_query_limit(self, logger) -> None:
-        for i in range(10):
-            await logger.log_decision(
-                operation="read",
-                entity_name="Task",
-                entity_id=str(i),
-                decision="allow",
-                matched_policy="p",
-                policy_effect="permit",
-            )
-        await logger._flush()
-        logs = logger.query_logs(limit=3)
-        assert len(logs) == 3
+    def test_query_limit(self, audit_logger, mock_conn) -> None:
+        conn, cursor = mock_conn
+        cursor.fetchall.return_value = []
+        audit_logger.query_logs(limit=3)
+        select_calls = [c for c in cursor._executed if isinstance(c[0], str) and "SELECT" in c[0]]
+        # The limit param should be passed
+        assert any(c[1] and c[1][-1] == 3 for c in select_calls if c[1])
 
 
 # =============================================================================
@@ -303,10 +305,10 @@ class TestAuditQueries:
 
 class TestFlushLoop:
     @pytest.mark.asyncio
-    async def test_start_stop(self, logger) -> None:
+    async def test_start_stop(self, audit_logger, mock_conn) -> None:
         """Logger can be started and stopped without errors."""
-        logger.start()
-        await logger.log_decision(
+        audit_logger.start()
+        await audit_logger.log_decision(
             operation="read",
             entity_name="Task",
             entity_id="1",
@@ -316,10 +318,11 @@ class TestFlushLoop:
         )
         # Wait for at least one flush cycle
         await asyncio.sleep(0.2)
-        await logger.stop()
+        await audit_logger.stop()
 
-        logs = logger.query_logs()
-        assert len(logs) == 1
+        conn, cursor = mock_conn
+        insert_calls = [c for c in cursor._executed if isinstance(c[0], str) and "INSERT" in c[0]]
+        assert len(insert_calls) >= 1
 
 
 # =============================================================================
@@ -351,9 +354,10 @@ class TestHelpers:
         assert elapsed_us >= 0
 
     @pytest.mark.asyncio
-    async def test_evaluation_time_persisted(self, logger) -> None:
+    async def test_evaluation_time_persisted(self, audit_logger, mock_conn) -> None:
         """evaluation_time_us should be written to the DB when provided."""
-        await logger.log_decision(
+        conn, cursor = mock_conn
+        await audit_logger.log_decision(
             operation="read",
             entity_name="Task",
             entity_id="t-1",
@@ -362,16 +366,17 @@ class TestHelpers:
             policy_effect="permit",
             evaluation_time_us=1234,
         )
-        await logger._flush()
-        logs = logger.query_logs(entity_name="Task")
-        assert len(logs) == 1
-        assert logs[0]["evaluation_time_us"] == 1234
+        await audit_logger._flush()
+        insert_calls = [c for c in cursor._executed if isinstance(c[0], str) and "INSERT" in c[0]]
+        assert len(insert_calls) == 1
+        params = insert_calls[0][1]
+        assert params is not None
+        # evaluation_time_us is at index 15
+        assert params[15] == 1234
 
     @pytest.mark.asyncio
     async def test_log_audit_decision_passes_evaluation_time(self) -> None:
         """_log_audit_decision should forward evaluation_time_us to log_decision."""
-        from unittest.mock import AsyncMock
-
         from dazzle_back.runtime.route_generator import _log_audit_decision
 
         mock_logger = AsyncMock()
@@ -511,8 +516,6 @@ class TestListAuditLogging:
     @pytest.mark.asyncio
     async def test_list_handler_calls_audit_logger(self) -> None:
         """create_list_handler should log list access when audit_logger is provided."""
-        from unittest.mock import AsyncMock
-
         from dazzle_back.runtime.route_generator import _list_handler_body
 
         mock_logger = AsyncMock()
@@ -550,8 +553,6 @@ class TestListAuditLogging:
     @pytest.mark.asyncio
     async def test_list_handler_no_audit_when_logger_none(self) -> None:
         """create_list_handler should not crash when audit_logger is None."""
-        from unittest.mock import AsyncMock
-
         from dazzle_back.runtime.route_generator import _list_handler_body
 
         mock_service = AsyncMock()
@@ -736,10 +737,10 @@ class TestFieldChanges:
         assert changes["title"] == {"old": "Old", "new": "New"}
 
     @pytest.mark.asyncio
-    async def test_field_changes_persisted_to_db(self, logger, tmp_path):
+    async def test_field_changes_persisted_to_db(self, audit_logger, mock_conn):
         """field_changes should be persisted to the audit log database."""
-        logger.start()
-        await logger.log_decision(
+        conn, cursor = mock_conn
+        await audit_logger.log_decision(
             operation="update",
             entity_name="Task",
             entity_id="abc",
@@ -748,18 +749,20 @@ class TestFieldChanges:
             policy_effect="permit",
             field_changes='{"title": {"old": "A", "new": "B"}}',
         )
-        await asyncio.sleep(0.3)
-        await logger.stop()
+        await audit_logger._flush()
 
-        rows = logger.query_logs(entity_name="Task")
-        assert len(rows) == 1
-        assert rows[0]["field_changes"] == '{"title": {"old": "A", "new": "B"}}'
+        insert_calls = [c for c in cursor._executed if isinstance(c[0], str) and "INSERT" in c[0]]
+        assert len(insert_calls) == 1
+        params = insert_calls[0][1]
+        assert params is not None
+        # field_changes is at index 16
+        assert params[16] == '{"title": {"old": "A", "new": "B"}}'
 
     @pytest.mark.asyncio
-    async def test_field_changes_null_when_not_provided(self, logger, tmp_path):
+    async def test_field_changes_null_when_not_provided(self, audit_logger, mock_conn):
         """field_changes should be NULL when not provided."""
-        logger.start()
-        await logger.log_decision(
+        conn, cursor = mock_conn
+        await audit_logger.log_decision(
             operation="read",
             entity_name="Task",
             entity_id="abc",
@@ -767,18 +770,17 @@ class TestFieldChanges:
             matched_policy="test",
             policy_effect="permit",
         )
-        await asyncio.sleep(0.3)
-        await logger.stop()
+        await audit_logger._flush()
 
-        rows = logger.query_logs(entity_name="Task")
-        assert len(rows) == 1
-        assert rows[0]["field_changes"] is None
+        insert_calls = [c for c in cursor._executed if isinstance(c[0], str) and "INSERT" in c[0]]
+        assert len(insert_calls) == 1
+        params = insert_calls[0][1]
+        assert params is not None
+        assert params[16] is None
 
     @pytest.mark.asyncio
     async def test_log_audit_decision_forwards_field_changes(self):
         """_log_audit_decision should forward field_changes to log_decision."""
-        from unittest.mock import AsyncMock
-
         from dazzle_back.runtime.route_generator import _log_audit_decision
 
         mock_logger = MagicMock()
