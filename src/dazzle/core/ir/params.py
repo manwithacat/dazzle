@@ -39,10 +39,18 @@ class ParamSpec(BaseModel):
 
 
 class ParamRef(BaseModel):
-    """Reference to a runtime parameter, used in place of literal values."""
+    """Reference to a runtime parameter, used in place of literal values.
+
+    JSON-serializable: resolves to ``{"$param": key, "default": default}``
+    so that ``json.dumps(model.model_dump())`` never crashes.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     key: str
     param_type: str
     default: Any
+
+    def __json__(self) -> dict[str, Any]:
+        """Custom JSON hook — resolve to a dict for stdlib json.dumps."""
+        return {"$param": self.key, "default": self.default}

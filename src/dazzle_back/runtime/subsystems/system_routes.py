@@ -432,7 +432,7 @@ class SystemRoutesSubsystem:
 
         try:
             _spec_bytes = appspec.model_dump_json().encode()
-        except (TypeError, ValueError):
+        except Exception:
             # ParamRef or other non-serializable IR nodes — fall back to repr
             _spec_bytes = repr(appspec.model_dump(mode="python")).encode()
         _dsl_hash = hashlib.sha256(_spec_bytes).hexdigest()[:8]
