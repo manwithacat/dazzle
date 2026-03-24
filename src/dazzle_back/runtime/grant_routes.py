@@ -11,6 +11,7 @@ field may create or manage grants.
 from __future__ import annotations
 
 from typing import Any
+from uuid import UUID
 
 from dazzle_back.runtime._fastapi_compat import (
     FASTAPI_AVAILABLE,
@@ -31,7 +32,7 @@ def create_grant_routes(
     """Create grant management routes.
 
     Args:
-        conn_factory: Callable returning a sqlite3 Connection for GrantStore.
+        conn_factory: Callable returning a psycopg Connection for GrantStore.
         appspec: The AppSpec for looking up GrantSchemaSpec definitions.
         auth_dep: FastAPI auth dependency that requires authentication.
 
@@ -46,7 +47,7 @@ def create_grant_routes(
     def _get_store() -> Any:
         from dazzle_back.runtime.grant_store import GrantStore
 
-        return GrantStore(conn_factory(), placeholder="%s")
+        return GrantStore(conn_factory())
 
     def _get_user_id(auth_context: AuthContext) -> str:
         if not auth_context or not auth_context.is_authenticated:
@@ -55,6 +56,12 @@ def create_grant_routes(
         if not uid:
             raise HTTPException(status_code=401, detail="Authentication required")
         return str(uid)
+
+    def _parse_uuid(value: str, field_name: str) -> UUID:
+        try:
+            return UUID(value)
+        except (ValueError, AttributeError):
+            raise HTTPException(status_code=422, detail=f"Invalid UUID for {field_name}")
 
     def _get_user_roles(auth_context: AuthContext) -> set[str]:
         user = getattr(auth_context, "user", None)
@@ -174,6 +181,28 @@ def create_grant_routes(
 
             try:
                 result = store.reject_grant(grant_id, user_id)
+            except ValueError as e:
+                raise HTTPException(status_code=422, detail=str(e))
+            return {"grant": result}
+
+        @router.post("/{grant_id}/cancel", summary="Cancel a pending grant")  # type: ignore[misc,untyped-decorator,unused-ignore]
+        async def cancel_grant(
+            grant_id: str,
+            auth_context: AuthContext = Depends(auth_dep),
+        ) -> dict[str, Any]:
+            user_id = _get_user_id(auth_context)
+            parsed_id = _parse_uuid(grant_id, "grant_id")
+            store = _get_store()
+            try:
+                grant = store._get_grant(parsed_id)
+            except ValueError:
+                raise HTTPException(status_code=404, detail="Grant not found")
+
+            user_roles = _get_user_roles(auth_context)
+            _check_granted_by(grant["schema_name"], user_roles)
+
+            try:
+                result = store.cancel_grant(parsed_id, UUID(user_id))
             except ValueError as e:
                 raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
