@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.1] - 2026-03-24
+
+### Fixed
+- `grant_routes`: `_check_granted_by` now reads `granted_by` and `approval` from `GrantRelationSpec` instead of `GrantSchemaSpec` — fixes 500 error on all grant creation (#650)
+
+### Added
+- `_extract_roles` helper to walk `ConditionExpr` trees for compound role expressions (e.g. `role(admin) or role(manager)`)
+- `_get_relation_spec` helper for relation-level lookups within grant schemas
+- Unit tests for grant routes (`test_grant_routes.py`)
+
 ## [0.48.0] - 2026-03-24
 
 ### Changed

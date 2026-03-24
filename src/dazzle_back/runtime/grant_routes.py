@@ -72,12 +72,36 @@ def create_grant_routes(
             roles.add(r if isinstance(r, str) else getattr(r, "name", str(r)))
         return roles
 
-    def _check_granted_by(schema_name: str, user_roles: set[str]) -> None:
-        """Verify the caller has a role listed in granted_by for the schema."""
+    def _extract_roles(expr: Any) -> set[str]:
+        """Extract role names from a ConditionExpr tree."""
+        roles: set[str] = set()
+        if expr is None:
+            return roles
+        if getattr(expr, "role_check", None):
+            roles.add(expr.role_check.role_name)
+        if getattr(expr, "left", None):
+            roles |= _extract_roles(expr.left)
+        if getattr(expr, "right", None):
+            roles |= _extract_roles(expr.right)
+        return roles
+
+    def _get_relation_spec(schema_name: str, relation_name: str) -> Any:
+        """Look up a GrantRelationSpec by schema and relation name."""
         schema = appspec.get_grant_schema(schema_name) if appspec else None
         if schema is None:
             raise HTTPException(status_code=404, detail=f"Grant schema '{schema_name}' not found")
-        allowed = set(schema.granted_by) if schema.granted_by else set()
+        rel = next((r for r in schema.relations if r.name == relation_name), None)
+        if rel is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Relation '{relation_name}' not found in grant schema '{schema_name}'",
+            )
+        return rel
+
+    def _check_granted_by(schema_name: str, relation_name: str, user_roles: set[str]) -> None:
+        """Verify the caller has a role listed in granted_by for the relation."""
+        rel = _get_relation_spec(schema_name, relation_name)
+        allowed = _extract_roles(rel.granted_by)
         if not allowed.intersection(user_roles):
             raise HTTPException(
                 status_code=403,
@@ -124,11 +148,11 @@ def create_grant_routes(
                     detail="Required fields: schema_name, relation, principal_id, scope_entity, scope_id",
                 )
 
-            _check_granted_by(schema_name, user_roles)
+            _check_granted_by(schema_name, relation, user_roles)
 
-            # Look up approval mode from schema
-            schema = appspec.get_grant_schema(schema_name)
-            approval_mode = getattr(schema, "approval", "auto") if schema else "auto"
+            # Look up approval mode from relation spec
+            rel_spec = _get_relation_spec(schema_name, relation)
+            approval_mode = str(rel_spec.approval) if rel_spec.approval else "auto"
 
             store = _get_store()
             grant = store.create_grant(
@@ -156,7 +180,7 @@ def create_grant_routes(
                 raise HTTPException(status_code=404, detail="Grant not found")
 
             user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], user_roles)
+            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
             try:
                 result = store.approve_grant(grant_id, user_id)
@@ -177,7 +201,7 @@ def create_grant_routes(
                 raise HTTPException(status_code=404, detail="Grant not found")
 
             user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], user_roles)
+            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
             try:
                 result = store.reject_grant(grant_id, user_id)
@@ -199,7 +223,7 @@ def create_grant_routes(
                 raise HTTPException(status_code=404, detail="Grant not found")
 
             user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], user_roles)
+            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
             try:
                 result = store.cancel_grant(parsed_id, UUID(user_id))
@@ -220,7 +244,7 @@ def create_grant_routes(
                 raise HTTPException(status_code=404, detail="Grant not found")
 
             user_roles = _get_user_roles(auth_context)
-            _check_granted_by(grant["schema_name"], user_roles)
+            _check_granted_by(grant["schema_name"], grant["relation"], user_roles)
 
             try:
                 result = store.revoke_grant(grant_id, user_id)
