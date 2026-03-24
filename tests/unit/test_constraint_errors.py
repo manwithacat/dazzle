@@ -405,14 +405,21 @@ class TestPsycopgSubclassDetection:
     def test_parse_constraint_error_with_subclass(self):
         """_parse_constraint_error works with psycopg-style subclass exceptions."""
         FKV = self._make_subclass("ForeignKeyViolation")
-        exc = FKV("FOREIGN KEY constraint failed")
+        exc = FKV("violates foreign key constraint")
+        exc.pgerror = 'ERROR:  insert or update on table "Task" violates foreign key constraint'
+        exc.diag = type(
+            "Diag", (), {"detail": 'Key (assigned_to)=(abc) is not present in table "User"'}
+        )()
         ctype, field = _parse_constraint_error(exc, "Task")
         assert ctype == "foreign_key"
+        assert field == "assigned_to"
 
     def test_parse_constraint_error_unique_subclass(self):
         """_parse_constraint_error parses unique violations from subclass."""
         UV = self._make_subclass("UniqueViolation")
-        exc = UV("UNIQUE constraint failed: Task.slug")
+        exc = UV("duplicate key value violates unique constraint")
+        exc.pgerror = 'ERROR:  duplicate key value violates unique constraint "Task_slug_key"'
+        exc.diag = type("Diag", (), {"detail": "Key (slug)=(test) already exists."})()
         ctype, field = _parse_constraint_error(exc, "Task")
         assert ctype == "unique"
         assert field == "slug"
