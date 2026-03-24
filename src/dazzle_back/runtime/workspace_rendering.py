@@ -504,8 +504,10 @@ async def _workspace_region_handler(
             if _db_mgr:
                 _grant_conn = _db_mgr.get_persistent_connection()
                 _grant_store = GrantStore(_grant_conn)
+                from uuid import UUID as _UUID
+
                 _active_grants = _grant_store.list_grants(
-                    principal_id=_current_user_id, status="active"
+                    principal_id=_UUID(_current_user_id), status="active"
                 )
                 _filter_context["active_grants"] = _active_grants
             else:

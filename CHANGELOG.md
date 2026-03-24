@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-03-24
+
+### Changed
+- GrantStore rewritten as PostgreSQL-only — removed all SQLite code paths, `_sql()` helper, and `placeholder` parameter
+- Grant tables now use native PostgreSQL types: UUID columns, TIMESTAMPTZ timestamps, JSONB metadata
+- State transitions use atomic `UPDATE WHERE status + rowcount` pattern — eliminates TOCTOU race conditions
+- `list_grants` uses dynamic WHERE clause construction instead of `IS NULL OR` anti-pattern
+- `expire_stale_grants` uses `RETURNING id` for single-pass batch expiry
+- `grant_routes.py` docstring and constructor updated for psycopg (was sqlite3)
+
+### Added
+- `cancel_grant` transition: `pending_approval → cancelled` (by the granter)
+- CHECK constraints on `_grants.status` and `_grant_events.event_type` columns
+- Partial index `idx_grants_expiry` for active grants with expiry dates
+- FK index `idx_grant_events_grant_id` on grant events table
+- Cancel endpoint: `POST /api/grants/{id}/cancel`
+- UUID validation at HTTP boundary in grant routes (`_parse_uuid` helper)
+- Concurrency tests proving one-winner property for competing state transitions
+- PostgreSQL integration tests via `TEST_DATABASE_URL` (skip when not set)
+
+### Removed
+- SQLite support in GrantStore — PostgreSQL is the sole supported backend
+- `_sql()` placeholder rewriting helper
+- `placeholder` parameter on GrantStore constructor
+
 ## [0.47.2] - 2026-03-23
 
 ### Fixed
