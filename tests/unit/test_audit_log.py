@@ -110,10 +110,12 @@ class TestAuditLoggerInit:
         assert any("idx_audit_timestamp" in sql for sql in executed_sqls)
 
     def test_raises_on_missing_psycopg(self) -> None:
-        """Logger should raise RuntimeError if psycopg is not installed."""
+        """_get_connection should raise RuntimeError if psycopg is not installed."""
         with patch.dict("sys.modules", {"psycopg": None, "psycopg.rows": None}):
+            logger_obj = AuditLogger.__new__(AuditLogger)
+            logger_obj._database_url = "postgresql://localhost/test"
             with pytest.raises(RuntimeError, match="psycopg is required"):
-                AuditLogger(database_url="postgresql://localhost/test")
+                logger_obj._get_connection()
 
     def test_raises_on_connection_failure(self) -> None:
         """Logger should raise RuntimeError if PostgreSQL connection fails."""
