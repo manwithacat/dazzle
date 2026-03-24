@@ -263,3 +263,105 @@ class TestDuplicatedRefFieldDetection:
         # School entity not in appspec — should not crash
         warnings = extended_lint(_make_appspec([student]))
         assert not any("duplicate" in w.lower() for w in warnings)
+
+
+class TestFkTargetMissingDisplayField:
+    """Test lint warning for FK-target entities missing display_field (#652)."""
+
+    def test_warns_on_fk_target_without_display_field(self) -> None:
+        school = ir.EntitySpec(
+            name="School",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(name="name", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
+            ],
+        )
+        student = ir.EntitySpec(
+            name="Student",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(
+                    name="school",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="School"),
+                ),
+            ],
+        )
+        from dazzle.core.validator import extended_lint
+
+        warnings = extended_lint(_make_appspec([school, student]))
+        assert any("School" in w and "display_field" in w for w in warnings)
+        assert any("name" in w for w in warnings)  # Suggests "name" field
+
+    def test_no_warning_when_display_field_set(self) -> None:
+        school = ir.EntitySpec(
+            name="School",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(name="name", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
+            ],
+            display_field="name",
+        )
+        student = ir.EntitySpec(
+            name="Student",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(
+                    name="school",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="School"),
+                ),
+            ],
+        )
+        from dazzle.core.validator import extended_lint
+
+        warnings = extended_lint(_make_appspec([school, student]))
+        assert not any("School" in w and "display_field" in w for w in warnings)
+
+    def test_junction_entity_skipped(self) -> None:
+        """Junction entities (2+ required refs, no str fields) are skipped."""
+        team = ir.EntitySpec(
+            name="Team",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(name="name", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
+            ],
+            display_field="name",
+        )
+        player = ir.EntitySpec(
+            name="Player",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(name="name", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
+            ],
+            display_field="name",
+        )
+        team_player = ir.EntitySpec(
+            name="TeamPlayer",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(
+                    name="team",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Team"),
+                    modifiers=[ir.FieldModifier.REQUIRED],
+                ),
+                ir.FieldSpec(
+                    name="player",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Player"),
+                    modifiers=[ir.FieldModifier.REQUIRED],
+                ),
+            ],
+        )
+        # Another entity references TeamPlayer — should not warn (it's a junction)
+        match_entity = ir.EntitySpec(
+            name="Match",
+            fields=[
+                _id_field(),
+                ir.FieldSpec(
+                    name="roster_entry",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="TeamPlayer"),
+                ),
+            ],
+        )
+        from dazzle.core.validator import extended_lint
+
+        warnings = extended_lint(_make_appspec([team, player, team_player, match_entity]))
+        assert not any("TeamPlayer" in w and "display_field" in w for w in warnings)

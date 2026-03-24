@@ -1739,6 +1739,76 @@ def _lint_graph_node_suggestions(appspec: ir.AppSpec) -> list[str]:
     return warnings
 
 
+def _lint_fk_targets_missing_display_field(appspec: ir.AppSpec) -> list[str]:
+    """Warn when FK-target entities lack display_field (#652).
+
+    Entities referenced by ``ref`` fields on other entities should declare
+    ``display_field:`` so that FK references render as human-readable text
+    instead of raw UUIDs. Junction entities (2+ required ref fields, no
+    str/text fields) are skipped since they rarely have a meaningful name.
+    """
+    warnings: list[str] = []
+    entities_by_name: dict[str, ir.EntitySpec] = {e.name: e for e in appspec.domain.entities}
+
+    # Build map: entity_name → list of "Entity.field" references
+    fk_refs: dict[str, list[str]] = {}
+    for entity in appspec.domain.entities:
+        for field in entity.fields:
+            kind = getattr(field.type, "kind", None)
+            kind_val = kind.value if hasattr(kind, "value") else str(kind)  # type: ignore[union-attr]
+            ref_target = getattr(field.type, "ref_entity", None)
+            if kind_val in ("ref", "belongs_to") and ref_target:
+                fk_refs.setdefault(ref_target, []).append(f"{entity.name}.{field.name}")
+
+    for target_name, refs in sorted(fk_refs.items()):
+        target = entities_by_name.get(target_name)
+        if target is None:
+            continue
+        if target.display_field:
+            continue
+
+        # Skip junction entities: 2+ required ref fields, no str/text fields
+        ref_count = 0
+        has_text_field = False
+        for f in target.fields:
+            fk = getattr(f.type, "kind", None)
+            fk_val = fk.value if hasattr(fk, "value") else str(fk)  # type: ignore[union-attr]
+            if fk_val in ("ref", "belongs_to") and f.is_required:
+                ref_count += 1
+            scalar = getattr(f.type, "scalar_type", None)
+            if scalar and str(scalar) in ("str", "text", "ScalarType.STR", "ScalarType.TEXT"):
+                has_text_field = True
+        if ref_count >= 2 and not has_text_field:
+            continue
+
+        # Suggest a candidate field
+        candidate = None
+        for name in ("name", "title", "label"):
+            if any(f.name == name for f in target.fields):
+                candidate = name
+                break
+        if candidate is None:
+            for f in target.fields:
+                scalar = getattr(f.type, "scalar_type", None)
+                if scalar and str(scalar) in ("str", "ScalarType.STR"):
+                    candidate = f.name
+                    break
+
+        ref_list = ", ".join(refs[:5])
+        if len(refs) > 5:
+            ref_list += f", ... ({len(refs)} total)"
+        msg = (
+            f"Entity '{target_name}' is referenced as FK by {len(refs)} field(s) "
+            f"but has no display_field."
+        )
+        if candidate:
+            msg += f"\n  Suggested: display_field: {candidate}"
+        msg += f"\n  FK references: {ref_list}"
+        warnings.append(msg)
+
+    return warnings
+
+
 def extended_lint(appspec: ir.AppSpec) -> list[str]:
     """Extended lint rules for code quality.
 
@@ -1759,6 +1829,7 @@ def extended_lint(appspec: ir.AppSpec) -> list[str]:
     warnings.extend(_lint_modeling_anti_patterns(appspec))
     warnings.extend(_lint_graph_edge_suggestions(appspec))
     warnings.extend(_lint_graph_node_suggestions(appspec))
+    warnings.extend(_lint_fk_targets_missing_display_field(appspec))
     return warnings
 
 
