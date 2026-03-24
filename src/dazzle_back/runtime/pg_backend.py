@@ -181,11 +181,16 @@ class PostgresBackend:
         from psycopg.rows import dict_row
         from psycopg_pool import ConnectionPool
 
+        def _reset_connection(conn: Any) -> None:
+            """Rollback any aborted transaction before returning to pool."""
+            conn.rollback()
+
         self._pool = ConnectionPool(
             self.database_url,
             min_size=min_size,
             max_size=max_size,
             kwargs={"row_factory": dict_row},
+            reset=_reset_connection,
             open=True,
         )
         logger.info("Connection pool opened (min=%d, max=%d)", min_size, max_size)
@@ -229,7 +234,11 @@ class PostgresBackend:
             with self._pool.connection() as conn:
                 if effective_search_path:
                     _set_search_path(conn, effective_search_path)
-                yield PgConnectionWrapper(conn)
+                try:
+                    yield PgConnectionWrapper(conn)
+                except Exception:
+                    conn.rollback()
+                    raise
             return
 
         # Direct-connect fallback (pre-pool: migrations, build-time)

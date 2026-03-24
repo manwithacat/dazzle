@@ -100,6 +100,48 @@ class TestConnectionFallback:
         assert isinstance(composed, Composed)
 
 
+class TestPoolRollbackOnError:
+    """Pool connections rollback on exception (#664)."""
+
+    def test_pool_connection_rollbacks_on_exception(self, _pg_backend):
+        """Pool path calls conn.rollback() when an exception occurs."""
+        mock_pool = MagicMock()
+        mock_pool_conn = MagicMock()
+        mock_pool.connection.return_value.__enter__ = MagicMock(return_value=mock_pool_conn)
+        mock_pool.connection.return_value.__exit__ = MagicMock(return_value=False)
+        _pg_backend._pool = mock_pool
+
+        with pytest.raises(RuntimeError, match="bad query"):
+            with _pg_backend.connection():
+                raise RuntimeError("bad query")
+
+        mock_pool_conn.rollback.assert_called_once()
+
+    def test_pool_connection_no_rollback_on_success(self, _pg_backend):
+        """Pool path does NOT call rollback on successful use."""
+        mock_pool = MagicMock()
+        mock_pool_conn = MagicMock()
+        mock_pool.connection.return_value.__enter__ = MagicMock(return_value=mock_pool_conn)
+        mock_pool.connection.return_value.__exit__ = MagicMock(return_value=False)
+        _pg_backend._pool = mock_pool
+
+        with _pg_backend.connection():
+            pass
+
+        mock_pool_conn.rollback.assert_not_called()
+
+    @patch("psycopg_pool.ConnectionPool")
+    def test_open_pool_passes_reset_callback(self, mock_pool_cls, _pg_backend):
+        """open_pool() passes a reset callback that calls rollback."""
+        _pg_backend.open_pool()
+        call_kwargs = mock_pool_cls.call_args[1]
+        assert "reset" in call_kwargs
+        # The reset callback should call rollback on a connection
+        mock_conn = MagicMock()
+        call_kwargs["reset"](mock_conn)
+        mock_conn.rollback.assert_called_once()
+
+
 class TestPoolEnvConfig:
     """Environment variable configuration for pool size."""
 

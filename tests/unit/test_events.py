@@ -1111,3 +1111,21 @@ class TestConnectFnInjection:
         with pytest.raises(ConnectionError, match="test connection failure"):
             await publisher.start()
         assert not publisher.is_running
+
+
+# ---------------------------------------------------------------------------
+# RedisBus.start_consumer_loop signature (#662)
+# ---------------------------------------------------------------------------
+
+
+class TestRedisBusSignature:
+    """RedisBus.start_consumer_loop must accept poll_interval kwarg (#662)."""
+
+    def test_start_consumer_loop_accepts_poll_interval(self) -> None:
+        """RedisBus.start_consumer_loop signature includes poll_interval."""
+        import inspect
+
+        from dazzle_back.events.redis_bus import RedisBus
+
+        sig = inspect.signature(RedisBus.start_consumer_loop)
+        assert "poll_interval" in sig.parameters

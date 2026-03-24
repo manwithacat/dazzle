@@ -487,6 +487,12 @@ async def _page_handler(
             path_id,
             _cookies,
         )
+        # Resolve FK dicts → display strings so detail fields show names not UUIDs (#663)
+        if req_detail.item and "error" not in req_detail.item:
+            from dazzle_back.runtime.workspace_rendering import _inject_display_names
+
+            req_detail.item = _inject_display_names(req_detail.item)
+
         if "error" in req_detail.item:
             logger.warning(
                 "Detail page data fetch failed for %s/%s: %s",
