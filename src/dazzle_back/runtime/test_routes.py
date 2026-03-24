@@ -25,7 +25,7 @@ from dazzle_back.runtime._fastapi_compat import (
     HTTPException,
     Request,
 )
-from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
+from dazzle_back.runtime.repository import DatabaseManager, Repository
 from dazzle_back.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -114,7 +114,7 @@ class AuthenticateResponse(BaseModel):
 @dataclass
 class _TestDeps:
     db_manager: DatabaseManager
-    repositories: dict[str, SQLiteRepository[Any]]
+    repositories: dict[str, Repository[Any]]
     entities: list[EntitySpec]
     entity_sql: dict[str, _EntitySQL]
     auth_store: Any
@@ -396,7 +396,7 @@ async def _delete_entity(deps: _TestDeps, entity_name: str, entity_id: str) -> d
 
 def create_test_routes(
     db_manager: DatabaseManager,
-    repositories: dict[str, SQLiteRepository[Any]],
+    repositories: dict[str, Repository[Any]],
     entities: list[EntitySpec],
     auth_store: Any = None,
     personas: list[dict[str, Any]] | None = None,

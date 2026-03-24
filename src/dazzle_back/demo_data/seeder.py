@@ -16,7 +16,7 @@ from .loader import DemoDataLoader
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
+    from dazzle_back.runtime.repository import DatabaseManager, Repository
     from dazzle_back.specs import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class DemoDataSeeder:
         self,
         entities: list[EntitySpec],
         db_manager: DatabaseManager,
-        repositories: dict[str, SQLiteRepository[Any]],
+        repositories: dict[str, Repository[Any]],
         project_root: Path | None = None,
         seed: int | None = None,
     ) -> None:

@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, APIRouter
 from dazzle_back.runtime.auth import AuthStore
-from dazzle_back.runtime.repository import DatabaseManager, SQLiteRepository
+from dazzle_back.runtime.repository import DatabaseManager, Repository
 from dazzle_back.specs.entity import EntitySpec
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ class FrontendLogRequest(BaseModel):
 @dataclass
 class _ControlPlaneDeps:
     db_manager: DatabaseManager | None
-    repositories: dict[str, SQLiteRepository[Any]] | None
+    repositories: dict[str, Repository[Any]] | None
     entities: list[EntitySpec]
     available_personas: list[dict[str, Any]]
     available_scenarios: list[dict[str, Any]]
@@ -452,7 +452,7 @@ async def _clear_logs(deps: _ControlPlaneDeps) -> dict[str, Any]:
 
 def create_control_plane_routes(
     db_manager: DatabaseManager | None,
-    repositories: dict[str, SQLiteRepository[Any]] | None,
+    repositories: dict[str, Repository[Any]] | None,
     entities: list[EntitySpec],
     personas: list[dict[str, Any]] | None = None,
     scenarios: list[dict[str, Any]] | None = None,

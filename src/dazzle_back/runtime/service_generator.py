@@ -22,7 +22,7 @@ from dazzle_back.specs.service import (
 )
 
 if TYPE_CHECKING:
-    from dazzle_back.runtime.repository import SQLiteRepository
+    from dazzle_back.runtime.repository import Repository
 
 logger = logging.getLogger("dazzle.service")
 
@@ -66,7 +66,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
     Generic CRUD service implementation.
 
     Provides standard create, read, update, delete, and list operations.
-    Supports both in-memory storage (for testing) and SQLite persistence
+    Supports both in-memory storage (for testing) and database persistence
     via the repository pattern.
 
     Entity lifecycle events (v0.24.0):
@@ -80,7 +80,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         model_class: type[T],
         create_schema: type[CreateT],
         update_schema: type[UpdateT],
-        repository: "SQLiteRepository[T] | None" = None,
+        repository: "Repository[T] | None" = None,
         state_machine: StateMachineSpec | None = None,
         entity_spec: EntitySpec | None = None,
     ):
@@ -91,7 +91,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         self.state_machine = state_machine
         self.entity_spec = entity_spec
 
-        # Repository for SQLite persistence
+        # Repository for database persistence
         self._repository = repository
 
         # In-memory store as fallback (for testing without database)
@@ -170,12 +170,12 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             self._on_deleted_callbacks, entity_id, entity_data, None, "deleted"
         )
 
-    def set_repository(self, repository: "SQLiteRepository[T]") -> None:
+    def set_repository(self, repository: "Repository[T]") -> None:
         """
         Set the repository for persistent storage.
 
         Args:
-            repository: SQLite repository instance
+            repository: Repository instance
         """
         self._repository = repository
 

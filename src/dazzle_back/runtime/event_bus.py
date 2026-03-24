@@ -402,7 +402,7 @@ class RealtimeRepositoryMixin:
     Mixin that adds event emission to repository operations.
 
     Usage:
-        class MyRepository(RealtimeRepositoryMixin, SQLiteRepository[T]):
+        class MyRepository(RealtimeRepositoryMixin, Repository[T]):
             entity_name = "Task"  # Set as class attribute
     """
 

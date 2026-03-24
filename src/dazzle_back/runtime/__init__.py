@@ -53,7 +53,6 @@ from dazzle_back.runtime.repository import (
     DatabaseManager,
     Repository,
     RepositoryFactory,
-    SQLiteRepository,
 )
 from dazzle_back.runtime.route_generator import (
     RouteGenerator,
@@ -106,7 +105,6 @@ __all__ = [
     # Repository
     "Repository",
     "DatabaseManager",
-    "SQLiteRepository",
     "RepositoryFactory",
     # Migrations
     "MigrationAction",

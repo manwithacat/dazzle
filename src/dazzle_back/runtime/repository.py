@@ -89,15 +89,6 @@ def _parse_constraint_error(exc: str | Exception, table_name: str) -> tuple[str,
         fk_field: str | None = fk_match.group(1) if fk_match else None
         return "foreign_key", fk_field
 
-    # Legacy SQLite patterns (kept for _parse_constraint_error string-based callers)
-    if "UNIQUE constraint failed:" in err:
-        parts = err.split("UNIQUE constraint failed:")[-1].strip()
-        field_name = parts.split(".")[-1].strip() if parts else None
-        return "unique", field_name or None
-
-    if "FOREIGN KEY constraint failed" in err:
-        return "foreign_key", None
-
     return "integrity", None
 
 
@@ -570,10 +561,6 @@ class Repository(Generic[T]):
 
         return result is not None
 
-
-# Backward-compatible aliases
-SQLiteRepository = Repository
-"""Deprecated alias for :class:`Repository`. Use ``Repository`` directly."""
 
 try:
     from dazzle_back.runtime.pg_backend import PostgresBackend
