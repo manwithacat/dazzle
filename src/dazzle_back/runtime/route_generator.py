@@ -744,6 +744,7 @@ def _wrap_with_auth(
 
     if _use_cedar:
         assert optional_auth_dep is not None  # narrowing for mypy
+        assert cedar_access_spec is not None  # narrowing for mypy
         return _build_cedar_handler(
             core_fn,
             service=service,

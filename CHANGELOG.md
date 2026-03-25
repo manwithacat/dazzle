@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.6] - 2026-03-25
+
+### Changed
+- `eval_comparison_op` extracted to `dazzle.core.comparison` — eliminates 60-line duplication between `_comparison.py` and `condition_eval.py` (#675)
+- `appspec: Any` replaced with `appspec: AppSpec` via `TYPE_CHECKING` across 5 agent mission files (#676)
+- `EventFramework.get_bus()` public method replaces all direct `framework._bus` access (#678)
+- `AuthStore` public API: `count_users`, `count_active_sessions`, `list_distinct_roles`, `list_sessions`, `store_totp_secret_pending` — eliminates 7 external `_execute` calls (#672)
+- `_fastapi_compat.py` TYPE_CHECKING imports — mypy sees real FastAPI types, removes type: ignore cascade (#677)
+- `route_generator.py` public handler signatures typed with `BaseService`, `EntityAccessSpec`, `AuditLogger` (#680)
+
 ## [0.48.5] - 2026-03-25
 
 ### Fixed

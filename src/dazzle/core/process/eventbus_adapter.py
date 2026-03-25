@@ -392,6 +392,7 @@ class EventBusProcessAdapter(ProcessAdapter):
             return None
 
         bus = framework.get_bus()
+        assert bus is not None  # guaranteed by check above
         envelope_cls = _env_mod.EventEnvelope
 
         async def _publish(
