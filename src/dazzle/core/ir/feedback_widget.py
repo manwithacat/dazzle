@@ -91,7 +91,7 @@ FEEDBACK_REPORT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...]
     # Audit — stored as string IDs, not FK refs, because the auto-entity
     # must not assume any particular User/tenant entity exists.
     # Apps that need FK refs can declare their own FeedbackReport entity.
-    ("reported_by", "str(200)", ("required",), None),
+    ("reported_by", "str(200)", (), None),
     ("assigned_to", "str(200)", (), None),
     ("resolved_by", "str(200)", (), None),
     ("created_at", "datetime", (), None),

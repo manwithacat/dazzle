@@ -120,7 +120,10 @@
   {% if _feedback_widget_enabled | default(false) %}
   <link rel="stylesheet" href="/static/css/feedback-widget.css">
   <script src="/static/js/feedback-widget.js"></script>
-  <script>document.body.dataset.userRole = "{{ user_roles[0] if user_roles else '' }}";</script>
+  <script>
+    document.body.dataset.userRole = "{{ user_roles[0] if user_roles else '' }}";
+    document.body.dataset.userEmail = "{{ user_email | default('') }}";
+  </script>
   {% endif %}
 
   {% block scripts_extra %}{% endblock %}

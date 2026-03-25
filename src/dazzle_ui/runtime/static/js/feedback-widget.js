@@ -337,6 +337,7 @@
     }
 
     var payload = {
+      reported_by: document.body.dataset.userEmail || "",
       category: this._category,
       severity: this._severity,
       description: description,
