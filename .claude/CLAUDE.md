@@ -277,6 +277,15 @@ The `status activity` MCP operation provides the same data for programmatic poll
 - **Import name**: `dazzle` (unchanged — PEP 503 normalises the package name)
 - `pip install dazzle-dsl` provides the `dazzle` console command
 
+## Architectural Decisions
+
+See `docs/adr/INDEX.md` for the full index. Key decisions that constrain agent proposals:
+- **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
+- **No SQLite** — PostgreSQL only (ADR-0008)
+- **No SPA frameworks** — server-side Jinja2 + HTMX (ADR-0011)
+- **No backward compat shims** — clean breaks before v1.0 (ADR-0003)
+- **No field conditions in `permit:`** — use `scope:` with `for:` (ADR-0010)
+
 ## Gotchas
 
 - **MCP test isolation**: Tests that mock `mcp.*` modules pollute `sys.modules`. The `tests/unit/conftest.py` 3-phase fixture handles this — don't bypass it.
