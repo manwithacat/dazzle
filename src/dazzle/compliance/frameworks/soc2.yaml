@@ -472,11 +472,17 @@ framework:
           dsl_evidence:
             - construct: processes
               description: "Capacity review processes define monitoring cadence and scaling decision steps"
+            - construct: sla
+              description: "SLA tier definitions evidence capacity targets and breach thresholds"
 
         - id: "A1.2"
           name: "Environmental and Technological Controls"
           objective: "The entity authorises, designs, develops or acquires, implements, operates, approves, maintains, and monitors environmental protections, software, data back-up processes, and recovery infrastructure to meet its availability objectives."
-          dsl_evidence: []
+          dsl_evidence:
+            - construct: sla
+              description: "SLA definitions with business hours evidence availability windows"
+            - construct: schedule
+              description: "Scheduled maintenance processes evidence operational controls"
 
         - id: "A1.3"
           name: "Recovery and Restoration"
@@ -484,6 +490,8 @@ framework:
           dsl_evidence:
             - construct: processes
               description: "Disaster recovery and restoration test processes are modelled as named processes with defined steps and owners"
+            - construct: schedule
+              description: "Scheduled recovery test processes evidence restoration testing cadence"
 
     # =========================================================================
     # Confidentiality
@@ -527,6 +535,8 @@ framework:
               description: "Process definitions encode transaction rules and processing procedures"
             - construct: stories
               description: "Stories validate that processing produces expected outputs against defined acceptance criteria"
+            - construct: archetype
+              description: "Archetype invariants define processing rules and data integrity checks"
 
         - id: "PI1.2"
           name: "Processing Integrity — System Inputs"
@@ -538,6 +548,8 @@ framework:
               description: "Transition guards enforce input validation rules before state changes are permitted"
             - construct: stories
               description: "Stories include acceptance criteria for input completeness and accuracy"
+            - construct: archetype
+              description: "Archetype field validations evidence input completeness and accuracy controls"
 
         - id: "PI1.3"
           name: "Processing Integrity — System Processing"

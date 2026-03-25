@@ -36,6 +36,9 @@ def extract_evidence(appspec: AppSpec) -> EvidenceMap:
         "story": _extract_stories(appspec),
         "grant_schema": _extract_grant_schemas(appspec),
         "llm_intent": _extract_llm_intents(appspec),
+        "sla": _extract_slas(appspec),
+        "schedule": _extract_schedules(appspec),
+        "archetype": _extract_archetypes(appspec),
     }
     return EvidenceMap(items=items)
 
@@ -208,4 +211,47 @@ def _extract_llm_intents(appspec: AppSpec) -> list[EvidenceItem]:
             dsl_ref=f"{intent.name}.llm_intent",
         )
         for intent in appspec.llm_intents
+    ]
+
+
+def _extract_slas(appspec: AppSpec) -> list[EvidenceItem]:
+    """Extract evidence from SLA definitions."""
+    return [
+        EvidenceItem(
+            entity=sla.entity or sla.name,
+            construct="sla",
+            detail=f"SLA '{sla.name}' with {len(sla.tiers)} tier(s)"
+            + (f" on entity {sla.entity}" if sla.entity else ""),
+            dsl_ref=f"{sla.name}.sla",
+        )
+        for sla in (appspec.slas or [])
+    ]
+
+
+def _extract_schedules(appspec: AppSpec) -> list[EvidenceItem]:
+    """Extract evidence from schedule definitions."""
+    return [
+        EvidenceItem(
+            entity=s.name,
+            construct="schedule",
+            detail=f"Schedule '{s.name}'"
+            + (f" (cron: {s.cron})" if s.cron else "")
+            + (f" implements {', '.join(s.implements)}" if s.implements else ""),
+            dsl_ref=f"{s.name}.schedule",
+        )
+        for s in (appspec.schedules or [])
+    ]
+
+
+def _extract_archetypes(appspec: AppSpec) -> list[EvidenceItem]:
+    """Extract evidence from archetype definitions."""
+    return [
+        EvidenceItem(
+            entity=a.name,
+            construct="archetype",
+            detail=f"Archetype '{a.name}' with {len(a.fields)} field(s)"
+            + (f", {len(a.invariants)} invariant(s)" if a.invariants else ""),
+            dsl_ref=f"{a.name}.archetype",
+        )
+        for a in (appspec.archetypes or [])
     ]
