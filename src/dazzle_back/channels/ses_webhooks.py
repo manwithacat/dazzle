@@ -26,7 +26,8 @@ def _parse_sns_message(body: bytes) -> dict[str, Any]:
     Returns:
         Parsed message dict
     """
-    return json.loads(body)  # type: ignore[no-any-return]
+    result: dict[str, Any] = json.loads(body)
+    return result
 
 
 async def _confirm_subscription(message: dict[str, Any]) -> bool:
@@ -71,7 +72,8 @@ def _parse_ses_event(notification_message: str) -> dict[str, Any] | None:
         Parsed SES event dict or None
     """
     try:
-        return json.loads(notification_message)  # type: ignore[no-any-return]
+        result: dict[str, Any] = json.loads(notification_message)
+        return result
     except (json.JSONDecodeError, TypeError):
         logger.error("Failed to parse SES event from SNS notification")
         return None

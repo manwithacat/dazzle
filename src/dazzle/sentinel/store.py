@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from typing import Any
 
 from .models import Finding, FindingStatus, ScanResult
 
@@ -111,7 +112,8 @@ class FindingStore:
 
     def _read_json(self, path: Path) -> dict | None:  # type: ignore[type-arg]
         try:
-            return json.loads(path.read_text())  # type: ignore[no-any-return]
+            result: dict[str, Any] = json.loads(path.read_text())
+            return result
         except (json.JSONDecodeError, OSError):
             return None
 

@@ -210,7 +210,8 @@ class SpecVersionStore:
             )
             row = cursor.fetchone()
             if row and row["diff_data"]:
-                return json.loads(row["diff_data"])  # type: ignore[no-any-return]
+                result: dict[str, Any] = json.loads(row["diff_data"])
+                return result
         return {}
 
     def get_snapshot(self, version_id: str) -> dict[str, Any] | None:
@@ -222,7 +223,8 @@ class SpecVersionStore:
             )
             row = cursor.fetchone()
             if row and row["spec_snapshot"]:
-                return json.loads(row["spec_snapshot"])  # type: ignore[no-any-return]
+                snapshot: dict[str, Any] = json.loads(row["spec_snapshot"])
+                return snapshot
         return None
 
     def _get_latest_snapshot(self) -> dict[str, Any] | None:
@@ -233,7 +235,8 @@ class SpecVersionStore:
             )
             row = cursor.fetchone()
             if row and row["spec_snapshot"]:
-                return json.loads(row["spec_snapshot"])  # type: ignore[no-any-return]
+                snapshot: dict[str, Any] = json.loads(row["spec_snapshot"])
+                return snapshot
         return None
 
     def _appspec_to_dict(self, appspec: Any) -> dict[str, Any]:

@@ -183,7 +183,8 @@ def load_registry(registry_path: Path) -> dict[str, Any]:
     if not registry_path.is_file():
         return {"template_overrides": []}
     try:
-        return json.loads(registry_path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
+        result: dict[str, Any] = json.loads(registry_path.read_text(encoding="utf-8"))
+        return result
     except (json.JSONDecodeError, OSError):
         return {"template_overrides": []}
 
