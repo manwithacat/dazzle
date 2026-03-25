@@ -614,7 +614,7 @@ def _build_access_context(auth_context: Any) -> tuple[Any, Any]:
 
     Returns (user_or_none, runtime_context) for Cedar policy evaluation.
     """
-    from dazzle_back.runtime.access_evaluator import AccessRuntimeContext
+    from dazzle.core.access import AccessRuntimeContext
 
     user = auth_context.user if auth_context.is_authenticated else None
     raw_roles = list(getattr(user, "roles", [])) if user else []
@@ -797,7 +797,8 @@ def _build_cedar_handler(
         request: Request,
         auth_context: Any,
     ) -> Any:
-        from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
+        from dazzle.core.access import AccessDecision
+        from dazzle_back.runtime.access_evaluator import evaluate_permission
         from dazzle_back.runtime.audit_log import measure_evaluation_time
 
         # Pre-read for operations that need existing record for policy eval
@@ -1759,7 +1760,8 @@ def create_read_handler(
         async def _read_cedar(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle_back.runtime.access_evaluator import AccessDecision, evaluate_permission
+            from dazzle.core.access import AccessDecision
+            from dazzle_back.runtime.access_evaluator import evaluate_permission
             from dazzle_back.runtime.audit_log import measure_evaluation_time
             from dazzle_back.specs.auth import AccessOperationKind
 

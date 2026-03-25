@@ -13,8 +13,8 @@ Evaluates EntityAccessSpec from BackendSpec at runtime, supporting:
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 
+from dazzle.core.access import AccessDecision, AccessRuntimeContext
 from dazzle_back.runtime._comparison import eval_comparison_op, normalize_for_comparison
 from dazzle_back.specs import (
     AccessComparisonKind,
@@ -25,80 +25,6 @@ from dazzle_back.specs import (
     EntityAccessSpec,
 )
 from dazzle_back.specs.auth import AccessAuthContext, PermissionRuleSpec
-
-# =============================================================================
-# Access Decision
-# =============================================================================
-
-
-class AccessDecision:
-    """
-    Result of an access evaluation.
-
-    Couples the allow/deny decision with the reason, enabling audit logging.
-    """
-
-    __slots__ = ("allowed", "matched_policy", "effect")
-
-    def __init__(
-        self,
-        allowed: bool,
-        matched_policy: str = "",
-        effect: str = "",
-    ):
-        self.allowed = allowed
-        self.matched_policy = matched_policy
-        self.effect = effect
-
-    def __bool__(self) -> bool:
-        return self.allowed
-
-    def __repr__(self) -> str:
-        return f"AccessDecision(allowed={self.allowed}, policy={self.matched_policy!r})"
-
-
-# =============================================================================
-# Access Runtime Context
-# =============================================================================
-
-
-class AccessRuntimeContext:
-    """
-    Runtime context for access rule evaluation.
-
-    Provides user identity, roles, and entity resolution for relationship traversal.
-    """
-
-    def __init__(
-        self,
-        user_id: str | UUID | None = None,
-        roles: list[str] | None = None,
-        is_superuser: bool = False,
-        entity_resolver: Any = None,
-    ):
-        """
-        Initialize access context.
-
-        Args:
-            user_id: Current user's ID
-            roles: List of user's roles
-            is_superuser: Whether user is a superuser (bypasses all checks)
-            entity_resolver: Callable to resolve related entities by (entity_name, id)
-        """
-        self.user_id = str(user_id) if user_id else None
-        self.roles = set(roles or [])
-        self.is_superuser = is_superuser
-        self.entity_resolver = entity_resolver
-
-    @property
-    def is_authenticated(self) -> bool:
-        """Check if user is authenticated."""
-        return self.user_id is not None
-
-    def has_role(self, role: str) -> bool:
-        """Check if user has a specific role."""
-        return role in self.roles or self.is_superuser
-
 
 # =============================================================================
 # Condition Evaluation

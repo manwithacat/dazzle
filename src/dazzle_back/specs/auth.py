@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from dazzle.core.access import AccessOperationKind
+
 # =============================================================================
 # Roles and Permissions
 # =============================================================================
@@ -169,16 +171,6 @@ class AccessAuthContext(StrEnum):
 
     ANONYMOUS = "anonymous"
     AUTHENTICATED = "authenticated"
-
-
-class AccessOperationKind(StrEnum):
-    """Access operation types."""
-
-    READ = "read"
-    CREATE = "create"
-    UPDATE = "update"
-    DELETE = "delete"
-    LIST = "list"
 
 
 class AccessPolicyEffect(StrEnum):
