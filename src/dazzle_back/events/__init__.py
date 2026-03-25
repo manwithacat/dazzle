@@ -47,9 +47,6 @@ if EVENTS_AVAILABLE:
         EventFramework,
         EventFrameworkConfig,
         FrameworkStats,
-        get_framework,
-        init_framework,
-        shutdown_framework,
     )
     from dazzle_back.events.inbox import EventInbox, InboxEntry, ProcessingResult
 
@@ -176,9 +173,6 @@ if EVENTS_AVAILABLE:
         "EventFramework",
         "EventFrameworkConfig",
         "FrameworkStats",
-        "get_framework",
-        "init_framework",
-        "shutdown_framework",
         # v0.18.0 Phase I - Kafka adapter
         "KAFKA_AVAILABLE",
         "KafkaBus",
