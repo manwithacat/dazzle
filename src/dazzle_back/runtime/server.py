@@ -376,6 +376,12 @@ class DazzleBackendApp:
             version=self._appspec.version,
         )
 
+        # Attach runtime service container (v0.49.0, #673)
+        from dazzle_back.runtime.services import RuntimeServices
+
+        services = RuntimeServices()
+        self._app.state.services = services
+
         # Security middleware (v0.11.0)
         from dazzle_back.runtime.security_middleware import apply_security_middleware
 
@@ -928,9 +934,7 @@ class DazzleBackendApp:
             self._upload_callbacks: list[Any] = []
             _upload_callbacks = self._upload_callbacks
 
-            from dazzle_back.runtime.event_bus import get_event_bus
-
-            _upload_bus = get_event_bus()
+            _upload_bus = self._app.state.services.event_bus
 
             async def _on_file_uploaded(
                 entity_name: str,

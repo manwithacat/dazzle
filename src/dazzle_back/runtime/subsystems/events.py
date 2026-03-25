@@ -44,6 +44,10 @@ class EventsSubsystem:
 
         ctx.event_framework = self._framework
 
+        # Store on RuntimeServices for dependency injection
+        if hasattr(ctx.app.state, "services"):
+            ctx.app.state.services.event_framework = self._framework
+
         # Wire lifecycle
         framework = self._framework
 
