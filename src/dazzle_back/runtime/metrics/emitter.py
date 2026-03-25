@@ -10,7 +10,6 @@ Designed for minimal overhead on the main application:
 
 from __future__ import annotations
 
-import atexit
 import json
 import logging
 import os
@@ -21,9 +20,6 @@ from dataclasses import dataclass, field
 from typing import Any
 
 logger = logging.getLogger(__name__)
-
-# Global emitter instance
-_emitter: MetricsEmitter | None = None
 
 
 @dataclass
@@ -214,24 +210,3 @@ class MetricsEmitter:
         self._running = False
         if self._flush_thread.is_alive():
             self._flush_thread.join(timeout=5.0)
-
-
-def get_emitter() -> MetricsEmitter | None:
-    """Get the global metrics emitter instance."""
-    global _emitter
-    if _emitter is None:
-        redis_url = os.environ.get("REDIS_URL")
-        if redis_url:
-            max_len = int(os.environ.get("DAZZLE_METRICS_MAXLEN", "10000"))
-            _emitter = MetricsEmitter(redis_url, max_stream_len=max_len)
-            atexit.register(_emitter.shutdown)
-        else:
-            logger.debug("REDIS_URL not set, metrics disabled")
-    return _emitter
-
-
-def emit(name: str, value: float, tags: dict[str, str] | None = None) -> None:
-    """Convenience function to emit a metric."""
-    emitter = get_emitter()
-    if emitter:
-        emitter.emit(name, value, tags)

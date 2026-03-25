@@ -597,23 +597,3 @@ class SystemMetricsCollector:
                 self.set_component_status(ComponentType.EVENT_BUS, "degraded")
 
             await asyncio.sleep(interval)
-
-
-# Global singleton instance
-_system_collector: SystemMetricsCollector | None = None
-
-
-def get_system_collector() -> SystemMetricsCollector:
-    """Get the global system metrics collector instance."""
-    global _system_collector
-    if _system_collector is None:
-        _system_collector = SystemMetricsCollector()
-    return _system_collector
-
-
-def reset_system_collector() -> None:
-    """Reset the global system metrics collector."""
-    global _system_collector
-    if _system_collector:
-        _system_collector.reset()
-    _system_collector = None

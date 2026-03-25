@@ -14,8 +14,6 @@ from .system_collector import (
     MetricType,
     SystemMetricsCollector,
     SystemMetricsSnapshot,
-    get_system_collector,
-    reset_system_collector,
 )
 from .throughput import ThroughputCounter
 
@@ -32,6 +30,4 @@ __all__ = [
     "MetricType",
     "SystemMetricsCollector",
     "SystemMetricsSnapshot",
-    "get_system_collector",
-    "reset_system_collector",
 ]

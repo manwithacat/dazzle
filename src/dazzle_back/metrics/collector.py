@@ -273,26 +273,3 @@ class MetricsCollector:
             "error_counts": error_counts,
             "recovery_times": {k: round(v, 3) for k, v in recovery_times.items()},
         }
-
-
-# Global collector instance (optional, for convenience)
-_collector: MetricsCollector | None = None
-
-
-def get_collector() -> MetricsCollector:
-    """
-    Get the global metrics collector.
-
-    Creates one if it doesn't exist.
-    """
-    global _collector
-    if _collector is None:
-        _collector = MetricsCollector()
-    return _collector
-
-
-def reset_collector() -> MetricsCollector:
-    """Reset the global metrics collector."""
-    global _collector
-    _collector = MetricsCollector()
-    return _collector

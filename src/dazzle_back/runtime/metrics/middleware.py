@@ -18,7 +18,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from .emitter import get_emitter
+from .emitter import MetricsEmitter
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp
@@ -32,12 +32,13 @@ class MetricsMiddleware(BaseHTTPMiddleware):
     Middleware that automatically collects HTTP metrics.
 
     Emits metrics to Redis streams via the MetricsEmitter.
-    Zero-overhead if REDIS_URL is not configured.
+    Zero-overhead if no emitter is provided.
     """
 
     def __init__(
         self,
         app: ASGIApp,
+        emitter: MetricsEmitter | None = None,
         exclude_paths: list[str] | None = None,
     ):
         """
@@ -45,9 +46,11 @@ class MetricsMiddleware(BaseHTTPMiddleware):
 
         Args:
             app: ASGI application
+            emitter: MetricsEmitter instance; if None, middleware is a no-op
             exclude_paths: Paths to exclude from metrics (e.g., /health)
         """
         super().__init__(app)
+        self._emitter = emitter
         self._exclude_paths = set(exclude_paths or ["/health", "/metrics", "/favicon.ico"])
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -57,7 +60,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             response: Response = await call_next(request)
             return response
 
-        emitter = get_emitter()
+        emitter = self._emitter
         if not emitter:
             # No metrics configured, pass through
             response = await call_next(request)
@@ -121,13 +124,17 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         return path
 
 
-def add_metrics_middleware(app: Any, exclude_paths: list[str] | None = None) -> None:
+def add_metrics_middleware(
+    app: Any,
+    emitter: MetricsEmitter | None = None,
+    exclude_paths: list[str] | None = None,
+) -> None:
     """
     Add metrics middleware to a FastAPI/Starlette app.
 
     Usage:
         from dazzle_back.runtime.metrics import add_metrics_middleware
-        add_metrics_middleware(app)
+        add_metrics_middleware(app, emitter=services.metrics_emitter)
     """
     default_excludes = [
         "/health",
@@ -138,5 +145,6 @@ def add_metrics_middleware(app: Any, exclude_paths: list[str] | None = None) -> 
     ]
     app.add_middleware(
         MetricsMiddleware,
+        emitter=emitter,
         exclude_paths=exclude_paths or default_excludes,
     )
