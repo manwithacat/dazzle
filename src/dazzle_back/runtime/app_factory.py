@@ -499,6 +499,9 @@ def assemble_post_build_routes(
 
     # ---- 3. App page routes (/app/*) ----
     try:
+        from dazzle_back.converters.entity_converter import convert_entity
+        from dazzle_back.runtime.access_evaluator import evaluate_permission
+        from dazzle_back.runtime.workspace_rendering import _inject_display_names
         from dazzle_ui.runtime.page_routes import create_page_routes
 
         page_router = create_page_routes(
@@ -507,6 +510,9 @@ def assemble_post_build_routes(
             theme_css=theme_css,
             get_auth_context=get_auth_context,
             app_prefix="/app",
+            evaluate_permission_fn=evaluate_permission,
+            convert_entity_fn=convert_entity,
+            inject_display_names_fn=_inject_display_names,
         )
         app.include_router(page_router, prefix="/app")
         logger.info("  App pages: %s workspaces mounted at /app", len(appspec.workspaces))
