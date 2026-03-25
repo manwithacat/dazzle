@@ -591,6 +591,24 @@ class SystemRoutesSubsystem:
             except ImportError:
                 pass
 
+            # Register POST /feedbackreports route for widget submissions (#670)
+            _fb_repo = ctx.repositories.get("FeedbackReport") if ctx.repositories else None
+            if _fb_repo:
+                from fastapi import Request as _FBRequest
+                from fastapi.responses import JSONResponse as _FBJson
+
+                @ctx.app.post("/feedbackreports", tags=["Feedback"])
+                async def _create_feedback(request: _FBRequest) -> _FBJson:
+                    """Accept feedback widget submissions from authenticated users."""
+                    # Require authentication
+                    auth_ctx = getattr(request.state, "auth_context", None)
+                    if not auth_ctx or not getattr(auth_ctx, "is_authenticated", False):
+                        return _FBJson({"error": "Authentication required"}, status_code=401)
+                    body = await request.json()
+                    body["submitted_by"] = str(getattr(auth_ctx, "user_id", ""))
+                    result = await _fb_repo.create(body)
+                    return _FBJson({"id": str(result.get("id", ""))}, status_code=201)
+
         # Mount static files from project dir + framework dir
         try:
             from pathlib import Path
