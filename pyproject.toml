@@ -227,6 +227,7 @@ markers = [
     "pra: Performance Reference App stress tests",
     "corpus: Parser corpus golden snapshot tests",
     "tigerbeetle: TigerBeetle integration tests (requires running TigerBeetle)",
+    "postgres: Tests requiring a live PostgreSQL connection (TEST_DATABASE_URL)",
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

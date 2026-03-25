@@ -9,7 +9,12 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle_back.runtime.pg_backend import PgConnectionWrapper
+
+pytestmark = pytest.mark.postgres
+
 
 # =============================================================================
 # PgConnectionWrapper Tests

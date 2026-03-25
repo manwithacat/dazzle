@@ -11,6 +11,8 @@ from dazzle.core.dsl_parser_impl import parse_dsl
 from dazzle_back.runtime.condition_evaluator import evaluate_condition
 from dazzle_back.runtime.grant_store import GrantStore
 
+pytestmark = pytest.mark.postgres
+
 
 @pytest.fixture
 def pg_integration_conn():

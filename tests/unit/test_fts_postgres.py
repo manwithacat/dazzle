@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from dazzle_back.runtime.fts_manager import FTSConfig, FTSManager, create_fts_manager
 from dazzle_back.runtime.fts_postgres import PostgresFTSBackend
+
+pytestmark = pytest.mark.postgres
+
 
 # ---------------------------------------------------------------------------
 # Helpers

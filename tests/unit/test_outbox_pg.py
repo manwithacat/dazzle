@@ -8,6 +8,8 @@ import pytest
 
 from dazzle_back.events.outbox import EventOutbox
 
+pytestmark = pytest.mark.postgres
+
 
 class TestOutboxCreateTable:
     """Test create_table with Postgres backend."""

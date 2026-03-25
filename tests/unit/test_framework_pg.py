@@ -16,6 +16,8 @@ import pytest
 
 from dazzle_back.events.framework import EventFramework, EventFrameworkConfig
 
+pytestmark = pytest.mark.postgres
+
 
 class TestEventFrameworkConfigPg:
     """Tests for EventFrameworkConfig with database_url."""

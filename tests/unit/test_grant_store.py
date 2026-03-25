@@ -12,6 +12,8 @@ from psycopg.rows import dict_row
 
 from dazzle_back.runtime.grant_store import GrantStatus, GrantStore
 
+pytestmark = pytest.mark.postgres
+
 
 @pytest.fixture(scope="session")
 def pg_grant_conn_factory():

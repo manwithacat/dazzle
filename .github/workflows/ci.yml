@@ -311,11 +311,12 @@ jobs:
         pip install -e ".[dev,llm,mcp,mobile,postgres]"
         pip install pygls || true
 
-    - name: Run tests with PostgreSQL
+    - name: Run PostgreSQL-specific tests
       env:
         DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
+        TEST_DATABASE_URL: postgresql://dazzle:dazzle_test@localhost:5432/dazzle_test
       run: |
-        pytest -v --cov=src/dazzle --cov-report=term-missing -m "not e2e" -x
+        pytest -v -m "postgres" -x
 
   # Runtime E2E: CRUD tests + Tier 1 DSL tests against PostgreSQL
   e2e-runtime:

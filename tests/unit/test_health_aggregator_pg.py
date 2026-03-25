@@ -12,6 +12,8 @@ from dazzle_back.runtime.health_aggregator import (
     create_database_check,
 )
 
+pytestmark = pytest.mark.postgres
+
 
 class TestCreateDatabaseCheck:
     """Tests for create_database_check (PostgreSQL-only)."""

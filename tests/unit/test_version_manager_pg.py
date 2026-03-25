@@ -18,6 +18,8 @@ import pytest
 
 from dazzle.core.process import VersionManager
 
+pytestmark = pytest.mark.postgres
+
 
 class TestVersionManagerPgInit:
     """Tests for VersionManager PostgreSQL initialization."""
