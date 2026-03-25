@@ -592,11 +592,11 @@ class SystemRoutesSubsystem:
                 pass
 
             # Register POST /feedbackreports route for widget submissions (#670)
-            if ctx.db:
+            if ctx.db_manager:
                 from fastapi import Request as _FBRequest
                 from fastapi.responses import JSONResponse as _FBJson
 
-                _fb_db = ctx.db
+                _fb_db = ctx.db_manager
 
                 @ctx.app.post("/feedbackreports", tags=["Feedback"])
                 async def _create_feedback(request: _FBRequest) -> _FBJson:
