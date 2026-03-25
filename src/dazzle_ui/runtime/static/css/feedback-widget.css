@@ -1,3 +1,4 @@
+@layer framework {
 /* Feedback Widget — framework-level in-app feedback collection.
  * Uses DaisyUI oklch colour tokens for theme consistency. */
 
@@ -223,3 +224,5 @@
   opacity: 1;
   pointer-events: auto;
 }
+
+} /* end @layer framework */
