@@ -11,6 +11,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  {# CSS Cascade Layer order — defines priority: base < framework < app < overrides #}
+  <style>@layer base, framework, app, overrides;</style>
+
   {# Tailwind CSS + DaisyUI — compiled bundle replaces both CDNs (#377) #}
   {% if _tailwind_bundled | default(false) %}
   <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
@@ -20,7 +23,7 @@
   {% endif %}
 
   {% set _cdn_base = "https://cdn.jsdelivr.net/gh/manwithacat/dazzle@v" ~ _dazzle_version ~ "/dist" %}
-  {% if _use_cdn | default(true) %}
+  {% if _use_cdn | default(false) %}
   {# Dazzle framework CSS + JS — jsDelivr CDN #}
   <link rel="stylesheet" href="{{ _cdn_base }}/dazzle.min.css">
   <script defer src="{{ _cdn_base }}/dazzle.min.js"></script>
@@ -40,8 +43,8 @@
   <script defer src="/static/js/dz-alpine.js"></script>
   <script defer src="/static/js/workspace-editor.js"></script>
   <script defer src="/static/vendor/alpine.min.js"></script>
-  {# Dazzle runtime (a11y + islands only — UI state managed by Alpine) #}
-  <link rel="stylesheet" href="/static/css/dz.css">
+  {# Dazzle framework CSS (local — framework layer via @import) #}
+  <link rel="stylesheet" href="/static/css/dazzle-framework.css">
   <script defer src="/static/js/dz-a11y.js"></script>
   <script defer src="/static/js/dz-islands.js"></script>
   {% endif %}
@@ -57,7 +60,7 @@
   </script>
 
   {# Lucide icons (v0.38.0: nav group icons) #}
-  {% if not _use_cdn | default(true) %}
+  {% if not _use_cdn | default(false) %}
   <script defer src="/static/vendor/lucide.min.js"></script>
   {% else %}
   <script defer src="{{ _cdn_base }}/dazzle-icons.min.js"
