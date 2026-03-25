@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.9] - 2026-03-25
+
+### Changed
+- 6 HIGH-risk module-level mutable singletons in `dazzle_back` consolidated into `RuntimeServices` dataclass on `app.state.services` (#673)
+- Route handlers access services via `Depends(get_services)`, middleware via `request.app.state.services` (#673)
+- Tests use pytest fixtures creating fresh instances instead of global reset functions (#673)
+
+### Removed
+- `get_event_bus()`, `set_event_bus()`, `reset_event_bus()` global singleton functions (#673)
+- `get_presence_tracker()`, `set_presence_tracker()`, `reset_presence_tracker()` global singleton functions (#673)
+- `get_framework()`, `init_framework()`, `shutdown_framework()` global singleton functions (#673)
+- `get_collector()`, `reset_collector()`, `get_system_collector()`, `reset_system_collector()` global singleton functions (#673)
+- `get_emitter()`, `emit()` global singleton functions (#673)
+
 ## [0.48.8] - 2026-03-25
 
 ### Changed
