@@ -153,24 +153,16 @@ class DazzleClient:
                 headers.setdefault("X-CSRF-Token", csrf_token)
                 kwargs["headers"] = headers
 
-        last_exc: httpx.TimeoutException | None = None
-        for attempt in range(self.MAX_RETRIES + 1):
-            try:
-                return self.client.request(method, url, **kwargs)
-            except httpx.TimeoutException as exc:
-                last_exc = exc
-                if attempt < self.MAX_RETRIES:
-                    delay = self.BACKOFF_SECONDS[attempt]
-                    logger.debug(
-                        "Timeout on %s %s (attempt %d/%d), retrying in %.1fs",
-                        method,
-                        url,
-                        attempt + 1,
-                        self.MAX_RETRIES + 1,
-                        delay,
-                    )
-                    time.sleep(delay)
-        raise last_exc  # type: ignore[misc]
+        from dazzle.core.http_client import retrying_request
+
+        return retrying_request(
+            self.client,
+            method,
+            url,
+            max_retries=self.MAX_RETRIES,
+            backoff=self.BACKOFF_SECONDS,
+            **kwargs,
+        )
 
     def close(self) -> None:
         self.client.close()

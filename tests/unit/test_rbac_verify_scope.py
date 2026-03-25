@@ -319,8 +319,9 @@ class TestRunScopeVerification:
         persona_query_resp.status_code = 200
         persona_query_resp.json.return_value = {"total": 12, "items": []}
 
-        mock_client.post = AsyncMock(side_effect=[admin_login_resp, persona_login_resp])
-        mock_client.get = AsyncMock(side_effect=[admin_query_resp, persona_query_resp])
+        mock_client.request = AsyncMock(
+            side_effect=[admin_login_resp, admin_query_resp, persona_login_resp, persona_query_resp]
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
@@ -371,8 +372,9 @@ class TestRunScopeVerification:
         persona_query_resp.status_code = 200
         persona_query_resp.json.return_value = {"total": 30, "items": []}
 
-        mock_client.post = AsyncMock(side_effect=[admin_login_resp, persona_login_resp])
-        mock_client.get = AsyncMock(side_effect=[admin_query_resp, persona_query_resp])
+        mock_client.request = AsyncMock(
+            side_effect=[admin_login_resp, admin_query_resp, persona_login_resp, persona_query_resp]
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
@@ -412,9 +414,8 @@ class TestRunScopeVerification:
         admin_query_resp.status_code = 200
         admin_query_resp.json.return_value = {"total": 50, "items": []}
 
-        # Only one POST (admin login) — no persona login needed
-        mock_client.post = AsyncMock(side_effect=[admin_login_resp])
-        mock_client.get = AsyncMock(side_effect=[admin_query_resp])
+        # Only one POST (admin login) + one GET — no persona login needed
+        mock_client.request = AsyncMock(side_effect=[admin_login_resp, admin_query_resp])
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
@@ -427,8 +428,8 @@ class TestRunScopeVerification:
         assert len(report.results) == 1
         assert report.results[0].status == "PASS"
         assert report.results[0].is_all is True
-        # Only admin login, no persona login
-        assert mock_client.post.call_count == 1
+        # Admin login + admin query, no persona login
+        assert mock_client.request.call_count == 2
 
     @pytest.mark.asyncio
     async def test_admin_login_failure(self) -> None:
@@ -450,7 +451,7 @@ class TestRunScopeVerification:
         mock_client = AsyncMock()
         admin_login_resp = MagicMock()
         admin_login_resp.status_code = 401
-        mock_client.post = AsyncMock(return_value=admin_login_resp)
+        mock_client.request = AsyncMock(return_value=admin_login_resp)
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
@@ -507,8 +508,9 @@ class TestRunScopeVerification:
         persona_query_resp = MagicMock()
         persona_query_resp.status_code = 403
 
-        mock_client.post = AsyncMock(side_effect=[admin_login_resp, persona_login_resp])
-        mock_client.get = AsyncMock(side_effect=[admin_query_resp, persona_query_resp])
+        mock_client.request = AsyncMock(
+            side_effect=[admin_login_resp, admin_query_resp, persona_login_resp, persona_query_resp]
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 

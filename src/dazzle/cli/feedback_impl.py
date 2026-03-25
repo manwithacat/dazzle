@@ -13,6 +13,8 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.http_client import async_retrying_request
+
 
 def _get_server_url(project_root: Path | None = None) -> str:
     """Read the running server URL from .dazzle/runtime.json.
@@ -65,7 +67,9 @@ async def feedback_list(
         params["severity"] = severity
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(
+        resp = await async_retrying_request(
+            client,
+            "GET",
             f"{url}/feedbackreports",
             params=params,
             cookies=_auth_cookies(project_root),
@@ -81,7 +85,9 @@ async def feedback_get(
     """Get a single feedback report by ID."""
     url = _get_server_url(project_root)
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.get(
+        resp = await async_retrying_request(
+            client,
+            "GET",
             f"{url}/feedbackreports/{report_id}",
             cookies=_auth_cookies(project_root),
         )
@@ -108,7 +114,9 @@ async def feedback_triage(
         payload["assigned_to"] = assigned_to
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.put(
+        resp = await async_retrying_request(
+            client,
+            "PUT",
             f"{url}/feedbackreports/{report_id}",
             json=payload,
             cookies=_auth_cookies(project_root),
@@ -133,7 +141,9 @@ async def feedback_resolve(
         payload["resolved_by"] = resolved_by
 
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.put(
+        resp = await async_retrying_request(
+            client,
+            "PUT",
             f"{url}/feedbackreports/{report_id}",
             json=payload,
             cookies=_auth_cookies(project_root),
@@ -149,7 +159,9 @@ async def feedback_delete(
     """Delete a feedback report. Returns True on success."""
     url = _get_server_url(project_root)
     async with httpx.AsyncClient(timeout=30.0) as client:
-        resp = await client.delete(
+        resp = await async_retrying_request(
+            client,
+            "DELETE",
             f"{url}/feedbackreports/{report_id}",
             cookies=_auth_cookies(project_root),
         )

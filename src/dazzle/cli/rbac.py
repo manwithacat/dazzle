@@ -143,7 +143,11 @@ async def _login(
     password: str,
 ) -> dict[str, str]:
     """Login via the app's auth endpoint and return session cookies."""
-    resp = await client.post(
+    from dazzle.core.http_client import async_retrying_request
+
+    resp = await async_retrying_request(
+        client,
+        "POST",
         f"{base_url}/auth/login",
         data={"email": email, "password": password},
     )
@@ -159,8 +163,10 @@ async def _get_entity_count(
     cookies: dict[str, str] | None = None,
 ) -> int:
     """Query entity list endpoint and return total count from pagination."""
+    from dazzle.core.http_client import async_retrying_request
+
     url = f"{base_url}/api/{entity_plural}?page_size=1"
-    resp = await client.get(url, cookies=cookies)
+    resp = await async_retrying_request(client, "GET", url, cookies=cookies)
     if resp.status_code == 403:
         return 0  # correctly denied
     if resp.status_code >= 400:
