@@ -166,10 +166,9 @@ class SystemRoutesSubsystem:
                 return
 
             from dazzle_back.runtime.api_cache import ApiResponseCache
-            from dazzle_back.runtime.event_bus import get_event_bus
             from dazzle_back.runtime.mapping_executor import MappingExecutor
 
-            event_bus = get_event_bus()
+            event_bus = ctx.app.state.services.event_bus
             repositories = ctx.repositories
 
             async def update_entity(

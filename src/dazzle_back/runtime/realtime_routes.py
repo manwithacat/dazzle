@@ -9,11 +9,8 @@ from typing import Any
 from fastapi import FastAPI
 
 from dazzle_back.runtime.auth import AuthStore
-from dazzle_back.runtime.event_bus import EntityEventBus, create_event_bus
-from dazzle_back.runtime.presence_tracker import (
-    PresenceTracker,
-    create_presence_tracker,
-)
+from dazzle_back.runtime.event_bus import EntityEventBus
+from dazzle_back.runtime.presence_tracker import PresenceTracker
 from dazzle_back.runtime.websocket_manager import (
     MessageType,
     RealtimeMessage,
@@ -40,8 +37,8 @@ class RealtimeContext:
         presence_tracker: PresenceTracker | None = None,
     ):
         self.ws_manager = ws_manager or create_websocket_manager()
-        self.event_bus = event_bus or create_event_bus()
-        self.presence_tracker = presence_tracker or create_presence_tracker()
+        self.event_bus = event_bus or EntityEventBus()
+        self.presence_tracker = presence_tracker or PresenceTracker()
 
         # Wire components together
         self.event_bus.set_websocket_manager(self.ws_manager)

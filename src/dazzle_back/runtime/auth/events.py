@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle_back.events.envelope import EventEnvelope
 
@@ -22,6 +22,23 @@ if TYPE_CHECKING:
     from .models import UserRecord
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Module-level event framework reference (set once at startup)
+# ---------------------------------------------------------------------------
+
+_event_framework: Any = None
+
+
+def configure_auth_events(framework: Any) -> None:
+    """Set the event framework for auth event publishing.
+
+    Called once during ``EventsSubsystem.startup()`` so that ``_publish()``
+    can reach the bus without importing a global singleton.
+    """
+    global _event_framework
+    _event_framework = framework
+
 
 # ---------------------------------------------------------------------------
 # Event type constants
@@ -112,9 +129,7 @@ async def _publish(envelope: EventEnvelope) -> None:
     responses are never blocked by event infrastructure issues.
     """
     try:
-        from dazzle_back.events.framework import get_framework
-
-        framework = get_framework()
+        framework = _event_framework
         bus = framework.get_bus() if framework else None
         if bus:
             await bus.publish(envelope.topic, envelope)

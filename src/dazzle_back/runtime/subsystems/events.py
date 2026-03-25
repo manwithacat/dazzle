@@ -48,6 +48,11 @@ class EventsSubsystem:
         if hasattr(ctx.app.state, "services"):
             ctx.app.state.services.event_framework = self._framework
 
+        # Configure auth event publishing with the framework reference
+        from dazzle_back.runtime.auth.events import configure_auth_events
+
+        configure_auth_events(self._framework)
+
         # Wire lifecycle
         framework = self._framework
 
