@@ -9,11 +9,13 @@ When ``DAZZLE_TEST_SECRET`` is set, all routes require the
 ``X-Test-Secret`` header to match (#458).
 """
 
+import json
 import logging
 import os
 import re
 from dataclasses import dataclass
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
@@ -119,6 +121,8 @@ class _TestDeps:
     entity_sql: dict[str, _EntitySQL]
     auth_store: Any
     personas: list[dict[str, Any]]
+    project_root: Path | None = None
+    project_root: Path | None = None
 
 
 # =============================================================================
@@ -193,6 +197,10 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
     Truncates all entity tables while preserving schema, then
     recreates auth users for each configured persona so that
     ``/__test__/authenticate`` works immediately after reset.
+
+    When ``.dazzle/test_credentials.json`` exists in the project root,
+    uses the emails and passwords defined there instead of generic
+    defaults so that generated auth tests work without extra config (#688).
     """
     with deps.db_manager.connection() as conn:
         for sql in deps.entity_sql.values():
@@ -201,19 +209,33 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
             except Exception:
                 logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
 
-    # Recreate demo auth users from personas (#465)
+    # Load project-specific credentials if available (#688)
+    creds_personas: dict[str, dict[str, str]] = {}
+    if deps.project_root:
+        creds_path = deps.project_root / ".dazzle" / "test_credentials.json"
+        if creds_path.exists():
+            try:
+                creds = json.loads(creds_path.read_text())
+                creds_personas = creds.get("personas", {})
+            except Exception:
+                logger.debug("Could not load test_credentials.json", exc_info=True)
+
+    # Recreate demo auth users from personas (#465, #688)
     if deps.auth_store is not None and deps.personas:
         for p in deps.personas:
             pid = p.get("id", "")
             if not pid:
                 continue
-            email = pid + "@demo.dazzle.local"
+            # Use credentials file when available, fall back to generic defaults
+            persona_creds = creds_personas.get(pid, {})
+            email = persona_creds.get("email") or (pid + "@demo.dazzle.local")
+            password = persona_creds.get("password") or ("demo_" + pid + "_password")  # nosec B106
             try:
                 user = deps.auth_store.get_user_by_email(email)
                 if not user:
                     deps.auth_store.create_user(
                         email=email,
-                        password="demo_" + pid + "_password",  # nosec B106
+                        password=password,
                         username=p.get("label") or pid,
                         roles=[pid],
                     )
@@ -400,6 +422,7 @@ def create_test_routes(
     entities: list[EntitySpec],
     auth_store: Any = None,
     personas: list[dict[str, Any]] | None = None,
+    project_root: Path | None = None,
 ) -> APIRouter:
     """
     Create test routes for E2E testing.
@@ -410,6 +433,7 @@ def create_test_routes(
         entities: List of entity specifications
         auth_store: Optional AuthStore for creating real test sessions
         personas: Optional list of persona configurations for demo user recreation
+        project_root: Optional project root for loading test_credentials.json
 
     Returns:
         APIRouter with test endpoints
@@ -432,6 +456,7 @@ def create_test_routes(
         entity_sql=entity_sql,
         auth_store=auth_store,
         personas=personas or [],
+        project_root=project_root,
     )
 
     # --- Authentication dependency ---
