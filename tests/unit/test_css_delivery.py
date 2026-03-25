@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import tempfile
 from pathlib import Path
 
 STATIC_CSS = (
@@ -40,3 +41,31 @@ class TestFrameworkCssEntryPoint:
     def test_no_feedback_widget_import(self) -> None:
         content = (STATIC_CSS / "dazzle-framework.css").read_text()
         assert "feedback-widget" not in content
+
+
+class TestCdnDefault:
+    def test_manifest_cdn_default_is_false(self) -> None:
+        from dazzle.core.manifest import ProjectManifest
+
+        m = ProjectManifest(name="t", version="0", project_root=".", module_paths=[])
+        assert m.cdn is False
+
+    def test_manifest_loader_cdn_default_is_false(self) -> None:
+        from dazzle.core.manifest import load_manifest
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write('[project]\nname = "test"\nversion = "0.1"\nmodules = ["app.dsl"]\n')
+            f.flush()
+            m = load_manifest(Path(f.name))
+        assert m.cdn is False
+
+    def test_manifest_explicit_cdn_true_preserved(self) -> None:
+        from dazzle.core.manifest import load_manifest
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write(
+                '[project]\nname = "test"\nversion = "0.1"\nmodules = ["app.dsl"]\n\n[ui]\ncdn = true\n'
+            )
+            f.flush()
+            m = load_manifest(Path(f.name))
+        assert m.cdn is True

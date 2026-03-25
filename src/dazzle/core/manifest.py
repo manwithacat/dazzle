@@ -338,7 +338,7 @@ class ProjectManifest:
     dev: DevConfig = field(default_factory=DevConfig)
     tenant: TenantConfig = field(default_factory=TenantConfig)
     framework_version: str | None = None
-    cdn: bool = True  # Serve assets from jsDelivr CDN; set [ui] cdn = false for air-gapped
+    cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     favicon: str | None = None  # Override favicon path; set [ui] favicon = "/static/my-icon.svg"
 
 
@@ -537,7 +537,7 @@ def load_manifest(path: Path) -> ProjectManifest:
 
     # Parse [ui] config
     ui_data = data.get("ui", {})
-    cdn_enabled = ui_data.get("cdn", True)
+    cdn_enabled = ui_data.get("cdn", False)
     favicon_path = ui_data.get("favicon")
 
     return ProjectManifest(

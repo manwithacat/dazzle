@@ -806,7 +806,7 @@ class TestJinjaFilters:
 
     def test_use_cdn_global(self, env) -> None:
         assert "_use_cdn" in env.globals
-        assert env.globals["_use_cdn"] is True
+        assert env.globals["_use_cdn"] is False
 
 
 # ===================================================================
