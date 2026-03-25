@@ -32,7 +32,6 @@ class ProcessSubsystem:
 
             from dazzle_back.runtime.process_manager import ProcessManager
             from dazzle_back.runtime.task_routes import router as task_router
-            from dazzle_back.runtime.task_routes import set_process_manager
 
             adapter_cls: type | None = ctx.config.process_adapter_class
             if adapter_cls is None:
@@ -59,7 +58,9 @@ class ProcessSubsystem:
             ctx.process_manager = self._manager
             ctx.process_adapter = self._adapter
 
-            set_process_manager(self._manager)
+            # Store on RuntimeServices for dependency injection
+            if hasattr(ctx.app.state, "services"):
+                ctx.app.state.services.process_manager = self._manager
             ctx.app.include_router(task_router, prefix="/api")
 
             self._wire_entity_events_to_processes(ctx)

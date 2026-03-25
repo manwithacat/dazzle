@@ -12,10 +12,11 @@ import logging
 from datetime import UTC
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from dazzle.core.process.adapter import ProcessTask, TaskStatus
+from dazzle_back.runtime.services import RuntimeServices, get_services
 
 logger = logging.getLogger(__name__)
 
@@ -110,23 +111,6 @@ class TaskListResponse(BaseModel):
 
     tasks: list[TaskSummary]
     total: int
-
-
-# Dependency placeholder - will be injected by server
-_process_manager = None
-
-
-def set_process_manager(manager: Any) -> None:
-    """Set the process manager dependency."""
-    global _process_manager
-    _process_manager = manager
-
-
-def get_process_manager() -> Any:
-    """Get the process manager."""
-    if _process_manager is None:
-        raise HTTPException(503, "Process manager not initialized")
-    return _process_manager
 
 
 def _build_process_context(
@@ -242,6 +226,7 @@ async def list_tasks(
     assignee_id: str | None = Query(None, description="Filter by assignee"),
     status: str | None = Query(None, description="Filter by status"),
     limit: int = Query(100, ge=1, le=1000),
+    services: RuntimeServices = Depends(get_services),
 ) -> TaskListResponse:
     """
     List tasks with optional filters.
@@ -250,7 +235,9 @@ async def list_tasks(
     - **status**: Filter by task status (pending, completed, escalated, etc.)
     - **limit**: Maximum number of tasks to return
     """
-    manager = get_process_manager()
+    if services.process_manager is None:
+        raise HTTPException(503, "Process manager not initialized")
+    manager = services.process_manager
 
     # Parse status if provided
     task_status = None
@@ -280,14 +267,19 @@ async def list_tasks(
 
 
 @router.get("/{task_id}", response_model=TaskDetailResponse)
-async def get_task(task_id: str) -> TaskDetailResponse:
+async def get_task(
+    task_id: str,
+    services: RuntimeServices = Depends(get_services),
+) -> TaskDetailResponse:
     """
     Get detailed task information including available outcomes.
 
     Returns task details with the surface to render and outcome buttons
     to display.
     """
-    manager = get_process_manager()
+    if services.process_manager is None:
+        raise HTTPException(503, "Process manager not initialized")
+    manager = services.process_manager
 
     task = await manager.get_task(task_id)
     if not task:
@@ -324,6 +316,7 @@ async def get_task(task_id: str) -> TaskDetailResponse:
 async def complete_task(
     task_id: str,
     body: CompleteTaskRequest,
+    services: RuntimeServices = Depends(get_services),
 ) -> CompleteTaskResponse:
     """
     Complete a task with the selected outcome.
@@ -331,7 +324,9 @@ async def complete_task(
     The outcome must be one of the valid outcomes defined in the
     process step's human_task configuration.
     """
-    manager = get_process_manager()
+    if services.process_manager is None:
+        raise HTTPException(503, "Process manager not initialized")
+    manager = services.process_manager
 
     task = await manager.get_task(task_id)
     if not task:
@@ -374,13 +369,16 @@ async def complete_task(
 async def reassign_task(
     task_id: str,
     body: ReassignTaskRequest,
+    services: RuntimeServices = Depends(get_services),
 ) -> CompleteTaskResponse:
     """
     Reassign a task to a different user.
 
     Only pending or escalated tasks can be reassigned.
     """
-    manager = get_process_manager()
+    if services.process_manager is None:
+        raise HTTPException(503, "Process manager not initialized")
+    manager = services.process_manager
 
     task = await manager.get_task(task_id)
     if not task:
@@ -404,14 +402,19 @@ async def reassign_task(
 
 
 @router.get("/{task_id}/surface-url")
-async def get_task_surface_url(task_id: str) -> dict[str, str]:
+async def get_task_surface_url(
+    task_id: str,
+    services: RuntimeServices = Depends(get_services),
+) -> dict[str, str]:
     """
     Get the URL to render the task's surface.
 
     Returns a URL that includes the task_id query parameter
     for TaskContext injection.
     """
-    manager = get_process_manager()
+    if services.process_manager is None:
+        raise HTTPException(503, "Process manager not initialized")
+    manager = services.process_manager
 
     task = await manager.get_task(task_id)
     if not task:

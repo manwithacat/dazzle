@@ -35,6 +35,7 @@ class RuntimeServices:
     metrics_collector: MetricsCollector | None = None
     system_collector: SystemMetricsCollector | None = None
     metrics_emitter: MetricsEmitter | None = None
+    process_manager: Any = None
 
 
 def get_services(request: Request) -> RuntimeServices:

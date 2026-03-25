@@ -33,3 +33,7 @@ class TestRuntimeServices:
         mock_framework = MagicMock()
         services = RuntimeServices(event_framework=mock_framework)
         assert services.event_framework is mock_framework
+
+    def test_process_manager_defaults_none(self) -> None:
+        services = RuntimeServices()
+        assert services.process_manager is None
