@@ -248,6 +248,31 @@ class DazzleLocalServerManager:
         self._terminate()
 
 
+def _ensure_authenticated(api_url: str) -> None:
+    """Register + login a test user on the shared session.
+
+    Idempotent: safe to call multiple times (registration may return 400
+    if the user already exists from a prior run).
+    """
+    # Seed CSRF cookie
+    _session.get(f"{api_url}/health", timeout=10)
+
+    # Register (ignore 400/409 — already exists)
+    _session.post(
+        f"{api_url}/auth/register",
+        json={"email": "e2e@example.com", "password": "Test1234!", "name": "E2E User"},
+        timeout=10,
+    )
+
+    # Login
+    resp = _session.post(
+        f"{api_url}/auth/login",
+        json={"email": "e2e@example.com", "password": "Test1234!"},
+        timeout=10,
+    )
+    assert resp.status_code == 200, f"Login failed: {resp.text}"
+
+
 @pytest.fixture(scope="module")
 def simple_task_server(
     dazzle_root: Path,
@@ -259,6 +284,8 @@ def simple_task_server(
 
     # Use unique port to avoid conflicts with other running servers
     with DazzleLocalServerManager(example_dir, port=3001) as server:
+        # Auth is enabled on simple_task — register + login for CRUD tests
+        _ensure_authenticated(server.api_url)
         yield server
 
 
@@ -428,45 +455,107 @@ def test_example_builds_ui(dazzle_root: Path, example_name: str) -> None:
     assert result.returncode == 0, f"UI build failed for {example_name}: {result.stderr}"
 
 
-class TestAuthDisabled:
-    """Tests for auth stub endpoints when AUTH_ENABLED=0."""
+class TestAuth:
+    """Tests for auth endpoints (auth enabled on simple_task)."""
 
     @pytest.mark.e2e
-    def test_auth_me_returns_401_when_disabled(
-        self, simple_task_server: DazzleLocalServerManager
-    ) -> None:
-        """Test that /auth/me returns a valid response when auth is disabled.
-
-        Acceptable responses: 401 (unauthorized), 200 (stub user), or 404 (no auth routes).
-        """
+    def test_auth_me_returns_user(self, simple_task_server: DazzleLocalServerManager) -> None:
+        """Authenticated session can retrieve current user info."""
         resp = _request_with_retry("GET", f"{simple_task_server.api_url}/auth/me")
-        # When auth is enabled: returns user info (200) or requires login (401)
-        # When auth is disabled: endpoint may not exist (404) or stub returns 401
-        # All of these are acceptable - just not 500 errors
-        assert resp.status_code in (401, 200, 404), (
-            f"Expected 401, 200, or 404, got {resp.status_code}"
-        )
+        assert resp.status_code == 200, f"Expected 200, got {resp.status_code}: {resp.text}"
+        data = resp.json()
+        assert data.get("email") == "e2e@example.com"
 
     @pytest.mark.e2e
-    def test_crud_works_without_auth(self, simple_task_server: DazzleLocalServerManager) -> None:
-        """Test that CRUD operations work without authentication.
-
-        Even with auth enabled by default, the API should allow CRUD
-        operations (for now - future versions may require auth for write ops).
-        """
+    def test_crud_works_with_auth(self, simple_task_server: DazzleLocalServerManager) -> None:
+        """Authenticated CRUD operations work end-to-end."""
         api = simple_task_server.api_url
 
-        # Create should work
-        task_data = {"title": "No Auth Test Task", "status": "todo"}
+        # Create
+        task_data = {"title": "Auth CRUD Test Task", "status": "todo"}
         resp = _request_with_retry("POST", f"{api}/tasks", json=task_data)
         assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
         created = resp.json()
         task_id = created["id"]
 
-        # Read should work
+        # Read
         resp = _request_with_retry("GET", f"{api}/tasks/{task_id}")
         assert resp.status_code == 200, f"Read failed: {resp.text}"
 
-        # List should work
+        # List
         resp = _request_with_retry("GET", f"{api}/tasks")
         assert resp.status_code == 200, f"List failed: {resp.text}"
+
+
+class TestFeedbackWidget:
+    """Feedback widget CRUD via synthetic surfaces (#685)."""
+
+    @pytest.mark.e2e
+    def test_post_creates_feedback(self, simple_task_server: DazzleLocalServerManager) -> None:
+        """POST /feedbackreports creates a FeedbackReport record."""
+        api = simple_task_server.api_url
+        resp = _request_with_retry(
+            "POST",
+            f"{api}/feedbackreports",
+            json={
+                "category": "bug",
+                "severity": "annoying",
+                "description": "Button alignment off on mobile",
+                "page_url": f"{api}/app",
+                "reported_by": "e2e@example.com",
+            },
+        )
+        assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
+        data = resp.json()
+        assert data["category"] == "bug"
+        assert data["severity"] == "annoying"
+        assert data["description"] == "Button alignment off on mobile"
+        assert "id" in data
+
+    @pytest.mark.e2e
+    def test_list_returns_feedback(self, simple_task_server: DazzleLocalServerManager) -> None:
+        """GET /feedbackreports returns paginated list with submitted feedback."""
+        api = simple_task_server.api_url
+
+        # Ensure at least one record
+        _request_with_retry(
+            "POST",
+            f"{api}/feedbackreports",
+            json={
+                "category": "ux",
+                "severity": "minor",
+                "description": "List test feedback",
+                "reported_by": "e2e@example.com",
+            },
+        )
+
+        resp = _request_with_retry("GET", f"{api}/feedbackreports")
+        assert resp.status_code == 200, f"List failed: {resp.text}"
+        data = resp.json()
+        assert "items" in data
+        assert data["total"] >= 1
+        item = data["items"][0]
+        assert "category" in item
+        assert "severity" in item
+        assert "status" in item
+
+    @pytest.mark.e2e
+    def test_unauthenticated_post_rejected(
+        self, simple_task_server: DazzleLocalServerManager
+    ) -> None:
+        """POST /feedbackreports without auth session is rejected."""
+        api = simple_task_server.api_url
+        # Use a fresh session with no cookies
+        resp = requests.post(
+            f"{api}/feedbackreports",
+            json={
+                "category": "bug",
+                "severity": "minor",
+                "description": "Unauthenticated attempt",
+                "reported_by": "anon@example.com",
+            },
+            timeout=REQUEST_TIMEOUT,
+        )
+        assert resp.status_code in (401, 403), (
+            f"Expected auth rejection, got {resp.status_code}: {resp.text}"
+        )

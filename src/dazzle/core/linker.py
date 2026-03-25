@@ -113,10 +113,12 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     if merged_fragment.llm_config is not None and not any(e.name == "AIJob" for e in entities):
         entities = [*entities, _build_ai_job_entity()]
 
-    # 9b. Auto-generate FeedbackReport entity when feedback_widget is enabled
+    # 9b. Auto-generate FeedbackReport entity + surfaces when feedback_widget is enabled
     fw = merged_fragment.feedback_widget
+    surfaces = merged_fragment.surfaces
     if fw is not None and fw.enabled and not any(e.name == "FeedbackReport" for e in entities):
         entities = [*entities, _build_feedback_report_entity()]
+        surfaces = [*surfaces, _build_feedback_create_surface(), _build_feedback_admin_surface()]
 
     # 10. Build FK graph and compile scope predicates
     from .ir.fk_graph import FKGraph
@@ -132,7 +134,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         version="0.1.0",
         domain=ir.DomainSpec(entities=entities),
         fk_graph=fk_graph,
-        surfaces=merged_fragment.surfaces,
+        surfaces=surfaces,
         workspaces=merged_fragment.workspaces,
         experiences=merged_fragment.experiences,
         apis=merged_fragment.apis,
@@ -370,4 +372,50 @@ def _build_feedback_report_entity() -> ir.EntitySpec:
         fields=fields,
         access=access,
         state_machine=state_machine,
+    )
+
+
+def _build_feedback_create_surface() -> ir.SurfaceSpec:
+    """Build a headless CREATE surface for FeedbackReport (API-only).
+
+    The widget JS is the UI — no sections needed. Any authenticated user
+    can submit feedback via POST /feedbackreports.
+    """
+    return ir.SurfaceSpec(
+        name="feedback_create",
+        title="Submit Feedback",
+        entity_ref="FeedbackReport",
+        mode=ir.SurfaceMode.CREATE,
+        sections=[],
+        access=ir.SurfaceAccessSpec(require_auth=True),
+    )
+
+
+def _build_feedback_admin_surface() -> ir.SurfaceSpec:
+    """Build a LIST+VIEW admin surface for FeedbackReport.
+
+    Renders at /app/feedbackreports. Shows triage fields for admin review.
+    """
+    elements = [
+        ir.SurfaceElement(field_name=name, label=label)
+        for name, label in [
+            ("category", "Category"),
+            ("severity", "Severity"),
+            ("description", "Description"),
+            ("status", "Status"),
+            ("reported_by", "Submitted By"),
+            ("page_url", "Page URL"),
+            ("created_at", "Created"),
+        ]
+    ]
+    return ir.SurfaceSpec(
+        name="feedback_admin",
+        title="Feedback Reports",
+        entity_ref="FeedbackReport",
+        mode=ir.SurfaceMode.LIST,
+        sections=[ir.SurfaceSection(name="main", title="Feedback", elements=elements)],
+        access=ir.SurfaceAccessSpec(
+            require_auth=True,
+            allow_personas=["admin", "super_admin"],
+        ),
     )

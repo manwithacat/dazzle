@@ -591,11 +591,6 @@ class SystemRoutesSubsystem:
             except ImportError:
                 pass
 
-            # TODO(#685): FeedbackReport POST route should go through the normal
-            # CRUD pipeline via a synthetic surface, not a hand-coded route.
-            # The linker needs to generate a CREATE surface for FeedbackReport
-            # when feedback_widget is enabled.
-
         # Mount static files from project dir + framework dir
         try:
             from pathlib import Path

@@ -10,6 +10,6 @@ paths = ["./dsl"]
 name = "dnr"
 
 [auth]
-enabled = false  # Disabled for E2E tests
+enabled = true
 provider = "session"
 allow_registration = true

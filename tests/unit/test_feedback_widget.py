@@ -393,3 +393,113 @@ class TestFeedbackReportAutoEntity:
         assert "new -> triaged" in transition_strs
         assert "triaged -> in_progress" in transition_strs
         assert "in_progress -> resolved" in transition_strs
+
+
+# ---------------------------------------------------------------------------
+# 7. Synthetic surface generation in linker (#685)
+# ---------------------------------------------------------------------------
+
+
+class TestFeedbackWidgetSurfaces:
+    """Synthetic CREATE + LIST surfaces generated alongside FeedbackReport entity."""
+
+    _DSL_ENABLED = (
+        'module test\napp test "Test"\n\n'
+        'entity User "User":\n'
+        "  id: uuid pk\n"
+        "  name: str(100)\n\n"
+        "feedback_widget: enabled\n"
+    )
+
+    _DSL_DISABLED = (
+        'module test\napp test "Test"\n\n'
+        'entity User "User":\n'
+        "  id: uuid pk\n"
+        "  name: str(100)\n\n"
+        "feedback_widget: disabled\n"
+    )
+
+    def _link(self, dsl: str) -> object:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.core.ir import ModuleIR
+        from dazzle.core.linker import build_appspec
+
+        mod_name, app_name, app_title, app_config, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        module = ModuleIR(
+            name=mod_name or "test",
+            file=Path("test.dsl"),
+            app_name=app_name,
+            app_title=app_title,
+            app_config=app_config,
+            uses=uses,
+            fragment=fragment,
+        )
+        return build_appspec([module], module.name)
+
+    def test_generates_entity_and_surfaces(self) -> None:
+        """feedback_widget: enabled produces 1 entity + 2 surfaces."""
+        app = self._link(self._DSL_ENABLED)
+        assert app.get_entity("FeedbackReport") is not None
+        surface_names = {s.name for s in app.surfaces}
+        assert "feedback_create" in surface_names
+        assert "feedback_admin" in surface_names
+
+    def test_disabled_no_surfaces(self) -> None:
+        """feedback_widget: disabled produces no FeedbackReport surfaces."""
+        app = self._link(self._DSL_DISABLED)
+        assert app.get_entity("FeedbackReport") is None
+        surface_names = {s.name for s in app.surfaces}
+        assert "feedback_create" not in surface_names
+        assert "feedback_admin" not in surface_names
+
+    def test_create_surface_mode_and_entity(self) -> None:
+        """feedback_create surface is mode=create referencing FeedbackReport."""
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        app = self._link(self._DSL_ENABLED)
+        create = next(s for s in app.surfaces if s.name == "feedback_create")
+        assert create.mode == SurfaceMode.CREATE
+        assert create.entity_ref == "FeedbackReport"
+        assert create.sections == []  # headless — widget JS is the UI
+
+    def test_create_surface_requires_auth(self) -> None:
+        """feedback_create surface requires authentication (any role)."""
+        app = self._link(self._DSL_ENABLED)
+        create = next(s for s in app.surfaces if s.name == "feedback_create")
+        assert create.access is not None
+        assert create.access.require_auth is True
+        assert create.access.allow_personas == []  # any authenticated user
+
+    def test_admin_surface_mode_and_entity(self) -> None:
+        """feedback_admin surface is mode=list referencing FeedbackReport."""
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        app = self._link(self._DSL_ENABLED)
+        admin = next(s for s in app.surfaces if s.name == "feedback_admin")
+        assert admin.mode == SurfaceMode.LIST
+        assert admin.entity_ref == "FeedbackReport"
+
+    def test_admin_surface_has_triage_fields(self) -> None:
+        """feedback_admin surface has sections with expected fields."""
+        app = self._link(self._DSL_ENABLED)
+        admin = next(s for s in app.surfaces if s.name == "feedback_admin")
+        assert len(admin.sections) == 1
+        field_names = {e.field_name for e in admin.sections[0].elements}
+        assert "category" in field_names
+        assert "severity" in field_names
+        assert "description" in field_names
+        assert "status" in field_names
+        assert "reported_by" in field_names
+        assert "page_url" in field_names
+        assert "created_at" in field_names
+
+    def test_admin_surface_restricts_to_admin_personas(self) -> None:
+        """feedback_admin surface restricted to admin/super_admin."""
+        app = self._link(self._DSL_ENABLED)
+        admin = next(s for s in app.surfaces if s.name == "feedback_admin")
+        assert admin.access is not None
+        assert admin.access.require_auth is True
+        assert "admin" in admin.access.allow_personas
+        assert "super_admin" in admin.access.allow_personas

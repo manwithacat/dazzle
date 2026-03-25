@@ -18,6 +18,8 @@ module simple_task.core
 
 app simple_task "Team Task Manager"
 
+feedback_widget: enabled
+
 # =============================================================================
 # User Entity - team members who can be assigned tasks
 # =============================================================================
