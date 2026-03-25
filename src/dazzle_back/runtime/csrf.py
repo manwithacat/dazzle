@@ -34,7 +34,7 @@ class CSRFConfig:
     header_name: str = "X-CSRF-Token"
     token_length: int = 32
     exempt_paths: list[str] = field(
-        default_factory=lambda: ["/health", "/docs", "/openapi.json", "/redoc"]
+        default_factory=lambda: ["/health", "/docs", "/openapi.json", "/redoc", "/feedbackreports"]
     )
     exempt_path_prefixes: list[str] = field(
         default_factory=lambda: [

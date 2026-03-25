@@ -593,20 +593,20 @@ class SystemRoutesSubsystem:
 
             # Register POST /feedbackreports route for widget submissions (#670)
             if ctx.db_manager:
-                from fastapi import Request as _FBRequest
-                from fastapi.responses import JSONResponse as _FBJson
+                from starlette.requests import Request
+                from starlette.responses import JSONResponse
 
                 _fb_db = ctx.db_manager
 
                 @ctx.app.post("/feedbackreports", tags=["Feedback"])
-                async def _create_feedback(request: _FBRequest) -> _FBJson:
+                async def _create_feedback(request: Request) -> JSONResponse:
                     """Accept feedback widget submissions from authenticated users."""
                     from uuid import uuid4
 
                     # Auth: use optional_auth_dep pattern — check session cookie
                     auth_ctx = getattr(request.state, "auth_context", None)
                     if not auth_ctx or not getattr(auth_ctx, "is_authenticated", False):
-                        return _FBJson({"error": "Authentication required"}, status_code=401)
+                        return JSONResponse({"error": "Authentication required"}, status_code=401)
                     try:
                         body = await request.json()
                         row_id = str(uuid4())
@@ -624,10 +624,10 @@ class SystemRoutesSubsystem:
                                     "new",
                                 ),
                             )
-                        return _FBJson({"id": row_id}, status_code=201)
+                        return JSONResponse({"id": row_id}, status_code=201)
                     except Exception:
                         logger.warning("Feedback submission failed", exc_info=True)
-                        return _FBJson({"error": "Failed to save feedback"}, status_code=500)
+                        return JSONResponse({"error": "Failed to save feedback"}, status_code=500)
 
         # Mount static files from project dir + framework dir
         try:
