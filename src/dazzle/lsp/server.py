@@ -346,7 +346,7 @@ def _build_name_index(appspec: ir.AppSpec) -> dict[str, tuple[str, Any]]:
     return index
 
 
-def _format_view_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_view_hover_section(spec: ir.ViewSpec, lines: list[str]) -> None:
     source = getattr(spec, "source_entity", None)
     if source:
         lines.append(f"**Source entity:** `{source}`")
@@ -355,7 +355,7 @@ def _format_view_hover_section(spec: Any, lines: list[str]) -> None:
         lines.append(f"**Fields:** {len(fields)}")
 
 
-def _format_enum_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_enum_hover_section(spec: ir.EnumSpec, lines: list[str]) -> None:
     values = getattr(spec, "values", None)
     if values:
         preview = ", ".join(getattr(v, "name", str(v)) for v in values[:6])
@@ -364,7 +364,7 @@ def _format_enum_hover_section(spec: Any, lines: list[str]) -> None:
         lines.append(f"**Values:** {preview}")
 
 
-def _format_process_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_process_hover_section(spec: ir.ProcessSpec, lines: list[str]) -> None:
     states = getattr(spec, "states", None)
     if states:
         state_names = [s if isinstance(s, str) else getattr(s, "name", str(s)) for s in states]
@@ -374,7 +374,7 @@ def _format_process_hover_section(spec: Any, lines: list[str]) -> None:
         lines.append(f"**Implements:** {', '.join(implements)}")
 
 
-def _format_story_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_story_hover_section(spec: ir.StorySpec, lines: list[str]) -> None:
     actor = getattr(spec, "actor", None)
     if actor:
         lines.append(f"**Actor:** {actor}")
@@ -383,7 +383,7 @@ def _format_story_hover_section(spec: Any, lines: list[str]) -> None:
         lines.append(f"**Steps:** {len(steps)}")
 
 
-def _format_persona_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_persona_hover_section(spec: ir.PersonaSpec, lines: list[str]) -> None:
     goals = getattr(spec, "goals", None)
     if goals:
         lines.append(f"**Goals:** {', '.join(goals[:3])}")
@@ -392,7 +392,7 @@ def _format_persona_hover_section(spec: Any, lines: list[str]) -> None:
         lines.append(f"**Proficiency:** {proficiency}")
 
 
-def _format_ledger_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_ledger_hover_section(spec: ir.LedgerSpec, lines: list[str]) -> None:
     account_type = getattr(spec, "account_type", None)
     currency = getattr(spec, "currency", None)
     if account_type:
@@ -401,7 +401,7 @@ def _format_ledger_hover_section(spec: Any, lines: list[str]) -> None:
         lines.append(f"**Currency:** {currency}")
 
 
-def _format_transaction_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_transaction_hover_section(spec: ir.TransactionSpec, lines: list[str]) -> None:
     execution = getattr(spec, "execution", None)
     transfers = getattr(spec, "transfers", None)
     if execution:
@@ -410,49 +410,51 @@ def _format_transaction_hover_section(spec: Any, lines: list[str]) -> None:
         lines.append(f"**Transfers:** {len(transfers)}")
 
 
-def _format_webhook_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_webhook_hover_section(spec: ir.WebhookSpec, lines: list[str]) -> None:
     events = getattr(spec, "events", None)
     if events:
         lines.append(f"**Events:** {', '.join(events[:4])}")
 
 
-def _format_approval_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_approval_hover_section(spec: ir.ApprovalSpec, lines: list[str]) -> None:
     approver_role = getattr(spec, "approver_role", None)
     if approver_role:
         lines.append(f"**Approver role:** {approver_role}")
 
 
-def _format_sla_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_sla_hover_section(spec: ir.SLASpec, lines: list[str]) -> None:
     threshold = getattr(spec, "threshold", None)
     if threshold:
         lines.append(f"**Threshold:** {threshold}")
 
 
-def _format_island_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_island_hover_section(spec: ir.IslandSpec, lines: list[str]) -> None:
     framework = getattr(spec, "framework", None)
     if framework:
         lines.append(f"**Framework:** {framework}")
 
 
-def _format_workspace_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_workspace_hover_section(spec: ir.WorkspaceSpec, lines: list[str]) -> None:
     stages = getattr(spec, "stages", None)
     if stages:
         lines.append(f"**Stages:** {len(stages)}")
 
 
-def _format_experience_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_experience_hover_section(spec: ir.ExperienceSpec, lines: list[str]) -> None:
     steps = getattr(spec, "steps", None)
     if steps:
         lines.append(f"**Steps:** {len(steps)}")
 
 
-def _format_service_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_service_hover_section(
+    spec: ir.DomainServiceSpec | ir.IntegrationSpec, lines: list[str]
+) -> None:
     kind = getattr(spec, "kind", None)
     if kind:
         lines.append(f"**Kind:** {kind}")
 
 
-def _format_schedule_hover_section(spec: Any, lines: list[str]) -> None:
+def _format_schedule_hover_section(spec: ir.ScheduleSpec, lines: list[str]) -> None:
     cron = getattr(spec, "cron", None)
     interval = getattr(spec, "interval", None)
     if cron:
