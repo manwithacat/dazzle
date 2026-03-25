@@ -238,10 +238,10 @@ class TestLoadManifestStack:
 
 
 class TestLoadManifestCdn:
-    def test_cdn_defaults_true(self, tmp_path: Path) -> None:
+    def test_cdn_defaults_false(self, tmp_path: Path) -> None:
         toml_path = _write_toml(tmp_path)
         mf = load_manifest(toml_path)
-        assert mf.cdn is True
+        assert mf.cdn is False
 
     def test_cdn_disabled(self, tmp_path: Path) -> None:
         toml_path = _write_toml(
