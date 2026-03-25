@@ -382,12 +382,12 @@ class EventBusProcessAdapter(ProcessAdapter):
         try:
             # fmt: off
             import dazzle_back.events.envelope as _env_mod  # noqa: PLC0415
-            import dazzle_back.events.framework as _fw_mod  # noqa: PLC0415
+            import dazzle_back.runtime.auth.events as _auth_mod  # noqa: PLC0415
             # fmt: on
         except ImportError:
             return None
 
-        framework = _fw_mod.get_framework()
+        framework = _auth_mod._event_framework  # noqa: SLF001
         if framework is None or framework.get_bus() is None:
             return None
 
