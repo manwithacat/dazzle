@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.7] - 2026-03-25
+
+### Fixed
+- Workspace regions returning 0 rows: UUID FK attrs from psycopg3 silently dropped in session preferences (#684)
+- Feedback widget POST 403 on deployed sites: route now uses direct SQL insert instead of nonexistent repository
+- Feedback widget CSS missing from CDN bundle — added to `build_dist.py`
+
+### Added
+- Positive auth resolution tests: verify UUID FK attrs resolve through full auth chain, not just deny paths (#684)
+
+### Changed
+- PostgreSQL CI job runs only `pytest.mark.postgres` tests (127 tests) instead of full suite (9,143) — ~3 min saved per run
+
 ## [0.48.6] - 2026-03-25
 
 ### Changed
