@@ -592,22 +592,42 @@ class SystemRoutesSubsystem:
                 pass
 
             # Register POST /feedbackreports route for widget submissions (#670)
-            _fb_repo = ctx.repositories.get("FeedbackReport") if ctx.repositories else None
-            if _fb_repo:
+            if ctx.db:
                 from fastapi import Request as _FBRequest
                 from fastapi.responses import JSONResponse as _FBJson
+
+                _fb_db = ctx.db
 
                 @ctx.app.post("/feedbackreports", tags=["Feedback"])
                 async def _create_feedback(request: _FBRequest) -> _FBJson:
                     """Accept feedback widget submissions from authenticated users."""
-                    # Require authentication
+                    from uuid import uuid4
+
+                    # Auth: use optional_auth_dep pattern — check session cookie
                     auth_ctx = getattr(request.state, "auth_context", None)
                     if not auth_ctx or not getattr(auth_ctx, "is_authenticated", False):
                         return _FBJson({"error": "Authentication required"}, status_code=401)
-                    body = await request.json()
-                    body["submitted_by"] = str(getattr(auth_ctx, "user_id", ""))
-                    result = await _fb_repo.create(body)
-                    return _FBJson({"id": str(result.get("id", ""))}, status_code=201)
+                    try:
+                        body = await request.json()
+                        row_id = str(uuid4())
+                        with _fb_db.connection() as conn:
+                            conn.execute(
+                                """INSERT INTO "FeedbackReport" (id, category, severity, description, page_url, submitted_by, status)
+                                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                                (
+                                    row_id,
+                                    body.get("category", "general"),
+                                    body.get("severity", "minor"),
+                                    body.get("description", ""),
+                                    body.get("page_url", ""),
+                                    str(getattr(auth_ctx, "user_id", "")),
+                                    "new",
+                                ),
+                            )
+                        return _FBJson({"id": row_id}, status_code=201)
+                    except Exception:
+                        logger.warning("Feedback submission failed", exc_info=True)
+                        return _FBJson({"error": "Failed to save feedback"}, status_code=500)
 
         # Mount static files from project dir + framework dir
         try:

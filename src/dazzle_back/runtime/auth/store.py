@@ -410,7 +410,9 @@ class SessionStoreMixin:
         for k, v in row.items():
             if k in _SKIP or v is None:
                 continue
-            if isinstance(v, str | int | float | bool):
+            from uuid import UUID as _UUID
+
+            if isinstance(v, str | int | float | bool | _UUID):
                 result[k] = str(v)
         # Store the domain entity ID as "entity_id" so via clauses can
         # resolve current_user to the DSL User entity PK (#534).

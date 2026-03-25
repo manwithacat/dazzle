@@ -470,9 +470,11 @@ async def _workspace_region_handler(
                 if prefs is None:
                     _auth_ctx_for_filters.preferences = {}
                     prefs = _auth_ctx_for_filters.preferences
+                from uuid import UUID as _UUID
+
                 for k, v in _current_user_entity.items():
                     if k not in prefs and v is not None:
-                        prefs[k] = v
+                        prefs[k] = str(v) if isinstance(v, _UUID) else v
                 if _current_user_id and "entity_id" not in prefs:
                     prefs["entity_id"] = _current_user_id
         except Exception:
@@ -1063,9 +1065,11 @@ async def _workspace_batch_handler(
                 if prefs is None:
                     _batch_auth_ctx.preferences = {}
                     prefs = _batch_auth_ctx.preferences
+                from uuid import UUID as _UUID
+
                 for k, v in _batch_user_entity.items():
                     if k not in prefs and v is not None:
-                        prefs[k] = v
+                        prefs[k] = str(v) if isinstance(v, _UUID) else v
                 if _batch_user_id and "entity_id" not in prefs:
                     prefs["entity_id"] = _batch_user_id
         except Exception:
