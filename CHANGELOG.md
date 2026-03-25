@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.5] - 2026-03-25
+
+### Fixed
+- `has_grant()` state machine guard: properly enter `db.connection()` context for GrantStore — was passing context manager generator instead of connection (#669)
+- `has_grant()` diagnostic logging: WARNING on missing store/IDs/UUID failures, DEBUG on query results (#669)
+- UUID objects passed through without re-casting in `has_grant()` (#669)
+- Feedback widget POST route registered at `/feedbackreports` when `feedback_widget.enabled` — was returning 403/404 (#670)
+
+### Changed
+- 7 `# type: ignore[no-any-return]` on `json.loads()` replaced with explicit variable annotations (#682)
+
 ## [0.48.4] - 2026-03-24
 
 ### Added
