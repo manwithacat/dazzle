@@ -39,4 +39,5 @@ class RuntimeServices:
 
 def get_services(request: Request) -> RuntimeServices:
     """FastAPI dependency — typed access to runtime services."""
-    return request.app.state.services
+    services: RuntimeServices = request.app.state.services
+    return services
