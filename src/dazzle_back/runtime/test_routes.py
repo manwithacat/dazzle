@@ -122,7 +122,6 @@ class _TestDeps:
     auth_store: Any
     personas: list[dict[str, Any]]
     project_root: Path | None = None
-    project_root: Path | None = None
 
 
 # =============================================================================
