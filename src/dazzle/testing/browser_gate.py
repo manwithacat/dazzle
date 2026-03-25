@@ -157,7 +157,7 @@ _gate_lock = threading.Lock()
 
 def get_browser_gate() -> BrowserGate:
     """Get or create the global BrowserGate singleton."""
-    global _gate
+    global _gate  # noqa: PLW0603  # process-bounded browser resource, thread-safe
     if _gate is None:
         with _gate_lock:
             if _gate is None:
@@ -170,7 +170,7 @@ def configure_browser_gate(
     headless: bool | None = None,
 ) -> BrowserGate:
     """Reconfigure the global gate.  Returns the new instance."""
-    global _gate
+    global _gate  # noqa: PLW0603  # browser gate reconfiguration at startup
     with _gate_lock:
         _gate = BrowserGate(max_concurrent=max_concurrent, headless=headless)
     return _gate

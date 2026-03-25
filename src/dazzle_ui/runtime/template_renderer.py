@@ -315,7 +315,7 @@ _env: Environment | None = None
 
 def get_jinja_env() -> Environment:
     """Get the shared Jinja2 environment (lazy singleton)."""
-    global _env
+    global _env  # noqa: PLW0603  # single-project Jinja2 env, lazy-init
     if _env is None:
         _env = create_jinja_env()
     return _env
@@ -327,7 +327,7 @@ def configure_project_templates(project_templates_dir: Path) -> None:
     Call this during app startup to enable project templates that override
     framework defaults.  Framework templates remain accessible via ``dz://``.
     """
-    global _env
+    global _env  # noqa: PLW0603  # project template override at startup
     _env = create_jinja_env(project_templates_dir)
 
 

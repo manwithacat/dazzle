@@ -40,7 +40,7 @@ def auth_callback(
     ] = None,
 ) -> None:
     """Manage authentication users and sessions."""
-    global _database_url_override
+    global _database_url_override  # noqa: PLW0603  # CLI callback storage, per-invocation
     _database_url_override = database_url
 
 

@@ -98,7 +98,7 @@ _state = ServerState()
 
 def reset_state() -> None:
     """Reset server state to initial values. Primarily for testing."""
-    global _state
+    global _state  # noqa: PLW0603  # centralized MCP state, reset for test isolation
     _state = ServerState()
 
 

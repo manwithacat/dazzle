@@ -89,6 +89,6 @@ def get_audit_sink() -> AccessAuditSink:
 
 
 def set_audit_sink(sink: AccessAuditSink) -> None:
-    global _current_sink
+    global _current_sink  # noqa: PLW0603  # thread-safe audit sink swap for testing
     with _sink_lock:
         _current_sink = sink

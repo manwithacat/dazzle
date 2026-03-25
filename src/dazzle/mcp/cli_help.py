@@ -298,7 +298,7 @@ _cached_commands: dict[str, dict[str, Any]] | None = None
 
 def _get_commands() -> dict[str, dict[str, Any]]:
     """Return the introspected command dict, building it once on first call."""
-    global _cached_commands
+    global _cached_commands  # noqa: PLW0603  # lazy-init command cache, immutable once created
     if _cached_commands is None:
         _cached_commands = _introspect_typer_app()
     return _cached_commands

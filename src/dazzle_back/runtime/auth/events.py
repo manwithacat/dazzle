@@ -36,7 +36,7 @@ def configure_auth_events(framework: Any) -> None:
     Called once during ``EventsSubsystem.startup()`` so that ``_publish()``
     can reach the bus without importing a global singleton.
     """
-    global _event_framework
+    global _event_framework  # noqa: PLW0603  # clean setter called once at startup
     _event_framework = framework
 
 

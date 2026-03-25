@@ -184,7 +184,7 @@ def setup_logging(
     Returns:
         Path to the log directory
     """
-    global _log_dir, _file_handler
+    global _log_dir, _file_handler  # noqa: PLW0603  # system-wide logging, init-only
 
     _log_dir = Path(log_dir)
     _log_dir.mkdir(parents=True, exist_ok=True)

@@ -960,7 +960,7 @@ def _execute_assertion_sync(
     timeout: int,
 ) -> None:
     """Execute an assertion synchronously."""
-    global _ASSERTION_HANDLERS
+    global _ASSERTION_HANDLERS  # noqa: PLW0603  # lazy-init handler registry, immutable
     if _ASSERTION_HANDLERS is None:
         _ASSERTION_HANDLERS = _build_assertion_handlers()
 

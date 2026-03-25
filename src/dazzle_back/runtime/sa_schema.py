@@ -33,7 +33,7 @@ _sa: Any = None  # sqlalchemy module
 
 def _ensure_sa() -> Any:
     """Import sqlalchemy on first use and return the module."""
-    global _sa_imported, _sa
+    global _sa_imported, _sa  # noqa: PLW0603  # lazy import for optional sqlalchemy
     if not _sa_imported:
         try:
             import sqlalchemy

@@ -287,7 +287,7 @@ def _load_toml_file(path: Path) -> dict[str, Any]:
 
 def _load_semantic_data() -> dict[str, Any]:
     """Load and merge all TOML files into unified index (fallback for when KG is not initialized)."""
-    global _semantic_cache
+    global _semantic_cache  # noqa: PLW0603  # KG fallback cache, lazy-init
 
     if _semantic_cache is not None:
         return _semantic_cache
@@ -479,7 +479,7 @@ def reload_cache() -> None:
     Also clears the TOML cache so that if the KG is not initialized the
     next ``get_semantic_index()`` call will re-read from disk.
     """
-    global _semantic_cache
+    global _semantic_cache  # noqa: PLW0603  # KG fallback cache reset for re-seeding
     _semantic_cache = None
 
     graph = _get_kg()

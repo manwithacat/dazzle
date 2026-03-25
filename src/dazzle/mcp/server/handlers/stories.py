@@ -48,7 +48,7 @@ def _get_trigger_map() -> dict[Any, Any]:
 
     Uses lazy initialization since the IR types aren't available at module load.
     """
-    global _TRIGGER_MAP
+    global _TRIGGER_MAP  # noqa: PLW0603  # lazy-init, immutable once created
     if _TRIGGER_MAP is None:
         from dazzle.core.ir.stories import StoryTrigger
         from dazzle.core.ir.test_design import TestDesignTrigger

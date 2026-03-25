@@ -29,7 +29,7 @@ _tb_module: ModuleType | None = None
 
 def _get_tb() -> ModuleType:
     """Lazy import TigerBeetle module."""
-    global _tb_module
+    global _tb_module  # noqa: PLW0603  # lazy import for optional dependency
     if _tb_module is None:
         try:
             from tigerbeetle import client as tb

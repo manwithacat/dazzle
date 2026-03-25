@@ -908,7 +908,7 @@ _REALTIME_JS_CACHED: str | None = None
 
 def _get_realtime_js() -> str:
     """Get the realtime JS, loading from files if available."""
-    global _REALTIME_JS_CACHED
+    global _REALTIME_JS_CACHED  # noqa: PLW0603  # static asset cache, immutable once loaded
     if _REALTIME_JS_CACHED is None:
         _REALTIME_JS_CACHED = _load_realtime_js()
     return _REALTIME_JS_CACHED
