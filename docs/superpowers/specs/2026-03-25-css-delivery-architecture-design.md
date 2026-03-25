@@ -125,7 +125,7 @@ Key changes:
 Key changes:
 - Layer declaration added
 - `_use_cdn | default(true)` → `_use_cdn | default(false)` in both CSS and icons blocks
-- Local path continues to use `/styles/dazzle.css` (served by `css_loader.py`) since site pages have different CSS needs (no `dz.css`, theme CSS prepended)
+- Local path continues to use `/styles/dazzle.css` (served by `css_loader.py`) since site pages support theme CSS prepending. `css_loader.py` is updated to include `dz.css` for consistency with the canonical order (the runtime selectors are inert on pages that don't use `data-dz-*` attributes)
 
 ### Backend Changes
 
@@ -181,16 +181,21 @@ parts.insert(0, "@layer base, framework, app, overrides;")
 
 ### Build Change: `build_dist.py`
 
-CSS source list updated to canonical order with layer metadata:
+CSS source list reordered to canonical order. All framework files share the same layer, so the list stays flat and the loop wraps each file in `@layer framework { }`:
 
 ```python
 CSS_SOURCES = [
-    (STATIC / "css" / "dazzle-layer.css", "framework"),
-    (STATIC / "css" / "design-system.css", "framework"),
-    (STATIC / "css" / "dz.css", "framework"),
-    (STATIC / "css" / "site-sections.css", "framework"),
-    (STATIC / "css" / "feedback-widget.css", "framework"),
+    STATIC / "css" / "dazzle-layer.css",
+    STATIC / "css" / "design-system.css",
+    STATIC / "css" / "dz.css",
+    STATIC / "css" / "site-sections.css",
+    STATIC / "css" / "feedback-widget.css",
 ]
+
+# In build():
+for src in CSS_SOURCES:
+    content = src.read_text()
+    css_parts.append(f"@layer framework {{\n{content}\n}}")
 ```
 
 Output in `dazzle.min.css`:
@@ -211,9 +216,11 @@ Add `python scripts/build_dist.py` step to `publish-pypi.yml`. The workflow must
 
 1. Checkout the tagged commit
 2. Run `python scripts/build_dist.py`
-3. Commit rebuilt `dist/` to the tag (or publish as release assets)
+3. Commit rebuilt `dist/` and push to the tag branch
 
-The exact mechanism: add a job that runs before the publish job, rebuilds dist, and pushes the result. Since jsDelivr resolves tags to commits, the dist files on the tagged commit must be up to date.
+**Permission change required:** `publish-pypi.yml` currently has `permissions: contents: read`. The dist rebuild job needs `contents: write` to push the rebuilt dist files. Add a separate job with write permissions that runs before the publish job.
+
+Since jsDelivr resolves tags to commits, the dist files on the tagged commit must be up to date.
 
 The weekly `update-vendors.yml` keeps its dist rebuild step (vendor JS updates change the bundle).
 
@@ -274,7 +281,9 @@ When serving assets locally (the new default), source maps improve the developer
 
 ### Tailwind source map: `build_css.py`
 
-Add `--sourcemap` flag to the Tailwind CLI invocation. The CLI writes `dazzle-bundle.css.map` next to the output. The static file server already serves `*.map` files from the same directory.
+Add `--sourcemap` flag to the Tailwind CLI invocation. The static file server already serves `*.map` files from the same directory.
+
+**Verification required at implementation time:** The project uses `tailwind-cli-extra` v2.8.1 (a Tailwind v4 standalone CLI fork). The `--sourcemap` flag may not be supported. At implementation time, test with `tailwind-cli-extra --help` or a trial run. If unsupported, skip this source map and note it as blocked on upstream CLI support.
 
 ```python
 cmd = [cli_path, "--input", input_css, "--output", output_css, "--content", ..., "--minify", "--sourcemap"]
@@ -300,4 +309,4 @@ parts.append(f"/*# sourceMappingURL=data:application/json;base64,{map_b64} */")
 |------|-----------------|
 | `src/dazzle_ui/build_css.py` | Add `--sourcemap` to Tailwind CLI args |
 | `src/dazzle_ui/runtime/css_loader.py` | Generate inline source map in `get_bundled_css()` |
-| `MANIFEST.in` | Exclude `*.map` from pip package (already excluded by pattern — verify) |
+| `MANIFEST.in` | Add `global-exclude *.map` (currently excluded by omission; make explicit) |
