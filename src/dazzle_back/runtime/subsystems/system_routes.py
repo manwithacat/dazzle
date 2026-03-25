@@ -591,43 +591,10 @@ class SystemRoutesSubsystem:
             except ImportError:
                 pass
 
-            # Register POST /feedbackreports route for widget submissions (#670)
-            if ctx.db_manager:
-                from starlette.requests import Request
-                from starlette.responses import JSONResponse
-
-                _fb_db = ctx.db_manager
-
-                @ctx.app.post("/feedbackreports", tags=["Feedback"])
-                async def _create_feedback(request: Request) -> JSONResponse:
-                    """Accept feedback widget submissions from authenticated users."""
-                    from uuid import uuid4
-
-                    # Auth: use optional_auth_dep pattern — check session cookie
-                    auth_ctx = getattr(request.state, "auth_context", None)
-                    if not auth_ctx or not getattr(auth_ctx, "is_authenticated", False):
-                        return JSONResponse({"error": "Authentication required"}, status_code=401)
-                    try:
-                        body = await request.json()
-                        row_id = str(uuid4())
-                        with _fb_db.connection() as conn:
-                            conn.execute(
-                                """INSERT INTO "FeedbackReport" (id, category, severity, description, page_url, submitted_by, status)
-                                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                                (
-                                    row_id,
-                                    body.get("category", "general"),
-                                    body.get("severity", "minor"),
-                                    body.get("description", ""),
-                                    body.get("page_url", ""),
-                                    str(getattr(auth_ctx, "user_id", "")),
-                                    "new",
-                                ),
-                            )
-                        return JSONResponse({"id": row_id}, status_code=201)
-                    except Exception:
-                        logger.warning("Feedback submission failed", exc_info=True)
-                        return JSONResponse({"error": "Failed to save feedback"}, status_code=500)
+            # TODO(#685): FeedbackReport POST route should go through the normal
+            # CRUD pipeline via a synthetic surface, not a hand-coded route.
+            # The linker needs to generate a CREATE surface for FeedbackReport
+            # when feedback_widget is enabled.
 
         # Mount static files from project dir + framework dir
         try:
