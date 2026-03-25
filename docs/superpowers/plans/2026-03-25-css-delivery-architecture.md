@@ -180,20 +180,28 @@ git commit -m "feat(css): wrap feedback-widget.css in @layer framework (#671)"
 Append to `tests/unit/test_css_delivery.py`:
 
 ```python
+import tempfile
+
 class TestCdnDefault:
     def test_manifest_cdn_default_is_false(self) -> None:
         from dazzle.core.manifest import ProjectManifest
-        m = ProjectManifest()
+        m = ProjectManifest(name="t", version="0", project_root=".", module_paths=[])
         assert m.cdn is False
 
-    def test_manifest_parser_cdn_default_is_false(self) -> None:
-        from dazzle.core.manifest import parse_manifest
-        m = parse_manifest({})  # empty TOML
+    def test_manifest_loader_cdn_default_is_false(self) -> None:
+        from dazzle.core.manifest import load_manifest
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write('[project]\nname = "test"\nversion = "0.1"\nmodules = ["app.dsl"]\n')
+            f.flush()
+            m = load_manifest(Path(f.name))
         assert m.cdn is False
 
     def test_manifest_explicit_cdn_true_preserved(self) -> None:
-        from dazzle.core.manifest import parse_manifest
-        m = parse_manifest({"ui": {"cdn": True}})
+        from dazzle.core.manifest import load_manifest
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as f:
+            f.write('[project]\nname = "test"\nversion = "0.1"\nmodules = ["app.dsl"]\n\n[ui]\ncdn = true\n')
+            f.flush()
+            m = load_manifest(Path(f.name))
         assert m.cdn is True
 ```
 
@@ -557,7 +565,9 @@ import subprocess
 import sys
 
 class TestBuildDist:
-    def test_dist_css_contains_layer_declaration(self) -> None:
+    @classmethod
+    def setup_class(cls) -> None:
+        """Build dist once for all tests in this class."""
         repo_root = Path(__file__).resolve().parent.parent.parent
         result = subprocess.run(
             [sys.executable, "scripts/build_dist.py"],
@@ -566,6 +576,9 @@ class TestBuildDist:
             text=True,
         )
         assert result.returncode == 0, f"build_dist.py failed: {result.stderr}"
+
+    def test_dist_css_contains_layer_declaration(self) -> None:
+        repo_root = Path(__file__).resolve().parent.parent.parent
         css = (repo_root / "dist" / "dazzle.min.css").read_text()
         assert "@layer base, framework, app, overrides;" in css
 
@@ -728,11 +741,12 @@ jobs:
             echo "dist/ is up to date"
             exit 0
           fi
+          # Tag triggers checkout in detached HEAD — push to main explicitly
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add dist/
           git commit -m "chore: rebuild dist bundles for $(git describe --tags --always)"
-          git push
+          git push origin HEAD:refs/heads/main
 
   build:
     name: Build sdist and wheel
@@ -800,3 +814,7 @@ Expected: Clean build with layer wrappers in output
 git add -u
 git commit -m "chore: lint + format fixes for CSS delivery (#671)"
 ```
+
+- [ ] **Step 8: Version bump**
+
+Run `/bump patch` to increment the version. Every push needs a unique version for deployment traceability.
