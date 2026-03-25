@@ -367,7 +367,7 @@ def create_2fa_routes(
 
     # 2FA Verify
     verify_handler = partial(_verify_2fa, deps)
-    verify_handler = _rl.limiter.limit(_rl.twofa_limit)(verify_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    verify_handler = _rl.limits.limiter.limit(_rl.limits.twofa_limit)(verify_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
     router.post("/verify", include_in_schema=False)(verify_handler)
 
     # Recovery codes

@@ -468,7 +468,7 @@ def create_auth_routes(
 
     # Login
     login_handler = partial(_login, deps)
-    login_handler = _rl.limiter.limit(_rl.auth_limit)(login_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    login_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(login_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
     router.post("/login", include_in_schema=False)(login_handler)
 
     # Logout
@@ -476,7 +476,7 @@ def create_auth_routes(
 
     # Register
     register_handler = partial(_register, deps)
-    register_handler = _rl.limiter.limit(_rl.auth_limit)(register_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    register_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(register_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
     router.post("/register", status_code=201, include_in_schema=False)(register_handler)
 
     # Get Current User
@@ -487,12 +487,12 @@ def create_auth_routes(
 
     # Forgot Password
     forgot_handler = partial(_forgot_password, deps)
-    forgot_handler = _rl.limiter.limit(_rl.auth_limit)(forgot_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    forgot_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(forgot_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
     router.post("/forgot-password", include_in_schema=False)(forgot_handler)
 
     # Reset Password
     reset_handler = partial(_reset_password, deps)
-    reset_handler = _rl.limiter.limit(_rl.auth_limit)(reset_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    reset_handler = _rl.limits.limiter.limit(_rl.limits.auth_limit)(reset_handler)  # type: ignore[misc,untyped-decorator,unused-ignore]
     router.post("/reset-password", include_in_schema=False)(reset_handler)
 
     # Preferences

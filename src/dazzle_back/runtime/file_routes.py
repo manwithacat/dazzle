@@ -403,7 +403,7 @@ def create_file_routes(
 
     # Upload — needs wrapper to wire up FastAPI's File/Query params
     @app.post(f"{prefix}/upload")  # nosemgrep
-    @_rl.limiter.limit(_rl.upload_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
+    @_rl.limits.limiter.limit(_rl.limits.upload_limit)  # type: ignore[misc,untyped-decorator,unused-ignore]
     async def upload_file(
         request: Request,
         file: UploadFile = File(...),  # noqa: B008

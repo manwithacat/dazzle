@@ -8,14 +8,14 @@ Usage in route modules::
     import dazzle_back.runtime.rate_limit as _rl
 
     @router.post("/login")
-    @_rl.limiter.limit(_rl.auth_limit)
+    @_rl.limits.limiter.limit(_rl.limits.auth_limit)
     async def login(request: Request, ...): ...
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -34,18 +34,23 @@ class _NoOpLimiter:
         return decorator
 
 
-# Module-level limiter instance, initialised by apply_rate_limiting().
-# Routes use ``@limiter.limit(auth_limit)`` — if slowapi is not installed
-# the object is a no-op stub. Defaults to _NoOpLimiter so routes work
-# even when apply_rate_limiting() hasn't been called (e.g. in tests).
-limiter: Any = _NoOpLimiter()
+@dataclass
+class _Limits:
+    """Mutable container for rate-limit state.
 
-# Module-level limit strings, set by apply_rate_limiting().
-# Used as arguments to @limiter.limit() in route modules.
-auth_limit: str = "10/minute"
-api_limit: str = "60/minute"
-upload_limit: str = "10/minute"
-twofa_limit: str = "5/minute"
+    Attributes are set once by apply_rate_limiting() at startup.
+    Using a dataclass avoids the ``global`` keyword — attribute
+    assignment on an existing instance needs no global declaration.
+    """
+
+    limiter: Any = field(default_factory=_NoOpLimiter)
+    auth_limit: str = "10/minute"
+    api_limit: str = "60/minute"
+    upload_limit: str = "10/minute"
+    twofa_limit: str = "5/minute"
+
+
+limits = _Limits()
 
 
 @dataclass
@@ -96,31 +101,30 @@ def apply_rate_limiting(app: FastAPI, profile: str) -> None:
     Creates a slowapi Limiter and stores it on app.state for use by
     endpoint decorators. On basic profile, no limiter is created.
 
-    Also sets module-level limit strings (auth_limit, twofa_limit, etc.)
-    so route modules can reference them via ``_rl.auth_limit``.
+    Also sets limit strings on the ``limits`` container (auth_limit, twofa_limit, etc.)
+    so route modules can reference them via ``_rl.limits.auth_limit``.
 
     Args:
         app: FastAPI application instance
         profile: Security profile (basic, standard, strict)
     """
-    global limiter, auth_limit, api_limit, upload_limit, twofa_limit
-
+    # No global statement needed — attribute writes on existing instance
     config = configure_rate_limits_for_profile(profile)
     app.state.rate_limit_config = config
 
-    # Publish limit strings at module level for route decorators
+    # Publish limit strings on the limits container for route decorators
     if config.auth_limit:
-        auth_limit = config.auth_limit
+        limits.auth_limit = config.auth_limit
     if config.api_limit:
-        api_limit = config.api_limit
+        limits.api_limit = config.api_limit
     if config.upload_limit:
-        upload_limit = config.upload_limit
+        limits.upload_limit = config.upload_limit
     if config.twofa_limit:
-        twofa_limit = config.twofa_limit
+        limits.twofa_limit = config.twofa_limit
 
     # No rate limiting on basic profile
     if profile == "basic":
-        limiter = _NoOpLimiter()
+        limits.limiter = _NoOpLimiter()
         return
 
     try:
@@ -131,12 +135,12 @@ def apply_rate_limiting(app: FastAPI, profile: str) -> None:
         logger.warning(
             "slowapi not installed — rate limiting disabled. Install with: pip install slowapi"
         )
-        limiter = _NoOpLimiter()
+        limits.limiter = _NoOpLimiter()
         app.state.rate_limit_config = RateLimitConfig()  # disabled
         return
 
-    limiter = Limiter(key_func=get_remote_address)
-    app.state.limiter = limiter
+    limits.limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limits.limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)  # type: ignore[arg-type]
 
     logger.info("Rate limiting enabled (profile=%s)", profile)
