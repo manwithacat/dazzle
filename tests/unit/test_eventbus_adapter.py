@@ -625,7 +625,6 @@ class TestAppIntegration:
             patch.dict("os.environ", {"REDIS_URL": "redis://localhost:6379/0"}),
             patch("dazzle.core.process.eventbus_adapter.ProcessStateStore"),
             patch("dazzle_back.runtime.process_manager.ProcessManager"),
-            patch("dazzle_back.runtime.task_routes.set_process_manager"),
             patch("dazzle_back.runtime.task_routes.router"),
         ):
             subsystem.startup(ctx)

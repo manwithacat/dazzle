@@ -484,38 +484,6 @@ class TestProcessManagerTasks:
 class TestTaskRoutes:
     """Test task API route handlers."""
 
-    def test_set_process_manager(self) -> None:
-        """Test set_process_manager sets global manager."""
-        from dazzle_back.runtime.task_routes import (
-            get_process_manager,
-            set_process_manager,
-        )
-
-        mock_manager = MagicMock()
-        set_process_manager(mock_manager)
-
-        result = get_process_manager()
-        assert result == mock_manager
-
-        # Reset
-        set_process_manager(None)
-
-    def test_get_process_manager_raises_when_not_set(self) -> None:
-        """Test get_process_manager raises HTTPException when not set."""
-        from fastapi import HTTPException
-
-        from dazzle_back.runtime.task_routes import (
-            get_process_manager,
-            set_process_manager,
-        )
-
-        set_process_manager(None)
-
-        with pytest.raises(HTTPException) as exc_info:
-            get_process_manager()
-
-        assert exc_info.value.status_code == 503
-
 
 # =============================================================================
 # Integration Tests

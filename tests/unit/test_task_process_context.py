@@ -215,8 +215,6 @@ class TestEndpointProcessContext:
 
     @pytest.fixture()
     def _setup_manager(self) -> tuple[MagicMock, ProcessTask]:
-        from dazzle_back.runtime import task_routes
-
         task = _make_task()
         spec = _make_process_spec()
 
@@ -229,15 +227,23 @@ class TestEndpointProcessContext:
         manager.get_run = AsyncMock(return_value=run)
         manager.get_process_spec.return_value = spec
 
-        task_routes._process_manager = manager
         yield manager, task
-        task_routes._process_manager = None
+
+    @staticmethod
+    def _make_services(manager: MagicMock) -> MagicMock:
+        from dazzle_back.runtime.services import RuntimeServices
+
+        services = RuntimeServices()
+        services.process_manager = manager
+        return services
 
     @pytest.mark.asyncio
     async def test_list_tasks_includes_context(self, _setup_manager: tuple) -> None:
         from dazzle_back.runtime.task_routes import list_tasks
 
-        result = await list_tasks(assignee_id=None, status=None, limit=100)
+        manager, _task = _setup_manager
+        services = self._make_services(manager)
+        result = await list_tasks(assignee_id=None, status=None, limit=100, services=services)
         assert result.total == 1
         ctx = result.tasks[0].process_context
         assert ctx is not None
@@ -250,7 +256,9 @@ class TestEndpointProcessContext:
     async def test_get_task_includes_context(self, _setup_manager: tuple) -> None:
         from dazzle_back.runtime.task_routes import get_task
 
-        result = await get_task("t1")
+        manager, _task = _setup_manager
+        services = self._make_services(manager)
+        result = await get_task("t1", services=services)
         ctx = result.process_context
         assert ctx is not None
         assert ctx.process_name == "order_flow"
@@ -258,18 +266,13 @@ class TestEndpointProcessContext:
 
     @pytest.mark.asyncio
     async def test_list_tasks_no_run_no_context(self) -> None:
-        from dazzle_back.runtime import task_routes
-
         task = _make_task()
         manager = MagicMock()
         manager.list_tasks = AsyncMock(return_value=[task])
         manager.get_run = AsyncMock(return_value=None)
 
-        task_routes._process_manager = manager
-        try:
-            from dazzle_back.runtime.task_routes import list_tasks
+        services = self._make_services(manager)
+        from dazzle_back.runtime.task_routes import list_tasks
 
-            result = await list_tasks(assignee_id=None, status=None, limit=100)
-            assert result.tasks[0].process_context is None
-        finally:
-            task_routes._process_manager = None
+        result = await list_tasks(assignee_id=None, status=None, limit=100, services=services)
+        assert result.tasks[0].process_context is None
