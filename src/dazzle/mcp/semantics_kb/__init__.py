@@ -54,6 +54,7 @@ TOML_FILES = [
     "patterns.toml",
     "frontend.toml",
     "runtime.toml",
+    "feedback.toml",
 ]
 
 # Alias mapping for common term variations — used by seed.py

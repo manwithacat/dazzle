@@ -169,6 +169,7 @@ from dazzle.cli.discovery import discovery_app  # noqa: E402
 from dazzle.cli.docs import docs_app  # noqa: E402
 from dazzle.cli.e2e import e2e_app  # noqa: E402
 from dazzle.cli.events import dlq_app, events_app, outbox_app  # noqa: E402
+from dazzle.cli.feedback import feedback_app  # noqa: E402
 from dazzle.cli.kg import kg_app  # noqa: E402
 from dazzle.cli.lsp import lsp_app  # noqa: E402
 from dazzle.cli.mcp import mcp_app  # noqa: E402
@@ -203,6 +204,7 @@ app.add_typer(contribution_app, name="contribution")
 app.add_typer(db_app, name="db")
 app.add_typer(demo_app, name="demo")
 app.add_typer(discovery_app, name="discovery")
+app.add_typer(feedback_app, name="feedback")
 app.add_typer(docs_app, name="docs")
 app.add_typer(vocab_app, name="vocab")
 app.add_typer(stubs_app, name="stubs")

@@ -338,6 +338,51 @@ def get_consolidated_tools() -> list[Tool]:
             },
         ),
         # =====================================================================
+        # Feedback — human→agent feedback loop
+        # =====================================================================
+        Tool(
+            name="feedback",
+            description=(
+                "Feedback operations: list, get, triage, resolve. "
+                "Query and manage user-submitted feedback reports. "
+                "Use 'list' to see open feedback, 'get' for detail, "
+                "'triage' to mark as triaged, 'resolve' to close."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "operation": {
+                        "type": "string",
+                        "enum": ["list", "get", "triage", "resolve"],
+                        "description": "Operation to perform",
+                    },
+                    "id": {
+                        "type": "string",
+                        "description": "Feedback report ID (required for get/triage/resolve)",
+                    },
+                    "status": {"type": "string", "description": "Filter by status (list only)"},
+                    "category": {"type": "string", "description": "Filter by category (list only)"},
+                    "severity": {"type": "string", "description": "Filter by severity (list only)"},
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (list only, default 20)",
+                    },
+                    "agent_notes": {
+                        "type": "string",
+                        "description": "Agent notes (triage/resolve)",
+                    },
+                    "agent_classification": {
+                        "type": "string",
+                        "description": "Classification (triage only)",
+                    },
+                    "assigned_to": {"type": "string", "description": "Assign to (triage only)"},
+                    "resolved_by": {"type": "string", "description": "Who resolved (resolve only)"},
+                    **PROJECT_PATH_SCHEMA,
+                },
+                "required": ["operation"],
+            },
+        ),
+        # =====================================================================
         # Test Design (replaces 7 tools + 2 new autonomous operations)
         # =====================================================================
         Tool(

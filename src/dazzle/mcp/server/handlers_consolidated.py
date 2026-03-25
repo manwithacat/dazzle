@@ -350,6 +350,23 @@ handle_demo_data: Callable[[dict[str, Any]], str] = _make_project_handler(
 
 
 # =============================================================================
+# Feedback Handler
+# =============================================================================
+
+_MOD_FEEDBACK = "dazzle.mcp.server.handlers.feedback"
+
+handle_feedback: Callable[[dict[str, Any]], str] = _make_project_handler(
+    "feedback",
+    {
+        "list": f"{_MOD_FEEDBACK}:list_handler",
+        "get": f"{_MOD_FEEDBACK}:get_handler",
+        "triage": f"{_MOD_FEEDBACK}:triage_handler",
+        "resolve": f"{_MOD_FEEDBACK}:resolve_handler",
+    },
+)
+
+
+# =============================================================================
 # SiteSpec Handler
 # =============================================================================
 
@@ -1218,6 +1235,7 @@ CONSOLIDATED_TOOL_HANDLERS = {
     "story": handle_story,
     "rhythm": handle_rhythm,
     "demo_data": handle_demo_data,
+    "feedback": handle_feedback,
     "test_design": handle_test_design,
     "sitespec": handle_sitespec,
     "semantics": handle_semantics,

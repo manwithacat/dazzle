@@ -21,9 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = (
-    5  # v5: visible_runtime, workspace_rendering, template_variable_flow + purpose annotations
-)
+SEED_SCHEMA_VERSION = 6  # v6: feedback_widget concepts + triage workflow
 
 
 def compute_seed_version() -> str:

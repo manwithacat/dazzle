@@ -257,6 +257,12 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 # --- UI ---
                 "8. Generate surfaces (CRUD views) for each entity",
                 (
+                    "8a. If the app has auth enabled, add `feedback_widget: enabled` after "
+                    "the app declaration. This creates a human→agent feedback loop — users "
+                    "report issues via an in-app widget, agents read and resolve them via "
+                    "the feedback MCP tool."
+                ),
+                (
                     "9. Add ux blocks to list surfaces: sort (default ordering), "
                     "filter (enum/bool/status fields), search (text fields users "
                     "would search by), empty messages. "
