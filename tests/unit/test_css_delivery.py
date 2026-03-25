@@ -69,3 +69,44 @@ class TestCdnDefault:
             f.flush()
             m = load_manifest(Path(f.name))
         assert m.cdn is True
+
+
+class TestCssLoader:
+    def test_canonical_order(self) -> None:
+        from dazzle_ui.runtime.css_loader import CSS_SOURCE_FILES
+
+        assert CSS_SOURCE_FILES == CANONICAL_ORDER
+
+    def test_output_contains_layer_declaration(self) -> None:
+        from dazzle_ui.runtime.css_loader import get_bundled_css
+
+        css = get_bundled_css()
+        assert "@layer base, framework, app, overrides;" in css
+
+    def test_output_wraps_files_in_layer_framework(self) -> None:
+        from dazzle_ui.runtime.css_loader import get_bundled_css
+
+        css = get_bundled_css()
+        assert css.count("@layer framework {") == len(CANONICAL_ORDER)
+
+    def test_output_contains_source_map(self) -> None:
+        from dazzle_ui.runtime.css_loader import get_bundled_css
+
+        css = get_bundled_css()
+        assert "sourceMappingURL=data:application/json;base64," in css
+
+    def test_source_map_lists_all_sources(self) -> None:
+        import base64
+        import json
+
+        from dazzle_ui.runtime.css_loader import get_bundled_css
+
+        css = get_bundled_css()
+        marker = "sourceMappingURL=data:application/json;base64,"
+        start = css.index(marker) + len(marker)
+        end = css.index(" */", start)
+        b64 = css[start:end]
+        source_map = json.loads(base64.b64decode(b64))
+        assert source_map["version"] == 3
+        for f in CANONICAL_ORDER:
+            assert f in source_map["sources"]
