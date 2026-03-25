@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -110,3 +112,27 @@ class TestCssLoader:
         assert source_map["version"] == 3
         for f in CANONICAL_ORDER:
             assert f in source_map["sources"]
+
+
+class TestBuildDist:
+    @classmethod
+    def setup_class(cls) -> None:
+        """Build dist once for all tests in this class."""
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        result = subprocess.run(
+            [sys.executable, "scripts/build_dist.py"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, f"build_dist.py failed: {result.stderr}"
+
+    def test_dist_css_contains_layer_declaration(self) -> None:
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        css = (repo_root / "dist" / "dazzle.min.css").read_text()
+        assert "@layer base, framework, app, overrides;" in css
+
+    def test_dist_css_wraps_files_in_layer(self) -> None:
+        repo_root = Path(__file__).resolve().parent.parent.parent
+        css = (repo_root / "dist" / "dazzle.min.css").read_text()
+        assert css.count("@layer framework {") >= 4

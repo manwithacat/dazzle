@@ -1,176 +1,6 @@
-/* dazzle v0.48.6 | MIT License | https://github.com/manwithacat/dazzle */
-[data-dz-show] {
-transition: opacity 150ms ease-in, transform 150ms ease-in;
-}
-[data-dz-toggleable]:not([data-dz-open]) [data-dz-show] {
-display: none;
-}
-[data-dz-show="dropdown"] {
-transition: opacity 150ms ease-out, transform 150ms ease-out;
-transform-origin: top right;
-}
-[data-dz-toggleable][data-dz-open] [data-dz-show="dropdown"] {
-opacity: 1;
-transform: scale(1) translateY(0);
-}
-[data-dz-slide-over] [data-dz-show="backdrop"] {
-transition: opacity 200ms ease-out;
-}
-[data-dz-slide-over] [data-dz-show="panel"] {
-transition: transform 200ms ease-out;
-transform: translateX(100%);
-}
-[data-dz-slide-over][data-dz-open] [data-dz-show="panel"] {
-transform: translateX(0);
-}
-[data-dz-bulk-bar] {
-transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-.dz-toast-enter {
-opacity: 0;
-transform: translateX(1rem);
-transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-.dz-toast-leave {
-opacity: 0;
-transform: translateX(1rem);
-transition: opacity 150ms ease-in, transform 150ms ease-in;
-}
-#dz-toast .alert {
-transition: opacity 200ms ease-out, transform 200ms ease-out;
-}
-@media (min-width: 1024px) {
-.drawer[data-dz-sidebar="open"] {
-grid-template-columns: max-content 1fr;
-}
-.drawer[data-dz-sidebar="open"] > .drawer-side {
-position: sticky;
-top: 0;
-height: 100vh;
-overflow-y: auto;
-visibility: visible;
-pointer-events: auto;
-opacity: 1;
-display: block;
-width: auto;
-overscroll-behavior: auto;
-}
-.drawer[data-dz-sidebar="open"] > .drawer-side > .drawer-overlay {
-visibility: hidden;
-}
-.drawer[data-dz-sidebar="open"] > .drawer-side > *:not(.drawer-overlay) {
-translate: 0%;
-transform: translateX(0);
-}
-.drawer[data-dz-sidebar="open"] > .drawer-content > [data-dz-sidebar-navbar] {
-display: none;
-}
-}
-tr.htmx-swapping {
-opacity: 0;
-transform: translateX(1rem);
-transition: opacity 300ms ease-out, transform 300ms ease-out;
-}
-tr.htmx-added,
-tr.htmx-settling {
-animation: dz-row-highlight 600ms ease-out;
-}
-@keyframes dz-row-highlight {
-from { background-color: oklch(0.85 0.1 145 / 0.3); }
-to { background-color: transparent; }
-}
-.btn.htmx-request {
-pointer-events: none;
-opacity: 0.7;
-}
-.htmx-indicator {
-display: none;
-}
-.htmx-request .htmx-indicator {
-display: inline-block;
-}
-.htmx-request.htmx-indicator {
-display: inline-block;
-}
-.dz-skeleton {
-background: linear-gradient(90deg, oklch(0.8 0 0 / 0.3) 25%, oklch(0.85 0 0 / 0.5) 50%, oklch(0.8 0 0 / 0.3) 75%);
-background-size: 200% 100%;
-animation: dz-shimmer 1.5s ease-in-out infinite;
-border-radius: 0.25rem;
-}
-.dz-skeleton-text {
-height: 0.75rem;
-margin-bottom: 0.5rem;
-}
-.dz-skeleton-text-lg {
-height: 1rem;
-margin-bottom: 0.5rem;
-width: 60%;
-}
-.dz-skeleton-cell {
-height: 1rem;
-}
-@keyframes dz-shimmer {
-0% { background-position: 200% 0; }
-100% { background-position: -200% 0; }
-}
-@view-transition {
-navigation: auto;
-}
-#main-content {
-view-transition-name: main-content;
-}
-::view-transition-old(main-content) {
-animation: dz-fade-out 150ms ease-in forwards;
-}
-::view-transition-new(main-content) {
-animation: dz-fade-in 200ms ease-out;
-}
-@keyframes dz-fade-out {
-to {
-opacity: 0;
-transform: translateY(4px);
-}
-}
-@keyframes dz-fade-in {
-from {
-opacity: 0;
-transform: translateY(4px);
-}
-}
-@media (prefers-reduced-motion: reduce) {
-::view-transition-old(main-content),
-::view-transition-new(main-content) {
-animation: none;
-}
-tr.htmx-swapping {
-transition: none;
-}
-tr.htmx-added,
-tr.htmx-settling {
-animation: none;
-}
-.dz-skeleton {
-animation: none;
-}
-}
-dialog::backdrop {
-background: rgba(0, 0, 0, 0.5);
-backdrop-filter: blur(2px);
-}
-dialog[open] {
-animation: dz-dialog-in 200ms ease-out;
-}
-@keyframes dz-dialog-in {
-from {
-opacity: 0;
-transform: scale(0.95);
-}
-to {
-opacity: 1;
-transform: scale(1);
-}
-}
+/* dazzle v0.48.7 | MIT License | https://github.com/manwithacat/dazzle */
+@layer base, framework, app, overrides;
+@layer framework {
 #app,
 .dz-app {
 min-height: 100vh;
@@ -273,6 +103,8 @@ margin-bottom: 0.25rem;
 color: hsl(var(--muted-foreground, 240 3.8% 46.1%));
 font-size: 0.875rem;
 }
+}
+@layer framework {
 :root {
 --background: 0 0% 100%;
 --foreground: 240 10% 3.9%;
@@ -957,6 +789,182 @@ letter-spacing: 0.05em;
 color: hsl(var(--muted-foreground));
 }
 }
+}
+@layer framework {
+[data-dz-show] {
+transition: opacity 150ms ease-in, transform 150ms ease-in;
+}
+[data-dz-toggleable]:not([data-dz-open]) [data-dz-show] {
+display: none;
+}
+[data-dz-show="dropdown"] {
+transition: opacity 150ms ease-out, transform 150ms ease-out;
+transform-origin: top right;
+}
+[data-dz-toggleable][data-dz-open] [data-dz-show="dropdown"] {
+opacity: 1;
+transform: scale(1) translateY(0);
+}
+[data-dz-slide-over] [data-dz-show="backdrop"] {
+transition: opacity 200ms ease-out;
+}
+[data-dz-slide-over] [data-dz-show="panel"] {
+transition: transform 200ms ease-out;
+transform: translateX(100%);
+}
+[data-dz-slide-over][data-dz-open] [data-dz-show="panel"] {
+transform: translateX(0);
+}
+[data-dz-bulk-bar] {
+transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+.dz-toast-enter {
+opacity: 0;
+transform: translateX(1rem);
+transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+.dz-toast-leave {
+opacity: 0;
+transform: translateX(1rem);
+transition: opacity 150ms ease-in, transform 150ms ease-in;
+}
+#dz-toast .alert {
+transition: opacity 200ms ease-out, transform 200ms ease-out;
+}
+@media (min-width: 1024px) {
+.drawer[data-dz-sidebar="open"] {
+grid-template-columns: max-content 1fr;
+}
+.drawer[data-dz-sidebar="open"] > .drawer-side {
+position: sticky;
+top: 0;
+height: 100vh;
+overflow-y: auto;
+visibility: visible;
+pointer-events: auto;
+opacity: 1;
+display: block;
+width: auto;
+overscroll-behavior: auto;
+}
+.drawer[data-dz-sidebar="open"] > .drawer-side > .drawer-overlay {
+visibility: hidden;
+}
+.drawer[data-dz-sidebar="open"] > .drawer-side > *:not(.drawer-overlay) {
+translate: 0%;
+transform: translateX(0);
+}
+.drawer[data-dz-sidebar="open"] > .drawer-content > [data-dz-sidebar-navbar] {
+display: none;
+}
+}
+tr.htmx-swapping {
+opacity: 0;
+transform: translateX(1rem);
+transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+tr.htmx-added,
+tr.htmx-settling {
+animation: dz-row-highlight 600ms ease-out;
+}
+@keyframes dz-row-highlight {
+from { background-color: oklch(0.85 0.1 145 / 0.3); }
+to { background-color: transparent; }
+}
+.btn.htmx-request {
+pointer-events: none;
+opacity: 0.7;
+}
+.htmx-indicator {
+display: none;
+}
+.htmx-request .htmx-indicator {
+display: inline-block;
+}
+.htmx-request.htmx-indicator {
+display: inline-block;
+}
+.dz-skeleton {
+background: linear-gradient(90deg, oklch(0.8 0 0 / 0.3) 25%, oklch(0.85 0 0 / 0.5) 50%, oklch(0.8 0 0 / 0.3) 75%);
+background-size: 200% 100%;
+animation: dz-shimmer 1.5s ease-in-out infinite;
+border-radius: 0.25rem;
+}
+.dz-skeleton-text {
+height: 0.75rem;
+margin-bottom: 0.5rem;
+}
+.dz-skeleton-text-lg {
+height: 1rem;
+margin-bottom: 0.5rem;
+width: 60%;
+}
+.dz-skeleton-cell {
+height: 1rem;
+}
+@keyframes dz-shimmer {
+0% { background-position: 200% 0; }
+100% { background-position: -200% 0; }
+}
+@view-transition {
+navigation: auto;
+}
+#main-content {
+view-transition-name: main-content;
+}
+::view-transition-old(main-content) {
+animation: dz-fade-out 150ms ease-in forwards;
+}
+::view-transition-new(main-content) {
+animation: dz-fade-in 200ms ease-out;
+}
+@keyframes dz-fade-out {
+to {
+opacity: 0;
+transform: translateY(4px);
+}
+}
+@keyframes dz-fade-in {
+from {
+opacity: 0;
+transform: translateY(4px);
+}
+}
+@media (prefers-reduced-motion: reduce) {
+::view-transition-old(main-content),
+::view-transition-new(main-content) {
+animation: none;
+}
+tr.htmx-swapping {
+transition: none;
+}
+tr.htmx-added,
+tr.htmx-settling {
+animation: none;
+}
+.dz-skeleton {
+animation: none;
+}
+}
+dialog::backdrop {
+background: rgba(0, 0, 0, 0.5);
+backdrop-filter: blur(2px);
+}
+dialog[open] {
+animation: dz-dialog-in 200ms ease-out;
+}
+@keyframes dz-dialog-in {
+from {
+opacity: 0;
+transform: scale(0.95);
+}
+to {
+opacity: 1;
+transform: scale(1);
+}
+}
+}
+@layer framework {
 .dz-section-hero {
 background: linear-gradient(135deg, var(--dz-hero-bg-from) 0%, var(--dz-hero-bg-to) 100%);
 color: white;
@@ -2033,6 +2041,9 @@ text-align: center;
 padding: 2rem;
 color: var(--dz-error-text);
 }
+}
+@layer framework {
+@layer framework {
 .dz-feedback-btn {
 position: fixed;
 bottom: 1.5rem;
@@ -2233,4 +2244,6 @@ pointer-events: none;
 .dz-feedback-backdrop.visible {
 opacity: 1;
 pointer-events: auto;
+}
+}
 }

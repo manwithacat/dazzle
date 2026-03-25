@@ -18,9 +18,9 @@ STATIC = REPO_ROOT / "src" / "dazzle_ui" / "runtime" / "static"
 SITE_STATIC = REPO_ROOT / "src" / "dazzle_ui" / "static"
 
 CSS_SOURCES = [
-    STATIC / "css" / "dz.css",
     STATIC / "css" / "dazzle-layer.css",
     STATIC / "css" / "design-system.css",
+    STATIC / "css" / "dz.css",
     STATIC / "css" / "site-sections.css",
     STATIC / "css" / "feedback-widget.css",
 ]
@@ -122,12 +122,13 @@ def build() -> None:
     results: list[tuple[str, int, int]] = []
 
     # --- CSS bundle ---
-    css_parts = []
+    css_parts = ["@layer base, framework, app, overrides;\n"]
     for src in CSS_SOURCES:
         if not src.exists():
             print(f"WARNING: missing {src}", file=sys.stderr)
             continue
-        css_parts.append(src.read_text())
+        content = src.read_text()
+        css_parts.append(f"@layer framework {{\n{content}\n}}\n")
     css_combined = "\n".join(css_parts)
     css_minified = hdr + minify_css(css_combined)
     css_out = DIST_DIR / "dazzle.min.css"
