@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.11] - 2026-03-25
+
+### Fixed
+- Feedback widget POST 422: `reported_by` now populated from session email, field made optional (#687)
+- Feedback widget CSS: converted `oklch()` to `hsl()` to match design system variable format (#690)
+- Missing favicon `<link>` in app `base.html` — 404 console error on all app pages (#691)
+- `/__test__/reset` now reads `.dazzle/test_credentials.json` for user creation instead of generic emails (#688)
+- Dead-construct lint false positives: surfaces reachable via `nav_group` entity items no longer flagged (#689)
+
 ## [0.48.10] - 2026-03-25
 
 ### Changed
