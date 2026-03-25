@@ -285,4 +285,4 @@ The `status activity` MCP operation provides the same data for programmatic poll
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.48.9 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.48.10 | **Python**: 3.12+ | **Status**: Production Ready

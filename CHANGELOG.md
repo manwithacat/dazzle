@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.10] - 2026-03-25
+
+### Changed
+- `process_manager` added to `RuntimeServices`, task route handlers use `Depends(get_services)` (#673)
+- Rate-limit globals replaced with `_Limits` dataclass container — eliminates `global` keyword (#673)
+- `runtime_tools/state.py` globals (`_appspec_data`, `_ui_spec`) moved to `ServerState` (#673)
+- `api_kb/loader.py` cache globals (`_pack_cache`, `_packs_loaded`, `_project_root`) moved to `ServerState` (#673)
+- All 17 remaining `global` statements annotated with `# noqa: PLW0603` and mandatory reason (#673)
+
+### Removed
+- `src/dazzle/mcp/runtime_tools/state.py` — module deleted, state migrated to `ServerState` (#673)
+- `get_process_manager()`, `set_process_manager()` global singleton functions (#673)
+- `api_kb.loader.set_project_root()` — cache clearing handled by `ServerState.set_project_root()` (#673)
+
 ## [0.48.9] - 2026-03-25
 
 ### Changed
