@@ -7,11 +7,41 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # needed for dist rebuild push
 
 jobs:
+  rebuild-dist:
+    name: Rebuild dist bundles for CDN
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Rebuild dist
+        run: python scripts/build_dist.py
+
+      - name: Commit dist if changed
+        run: |
+          if git diff --quiet dist/; then
+            echo "dist/ is up to date"
+            exit 0
+          fi
+          # Tag triggers checkout in detached HEAD — push to main explicitly
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dist/
+          git commit -m "chore: rebuild dist bundles for $(git describe --tags --always)"
+          git push origin HEAD:refs/heads/main
+
   build:
     name: Build sdist and wheel
+    needs: rebuild-dist
     runs-on: ubuntu-latest
 
     steps:
@@ -81,6 +111,7 @@ jobs:
     environment: pypi
     permissions:
       id-token: write  # OIDC for trusted publishing
+      contents: read
 
     steps:
       - name: Download dist artifacts
