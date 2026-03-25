@@ -1,0 +1,7 @@
+/* Dazzle framework semantic layer — load order is authoritative.
+   This is the single source of truth for framework CSS ordering.
+   build_dist.py and css_loader.py must use the same order. */
+@import "dazzle-layer.css" layer(framework);
+@import "design-system.css" layer(framework);
+@import "dz.css" layer(framework);
+@import "site-sections.css" layer(framework);
