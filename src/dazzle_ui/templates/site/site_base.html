@@ -9,6 +9,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  {# CSS Cascade Layer order #}
+  <style>@layer base, framework, app, overrides;</style>
   {# Tailwind CSS + DaisyUI — compiled bundle replaces both CDNs (#377) #}
   {% if _tailwind_bundled | default(false) %}
   <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
@@ -18,7 +20,7 @@
   {% endif %}
   {% set _cdn_base = "https://cdn.jsdelivr.net/gh/manwithacat/dazzle@v" ~ _dazzle_version ~ "/dist" %}
   {# DAZZLE design system layer #}
-  {% if _use_cdn | default(true) %}
+  {% if _use_cdn | default(false) %}
   <link rel="stylesheet" href="{{ _cdn_base }}/dazzle.min.css">
   {% else %}
   <link rel="stylesheet" href="/styles/dazzle.css">
@@ -28,7 +30,7 @@
   <link rel="stylesheet" href="/static/css/custom.css">
   {% endif %}
   {# Lucide icons #}
-  {% if _use_cdn | default(true) %}
+  {% if _use_cdn | default(false) %}
   <script src="{{ _cdn_base }}/dazzle-icons.min.js"></script>
   {% else %}
   <script src="/static/vendor/lucide.min.js"></script>
