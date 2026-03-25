@@ -365,34 +365,6 @@ class EntityEventBus:
 
 
 # =============================================================================
-# Global Event Bus
-# =============================================================================
-
-
-_global_event_bus: EntityEventBus | None = None
-
-
-def get_event_bus() -> EntityEventBus:
-    """Get the global event bus instance."""
-    global _global_event_bus
-    if _global_event_bus is None:
-        _global_event_bus = EntityEventBus()
-    return _global_event_bus
-
-
-def set_event_bus(bus: EntityEventBus) -> None:
-    """Set the global event bus instance."""
-    global _global_event_bus
-    _global_event_bus = bus
-
-
-def reset_event_bus() -> None:
-    """Reset the global event bus (mainly for testing)."""
-    global _global_event_bus
-    _global_event_bus = None
-
-
-# =============================================================================
 # Repository Integration
 # =============================================================================
 
@@ -414,8 +386,13 @@ class RealtimeRepositoryMixin:
         self._event_bus = bus
 
     def get_event_bus(self) -> EntityEventBus:
-        """Get the event bus, using global if not set."""
-        return self._event_bus or get_event_bus()
+        """Get the event bus for this repository."""
+        if self._event_bus is None:
+            raise RuntimeError(
+                f"{type(self).__name__} has no event bus — "
+                "call set_event_bus() during service initialization"
+            )
+        return self._event_bus
 
     async def _emit_created(
         self, entity_id: str, data: dict[str, Any], user_id: str | None = None
