@@ -66,7 +66,7 @@ class TestEmitUserRegistered:
     async def test_creates_correct_envelope(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_registered(user, session_id="sess_abc")
 
         mock_bus.assert_awaited_once()
@@ -86,7 +86,7 @@ class TestEmitUserRegistered:
     async def test_without_session_id(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_registered(user)
 
         envelope = mock_bus.await_args.args[1]
@@ -98,7 +98,7 @@ class TestEmitUserLoggedIn:
     async def test_creates_correct_envelope(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_logged_in(user, session_id="sess_xyz", method="password")
 
         mock_bus.assert_awaited_once()
@@ -116,7 +116,7 @@ class TestEmitUserLoggedIn:
     async def test_2fa_method(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_logged_in(user, session_id="s", method="2fa")
 
         envelope = mock_bus.await_args.args[1]
@@ -126,7 +126,7 @@ class TestEmitUserLoggedIn:
     async def test_default_method_is_password(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_logged_in(user)
 
         envelope = mock_bus.await_args.args[1]
@@ -138,7 +138,7 @@ class TestEmitUserPasswordChanged:
     async def test_creates_correct_envelope(
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_password_changed(user)
 
         mock_bus.assert_awaited_once()
@@ -161,10 +161,7 @@ class TestPublishResilience:
     @pytest.mark.asyncio
     async def test_swallows_framework_not_initialized(self) -> None:
         """_publish should not raise when framework is not initialized."""
-        with patch(
-            "dazzle_back.events.framework.get_framework",
-            side_effect=RuntimeError("Event framework not initialized"),
-        ):
+        with patch("dazzle_back.runtime.auth.events._event_framework", None):
             # Should not raise
             envelope = EventEnvelope.create(
                 event_type="auth.user.registered",
@@ -176,9 +173,9 @@ class TestPublishResilience:
     @pytest.mark.asyncio
     async def test_swallows_bus_publish_error(self, mock_framework: MagicMock) -> None:
         """_publish should not raise when bus.publish fails."""
-        mock_framework._bus.publish = AsyncMock(side_effect=ConnectionError("redis down"))
+        mock_framework.get_bus().publish = AsyncMock(side_effect=ConnectionError("redis down"))
 
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             envelope = EventEnvelope.create(
                 event_type="auth.user.registered",
                 key="test",
@@ -190,9 +187,9 @@ class TestPublishResilience:
     async def test_skips_when_bus_is_none(self) -> None:
         """_publish should skip gracefully when bus is None."""
         fw = MagicMock()
-        fw._bus = None
+        fw.get_bus.return_value = None
 
-        with patch("dazzle_back.events.framework.get_framework", return_value=fw):
+        with patch("dazzle_back.runtime.auth.events._event_framework", fw):
             envelope = EventEnvelope.create(
                 event_type="auth.user.registered",
                 key="test",
@@ -212,7 +209,7 @@ class TestEnvelopeShape:
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
         """Event type 'auth.user.registered' should derive topic 'auth.user'."""
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_registered(user)
 
         envelope: EventEnvelope = mock_bus.await_args.args[1]
@@ -224,7 +221,7 @@ class TestEnvelopeShape:
         self, user: UserRecord, mock_framework: MagicMock, mock_bus: AsyncMock
     ) -> None:
         """All emitted envelopes should be JSON-serializable."""
-        with patch("dazzle_back.events.framework.get_framework", return_value=mock_framework):
+        with patch("dazzle_back.runtime.auth.events._event_framework", mock_framework):
             await emit_user_registered(user)
             await emit_user_logged_in(user, session_id="s1")
             await emit_user_password_changed(user)

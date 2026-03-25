@@ -14,11 +14,7 @@ import pytest
 
 from dazzle_back.runtime.presence_tracker import (
     PresenceEntry,
-    PresenceTracker,
     create_presence_tracker,
-    get_presence_tracker,
-    reset_presence_tracker,
-    set_presence_tracker,
 )
 
 # =============================================================================
@@ -26,17 +22,9 @@ from dazzle_back.runtime.presence_tracker import (
 # =============================================================================
 
 
-@pytest.fixture(autouse=True)
-def reset_global_tracker() -> Any:
-    """Reset global presence tracker before each test."""
-    reset_presence_tracker()
-    yield
-    reset_presence_tracker()
-
-
 @pytest.fixture
 def tracker() -> Any:
-    """Create a presence tracker for testing."""
+    """Create a fresh presence tracker for testing."""
     return create_presence_tracker(timeout_seconds=30)
 
 
@@ -402,41 +390,3 @@ class TestStatistics:
         assert stats["resources"] == 2
         assert stats["entries"] == 3
         assert stats["connections"] == 2
-
-
-# =============================================================================
-# Global Presence Tracker Tests
-# =============================================================================
-
-
-class TestGlobalPresenceTracker:
-    """Tests for global presence tracker functions."""
-
-    def test_get_presence_tracker_creates_default(self) -> None:
-        """Test that get_presence_tracker creates a default tracker."""
-        tracker = get_presence_tracker()
-
-        assert tracker is not None
-        assert isinstance(tracker, PresenceTracker)
-
-    def test_get_presence_tracker_returns_same(self) -> None:
-        """Test that get_presence_tracker returns the same instance."""
-        tracker1 = get_presence_tracker()
-        tracker2 = get_presence_tracker()
-
-        assert tracker1 is tracker2
-
-    def test_set_presence_tracker(self) -> None:
-        """Test setting a custom tracker."""
-        custom_tracker = create_presence_tracker(timeout_seconds=60)
-        set_presence_tracker(custom_tracker)
-
-        assert get_presence_tracker() is custom_tracker
-
-    def test_reset_presence_tracker(self) -> None:
-        """Test resetting the global tracker."""
-        tracker1 = get_presence_tracker()
-        reset_presence_tracker()
-        tracker2 = get_presence_tracker()
-
-        assert tracker1 is not tracker2

@@ -13,13 +13,9 @@ import pytest
 
 from dazzle_back.runtime.event_bus import (
     EntityEvent,
-    EntityEventBus,
     EntityEventType,
     RealtimeRepositoryMixin,
     create_event_bus,
-    get_event_bus,
-    reset_event_bus,
-    set_event_bus,
 )
 
 # =============================================================================
@@ -27,17 +23,9 @@ from dazzle_back.runtime.event_bus import (
 # =============================================================================
 
 
-@pytest.fixture(autouse=True)
-def reset_global_bus() -> Any:
-    """Reset global event bus before each test."""
-    reset_event_bus()
-    yield
-    reset_event_bus()
-
-
 @pytest.fixture
 def event_bus() -> Any:
-    """Create an event bus for testing."""
+    """Create a fresh event bus for testing."""
     return create_event_bus()
 
 
@@ -282,44 +270,6 @@ class TestWebSocketBroadcasting:
 
 
 # =============================================================================
-# Global Event Bus Tests
-# =============================================================================
-
-
-class TestGlobalEventBus:
-    """Tests for global event bus functions."""
-
-    def test_get_event_bus_creates_default(self) -> None:
-        """Test that get_event_bus creates a default bus."""
-        bus = get_event_bus()
-
-        assert bus is not None
-        assert isinstance(bus, EntityEventBus)
-
-    def test_get_event_bus_returns_same(self) -> None:
-        """Test that get_event_bus returns the same instance."""
-        bus1 = get_event_bus()
-        bus2 = get_event_bus()
-
-        assert bus1 is bus2
-
-    def test_set_event_bus(self) -> None:
-        """Test setting a custom event bus."""
-        custom_bus = create_event_bus()
-        set_event_bus(custom_bus)
-
-        assert get_event_bus() is custom_bus
-
-    def test_reset_event_bus(self) -> None:
-        """Test resetting the global event bus."""
-        bus1 = get_event_bus()
-        reset_event_bus()
-        bus2 = get_event_bus()
-
-        assert bus1 is not bus2
-
-
-# =============================================================================
 # RealtimeRepositoryMixin Tests
 # =============================================================================
 
@@ -337,12 +287,12 @@ class TestRealtimeRepositoryMixin:
 
         bus = create_event_bus()
         bus.add_handler(handler)
-        set_event_bus(bus)
 
         class TestRepo(RealtimeRepositoryMixin):
             entity_name = "Task"
 
         repo = TestRepo()
+        repo.set_event_bus(bus)
         await repo._emit_created("123", {"title": "Test"}, "user_456")
 
         assert len(events) == 1
