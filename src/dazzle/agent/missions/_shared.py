@@ -9,9 +9,12 @@ imports and code duplication.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..core import AgentTool
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 from ..models import ActionType, AgentAction, Step
 
 logger = logging.getLogger("dazzle.agent.missions")
@@ -90,7 +93,7 @@ def make_stagnation_completion(
 # =============================================================================
 
 
-def build_dsl_summary(appspec: Any) -> str:
+def build_dsl_summary(appspec: AppSpec) -> str:
     """
     Build a compact DSL summary for system prompts.
 
@@ -258,7 +261,7 @@ def make_observe_gap_tool(kg_store: Any | None) -> AgentTool:
     )
 
 
-def make_query_dsl_tool(appspec: Any) -> AgentTool:
+def make_query_dsl_tool(appspec: AppSpec) -> AgentTool:
     """
     Tool: query_dsl — ask about DSL definitions on-demand.
 

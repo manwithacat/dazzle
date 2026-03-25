@@ -15,78 +15,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
 
-# =============================================================================
-# Comparison helpers (inlined to avoid importing from dazzle_back)
-# =============================================================================
-
-
-def _eval_comparison_op(
-    op: str,
-    record_val: Any,
-    resolved_val: Any,
-    *,
-    value_list: list[Any] | None = None,
-) -> bool:
-    """Evaluate a comparison operation between two values."""
-    # Normalize UUIDs to strings for comparison
-    if isinstance(record_val, UUID):
-        record_val = str(record_val)
-    if isinstance(resolved_val, UUID):
-        resolved_val = str(resolved_val)
-
-    # Handle null comparisons — return early before any coercion
-    if resolved_val is None:
-        if op in ("eq", "=", "=="):
-            return record_val is None
-        if op in ("ne", "!=", "<>"):
-            return record_val is not None
-        return False
-
-    if record_val is None:
-        if op in ("eq", "=", "=="):
-            return resolved_val is None
-        if op in ("ne", "!=", "<>"):
-            return resolved_val is not None
-        return False
-
-    if op in ("eq", "=", "=="):
-        if isinstance(record_val, bool) and isinstance(resolved_val, bool):
-            return record_val == resolved_val
-        return str(record_val) == str(resolved_val)
-
-    if op in ("ne", "!=", "<>"):
-        if isinstance(record_val, bool) and isinstance(resolved_val, bool):
-            return record_val != resolved_val
-        return str(record_val) != str(resolved_val)
-
-    if op in ("gt", ">"):
-        return record_val > resolved_val  # type: ignore[no-any-return]
-
-    if op in ("ge", ">="):
-        return record_val >= resolved_val  # type: ignore[no-any-return]
-
-    if op in ("lt", "<"):
-        return record_val < resolved_val  # type: ignore[no-any-return]
-
-    if op in ("le", "<="):
-        return record_val <= resolved_val  # type: ignore[no-any-return]
-
-    if op == "in":
-        items = value_list if value_list is not None else resolved_val
-        if isinstance(items, (list, tuple)):
-            return record_val in items
-        return False
-
-    if op in ("not_in", "not in"):
-        items = value_list if value_list is not None else resolved_val
-        if isinstance(items, (list, tuple)):
-            return record_val not in items
-        return True
-
-    return False
-
+from dazzle.core.comparison import eval_comparison_op as _eval_comparison_op
 
 # =============================================================================
 # Condition Expression Evaluator

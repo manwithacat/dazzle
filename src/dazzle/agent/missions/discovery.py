@@ -17,9 +17,12 @@ the richness of the DSL specification.
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..core import AgentTool, Mission
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 from ._shared import (
     build_dsl_summary,
     get_surface_entity,
@@ -145,7 +148,7 @@ def _make_check_adjacency_tool(
 
 
 def _make_list_surfaces_tool(
-    appspec: Any,
+    appspec: AppSpec,
 ) -> AgentTool:
     """
     Tool: list_surfaces — get all surface URLs the agent should visit.
@@ -241,7 +244,7 @@ Respond with ONLY a single JSON object for each action. No extra text."""
 
 
 def build_discovery_mission(
-    appspec: Any,
+    appspec: AppSpec,
     persona_name: str = "admin",
     base_url: str = "http://localhost:3000",
     kg_store: Any | None = None,

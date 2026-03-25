@@ -159,6 +159,10 @@ class EventFramework:
 
         return _pg_connect
 
+    def get_bus(self) -> EventBus | None:
+        """Return the underlying event bus, or None if not configured."""
+        return self._bus
+
     @property
     def bus(self) -> EventBus:
         """Get the event bus (raises if not started)."""

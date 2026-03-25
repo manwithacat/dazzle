@@ -115,8 +115,9 @@ async def _publish(envelope: EventEnvelope) -> None:
         from dazzle_back.events.framework import get_framework
 
         framework = get_framework()
-        if framework and framework._bus:
-            await framework._bus.publish(envelope.topic, envelope)
+        bus = framework.get_bus() if framework else None
+        if bus:
+            await bus.publish(envelope.topic, envelope)
             logger.debug("Published %s for key=%s", envelope.event_type, envelope.key)
         else:
             logger.debug("Event bus not available, skipping %s", envelope.event_type)

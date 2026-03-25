@@ -48,10 +48,11 @@ def mock_bus() -> AsyncMock:
 
 @pytest.fixture
 def mock_framework(mock_bus: AsyncMock) -> MagicMock:
-    """A MagicMock EventFramework whose _bus.publish is async."""
+    """A MagicMock EventFramework whose get_bus().publish is async."""
     fw = MagicMock()
-    fw._bus = MagicMock()
-    fw._bus.publish = mock_bus
+    bus = MagicMock()
+    bus.publish = mock_bus
+    fw.get_bus.return_value = bus
     return fw
 
 

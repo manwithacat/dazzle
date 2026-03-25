@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..core import AgentTool, Mission
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 from ._shared import (
     build_dsl_summary,
     is_step_kind,
@@ -75,7 +78,7 @@ class WorkflowCoherenceReport:
 # =============================================================================
 
 
-def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
+def _static_workflow_analysis(appspec: AppSpec) -> WorkflowCoherenceReport:
     """
     Analyze DSL spec for workflow coherence gaps.
 
@@ -179,7 +182,7 @@ def _static_workflow_analysis(appspec: Any) -> WorkflowCoherenceReport:
 # =============================================================================
 
 
-def _make_check_process_coverage_tool(appspec: Any) -> AgentTool:
+def _make_check_process_coverage_tool(appspec: AppSpec) -> AgentTool:
     """Tool: check_process_coverage — returns step-by-step coverage for a process."""
     processes = appspec.processes
     surfaces = appspec.surfaces
@@ -347,7 +350,7 @@ Respond with ONLY a single JSON object for each action. No extra text."""
 
 
 def build_workflow_coherence_mission(
-    appspec: Any,
+    appspec: AppSpec,
     base_url: str = "http://localhost:3000",
     kg_store: Any | None = None,
     max_steps: int = 30,

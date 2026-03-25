@@ -388,10 +388,10 @@ class EventBusProcessAdapter(ProcessAdapter):
             return None
 
         framework = _fw_mod.get_framework()
-        if framework is None or framework._bus is None:
+        if framework is None or framework.get_bus() is None:
             return None
 
-        bus = framework._bus
+        bus = framework.get_bus()
         envelope_cls = _env_mod.EventEnvelope
 
         async def _publish(

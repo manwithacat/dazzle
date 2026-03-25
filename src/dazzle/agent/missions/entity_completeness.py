@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from dazzle.core.patterns import SYSTEM_MANAGED_PATTERNS
 
 from ..core import AgentTool, Mission
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 from ._shared import (
     build_dsl_summary,
     get_surface_entity,
@@ -117,7 +120,7 @@ def _is_operation_forbidden(entity: Any, operation: str) -> bool:
     return False
 
 
-def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
+def _static_entity_analysis(appspec: AppSpec) -> EntityCompletenessReport:
     """
     Analyze DSL spec for entity CRUD coverage gaps.
 
@@ -276,7 +279,7 @@ def _static_entity_analysis(appspec: Any) -> EntityCompletenessReport:
 # =============================================================================
 
 
-def _make_check_crud_coverage_tool(appspec: Any) -> AgentTool:
+def _make_check_crud_coverage_tool(appspec: AppSpec) -> AgentTool:
     """Tool: check_crud_coverage — returns CRUD coverage for an entity."""
     surfaces = appspec.surfaces
 
@@ -319,7 +322,7 @@ def _make_check_crud_coverage_tool(appspec: Any) -> AgentTool:
     )
 
 
-def _make_check_state_transitions_tool(appspec: Any) -> AgentTool:
+def _make_check_state_transitions_tool(appspec: AppSpec) -> AgentTool:
     """Tool: check_state_transitions — returns state transitions with UI status."""
     entities = appspec.domain.entities
     surfaces = appspec.surfaces
@@ -430,7 +433,7 @@ Respond with ONLY a single JSON object for each action. No extra text."""
 
 
 def build_entity_completeness_mission(
-    appspec: Any,
+    appspec: AppSpec,
     base_url: str = "http://localhost:3000",
     kg_store: Any | None = None,
     max_steps: int = 30,

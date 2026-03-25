@@ -25,9 +25,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from ..compiler import infer_crud_action
+
+if TYPE_CHECKING:
+    from dazzle.core.ir.appspec import AppSpec
 from ..transcript import Observation
 from ._shared import get_surface_entity, is_step_kind
 
@@ -198,7 +201,7 @@ def _gap_to_observation(gap: PersonaJourneyGap) -> Observation:
 # =============================================================================
 
 
-def _compute_accessible_surfaces(persona_id: str, appspec: Any) -> set[str]:
+def _compute_accessible_surfaces(persona_id: str, appspec: AppSpec) -> set[str]:
     """
     Compute the set of surface names accessible to a persona.
 
@@ -228,7 +231,7 @@ def _compute_accessible_surfaces(persona_id: str, appspec: Any) -> set[str]:
     return accessible
 
 
-def _get_persona_stories(persona_id: str, appspec: Any) -> list[Any]:
+def _get_persona_stories(persona_id: str, appspec: AppSpec) -> list[Any]:
     """Get stories where this persona is the actor."""
     return [s for s in appspec.stories if s.actor == persona_id]
 
@@ -245,7 +248,7 @@ def _get_story_entities(story: Any) -> list[str]:
     return []
 
 
-def _get_surfaces_for_entity(entity_name: str, appspec: Any) -> list[Any]:
+def _get_surfaces_for_entity(entity_name: str, appspec: AppSpec) -> list[Any]:
     """Get all surfaces that reference a given entity."""
     return [s for s in appspec.surfaces if get_surface_entity(s) == entity_name]
 
@@ -258,7 +261,7 @@ def _get_surfaces_for_entity(entity_name: str, appspec: Any) -> list[Any]:
 def _analyze_workspace_reachability(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
 ) -> list[PersonaJourneyGap]:
     """Check that persona has a valid, accessible workspace with regions."""
     gaps: list[PersonaJourneyGap] = []
@@ -328,7 +331,7 @@ def _analyze_workspace_reachability(
 def _analyze_surface_access(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
     """Flag surfaces that reference entities in persona's stories but are inaccessible."""
@@ -371,7 +374,7 @@ def _analyze_surface_access(
 def _analyze_story_surface_coverage(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
     """Check that stories have accessible surfaces for their implied CRUD operations."""
@@ -458,7 +461,7 @@ def _analyze_story_surface_coverage(
 def _analyze_process_surface_wiring(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
     """Check that process human_task steps reference existing, accessible surfaces."""
@@ -528,7 +531,7 @@ def _analyze_process_surface_wiring(
 def _analyze_experience_completeness(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
     """Check experience steps and transitions for validity and accessibility."""
@@ -697,7 +700,7 @@ def _find_reachable_steps(start: str, steps: list[Any]) -> set[str]:
 def _analyze_experience_reachability(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
     """Check that experiences relevant to a persona are reachable from their workspace.
@@ -818,7 +821,7 @@ def _analyze_experience_reachability(
 def _analyze_orphan_surfaces(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
     """Find accessible surfaces not reachable from any workspace region, experience, or process.
@@ -923,7 +926,7 @@ def _analyze_orphan_surfaces(
 def _analyze_cross_entity_gaps(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
     kg_store: Any | None = None,
 ) -> list[PersonaJourneyGap]:
@@ -1027,7 +1030,7 @@ def _condition_matches_role(condition: Any, role_name: str) -> bool:
 def _analyze_navigation_scope(
     persona_id: str,
     persona: Any,
-    appspec: Any,
+    appspec: AppSpec,
     accessible_surfaces: set[str],
 ) -> list[PersonaJourneyGap]:
     """Audit which entities should appear in a persona's navigation.
@@ -1188,7 +1191,7 @@ def _analyze_navigation_scope(
 
 
 def run_headless_discovery(
-    appspec: Any,
+    appspec: AppSpec,
     persona_ids: list[str] | None = None,
     kg_store: Any | None = None,
     include_entity_analysis: bool = True,
