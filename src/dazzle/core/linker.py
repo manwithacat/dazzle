@@ -118,7 +118,12 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     surfaces = merged_fragment.surfaces
     if fw is not None and fw.enabled and not any(e.name == "FeedbackReport" for e in entities):
         entities = [*entities, _build_feedback_report_entity()]
-        surfaces = [*surfaces, _build_feedback_create_surface(), _build_feedback_admin_surface()]
+        surfaces = [
+            *surfaces,
+            _build_feedback_create_surface(),
+            _build_feedback_admin_surface(),
+            _build_feedback_edit_surface(),
+        ]
 
     # 10. Build FK graph and compile scope predicates
     from .ir.fk_graph import FKGraph
@@ -352,6 +357,7 @@ def _build_feedback_report_entity() -> ir.EntitySpec:
         ir.StateTransition(from_state="triaged", to_state="in_progress"),
         ir.StateTransition(from_state="triaged", to_state="wont_fix"),
         ir.StateTransition(from_state="triaged", to_state="duplicate"),
+        ir.StateTransition(from_state="triaged", to_state="resolved"),  # agent shortcut
         ir.StateTransition(from_state="in_progress", to_state="resolved"),
         ir.StateTransition(from_state="in_progress", to_state="wont_fix"),
         ir.StateTransition(from_state="resolved", to_state="verified"),
@@ -414,6 +420,36 @@ def _build_feedback_admin_surface() -> ir.SurfaceSpec:
         entity_ref="FeedbackReport",
         mode=ir.SurfaceMode.LIST,
         sections=[ir.SurfaceSection(name="main", title="Feedback", elements=elements)],
+        access=ir.SurfaceAccessSpec(
+            require_auth=True,
+            allow_personas=["admin", "super_admin"],
+        ),
+    )
+
+
+def _build_feedback_edit_surface() -> ir.SurfaceSpec:
+    """Build a headless EDIT surface for FeedbackReport (triage/resolve).
+
+    Admin-only. Exposes status transitions + agent triage fields via
+    PUT /feedbackreports/{id}.
+    """
+    elements = [
+        ir.SurfaceElement(field_name=name, label=label)
+        for name, label in [
+            ("status", "Status"),
+            ("assigned_to", "Assigned To"),
+            ("agent_notes", "Agent Notes"),
+            ("agent_classification", "Classification"),
+            ("related_entity", "Related Entity"),
+            ("related_story", "Related Story"),
+        ]
+    ]
+    return ir.SurfaceSpec(
+        name="feedback_edit",
+        title="Edit Feedback Report",
+        entity_ref="FeedbackReport",
+        mode=ir.SurfaceMode.EDIT,
+        sections=[ir.SurfaceSection(name="main", title="Triage", elements=elements)],
         access=ir.SurfaceAccessSpec(
             require_auth=True,
             allow_personas=["admin", "super_admin"],

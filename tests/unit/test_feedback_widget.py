@@ -394,6 +394,24 @@ class TestFeedbackReportAutoEntity:
         assert "triaged -> in_progress" in transition_strs
         assert "in_progress -> resolved" in transition_strs
 
+    def test_triaged_to_resolved_shortcut(self) -> None:
+        """State machine allows triaged → resolved (agent shortcut)."""
+        dsl = (
+            'module test\napp test "Test"\n\n'
+            'entity User "User":\n'
+            "  id: uuid pk\n"
+            "  name: str(100)\n\n"
+            "feedback_widget: enabled\n"
+        )
+        app = self._link(dsl)
+        entity = app.get_entity("FeedbackReport")
+        assert entity is not None
+        assert entity.state_machine is not None
+        transition_strs = {
+            f"{t.from_state} -> {t.to_state}" for t in entity.state_machine.transitions
+        }
+        assert "triaged -> resolved" in transition_strs
+
 
 # ---------------------------------------------------------------------------
 # 7. Synthetic surface generation in linker (#685)
@@ -503,3 +521,36 @@ class TestFeedbackWidgetSurfaces:
         assert admin.access.require_auth is True
         assert "admin" in admin.access.allow_personas
         assert "super_admin" in admin.access.allow_personas
+
+    def test_edit_surface_generated(self) -> None:
+        """feedback_widget: enabled produces a feedback_edit surface."""
+        app = self._link(self._DSL_ENABLED)
+        surface_names = {s.name for s in app.surfaces}
+        assert "feedback_edit" in surface_names
+
+    def test_edit_surface_mode_and_entity(self) -> None:
+        """feedback_edit surface is mode=edit referencing FeedbackReport."""
+        from dazzle.core.ir.surfaces import SurfaceMode
+
+        app = self._link(self._DSL_ENABLED)
+        edit = next(s for s in app.surfaces if s.name == "feedback_edit")
+        assert edit.mode == SurfaceMode.EDIT
+        assert edit.entity_ref == "FeedbackReport"
+
+    def test_edit_surface_has_editable_fields(self) -> None:
+        """feedback_edit surface has triage/resolution fields."""
+        app = self._link(self._DSL_ENABLED)
+        edit = next(s for s in app.surfaces if s.name == "feedback_edit")
+        assert len(edit.sections) == 1
+        field_names = {e.field_name for e in edit.sections[0].elements}
+        assert "status" in field_names
+        assert "assigned_to" in field_names
+        assert "agent_notes" in field_names
+
+    def test_edit_surface_has_admin_access(self) -> None:
+        """feedback_edit surface restricted to admin/super_admin."""
+        app = self._link(self._DSL_ENABLED)
+        edit = next(s for s in app.surfaces if s.name == "feedback_edit")
+        assert edit.access is not None
+        assert edit.access.require_auth is True
+        assert "admin" in edit.access.allow_personas
