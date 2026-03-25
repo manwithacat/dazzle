@@ -337,6 +337,7 @@ def validate_seed_data(
             rows = read_seed_file(path)
             entity_ids[name] = {str(r.get("id", "")) for r in rows if r.get("id")}
         except Exception as e:
+            logger.warning("Seed validation error: %s", e, exc_info=True)
             errors.append(f"{name}: Failed to read seed file: {e}")
 
     for name, path in seed_files.items():
@@ -350,6 +351,7 @@ def validate_seed_data(
         try:
             rows = read_seed_file(path)
         except Exception as e:
+            logger.warning("Seed validation error: %s", e, exc_info=True)
             errors.append(f"{name}: Failed to read: {e}")
             continue
 

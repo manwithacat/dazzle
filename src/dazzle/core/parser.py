@@ -1,9 +1,12 @@
+import logging
 from pathlib import Path
 
 from . import ir
 from .dsl_parser_impl import parse_dsl
 from .expander import VocabExpander
 from .vocab import load_manifest
+
+logger = logging.getLogger(__name__)
 
 
 def parse_modules(files: list[Path]) -> list[ir.ModuleIR]:
@@ -95,6 +98,5 @@ def _load_vocabulary_expander(files: list[Path]) -> VocabExpander | None:
         manifest = load_manifest(manifest_path)
         return VocabExpander(manifest)
     except Exception:
-        # If manifest exists but is invalid, fail silently for now
-        # In a future version, we might want to emit a warning
+        logger.warning("Failed to load vocabulary expander", exc_info=True)
         return None
