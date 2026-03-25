@@ -22,8 +22,8 @@ from dazzle.core.patterns import detect_crud_patterns, detect_integration_patter
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
-from dazzle.mcp.runtime_tools import set_appspec_data
 from dazzle.mcp.semantics import get_mcp_version, lookup_concept
+from dazzle.mcp.server.state import get_state
 
 from .state import (
     get_active_project,
@@ -128,7 +128,7 @@ def load_appspec_for_project(project_path: Path) -> bool:
             return False
 
         # Store AppSpec data for DNR tools
-        set_appspec_data(appspec.model_dump())
+        get_state().appspec_data = appspec.model_dump()
 
         logger.info(
             "Loaded AppSpec for %s: %s entities, %s surfaces",

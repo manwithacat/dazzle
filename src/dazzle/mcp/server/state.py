@@ -51,6 +51,14 @@ class ServerState:
         self.activity_log: ActivityLog | None = None
         self.activity_store: ActivityStore | None = None
         self.mock_orchestrator: MockOrchestrator | None = None
+        self.appspec_data: dict[str, Any] | None = None
+        self.ui_spec: dict[str, Any] | None = None
+
+    def get_or_create_ui_spec(self) -> dict[str, Any]:
+        """Get the UI spec, creating a default if none exists."""
+        if self.ui_spec is None:
+            self.ui_spec = {"name": "unnamed", "components": [], "workspaces": [], "themes": []}
+        return self.ui_spec
 
     def reset(self) -> None:
         """Reset all state to defaults."""
@@ -63,6 +71,13 @@ class ServerState:
         self.activity_log = None
         self.activity_store = None
         self.mock_orchestrator = None
+        self.appspec_data = None
+        self.ui_spec = None
+
+
+def get_state() -> ServerState:
+    """Get the module-level ServerState singleton."""
+    return _state
 
 
 # Module-level singleton holding all mutable MCP server state.

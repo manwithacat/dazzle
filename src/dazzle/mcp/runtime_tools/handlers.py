@@ -10,6 +10,8 @@ import json
 from collections.abc import Callable
 from typing import Any
 
+from dazzle.mcp.server.state import get_state
+
 from .components import (
     LAYOUT_TYPES,
     PATTERN_COMPONENTS,
@@ -18,7 +20,6 @@ from .components import (
     get_component_by_name,
     get_valid_layout_kinds,
 )
-from .state import get_appspec_data, get_or_create_ui_spec, get_ui_spec
 
 # Dispatch table mapping tool names to handler functions.
 # Populated after handler definitions via _build_dispatch_table().
@@ -43,7 +44,7 @@ def handle_runtime_tool(name: str, arguments: dict[str, Any]) -> str:
 
 def _list_dnr_entities(_args: dict[str, Any] | None = None) -> str:
     """List all entities from AppSpec."""
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps(
             {
@@ -81,7 +82,7 @@ def _get_dnr_entity(args: dict[str, Any]) -> str:
     if not name:
         return json.dumps({"error": "name parameter required"})
 
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps({"error": "No AppSpec loaded"})
 
@@ -104,7 +105,7 @@ def _list_backend_services(args: dict[str, Any]) -> str:
     """List surfaces (which drive backend service generation)."""
     entity_filter = args.get("entity_name")
 
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps(
             {
@@ -147,7 +148,7 @@ def _get_backend_service_spec(args: dict[str, Any]) -> str:
     if not name:
         return json.dumps({"error": "name parameter required"})
 
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps({"error": "No AppSpec loaded"})
 
@@ -182,7 +183,7 @@ def _list_dnr_components(args: dict[str, Any]) -> str:
         components = list(PRIMITIVE_COMPONENTS) + list(PATTERN_COMPONENTS)
 
     # Add any custom components from UISpec
-    ui_spec = get_ui_spec()
+    ui_spec = get_state().ui_spec
     if ui_spec:
         custom_components = [
             {
@@ -226,7 +227,7 @@ def _get_dnr_component_spec(args: dict[str, Any]) -> str:
         )
 
     # Check custom components in UISpec
-    ui_spec = get_ui_spec()
+    ui_spec = get_state().ui_spec
     if ui_spec:
         components = ui_spec.get("components", [])
         component = next((c for c in components if c.get("name") == name), None)
@@ -299,7 +300,7 @@ def _create_uispec_component(args: dict[str, Any]) -> str:
     }
 
     # Add to UISpec
-    ui_spec = get_or_create_ui_spec()
+    ui_spec = get_state().get_or_create_ui_spec()
     ui_spec["components"].append(component_spec)
 
     return json.dumps(
@@ -322,7 +323,7 @@ def _patch_uispec_component(args: dict[str, Any]) -> str:
     if not patch:
         return json.dumps({"error": "patch parameter required"})
 
-    ui_spec = get_ui_spec()
+    ui_spec = get_state().ui_spec
     if not ui_spec:
         return json.dumps({"error": "No UISpec loaded"})
 
@@ -416,7 +417,7 @@ def _compose_workspace(args: dict[str, Any]) -> str:
     }
 
     # Add to UISpec
-    ui_spec = get_or_create_ui_spec()
+    ui_spec = get_state().get_or_create_ui_spec()
 
     # Check if workspace already exists
     workspaces = ui_spec.get("workspaces", [])
@@ -449,7 +450,7 @@ def _compose_workspace(args: dict[str, Any]) -> str:
 
 def _get_graphql_schema(args: dict[str, Any]) -> str:
     """Get the GraphQL schema from AppSpec."""
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps(
             {
@@ -493,7 +494,7 @@ def _get_graphql_schema(args: dict[str, Any]) -> str:
 
 def _list_graphql_types(_args: dict[str, Any] | None = None) -> str:
     """List GraphQL types from AppSpec entities."""
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps(
             {
@@ -625,7 +626,7 @@ def _get_adapter_guide(args: dict[str, Any]) -> str:
 
 def _list_channels(_args: dict[str, Any] | None = None) -> str:
     """List all messaging channels from AppSpec."""
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps(
             {
@@ -674,7 +675,7 @@ def _get_channel_status(args: dict[str, Any]) -> str:
     if not channel_name:
         return json.dumps({"error": "channel_name parameter required"})
 
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps({"error": "No AppSpec loaded. Select a project first."})
 
@@ -724,7 +725,7 @@ def _get_channel_status(args: dict[str, Any]) -> str:
 
 def _list_messages(args: dict[str, Any]) -> str:
     """List message schemas from AppSpec."""
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps(
             {
@@ -778,7 +779,7 @@ def _list_messages(args: dict[str, Any]) -> str:
 
 def _get_outbox_status(_args: dict[str, Any] | None = None) -> str:
     """Get outbox statistics."""
-    spec = get_appspec_data()
+    spec = get_state().appspec_data
     if not spec:
         return json.dumps(
             {

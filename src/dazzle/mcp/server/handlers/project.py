@@ -15,7 +15,7 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.linker import build_appspec
 from dazzle.core.manifest import load_manifest
 from dazzle.core.parser import parse_modules
-from dazzle.mcp.runtime_tools import set_appspec_data
+from dazzle.mcp.server.state import get_state
 
 from ..state import (
     get_active_project,
@@ -116,7 +116,7 @@ def load_appspec_for_project(project_path: Path) -> bool:
             return False
 
         # Store AppSpec data for DNR tools
-        set_appspec_data(appspec.model_dump())
+        get_state().appspec_data = appspec.model_dump()
 
         logger.info(
             "Loaded AppSpec for %s: %s entities, %s surfaces",
