@@ -443,34 +443,6 @@ class PresenceTracker:
 
 
 # =============================================================================
-# Global Presence Tracker
-# =============================================================================
-
-
-_global_presence_tracker: PresenceTracker | None = None
-
-
-def get_presence_tracker() -> PresenceTracker:
-    """Get the global presence tracker instance."""
-    global _global_presence_tracker
-    if _global_presence_tracker is None:
-        _global_presence_tracker = PresenceTracker()
-    return _global_presence_tracker
-
-
-def set_presence_tracker(tracker: PresenceTracker) -> None:
-    """Set the global presence tracker instance."""
-    global _global_presence_tracker
-    _global_presence_tracker = tracker
-
-
-def reset_presence_tracker() -> None:
-    """Reset the global presence tracker (mainly for testing)."""
-    global _global_presence_tracker
-    _global_presence_tracker = None
-
-
-# =============================================================================
 # Convenience Functions
 # =============================================================================
 
