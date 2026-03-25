@@ -44,9 +44,10 @@ build/
 *.pyc
 src/dazzle_ui/runtime/static/css/dazzle-bundle.css
 
-# Test coverage
+# Test artifacts
 .coverage
 htmlcov/
+pytest-of-*/
 .pytest_cache/
 .hypothesis/
 
