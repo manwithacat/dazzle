@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.8] - 2026-03-25
+
+### Changed
+- CSS delivery default flipped to local-first (`_use_cdn = False`); CDN opt-in via `[ui] cdn = true` in `dazzle.toml` (#671)
+- CSS Cascade Layers (`@layer base, framework, app, overrides`) added to `base.html` and `site_base.html` for explicit cascade ordering (#671)
+- New `dazzle-framework.css` entry point replaces standalone `dz.css` loading in local mode (#671)
+- `css_loader.py` updated with canonical CSS order, `@layer framework` wrappers, and inline source map (#671)
+- `build_dist.py` produces layer-aware `dazzle.min.css` with `@layer framework` wrappers (#671)
+- CI publish workflow rebuilds `dist/` at release time for CDN freshness (#671)
+
 ## [0.48.7] - 2026-03-25
 
 ### Fixed
