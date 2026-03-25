@@ -110,7 +110,7 @@ def create_grant_routes(
 
     if auth_dep is not None:
 
-        @router.get("", summary="List grants")  # type: ignore[misc,untyped-decorator,unused-ignore]
+        @router.get("", summary="List grants")
         async def list_grants(
             auth_context: AuthContext = Depends(auth_dep),
             scope_entity: str | None = Query(None),
@@ -128,7 +128,7 @@ def create_grant_routes(
             )
             return {"grants": grants}
 
-        @router.post("", summary="Create a grant", status_code=201)  # type: ignore[misc,untyped-decorator,unused-ignore]
+        @router.post("", summary="Create a grant", status_code=201)
         async def create_grant(
             body: dict[str, Any],
             auth_context: AuthContext = Depends(auth_dep),
@@ -167,7 +167,7 @@ def create_grant_routes(
             )
             return {"grant": grant}
 
-        @router.post("/{grant_id}/approve", summary="Approve a pending grant")  # type: ignore[misc,untyped-decorator,unused-ignore]
+        @router.post("/{grant_id}/approve", summary="Approve a pending grant")
         async def approve_grant(
             grant_id: str,
             auth_context: AuthContext = Depends(auth_dep),
@@ -188,7 +188,7 @@ def create_grant_routes(
                 raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
 
-        @router.post("/{grant_id}/reject", summary="Reject a pending grant")  # type: ignore[misc,untyped-decorator,unused-ignore]
+        @router.post("/{grant_id}/reject", summary="Reject a pending grant")
         async def reject_grant(
             grant_id: str,
             auth_context: AuthContext = Depends(auth_dep),
@@ -209,7 +209,7 @@ def create_grant_routes(
                 raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
 
-        @router.post("/{grant_id}/cancel", summary="Cancel a pending grant")  # type: ignore[misc,untyped-decorator,unused-ignore]
+        @router.post("/{grant_id}/cancel", summary="Cancel a pending grant")
         async def cancel_grant(
             grant_id: str,
             auth_context: AuthContext = Depends(auth_dep),
@@ -231,7 +231,7 @@ def create_grant_routes(
                 raise HTTPException(status_code=422, detail=str(e))
             return {"grant": result}
 
-        @router.delete("/{grant_id}", summary="Revoke an active grant")  # type: ignore[misc,untyped-decorator,unused-ignore]
+        @router.delete("/{grant_id}", summary="Revoke an active grant")
         async def revoke_grant(
             grant_id: str,
             auth_context: AuthContext = Depends(auth_dep),

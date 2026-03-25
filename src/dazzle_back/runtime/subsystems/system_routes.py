@@ -494,7 +494,7 @@ class SystemRoutesSubsystem:
         if ctx.auth_dep:
             from dazzle_back.runtime._fastapi_compat import Depends
 
-            @ctx.app.get("/_diagnostics", tags=["System"])  # type: ignore[misc,untyped-decorator,unused-ignore]
+            @ctx.app.get("/_diagnostics", tags=["System"])
             async def diagnostics(
                 auth_context: Any = Depends(ctx.auth_dep),
             ) -> dict[str, Any]:

@@ -11,28 +11,14 @@ When FastAPI is not installed every symbol is set to ``None`` so that
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
 # ---------------------------------------------------------------------------
 # Core FastAPI symbols
 # ---------------------------------------------------------------------------
-FASTAPI_AVAILABLE: bool
-APIRouter: Any
-Cookie: Any
-CORSMiddleware: Any
-Depends: Any
-FastAPIRequest: Any
-HTMLResponse: Any
-HTTPException: Any
-JSONResponse: Any
-Query: Any
-RedirectResponse: Any
-Request: Any
-Response: Any
-StarletteResponse: Any
-_FastAPI: Any
-
-try:
+# Under TYPE_CHECKING mypy sees the real types; at runtime the try/except
+# block below provides the actual imports (or None fallbacks).
+if TYPE_CHECKING:
     from fastapi import (
         APIRouter,
         Cookie,
@@ -52,24 +38,46 @@ try:
     )
     from starlette.responses import Response as StarletteResponse
 
-    FASTAPI_AVAILABLE = True
+    FASTAPI_AVAILABLE: bool
+else:
+    try:
+        from fastapi import (
+            APIRouter,
+            Cookie,
+            Depends,
+            HTTPException,
+            Query,
+            Request,
+            Response,
+        )
+        from fastapi import FastAPI as _FastAPI
+        from fastapi import Request as FastAPIRequest
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.responses import (
+            HTMLResponse,
+            JSONResponse,
+            RedirectResponse,
+        )
+        from starlette.responses import Response as StarletteResponse
 
-except ImportError:
-    FASTAPI_AVAILABLE = False
-    APIRouter = None
-    Cookie = None
-    CORSMiddleware = None
-    Depends = None
-    _FastAPI = None
-    FastAPIRequest = None
-    HTMLResponse = None
-    HTTPException = None
-    JSONResponse = None
-    Query = None
-    RedirectResponse = None
-    Request = None
-    Response = None
-    StarletteResponse = None
+        FASTAPI_AVAILABLE = True
+
+    except ImportError:
+        FASTAPI_AVAILABLE = False
+        APIRouter = None
+        Cookie = None
+        CORSMiddleware = None
+        Depends = None
+        _FastAPI = None
+        FastAPIRequest = None
+        HTMLResponse = None
+        HTTPException = None
+        JSONResponse = None
+        Query = None
+        RedirectResponse = None
+        Request = None
+        Response = None
+        StarletteResponse = None
 
 # Expose FastAPI under its canonical name for callers that reference it.
 FastAPI = _FastAPI

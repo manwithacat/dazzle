@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import secrets
 import string
-from datetime import UTC, datetime
 from typing import Annotated, Any
 from uuid import UUID
 
@@ -404,23 +403,11 @@ def list_sessions(
             raise typer.Exit(1)
         user_id_filter = str(resolved.id)
 
-    # Build query
-    conditions: list[str] = []
-    params: list[Any] = []
-
-    if user_id_filter:
-        conditions.append("user_id = %s")
-        params.append(user_id_filter)
-
-    if not include_expired:
-        conditions.append("expires_at > %s")
-        params.append(datetime.now(UTC).isoformat())
-
-    where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-    query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT %s"
-    params.append(limit)
-
-    rows = store.execute_raw(query, tuple(params))
+    rows = store.list_sessions(
+        user_id=user_id_filter,
+        active_only=not include_expired,
+        limit=limit,
+    )
 
     if output_json:
         console.print_json(json.dumps(rows))
@@ -471,25 +458,10 @@ def config(
     """Show authentication system configuration and status."""
     store = _get_auth_store()
 
-    # Counts
-    user_rows = store.execute_raw("SELECT COUNT(*) as count FROM users")
-    total_users = user_rows[0]["count"] if user_rows else 0
-
-    active_rows = store.execute_raw("SELECT COUNT(*) as count FROM users WHERE is_active = TRUE")
-    active_users = active_rows[0]["count"] if active_rows else 0
-
-    session_rows = store.execute_raw(
-        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > %s",
-        (datetime.now(UTC).isoformat(),),
-    )
-    active_sessions = session_rows[0]["count"] if session_rows else 0
-
-    # Roles in use
-    roles_result = store.execute_raw("SELECT DISTINCT roles FROM users")
-    all_roles: set[str] = set()
-    for row in roles_result:
-        parsed = json.loads(row["roles"]) if row["roles"] else []
-        all_roles.update(parsed)
+    total_users = store.count_users()
+    active_users = store.count_users(active_only=True)
+    active_sessions = store.count_active_sessions()
+    roles_in_use = store.list_distinct_roles()
 
     db_type = "postgresql"
     db_path = "[PostgreSQL]"
@@ -503,7 +475,7 @@ def config(
                     "total_users": total_users,
                     "active_users": active_users,
                     "active_sessions": active_sessions,
-                    "roles_in_use": sorted(all_roles),
+                    "roles_in_use": roles_in_use,
                 }
             )
         )
@@ -514,5 +486,5 @@ def config(
         console.print(f"  Total users:      {total_users}")
         console.print(f"  Active users:     {active_users}")
         console.print(f"  Active sessions:  {active_sessions}")
-        roles_str = ", ".join(sorted(all_roles)) if all_roles else "[dim]none[/dim]"
+        roles_str = ", ".join(roles_in_use) if roles_in_use else "[dim]none[/dim]"
         console.print(f"  Roles in use:     {roles_str}")

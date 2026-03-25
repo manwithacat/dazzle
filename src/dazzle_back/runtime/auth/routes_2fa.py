@@ -89,14 +89,9 @@ async def _setup_totp(deps: _TwoFaDeps, request: FastAPIRequest) -> dict[str, st
     secret = generate_totp_secret()
     uri = get_totp_uri(secret, user.email)
 
-    # Temporarily store the secret (not enabled yet)
-    deps.auth_store.enable_totp(user.id, secret)
-    # Mark as not yet enabled — we store the secret but set totp_enabled=False
-    # until verification succeeds
-    deps.auth_store._execute_modify(
-        "UPDATE users SET totp_enabled = FALSE WHERE id = %s",  # nosemgrep
-        (str(user.id),),
-    )
+    # Temporarily store the secret without enabling TOTP — it will be enabled
+    # after the user verifies their first code in _verify_totp_setup.
+    deps.auth_store.store_totp_secret_pending(user.id, secret)
 
     return {"secret": secret, "uri": uri}
 

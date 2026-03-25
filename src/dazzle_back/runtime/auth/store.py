@@ -535,20 +535,28 @@ class SessionStoreMixin:
         """Delete all sessions for a user."""
         return int(self._execute_modify("DELETE FROM sessions WHERE user_id = %s", (str(user_id),)))
 
-    def count_active_sessions(self, user_id: UUID) -> int:
+    def count_active_sessions(self, user_id: UUID | None = None) -> int:
         """
-        Count active (non-expired) sessions for a user.
+        Count active (non-expired) sessions.
 
         Args:
-            user_id: User UUID
+            user_id: If provided, count only sessions for this user.
+                     If None, count all active sessions across all users.
 
         Returns:
             Number of active sessions
         """
-        rows = self._execute(
-            "SELECT COUNT(*) as count FROM sessions WHERE user_id = %s AND expires_at > %s",
-            (str(user_id), datetime.now(UTC).isoformat()),
-        )
+        now = datetime.now(UTC).isoformat()
+        if user_id is not None:
+            rows = self._execute(
+                "SELECT COUNT(*) as count FROM sessions WHERE user_id = %s AND expires_at > %s",
+                (str(user_id), now),
+            )
+        else:
+            rows = self._execute(
+                "SELECT COUNT(*) as count FROM sessions WHERE expires_at > %s",
+                (now,),
+            )
         return int(rows[0]["count"]) if rows else 0
 
     def cleanup_expired_sessions(self) -> int:
@@ -774,4 +782,133 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                 "DELETE FROM user_preferences WHERE user_id = %s",
                 (str(user_id),),
             )
+        )
+
+    # =========================================================================
+    # Aggregate / Query helpers (v0.48.x)
+    # =========================================================================
+
+    def count_users(self, active_only: bool = False) -> int:
+        """Return the total number of users.
+
+        Args:
+            active_only: When True, count only active (is_active = TRUE) users.
+
+        Returns:
+            User count.
+        """
+        if active_only:
+            rows = self._execute("SELECT COUNT(*) as count FROM users WHERE is_active = TRUE")
+        else:
+            rows = self._execute("SELECT COUNT(*) as count FROM users")
+        return int(rows[0]["count"]) if rows else 0
+
+    def list_distinct_roles(self) -> list[str]:
+        """Return a sorted list of all distinct role names currently assigned to users.
+
+        Roles are stored as a JSON array per row; this method unnests and
+        deduplicates them across all users.
+
+        Returns:
+            Sorted list of unique role name strings.
+        """
+        import json
+
+        rows = self._execute("SELECT DISTINCT roles FROM users")
+        all_roles: set[str] = set()
+        for row in rows:
+            roles = json.loads(row["roles"]) if row["roles"] else []
+            all_roles.update(roles)
+        return sorted(all_roles)
+
+    def search_users(
+        self,
+        query: str | None = None,
+        user_id: str | None = None,
+        active_only: bool = True,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[dict[str, Any]]:
+        """Search / list raw session rows for display purposes.
+
+        Returns raw dicts (not UserRecord objects) so callers can render them
+        without additional conversion.  Intended for admin tools that need
+        flexible filtering beyond what :meth:`list_users` provides.
+
+        Args:
+            query:      Filter by user_id equality (kept for backwards compat
+                        with callers that pass a dynamic WHERE fragment; pass
+                        ``None`` to skip).
+            user_id:    Explicit user_id filter applied as ``user_id = %s``.
+            active_only: When True, add ``is_active = TRUE`` to the WHERE clause.
+            limit:      Maximum rows to return.
+            offset:     Number of rows to skip.
+
+        Returns:
+            List of raw row dicts ordered by ``created_at DESC``.
+        """
+        conditions: list[str] = []
+        params: list[object] = []
+
+        if user_id is not None:
+            conditions.append("user_id = %s")
+            params.append(user_id)
+
+        if active_only:
+            conditions.append("is_active = TRUE")
+
+        where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+        sql = f"SELECT * FROM users{where_clause} ORDER BY created_at DESC LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+
+        return self._execute(sql, tuple(params))
+
+    def list_sessions(
+        self,
+        user_id: str | None = None,
+        active_only: bool = True,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Return raw session rows, optionally filtered.
+
+        Args:
+            user_id:    If provided, restrict to sessions for this user.
+            active_only: When True, exclude expired sessions.
+            limit:      Maximum rows to return.
+
+        Returns:
+            List of raw row dicts ordered by ``created_at DESC``.
+        """
+        conditions: list[str] = []
+        params: list[object] = []
+
+        if user_id is not None:
+            conditions.append("user_id = %s")
+            params.append(user_id)
+
+        if active_only:
+            conditions.append("expires_at > %s")
+            params.append(datetime.now(UTC).isoformat())
+
+        where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+        sql = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT %s"
+        params.append(limit)
+
+        return self._execute(sql, tuple(params))
+
+    def store_totp_secret_pending(self, user_id: UUID, secret: str) -> None:
+        """Store a TOTP secret without enabling TOTP (pending confirmation).
+
+        Use this during TOTP setup to persist the secret before the user
+        has verified their first code.  Call :meth:`enable_totp` once the
+        verification succeeds.
+
+        Args:
+            user_id: User UUID.
+            secret:  Base32-encoded TOTP secret to store.
+        """
+        self._execute_modify(
+            "UPDATE users SET totp_secret = %s, totp_enabled = FALSE, updated_at = %s "
+            "WHERE id = %s",
+            (secret, datetime.now(UTC).isoformat(), str(user_id)),
         )

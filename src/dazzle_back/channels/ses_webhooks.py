@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 logger = logging.getLogger("dazzle.channels.ses_webhooks")
 
@@ -48,7 +51,7 @@ async def _confirm_subscription(message: dict[str, Any]) -> bool:
         import urllib.request
 
         req = urllib.request.Request(subscribe_url)
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosemgrep
             if resp.status == 200:
                 logger.info(
                     "SNS subscription confirmed for topic: %s",
@@ -203,7 +206,7 @@ async def handle_sns_notification(body: bytes) -> dict[str, Any]:
     return {"event_type": "ignored", "message_type": message_type}
 
 
-def register_ses_webhook(app: Any) -> None:
+def register_ses_webhook(app: FastAPI) -> None:
     """Register SES webhook endpoint on a FastAPI app.
 
     POST /webhooks/ses/notifications

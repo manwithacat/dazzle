@@ -442,24 +442,7 @@ async def list_sessions_handler(
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
-    conditions = []
-    params: list[Any] = []
-
-    if user_id:
-        conditions.append("user_id = %s")
-        params.append(user_id)
-
-    if active_only:
-        from datetime import UTC, datetime
-
-        conditions.append("expires_at > %s")
-        params.append(datetime.now(UTC).isoformat())
-
-    where_clause = f" WHERE {' AND '.join(conditions)}" if conditions else ""
-    query = f"SELECT * FROM sessions{where_clause} ORDER BY created_at DESC LIMIT %s"
-    params.append(limit)
-
-    rows = auth_store._execute(query, tuple(params))
+    rows = auth_store.list_sessions(user_id=user_id, active_only=active_only, limit=limit)
 
     sessions = []
     for row in rows:
@@ -539,32 +522,11 @@ async def get_auth_config_handler(
     path = Path(project_path) if project_path else None
     auth_store = _get_auth_store(path)
 
-    # Get counts
-    from datetime import UTC, datetime
-
-    user_count = auth_store._execute("SELECT COUNT(*) as count FROM users")
-    active_user_count = auth_store._execute(
-        "SELECT COUNT(*) as count FROM users WHERE is_active = TRUE"
-    )
-    session_count = auth_store._execute(
-        "SELECT COUNT(*) as count FROM sessions WHERE expires_at > %s",
-        (datetime.now(UTC).isoformat(),),
-    )
-
-    # Get roles in use
-    roles_result = auth_store._execute("SELECT DISTINCT roles FROM users")
-    import json
-
-    all_roles: set[str] = set()
-    for row in roles_result:
-        roles = json.loads(row["roles"]) if row["roles"] else []
-        all_roles.update(roles)
-
     return {
         "database_type": "postgresql",
         "database_path": "[PostgreSQL]",
-        "total_users": user_count[0]["count"] if user_count else 0,
-        "active_users": active_user_count[0]["count"] if active_user_count else 0,
-        "active_sessions": session_count[0]["count"] if session_count else 0,
-        "roles_in_use": sorted(all_roles),
+        "total_users": auth_store.count_users(),
+        "active_users": auth_store.count_users(active_only=True),
+        "active_sessions": auth_store.count_active_sessions(),
+        "roles_in_use": auth_store.list_distinct_roles(),
     }

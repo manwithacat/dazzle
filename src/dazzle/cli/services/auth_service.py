@@ -101,8 +101,12 @@ class AuthService:
 
     # ----- Sessions -----
 
-    def count_active_sessions(self, user_id: UUID) -> int:
-        """Count active (non-expired) sessions for a user."""
+    def count_active_sessions(self, user_id: UUID | None = None) -> int:
+        """Count active (non-expired) sessions.
+
+        If *user_id* is provided, count only that user's sessions.
+        If omitted, count all active sessions across all users.
+        """
         result: int = self._store.count_active_sessions(user_id)
         return result
 
@@ -116,13 +120,23 @@ class AuthService:
         result: int = self._store.cleanup_expired_sessions()
         return result
 
-    # ----- Raw SQL (for queries not covered by AuthStore API) -----
+    # ----- Aggregate / stats -----
 
-    def execute_raw(self, query: str, params: tuple[object, ...] = ()) -> list[dict[str, Any]]:
-        """Execute a raw SQL query against the auth database.
+    def count_users(self, active_only: bool = False) -> int:
+        """Return total (or active-only) user count."""
+        return self._store.count_users(active_only=active_only)
 
-        Used by CLI commands that need direct DB access (e.g. session listing,
-        config/stats queries) where AuthStore doesn't expose a dedicated method.
-        """
-        result: list[dict[str, Any]] = self._store._execute(query, params)
-        return result
+    def list_distinct_roles(self) -> list[str]:
+        """Return sorted list of all distinct role names in use."""
+        return self._store.list_distinct_roles()
+
+    # ----- Session listing -----
+
+    def list_sessions(
+        self,
+        user_id: str | None = None,
+        active_only: bool = True,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Return raw session rows, optionally filtered by user."""
+        return self._store.list_sessions(user_id=user_id, active_only=active_only, limit=limit)

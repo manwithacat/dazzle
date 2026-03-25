@@ -6,7 +6,7 @@ This module creates FastAPI routers and routes from backend specifications.
 
 from collections.abc import Callable
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -29,6 +29,11 @@ if FASTAPI_AVAILABLE:
     from dazzle_back.runtime.htmx_response import htmx_trigger_headers
 else:
     AuthContext = None  # type: ignore[assignment,misc]
+
+if TYPE_CHECKING:
+    from dazzle_back.runtime.audit_log import AuditLogger
+    from dazzle_back.runtime.service_generator import BaseService
+    from dazzle_back.specs.auth import EntityAccessSpec
 
 # Expose APIRouter name for return-type annotations (the real class is
 # imported as _APIRouter to allow a None fallback when FastAPI is absent).
@@ -709,14 +714,14 @@ async def _log_audit_decision(
 def _wrap_with_auth(
     core_fn: Callable[..., Any],
     *,
-    service: Any,
-    cedar_access_spec: Any | None,
+    service: "BaseService[Any]",
+    cedar_access_spec: "EntityAccessSpec | None",
     auth_dep: Callable[..., Any] | None,
     optional_auth_dep: Callable[..., Any] | None,
     require_auth_by_default: bool,
     operation: str,
     entity_name: str,
-    audit_logger: Any | None,
+    audit_logger: "AuditLogger | None",
     include_field_changes: bool = False,
     needs_pre_read: bool = False,
 ) -> Callable[..., Any]:
@@ -771,12 +776,12 @@ def _wrap_with_auth(
 def _build_cedar_handler(
     core_fn: Callable[..., Any],
     *,
-    service: Any,
-    cedar_access_spec: Any,
+    service: "BaseService[Any]",
+    cedar_access_spec: "EntityAccessSpec",
     optional_auth_dep: Callable[..., Any],
     operation: str,
     entity_name: str,
-    audit_logger: Any | None,
+    audit_logger: "AuditLogger | None",
     include_field_changes: bool,
     needs_pre_read: bool,
     is_create: bool,
@@ -899,11 +904,11 @@ def _build_cedar_handler(
 def _build_auth_handler(
     core_fn: Callable[..., Any],
     *,
-    service: Any,
+    service: "BaseService[Any]",
     auth_dep: Callable[..., Any],
     operation: str,
     entity_name: str,
-    audit_logger: Any | None,
+    audit_logger: "AuditLogger | None",
     include_field_changes: bool,
     needs_pre_read: bool,
     is_create: bool,
@@ -994,7 +999,7 @@ def _build_noauth_handler(
 
 
 def create_list_handler(
-    service: Any,
+    service: "BaseService[Any]",
     _response_schema: type[BaseModel] | None = None,
     access_spec: dict[str, Any] | None = None,
     optional_auth_dep: Callable[..., Any] | None = None,
@@ -1006,8 +1011,8 @@ def create_list_handler(
     htmx_detail_url: str | None = None,
     htmx_entity_name: str = "Item",
     htmx_empty_message: str = "No items found.",
-    cedar_access_spec: Any | None = None,
-    audit_logger: Any | None = None,
+    cedar_access_spec: "EntityAccessSpec | None" = None,
+    audit_logger: "AuditLogger | None" = None,
     entity_name: str = "Item",
     search_fields: list[str] | None = None,
     filter_fields: list[str] | None = None,
@@ -1717,13 +1722,13 @@ def _render_detail_html(request: Any, result: Any, entity_name: str) -> Any:
 
 
 def create_read_handler(
-    service: Any,
+    service: "BaseService[Any]",
     _response_schema: type[BaseModel] | None = None,
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     entity_name: str = "Item",
-    audit_logger: Any | None = None,
-    cedar_access_spec: Any | None = None,
+    audit_logger: "AuditLogger | None" = None,
+    cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
     auto_include: list[str] | None = None,
 ) -> Callable[..., Any]:
@@ -1820,15 +1825,15 @@ def _extract_result_id(result: Any) -> str | None:
 
 
 def create_create_handler(
-    service: Any,
+    service: "BaseService[Any]",
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     entity_name: str = "Item",
     entity_slug: str = "",
-    audit_logger: Any | None = None,
-    cedar_access_spec: Any | None = None,
+    audit_logger: "AuditLogger | None" = None,
+    cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
 ) -> Callable[..., Any]:
     """Create a handler for create operations with optional Cedar-style access control."""
@@ -1870,14 +1875,14 @@ def create_create_handler(
 
 
 def create_update_handler(
-    service: Any,
+    service: "BaseService[Any]",
     input_schema: type[BaseModel],
     _response_schema: type[BaseModel] | None = None,
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     entity_name: str = "Item",
-    audit_logger: Any | None = None,
-    cedar_access_spec: Any | None = None,
+    audit_logger: "AuditLogger | None" = None,
+    cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
     include_field_changes: bool = False,
 ) -> Callable[..., Any]:
@@ -1923,12 +1928,12 @@ def create_update_handler(
 
 
 def create_delete_handler(
-    service: Any,
+    service: "BaseService[Any]",
     auth_dep: Callable[..., Any] | None = None,
     require_auth_by_default: bool = False,
     entity_name: str = "Item",
-    audit_logger: Any | None = None,
-    cedar_access_spec: Any | None = None,
+    audit_logger: "AuditLogger | None" = None,
+    cedar_access_spec: "EntityAccessSpec | None" = None,
     optional_auth_dep: Callable[..., Any] | None = None,
     include_field_changes: bool = False,
 ) -> Callable[..., Any]:
