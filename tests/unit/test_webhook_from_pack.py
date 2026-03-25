@@ -102,9 +102,10 @@ def test_webhook_string_shorthand(tmp_path: Path) -> None:
 
 def test_sumsub_pack_has_webhook_payloads() -> None:
     """SumSub pack TOML has webhook payload templates."""
-    from dazzle.api_kb.loader import load_pack, set_project_root
+    from dazzle.api_kb.loader import load_pack
+    from dazzle.mcp.server.state import reset_state
 
-    set_project_root(None)
+    reset_state()
     pack = load_pack("sumsub_kyc")
     assert pack is not None
 
@@ -119,7 +120,7 @@ def test_sumsub_pack_has_webhook_payloads() -> None:
     assert reviewed.signing == "sumsub-hmac"
     assert reviewed.signing_header == "X-Payload-Digest"
     # Clean up
-    set_project_root(None)
+    reset_state()
 
 
 def test_load_events_from_packs() -> None:

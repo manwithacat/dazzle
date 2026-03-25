@@ -53,6 +53,8 @@ class ServerState:
         self.mock_orchestrator: MockOrchestrator | None = None
         self.appspec_data: dict[str, Any] | None = None
         self.ui_spec: dict[str, Any] | None = None
+        self.pack_cache: dict[str, Any] = {}
+        self.packs_loaded: bool = False
 
     def get_or_create_ui_spec(self) -> dict[str, Any]:
         """Get the UI spec, creating a default if none exists."""
@@ -73,6 +75,8 @@ class ServerState:
         self.mock_orchestrator = None
         self.appspec_data = None
         self.ui_spec = None
+        self.pack_cache.clear()
+        self.packs_loaded = False
 
 
 def get_state() -> ServerState:
@@ -101,6 +105,8 @@ def reset_state() -> None:
 def set_project_root(path: Path) -> None:
     """Set the project root for the server."""
     _state.project_root = path
+    _state.pack_cache.clear()
+    _state.packs_loaded = False
 
 
 def get_project_root() -> Path:

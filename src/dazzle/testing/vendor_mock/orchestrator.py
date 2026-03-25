@@ -84,7 +84,7 @@ class MockOrchestrator:
         """
         # Set project root for project-local pack discovery
         if project_root is not None:
-            from dazzle.api_kb.loader import set_project_root
+            from dazzle.mcp.server.state import set_project_root
 
             set_project_root(project_root)
 

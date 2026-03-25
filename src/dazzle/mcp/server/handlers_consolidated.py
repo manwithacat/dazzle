@@ -240,7 +240,7 @@ def handle_api_pack(arguments: dict[str, Any]) -> str:
     # Set project root for project-local pack discovery
     project_path = _resolve_project(arguments)
     if project_path is not None:
-        from dazzle.api_kb.loader import set_project_root
+        from dazzle.mcp.server.state import set_project_root
 
         set_project_root(project_path)
 

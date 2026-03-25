@@ -10,16 +10,16 @@ import pytest
 from dazzle.api_kb.loader import (
     list_packs,
     load_pack,
-    set_project_root,
 )
+from dazzle.mcp.server.state import reset_state, set_project_root
 
 
 @pytest.fixture(autouse=True)
 def _reset_pack_cache():
     """Reset pack cache between tests."""
-    set_project_root(None)
+    reset_state()
     yield
-    set_project_root(None)
+    reset_state()
 
 
 def _write_pack_toml(path: Path, name: str, provider: str = "TestVendor") -> None:
