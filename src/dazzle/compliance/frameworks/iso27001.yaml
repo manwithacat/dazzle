@@ -4,6 +4,7 @@ framework:
   jurisdiction: international
   body: "ISO/IEC JTC 1/SC 27"
   version: "2022"
+  related_frameworks: ["soc2"]
 
   themes:
     # =========================================================================
@@ -173,6 +174,7 @@ framework:
         - id: "A.5.15"
           name: "Access control"
           objective: "Ensure authorised access and prevent unauthorised access to information and other associated assets."
+          cross_references: ["soc2:CC6.3"]
           attributes:
             control_type: [preventive]
             security_concepts: [confidentiality, integrity, availability]
@@ -660,6 +662,7 @@ framework:
         - id: "A.8.3"
           name: "Information access restriction"
           objective: "Ensure only authorised access to information and other associated assets in accordance with the access control policy."
+          cross_references: ["soc2:CC6.1"]
           attributes:
             control_type: [preventive]
             security_concepts: [confidentiality, integrity, availability]
@@ -684,6 +687,7 @@ framework:
         - id: "A.8.5"
           name: "Secure authentication"
           objective: "Ensure a user or entity is securely authenticated when access to systems, applications and services is granted."
+          cross_references: ["soc2:CC6.1"]
           attributes:
             control_type: [preventive]
             security_concepts: [confidentiality, integrity, availability]
@@ -788,6 +792,7 @@ framework:
         - id: "A.8.15"
           name: "Logging"
           objective: "Record events, generate evidence, ensure the integrity of log information, prevent against unauthorised access, identify information security events."
+          cross_references: ["soc2:CC7.2"]
           attributes:
             control_type: [detective]
             security_concepts: [confidentiality, integrity, availability]
@@ -803,6 +808,7 @@ framework:
         - id: "A.8.16"
           name: "Monitoring activities"
           objective: "Detect anomalous behaviour and potential information security incidents."
+          cross_references: ["soc2:CC7.2"]
           attributes:
             control_type: [detective, corrective]
             security_concepts: [confidentiality, integrity, availability]
@@ -881,6 +887,7 @@ framework:
         - id: "A.8.24"
           name: "Use of cryptography"
           objective: "Ensure proper and effective use of cryptography to protect the confidentiality, authenticity and integrity of information."
+          cross_references: ["soc2:CC6.6"]
           attributes:
             control_type: [preventive]
             security_concepts: [confidentiality, integrity]
@@ -971,6 +978,7 @@ framework:
         - id: "A.8.32"
           name: "Change management"
           objective: "Ensure information security is maintained when changes to information processing facilities and information systems are implemented."
+          cross_references: ["soc2:CC8.1"]
           attributes:
             control_type: [preventive]
             security_concepts: [confidentiality, integrity, availability]

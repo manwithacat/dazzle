@@ -56,6 +56,7 @@ def load_taxonomy(path: Path) -> Taxonomy:
                         objective=ctrl_data.get("objective", ""),
                         dsl_evidence=evidence,
                         attributes=ctrl_data.get("attributes", {}),
+                        cross_references=ctrl_data.get("cross_references", []),
                     )
                 )
             themes.append(
@@ -63,6 +64,8 @@ def load_taxonomy(path: Path) -> Taxonomy:
                     id=theme_data["id"],
                     name=theme_data["name"],
                     controls=controls,
+                    mandatory=theme_data.get("mandatory", True),
+                    applicability=theme_data.get("applicability", ""),
                 )
             )
 
@@ -72,6 +75,7 @@ def load_taxonomy(path: Path) -> Taxonomy:
             version=fw.get("version", ""),
             jurisdiction=fw.get("jurisdiction", ""),
             body=fw.get("body", ""),
+            related_frameworks=fw.get("related_frameworks", []),
             themes=themes,
         )
     except KeyError as e:

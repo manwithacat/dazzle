@@ -174,3 +174,63 @@ class TestSoc2MiniFixture:
             "Protects Encryption Keys",
             "Uses Encryption to Protect Data",
         ]
+
+
+# ---------------------------------------------------------------------------
+# Cross-Framework Metadata (#667)
+# ---------------------------------------------------------------------------
+
+ISO27001_FRAMEWORK = (
+    Path(__file__).parents[2] / "src" / "dazzle" / "compliance" / "frameworks" / "iso27001.yaml"
+)
+
+
+class TestCrossFrameworkMetadata:
+    """Tests for cross-framework metadata fields (#667)."""
+
+    def test_control_cross_references_parsed(self) -> None:
+        """CC6.1 has cross_references to ISO 27001 controls."""
+        tax = load_taxonomy(SOC2_FRAMEWORK)
+        by_id = tax.controls_by_id()
+        cc6_1 = by_id["CC6.1"]
+        assert "iso27001:A.8.3" in cc6_1.cross_references
+        assert "iso27001:A.8.5" in cc6_1.cross_references
+
+    def test_theme_mandatory_flag(self) -> None:
+        """Security is mandatory, availability is not."""
+        tax = load_taxonomy(SOC2_FRAMEWORK)
+        themes_by_id = {t.id: t for t in tax.themes}
+        assert themes_by_id["security"].mandatory is True
+        assert themes_by_id["availability"].mandatory is False
+        assert themes_by_id["privacy"].mandatory is False
+
+    def test_taxonomy_related_frameworks(self) -> None:
+        """SOC 2 declares ISO 27001 as a related framework."""
+        tax = load_taxonomy(SOC2_FRAMEWORK)
+        assert "iso27001" in tax.related_frameworks
+
+    def test_iso27001_related_frameworks(self) -> None:
+        """ISO 27001 declares SOC 2 as a related framework."""
+        tax = load_taxonomy(ISO27001_FRAMEWORK)
+        assert "soc2" in tax.related_frameworks
+
+    def test_cross_references_default_empty(self) -> None:
+        """Controls without cross_references get empty list."""
+        tax = load_taxonomy(SOC2_FRAMEWORK)
+        by_id = tax.controls_by_id()
+        # CC1.1 has no cross-references
+        assert by_id["CC1.1"].cross_references == []
+
+    def test_mandatory_defaults_true(self) -> None:
+        """Themes without explicit mandatory field default to True."""
+        tax = load_taxonomy(FIXTURES / "mini_taxonomy.yaml")
+        for theme in tax.themes:
+            assert theme.mandatory is True
+
+    def test_iso27001_reciprocal_cross_references(self) -> None:
+        """ISO 27001 controls have reciprocal cross-references back to SOC 2."""
+        tax = load_taxonomy(ISO27001_FRAMEWORK)
+        by_id = tax.controls_by_id()
+        assert "soc2:CC6.1" in by_id["A.8.3"].cross_references
+        assert "soc2:CC6.3" in by_id["A.5.15"].cross_references
+        assert "soc2:CC8.1" in by_id["A.8.32"].cross_references

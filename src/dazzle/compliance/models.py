@@ -32,6 +32,7 @@ class Control(BaseModel):
     objective: str = ""
     dsl_evidence: list[DslEvidence] = Field(default_factory=list)
     attributes: dict[str, list[str]] = Field(default_factory=dict)
+    cross_references: list[str] = Field(default_factory=list)  # e.g. ["iso27001:A.8.3"]
 
 
 class Theme(BaseModel):
@@ -40,6 +41,8 @@ class Theme(BaseModel):
     id: str
     name: str
     controls: list[Control]
+    mandatory: bool = True  # SOC 2: Security is mandatory, others optional
+    applicability: str = ""  # conditions for applicability (e.g. "when processing financial data")
 
 
 class Taxonomy(BaseModel):
@@ -50,6 +53,7 @@ class Taxonomy(BaseModel):
     version: str = ""
     jurisdiction: str = ""
     body: str = ""  # standards body (e.g. "ISO")
+    related_frameworks: list[str] = Field(default_factory=list)  # e.g. ["soc2", "iso27001"]
     themes: list[Theme]
 
     def all_controls(self) -> list[Control]:
