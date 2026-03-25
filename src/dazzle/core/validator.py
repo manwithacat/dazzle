@@ -1249,6 +1249,8 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
     # Surfaces belonging to entities used in workspace regions are implicitly
     # alive — entity CRUD surfaces are navigable from workspace detail pages
     # even when not explicitly wired to a workspace action.
+    # Entities listed in nav_groups are also navigable via entity nav routes
+    # (e.g. /app/trust, /app/trust/create) even without a workspace region.
     workspace_entities: set[str] = set()
     for workspace in appspec.workspaces:
         for region in workspace.regions:
@@ -1257,6 +1259,10 @@ def _detect_dead_constructs(appspec: ir.AppSpec) -> list[str]:
             for src in region.sources:
                 if src in all_entities:
                     workspace_entities.add(src)
+        for nav_group in workspace.nav_groups:
+            for nav_item in nav_group.items:
+                if nav_item.entity in all_entities:
+                    workspace_entities.add(nav_item.entity)
     for surface in appspec.surfaces:
         if surface.entity_ref and surface.entity_ref in workspace_entities:
             used_surfaces.add(surface.name)
