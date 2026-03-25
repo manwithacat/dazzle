@@ -358,20 +358,32 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
                 try:
                     from dazzle_back.runtime.grant_store import GrantStore
 
-                    _grant_store = GrantStore(self._repository.db.connection())
+                    # db.connection() is a context manager — must enter it
+                    _grant_conn = self._repository.db.connection()
+                    _conn = _grant_conn.__enter__()
+                    _grant_store = GrantStore(_conn)
                 except Exception:
-                    pass  # Grant checks will return False if store unavailable
-            result = validate_status_update(
-                self.state_machine,
-                current_data,
-                update_data,
-                user_roles,
-                current_user,
-                is_superuser=is_superuser,
-                grant_store=_grant_store,
-            )
-            if result is not None and not result.is_valid:
-                raise result.error  # type: ignore
+                    logger.debug(
+                        "GrantStore init failed — has_grant() will return False", exc_info=True
+                    )
+            try:
+                result = validate_status_update(
+                    self.state_machine,
+                    current_data,
+                    update_data,
+                    user_roles,
+                    current_user,
+                    is_superuser=is_superuser,
+                    grant_store=_grant_store,
+                )
+                if result is not None and not result.is_valid:
+                    raise result.error  # type: ignore
+            finally:
+                if _grant_store is not None:
+                    try:
+                        _grant_conn.__exit__(None, None, None)
+                    except Exception:
+                        pass
 
         # Validate invariants after update (v0.14.2)
         if self.entity_spec and self.entity_spec.invariants:
