@@ -24,3 +24,4 @@ global-exclude *.pyo
 global-exclude __pycache__
 global-exclude .DS_Store
 global-exclude *.so
+global-exclude *.map
