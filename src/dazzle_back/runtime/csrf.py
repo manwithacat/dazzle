@@ -43,6 +43,7 @@ class CSRFConfig:
             "/__test__/",
             "/dazzle/dev/",
             "/auth/",
+            "/feedbackreports/",
         ]
     )
 

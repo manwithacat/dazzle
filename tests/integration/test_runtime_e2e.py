@@ -559,3 +559,96 @@ class TestFeedbackWidget:
         assert resp.status_code in (401, 403), (
             f"Expected auth rejection, got {resp.status_code}: {resp.text}"
         )
+
+    @pytest.mark.e2e
+    def test_put_updates_feedback_status(
+        self, simple_task_server: DazzleLocalServerManager
+    ) -> None:
+        """PUT /feedbackreports/{id} transitions status via state machine."""
+        api = simple_task_server.api_url
+
+        # Create a feedback report
+        resp = _request_with_retry(
+            "POST",
+            f"{api}/feedbackreports",
+            json={
+                "category": "bug",
+                "severity": "minor",
+                "description": "PUT test feedback",
+                "reported_by": "e2e@example.com",
+            },
+        )
+        assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
+        report_id = resp.json()["id"]
+
+        # Triage it (new → triaged)
+        resp = _request_with_retry(
+            "PUT",
+            f"{api}/feedbackreports/{report_id}",
+            json={"status": "triaged", "agent_notes": "Looks like a CSS issue"},
+        )
+        assert resp.status_code == 200, f"PUT failed: {resp.text}"
+        assert resp.json()["status"] == "triaged"
+
+    @pytest.mark.e2e
+    def test_delete_removes_feedback(self, simple_task_server: DazzleLocalServerManager) -> None:
+        """DELETE /feedbackreports/{id} removes the record."""
+        api = simple_task_server.api_url
+
+        # Create a feedback report
+        resp = _request_with_retry(
+            "POST",
+            f"{api}/feedbackreports",
+            json={
+                "category": "ux",
+                "severity": "minor",
+                "description": "Delete test feedback",
+                "reported_by": "e2e@example.com",
+            },
+        )
+        assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
+        report_id = resp.json()["id"]
+
+        # Delete it
+        resp = _request_with_retry("DELETE", f"{api}/feedbackreports/{report_id}")
+        assert resp.status_code in (200, 204), f"Delete failed: {resp.text}"
+
+        # Verify it's gone
+        resp = _request_with_retry("GET", f"{api}/feedbackreports/{report_id}")
+        assert resp.status_code == 404
+
+    @pytest.mark.e2e
+    def test_triage_resolve_lifecycle(self, simple_task_server: DazzleLocalServerManager) -> None:
+        """Full lifecycle: create → triage → resolve."""
+        api = simple_task_server.api_url
+
+        # Create
+        resp = _request_with_retry(
+            "POST",
+            f"{api}/feedbackreports",
+            json={
+                "category": "bug",
+                "severity": "annoying",
+                "description": "Lifecycle test feedback",
+                "reported_by": "e2e@example.com",
+            },
+        )
+        assert resp.status_code in (200, 201), f"Create failed: {resp.text}"
+        report_id = resp.json()["id"]
+
+        # Triage (new → triaged)
+        resp = _request_with_retry(
+            "PUT",
+            f"{api}/feedbackreports/{report_id}",
+            json={"status": "triaged"},
+        )
+        assert resp.json()["status"] == "triaged"
+
+        # Resolve (triaged → resolved, shortcut)
+        resp = _request_with_retry(
+            "PUT",
+            f"{api}/feedbackreports/{report_id}",
+            json={"status": "resolved", "agent_notes": "Fixed in commit abc123"},
+        )
+        assert resp.status_code == 200, f"Resolve failed: {resp.text}"
+        assert resp.json()["status"] == "resolved"
