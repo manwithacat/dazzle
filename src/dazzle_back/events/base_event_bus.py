@@ -12,7 +12,7 @@ Subclasses must implement:
   for DLQ replay support
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

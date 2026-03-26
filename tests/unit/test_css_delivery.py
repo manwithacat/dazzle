@@ -1,7 +1,5 @@
 """Tests for CSS delivery architecture — cascade layers and local-first delivery."""
 
-from __future__ import annotations
-
 import subprocess
 import sys
 import tempfile

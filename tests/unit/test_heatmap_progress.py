@@ -1,7 +1,5 @@
 """Tests for heatmap and progress workspace region display modes (v0.44.0)."""
 
-from __future__ import annotations
-
 import textwrap
 from pathlib import Path
 

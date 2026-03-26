@@ -6,8 +6,6 @@ Supports three authentication methods:
 3. Token pipe: ``echo $TOKEN | gh auth login --with-token`` (one-time setup)
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import shutil

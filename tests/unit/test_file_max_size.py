@@ -1,7 +1,5 @@
 """Tests for per-field file upload size limits (#436)."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import FastAPI

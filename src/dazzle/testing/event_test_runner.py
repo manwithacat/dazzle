@@ -12,7 +12,7 @@ This provides testing confidence that event flows and temporal workflows
 respond correctly to new log entries.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import time
 import uuid

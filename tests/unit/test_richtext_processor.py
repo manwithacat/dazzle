@@ -1,7 +1,5 @@
 """Tests for rich text processor (#coverage)."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle_back.runtime.richtext_processor import (

@@ -1,6 +1,6 @@
 """RBAC verification CLI commands."""
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import json

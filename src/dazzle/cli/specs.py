@@ -6,8 +6,6 @@ Commands for generating API specifications from DAZZLE projects:
 - specs asyncapi: Generate AsyncAPI 3.0 specification
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import typer

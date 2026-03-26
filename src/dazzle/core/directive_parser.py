@@ -32,8 +32,6 @@ The ``_parse_*_section()`` functions in :mod:`dazzle.core.copy_parser` are
 reused for typed blocks so the parsing logic stays in one place.
 """
 
-from __future__ import annotations
-
 import re
 from typing import Any
 

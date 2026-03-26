@@ -5,8 +5,6 @@ to their workspace.  When unauthenticated, the configured CTA (e.g. "Sign In")
 is shown instead.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import MagicMock
 

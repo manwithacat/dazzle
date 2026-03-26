@@ -5,8 +5,6 @@ dazzle_back (which implements access evaluation) and dazzle_ui (which consumes
 access decisions for UI filtering) can import them without circular deps.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 from typing import Any
 from uuid import UUID

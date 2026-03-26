@@ -6,6 +6,8 @@ attention signals into surfaces. Archetypes are deterministic blueprints
 that guide the layout allocation algorithm.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass
 
 from dazzle.core.ir import LayoutArchetype

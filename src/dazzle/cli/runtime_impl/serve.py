@@ -11,8 +11,6 @@ Port Allocation:
     Override with --port and --api-port for explicit control.
 """
 
-from __future__ import annotations
-
 import atexit
 import http.server
 import os

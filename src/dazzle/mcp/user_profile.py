@@ -9,7 +9,7 @@ question strategy, and explanation depth for different user types:
   - Backend developers (system architecture, precise terminology)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import logging

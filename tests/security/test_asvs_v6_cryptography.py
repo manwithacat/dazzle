@@ -1,7 +1,5 @@
 """ASVS V6: Stored Cryptography security tests."""
 
-from __future__ import annotations
-
 import inspect
 
 import pytest

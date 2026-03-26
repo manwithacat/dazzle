@@ -5,8 +5,6 @@ Cites NIST SP 800-162, Saltzer & Schroeder (1975), and ISO 27001 in the
 methodology section.
 """
 
-from __future__ import annotations
-
 from dazzle.rbac.verifier import CellResult, VerificationReport
 
 # Decision glyphs used in the access matrix table.

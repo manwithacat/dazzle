@@ -8,8 +8,6 @@ Two implementations:
 Both execute AgentActions and return ActionResults.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from typing import Any, Protocol, runtime_checkable

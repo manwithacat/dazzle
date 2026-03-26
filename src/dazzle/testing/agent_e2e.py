@@ -21,7 +21,7 @@ Usage:
         result = await agent.run_test(page, test_spec)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 from dataclasses import dataclass, field

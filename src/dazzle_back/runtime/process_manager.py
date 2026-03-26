@@ -6,8 +6,6 @@ process adapter (EventBusProcessAdapter, CeleryProcessAdapter, or TemporalAdapte
 entity event triggers.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

@@ -4,8 +4,6 @@ Tests AuditLogger queue behavior, writing, query methods, and helpers.
 All database tests use mocked psycopg connections (PostgreSQL only).
 """
 
-from __future__ import annotations
-
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 

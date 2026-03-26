@@ -1,7 +1,5 @@
 """Tests for built-in entity CRUD operations in celery_tasks.py (#345)."""
 
-from __future__ import annotations
-
 import sys
 import uuid
 from typing import Any

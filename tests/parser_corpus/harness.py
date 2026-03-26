@@ -5,8 +5,6 @@ Provides utilities for parsing DSL files and extracting structured outputs
 for snapshot testing.
 """
 
-from __future__ import annotations
-
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path

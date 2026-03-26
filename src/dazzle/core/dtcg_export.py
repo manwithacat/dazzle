@@ -5,8 +5,6 @@ Generates a DTCG-compliant tokens.json file from a ThemeSpecYAML.
 See: https://design-tokens.github.io/community-group/format/
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

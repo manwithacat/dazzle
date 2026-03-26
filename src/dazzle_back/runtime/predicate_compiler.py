@@ -13,8 +13,6 @@ Two marker types are returned in the params list instead of resolved values:
 Neither marker is resolved here; the compiler is purely structural.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
 

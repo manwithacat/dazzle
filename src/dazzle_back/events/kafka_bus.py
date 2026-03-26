@@ -29,7 +29,7 @@ Configuration via environment variables:
 Part of v0.18.0 Event-First Architecture (Issue #25, Phase I).
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import json

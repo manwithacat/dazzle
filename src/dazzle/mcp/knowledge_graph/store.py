@@ -13,8 +13,6 @@ Method groups are split into mixin classes for maintainability:
 - KnowledgeGraphActivity: telemetry logging, activity event streaming
 """
 
-from __future__ import annotations
-
 import json
 import sqlite3
 import time

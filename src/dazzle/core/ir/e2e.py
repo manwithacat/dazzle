@@ -5,7 +5,7 @@ This module contains E2E user journey specifications including
 flows, fixtures, usability rules, and accessibility checks.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Any

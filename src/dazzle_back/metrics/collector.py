@@ -4,7 +4,7 @@ Central metrics collector for PRA.
 Aggregates latency, throughput, and backlog metrics into a unified interface.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import threading
 import time

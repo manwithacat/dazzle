@@ -8,6 +8,8 @@ The context is attached to every GraphQL request and provides:
 - Request metadata
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass, field
 from typing import Any
 

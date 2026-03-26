@@ -4,8 +4,6 @@ The changelog follows Keep a Changelog format:
 https://keepachangelog.com/en/1.0.0/
 """
 
-from __future__ import annotations
-
 import re
 from pathlib import Path
 

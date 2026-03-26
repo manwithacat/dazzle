@@ -1,7 +1,5 @@
 """Tests for the conformance fixture engine."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 
 # ---------------------------------------------------------------------------

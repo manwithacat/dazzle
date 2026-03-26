@@ -9,8 +9,6 @@ Covers:
   - Task 5: Admin workspace builder — profile-gated regions + nav groups
 """
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core import ir

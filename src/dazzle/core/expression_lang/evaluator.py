@@ -6,8 +6,6 @@ Pure evaluation — no I/O, no side effects. Does NOT use Python's eval().
 This is a safe, sandboxed tree-walking interpreter over a typed AST.
 """
 
-from __future__ import annotations
-
 from datetime import date, datetime, timedelta
 from typing import Any
 

@@ -10,8 +10,6 @@ by design. The agent's effectiveness depends on the quality of its
 mission prompt and the model's reasoning capability.
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 import logging

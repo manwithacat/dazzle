@@ -4,8 +4,6 @@ Verifies that _ref_display_name correctly resolves human-readable names
 from FK reference dicts using the canonical display chain.
 """
 
-from __future__ import annotations
-
 from dazzle_ui.runtime.template_renderer import _ref_display_name
 
 

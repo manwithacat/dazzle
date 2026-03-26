@@ -1,7 +1,5 @@
 """Tests for [database] config in dazzle.toml and resolve_database_url()."""
 
-from __future__ import annotations
-
 import textwrap
 from pathlib import Path
 

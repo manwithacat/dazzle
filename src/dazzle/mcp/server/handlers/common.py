@@ -7,8 +7,6 @@ Eliminates repeated boilerplate across handler files:
 - Timeout-protected execution
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from collections.abc import Callable

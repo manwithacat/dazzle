@@ -5,8 +5,6 @@ Handles concept lookup, example search, CLI help, workflow guides,
 and inference pattern lookup.
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 

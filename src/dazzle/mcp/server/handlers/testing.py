@@ -4,8 +4,6 @@ MCP Server handlers for E2E testing.
 Provides tools for LLM agents to run and analyze E2E tests.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import shutil

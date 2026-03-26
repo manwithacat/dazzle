@@ -8,7 +8,7 @@ at import time — a deliberate design choice so that every code path
 transparently without ``default=str`` annotations.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward self-reference in class definitions
 
 import json
 from typing import Any, Literal

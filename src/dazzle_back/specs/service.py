@@ -4,6 +4,8 @@ Service specification types for BackendSpec.
 Defines domain services, operations, and business rules.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from enum import StrEnum
 from typing import Any
 

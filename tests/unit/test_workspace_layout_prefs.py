@@ -1,7 +1,5 @@
 """Tests for workspace layout preferences and col_span grid system."""
 
-from __future__ import annotations
-
 import pytest
 
 

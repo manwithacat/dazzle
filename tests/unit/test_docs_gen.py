@@ -1,7 +1,5 @@
 """Tests for documentation generator."""
 
-from __future__ import annotations
-
 from dazzle.core.docs_gen import (
     check_docs_coverage,
     generate_reference_docs,

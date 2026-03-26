@@ -1,7 +1,5 @@
 """Tests for context-aware LSP completion (issue #234)."""
 
-from __future__ import annotations
-
 
 class TestDetectCompletionContext:
     """_detect_completion_context identifies cursor context."""

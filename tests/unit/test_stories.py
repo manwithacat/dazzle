@@ -4,8 +4,6 @@ Unit tests for DAZZLE Behaviour Layer stories.
 Tests the Story IR types and DSL story emitter.
 """
 
-from __future__ import annotations
-
 import tempfile
 from pathlib import Path
 

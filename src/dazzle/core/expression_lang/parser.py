@@ -21,8 +21,6 @@ Grammar (precedence low to high):
     list_literal → "[" (expr ("," expr)*)? "]"
 """
 
-from __future__ import annotations
-
 from dazzle.core.expression_lang.tokenizer import (
     ExpressionTokenError,
     Token,

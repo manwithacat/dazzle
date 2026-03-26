@@ -11,8 +11,6 @@ dazzle_back.runtime.condition_evaluator re-exports evaluate_condition from
 here so both packages share one implementation.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from typing import Any
 

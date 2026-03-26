@@ -1,7 +1,5 @@
 """Tenant configuration helpers — slug validation and schema naming."""
 
-from __future__ import annotations
-
 import re
 
 # Max slug length: 63 (PG identifier limit) - 7 ("tenant_" prefix) = 56

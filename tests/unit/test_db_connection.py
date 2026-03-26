@@ -1,7 +1,5 @@
 """Tests for dazzle.db.connection — database URL resolution and connection factory."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

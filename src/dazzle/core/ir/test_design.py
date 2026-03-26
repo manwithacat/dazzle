@@ -9,8 +9,6 @@ Test designs are persona-centric and outcome-focused, describing WHAT
 should be tested rather than HOW (implementation details).
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any, Literal

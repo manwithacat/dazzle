@@ -8,8 +8,6 @@ Tests cover:
 - Backward-compatible shims in site_renderer.py
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 

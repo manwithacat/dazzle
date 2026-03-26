@@ -4,8 +4,6 @@ Tests the new LLM IR fields (budget_alert_usd, default_provider, vision,
 description), DSL parsing of those fields, and AIJob auto-generation.
 """
 
-from __future__ import annotations
-
 from decimal import Decimal
 from pathlib import Path
 from textwrap import dedent

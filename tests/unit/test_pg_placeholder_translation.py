@@ -5,8 +5,6 @@ Verifies that PgConnectionWrapper passes SQL through to cursor,
 and that outbox/relation_loader use db.placeholder correctly.
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

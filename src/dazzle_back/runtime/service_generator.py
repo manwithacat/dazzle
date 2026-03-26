@@ -5,6 +5,8 @@ This module creates service classes that implement domain operations.
 Services handle business logic and can be customized by users.
 """
 
+from __future__ import annotations  # required: forward reference
+
 import asyncio
 import builtins
 import logging
@@ -80,7 +82,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
         model_class: type[T],
         create_schema: type[CreateT],
         update_schema: type[UpdateT],
-        repository: "Repository[T] | None" = None,
+        repository: Repository[T] | None = None,
         state_machine: StateMachineSpec | None = None,
         entity_spec: EntitySpec | None = None,
     ):
@@ -170,7 +172,7 @@ class CRUDService(BaseService[T], Generic[T, CreateT, UpdateT]):
             self._on_deleted_callbacks, entity_id, entity_data, None, "deleted"
         )
 
-    def set_repository(self, repository: "Repository[T]") -> None:
+    def set_repository(self, repository: Repository[T]) -> None:
         """
         Set the repository for persistent storage.
 

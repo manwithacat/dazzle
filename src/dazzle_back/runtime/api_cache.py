@@ -17,8 +17,6 @@ Usage::
         await cache.put("ch_api:fetch_company", url, data, ttl=86400)
 """
 
-from __future__ import annotations
-
 import hashlib
 import json
 import logging

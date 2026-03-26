@@ -4,8 +4,6 @@ WeasyPrint is an optional dependency — this module gracefully handles
 its absence with a clear error message.
 """
 
-from __future__ import annotations
-
 from datetime import date
 from pathlib import Path
 from typing import Any

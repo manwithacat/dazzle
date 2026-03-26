@@ -4,8 +4,6 @@ Project management tool handlers.
 Handles project listing, selection, validation, and dev mode operations.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from pathlib import Path

@@ -5,8 +5,6 @@ Tests the pure-function rendering: template compiler, Jinja2 renderer,
 custom filters, design token CSS, and mock data generation — no server needed.
 """
 
-from __future__ import annotations
-
 from datetime import date, datetime, timedelta
 
 import pytest

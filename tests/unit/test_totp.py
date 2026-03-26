@@ -1,7 +1,5 @@
 """Tests for dazzle_back.runtime.totp — TOTP generation and verification."""
 
-from __future__ import annotations
-
 import base64
 import re
 

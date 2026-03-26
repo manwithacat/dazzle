@@ -7,8 +7,6 @@ Tests loading from:
 - Nested directories within spec/
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.spec_loader import SpecContent, get_spec_summary, load_spec

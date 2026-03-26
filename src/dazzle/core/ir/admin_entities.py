@@ -12,7 +12,6 @@ Follows the same convention as FEEDBACK_REPORT_FIELDS in ir/feedback_widget.py
 and AI_JOB_FIELDS in ir/llm.py.
 """
 
-from __future__ import annotations
 
 # ---------------------------------------------------------------------------
 # Field definitions

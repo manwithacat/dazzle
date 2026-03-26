@@ -1,7 +1,5 @@
 """Tests for the Performance & Resource detection agent (PR-01 through PR-08)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

@@ -6,8 +6,6 @@ layout signals, workspace layouts, persona layouts, archetypes,
 surfaces, and layout plans.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 from typing import Any
 

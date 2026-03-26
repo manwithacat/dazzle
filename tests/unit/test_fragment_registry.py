@@ -1,7 +1,5 @@
 """Unit tests for the fragment registry."""
 
-from __future__ import annotations
-
 from dazzle_ui.runtime.fragment_registry import get_fragment_info, get_fragment_registry
 
 EXPECTED_FRAGMENTS = [

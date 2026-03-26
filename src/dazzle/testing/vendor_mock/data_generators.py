@@ -5,8 +5,6 @@ Generates realistic fake data matching API pack foreign model field types.
 Supports deterministic mode (seeded) for reproducible test data.
 """
 
-from __future__ import annotations
-
 import random
 import re
 import string

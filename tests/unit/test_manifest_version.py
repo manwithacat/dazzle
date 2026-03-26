@@ -1,7 +1,5 @@
 """Tests for framework version pinning (#440)."""
 
-from __future__ import annotations
-
 from unittest.mock import patch
 
 import pytest

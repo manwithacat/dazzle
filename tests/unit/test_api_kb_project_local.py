@@ -1,7 +1,5 @@
 """Tests for project-local API pack resolution."""
 
-from __future__ import annotations
-
 import textwrap
 from pathlib import Path
 

@@ -1,7 +1,5 @@
 """ASVS V2: Authentication security tests."""
 
-from __future__ import annotations
-
 import inspect
 
 import pytest

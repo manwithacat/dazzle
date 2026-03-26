@@ -1,6 +1,6 @@
 """Markdown section parsing, patching, and diff generation."""
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import difflib
 import re

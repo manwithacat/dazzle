@@ -5,8 +5,6 @@ Public API:
     from dazzle.sentinel import ScanOrchestrator, ScanConfig, ScanResult
 """
 
-from __future__ import annotations
-
 from .models import (
     AgentId,
     AgentResult,

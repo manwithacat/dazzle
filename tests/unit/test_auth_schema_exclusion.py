@@ -6,8 +6,6 @@ that Pydantic can't resolve during schema generation. Routes returning Response
 use `include_in_schema=False`.
 """
 
-from __future__ import annotations
-
 import ast
 from pathlib import Path
 

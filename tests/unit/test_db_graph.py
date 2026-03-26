@@ -1,7 +1,5 @@
 """Tests for dazzle.db.graph — entity dependency graph utilities."""
 
-from __future__ import annotations
-
 from dazzle.db.graph import build_dependency_graph, get_ref_fields, leaves_first, parents_first
 
 

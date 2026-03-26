@@ -5,8 +5,6 @@ These models are used by both the agent core and the observer/executor
 backends. They define the interface between observation and action.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum

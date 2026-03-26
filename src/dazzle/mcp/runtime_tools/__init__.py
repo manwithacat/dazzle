@@ -12,8 +12,6 @@ Split into focused modules:
 - adapter_examples.py - Adapter implementation examples
 """
 
-from __future__ import annotations
-
 from dazzle.mcp.server.state import get_state as _get_state
 
 # Re-export public API

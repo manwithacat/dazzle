@@ -1,7 +1,5 @@
 """Pulse health-check and analytics CLI commands."""
 
-from __future__ import annotations
-
 import typer
 
 pulse_app = typer.Typer(help="Project health pulse checks.", no_args_is_help=True)

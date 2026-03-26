@@ -5,6 +5,8 @@ Enables apps to define reusable patterns (macros/aliases) that expand to core DS
 This module provides the schema and utilities for managing vocabulary entries.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -110,7 +112,7 @@ class VocabEntry(BaseModel):
         result = self.metadata.get("usage_count", 0)
         return int(result) if isinstance(result, int | float | str) else 0
 
-    def increment_usage(self) -> "VocabEntry":
+    def increment_usage(self) -> VocabEntry:
         """
         Increment usage count.
 
@@ -147,7 +149,7 @@ class VocabManifest(BaseModel):
     dsl_core_version: str = Field(..., description="Target core DSL version")
     entries: list[VocabEntry] = Field(default_factory=list, description="Vocabulary entries")
 
-    def add_entry(self, entry: VocabEntry) -> "VocabManifest":
+    def add_entry(self, entry: VocabEntry) -> VocabManifest:
         """
         Add a new vocabulary entry.
 
@@ -173,7 +175,7 @@ class VocabManifest(BaseModel):
                 return entry
         return None
 
-    def update_entry(self, entry: VocabEntry) -> "VocabManifest":
+    def update_entry(self, entry: VocabEntry) -> VocabManifest:
         """
         Update an existing entry.
 
@@ -194,7 +196,7 @@ class VocabManifest(BaseModel):
             entries=new_entries,
         )
 
-    def remove_entry(self, entry_id: str) -> "VocabManifest":
+    def remove_entry(self, entry_id: str) -> VocabManifest:
         """
         Remove an entry.
 

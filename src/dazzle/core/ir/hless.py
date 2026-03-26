@@ -15,7 +15,7 @@ Use RecordKind (INTENT, FACT, OBSERVATION, DERIVATION) instead.
 See: dev_docs/architecture/event_first/high_level_event_semantics.md
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Literal

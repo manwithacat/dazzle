@@ -5,8 +5,6 @@ This module provides dispatch functions for consolidated tools.
 Each handler routes the 'operation' parameter to existing handler functions.
 """
 
-from __future__ import annotations
-
 import importlib
 import json
 import logging

@@ -1,7 +1,5 @@
 """Tests for PRA load generator components."""
 
-from __future__ import annotations
-
 import asyncio
 from collections import defaultdict
 

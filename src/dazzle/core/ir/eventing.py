@@ -12,7 +12,7 @@ features in the DAZZLE DSL:
 - ProjectionSpec: Event-driven state projection
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Any

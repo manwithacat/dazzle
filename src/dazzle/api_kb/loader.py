@@ -4,7 +4,7 @@ API Knowledgebase loader - loads and queries API packs.
 Packs are TOML files containing pre-validated API configurations.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 import tomllib

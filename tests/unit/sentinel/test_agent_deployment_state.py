@@ -1,7 +1,5 @@
 """Tests for the Deployment & State detection agent (DS-01 through DS-08)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

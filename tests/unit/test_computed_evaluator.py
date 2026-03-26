@@ -1,7 +1,5 @@
 """Tests for computed field evaluator (#coverage)."""
 
-from __future__ import annotations
-
 from decimal import Decimal
 
 from dazzle_back.runtime.computed_evaluator import (

@@ -1,7 +1,5 @@
 """Tests for user preference persistence (v0.38.0)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 

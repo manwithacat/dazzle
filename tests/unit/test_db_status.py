@@ -1,8 +1,6 @@
 # tests/unit/test_db_status.py
 """Tests for dazzle.db.status — row counts and database size."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock
 
 import pytest

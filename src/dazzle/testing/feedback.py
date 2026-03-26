@@ -14,7 +14,7 @@ Storage locations:
 - .dazzle/test_feedback/prompt_versions.json
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import subprocess

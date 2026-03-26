@@ -4,8 +4,6 @@ Dazzle test command.
 Run tests for a Dazzle application.
 """
 
-from __future__ import annotations
-
 import json as json_module
 import logging
 import subprocess

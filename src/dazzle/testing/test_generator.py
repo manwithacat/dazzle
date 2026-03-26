@@ -10,7 +10,7 @@ This module generates executable test designs based on:
 The generated tests are compatible with the test_runner.py harness.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import re

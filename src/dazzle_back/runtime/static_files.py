@@ -14,8 +14,6 @@ back to the original filename before serving. No files are renamed on
 disk — the hash is a virtual path segment.
 """
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
 from typing import Any

@@ -5,7 +5,7 @@ This module contains experience flow specifications including
 steps, transitions, and orchestrated user journeys.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 

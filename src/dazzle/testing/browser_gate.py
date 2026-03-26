@@ -24,7 +24,7 @@ Configuration via environment variables:
 - ``DAZZLE_BROWSER_HEADLESS`` — ``1``/``true`` or ``0``/``false`` (default: ``1``)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

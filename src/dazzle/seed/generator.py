@@ -14,8 +14,6 @@ Special template expressions:
     "y == current_year"  → evaluates to ``true`` or ``false`` (string)
 """
 
-from __future__ import annotations
-
 import datetime
 from typing import Any
 

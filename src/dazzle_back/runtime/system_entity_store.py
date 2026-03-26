@@ -6,8 +6,6 @@ metrics store, process monitor) instead of PostgreSQL. Write operations
 are blocked — these entities are read-only projections.
 """
 
-from __future__ import annotations
-
 import builtins
 import uuid
 from datetime import UTC, datetime

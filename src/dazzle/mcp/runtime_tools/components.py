@@ -5,8 +5,6 @@ Contains primitive components, pattern components, and layout types
 as defined in DNR-Components-v1.md specification.
 """
 
-from __future__ import annotations
-
 # Built-in component registry (from DNR-Components-v1.md)
 PRIMITIVE_COMPONENTS = [
     {"name": "Page", "category": "primitive", "description": "Top-level container for a screen"},

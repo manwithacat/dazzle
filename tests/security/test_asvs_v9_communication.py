@@ -1,7 +1,5 @@
 """ASVS V9: Communication security tests."""
 
-from __future__ import annotations
-
 
 class TestTransportSecurity:
     """V9.1: Client Communication Security."""

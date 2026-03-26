@@ -4,8 +4,6 @@ Stage 0: Bootstrap & Context Load.
 Validates toolchain versions and loads project context.
 """
 
-from __future__ import annotations
-
 import logging
 import shutil
 import subprocess

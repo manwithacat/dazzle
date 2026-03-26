@@ -4,8 +4,6 @@ Verifies that workspace region queries apply entity-level scope predicates
 from scope: DSL blocks, matching the enforcement in API route paths.
 """
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import patch

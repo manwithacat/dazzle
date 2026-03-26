@@ -1,7 +1,5 @@
 """Generate review data for human-in-the-loop workflow."""
 
-from __future__ import annotations
-
 from typing import Any
 
 

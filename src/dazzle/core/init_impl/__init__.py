@@ -10,8 +10,6 @@ This package contains modular implementations for project initialization:
 - reset.py - Project reset and verification
 """
 
-from __future__ import annotations
-
 from .project import create_mcp_config, init_project, list_examples
 from .reset import reset_project, verify_project
 from .spec import create_spec_template

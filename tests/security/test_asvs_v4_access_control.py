@@ -1,7 +1,5 @@
 """ASVS V4: Access Control security tests."""
 
-from __future__ import annotations
-
 from dazzle.core import ir
 
 

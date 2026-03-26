@@ -4,8 +4,6 @@ Tokenizer for Dazzle expression language.
 Converts an expression string into a sequence of typed tokens.
 """
 
-from __future__ import annotations
-
 import re
 from enum import StrEnum, auto
 

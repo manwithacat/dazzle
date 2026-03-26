@@ -1,7 +1,5 @@
 """Shared serialization helpers for KG handler sub-modules."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from ..models import Entity, Relation

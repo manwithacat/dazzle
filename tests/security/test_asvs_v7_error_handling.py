@@ -1,7 +1,5 @@
 """ASVS V7: Error Handling and Logging security tests."""
 
-from __future__ import annotations
-
 import inspect
 
 

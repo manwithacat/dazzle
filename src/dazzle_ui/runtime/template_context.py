@@ -5,7 +5,7 @@ Pydantic models that represent the data needed to render Jinja2 templates.
 These replace UISpec as the bridge between IR and rendered HTML.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from typing import Any
 

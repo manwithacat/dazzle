@@ -1,7 +1,5 @@
 """Tests for dazzle rbac verify-scope — scope fidelity verification."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

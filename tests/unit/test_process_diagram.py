@@ -6,8 +6,6 @@ Tests the Mermaid diagram generation for ProcessSpec.
 Uses direct module import to avoid triggering mcp.server import from dazzle.mcp.__init__.
 """
 
-from __future__ import annotations
-
 import importlib.util
 import sys
 from pathlib import Path

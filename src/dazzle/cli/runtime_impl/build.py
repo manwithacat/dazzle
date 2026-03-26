@@ -4,8 +4,6 @@ Dazzle build commands.
 Commands for generating UI artifacts, API specs, and production bundles.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

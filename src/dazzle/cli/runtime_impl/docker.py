@@ -6,8 +6,6 @@ dev infrastructure (Postgres + Redis via Docker Compose),
 and production artifact generation (Dockerfile, docker-compose, etc.).
 """
 
-from __future__ import annotations
-
 import subprocess
 import time
 from pathlib import Path

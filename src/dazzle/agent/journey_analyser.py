@@ -4,8 +4,6 @@ Analyses multiple JourneySession results to detect systemic issues
 that only become visible when comparing behaviour across personas.
 """
 
-from __future__ import annotations
-
 import re
 import uuid
 from collections import defaultdict

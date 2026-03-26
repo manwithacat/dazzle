@@ -1,7 +1,5 @@
 """Integration tests for the fidelity scorer with real project data."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

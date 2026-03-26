@@ -5,8 +5,6 @@ Tests that FILE field types are correctly mapped to form types,
 field elements, and template filters.
 """
 
-from __future__ import annotations
-
 from dazzle.core import ir
 from dazzle.core.ir import EntitySpec, FieldTypeKind
 from dazzle.core.ir.fields import FieldSpec, FieldType

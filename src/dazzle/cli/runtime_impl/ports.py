@@ -13,7 +13,7 @@ This allows multiple agents/developers to work on different projects
 without port conflicts, while keeping ports predictable per project.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import hashlib
 import json

@@ -19,8 +19,6 @@ Notes on parser behaviour verified by these tests:
   an infinite loop. Tests for that block are omitted.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl

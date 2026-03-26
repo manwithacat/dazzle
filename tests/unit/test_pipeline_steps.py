@@ -1,7 +1,5 @@
 """Tests for pipeline step composition."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.mcp.server.handlers.pipeline import _build_quality_steps

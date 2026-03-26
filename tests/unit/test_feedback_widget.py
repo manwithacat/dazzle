@@ -4,8 +4,6 @@ Tests for feedback_widget DSL keyword — IR model, parser, and auto-entity gene
 TDD: These tests are written BEFORE the implementation.
 """
 
-from __future__ import annotations
-
 import pytest
 from pydantic import ValidationError
 

@@ -6,8 +6,6 @@ DSL patterns, feature requests) in a structured format for sharing with the
 Dazzle team.
 """
 
-from __future__ import annotations
-
 import json
 import platform
 from datetime import datetime

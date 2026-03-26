@@ -8,8 +8,6 @@ Storage locations:
 - Runtime: .dazzle/viewport_specs/specs.json
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from datetime import UTC, datetime

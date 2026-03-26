@@ -1,7 +1,5 @@
 """Tests for Docker artifact generation."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.cli.runtime_impl.docker import (

@@ -1,7 +1,5 @@
 """Tests for compliance AuditSpec compiler."""
 
-from __future__ import annotations
-
 from dazzle.compliance.compiler import compile_auditspec
 from dazzle.compliance.models import (
     AuditSpec,

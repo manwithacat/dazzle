@@ -4,8 +4,6 @@ Computes FK dependency ordering from AppSpec entities.
 Used by reset (leaf-first truncation) and cleanup (orphan detection).
 """
 
-from __future__ import annotations
-
 import logging
 from graphlib import TopologicalSorter
 from typing import Any

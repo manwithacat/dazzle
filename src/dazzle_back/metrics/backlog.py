@@ -5,7 +5,7 @@ Tracks the difference between produced and consumed sequence numbers
 to measure consumer lag and backpressure.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import threading
 import time

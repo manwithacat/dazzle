@@ -4,7 +4,7 @@ Layer 3 of the RBAC verification framework. Instruments evaluate_permission()
 to emit structured records of every access decision.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import threading

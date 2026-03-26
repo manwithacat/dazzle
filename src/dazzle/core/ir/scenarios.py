@@ -5,7 +5,7 @@ This module contains scenario definitions. Scenarios represent
 different demo states with per-persona configurations.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from typing import Any
 

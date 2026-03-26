@@ -10,7 +10,7 @@ The dazzle_back package imports the FastAPI-specific helpers
 module, which may delegate to these types.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass
 from typing import Any

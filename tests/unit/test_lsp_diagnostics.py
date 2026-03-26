@@ -1,7 +1,5 @@
 """Tests for LSP diagnostics publishing (issue #232)."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.errors import ErrorContext, LinkError, ParseError, ValidationError

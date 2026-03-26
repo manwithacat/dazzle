@@ -1,7 +1,5 @@
 """Tests for experience flow route handler."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, patch
 
 import pytest

@@ -9,8 +9,6 @@ Uses the canonical Money type for all monetary values to ensure:
 - Explicit currency handling
 """
 
-from __future__ import annotations
-
 import random
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta

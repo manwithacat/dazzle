@@ -4,8 +4,6 @@ Read-only operations: status, verify.
 Write operations (reset, cleanup) are CLI-only per MCP/CLI boundary.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

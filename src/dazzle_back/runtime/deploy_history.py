@@ -4,7 +4,7 @@ Deployment History Store.
 Tracks deployment records in the ops database for the Founder Console.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import logging

@@ -9,7 +9,7 @@ skipped.
 Rule 2: At-least-once delivery is assumed; consumers must be idempotent
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime

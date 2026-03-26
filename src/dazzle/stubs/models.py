@@ -5,8 +5,6 @@ Domain services are business logic functions declared in DSL and implemented in 
 This is distinct from external ServiceSpec which represents third-party APIs.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

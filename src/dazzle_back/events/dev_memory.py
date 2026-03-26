@@ -14,7 +14,7 @@ Features:
 NOT for production use - all data is lost on process exit.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 from collections import defaultdict

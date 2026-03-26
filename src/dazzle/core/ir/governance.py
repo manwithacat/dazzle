@@ -9,8 +9,6 @@ This module contains IR types for:
 Part of v0.18.0 Event-First Architecture (Issue #25).
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

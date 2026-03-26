@@ -4,8 +4,6 @@ Auto-seeds reference data from entity ``seed_template`` declarations at
 application startup (v0.38.0, #428).
 """
 
-from __future__ import annotations
-
 import logging
 
 from dazzle_back.runtime.subsystems import SubsystemContext

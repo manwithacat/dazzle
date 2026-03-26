@@ -8,8 +8,6 @@ Designed for minimal overhead on the main application:
 - Graceful degradation if Redis unavailable
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import os

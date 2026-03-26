@@ -12,6 +12,8 @@ Usage:
     page_results = await checker.check_page(page)
 """
 
+from __future__ import annotations  # required: forward reference
+
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -144,7 +146,7 @@ class UsabilityChecker:
 
     async def check_page(
         self,
-        page: "Page",
+        page: Page,
         context: str = "page",
     ) -> UsabilityCheckResult:
         """
@@ -258,7 +260,7 @@ class UsabilityChecker:
 
     async def _check_primary_action_visible(
         self,
-        page: "Page",
+        page: Page,
         rule: UsabilityRule,
         context: str,
         result: UsabilityCheckResult,
@@ -317,7 +319,7 @@ class UsabilityChecker:
 
     async def _check_validation_placement(
         self,
-        page: "Page",
+        page: Page,
         rule: UsabilityRule,
         context: str,
         result: UsabilityCheckResult,

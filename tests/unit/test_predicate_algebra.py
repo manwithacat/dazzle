@@ -5,8 +5,6 @@ Covers construction of all 7 predicate node types and BoolComposite
 simplification rules.
 """
 
-from __future__ import annotations
-
 from dazzle.core.ir.predicates import (
     BoolComposite,
     BoolOp,

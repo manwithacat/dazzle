@@ -1,7 +1,5 @@
 """Tests for backup/restore CLI commands (#441)."""
 
-from __future__ import annotations
-
 import os
 from unittest.mock import patch
 

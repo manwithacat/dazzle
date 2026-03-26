@@ -1,7 +1,5 @@
 """ASVS V3: Session Management security tests."""
 
-from __future__ import annotations
-
 import inspect
 
 

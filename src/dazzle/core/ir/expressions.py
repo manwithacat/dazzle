@@ -16,7 +16,7 @@ Supports:
 - Null checks: x is null, x is not null
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: Expr forward-references in BinaryExpr/UnaryExpr
 
 from enum import StrEnum
 

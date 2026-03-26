@@ -7,8 +7,6 @@ These activities are used by dynamically generated workflows to:
 - Execute service calls
 """
 
-from __future__ import annotations
-
 import logging
 import threading
 from datetime import UTC, datetime, timedelta

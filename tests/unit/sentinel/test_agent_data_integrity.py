@@ -1,7 +1,5 @@
 """Tests for the Data Integrity detection agent (DI-01 through DI-08)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

@@ -7,7 +7,7 @@ silently accept all operations, allowing application code to use the event
 API without conditional checks.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from collections.abc import AsyncIterator
 from datetime import datetime

@@ -3,8 +3,6 @@
 Resolves DATABASE_URL and provides asyncpg connection factories.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

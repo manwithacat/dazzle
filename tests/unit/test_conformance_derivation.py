@@ -1,7 +1,5 @@
 """Tests for conformance testing data models and derivation engine."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 
 

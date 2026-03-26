@@ -12,8 +12,6 @@ Usage:
     # Events will be automatically emitted on create/update/delete
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any, Generic, TypeVar
 from uuid import UUID

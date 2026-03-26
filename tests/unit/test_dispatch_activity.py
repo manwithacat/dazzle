@@ -5,8 +5,6 @@ ActivityStore receives at least tool_start and tool_end events.  This is
 the integration test for the workshop observability pipeline.
 """
 
-from __future__ import annotations
-
 from unittest.mock import patch
 
 import pytest

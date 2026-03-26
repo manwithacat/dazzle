@@ -1,7 +1,5 @@
 """Tests for the agent registry."""
 
-from __future__ import annotations
-
 from dazzle.sentinel.agents import get_agent, get_all_agents
 from dazzle.sentinel.agents.auth_authorization import AuthAuthorizationAgent
 from dazzle.sentinel.agents.business_logic import BusinessLogicAgent

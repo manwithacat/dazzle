@@ -5,8 +5,6 @@ Tests parsing of ledger and transaction blocks for TigerBeetle
 double-entry accounting constructs.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl

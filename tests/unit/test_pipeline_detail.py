@@ -1,7 +1,5 @@
 """Tests for pipeline adaptive detail levels and _meta block."""
 
-from __future__ import annotations
-
 import json
 import time
 

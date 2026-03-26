@@ -7,8 +7,6 @@ Covers:
 - Factory auto-detection preferring eventbus over celery
 """
 
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch

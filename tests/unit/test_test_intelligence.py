@@ -1,7 +1,5 @@
 """Tests for test_intelligence MCP handler operations."""
 
-from __future__ import annotations
-
 import importlib.util
 import json
 import sys

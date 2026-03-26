@@ -8,8 +8,6 @@ Commands:
 - api-pack scaffold: Scaffold a new API pack TOML from OpenAPI or blank template
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

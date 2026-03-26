@@ -9,8 +9,6 @@ Input: list[Observation] from an AgentTranscript
 Output: list[Proposal] — structured, prioritized, ready for DSL emission
 """
 
-from __future__ import annotations
-
 import logging
 from collections import Counter
 from dataclasses import dataclass, field

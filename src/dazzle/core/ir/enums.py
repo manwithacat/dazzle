@@ -16,8 +16,6 @@ Usage in entities:
       status: OrderStatus = draft
 """
 
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict, Field
 
 

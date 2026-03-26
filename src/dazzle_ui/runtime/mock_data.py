@@ -5,8 +5,6 @@ Generates realistic-looking sample data from entity specifications
 for use in preview HTML files that work without a server.
 """
 
-from __future__ import annotations
-
 import random
 import uuid
 from typing import Any

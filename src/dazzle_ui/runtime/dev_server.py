@@ -4,8 +4,6 @@ Development server for Dazzle UI.
 Serves the generated UI with hot reload support.
 """
 
-from __future__ import annotations
-
 import http.server
 import json
 import socketserver

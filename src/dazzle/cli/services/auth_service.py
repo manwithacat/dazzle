@@ -1,6 +1,6 @@
 """CLI-facing auth service wrapping AuthStore."""
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from pathlib import Path
 from typing import Any

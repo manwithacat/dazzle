@@ -19,8 +19,6 @@ Example:
     # Result: "Hello John, your order #1234 is confirmed."
 """
 
-from __future__ import annotations
-
 import logging
 import re
 from dataclasses import dataclass

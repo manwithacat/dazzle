@@ -1,7 +1,5 @@
 """Tests for API pack cache TTL and integration template generation."""
 
-from __future__ import annotations
-
 from dazzle.api_kb.loader import ApiPack, AuthSpec, ForeignModelSpec, OperationSpec
 from dazzle.core.dsl_parser_impl.process import format_duration
 

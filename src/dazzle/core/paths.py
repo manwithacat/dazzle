@@ -6,8 +6,6 @@ collected here so they can be changed in one place.  This module lives in
 can import it without creating a core→mcp dependency.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 # -- Top-level project files -------------------------------------------------

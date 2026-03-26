@@ -1,7 +1,5 @@
 """Tests for the Social Authentication module."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
 

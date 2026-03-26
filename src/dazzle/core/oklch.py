@@ -5,8 +5,6 @@ Generates a complete design-system color palette from a brand hue and chroma
 using the OKLCH color space. No external color libraries required.
 """
 
-from __future__ import annotations
-
 
 def oklch_to_css(L: float, C: float, H: float, alpha: float = 1.0) -> str:
     """Format an OKLCH color as a CSS string.

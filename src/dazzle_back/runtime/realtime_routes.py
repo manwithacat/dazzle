@@ -4,6 +4,8 @@ WebSocket routes for DNR real-time features.
 Provides the WebSocket endpoint and message handlers.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from typing import Any
 
 from fastapi import FastAPI

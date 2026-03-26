@@ -5,8 +5,6 @@ registry are known to be lossless and can be applied automatically during
 auto-migration. Unknown casts are skipped with a warning.
 """
 
-from __future__ import annotations
-
 from dazzle_back.runtime.query_builder import quote_identifier
 
 # (from_type, to_type) → USING template or "" for no-op widening.

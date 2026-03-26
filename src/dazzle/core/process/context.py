@@ -5,7 +5,7 @@ ProcessContext accumulates step outputs and provides expression resolution
 for input mappings between steps.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import re
 from datetime import UTC, datetime

@@ -13,7 +13,7 @@ Usage:
     python -m dazzle.testing.unified_runner <project_path> [--generate] [--run] [--all-examples]
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import argparse
 import json

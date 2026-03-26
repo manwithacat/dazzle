@@ -1,7 +1,5 @@
 """Tests for dazzle.docs_update.synthesizer — mocked LLM calls."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from unittest.mock import MagicMock

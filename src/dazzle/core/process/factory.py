@@ -6,8 +6,6 @@ and availability, allowing seamless switching between EventBus (Redis)
 and Temporal backends.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import socket

@@ -13,6 +13,8 @@ Usage:
         print(f"{violation.id}: {violation.impact} - {violation.description}")
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -126,7 +128,7 @@ class AccessibilityChecker:
 
     def __init__(
         self,
-        page: "Page",
+        page: Page,
         rules: list[A11yRule] | None = None,
     ) -> None:
         """
@@ -464,7 +466,7 @@ def check_a11y_rules(results: AxeResults, rules: list[A11yRule]) -> list[AxeViol
 
 
 async def run_accessibility_check(
-    page: "Page",
+    page: Page,
     testspec: E2ETestSpec | None = None,
     level: str = "AA",
 ) -> A11yCheckResult:

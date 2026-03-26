@@ -4,8 +4,6 @@ Translates each ``ConformanceCase`` into an HTTP request against the
 live FastAPI app and checks status code + row count.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

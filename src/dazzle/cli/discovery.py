@@ -11,8 +11,6 @@ Commands:
 - discovery coherence: Run persona-by-persona UX coherence checks
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 

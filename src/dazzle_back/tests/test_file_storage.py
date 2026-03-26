@@ -4,8 +4,6 @@ Tests for file storage system.
 Tests local storage, metadata store, validation, and file service.
 """
 
-from __future__ import annotations
-
 import os
 from datetime import UTC, datetime
 from io import BytesIO

@@ -1,7 +1,5 @@
 """Tests for dazzle.testing.browser_gate — bounded Playwright browser factory."""
 
-from __future__ import annotations
-
 import asyncio
 import threading
 import time

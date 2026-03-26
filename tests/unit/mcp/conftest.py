@@ -11,8 +11,6 @@ for a simple MagicMock, or :func:`install_handlers_common_real` when tests
 need the real ``load_project_appspec`` (i.e. tests that create real DSL files).
 """
 
-from __future__ import annotations
-
 import json
 import sys
 from functools import wraps

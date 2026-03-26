@@ -1,7 +1,5 @@
 """Integration tests: evaluate_permission emits audit records via the sink."""
 
-from __future__ import annotations
-
 from dazzle.rbac.audit import InMemoryAuditSink, get_audit_sink, set_audit_sink
 from dazzle_back.runtime.access_evaluator import (
     AccessRuntimeContext,

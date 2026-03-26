@@ -4,8 +4,6 @@ Single implementation of the manifest → discover → parse → build pipeline.
 All code that needs to load a project's AppSpec should import from here.
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 

@@ -4,8 +4,6 @@ Validates that deny_roles on EndpointSpec produces a FastAPI dependency
 that returns 403 when the user has a denied role.
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

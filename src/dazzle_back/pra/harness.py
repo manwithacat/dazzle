@@ -5,7 +5,7 @@ Orchestrates load generation, event processing, metrics collection,
 and result reporting.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

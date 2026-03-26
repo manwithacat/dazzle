@@ -5,7 +5,7 @@ This module defines the abstract interface that all process execution
 backends must implement, allowing swappable runtime implementations.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime

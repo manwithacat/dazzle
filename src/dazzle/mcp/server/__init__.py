@@ -9,8 +9,6 @@ Supports two modes:
 - Dev Mode: When running in the Dazzle development environment (has examples/, src/dazzle/)
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import sys

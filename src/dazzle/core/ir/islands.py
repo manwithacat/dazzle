@@ -16,8 +16,6 @@ DSL Syntax:
         detail: [task_id, series]
 """
 
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict, Field
 
 

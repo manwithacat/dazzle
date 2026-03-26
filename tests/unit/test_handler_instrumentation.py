@@ -1,7 +1,5 @@
 """Tests for handler progress instrumentation."""
 
-from __future__ import annotations
-
 import json
 import time
 

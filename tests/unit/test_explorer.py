@@ -1,7 +1,5 @@
 """Tests for the Activity Explorer HTTP server."""
 
-from __future__ import annotations
-
 import json
 import threading
 from http.client import HTTPConnection

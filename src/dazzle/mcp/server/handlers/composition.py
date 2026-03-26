@@ -11,8 +11,6 @@ Operations:
 - ``inspect_styles`` — extract computed CSS styles via Playwright for diagnosis
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import time

@@ -5,7 +5,7 @@ Provides a ``RequestRecorder`` wrapper around a mock app's request log with
 convenience methods for asserting request counts, methods, paths, and bodies.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from typing import Any
 

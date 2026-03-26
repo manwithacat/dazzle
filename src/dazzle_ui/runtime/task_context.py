@@ -6,7 +6,7 @@ provides task-specific information like outcomes, due dates, and
 assignee details.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime

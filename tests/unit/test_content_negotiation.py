@@ -1,7 +1,5 @@
 """Tests for Accept header content negotiation in route_generator (#348, #349, #356)."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 

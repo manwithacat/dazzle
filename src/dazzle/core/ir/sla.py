@@ -23,8 +23,6 @@ DSL Syntax (v0.25.0):
         set: escalated = true
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field

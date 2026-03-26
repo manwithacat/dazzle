@@ -6,8 +6,6 @@ created, updated, or deleted, and that ProcessManager correctly registers
 triggers and dispatches entity events.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4

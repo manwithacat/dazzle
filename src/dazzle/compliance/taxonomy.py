@@ -4,8 +4,6 @@ Loads and validates YAML taxonomy files (e.g. ISO 27001).
 Types are defined in models.py.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import yaml

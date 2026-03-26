@@ -6,7 +6,7 @@ override default mock behaviour with specific responses, error codes, delays,
 and sequenced multi-step flows.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

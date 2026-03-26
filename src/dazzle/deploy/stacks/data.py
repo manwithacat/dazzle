@@ -4,8 +4,6 @@ Data stack generator.
 Generates RDS (Postgres) and S3 bucket resources.
 """
 
-from __future__ import annotations
-
 from ..generator import CDKGeneratorResult, StackGenerator
 
 

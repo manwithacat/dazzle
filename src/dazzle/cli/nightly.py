@@ -5,8 +5,6 @@ Commands:
 - nightly run: Execute quality steps in parallel
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 

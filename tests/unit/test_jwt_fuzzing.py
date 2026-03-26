@@ -4,8 +4,6 @@ Property-based fuzzing tests for JWT authentication.
 Uses Hypothesis to generate random inputs and test crash resistance.
 """
 
-from __future__ import annotations
-
 import base64
 import json
 import os

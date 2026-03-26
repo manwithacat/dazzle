@@ -9,8 +9,6 @@ Both produce the same PageState model, so the agent doesn't know
 which backend it's using.
 """
 
-from __future__ import annotations
-
 import base64
 import logging
 import re

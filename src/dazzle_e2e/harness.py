@@ -12,6 +12,8 @@ Usage:
         assert result.passed
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -72,8 +74,8 @@ class FlowRunner:
 
     def __init__(
         self,
-        page: "Page",
-        adapter: "BaseAdapter",
+        page: Page,
+        adapter: BaseAdapter,
         fixtures: dict[str, FixtureSpec] | None = None,
         default_timeout: int = 5000,
     ) -> None:
@@ -94,7 +96,7 @@ class FlowRunner:
         self.default_timeout = default_timeout
         self._fixture_data: dict[str, Any] = {}
 
-    async def __aenter__(self) -> "FlowRunner":
+    async def __aenter__(self) -> FlowRunner:
         """Context manager entry."""
         return self
 
@@ -403,9 +405,9 @@ class FlowRunner:
 
 
 async def run_flow(
-    page: "Page",
+    page: Page,
     flow: FlowSpec,
-    adapter: "BaseAdapter",
+    adapter: BaseAdapter,
     fixtures: dict[str, FixtureSpec] | None = None,
 ) -> FlowResult:
     """
@@ -425,9 +427,9 @@ async def run_flow(
 
 
 async def run_testspec(
-    page: "Page",
+    page: Page,
     testspec: E2ETestSpec,
-    adapter: "BaseAdapter",
+    adapter: BaseAdapter,
     priority_filter: str | None = None,
     tag_filter: str | None = None,
 ) -> list[FlowResult]:

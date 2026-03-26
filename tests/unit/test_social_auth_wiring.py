@@ -5,8 +5,6 @@ Verifies that OAuth social login routes are correctly wired when
 configured in the manifest.
 """
 
-from __future__ import annotations
-
 import os
 from dataclasses import dataclass, field
 from unittest.mock import patch

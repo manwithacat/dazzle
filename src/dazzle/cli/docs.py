@@ -1,7 +1,5 @@
 """CLI sub-app for documentation generation, validation, and maintenance."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

@@ -12,8 +12,6 @@ before DSL generation. Operations:
 - refine_spec: Produce a structured refined spec from narrative
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import re

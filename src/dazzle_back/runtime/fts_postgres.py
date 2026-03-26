@@ -4,8 +4,6 @@ PostgreSQL full-text search backend.
 Uses tsvector, tsquery, and GIN indexes for text search.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Any
 

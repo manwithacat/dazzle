@@ -1,7 +1,5 @@
 """MCP handler for viewport assertion testing."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

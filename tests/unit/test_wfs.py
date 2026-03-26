@@ -1,7 +1,5 @@
 """Tests for Workflow Friction Score (WFS) computation (#375)."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 

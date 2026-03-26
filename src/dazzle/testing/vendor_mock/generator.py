@@ -5,8 +5,6 @@ Reads operations, foreign models, and auth specs from API packs and generates
 a fully functional mock server with stateful CRUD and auth validation.
 """
 
-from __future__ import annotations
-
 import hashlib
 import hmac
 import logging

@@ -1,7 +1,5 @@
 """Tests for CombinedStaticFiles — multi-directory static file serving."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

@@ -4,8 +4,6 @@ API packs tool handlers.
 Handles API pack listing, searching, details, and DSL generation.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

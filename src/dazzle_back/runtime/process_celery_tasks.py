@@ -11,8 +11,6 @@ Configuration:
     Run worker with: celery -A dazzle_back.runtime.process_celery_tasks worker -l info --beat
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import ssl

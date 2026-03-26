@@ -10,8 +10,6 @@ Usage::
     dazzle workshop --explore --port 9999
 """
 
-from __future__ import annotations
-
 import json
 import sqlite3
 import webbrowser

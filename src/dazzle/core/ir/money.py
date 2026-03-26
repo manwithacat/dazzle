@@ -26,7 +26,7 @@ Usage:
 See: dev_docs/architecture/event_first/money_representation.md
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward self-reference in class definitions
 
 from decimal import Decimal
 from typing import Any

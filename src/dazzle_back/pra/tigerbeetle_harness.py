@@ -5,7 +5,7 @@ Orchestrates TigerBeetle load generation, metrics collection,
 and result reporting.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

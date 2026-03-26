@@ -5,8 +5,6 @@ entity presence, notifications, and live updates.  Not enabled by default —
 callers may subclass or replace this subsystem.
 """
 
-from __future__ import annotations
-
 import logging
 
 from dazzle_back.runtime.subsystems import SubsystemContext

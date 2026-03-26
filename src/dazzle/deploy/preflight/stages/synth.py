@@ -4,8 +4,6 @@ Stage 1: CDK Synthesis.
 Runs 'cdk synth' to generate CloudFormation templates.
 """
 
-from __future__ import annotations
-
 import json
 import subprocess
 from pathlib import Path

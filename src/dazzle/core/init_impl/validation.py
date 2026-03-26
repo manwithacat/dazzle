@@ -5,8 +5,6 @@ Handles validation of project names against reserved keywords and
 conversion to valid Python module names.
 """
 
-from __future__ import annotations
-
 import re
 
 from ..errors import DazzleError

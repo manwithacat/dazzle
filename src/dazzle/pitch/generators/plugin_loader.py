@@ -5,7 +5,7 @@ Discovers project-local slide plugins from a ``pitch_slides/`` directory
 and registers their builder functions for use with ``ExtraSlideLayout.CUSTOM``.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import importlib.util
 import inspect

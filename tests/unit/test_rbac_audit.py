@@ -1,7 +1,5 @@
 """Tests for the RBAC audit trail types and sinks (Layer 3)."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

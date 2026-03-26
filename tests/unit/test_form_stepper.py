@@ -8,8 +8,6 @@ Covers:
 - Single-section surfaces render without stepper
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from dazzle.core import ir

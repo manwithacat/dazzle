@@ -4,8 +4,6 @@ Coordinates: taxonomy loading → evidence extraction → AuditSpec compilation.
 File output is handled by the CLI, not this module.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

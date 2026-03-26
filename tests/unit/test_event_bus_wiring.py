@@ -4,8 +4,6 @@ Verifies that entity lifecycle events from CRUD services are emitted
 to the EntityEventBus, enabling integration mapping triggers to fire.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 

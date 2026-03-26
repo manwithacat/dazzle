@@ -1,7 +1,5 @@
 """Tests for dazzle.db.verify — FK integrity checking."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock
 
 import pytest

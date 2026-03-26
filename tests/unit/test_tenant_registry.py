@@ -1,7 +1,5 @@
 """Tests for TenantRegistry — CRUD on public.tenants."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 import pytest

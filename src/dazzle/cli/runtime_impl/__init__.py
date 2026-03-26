@@ -13,8 +13,6 @@ The modules are:
 - docker.py: Docker/container utilities
 """
 
-from __future__ import annotations
-
 from .build import (
     build_api_command,
     build_command,

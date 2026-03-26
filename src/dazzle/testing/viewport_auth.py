@@ -4,8 +4,6 @@ Loads persona session cookies from the SessionManager store and converts
 them to Playwright-compatible cookie format for ``context.add_cookies()``.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from pathlib import Path

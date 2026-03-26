@@ -12,7 +12,7 @@ Usage:
     python -m dazzle.testing.test_runner --all-examples
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import logging

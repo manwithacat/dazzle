@@ -8,7 +8,7 @@ Each scenario configures a complete test run with:
 - Success criteria
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from collections.abc import Callable
 from dataclasses import dataclass, field

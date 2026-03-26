@@ -6,7 +6,7 @@ for multi-step experience flows. State is stored in signed cookies
 to prevent tampering.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import base64
 import hashlib

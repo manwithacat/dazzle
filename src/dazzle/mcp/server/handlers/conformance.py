@@ -7,8 +7,6 @@ Provides 4 operations:
 - monitor_status: return current conformance monitor state (if installed)
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from pathlib import Path

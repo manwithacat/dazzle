@@ -1,7 +1,5 @@
 """Tests for RBAC/UX fixes #581, #582, #583, #585."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 

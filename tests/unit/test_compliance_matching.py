@@ -4,8 +4,6 @@ Verifies that _match_compliance_pattern correctly identifies PII/financial
 fields while avoiding false positives on system and technical fields.
 """
 
-from __future__ import annotations
-
 from dazzle.mcp.event_first_tools import (
     _match_compliance_pattern,
     infer_compliance_requirements,

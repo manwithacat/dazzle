@@ -13,8 +13,6 @@ Design constraints:
   in-place so callers see final counts after generate_fixtures() returns.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from .models import ConformanceCase, ConformanceFixtures, ScopeOutcome, conformance_uuid

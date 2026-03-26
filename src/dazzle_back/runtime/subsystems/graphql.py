@@ -4,8 +4,6 @@ Strawberry/Ariadne GraphQL schema and route registration. Currently not
 wired into the main server but reserved for future use.
 """
 
-from __future__ import annotations
-
 import logging
 
 from dazzle_back.runtime.subsystems import SubsystemContext

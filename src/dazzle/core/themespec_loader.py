@@ -3,12 +3,12 @@ ThemeSpec persistence layer for DAZZLE design system.
 
 Handles reading and writing ThemeSpec configurations to themespec.yaml
 in the project root. ThemeSpec drives deterministic theme generation
+from __future__ import annotations  # required: forward reference
+
 from a small set of declarative parameters.
 
 Default location: {project_root}/themespec.yaml
 """
-
-from __future__ import annotations
 
 import logging
 from pathlib import Path

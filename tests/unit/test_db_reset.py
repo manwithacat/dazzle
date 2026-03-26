@@ -1,7 +1,5 @@
 """Tests for dazzle.db.reset — truncate entity tables in dependency order."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock
 
 import pytest

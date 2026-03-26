@@ -1,7 +1,5 @@
 """Tests for the static access matrix generator (Layer 1 RBAC)."""
 
-from __future__ import annotations
-
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.conditions import (
     Comparison,

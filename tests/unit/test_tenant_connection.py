@@ -1,7 +1,5 @@
 """Tests for tenant connection routing — context vars and schema resolution."""
 
-from __future__ import annotations
-
 import pytest
 
 

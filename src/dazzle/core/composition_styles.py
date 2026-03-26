@@ -5,8 +5,6 @@ actually renders, bridging the gap between "something looks wrong"
 (detected by geometry audit) and "here's the CSS fix" (remediation).
 """
 
-from __future__ import annotations
-
 import logging
 
 logger = logging.getLogger(__name__)

@@ -4,8 +4,6 @@ Contains functions for building workspace region data, computing aggregate
 metrics, and rendering workspace regions as HTML or JSON.
 """
 
-from __future__ import annotations
-
 import asyncio
 import csv
 import io

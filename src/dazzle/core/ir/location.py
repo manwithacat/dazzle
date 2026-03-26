@@ -4,8 +4,6 @@ Records the file, line, and column where a DSL construct was defined,
 enabling source-mapped error messages and IDE navigation.
 """
 
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict
 
 

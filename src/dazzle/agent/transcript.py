@@ -6,8 +6,6 @@ every step (observation, decision, action, result) and mission-specific
 observations (gaps, assertions, etc.).
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path

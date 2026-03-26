@@ -1,7 +1,5 @@
 """ASVS V8: Data Protection security tests."""
 
-from __future__ import annotations
-
 from dazzle.core import ir
 
 

@@ -12,7 +12,7 @@ The loader:
 4. Makes them available for invocation
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import importlib.util
 import logging

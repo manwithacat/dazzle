@@ -4,8 +4,6 @@ DNR MCP tool definitions.
 Contains Tool objects for backend, UI, and GraphQL BFF tools.
 """
 
-from __future__ import annotations
-
 try:
     from mcp.types import Tool
 except ImportError:

@@ -1,7 +1,5 @@
 """Tests for _set_factory_env in combined_server.py."""
 
-from __future__ import annotations
-
 import os
 from pathlib import Path
 from unittest.mock import patch

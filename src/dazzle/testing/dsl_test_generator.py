@@ -15,7 +15,7 @@ requiring a running server. Tests are derived from:
 Tests are versioned based on DSL hash for change tracking.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import hashlib
 import json

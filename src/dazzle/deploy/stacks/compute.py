@@ -4,8 +4,6 @@ Compute stack generator.
 Generates ECS Fargate cluster, ECR repository, and ALB.
 """
 
-from __future__ import annotations
-
 from ..generator import CDKGeneratorResult, StackGenerator
 
 

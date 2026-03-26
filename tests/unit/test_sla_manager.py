@@ -1,7 +1,5 @@
 """Tests for SLA runtime enforcement manager."""
 
-from __future__ import annotations
-
 import time
 from datetime import UTC
 from unittest.mock import AsyncMock

@@ -1,7 +1,5 @@
 """Tests for content-hash asset fingerprinting (#711)."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle_ui.runtime.asset_fingerprint import (

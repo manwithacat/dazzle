@@ -4,8 +4,6 @@ Classify test failures into actionable categories.
 Pure function — no side effects, no imports beyond stdlib.
 """
 
-from __future__ import annotations
-
 
 def classify_failure(
     test_id: str,

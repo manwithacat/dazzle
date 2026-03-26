@@ -5,8 +5,6 @@ Manage users and sessions directly against the auth database
 (PostgreSQL) without requiring a running server.
 """
 
-from __future__ import annotations
-
 import json
 import secrets
 import string

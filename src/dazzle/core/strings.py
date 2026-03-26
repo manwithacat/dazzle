@@ -4,8 +4,6 @@ String utility functions for DAZZLE.
 Provides common string transformations used across the codebase.
 """
 
-from __future__ import annotations
-
 import re
 
 # Irregular plurals that don't follow standard rules

@@ -1,7 +1,5 @@
 """Tests for the FK graph used in scope path validation."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core import ir

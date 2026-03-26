@@ -4,7 +4,7 @@ Metrics reporter for PRA.
 Generates machine-readable (JSON) and human-readable reports from metrics.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 from dataclasses import asdict, dataclass

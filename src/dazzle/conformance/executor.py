@@ -10,7 +10,7 @@ Requires:
   or ``database_url`` argument)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 import os

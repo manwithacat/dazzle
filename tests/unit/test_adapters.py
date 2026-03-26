@@ -1,7 +1,5 @@
 """Tests for external API adapter interface and error normalization."""
 
-from __future__ import annotations
-
 from typing import Any
 
 import pytest

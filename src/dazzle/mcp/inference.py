@@ -24,8 +24,6 @@ the unified Knowledge Graph at startup.  All runtime queries go through the
 KG — TOML is never read at query time (except by ``seed.py``).
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any, Literal
 

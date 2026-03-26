@@ -9,8 +9,6 @@ Commands:
 - rhythm lifecycle: Show rhythm lifecycle overview
 """
 
-from __future__ import annotations
-
 import typer
 
 rhythm_app = typer.Typer(

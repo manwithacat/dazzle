@@ -5,8 +5,6 @@ This module evaluates entity invariants at runtime during create/update operatio
 Invariants are cross-field constraints that must always hold true.
 """
 
-from __future__ import annotations
-
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any

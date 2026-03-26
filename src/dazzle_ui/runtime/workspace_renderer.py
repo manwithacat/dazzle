@@ -12,7 +12,7 @@ Stage → Layout mapping:
     COMMAND_CENTER  → 12-col grid with region spans
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from typing import Any
 

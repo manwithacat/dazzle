@@ -1,7 +1,5 @@
 """Shared CLI helpers to reduce boilerplate across CLI command modules."""
 
-from __future__ import annotations
-
 import json
 from collections.abc import Callable
 from pathlib import Path

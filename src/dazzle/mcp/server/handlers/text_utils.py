@@ -1,7 +1,5 @@
 """Text manipulation helpers for MCP handler functions."""
 
-from __future__ import annotations
-
 import re
 
 

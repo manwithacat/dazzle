@@ -1,7 +1,5 @@
 """Tests for _resolve_display_name — FK dict → display string resolution."""
 
-from __future__ import annotations
-
 from dazzle_back.runtime.workspace_rendering import (
     _inject_display_names,
     _resolve_display_name,

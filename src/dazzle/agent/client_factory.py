@@ -6,8 +6,6 @@ cookies from the session manager. Used by discovery agents and test
 runners to make authenticated requests as specific personas.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import httpx

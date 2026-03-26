@@ -6,8 +6,6 @@ Handles reading and writing composed process specifications to the
 inspection and editing.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import tempfile

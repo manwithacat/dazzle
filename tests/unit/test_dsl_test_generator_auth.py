@@ -1,7 +1,5 @@
 """Tests for auth lifecycle test generation (issue #245)."""
 
-from __future__ import annotations
-
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind

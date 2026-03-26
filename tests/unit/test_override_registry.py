@@ -8,8 +8,6 @@ Covers:
 - check_overrides() compatibility checking
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

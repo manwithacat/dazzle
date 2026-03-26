@@ -1,7 +1,5 @@
 """Tests for the Auth & Authorization detection agent (AA-01 through AA-08)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

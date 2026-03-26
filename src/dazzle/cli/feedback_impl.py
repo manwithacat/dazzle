@@ -5,8 +5,6 @@ Both the CLI (``dazzle feedback``) and MCP handler (``feedback`` tool)
 import from here.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

@@ -9,7 +9,7 @@ File key: ``{experience_name}.json`` (single-user) or
 ``{experience_name}_{user_hash}.json`` (multi-user with auth).
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import hashlib
 import json

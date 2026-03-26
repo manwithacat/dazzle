@@ -1,7 +1,5 @@
 """Tests for RBAC verifier types and comparison logic (Layer 2)."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

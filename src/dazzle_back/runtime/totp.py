@@ -4,8 +4,6 @@ TOTP (Time-based One-Time Password) implementation per RFC 6238.
 Pure-Python implementation using HMAC-SHA1 — no external dependencies.
 """
 
-from __future__ import annotations
-
 import base64
 import hashlib
 import hmac

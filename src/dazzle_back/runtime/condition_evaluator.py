@@ -11,8 +11,6 @@ This module re-exports evaluate_condition from there and adds the SQL
 filter generation helpers that are only needed in the backend.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from dazzle_ui.utils.condition_eval import (

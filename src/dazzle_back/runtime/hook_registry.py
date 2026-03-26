@@ -32,7 +32,7 @@ Supported hook points:
                                    ``(entity_name, entity_id, from_state, to_state)``
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import importlib.util
 import logging

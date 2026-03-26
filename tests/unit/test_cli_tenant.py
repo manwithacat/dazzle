@@ -1,7 +1,5 @@
 """Tests for dazzle tenant CLI commands."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner

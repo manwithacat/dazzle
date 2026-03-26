@@ -5,8 +5,6 @@ Infers expression result types from field type context and validates
 type compatibility of operations at specification time (not runtime).
 """
 
-from __future__ import annotations
-
 from dazzle.core.ir.expressions import (
     BinaryExpr,
     BinaryOp,

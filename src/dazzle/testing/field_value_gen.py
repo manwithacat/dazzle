@@ -12,8 +12,6 @@ Public API
   (used by test_runner which reads type names from JSON schema files)
 """
 
-from __future__ import annotations
-
 import re
 import uuid as _uuid_module
 from datetime import datetime

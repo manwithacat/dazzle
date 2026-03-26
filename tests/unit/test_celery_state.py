@@ -1,7 +1,5 @@
 """Tests for celery_state.py — ProcessStateStore JSON serialization."""
 
-from __future__ import annotations
-
 import json
 import uuid
 from datetime import date, datetime

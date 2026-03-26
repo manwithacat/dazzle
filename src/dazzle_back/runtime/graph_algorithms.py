@@ -1,7 +1,5 @@
 """Graph algorithm functions (#619 Phase 4). Pure functions on NetworkX graphs."""
 
-from __future__ import annotations
-
 from typing import Any
 
 try:

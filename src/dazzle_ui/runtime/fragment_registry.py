@@ -4,8 +4,6 @@ Provides a static registry of available fragment types so that agents
 and tooling can discover fragments without reading template files.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 FRAGMENT_REGISTRY: dict[str, dict[str, Any]] = {

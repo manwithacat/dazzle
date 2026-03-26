@@ -4,8 +4,6 @@ Tests for image processor.
 Tests thumbnail generation, optimization, and format conversion.
 """
 
-from __future__ import annotations
-
 from io import BytesIO
 from typing import Any
 

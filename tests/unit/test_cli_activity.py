@@ -1,7 +1,5 @@
 """Tests for CLI activity logging context manager and source column."""
 
-from __future__ import annotations
-
 import sqlite3
 from pathlib import Path
 from unittest.mock import patch

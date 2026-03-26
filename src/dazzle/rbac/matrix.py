@@ -10,7 +10,7 @@ Cedar semantics:
   - No rules at all on entity → PERMIT_UNPROTECTED (backward-compat warning)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import csv
 import io

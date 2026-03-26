@@ -3,8 +3,6 @@
 Handles demo blueprint proposal, saving, loading, and data generation.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from pathlib import Path

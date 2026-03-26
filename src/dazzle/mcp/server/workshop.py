@@ -12,7 +12,7 @@ Usage::
     dazzle workshop --info                   # print log path and exit
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import logging

@@ -5,8 +5,6 @@ Registers authentication routes (login/register/logout), social auth (OAuth2),
 optional_auth_dep) are set on SubsystemContext by DazzleBackendApp._setup_auth().
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

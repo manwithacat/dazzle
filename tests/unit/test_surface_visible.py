@@ -5,8 +5,6 @@ stores them as ConditionExpr in the IR, and that the condition evaluator can
 determine visibility at runtime.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core import ir

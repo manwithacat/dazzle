@@ -5,8 +5,6 @@ on CRUD services.  Falls back to ``NullEventFramework`` when the optional
 ``dazzle_back.events`` package is unavailable.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 from typing import Any

@@ -1,7 +1,5 @@
 """Backup and restore commands for Dazzle projects (#441)."""
 
-from __future__ import annotations
-
 import json
 import logging
 import os

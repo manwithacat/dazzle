@@ -4,8 +4,6 @@ Adapter examples and guides for GraphQL BFF layer.
 Contains example code for implementing external API adapters.
 """
 
-from __future__ import annotations
-
 # Available adapter patterns
 ADAPTERS = [
     {

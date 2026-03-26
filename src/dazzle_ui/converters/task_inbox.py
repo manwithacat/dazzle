@@ -5,7 +5,7 @@ Converts task_inbox workspace regions into UI component specifications
 for rendering a list of human tasks assigned to the current user.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass, field
 from typing import Any

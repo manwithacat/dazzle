@@ -13,8 +13,6 @@ DSL Syntax (v0.41.0):
       scope: [Customer, Task]
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

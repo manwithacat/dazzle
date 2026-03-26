@@ -1,7 +1,5 @@
 """Tests for TenantProvisioner — schema creation and table provisioning."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 from dazzle.tenant.provisioner import TenantProvisioner

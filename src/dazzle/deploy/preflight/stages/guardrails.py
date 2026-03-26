@@ -4,8 +4,6 @@ Stage 4: Policy Guardrails.
 Validates templates against cfn-guard policy rules.
 """
 
-from __future__ import annotations
-
 import json
 import shutil
 import subprocess

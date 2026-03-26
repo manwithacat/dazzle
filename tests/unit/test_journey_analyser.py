@@ -1,7 +1,5 @@
 """Tests for cross-persona pattern analyser."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
 from dazzle.agent.journey_analyser import analyse_sessions

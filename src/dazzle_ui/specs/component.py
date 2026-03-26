@@ -4,6 +4,8 @@ Component specification types for UISpec.
 Defines component structure and props schemas.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator

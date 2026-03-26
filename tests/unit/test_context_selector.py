@@ -8,8 +8,6 @@ Covers:
 - Region handler context_id propagation
 """
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 

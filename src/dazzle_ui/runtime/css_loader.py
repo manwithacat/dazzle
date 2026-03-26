@@ -8,8 +8,6 @@ Uses CSS Cascade Layers (@layer) for explicit ordering.
 Generates an inline source map for DevTools debugging.
 """
 
-from __future__ import annotations
-
 import base64
 import json
 from pathlib import Path

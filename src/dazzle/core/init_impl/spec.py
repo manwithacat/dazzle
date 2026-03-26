@@ -4,8 +4,6 @@ SPEC.md template generation.
 Creates the product specification template to guide founders in defining their project.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 

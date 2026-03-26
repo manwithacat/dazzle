@@ -1,7 +1,5 @@
 """Tests for the Multi-Tenancy detection agent (MT-01 through MT-07)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

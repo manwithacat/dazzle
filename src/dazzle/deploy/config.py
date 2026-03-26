@@ -4,7 +4,7 @@ Deployment configuration models for Dazzle Deploy.
 Configuration is loaded from dazzle.toml [deploy] section.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import tomllib
 from enum import StrEnum

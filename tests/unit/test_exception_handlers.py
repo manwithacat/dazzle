@@ -1,7 +1,5 @@
 """Unit tests for exception handlers — JSON serialization of validation errors."""
 
-from __future__ import annotations
-
 import json
 from typing import Annotated, Any
 from unittest.mock import MagicMock

@@ -4,8 +4,6 @@ Tests for BackendSpec types.
 Basic validation and construction tests to ensure specs work correctly.
 """
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle_back.specs import (

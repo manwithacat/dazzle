@@ -1,7 +1,5 @@
 """Tests for multi-source workspace regions (issue #322)."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl

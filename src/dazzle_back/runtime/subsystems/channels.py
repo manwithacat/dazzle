@@ -5,8 +5,6 @@ registers channel management REST endpoints, wires entity lifecycle events to
 channel send operations, and connects the process adapter SEND step handler.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

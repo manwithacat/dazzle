@@ -1,7 +1,5 @@
 """Tests for GraphSerializer — Cytoscape.js and D3 force-graph formats (#619)."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec

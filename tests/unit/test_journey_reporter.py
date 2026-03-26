@@ -1,7 +1,5 @@
 """Tests for the E2E journey HTML report renderer."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from pathlib import Path
 

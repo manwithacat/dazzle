@@ -9,8 +9,6 @@ Covers:
 - role_check in AND with comparison for SQL filter
 """
 
-from __future__ import annotations
-
 from dazzle_back.runtime.condition_evaluator import (
     condition_to_sql_filter,
     evaluate_condition,

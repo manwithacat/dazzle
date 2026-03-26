@@ -13,7 +13,7 @@ Implementations:
 - KafkaBus: Production Kafka implementation
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator, Awaitable, Callable

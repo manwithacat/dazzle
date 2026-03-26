@@ -9,7 +9,7 @@ Files in spec/ are loaded recursively, sorted alphabetically,
 and concatenated with source markers for LLM context.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 from dataclasses import dataclass

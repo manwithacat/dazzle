@@ -1,7 +1,5 @@
 """Tests for the safe cast registry."""
 
-from __future__ import annotations
-
 from dazzle_back.runtime.safe_casts import get_using_clause, is_safe_cast
 
 

@@ -7,8 +7,6 @@ operations with atomic status transitions and audit event logging.
 Requires: psycopg >= 3.2
 """
 
-from __future__ import annotations
-
 import json
 from datetime import UTC, datetime
 from enum import StrEnum

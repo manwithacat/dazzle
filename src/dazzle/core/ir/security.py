@@ -5,7 +5,7 @@ This module contains security-related IR types for configuring
 application security behavior.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward self-reference in class definitions
 
 from enum import StrEnum
 

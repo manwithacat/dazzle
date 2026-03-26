@@ -4,8 +4,6 @@ Initialises the LLM intent executor, job queue, trigger matcher, and REST
 routes for LLM-backed field classification and intent processing (v0.38.0).
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

@@ -1,7 +1,5 @@
 """Tests for dazzle build --target codegen pipeline (#284)."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

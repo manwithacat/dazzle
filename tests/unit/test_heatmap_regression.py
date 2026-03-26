@@ -1,8 +1,6 @@
 # tests/unit/test_heatmap_regression.py
 """Regression tests for heatmap display-name resolution, row IDs, and thresholds (#586)."""
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import MagicMock
 

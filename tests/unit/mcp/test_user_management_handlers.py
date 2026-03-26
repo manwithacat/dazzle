@@ -15,8 +15,6 @@ Tests all 9 handler operations:
 Requires PostgreSQL — run with: pytest -m e2e
 """
 
-from __future__ import annotations
-
 import importlib.util
 import os
 import string

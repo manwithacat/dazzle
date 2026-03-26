@@ -5,7 +5,7 @@ Reads AppSpec from DSL files and populates PitchContext with
 both user-specified PitchSpec content and auto-extracted DSL data.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 from dataclasses import dataclass, field

@@ -6,8 +6,6 @@ different user roles that can be impersonated during development
 and testing.
 """
 
-from __future__ import annotations
-
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field

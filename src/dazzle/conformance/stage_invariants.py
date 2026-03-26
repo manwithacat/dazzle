@@ -14,7 +14,7 @@ Three verifier functions test each boundary:
 Each verifier returns a ``StageVerification`` result with pass/fail + diagnostics.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass, field
 from typing import Any

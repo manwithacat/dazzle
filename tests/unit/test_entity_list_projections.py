@@ -1,7 +1,5 @@
 """Tests for build_entity_list_projections() — money field expansion and view projections."""
 
-from __future__ import annotations
-
 import dazzle.core.ir as ir
 from dazzle_back.runtime.app_factory import build_entity_list_projections
 

@@ -2,15 +2,16 @@
 Error types for DAZZLE DSL parsing, linking, and validation.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 class DazzleError(Exception):
     """Base exception for all DAZZLE errors."""
 
-    def __init__(self, message: str, context: Optional["ErrorContext"] = None):
+    def __init__(self, message: str, context: ErrorContext | None = None):
         self.message = message
         self.context = context
         super().__init__(self._format_message())

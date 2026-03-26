@@ -1,7 +1,5 @@
 """Tests for LSP hover and go-to-definition across all constructs (issue #235)."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

@@ -15,8 +15,6 @@ Usage:
     pytest -m "not conformance"    # exclude conformance tests
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 from typing import Any

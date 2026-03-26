@@ -1,7 +1,5 @@
 """Tests for Phase 1 workspace explorer — navigation plan + deterministic exploration."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

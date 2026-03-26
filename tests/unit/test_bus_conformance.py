@@ -9,8 +9,6 @@ Runs the same test cases against:
 Part of v0.18.0 Event-First Architecture (Issue #25, Phase I).
 """
 
-from __future__ import annotations
-
 import asyncio
 import os
 from collections.abc import AsyncGenerator

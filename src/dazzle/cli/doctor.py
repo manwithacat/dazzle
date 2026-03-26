@@ -4,8 +4,6 @@ DAZZLE Doctor — environment health check.
 Validates that the local environment has everything needed to run Dazzle.
 """
 
-from __future__ import annotations
-
 import importlib
 import shutil
 import subprocess

@@ -9,8 +9,6 @@ Tests covering:
 5. End-to-end: process with step effects triggers entity creation
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4

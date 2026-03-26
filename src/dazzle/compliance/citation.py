@@ -1,7 +1,5 @@
 """Deterministic citation validation for generated compliance documents."""
 
-from __future__ import annotations
-
 import re
 from typing import Any
 

@@ -7,6 +7,8 @@ Tracks:
 - AppSpec snapshot for diff comparison
 """
 
+from __future__ import annotations  # required: forward reference
+
 import hashlib
 import json
 from dataclasses import asdict, dataclass
@@ -46,7 +48,7 @@ class BuildState:
         return asdict(self)
 
     @staticmethod
-    def from_dict(data: dict[str, Any]) -> "BuildState":
+    def from_dict(data: dict[str, Any]) -> BuildState:
         """Create BuildState from dict."""
         return BuildState(**data)
 

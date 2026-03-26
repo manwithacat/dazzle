@@ -14,7 +14,7 @@ These rules are ENFORCED, not advisory. Violations require architectural
 revision, not workaround.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import re
 from dataclasses import dataclass, field

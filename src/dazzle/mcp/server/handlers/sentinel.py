@@ -4,8 +4,6 @@ MCP handler for the Sentinel failure-mode detection tool.
 Operations: scan, findings, suppress, status, history
 """
 
-from __future__ import annotations
-
 import json
 import time
 from pathlib import Path

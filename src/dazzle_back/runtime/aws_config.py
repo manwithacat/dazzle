@@ -5,7 +5,7 @@ Single source of truth for AWS credentials, region, and session management.
 Used by S3 storage, SES email, and any future AWS integrations.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import os
 from dataclasses import dataclass

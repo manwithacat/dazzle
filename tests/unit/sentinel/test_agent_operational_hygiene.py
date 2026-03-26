@@ -1,7 +1,5 @@
 """Tests for the Operational Hygiene detection agent (OP-01 through OP-08)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

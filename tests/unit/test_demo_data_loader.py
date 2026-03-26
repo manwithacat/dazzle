@@ -1,7 +1,5 @@
 """Tests for demo data loader."""
 
-from __future__ import annotations
-
 import csv
 import json
 from pathlib import Path

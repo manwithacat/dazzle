@@ -10,8 +10,6 @@ metadata that introspection cannot derive (categories, MCP equivalents,
 and hand-written enrichments like output URLs and prerequisite lists).
 """
 
-from __future__ import annotations
-
 import inspect
 from typing import Any
 

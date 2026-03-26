@@ -1,7 +1,5 @@
 """Compliance MCP handler — read-only compliance pipeline operations."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

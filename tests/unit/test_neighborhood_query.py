@@ -1,7 +1,5 @@
 """Tests for NeighborhoodQueryBuilder — recursive CTE SQL generation (#619)."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core.ir import GraphEdgeSpec

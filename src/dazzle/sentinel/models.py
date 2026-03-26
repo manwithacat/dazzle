@@ -4,8 +4,6 @@ Pydantic models for the SaaS Sentinel failure-mode detection system.
 All models use frozen=True per codebase convention.
 """
 
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime
 from enum import StrEnum

@@ -12,8 +12,6 @@ Design Documents:
 - dev_docs/RFC-001-design-decisions.md
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

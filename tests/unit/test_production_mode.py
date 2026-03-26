@@ -1,7 +1,5 @@
 """Tests for production mode helpers."""
 
-from __future__ import annotations
-
 import inspect
 import logging
 import os

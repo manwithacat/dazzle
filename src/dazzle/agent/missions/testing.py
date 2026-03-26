@@ -5,8 +5,6 @@ This replaces the hardcoded test loop in agent_e2e.py with a
 Mission object that plugs into the generic agent framework.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from ..core import Mission

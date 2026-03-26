@@ -4,8 +4,6 @@ Generates PostgreSQL recursive CTEs for graph neighborhood traversal.
 Pure SQL generation — no DB execution.
 """
 
-from __future__ import annotations
-
 from dazzle.core.ir import GraphEdgeSpec
 
 

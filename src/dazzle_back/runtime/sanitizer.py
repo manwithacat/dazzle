@@ -6,8 +6,6 @@ Jinja2 auto-escaping already protects SSR views, but API responses
 must also be safe for client-side rendering.
 """
 
-from __future__ import annotations
-
 import re
 
 # Pattern that matches all HTML tags

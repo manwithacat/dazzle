@@ -5,8 +5,6 @@ This module contains module fragment and module IR definitions
 representing parser output for single DSL files.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

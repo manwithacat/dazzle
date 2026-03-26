@@ -1,7 +1,5 @@
 """Tests for MCP tool call telemetry logging."""
 
-from __future__ import annotations
-
 import importlib.util
 import sys
 import time

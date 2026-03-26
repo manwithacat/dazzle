@@ -5,8 +5,6 @@ Re-exports quote_identifier from the runtime and provides query builders.
 All SQL in this package goes through these helpers for safety.
 """
 
-from __future__ import annotations
-
 
 def quote_id(name: str) -> str:
     """Quote a SQL identifier (table or column name).

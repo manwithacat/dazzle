@@ -5,8 +5,6 @@ Verifies that CRUD handlers properly authenticate requests via FastAPI's
 Depends() system using auth dependency factories from auth.py.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock

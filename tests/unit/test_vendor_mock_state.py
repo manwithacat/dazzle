@@ -1,7 +1,5 @@
 """Tests for vendor mock state store."""
 
-from __future__ import annotations
-
 from dazzle.testing.vendor_mock.data_generators import DataGenerator
 from dazzle.testing.vendor_mock.state import MockStateStore
 

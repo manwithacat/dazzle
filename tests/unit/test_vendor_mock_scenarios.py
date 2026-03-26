@@ -1,7 +1,5 @@
 """Tests for vendor mock scenario engine."""
 
-from __future__ import annotations
-
 import asyncio
 import time
 from pathlib import Path

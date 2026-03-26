@@ -7,8 +7,6 @@ Verifies that TransitionValidator correctly handles:
 - has_grant() expression guard evaluation (#653)
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 from uuid import uuid4
 

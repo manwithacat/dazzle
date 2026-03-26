@@ -7,8 +7,6 @@ enabling model definitions, job intents, and configuration.
 Part of Issue #33: LLM Jobs as First-Class Events.
 """
 
-from __future__ import annotations
-
 from decimal import Decimal
 from enum import StrEnum
 

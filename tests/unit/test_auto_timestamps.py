@@ -1,7 +1,5 @@
 """Tests for auto_add / auto_update timestamp injection (#132)."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from uuid import UUID
 

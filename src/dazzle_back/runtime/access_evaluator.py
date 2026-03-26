@@ -10,8 +10,6 @@ Evaluates EntityAccessSpec from BackendSpec at runtime, supporting:
 - Comparison operators: =, !=, >, <, >=, <=, in, not in
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from dazzle.core.access import AccessDecision, AccessRuntimeContext

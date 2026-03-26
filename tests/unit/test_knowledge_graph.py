@@ -1,7 +1,5 @@
 """Tests for the Knowledge Graph MCP module."""
 
-from __future__ import annotations
-
 import importlib.util
 import sys
 from pathlib import Path

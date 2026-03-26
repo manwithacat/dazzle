@@ -1,7 +1,5 @@
 """Tests for the composition visual evaluation pipeline."""
 
-from __future__ import annotations
-
 import importlib.util
 import json
 from pathlib import Path

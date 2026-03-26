@@ -13,6 +13,8 @@ Usage:
         print(f"Fix {item.wcag_criterion} in {item.appspec_location}")
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass, field
 
 from dazzle.core.ir import AppSpec, EntitySpec, SurfaceSpec, WorkspaceSpec

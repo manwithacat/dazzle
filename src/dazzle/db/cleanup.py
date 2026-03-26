@@ -1,7 +1,5 @@
 """Database cleanup: find and remove FK orphans."""
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

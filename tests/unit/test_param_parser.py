@@ -1,7 +1,5 @@
 """Tests for param declaration and param() reference parsing."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl

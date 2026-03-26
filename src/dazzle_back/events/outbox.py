@@ -11,7 +11,7 @@ but event publishing fails (or vice versa).
 Rule 1: No dual writes (DB and bus must not drift)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime

@@ -1,7 +1,5 @@
 """ASVS V5: Validation, Sanitization and Encoding security tests."""
 
-from __future__ import annotations
-
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 

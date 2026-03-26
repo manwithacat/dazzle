@@ -1,7 +1,5 @@
 """Tests for vendor mock webhook dispatcher."""
 
-from __future__ import annotations
-
 import base64
 import hashlib
 import hmac as hmac_mod

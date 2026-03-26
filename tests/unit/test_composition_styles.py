@@ -1,7 +1,5 @@
 """Tests for the composition style inspection module."""
 
-from __future__ import annotations
-
 import importlib.util
 import json
 from typing import Any

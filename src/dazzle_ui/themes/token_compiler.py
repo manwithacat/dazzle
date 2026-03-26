@@ -13,8 +13,6 @@ Token axes:
 - palette: blue | green | purple | neutral
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 # Spacing presets

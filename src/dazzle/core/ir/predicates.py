@@ -19,7 +19,7 @@ ScopePredicate is a Pydantic discriminated union over all node types; use it
 as the field type wherever a predicate tree is stored.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Annotated, Literal

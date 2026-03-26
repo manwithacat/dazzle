@@ -1,7 +1,5 @@
 """Tests for scope via clause — junction-table access control (#530)."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core.ir.conditions import ConditionExpr, ViaBinding, ViaCondition

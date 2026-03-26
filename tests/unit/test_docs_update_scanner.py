@@ -1,7 +1,5 @@
 """Tests for dazzle.docs_update.scanner — mocked ``gh`` subprocess."""
 
-from __future__ import annotations
-
 import json
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch

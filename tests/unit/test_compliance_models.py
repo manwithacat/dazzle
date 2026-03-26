@@ -1,7 +1,5 @@
 """Tests for compliance Pydantic models."""
 
-from __future__ import annotations
-
 from dazzle.compliance.models import (
     AuditSpec,
     AuditSummary,

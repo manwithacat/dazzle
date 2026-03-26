@@ -1,7 +1,5 @@
 """Tests for LLM job queue, token bucket, and semaphore."""
 
-from __future__ import annotations
-
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 

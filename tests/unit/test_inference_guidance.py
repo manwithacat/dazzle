@@ -1,7 +1,5 @@
 """Tests for modeling guidance in the inference KB."""
 
-from __future__ import annotations
-
 import importlib.util
 import sys
 from pathlib import Path

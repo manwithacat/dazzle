@@ -8,7 +8,7 @@ python-pptx is an optional dependency. The generator checks for
 its availability at runtime and returns a clear error if missing.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 from collections.abc import Callable

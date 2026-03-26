@@ -6,8 +6,6 @@ connects the process adapter's SEND handler to ChannelManager, and registers
 schedule-based triggers.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

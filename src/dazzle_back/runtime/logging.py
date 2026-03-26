@@ -14,8 +14,6 @@ Log Format Design:
 - Designed for agents to tail/read without human preprocessing
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import os

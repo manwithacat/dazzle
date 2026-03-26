@@ -6,8 +6,6 @@ MetaData bridge as ``target_metadata`` so that ``--autogenerate`` can diff
 the DSL schema against the live database.
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import sys

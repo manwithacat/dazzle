@@ -1,7 +1,5 @@
 """HTML report renderer for E2E journey testing results."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader

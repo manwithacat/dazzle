@@ -4,8 +4,6 @@ Messaging stack generator.
 Generates SQS queues and EventBridge event buses.
 """
 
-from __future__ import annotations
-
 from ..generator import CDKGeneratorResult, StackGenerator
 
 

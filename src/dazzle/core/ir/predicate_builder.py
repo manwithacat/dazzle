@@ -18,8 +18,6 @@ Mapping rules
 - Compound AND / OR / NOT           → :class:`BoolComposite` (via ``make()``)
 """
 
-from __future__ import annotations
-
 from dazzle.core.ir.conditions import (
     ComparisonOperator,
     ConditionExpr,

@@ -8,7 +8,7 @@ marking events as processed after successful handling.
 Rule 2: At-least-once delivery is assumed; consumers must be idempotent
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 from collections.abc import Awaitable, Callable

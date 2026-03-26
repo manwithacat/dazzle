@@ -6,7 +6,7 @@ vendor-appropriate HMAC signing (SumSub, Stripe, DocuSeal, Xero), automatic
 triggering from scenario steps, and delivery tracking.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import base64

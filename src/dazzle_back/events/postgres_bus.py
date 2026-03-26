@@ -15,8 +15,6 @@ Tables created:
 - _dazzle_dlq: Dead letter queue for failed events
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 import logging

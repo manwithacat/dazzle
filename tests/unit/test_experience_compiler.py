@@ -1,7 +1,5 @@
 """Tests for experience compiler — ExperienceSpec + state → ExperienceContext."""
 
-from __future__ import annotations
-
 from dazzle.core.ir import AppSpec, DomainSpec, EntitySpec, FieldSpec, FieldType, SurfaceSpec
 from dazzle.core.ir.experiences import (
     ExperienceSpec,

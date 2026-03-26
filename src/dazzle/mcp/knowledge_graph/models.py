@@ -5,7 +5,7 @@ Contains all dataclasses used across the knowledge graph module:
 entities, relations, path results, and activity events.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import sqlite3

@@ -4,8 +4,6 @@ Derives a list of ConformanceCase objects from an AppSpec using Cedar-style
 three-rule evaluation: FORBID > PERMIT > default-deny.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from .models import ConformanceCase, ScopeOutcome

@@ -4,8 +4,6 @@ Tests for full-text search functionality.
 Tests PostgreSQL tsvector/GIN index creation, search queries, and snippets.
 """
 
-from __future__ import annotations
-
 import os
 from typing import Any
 from uuid import uuid4

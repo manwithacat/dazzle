@@ -1,7 +1,5 @@
 """Tests for workshop data layer and widgets."""
 
-from __future__ import annotations
-
 import sqlite3
 
 

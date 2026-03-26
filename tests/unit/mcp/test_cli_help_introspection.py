@@ -4,8 +4,6 @@ Verifies that the typer app tree is walked correctly and the public
 ``get_cli_help()`` API keeps its backward-compatible shape.
 """
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.mcp.cli_help import (

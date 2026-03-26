@@ -4,6 +4,8 @@ Resolver protocol + implementations (subdomain, header, session).
 TenantMiddleware class with registry cache.
 """
 
+from __future__ import annotations  # required: forward reference
+
 import logging
 import os
 import time

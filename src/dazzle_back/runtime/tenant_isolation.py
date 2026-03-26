@@ -4,8 +4,6 @@ The middleware sets the current tenant schema, and pg_backend.connection()
 reads it to SET search_path on each connection lease.
 """
 
-from __future__ import annotations
-
 from contextvars import ContextVar, Token
 
 _current_tenant_schema: ContextVar[str | None] = ContextVar("_current_tenant_schema", default=None)

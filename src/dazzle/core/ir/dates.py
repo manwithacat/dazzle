@@ -11,7 +11,7 @@ Examples:
     - end_date < start_date + 30d (invariant)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: DateExpr forward-references in DateArithmeticExpr
 
 from enum import StrEnum
 from typing import Annotated, Union

@@ -1,7 +1,5 @@
 """Tests for viewport auto-fix suggestions."""
 
-from __future__ import annotations
-
 from dazzle.testing.viewport import ViewportAssertion, ViewportAssertionResult
 from dazzle.testing.viewport_suggestions import (
     SUGGESTION_TABLE,

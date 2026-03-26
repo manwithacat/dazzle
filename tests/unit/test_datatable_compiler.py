@@ -1,7 +1,5 @@
 """Tests for DataTable UXSpec → template context wiring."""
 
-from __future__ import annotations
-
 from dazzle.core import ir
 from dazzle.core.ir import FieldModifier, FieldTypeKind, SurfaceMode
 from dazzle_ui.converters.template_compiler import compile_surface_to_context

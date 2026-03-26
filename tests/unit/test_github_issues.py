@@ -1,7 +1,5 @@
 """Tests for GitHub issue creation helper and its integration points."""
 
-from __future__ import annotations
-
 import json
 import sys
 from unittest.mock import MagicMock, patch

@@ -8,8 +8,6 @@ Commands:
 - story generate-tests: Generate test designs from accepted stories
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

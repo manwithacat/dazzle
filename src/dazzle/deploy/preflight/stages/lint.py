@@ -4,8 +4,6 @@ Stage 3: Static Linting.
 Runs cfn-lint on synthesized CloudFormation templates.
 """
 
-from __future__ import annotations
-
 import json
 import shutil
 import subprocess

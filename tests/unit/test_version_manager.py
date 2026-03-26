@@ -8,8 +8,6 @@ Tests cover:
 - Version hash computation
 """
 
-from __future__ import annotations
-
 import asyncio
 import tempfile
 from pathlib import Path

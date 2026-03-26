@@ -1,7 +1,5 @@
 """Tests for OpenAPI to pack TOML importer."""
 
-from __future__ import annotations
-
 from dazzle.api_kb.openapi_importer import import_from_openapi, scaffold_blank
 
 

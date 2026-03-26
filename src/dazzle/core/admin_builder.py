@@ -7,8 +7,6 @@ Entities are profile-gated: some only appear for STANDARD and STRICT profiles.
 Part of Issue #686 — universal admin workspace for auth-enabled Dazzle apps.
 """
 
-from __future__ import annotations
-
 from dazzle.core import ir
 from dazzle.core.errors import LinkError
 from dazzle.core.ir.admin_entities import ADMIN_ENTITY_DEFS

@@ -6,8 +6,6 @@ Covers:
 - list_tasks and get_task endpoints including process_context in responses
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 

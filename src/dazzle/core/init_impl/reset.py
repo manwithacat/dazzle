@@ -4,8 +4,6 @@ Project reset and verification.
 Handles resetting projects to example state and verifying project structure.
 """
 
-from __future__ import annotations
-
 import shutil
 import subprocess
 from pathlib import Path

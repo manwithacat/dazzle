@@ -1,7 +1,5 @@
 """Tests for tree/hierarchy workspace region display mode (#565)."""
 
-from __future__ import annotations
-
 import textwrap
 from pathlib import Path
 

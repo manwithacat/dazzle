@@ -4,8 +4,6 @@ Model generator - generates Pydantic models from EntitySpec.
 This module creates dynamic Pydantic models at runtime from BackendSpec entity definitions.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from decimal import Decimal

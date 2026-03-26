@@ -4,8 +4,6 @@ Dazzle info command.
 Show Dazzle runtime installation status and available features.
 """
 
-from __future__ import annotations
-
 import typer
 
 

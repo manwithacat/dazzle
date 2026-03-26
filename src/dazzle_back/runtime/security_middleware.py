@@ -7,6 +7,8 @@ Provides configurable security based on security profile:
 - Request origin validation
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass
 from typing import Any
 

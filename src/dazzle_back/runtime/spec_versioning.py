@@ -7,7 +7,7 @@ between versions for the Founder Console changes timeline.
 Tables: spec_versions (in ops_database)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import hashlib
 import json

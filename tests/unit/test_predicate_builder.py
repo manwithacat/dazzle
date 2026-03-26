@@ -1,7 +1,5 @@
 """Tests for the ConditionExpr → ScopePredicate converter."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core.ir.conditions import (

@@ -1,7 +1,5 @@
 """Tests for AppSpec-based evidence extraction."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 from dazzle.compliance.evidence import extract_evidence

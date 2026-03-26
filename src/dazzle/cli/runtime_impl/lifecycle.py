@@ -4,8 +4,6 @@ Dazzle lifecycle commands.
 Commands for managing running Dazzle Docker containers: stop, rebuild, logs, status.
 """
 
-from __future__ import annotations
-
 import subprocess
 from pathlib import Path
 

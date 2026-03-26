@@ -4,7 +4,7 @@ Workspace specification types for UISpec.
 Defines workspaces, layouts, and routes.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Any, Literal

@@ -3,7 +3,7 @@
 These are pure data types — no browser or LLM dependencies.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from datetime import datetime
 from enum import StrEnum

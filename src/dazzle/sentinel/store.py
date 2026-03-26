@@ -5,8 +5,6 @@ Persists scan results to `.dazzle/sentinel/` following the same pattern
 as `.dazzle/discovery/`.
 """
 
-from __future__ import annotations
-
 import json
 import time
 from pathlib import Path

@@ -5,6 +5,8 @@ Caches computed layout plans to speed up incremental builds.
 Invalidates cache when DSL files or layout engine code changes.
 """
 
+from __future__ import annotations  # required: forward reference
+
 import hashlib
 import json
 from pathlib import Path

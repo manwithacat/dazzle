@@ -4,7 +4,7 @@ All functions are pure (no IO). The scorer parses HTML into a lightweight tree
 and checks structural, semantic, and story dimensions against the spec.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import re
 from dataclasses import dataclass, field

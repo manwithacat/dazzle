@@ -1,7 +1,5 @@
 """Tests for vendor mock data generators."""
 
-from __future__ import annotations
-
 import re
 from datetime import date, datetime
 

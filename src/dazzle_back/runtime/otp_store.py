@@ -4,8 +4,6 @@ OTP (One-Time Password) store for email verification codes.
 Stores hashed OTP codes in PostgreSQL with expiry and attempt limiting.
 """
 
-from __future__ import annotations
-
 import hashlib
 import hmac
 import secrets

@@ -5,8 +5,6 @@ Called at server startup to idempotently upsert rows generated
 from entity ``seed_template`` specs.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 from uuid import uuid4

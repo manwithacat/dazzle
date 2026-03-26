@@ -11,7 +11,7 @@ Temporal Mapping:
 - CompensationSpec -> Saga compensation activity
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: ProcessStepSpec self-reference
 
 from enum import StrEnum
 from typing import Any

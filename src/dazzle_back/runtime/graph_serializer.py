@@ -4,8 +4,6 @@ Transforms flat entity lists into Cytoscape.js or D3 force-graph JSON.
 Pure data transformation — no DB access, no request handling.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from dazzle.core.ir import GraphEdgeSpec, GraphNodeSpec

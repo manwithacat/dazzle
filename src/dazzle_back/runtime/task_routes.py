@@ -8,6 +8,8 @@ These routes provide:
 - Task reassignment
 """
 
+from __future__ import annotations  # required: forward reference
+
 import logging
 from datetime import UTC
 from typing import Any

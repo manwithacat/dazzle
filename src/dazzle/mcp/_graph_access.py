@@ -5,8 +5,6 @@ Centralises the try/except-import pattern so that modules outside
 MCP server being initialised.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 

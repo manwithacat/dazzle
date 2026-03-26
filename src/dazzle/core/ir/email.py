@@ -8,8 +8,6 @@ This module defines the event schema for the two-stream email model:
 Design Document: dev_docs/architecture/event_first/Dazzle-Email-Integration-Spec-v1.md
 """
 
-from __future__ import annotations
-
 from datetime import datetime
 from enum import StrEnum
 

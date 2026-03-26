@@ -9,6 +9,8 @@ When ``DAZZLE_TEST_SECRET`` is set, all routes require the
 ``X-Test-Secret`` header to match (#458).
 """
 
+from __future__ import annotations  # required: forward reference
+
 import json
 import logging
 import os

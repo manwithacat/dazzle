@@ -5,8 +5,6 @@ Tests the _extract_cedar_row_filters and _extract_condition_filters functions
 that convert Cedar permission rules to SQL-compatible row filters.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from dazzle_back.runtime.route_generator import (

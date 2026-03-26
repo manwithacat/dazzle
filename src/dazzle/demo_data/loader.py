@@ -5,7 +5,7 @@ Loads seed CSV/JSONL files into a running Dazzle instance via the REST API.
 Handles entity dependency ordering, authentication, and conflict detection.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import csv
 import json

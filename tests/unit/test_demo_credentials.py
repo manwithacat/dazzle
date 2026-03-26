@@ -1,7 +1,5 @@
 """Tests for demo propose credential generation."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 

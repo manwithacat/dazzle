@@ -1,7 +1,5 @@
 """Tests for the sitespec MCP handlers."""
 
-from __future__ import annotations
-
 import importlib.util
 import json
 import sys

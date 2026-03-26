@@ -4,8 +4,6 @@ Writes one TOML file per entity into the output directory.
 Uses manual TOML formatting to avoid external dependencies.
 """
 
-from __future__ import annotations
-
 from collections import defaultdict
 from pathlib import Path
 from typing import Any

@@ -12,7 +12,7 @@ Usage:
     cookies = manager.get_cookies("admin")  # {"dazzle_session": "..."}
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import logging

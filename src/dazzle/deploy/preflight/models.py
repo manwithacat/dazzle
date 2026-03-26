@@ -5,7 +5,7 @@ These models define the structure of preflight configuration,
 stage results, findings, and the final report.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass, field
 from enum import StrEnum

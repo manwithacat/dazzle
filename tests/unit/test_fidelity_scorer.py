@@ -10,8 +10,6 @@ Tests cover:
 - Story loading fallback for score_appspec_fidelity
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 from dazzle.core.fidelity_scorer import (

@@ -4,8 +4,6 @@ Converts raw sitespec dicts into typed Pydantic context models
 that are passed to Jinja2 templates for rendering.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from typing import Any
 

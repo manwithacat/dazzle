@@ -1,7 +1,5 @@
 """Tests for review surface mode (mode: review)."""
 
-from __future__ import annotations
-
 from dazzle.core.ir import (
     AppSpec,
     DomainSpec,

@@ -1,7 +1,5 @@
 """Tests for dazzle db status/verify/reset/cleanup CLI commands."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 from typer.testing import CliRunner

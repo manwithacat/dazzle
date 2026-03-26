@@ -4,6 +4,8 @@ OAuth2 Social Login for mobile clients.
 Supports Google, Apple, and GitHub authentication via ID tokens or OAuth codes.
 """
 
+from __future__ import annotations  # required: forward reference
+
 import logging
 import secrets
 from dataclasses import dataclass

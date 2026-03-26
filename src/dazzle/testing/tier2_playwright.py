@@ -29,7 +29,7 @@ Auth Elements:
   data-dazzle-persona="persona_id"
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import re
 from dataclasses import dataclass, field
@@ -687,7 +687,6 @@ Note:
     - Environment: export PLAYWRIGHT_BASE_URL=http://localhost:3000
 """
 
-from __future__ import annotations
 
 import pytest
 from playwright.sync_api import Page, expect

@@ -10,7 +10,7 @@ Implements the transform operations defined in DataProductTransform:
 Design Document: dev_docs/architecture/event_first/EventSystemStabilityRules-v1.md
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import hashlib
 import logging

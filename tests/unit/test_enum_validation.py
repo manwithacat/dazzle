@@ -1,7 +1,5 @@
 """Tests for enum field validation (#130)."""
 
-from __future__ import annotations
-
 import pytest
 from pydantic import ValidationError
 

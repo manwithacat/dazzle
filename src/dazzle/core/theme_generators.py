@@ -5,8 +5,6 @@ Generates design tokens from ThemeSpec section models.
 All outputs are flat dicts of token name -> CSS value string.
 """
 
-from __future__ import annotations
-
 from .ir.themespec import (
     TYPOGRAPHY_RATIO_VALUES,
     DensityEnum,

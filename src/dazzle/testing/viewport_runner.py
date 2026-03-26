@@ -7,7 +7,7 @@ Separate from :mod:`dazzle.testing.e2e_runner` — viewport assertions have no
 flows, steps, fixtures, or state.  They assert CSS properties only.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import time

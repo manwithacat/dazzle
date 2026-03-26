@@ -8,8 +8,6 @@ Covers:
 - Sort spec → repo format conversion
 """
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 

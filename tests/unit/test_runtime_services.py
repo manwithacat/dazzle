@@ -1,7 +1,5 @@
 """Tests for RuntimeServices container."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 from dazzle_back.runtime.services import RuntimeServices

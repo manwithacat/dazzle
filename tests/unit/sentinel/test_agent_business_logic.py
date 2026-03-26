@@ -1,7 +1,5 @@
 """Tests for the Business Logic detection agent (BL-01 through BL-08)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

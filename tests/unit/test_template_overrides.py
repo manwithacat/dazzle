@@ -8,8 +8,6 @@ Covers:
 - Semantic block tags in layout templates
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

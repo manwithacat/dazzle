@@ -9,8 +9,6 @@ v0.7.1: Added for LLM cognition
 v0.10.3: Added ArchetypeKind for semantic archetypes (settings, tenant)
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

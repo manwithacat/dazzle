@@ -4,7 +4,7 @@ Module linker implementation for DAZZLE.
 Handles dependency resolution, symbol table building, and reference validation.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from collections import deque
 from dataclasses import dataclass, field

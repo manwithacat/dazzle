@@ -4,8 +4,6 @@ Unit tests for JWT authentication.
 Tests for jwt_auth.py, jwt_middleware.py, and token_store.py.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 

@@ -19,8 +19,6 @@ HLESS RecordKind Mappings:
 Part of Issue #33: LLM Jobs as First-Class Events.
 """
 
-from __future__ import annotations
-
 from .fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from .hless import (
     DerivationLineage,

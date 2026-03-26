@@ -4,8 +4,6 @@ Validates that the audit: directive in entity definitions is correctly
 parsed into AuditConfig on EntitySpec.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl

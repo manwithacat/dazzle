@@ -5,6 +5,8 @@ Analyzes AppSpec IR to infer infrastructure needs without requiring
 explicit infrastructure declarations in the DSL.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass
 
 from . import ir

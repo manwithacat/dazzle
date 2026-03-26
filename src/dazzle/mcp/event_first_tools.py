@@ -7,7 +7,7 @@ for event-driven architecture support.
 Part of v0.18.0 Event-First Architecture (Issue #25, Phase H).
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 import logging

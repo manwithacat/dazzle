@@ -1,7 +1,5 @@
 """Tests for surface conditional field visibility (when_expr) (#363)."""
 
-from __future__ import annotations
-
 from dazzle_ui.runtime.template_context import FieldContext
 from dazzle_ui.utils.expression_eval import evaluate_when_expr
 

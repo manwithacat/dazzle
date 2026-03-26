@@ -5,7 +5,7 @@ runtime, producing ``ExecutionResult`` values and optionally recording
 ``AIJob`` entities for cost tracking.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

@@ -4,8 +4,6 @@ Unit tests for demo data generation (v0.8.5).
 Tests the Faker-based data generator and data loader.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

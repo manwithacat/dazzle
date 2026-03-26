@@ -4,8 +4,6 @@ Tests for EntitySpec -> SQLAlchemy MetaData bridge.
 Verifies type mapping, FK handling, self-references, and topological ordering.
 """
 
-from __future__ import annotations
-
 from sqlalchemy import JSON, Boolean, Date, DateTime, Float, Integer, Text, Uuid
 
 from dazzle_back.runtime.sa_schema import (

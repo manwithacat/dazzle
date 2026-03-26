@@ -21,8 +21,6 @@ DSL Syntax (v0.25.0):
         rejected -> rejected
 """
 
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from .conditions import ConditionExpr

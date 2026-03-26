@@ -8,8 +8,6 @@ Usage:
     python -m dazzle.mcp.knowledge_graph.cli deps file:src/dazzle/core/parser.py
 """
 
-from __future__ import annotations
-
 import argparse
 import json
 import sys

@@ -5,7 +5,7 @@ Implements weighted key selection to simulate hot partitions where
 a small percentage of keys receive a disproportionate amount of traffic.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import random
 from dataclasses import dataclass, field

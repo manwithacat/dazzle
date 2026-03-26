@@ -1,7 +1,5 @@
 """Tests for LSP document symbol positions (issue #233)."""
 
-from __future__ import annotations
-
 
 class TestScanDocumentSymbols:
     """_scan_document_symbols finds constructs with correct positions."""

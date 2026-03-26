@@ -9,8 +9,6 @@ Wraps Alembic's programmatic API for managing PostgreSQL schema migrations:
 - history:  Show migration history
 """
 
-from __future__ import annotations
-
 import asyncio
 import os
 from pathlib import Path

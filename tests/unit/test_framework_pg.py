@@ -7,8 +7,6 @@ Tests cover:
 - Connection handling for postgres mode
 """
 
-from __future__ import annotations
-
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 

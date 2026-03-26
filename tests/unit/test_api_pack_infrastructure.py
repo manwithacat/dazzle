@@ -1,7 +1,5 @@
 """Tests for API pack infrastructure manifest."""
 
-from __future__ import annotations
-
 from dazzle.api_kb import load_pack
 from dazzle.api_kb.loader import (
     DockerSpec,

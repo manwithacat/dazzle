@@ -6,8 +6,6 @@ Provides the PostgreSQL database backend — the sole runtime backend.
 Requires: psycopg[binary]>=3.2
 """
 
-from __future__ import annotations
-
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager

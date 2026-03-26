@@ -1,7 +1,5 @@
 """Tests for experience flow entity orchestration (context, saves_to, prefill, when)."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl

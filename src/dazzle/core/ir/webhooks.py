@@ -20,8 +20,6 @@ DSL Syntax (v0.25.0):
         backoff: exponential
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

@@ -1,7 +1,5 @@
 """Tests for the Integration & Dependency detection agent (ID-01 through ID-08)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

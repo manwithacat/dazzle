@@ -11,6 +11,8 @@ Available variants:
 - comfortable: More whitespace for readability (1.25x spacing)
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any

@@ -4,8 +4,6 @@ Tests for query builder.
 Tests filter parsing, SQL generation, and sorting.
 """
 
-from __future__ import annotations
-
 from uuid import UUID
 
 import pytest

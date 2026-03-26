@@ -4,8 +4,6 @@ Tracks SLA timers in memory and runs a periodic background task to detect
 tier transitions and execute breach actions.
 """
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

@@ -10,8 +10,6 @@ at link time. Semantic hints (cadence, action, expects) are free-form
 strings interpreted by AI agents per domain.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 from typing import Literal
 

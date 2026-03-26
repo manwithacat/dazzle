@@ -8,8 +8,6 @@ This module retains:
 - ``get_site_js()`` (serves the site.js static file)
 """
 
-from __future__ import annotations
-
 import json
 
 from dazzle_ui.runtime.task_context import TaskContext

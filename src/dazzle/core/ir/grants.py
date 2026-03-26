@@ -14,8 +14,6 @@ DSL Syntax (v0.42.0):
         max_duration: 90d
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 from typing import Any
 

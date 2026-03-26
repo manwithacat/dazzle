@@ -1,7 +1,5 @@
 """Tests for the entity completeness mission."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 

@@ -1,7 +1,5 @@
 """Tests for pitch deck generators."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

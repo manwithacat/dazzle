@@ -4,7 +4,7 @@ Query builder for advanced filtering and sorting.
 Provides SQL generation for filter operators, sorting, and search.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: FilterCondition forward self-reference
 
 import dataclasses
 import re

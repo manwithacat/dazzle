@@ -4,8 +4,6 @@ Provides list/get/triage/resolve operations for the human->agent feedback loop.
 Calls the running server's CRUD endpoints via the shared feedback_impl module.
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 from pathlib import Path

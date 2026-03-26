@@ -4,8 +4,6 @@ Rhythm tool handlers.
 Handles rhythm listing, retrieval, evaluation, coverage, and proposal.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any, Literal

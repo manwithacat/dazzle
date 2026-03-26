@@ -1,7 +1,5 @@
 """Unit tests for CurlTestGenerator — bash/curl smoke test generation."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core.ir import (

@@ -5,8 +5,6 @@ Provides ``dazzle mock`` command group for starting, stopping, and
 configuring vendor mock servers.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

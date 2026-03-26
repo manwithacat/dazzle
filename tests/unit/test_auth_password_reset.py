@@ -9,8 +9,6 @@ Tests cover:
 - Auth page rendering (forgot-password link, page renderers)
 """
 
-from __future__ import annotations
-
 import time
 from datetime import timedelta
 from pathlib import Path

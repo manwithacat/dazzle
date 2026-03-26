@@ -1,7 +1,5 @@
 """Tests for permit-based UI button suppression (#550, #552)."""
 
-from __future__ import annotations
-
 from types import SimpleNamespace
 from typing import Any
 

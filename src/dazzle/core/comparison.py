@@ -6,8 +6,6 @@ condition_evaluator, access_evaluator, invariant_evaluator, and the
 UI-side condition_eval module.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from uuid import UUID
 

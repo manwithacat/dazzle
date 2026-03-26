@@ -1,7 +1,5 @@
 """Tests for dazzle deploy dockerfile|heroku|compose commands."""
 
-from __future__ import annotations
-
 from dazzle.cli.deploy import (
     generate_compose_yaml,
     generate_heroku_files,

@@ -5,8 +5,6 @@ Converts OpenAPI 3.x specifications into Dazzle API pack TOML format,
 and generates blank scaffold templates for new packs.
 """
 
-from __future__ import annotations
-
 import re
 from typing import Any
 

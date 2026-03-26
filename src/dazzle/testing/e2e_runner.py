@@ -8,7 +8,7 @@ Provides unified E2E test execution that:
 4. Cleans up server after tests complete
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 import os

@@ -4,8 +4,6 @@ Template copying and variable substitution.
 Handles copying template directories and substituting {{variable}} patterns.
 """
 
-from __future__ import annotations
-
 import shutil
 from pathlib import Path
 

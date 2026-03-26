@@ -1,7 +1,5 @@
 """Tests for view-based list surface projections (issue #230)."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

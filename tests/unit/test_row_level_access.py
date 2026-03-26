@@ -4,8 +4,6 @@ Validates that Cedar-style access evaluation is wired into read/create/update/de
 handlers, including 404 vs 403 semantics for enumeration prevention.
 """
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 

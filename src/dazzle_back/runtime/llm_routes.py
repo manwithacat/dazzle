@@ -4,6 +4,8 @@ Prefix: ``/_dazzle/llm`` — matches other internal routes
 (``/_dazzle/channels``, ``/_dazzle/services``).
 """
 
+from __future__ import annotations  # required: forward reference
+
 from typing import Any
 
 from fastapi import APIRouter

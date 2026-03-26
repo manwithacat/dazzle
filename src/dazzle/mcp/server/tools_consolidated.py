@@ -13,8 +13,6 @@ Consolidation strategy:
 Token savings: ~40-50% reduction in tool schema overhead.
 """
 
-from __future__ import annotations
-
 from mcp.types import Tool
 
 from .state import is_dev_mode

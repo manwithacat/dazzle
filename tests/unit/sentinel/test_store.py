@@ -1,7 +1,5 @@
 """Tests for the FindingStore JSON persistence layer."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.sentinel.models import (

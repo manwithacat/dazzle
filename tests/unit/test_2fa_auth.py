@@ -9,8 +9,6 @@ Covers:
 - 2FA verify endpoint (valid TOTP code -> session, invalid code -> 401)
 """
 
-from __future__ import annotations
-
 import secrets
 import sys
 from collections.abc import Iterator

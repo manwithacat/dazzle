@@ -2,8 +2,6 @@
 Unit tests for infrastructure versioning utilities.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 

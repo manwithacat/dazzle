@@ -1,7 +1,5 @@
 """Tests for experience flow entity steps — entity:, creates:, defaults: syntax."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 

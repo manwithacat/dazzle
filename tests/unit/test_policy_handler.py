@@ -4,8 +4,6 @@ Validates the analyze, conflicts, coverage, and simulate operations
 against in-memory AppSpec objects with various access configurations.
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 from dazzle.core.ir.conditions import (

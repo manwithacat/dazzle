@@ -27,8 +27,6 @@ v0.34.0 Date-range reporting:
         count: count()
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

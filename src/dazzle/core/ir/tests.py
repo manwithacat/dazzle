@@ -5,8 +5,6 @@ This module contains test case specifications for API testing
 including setup steps, actions, and assertions.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 from typing import Any
 

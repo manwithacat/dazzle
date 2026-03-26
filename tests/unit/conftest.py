@@ -16,8 +16,6 @@ errors and assertion failures for unrelated tests.
    module's tests execute and tears them down afterwards.
 """
 
-from __future__ import annotations
-
 import os
 import sys
 from typing import Any

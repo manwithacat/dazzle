@@ -6,8 +6,6 @@ This module contains:
 - DomainServiceSpec: Internal domain services (business logic stubs)
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

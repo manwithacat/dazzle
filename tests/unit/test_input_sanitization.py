@@ -1,7 +1,5 @@
 """Tests for HTML input sanitization (#135)."""
 
-from __future__ import annotations
-
 from dazzle_back.runtime.sanitizer import strip_dangerous_tags, strip_html_tags
 
 # ---------------------------------------------------------------------------

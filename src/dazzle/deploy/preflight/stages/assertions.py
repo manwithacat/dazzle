@@ -4,8 +4,6 @@ Stage 2: Template Assertions.
 Validates CloudFormation templates against security and best practice rules.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from ..models import (

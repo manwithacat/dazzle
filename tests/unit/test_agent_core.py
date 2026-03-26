@@ -1,8 +1,6 @@
 """Tests for DazzleAgent core — LLM backend selection, MCP sampling,
 observer modes, executor selectors, and viewport runner optimization."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

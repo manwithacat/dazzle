@@ -5,8 +5,6 @@ Generates a structured Markdown document from PitchContext
 with optional chart images if matplotlib is available.
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 

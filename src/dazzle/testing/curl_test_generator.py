@@ -11,8 +11,6 @@ Usage:
     script = generator.generate(suites=["smoke", "crud"])  # specific suites
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from datetime import datetime

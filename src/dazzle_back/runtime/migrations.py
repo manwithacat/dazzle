@@ -6,8 +6,6 @@ This module retains schema introspection utilities and type definitions
 used by the MCP db tools and CLI reporting.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any

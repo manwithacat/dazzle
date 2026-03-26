@@ -8,8 +8,6 @@ Validates the three-rule Cedar evaluation semantics:
 Also tests persona scoping, superuser bypass, and backward compatibility.
 """
 
-from __future__ import annotations
-
 from dazzle_back.runtime.access_evaluator import (
     AccessDecision,
     AccessRuntimeContext,

@@ -1,7 +1,5 @@
 """LLM-powered classification and documentation patch generation."""
 
-from __future__ import annotations
-
 import json
 import logging
 import re

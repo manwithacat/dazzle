@@ -4,6 +4,8 @@ Attached to app.state.services at startup.  Each app instance gets its own
 services, enabling multi-tenant isolation and clean test fixtures.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass, field
 from typing import Any
 

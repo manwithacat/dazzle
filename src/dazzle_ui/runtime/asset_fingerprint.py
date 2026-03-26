@@ -11,8 +11,6 @@ before serving, adding ``Cache-Control: immutable`` headers.
 No build step required — hashes are computed at runtime on first access.
 """
 
-from __future__ import annotations
-
 import hashlib
 import re
 from pathlib import Path

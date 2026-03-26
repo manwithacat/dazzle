@@ -4,8 +4,6 @@ Status and logging tool handlers.
 Handles MCP server status and DNR log retrieval.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from typing import Any

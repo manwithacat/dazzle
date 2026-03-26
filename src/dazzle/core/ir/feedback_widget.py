@@ -15,8 +15,6 @@ DSL Syntax:
       capture: [url, persona, viewport, user_agent, console_errors, nav_history, page_snapshot]
 """
 
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict, Field
 
 

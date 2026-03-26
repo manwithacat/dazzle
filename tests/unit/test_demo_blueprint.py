@@ -4,8 +4,6 @@ Unit tests for Demo Data Blueprint types and generation.
 Tests the blueprint IR types, persistence layer, and data generation.
 """
 
-from __future__ import annotations
-
 import json
 import tempfile
 from pathlib import Path

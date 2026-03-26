@@ -9,7 +9,7 @@ This is the canonical location for HTMX presentation logic.  The
 backward compatibility.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 from dataclasses import dataclass

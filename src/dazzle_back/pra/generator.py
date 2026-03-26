@@ -5,7 +5,7 @@ Orchestrates load generation according to load profiles,
 using data factories to create synthetic payloads.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

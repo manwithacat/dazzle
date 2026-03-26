@@ -5,8 +5,6 @@ Generates CSS custom properties from ThemeSpec tokens, including
 support for dark mode variants via [data-theme="dark"] selectors.
 """
 
-from __future__ import annotations
-
 from dazzle_ui.specs.theme import ThemeSpec, ThemeTokens
 
 

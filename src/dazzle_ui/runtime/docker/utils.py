@@ -4,8 +4,6 @@ Docker utility functions.
 Provides Docker availability checks and version detection.
 """
 
-from __future__ import annotations
-
 import subprocess
 
 

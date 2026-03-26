@@ -4,8 +4,6 @@ Tests the three stage verifiers and the round-trip checker against
 the real predicate builder and compiler.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from dazzle.conformance.stage_invariants import (

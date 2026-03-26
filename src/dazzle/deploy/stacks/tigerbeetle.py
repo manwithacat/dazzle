@@ -13,8 +13,6 @@ TigerBeetle has no managed AWS service, so we deploy self-hosted
 EC2 instances. Node count must be odd (1, 3, 5) for Raft consensus.
 """
 
-from __future__ import annotations
-
 from ..generator import CDKGeneratorResult, StackGenerator
 
 

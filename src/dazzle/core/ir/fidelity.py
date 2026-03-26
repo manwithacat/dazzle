@@ -1,7 +1,5 @@
 """Fidelity scoring models for measuring HTML-to-spec alignment."""
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

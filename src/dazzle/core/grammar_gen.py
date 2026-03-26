@@ -9,8 +9,6 @@ Usage:
     dazzle grammar                              # write docs/reference/grammar.md
 """
 
-from __future__ import annotations
-
 import importlib
 import inspect
 import re

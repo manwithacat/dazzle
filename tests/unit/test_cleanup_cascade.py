@@ -1,7 +1,5 @@
 """Tests for dependency-safe cleanup during test runs (#407, #410)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

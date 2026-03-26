@@ -4,8 +4,6 @@ DNR MCP tool handlers.
 Implementations for backend, UI, and GraphQL BFF tool calls.
 """
 
-from __future__ import annotations
-
 import json
 from collections.abc import Callable
 from typing import Any

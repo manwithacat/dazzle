@@ -7,7 +7,7 @@ the gap between DSL specifications and implementation code.
 Stories use Gherkin-style given/when/then conditions defined in DSL syntax.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward self-reference in class definitions
 
 from enum import StrEnum
 

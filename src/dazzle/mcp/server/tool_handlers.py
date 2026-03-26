@@ -4,8 +4,6 @@ MCP Server tool handler implementations.
 This module contains the implementations for all MCP tools.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from pathlib import Path

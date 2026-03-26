@@ -5,7 +5,7 @@ Provides p50/p95/p99 percentile calculations with efficient
 streaming updates using a sorted insertion approach.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import bisect
 import threading

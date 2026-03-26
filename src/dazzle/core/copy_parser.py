@@ -28,7 +28,7 @@ Supported section types:
     - custom: Any other named section
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import re
 from dataclasses import dataclass, field

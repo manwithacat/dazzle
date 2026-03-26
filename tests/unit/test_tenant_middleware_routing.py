@@ -1,7 +1,5 @@
 """Tests for TenantMiddleware dispatch — error cases and happy path."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 from starlette.applications import Starlette

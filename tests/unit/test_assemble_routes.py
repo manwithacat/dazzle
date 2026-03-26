@@ -4,8 +4,6 @@ Uses AST inspection (like test_url_consistency.py) and mock-based integration
 tests to verify the shared route assembly function.
 """
 
-from __future__ import annotations
-
 import ast
 import inspect
 from typing import Any

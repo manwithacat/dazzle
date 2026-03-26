@@ -11,7 +11,7 @@ Defines the specification for investor pitch materials:
 - Brand colors for slide theming
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Any

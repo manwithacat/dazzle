@@ -5,8 +5,6 @@ Commands:
 - pipeline run: Execute the full deterministic quality pipeline
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 

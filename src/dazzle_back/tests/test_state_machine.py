@@ -1,7 +1,5 @@
 """Tests for state machine runtime validation."""
 
-from __future__ import annotations
-
 from dazzle_back.runtime.state_machine import (
     GuardNotSatisfiedError,
     InvalidTransitionError,

@@ -5,8 +5,6 @@ same depth, preventing FastAPI from matching path params like {id} against
 literal segments like "create".
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

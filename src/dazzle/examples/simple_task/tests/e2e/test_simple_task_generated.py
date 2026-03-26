@@ -13,7 +13,6 @@ Test Count: 12
 - Low Priority: 4
 """
 
-from __future__ import annotations
 
 import os
 from typing import Any

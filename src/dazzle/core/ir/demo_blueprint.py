@@ -5,8 +5,6 @@ Defines the schema for Demo Data Blueprints that guide LLM agents
 in generating realistic, domain-specific demo data.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 from typing import Any
 

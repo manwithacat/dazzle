@@ -10,8 +10,6 @@ Usage::
     bootstrap_references(Path(".dazzle/composition/references"))
 """
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 from typing import Any

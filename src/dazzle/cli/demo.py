@@ -10,8 +10,6 @@ Commands:
   dazzle demo generate  — Generate demo data files from the blueprint
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

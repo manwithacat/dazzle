@@ -1,7 +1,5 @@
 """Tests for constraint violation error handling (#133 + #134 + #146)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 from uuid import uuid4
 

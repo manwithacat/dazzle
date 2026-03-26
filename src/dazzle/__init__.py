@@ -5,8 +5,6 @@ A DSL-first toolkit for designing and generating applications from
 high-level specifications.
 """
 
-from __future__ import annotations
-
 from ._version import get_version as _get_version
 
 # Re-export commonly used types for convenience

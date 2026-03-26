@@ -1,7 +1,5 @@
 """Tenant schema provisioner — creates PostgreSQL schemas with entity tables."""
 
-from __future__ import annotations
-
 import logging
 from pathlib import Path
 from typing import Any

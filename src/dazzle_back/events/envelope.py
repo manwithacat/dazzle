@@ -6,13 +6,14 @@ event system. The schema is Kafka-shaped, meaning it follows Kafka's
 conceptual model (topics, partitions, keys) even when running on SQLite.
 
 Rule 0: The event log is the system journal; state is derived from accepted events.
+
 Acceptance criteria:
 1. Trust boundary - event originates from authorized producer
 2. Schema validation - event conforms to declared schema
 3. Producer commit - producer has durably committed the event (outbox published)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: EventEnvelope forward self-reference
 
 import json
 from dataclasses import dataclass, field

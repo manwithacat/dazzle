@@ -1,7 +1,5 @@
 """Tests for surface search_fields and filter_fields wiring (#361, #596)."""
 
-from __future__ import annotations
-
 from dazzle_back.runtime.app_factory import build_entity_filter_fields, build_entity_search_fields
 from dazzle_back.runtime.query_builder import QueryBuilder
 

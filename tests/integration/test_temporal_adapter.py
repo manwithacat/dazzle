@@ -8,8 +8,6 @@ Note: These tests require the Temporal test server or a running Temporal instanc
 Run with: pytest -m temporal tests/integration/test_temporal_adapter.py
 """
 
-from __future__ import annotations
-
 import asyncio
 
 import pytest

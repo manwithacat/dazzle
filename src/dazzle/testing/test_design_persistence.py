@@ -9,7 +9,7 @@ Storage locations:
 - Runtime: .dazzle/test_designs/designs.json (for generated designs)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 from datetime import UTC, datetime

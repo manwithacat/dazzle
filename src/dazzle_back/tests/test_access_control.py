@@ -4,8 +4,6 @@ Tests for access control and row-level security.
 Tests owner-based, tenant-based, and role-based access control.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from uuid import uuid4
 

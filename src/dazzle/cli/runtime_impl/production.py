@@ -5,8 +5,6 @@ Validates environment, configures structured logging, and provides
 the production-specific settings that differ from dev/local modes.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import os

@@ -4,8 +4,6 @@ Network stack generator.
 Generates VPC, subnets, and security groups.
 """
 
-from __future__ import annotations
-
 from ..generator import CDKGeneratorResult, StackGenerator
 
 

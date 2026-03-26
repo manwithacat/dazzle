@@ -7,8 +7,6 @@ Verifies that:
 3. No roles assigned when default_signup_roles is not provided.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock
 from uuid import uuid4

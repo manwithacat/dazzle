@@ -5,6 +5,8 @@ Analyzes differences between previous and current AppSpec to determine
 what needs to be regenerated.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from dataclasses import dataclass
 
 from . import ir

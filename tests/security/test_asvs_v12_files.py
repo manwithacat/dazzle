@@ -1,7 +1,5 @@
 """ASVS V12: File and Resources security tests."""
 
-from __future__ import annotations
-
 import inspect
 
 

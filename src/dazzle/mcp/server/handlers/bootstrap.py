@@ -5,8 +5,6 @@ Scans for spec files, runs initial cognition pass, and returns a structured
 mission briefing that programs the LLM agent's next steps.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 from pathlib import Path

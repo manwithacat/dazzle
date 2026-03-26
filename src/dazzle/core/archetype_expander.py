@@ -8,8 +8,6 @@ v0.10.3: Initial implementation (settings, tenant, tenant_settings)
 v0.10.4: Added user and user_membership archetypes
 """
 
-from __future__ import annotations
-
 from . import ir
 from .linker_impl import SymbolTable
 

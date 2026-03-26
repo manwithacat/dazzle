@@ -15,7 +15,7 @@ Features:
 Rule 1: No dual writes - events are published only from the outbox
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

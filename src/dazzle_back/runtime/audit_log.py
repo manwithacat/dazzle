@@ -5,8 +5,6 @@ Provides async, non-blocking audit trail for all authorization decisions,
 following the _dazzle_event_outbox pattern. PostgreSQL only.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import time

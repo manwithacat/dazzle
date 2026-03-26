@@ -4,8 +4,6 @@ Observability stack generator.
 Generates CloudWatch dashboards and alarms.
 """
 
-from __future__ import annotations
-
 from ..generator import CDKGeneratorResult, StackGenerator
 
 

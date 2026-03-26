@@ -1,7 +1,5 @@
 """Tests for dazzle.db.cleanup — orphan record removal."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock
 
 import pytest

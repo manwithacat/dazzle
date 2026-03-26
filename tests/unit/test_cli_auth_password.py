@@ -1,7 +1,5 @@
 """Tests for --password flag on create-user and reset-password CLI commands."""
 
-from __future__ import annotations
-
 import json
 from unittest.mock import MagicMock, patch
 

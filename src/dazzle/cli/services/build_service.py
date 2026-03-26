@@ -1,7 +1,5 @@
 """CLI-facing build service wrapping build/migration operations."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
 

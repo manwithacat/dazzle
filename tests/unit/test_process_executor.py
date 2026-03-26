@@ -1,7 +1,5 @@
 """Tests for linear checkpointed process executor."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

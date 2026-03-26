@@ -11,7 +11,7 @@ SiteSpec is separate from AppSpec to keep domain logic clean.
 Design Document: dev_docs/content_management.md
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 

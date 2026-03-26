@@ -11,6 +11,8 @@
 #   - Returns 0 if task is not overdue.
 # ==========================================================================
 
+from __future__ import annotations  # required: forward reference
+
 from typing import TypedDict
 
 

@@ -1,7 +1,5 @@
 """Database reset: truncate entity tables in dependency order."""
 
-from __future__ import annotations
-
 import logging
 from typing import Any
 

@@ -1,7 +1,5 @@
 """Tests for grant schema IR types."""
 
-from __future__ import annotations
-
 import pytest
 from pydantic import ValidationError
 

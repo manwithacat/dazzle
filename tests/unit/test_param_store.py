@@ -1,7 +1,5 @@
 """Tests for runtime parameter store and resolver."""
 
-from __future__ import annotations
-
 from typing import Any
 
 import pytest

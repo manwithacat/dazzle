@@ -6,8 +6,6 @@ Single import point for agents consuming the module. Contains:
 - AuditSpec types (compiler output)
 """
 
-from __future__ import annotations
-
 from typing import Literal
 
 from pydantic import BaseModel, Field

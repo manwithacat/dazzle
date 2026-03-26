@@ -1,7 +1,5 @@
 """Tests for integration manual trigger buttons on entity detail pages (#338)."""
 
-from __future__ import annotations
-
 from dazzle.core.ir import AppSpec, DomainSpec, EntitySpec, FieldSpec, FieldType
 from dazzle.core.ir.integrations import (
     IntegrationMapping,

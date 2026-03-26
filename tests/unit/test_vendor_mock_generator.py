@@ -1,7 +1,5 @@
 """Tests for vendor mock server generator."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 import pytest

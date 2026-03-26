@@ -4,7 +4,7 @@ Throughput counter for rate measurement.
 Provides events-per-second calculations with sliding window averaging.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import threading
 import time

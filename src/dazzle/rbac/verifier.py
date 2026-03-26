@@ -8,7 +8,7 @@ endpoints) is stubbed here. The types and comparison logic are the critical
 pieces for unit testing.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import json
 from dataclasses import dataclass

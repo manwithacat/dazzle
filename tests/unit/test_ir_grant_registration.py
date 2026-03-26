@@ -4,8 +4,6 @@ Tests for grant_schemas registration on ModuleFragment and AppSpec (v0.42.0).
 Verifies that GrantSchemaSpec flows through the IR container types correctly.
 """
 
-from __future__ import annotations
-
 from dazzle.core.ir.appspec import AppSpec
 from dazzle.core.ir.conditions import ConditionExpr, RoleCheck
 from dazzle.core.ir.domain import DomainSpec

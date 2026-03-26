@@ -5,8 +5,6 @@ Docker-based E2E tests and impl-based commands for check-infra, coverage,
 list-flows, tier-guidance, and viewport testing.
 """
 
-from __future__ import annotations
-
 import json
 import shutil
 import subprocess

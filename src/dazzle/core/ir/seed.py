@@ -7,8 +7,6 @@ time-dependent reference data that the framework generates on startup.
 Use cases: academic years, financial years, terms, tax periods.
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

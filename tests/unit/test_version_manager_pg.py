@@ -7,8 +7,6 @@ Tests cover:
 - _use_postgres flag is set correctly
 """
 
-from __future__ import annotations
-
 import sys
 import tempfile
 from pathlib import Path

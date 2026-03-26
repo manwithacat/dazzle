@@ -7,8 +7,6 @@ route maps, component inventories, state machines, API contracts,
 workspace layouts, and test acceptance criteria.
 """
 
-from __future__ import annotations
-
 import json
 from typing import Any
 

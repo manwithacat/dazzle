@@ -6,7 +6,7 @@ Handles reading and writing PitchSpec configurations to pitchspec.yaml.
 Default location: {project_root}/pitchspec.yaml
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 from pathlib import Path

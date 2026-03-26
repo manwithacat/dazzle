@@ -1,7 +1,5 @@
 """Tests for field value generation fixes (#246–#252)."""
 
-from __future__ import annotations
-
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind

@@ -6,8 +6,6 @@ Covers:
 - Router building from discovered overrides
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 

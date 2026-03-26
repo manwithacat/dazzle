@@ -1,7 +1,5 @@
 """Tests for DazzleAdapter.resolve_view_url (#469)."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle_e2e.adapters.dazzle_adapter import DazzleAdapter

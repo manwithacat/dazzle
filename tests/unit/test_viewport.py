@@ -4,8 +4,6 @@ No Playwright required — tests types, patterns, derivation logic, and
 assertion matching.
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 from dazzle.testing.viewport import (

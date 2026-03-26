@@ -5,8 +5,6 @@ This module contains the top-level AppSpec that represents
 a complete, linked application definition.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field

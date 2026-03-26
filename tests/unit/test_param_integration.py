@@ -7,8 +7,6 @@ Covers:
 - Static heatmap thresholds (no ParamRef) still work in workspace rendering
 """
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 from dazzle.core.ir.params import ParamRef, ParamSpec

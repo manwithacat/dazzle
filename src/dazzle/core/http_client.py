@@ -4,8 +4,6 @@ Provides ``retrying_request`` (sync) and ``async_retrying_request`` (async)
 with exponential backoff on timeout errors.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import time

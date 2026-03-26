@@ -4,6 +4,8 @@ Theme specification types for UISpec.
 Defines themes, variants, and design tokens.
 """
 
+from __future__ import annotations  # required: forward reference
+
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field

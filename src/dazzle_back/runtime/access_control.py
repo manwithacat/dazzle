@@ -4,7 +4,7 @@ Access control and row-level security for DNR Backend.
 Provides owner-based and tenant-based access control for entities.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from collections.abc import Callable
 from enum import StrEnum

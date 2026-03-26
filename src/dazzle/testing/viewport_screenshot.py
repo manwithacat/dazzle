@@ -4,7 +4,7 @@ Captures screenshots at each viewport size and compares against stored
 baselines using pixel-level diffing via Pillow (optional dependency).
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import hashlib
 import logging

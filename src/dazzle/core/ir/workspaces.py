@@ -5,7 +5,7 @@ This module contains workspace specifications for composing related
 information needs into cohesive user experiences.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 

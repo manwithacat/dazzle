@@ -6,8 +6,6 @@ rollback to a previous version by restoring DSL files and
 triggering re-deployment.
 """
 
-from __future__ import annotations
-
 import json
 import logging
 import shutil

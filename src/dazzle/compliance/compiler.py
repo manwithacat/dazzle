@@ -4,8 +4,6 @@ Maps DSL evidence to compliance framework controls and produces
 a per-control assessment (evidenced / partial / gap / excluded).
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from typing import Literal
 

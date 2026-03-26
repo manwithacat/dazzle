@@ -5,7 +5,7 @@ This module contains entity definitions, constraints, access control,
 and the domain specification.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Any

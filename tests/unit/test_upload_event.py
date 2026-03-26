@@ -1,7 +1,5 @@
 """Tests for post-upload event hooks (#437)."""
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

@@ -14,8 +14,6 @@ Or via CLI::
     dazzle build-css
 """
 
-from __future__ import annotations
-
 import logging
 import os
 import platform

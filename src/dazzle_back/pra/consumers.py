@@ -7,7 +7,7 @@ Provides configurable consumers that simulate various processing behaviors:
 - Failing: Randomly fail events (DLQ testing)
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import asyncio
 import logging

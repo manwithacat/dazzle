@@ -4,8 +4,6 @@ Tests for rich text processor.
 Tests markdown rendering, HTML sanitization, and text extraction.
 """
 
-from __future__ import annotations
-
 import pytest
 
 # Check if dependencies are available

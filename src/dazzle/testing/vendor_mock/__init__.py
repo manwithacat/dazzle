@@ -6,8 +6,6 @@ directly from TOML-defined API packs. Provides stateful CRUD, auth validation,
 and realistic response data for integration testing without vendor credentials.
 """
 
-from __future__ import annotations
-
 from dazzle.testing.vendor_mock.assertions import RequestRecorder, get_recorder
 from dazzle.testing.vendor_mock.data_generators import DataGenerator
 from dazzle.testing.vendor_mock.fixtures import mock_vendor

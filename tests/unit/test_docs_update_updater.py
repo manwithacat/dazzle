@@ -1,7 +1,5 @@
 """Tests for dazzle.docs_update.updater — pure markdown operations."""
 
-from __future__ import annotations
-
 from dazzle.docs_update.updater import (
     build_changelog_entries,
     ensure_unreleased_section,

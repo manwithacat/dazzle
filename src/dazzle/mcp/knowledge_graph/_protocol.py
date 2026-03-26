@@ -6,8 +6,6 @@ call _get_connection() and _close_connection() on ``self``. This protocol
 captures that contract so mypy can verify it without ``# type: ignore``.
 """
 
-from __future__ import annotations
-
 import sqlite3
 from typing import Any, Protocol
 

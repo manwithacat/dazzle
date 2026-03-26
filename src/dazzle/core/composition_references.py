@@ -19,7 +19,7 @@ Directory layout::
     └── ...
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import base64
 import json

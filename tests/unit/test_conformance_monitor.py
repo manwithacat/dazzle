@@ -3,8 +3,6 @@
 Tests the ConformanceMonitor audit sink integration and comparison logic.
 """
 
-from __future__ import annotations
-
 from dazzle.conformance.models import ConformanceCase, ScopeOutcome
 from dazzle.conformance.monitor import (
     ConformanceMonitor,

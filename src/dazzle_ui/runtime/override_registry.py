@@ -14,8 +14,6 @@ The registry persists as JSON so upgrade checks can compare block
 hashes across framework versions without re-scanning.
 """
 
-from __future__ import annotations
-
 import hashlib
 import json
 import logging

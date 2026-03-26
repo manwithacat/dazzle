@@ -8,8 +8,6 @@ Covers:
 - End-to-end: parse DSL → evaluate guard expression
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from dazzle.core.dsl_parser_impl import parse_dsl

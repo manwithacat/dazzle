@@ -9,7 +9,7 @@ Defines various load shapes as specified in the PRA specification:
 - Replay Mode: Processing from offset zero without live writes
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field

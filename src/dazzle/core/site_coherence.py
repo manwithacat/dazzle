@@ -13,7 +13,7 @@ This is not schema validation (that's in sitespec_loader.py).
 This is about whether the site would feel "real" to a visitor.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import re
 from dataclasses import dataclass, field

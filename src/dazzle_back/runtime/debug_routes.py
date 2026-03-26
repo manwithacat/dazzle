@@ -7,6 +7,8 @@ recent actions, and system health.
 These endpoints are always available in development mode (localhost).
 """
 
+from __future__ import annotations  # required: forward reference
+
 import logging
 from dataclasses import dataclass
 from datetime import datetime

@@ -1,7 +1,5 @@
 """Tests for PostgresBackend connection pooling (#438)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock, patch
 
 import pytest

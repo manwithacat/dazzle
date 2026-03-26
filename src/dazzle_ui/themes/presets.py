@@ -6,8 +6,6 @@ or sitespec.yaml. Each preset is a ThemeSpec instance with complete token
 definitions for colors, shadows, spacing, and typography.
 """
 
-from __future__ import annotations
-
 from dazzle_ui.specs.theme import TextStyle, ThemeSpec, ThemeTokens, VariantSpec
 
 # =============================================================================

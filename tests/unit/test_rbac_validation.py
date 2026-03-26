@@ -6,8 +6,6 @@ using the policy handler functions and role-condition-aware evaluation.
 NIST Reference: https://csrc.nist.gov/publications/detail/sp/800-162/final
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

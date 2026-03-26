@@ -1,7 +1,5 @@
 """Tests for the SQLite-backed ActivityStore and KG activity methods."""
 
-from __future__ import annotations
-
 import threading
 
 import pytest

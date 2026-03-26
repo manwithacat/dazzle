@@ -1,7 +1,5 @@
 """Graph materializer — DB records → NetworkX graph (#619 Phase 4)."""
 
-from __future__ import annotations
-
 from typing import Any
 
 try:

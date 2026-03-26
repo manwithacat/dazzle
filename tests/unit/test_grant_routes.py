@@ -1,7 +1,5 @@
 """Tests for grant_routes — relation-level granted_by / approval (#650)."""
 
-from __future__ import annotations
-
 from unittest.mock import MagicMock
 
 from dazzle_back.runtime.grant_routes import create_grant_routes

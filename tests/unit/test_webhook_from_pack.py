@@ -1,7 +1,5 @@
 """Tests for webhook event loading from pack TOML files."""
 
-from __future__ import annotations
-
 import textwrap
 from pathlib import Path
 from unittest.mock import MagicMock

@@ -5,8 +5,6 @@ router mount prefix, and that HTMX create responses redirect to the
 detail page.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4

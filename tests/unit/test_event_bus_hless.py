@@ -14,8 +14,6 @@ These tests verify that our internal Dazzle-native event vocabulary
 works correctly before deploying to production Kafka.
 """
 
-from __future__ import annotations
-
 import os
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime

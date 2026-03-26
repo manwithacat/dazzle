@@ -15,8 +15,6 @@ Usage:
     docker-compose -f docker-compose.temporal.yml up temporal-worker
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import os

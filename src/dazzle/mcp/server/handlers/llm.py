@@ -4,8 +4,6 @@ Read-only operations that expose LLM configuration from the parsed DSL
 via the MCP ``llm`` tool.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import Any

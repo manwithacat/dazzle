@@ -5,7 +5,7 @@ This module contains attention signals, persona variants, sort/filter specs,
 and other UX-related specifications.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from enum import StrEnum
 from typing import Any

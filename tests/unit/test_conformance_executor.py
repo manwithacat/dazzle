@@ -5,8 +5,6 @@ no real PostgreSQL or FastAPI app needed. Integration tests requiring
 a database are left for the conformance marker tests.
 """
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

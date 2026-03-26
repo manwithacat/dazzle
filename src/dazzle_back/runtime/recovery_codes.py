@@ -5,8 +5,6 @@ Recovery codes are one-time-use backup codes that allow users to
 regain access when they lose their TOTP device.
 """
 
-from __future__ import annotations
-
 import hashlib
 import hmac
 import secrets

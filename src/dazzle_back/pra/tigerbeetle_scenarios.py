@@ -5,7 +5,7 @@ These scenarios exercise TigerBeetle under various load patterns to
 identify bottlenecks and validate performance characteristics.
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 from dataclasses import dataclass, field
 from enum import StrEnum

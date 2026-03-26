@@ -1,7 +1,5 @@
 """ASVS V13: API and Web Service security tests."""
 
-from __future__ import annotations
-
 
 class TestRateLimiting:
     """V13.2: RESTful Web Service."""

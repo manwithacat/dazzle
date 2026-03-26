@@ -5,8 +5,6 @@ Provides stateful CRUD tracking so that resources created via POST
 can be retrieved via GET, matching real vendor API behaviour.
 """
 
-from __future__ import annotations
-
 import uuid
 from datetime import UTC, datetime
 from typing import Any

@@ -3,8 +3,6 @@
 Validates that _security_score correctly treats default-deny as secure.
 """
 
-from __future__ import annotations
-
 from dazzle.mcp.server.handlers.pulse import _security_score
 
 

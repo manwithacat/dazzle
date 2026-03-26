@@ -1,8 +1,6 @@
 # src/dazzle/db/status.py
 """Database status: row counts per entity, database size."""
 
-from __future__ import annotations
-
 from typing import Any
 
 from .sql import quote_id

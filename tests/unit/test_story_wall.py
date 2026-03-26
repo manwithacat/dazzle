@@ -1,7 +1,5 @@
 """Tests for the Story Wall handler (story get view=wall)."""
 
-from __future__ import annotations
-
 import json
 from typing import Any
 from unittest.mock import MagicMock, patch

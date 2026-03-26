@@ -10,7 +10,7 @@ Design Document: dev_docs/architecture/event_first/EventSystemStabilityRules-v1.
 Rule 11: Multi-tenancy enforced everywhere
 """
 
-from __future__ import annotations
+from __future__ import annotations  # required: forward reference
 
 import logging
 from dataclasses import dataclass, field

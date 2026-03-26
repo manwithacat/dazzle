@@ -4,8 +4,6 @@ These stores use PostgreSQL. We mock the database layer by replacing
 _get_connection() with an in-memory cursor simulator so no real DB is needed.
 """
 
-from __future__ import annotations
-
 import re
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4

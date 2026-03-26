@@ -1,7 +1,5 @@
 """Tests for DataTable sort/filter/search query parameter handling."""
 
-from __future__ import annotations
-
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 

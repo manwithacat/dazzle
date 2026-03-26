@@ -7,8 +7,6 @@ assert_no_cookie, assert_cookie_cleared, assert_redirect_url,
 assert_unauthenticated.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 from unittest.mock import MagicMock
 

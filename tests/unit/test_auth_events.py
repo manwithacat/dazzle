@@ -4,8 +4,6 @@ Verifies that successful registration, login, password change, and 2FA
 verification emit the correct events via the EventFramework bus.
 """
 
-from __future__ import annotations
-
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 

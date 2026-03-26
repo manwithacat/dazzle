@@ -12,8 +12,6 @@ DSL Syntax (v0.41.0):
       status: open
 """
 
-from __future__ import annotations
-
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict, Field

@@ -1,8 +1,6 @@
 """Tests for recursive FK dependency chain resolution (issue #237) and
 3-way OR invariants with nullable FK refs (issue #533)."""
 
-from __future__ import annotations
-
 from dazzle.core.ir import AppSpec
 from dazzle.core.ir.domain import DomainSpec, EntitySpec
 from dazzle.core.ir.expressions import BinaryExpr, BinaryOp, FieldRef, Literal

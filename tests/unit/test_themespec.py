@@ -3,8 +3,6 @@
 Covers: IR models, OKLCH, generators, loader, DTCG, imagery, bridge, MCP handlers.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

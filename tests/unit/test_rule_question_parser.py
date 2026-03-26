@@ -1,7 +1,5 @@
 """Tests for rule and question DSL construct parsing (v0.41.0 Convergent BDD)."""
 
-from __future__ import annotations
-
 import pytest
 
 from dazzle.core.dsl_parser_impl import parse_dsl
