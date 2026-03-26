@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-03-26
+
+### Added
+- MCP `knowledge` tool: `changelog` operation — returns `### Agent Guidance` entries from recent releases, with optional `since` version filter (#716)
+- MCP `knowledge` tool: `version_info` block in concept lookup responses — includes `since` version and `changes` history when annotated in TOML (#716)
+- Semantics KB: `since_version` and `changed_in` fields on TOML concepts — 5 concepts annotated (feedback_widget, scope, static_assets, predicate_compilation, surface_access) (#716)
+- KG seeder: changelog guidance entries stored as `changelog:vX.Y.Z` entities during startup (#716)
+
+### Agent Guidance
+- **Version-aware concepts**: Some concept lookups now include a `version_info` block with `since` (introduction version) and `changes` (version history). Use this to understand when features appeared and what changed.
+- **Changelog operation**: Use `knowledge(operation='changelog')` to get agent guidance from recent releases. Use `since` parameter to filter (e.g., `knowledge(operation='changelog', since='0.48.0')`). Default: last 5 releases with guidance.
+
 ## [0.48.16] - 2026-03-26
 
 ### Added
