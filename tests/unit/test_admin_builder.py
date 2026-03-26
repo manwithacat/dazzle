@@ -4,15 +4,22 @@ Tests for admin entity field definitions and the admin entity builder.
 Covers:
   - Task 1: ADMIN_ENTITY_DEFS and individual FIELDS constants
   - Task 2: _build_admin_entities profile-gating and EntitySpec shape
+  - Task 3: Collision detection for synthetic admin names
+  - Task 4: Admin surface builder — LIST surfaces for platform entities
+  - Task 5: Admin workspace builder — profile-gated regions + nav groups
 """
 
 from __future__ import annotations
 
+import pytest
+
+from dazzle.core.errors import LinkError
 from dazzle.core.ir.admin_entities import (
     ADMIN_ENTITY_DEFS,
     VIRTUAL_ENTITY_NAMES,
 )
 from dazzle.core.ir.security import SecurityConfig, SecurityProfile
+from dazzle.core.ir.surfaces import SurfaceMode
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -164,3 +171,249 @@ class TestBuildAdminEntities:
                     f"{entity.name} op={rule.operation}: "
                     f"expected personas {expected_personas!r}, got {rule.personas!r}"
                 )
+
+
+# ---------------------------------------------------------------------------
+# Task 3 — Collision detection tests
+# ---------------------------------------------------------------------------
+
+
+class TestCollisionDetection:
+    """_check_collisions raises LinkError on name collisions."""
+
+    def test_entity_collision_raises(self) -> None:
+        """Entity name collision with synthetic names raises LinkError."""
+        from dazzle.core.admin_builder import _check_collisions
+
+        with pytest.raises(LinkError, match="SystemHealth"):
+            _check_collisions(
+                existing_entity_names={"SystemHealth", "Task", "User"},
+                existing_workspace_names=set(),
+                synthetic_entity_names={"SystemHealth", "DeployHistory"},
+                synthetic_workspace_names=set(),
+            )
+
+    def test_workspace_collision_raises(self) -> None:
+        """Workspace name collision with synthetic names raises LinkError."""
+        from dazzle.core.admin_builder import _check_collisions
+
+        with pytest.raises(LinkError, match="_platform_admin"):
+            _check_collisions(
+                existing_entity_names=set(),
+                existing_workspace_names={"_platform_admin", "dashboard"},
+                synthetic_entity_names=set(),
+                synthetic_workspace_names={"_platform_admin"},
+            )
+
+    def test_no_collision_passes(self) -> None:
+        """No overlap between existing and synthetic names raises no error."""
+        from dazzle.core.admin_builder import _check_collisions
+
+        # Should not raise
+        _check_collisions(
+            existing_entity_names={"Task", "User", "Project"},
+            existing_workspace_names={"my_dashboard"},
+            synthetic_entity_names={"SystemHealth", "DeployHistory"},
+            synthetic_workspace_names={"_platform_admin"},
+        )
+
+
+# ---------------------------------------------------------------------------
+# Task 4 — Admin surfaces builder tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildAdminSurfaces:
+    """_build_admin_surfaces profile-gating and SurfaceSpec shape."""
+
+    def test_standard_generates_session_surface(self) -> None:
+        """STANDARD profile includes the _admin_sessions surface."""
+        from dazzle.core.admin_builder import _build_admin_surfaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        surfaces = _build_admin_surfaces(security)
+        names = {s.name for s in surfaces}
+        assert "_admin_sessions" in names
+
+    def test_basic_no_session_surface(self) -> None:
+        """BASIC profile does NOT include the _admin_sessions surface."""
+        from dazzle.core.admin_builder import _build_admin_surfaces
+
+        security = _make_security(SecurityProfile.BASIC)
+        surfaces = _build_admin_surfaces(security)
+        names = {s.name for s in surfaces}
+        assert "_admin_sessions" not in names
+
+    def test_surfaces_require_admin_personas(self) -> None:
+        """All surfaces require auth and allow only admin/super_admin personas."""
+        from dazzle.core.admin_builder import _build_admin_surfaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        for surface in _build_admin_surfaces(security):
+            assert surface.access is not None, f"{surface.name}: access is None"
+            assert surface.access.require_auth is True, f"{surface.name}: require_auth is False"
+            assert set(surface.access.allow_personas) == {"admin", "super_admin"}, (
+                f"{surface.name}: unexpected personas {surface.access.allow_personas!r}"
+            )
+
+    def test_surfaces_are_list_mode(self) -> None:
+        """All generated surfaces have mode=LIST."""
+        from dazzle.core.admin_builder import _build_admin_surfaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        for surface in _build_admin_surfaces(security):
+            assert surface.mode == SurfaceMode.LIST, (
+                f"{surface.name}: expected LIST mode, got {surface.mode!r}"
+            )
+
+    def test_deploy_surface_always_present(self) -> None:
+        """_admin_deploys is present for all security profiles."""
+        from dazzle.core.admin_builder import _build_admin_surfaces
+
+        for profile in SecurityProfile:
+            security = _make_security(profile)
+            names = {s.name for s in _build_admin_surfaces(security)}
+            assert "_admin_deploys" in names, f"_admin_deploys missing for profile={profile}"
+
+    def test_health_surface_always_present(self) -> None:
+        """_admin_health is present for all security profiles."""
+        from dazzle.core.admin_builder import _build_admin_surfaces
+
+        for profile in SecurityProfile:
+            security = _make_security(profile)
+            names = {s.name for s in _build_admin_surfaces(security)}
+            assert "_admin_health" in names, f"_admin_health missing for profile={profile}"
+
+
+# ---------------------------------------------------------------------------
+# Task 5 — Admin workspace builder tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildAdminWorkspaces:
+    """_build_admin_workspaces workspace count, regions, and access."""
+
+    def test_single_tenant_one_workspace(self) -> None:
+        """Single-tenant app produces only _platform_admin."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=False)
+        names = {w.name for w in workspaces}
+        assert names == {"_platform_admin"}
+
+    def test_multi_tenant_two_workspaces(self) -> None:
+        """Multi-tenant app produces _platform_admin and _tenant_admin."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
+        names = {w.name for w in workspaces}
+        assert names == {"_platform_admin", "_tenant_admin"}
+
+    def test_platform_admin_super_admin_only_multi_tenant(self) -> None:
+        """In multi-tenant mode, _platform_admin allows only super_admin."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        assert platform.access is not None
+        assert platform.access.allow_personas == ["super_admin"]
+
+    def test_platform_admin_both_personas_single_tenant(self) -> None:
+        """In single-tenant mode, _platform_admin allows admin and super_admin."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=False)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        assert platform.access is not None
+        assert set(platform.access.allow_personas) == {"admin", "super_admin"}
+
+    def test_tenant_admin_persona(self) -> None:
+        """_tenant_admin allows only admin persona."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
+        tenant = next(w for w in workspaces if w.name == "_tenant_admin")
+        assert tenant.access is not None
+        assert tenant.access.allow_personas == ["admin"]
+
+    def test_tenant_admin_has_subset_of_regions(self) -> None:
+        """_tenant_admin regions are a strict subset of _platform_admin regions."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=True)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        tenant = next(w for w in workspaces if w.name == "_tenant_admin")
+        platform_names = {r.name for r in platform.regions}
+        tenant_names = {r.name for r in tenant.regions}
+        assert tenant_names < platform_names, (
+            f"Tenant regions {tenant_names!r} are not a strict subset of "
+            f"platform regions {platform_names!r}"
+        )
+
+    def test_tenant_admin_no_tenants_region(self) -> None:
+        """_tenant_admin does not include the 'tenants' region."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        workspaces = _build_admin_workspaces(security, multi_tenant=True, feedback_enabled=False)
+        tenant = next(w for w in workspaces if w.name == "_tenant_admin")
+        tenant_region_names = {r.name for r in tenant.regions}
+        assert "tenants" not in tenant_region_names
+
+    def test_feedback_region_when_enabled(self) -> None:
+        """'feedback' region appears in _platform_admin when feedback is enabled."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=True)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        region_names = {r.name for r in platform.regions}
+        assert "feedback" in region_names
+
+    def test_no_feedback_region_when_disabled(self) -> None:
+        """'feedback' region is absent when feedback is disabled."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=False)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        region_names = {r.name for r in platform.regions}
+        assert "feedback" not in region_names
+
+    def test_nav_groups_present(self) -> None:
+        """All three nav groups (Management, Observability, Operations) are present."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        security = _make_security(SecurityProfile.STANDARD)
+        workspaces = _build_admin_workspaces(security, multi_tenant=False, feedback_enabled=True)
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        labels = {g.label for g in platform.nav_groups}
+        assert labels == {"Management", "Observability", "Operations"}
+
+    def test_basic_profile_fewer_regions(self) -> None:
+        """BASIC profile produces fewer regions than STANDARD in _platform_admin."""
+        from dazzle.core.admin_builder import _build_admin_workspaces
+
+        basic_security = _make_security(SecurityProfile.BASIC)
+        standard_security = _make_security(SecurityProfile.STANDARD)
+
+        basic_ws = _build_admin_workspaces(
+            basic_security, multi_tenant=False, feedback_enabled=True
+        )
+        standard_ws = _build_admin_workspaces(
+            standard_security, multi_tenant=False, feedback_enabled=True
+        )
+
+        basic_platform = next(w for w in basic_ws if w.name == "_platform_admin")
+        standard_platform = next(w for w in standard_ws if w.name == "_platform_admin")
+
+        assert len(basic_platform.regions) < len(standard_platform.regions), (
+            f"Expected BASIC ({len(basic_platform.regions)}) < STANDARD "
+            f"({len(standard_platform.regions)}) region count"
+        )

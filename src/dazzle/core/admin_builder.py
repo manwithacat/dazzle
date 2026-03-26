@@ -10,9 +10,26 @@ Part of Issue #686 — universal admin workspace for auth-enabled Dazzle apps.
 from __future__ import annotations
 
 from dazzle.core import ir
+from dazzle.core.errors import LinkError
 from dazzle.core.ir.admin_entities import ADMIN_ENTITY_DEFS
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.security import SecurityConfig, SecurityProfile
+from dazzle.core.ir.surfaces import (
+    SurfaceAccessSpec,
+    SurfaceElement,
+    SurfaceMode,
+    SurfaceSection,
+    SurfaceSpec,
+)
+from dazzle.core.ir.workspaces import (
+    DisplayMode,
+    NavGroupSpec,
+    NavItemIR,
+    WorkspaceAccessLevel,
+    WorkspaceAccessSpec,
+    WorkspaceRegion,
+    WorkspaceSpec,
+)
 
 # ---------------------------------------------------------------------------
 # Field type parser (duplicated from linker._parse_field_type to avoid
@@ -104,6 +121,41 @@ def _is_profile_included(profile_gate: str | None, active_profile: SecurityProfi
 
 
 # ---------------------------------------------------------------------------
+# Collision detection
+# ---------------------------------------------------------------------------
+
+
+def _check_collisions(
+    *,
+    existing_entity_names: set[str],
+    existing_workspace_names: set[str],
+    synthetic_entity_names: set[str],
+    synthetic_workspace_names: set[str],
+) -> None:
+    """Raise LinkError if user-declared names collide with synthetic names.
+
+    Args:
+        existing_entity_names: Entity names already declared in the DSL.
+        existing_workspace_names: Workspace names already declared in the DSL.
+        synthetic_entity_names: Entity names that will be auto-generated.
+        synthetic_workspace_names: Workspace names that will be auto-generated.
+
+    Raises:
+        :class:`~dazzle.core.errors.LinkError`: If any name appears in both the
+            user-declared set and the synthetic set.
+    """
+    entity_collisions = existing_entity_names & synthetic_entity_names
+    workspace_collisions = existing_workspace_names & synthetic_workspace_names
+    collisions = entity_collisions | workspace_collisions
+    if collisions:
+        names = ", ".join(sorted(collisions))
+        raise LinkError(
+            f"Name collision with framework-generated admin infrastructure: {names}. "
+            "Rename your entity/workspace to avoid the conflict."
+        )
+
+
+# ---------------------------------------------------------------------------
 # Main builder
 # ---------------------------------------------------------------------------
 
@@ -169,3 +221,263 @@ def _build_admin_entities(security: SecurityConfig) -> list[ir.EntitySpec]:
         )
 
     return entities
+
+
+# ---------------------------------------------------------------------------
+# Admin surface builder
+# ---------------------------------------------------------------------------
+
+# Each tuple: (surface_name, entity_ref, title, [(field, label), ...], profile_gate)
+_ADMIN_SURFACE_DEFS: list[tuple[str, str, str, list[tuple[str, str]], str | None]] = [
+    (
+        "_admin_health",
+        "SystemHealth",
+        "System Health",
+        [
+            ("component", "Component"),
+            ("status", "Status"),
+            ("message", "Message"),
+            ("checked_at", "Checked"),
+        ],
+        None,
+    ),
+    (
+        "_admin_deploys",
+        "DeployHistory",
+        "Deploy History",
+        [
+            ("version", "Version"),
+            ("status", "Status"),
+            ("deployed_by", "Deployed By"),
+            ("deployed_at", "Deployed At"),
+        ],
+        None,
+    ),
+    (
+        "_admin_metrics",
+        "SystemMetric",
+        "System Metrics",
+        [
+            ("name", "Metric"),
+            ("value", "Value"),
+            ("unit", "Unit"),
+            ("bucket_start", "Time"),
+        ],
+        "standard",
+    ),
+    (
+        "_admin_processes",
+        "ProcessRun",
+        "Process Runs",
+        [
+            ("process_name", "Process"),
+            ("status", "Status"),
+            ("started_at", "Started"),
+            ("current_step", "Step"),
+        ],
+        "standard",
+    ),
+    (
+        "_admin_sessions",
+        "SessionInfo",
+        "Active Sessions",
+        [
+            ("email", "User"),
+            ("ip_address", "IP"),
+            ("created_at", "Started"),
+            ("expires_at", "Expires"),
+        ],
+        "standard",
+    ),
+]
+
+
+def _build_admin_surfaces(security: SecurityConfig) -> list[SurfaceSpec]:
+    """Build admin LIST surfaces for platform entities.
+
+    Only surfaces whose ``profile_gate`` is satisfied by *security.profile* are
+    included. All generated surfaces require authentication and are restricted
+    to ``admin`` / ``super_admin`` personas.
+
+    Args:
+        security: Application security configuration (provides the active profile).
+
+    Returns:
+        A list of :class:`~dazzle.core.ir.surfaces.SurfaceSpec` objects.
+    """
+    surfaces: list[SurfaceSpec] = []
+    access = SurfaceAccessSpec(
+        require_auth=True,
+        allow_personas=list(_ADMIN_PERSONAS),
+    )
+
+    for surface_name, entity_ref, title, field_defs, profile_gate in _ADMIN_SURFACE_DEFS:
+        if not _is_profile_included(profile_gate, security.profile):
+            continue
+
+        elements = [
+            SurfaceElement(field_name=field_name, label=label) for field_name, label in field_defs
+        ]
+        section = SurfaceSection(name="main", elements=elements)
+
+        surfaces.append(
+            SurfaceSpec(
+                name=surface_name,
+                title=title,
+                entity_ref=entity_ref,
+                mode=SurfaceMode.LIST,
+                sections=[section],
+                access=access,
+            )
+        )
+
+    return surfaces
+
+
+# ---------------------------------------------------------------------------
+# Admin workspace builder
+# ---------------------------------------------------------------------------
+
+# Each tuple: (name, source, display, profile_gate, tenant_admin_visible, feedback_only, multi_tenant_only)
+_REGION_DEFS: list[tuple[str, str, DisplayMode, str | None, bool, bool, bool]] = [
+    ("users", "User", DisplayMode.LIST, None, True, False, False),
+    ("tenants", "Tenant", DisplayMode.LIST, "standard", False, False, True),
+    ("sessions", "_admin_sessions", DisplayMode.LIST, "standard", True, False, False),
+    ("health", "_admin_health", DisplayMode.GRID, None, True, False, False),
+    ("metrics", "_admin_metrics", DisplayMode.BAR_CHART, "standard", False, False, False),
+    ("processes", "_admin_processes", DisplayMode.LIST, "standard", False, False, False),
+    ("deploys", "_admin_deploys", DisplayMode.LIST, None, True, False, False),
+    ("feedback", "feedback_admin", DisplayMode.LIST, None, True, True, False),
+]
+
+_NAV_GROUPS: list[tuple[str, list[str]]] = [
+    ("Management", ["users", "tenants", "sessions"]),
+    ("Observability", ["health", "metrics", "processes"]),
+    ("Operations", ["deploys", "feedback"]),
+]
+
+
+def _build_regions(
+    security: SecurityConfig,
+    *,
+    multi_tenant: bool,
+    feedback_enabled: bool,
+    tenant_admin: bool = False,
+) -> list[WorkspaceRegion]:
+    """Build WorkspaceRegion list filtered by profile and feature flags.
+
+    Args:
+        security: Application security configuration.
+        multi_tenant: Whether the app is multi-tenant.
+        feedback_enabled: Whether the feedback widget is enabled.
+        tenant_admin: If True, only include regions visible to tenant admins.
+
+    Returns:
+        A list of :class:`~dazzle.core.ir.workspaces.WorkspaceRegion` objects.
+    """
+    regions: list[WorkspaceRegion] = []
+
+    for name, source, display, profile_gate, tenant_visible, feedback_only, mt_only in _REGION_DEFS:
+        # Profile gate
+        if not _is_profile_included(profile_gate, security.profile):
+            continue
+        # Feedback-only regions require feedback_enabled
+        if feedback_only and not feedback_enabled:
+            continue
+        # Multi-tenant-only regions require multi_tenant
+        if mt_only and not multi_tenant:
+            continue
+        # Tenant admin sees only tenant_admin_visible regions
+        if tenant_admin and not tenant_visible:
+            continue
+
+        regions.append(WorkspaceRegion(name=name, source=source, display=display))
+
+    return regions
+
+
+def _build_nav_groups(region_names: set[str]) -> list[NavGroupSpec]:
+    """Build NavGroupSpec list, including only groups with at least one member.
+
+    Args:
+        region_names: Set of region names that exist in the workspace.
+
+    Returns:
+        A list of :class:`~dazzle.core.ir.workspaces.NavGroupSpec` objects.
+    """
+    groups: list[NavGroupSpec] = []
+    for label, members in _NAV_GROUPS:
+        items = [NavItemIR(entity=m) for m in members if m in region_names]
+        if items:
+            groups.append(NavGroupSpec(label=label, items=items))
+    return groups
+
+
+def _build_admin_workspaces(
+    security: SecurityConfig,
+    *,
+    multi_tenant: bool,
+    feedback_enabled: bool,
+) -> list[WorkspaceSpec]:
+    """Build admin workspace(s) for the application.
+
+    Always produces ``_platform_admin``. In multi-tenant mode, also produces
+    ``_tenant_admin`` with a restricted subset of regions.
+
+    Args:
+        security: Application security configuration.
+        multi_tenant: Whether the app is multi-tenant.
+        feedback_enabled: Whether the feedback widget is enabled.
+
+    Returns:
+        A list of :class:`~dazzle.core.ir.workspaces.WorkspaceSpec` objects.
+    """
+    workspaces: list[WorkspaceSpec] = []
+
+    # _platform_admin
+    platform_personas = ["super_admin"] if multi_tenant else ["admin", "super_admin"]
+    platform_regions = _build_regions(
+        security,
+        multi_tenant=multi_tenant,
+        feedback_enabled=feedback_enabled,
+        tenant_admin=False,
+    )
+    platform_region_names = {r.name for r in platform_regions}
+    platform_nav = _build_nav_groups(platform_region_names)
+    workspaces.append(
+        WorkspaceSpec(
+            name="_platform_admin",
+            title="Platform Admin",
+            regions=platform_regions,
+            nav_groups=platform_nav,
+            access=WorkspaceAccessSpec(
+                level=WorkspaceAccessLevel.PERSONA,
+                allow_personas=platform_personas,
+            ),
+        )
+    )
+
+    if multi_tenant:
+        # _tenant_admin — subset of regions visible to tenant admins
+        tenant_regions = _build_regions(
+            security,
+            multi_tenant=multi_tenant,
+            feedback_enabled=feedback_enabled,
+            tenant_admin=True,
+        )
+        tenant_region_names = {r.name for r in tenant_regions}
+        tenant_nav = _build_nav_groups(tenant_region_names)
+        workspaces.append(
+            WorkspaceSpec(
+                name="_tenant_admin",
+                title="Tenant Admin",
+                regions=tenant_regions,
+                nav_groups=tenant_nav,
+                access=WorkspaceAccessSpec(
+                    level=WorkspaceAccessLevel.PERSONA,
+                    allow_personas=["admin"],
+                ),
+            )
+        )
+
+    return workspaces
