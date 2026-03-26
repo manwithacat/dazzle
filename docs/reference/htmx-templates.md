@@ -246,3 +246,70 @@ This specification does not cover:
 - TypeScript (server-rendered HTML needs no client types)
 - Real-time collaboration / WebSockets
 - Offline-first / service workers
+
+---
+
+## Template Overrides
+
+Projects can override framework templates by placing files with the same
+name in their `templates/` directory. The Jinja2 `ChoiceLoader` searches
+the project directory first, then the framework directory.
+
+### The `dz://` prefix
+
+A project override that needs to *extend* the framework template it
+replaces must use the `dz://` prefix to avoid circular inheritance:
+
+```html
+{# dazzle:override base.html #}
+{# dazzle:blocks scripts_extra #}
+{% extends "dz://base.html" %}
+
+{% block scripts_extra %}
+  {{ super() }}
+  <script src="/static/js/my-custom.js"></script>
+{% endblock %}
+```
+
+Without the `dz://` prefix, `{% extends "base.html" %}` resolves to the
+project's own file (ChoiceLoader priority), causing infinite recursion.
+
+### Declaration headers
+
+The `{# dazzle:override <target> #}` and `{# dazzle:blocks <block-list> #}`
+headers are optional but recommended. They register the override in
+`.dazzle/overrides.json` so the framework can check compatibility across
+upgrades.
+
+### Available blocks in `base.html`
+
+| Block | Purpose |
+|-------|---------|
+| `head_extra` | Additional `<head>` content (meta tags, stylesheets) |
+| `body` | Full page body (rarely overridden directly) |
+| `scripts_extra` | Additional `<script>` tags before `</body>` |
+
+Layout templates (`layouts/app_shell.html`, etc.) expose additional blocks
+for sidebar, navbar, and content areas.
+
+### CLI commands
+
+```bash
+dazzle overrides scan    # Scan project templates/ for override declarations
+dazzle overrides check   # Verify overrides are compatible with current framework
+dazzle overrides list    # List registered overrides from .dazzle/overrides.json
+```
+
+### How the loader works
+
+```
+Project templates/          Framework templates/
+  base.html ──────────┐
+                       ├── ChoiceLoader (project wins)
+  dz://base.html ─────┤── PrefixLoader (always framework)
+                       │
+                       └── Framework base.html
+```
+
+`template_renderer.py` configures this via `ChoiceLoader` + `PrefixLoader`
+with `"dz"` as the prefix and `"://"` as the delimiter.

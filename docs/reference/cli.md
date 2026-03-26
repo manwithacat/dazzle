@@ -69,6 +69,7 @@ Complete reference for the `dazzle` command-line interface.
 | `dazzle dlq` | Dead letter queue commands |
 | `dazzle outbox` | Event outbox commands |
 | `dazzle process-migrate` | Safe DSL version deployment migrations |
+| `dazzle overrides` | Template override management (scan, check, list) |
 
 ### Infrastructure
 
