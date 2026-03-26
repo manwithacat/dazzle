@@ -27,12 +27,12 @@ jobs:
         run: python scripts/build_dist.py
 
       - name: Commit dist if changed
+        continue-on-error: true
         run: |
           if git diff --quiet dist/; then
             echo "dist/ is up to date"
             exit 0
           fi
-          # Tag triggers checkout in detached HEAD — push to main explicitly
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add dist/
@@ -42,6 +42,7 @@ jobs:
   build:
     name: Build sdist and wheel
     needs: rebuild-dist
+    if: always()
     runs-on: ubuntu-latest
 
     steps:
