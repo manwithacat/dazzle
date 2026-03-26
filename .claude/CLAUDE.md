@@ -208,26 +208,6 @@ When integrating a third-party API:
 Place custom packs in `.dazzle/api_packs/<vendor>/<name>.toml`.
 Project-local packs override built-in packs with the same name.
 
-## Workshop
-
-Run `dazzle workshop` in your project directory to watch MCP activity in a live terminal display. It shows active tools with progress bars, completed calls with timing, and a running tally of errors and warnings. Open it in a second terminal while Claude Code works on your app.
-
-```bash
-dazzle workshop                    # watch current directory
-dazzle workshop --bell             # ring terminal bell on errors
-dazzle workshop --tail 50          # show more history
-dazzle workshop --info             # print log path (for scripting)
-```
-
-The log location defaults to `.dazzle/mcp-activity.log` and can be overridden in `dazzle.toml`:
-
-```toml
-[workshop]
-log = ".dazzle/mcp-activity.log"   # default
-```
-
-The `status activity` MCP operation provides the same data for programmatic polling.
-
 ## PyPI Package
 
 - **Package name**: `dazzle-dsl` (the name `dazzle` is taken on PyPI)
