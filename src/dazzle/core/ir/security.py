@@ -16,10 +16,18 @@ class SecurityProfile(StrEnum):
     """
     Application security profile levels.
 
-    Profiles define preset security configurations:
-    - BASIC: Internal tools, minimal security, no auth required
-    - STANDARD: Default SaaS, session auth, basic headers
-    - STRICT: Multi-tenant SaaS, enforced isolation, full security headers
+    All profiles include authentication and an admin workspace.
+    The profile controls *how much* security infrastructure is generated,
+    not whether auth exists.
+
+    Profiles:
+        BASIC: Prototyping and internal tools. Auth enabled but not required
+            by default on surfaces. CORS allows all origins. Admin workspace
+            includes: users, health, deploys, metrics.
+        STANDARD: Production SaaS. Auth required by default, HSTS enabled,
+            same-origin CORS. Admin workspace adds: sessions, processes.
+        STRICT: Regulated / multi-tenant SaaS. Everything in STANDARD plus
+            CSP headers and tenant database isolation (when multi_tenant=True).
     """
 
     BASIC = "basic"
