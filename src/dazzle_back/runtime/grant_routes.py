@@ -8,8 +8,6 @@ Authorization: only roles listed in the matching ``GrantSchemaSpec.granted_by``
 field may create or manage grants.
 """
 
-from __future__ import annotations
-
 from typing import Any
 from uuid import UUID
 

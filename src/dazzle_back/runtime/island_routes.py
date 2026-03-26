@@ -6,20 +6,16 @@ a lightweight data endpoint at ``/api/islands/{island_name}/data``
 that proxies to the entity's CRUD service.
 """
 
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from dazzle.core.ir.islands import IslandSpec
 from dazzle_back.runtime._fastapi_compat import (
     APIRouter,
     Depends,
     HTTPException,
     Query,
 )
-
-if TYPE_CHECKING:
-    from dazzle.core.ir.islands import IslandSpec
 
 logger = logging.getLogger("dazzle.islands")
 

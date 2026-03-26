@@ -8,19 +8,15 @@ Also provides request correlation for tracing API calls back to
 the originating user request.
 """
 
-from __future__ import annotations
-
 import contextvars
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
 
-if TYPE_CHECKING:
-    from fastapi import FastAPI, Request, Response
-    from starlette.middleware.base import RequestResponseEndpoint
+from fastapi import FastAPI, Request, Response
+from starlette.middleware.base import RequestResponseEndpoint
 
-    from dazzle_back.runtime.api_tracker import ApiTracker
-
+from dazzle_back.runtime.api_tracker import ApiTracker
 
 # Context variable for request correlation
 _correlation_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
@@ -54,7 +50,7 @@ class RequestContext:
     user_id: str | None = None
 
     @classmethod
-    def current(cls) -> RequestContext:
+    def current(cls) -> "RequestContext":
         """Get current request context from context vars."""
         return cls(
             correlation_id=_correlation_id.get() or str(uuid4()),
