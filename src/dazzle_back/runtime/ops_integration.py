@@ -30,7 +30,6 @@ from dazzle_back.runtime.api_tracker import (
     configure_anthropic_tracking,
     configure_openai_tracking,
 )
-from dazzle_back.runtime.console_routes import create_console_routes
 from dazzle_back.runtime.email_templates import (
     BrandConfig,
     EmailTemplateEngine,
@@ -47,8 +46,6 @@ from dazzle_back.runtime.ops_database import (
     OpsDatabase,
     RetentionConfig,
 )
-from dazzle_back.runtime.ops_routes import create_ops_routes
-from dazzle_back.runtime.ops_simulator import OpsSimulator
 from dazzle_back.runtime.sse_stream import SSEStreamManager, create_sse_routes
 
 if TYPE_CHECKING:
@@ -98,7 +95,6 @@ class OpsConfig:
         self.sse_heartbeat_interval = sse_heartbeat_interval
         self.brand_config = brand_config
         self.tracking_base_url = tracking_base_url
-        self.enable_console = True
 
 
 class OpsPlatform:
@@ -128,7 +124,6 @@ class OpsPlatform:
         self.analytics_collector: AnalyticsCollector | None = None
         self.api_tracker: ApiTracker | None = None
         self.email_engine: EmailTemplateEngine | None = None
-        self.simulator: OpsSimulator | None = None
         self.appspec: Any = None
         self.spec_version_store: Any = None
         self.deploy_history_store: Any = None
@@ -214,12 +209,6 @@ class OpsPlatform:
             brand_config=self.config.brand_config,
         )
 
-        # Simulator for dashboard demo
-        self.simulator = OpsSimulator(
-            ops_db=self.ops_db,
-            event_bus=event_bus,
-        )
-
     async def start(self) -> None:
         """Start all ops services."""
         if self.health_aggregator:
@@ -233,9 +222,6 @@ class OpsPlatform:
 
     async def stop(self) -> None:
         """Stop all ops services."""
-        if self.simulator and self.simulator.running:
-            await self.simulator.stop()
-
         if self.health_aggregator:
             await self.health_aggregator.stop_periodic_checks()
 
@@ -289,17 +275,6 @@ class OpsPlatform:
         """
         routers = []
 
-        # Main ops routes
-        routers.append(
-            create_ops_routes(
-                ops_db=self.ops_db,
-                health_aggregator=self.health_aggregator,
-                sse_manager=self.sse_manager,
-                simulator=self.simulator,
-                require_auth=self.config.require_auth,
-            )
-        )
-
         # SSE routes
         if self.sse_manager:
             routers.append(create_sse_routes(self.sse_manager))
@@ -311,34 +286,6 @@ class OpsPlatform:
         # Email tracking routes
         if self.email_engine:
             routers.append(create_email_tracking_routes(self.email_engine))
-
-        # Founder Console routes
-        if self.config.enable_console:
-            try:
-                console_router = create_console_routes(
-                    ops_db=self.ops_db,
-                    health_aggregator=self.health_aggregator,
-                    appspec=self.appspec,
-                    spec_version_store=self.spec_version_store,
-                    deploy_history_store=self.deploy_history_store,
-                    require_auth=self.config.require_auth,
-                )
-                routers.append(console_router)
-
-                # Deploy routes
-                from dazzle_back.runtime.deploy_routes import create_deploy_routes
-
-                deploy_router = create_deploy_routes(
-                    deploy_history_store=self.deploy_history_store,
-                    spec_version_store=self.spec_version_store,
-                    rollback_manager=self.rollback_manager,
-                    appspec=self.appspec,
-                )
-                routers.append(deploy_router)
-            except Exception:
-                import logging
-
-                logging.getLogger("dazzle.ops").debug("Console routes not available")
 
         return routers
 

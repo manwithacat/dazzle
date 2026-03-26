@@ -290,12 +290,8 @@ disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = [
-    "dazzle_back.runtime.ops_routes",
     "dazzle_back.runtime.island_routes",
-    "dazzle_back.runtime.console_routes",
-    "dazzle_back.runtime.control_plane",
     "dazzle_back.runtime.debug_routes",
-    "dazzle_back.runtime.deploy_routes",
     "dazzle_back.runtime.event_explorer",
     "dazzle_back.runtime.audit_routes",
     "dazzle_back.runtime.test_routes",

@@ -117,9 +117,6 @@ class ServerConfig:
     # Fragment sources from DSL source= annotations (v0.25.1)
     fragment_sources: dict[str, dict[str, Any]] = field(default_factory=dict)
 
-    # Founder Console (v0.26.0)
-    enable_console: bool = True  # Enable /_console/ founder control plane
-
     # View-based list projections (v0.26.0) — entity_name -> [field_names]
     entity_list_projections: dict[str, list[str]] = field(default_factory=dict)
     # Surface search fields (v0.34.2) — entity_name -> [field_names]
@@ -258,8 +255,6 @@ class DazzleBackendApp:
         self._tenant_config = config.tenant_config
         # Fragment sources from DSL source= annotations (v0.25.1)
         self._fragment_sources: dict[str, dict[str, Any]] = config.fragment_sources
-        # Founder Console (v0.26.0)
-        self._enable_console = config.enable_console
         # View-based list projections (v0.26.0)
         self._entity_list_projections: dict[str, list[str]] = config.entity_list_projections
         # Surface search fields (v0.34.2)
@@ -286,7 +281,6 @@ class DazzleBackendApp:
         """Create the ordered list of default subsystem plugins."""
         from dazzle_back.runtime.subsystems.auth import AuthSubsystem
         from dazzle_back.runtime.subsystems.channels import ChannelsSubsystem
-        from dazzle_back.runtime.subsystems.console import ConsoleSubsystem
         from dazzle_back.runtime.subsystems.events import EventsSubsystem
         from dazzle_back.runtime.subsystems.llm_queue import LLMQueueSubsystem
         from dazzle_back.runtime.subsystems.process import ProcessSubsystem
@@ -298,7 +292,6 @@ class DazzleBackendApp:
             AuthSubsystem(),
             EventsSubsystem(),
             ChannelsSubsystem(),
-            ConsoleSubsystem(),
             ProcessSubsystem(),
             SLASubsystem(),
             LLMQueueSubsystem(),
