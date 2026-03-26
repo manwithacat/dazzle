@@ -52,4 +52,4 @@ def validate_magic_link(store: Any, token: str) -> str | None:
         "UPDATE magic_links SET used_at = %s WHERE token = %s",
         (datetime.now(UTC).isoformat(), token),
     )
-    return row["user_id"]
+    return str(row["user_id"])
