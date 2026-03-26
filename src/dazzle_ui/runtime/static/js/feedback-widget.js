@@ -354,7 +354,11 @@
     this._doPost(payload, this._idempotencyKey);
   };
 
-  FeedbackWidget.prototype._doPost = function (payload, idempotencyKey) {
+  FeedbackWidget.prototype._doPost = function (
+    payload,
+    idempotencyKey,
+    silent,
+  ) {
     var csrfToken = "";
     var csrfMeta = document.querySelector('meta[name="csrf-token"]');
     if (csrfMeta) csrfToken = csrfMeta.getAttribute("content") || "";
@@ -374,13 +378,15 @@
     })
       .then(function (resp) {
         if (!resp.ok) throw new Error("HTTP " + resp.status);
-        self._onSuccess();
+        if (!silent) self._onSuccess();
       })
       .catch(function () {
-        self._savePending(payload, idempotencyKey);
-        self._showToast("Saved offline \u2014 will retry on next page load.");
-        self.close();
-        self._resetForm();
+        if (!silent) {
+          self._savePending(payload, idempotencyKey);
+          self._showToast("Saved offline \u2014 will retry on next page load.");
+          self.close();
+          self._resetForm();
+        }
       });
   };
 
@@ -430,7 +436,7 @@
       var self = this;
       pending.forEach(function (item) {
         if (now - item.ts > PENDING_MAX_AGE_MS) return;
-        self._doPost(item.payload, item.key);
+        self._doPost(item.payload, item.key, true);
       });
     } catch (_) {
       /* noop */
