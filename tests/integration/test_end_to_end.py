@@ -73,9 +73,10 @@ surface post_create "Create Post":
     assert len(errors) == 0, f"Unexpected errors: {errors}"
     # May have warnings (unused entities, etc.) but no errors
 
-    # Step 5: Check IR structure
-    assert len(appspec.domain.entities) == 2
-    entity_names = {e.name for e in appspec.domain.entities}
+    # Step 5: Check IR structure (filter out synthetic platform entities/surfaces)
+    user_entities = [e for e in appspec.domain.entities if e.domain != "platform"]
+    assert len(user_entities) == 2
+    entity_names = {e.name for e in user_entities}
     assert entity_names == {"User", "Post"}
 
     # Check Post entity has author reference
@@ -86,9 +87,10 @@ surface post_create "Create Post":
     assert author_field.type.kind.value == "ref"
     assert author_field.type.ref_entity == "User"
 
-    # Check surfaces
-    assert len(appspec.surfaces) == 2
-    surface_names = {s.name for s in appspec.surfaces}
+    # Check surfaces (filter out synthetic admin surfaces)
+    user_surfaces = [s for s in appspec.surfaces if not s.name.startswith("_admin_")]
+    assert len(user_surfaces) == 2
+    surface_names = {s.name for s in user_surfaces}
     assert surface_names == {"user_list", "post_create"}
 
 
@@ -139,9 +141,10 @@ surface user_list "Users":
     # Link with dependency resolution
     appspec = build_appspec(modules, "myapp.core")
 
-    # Should have both entities
-    assert len(appspec.domain.entities) == 2
-    entity_names = {e.name for e in appspec.domain.entities}
+    # Should have both user-declared entities (filter out synthetic platform entities)
+    user_entities = [e for e in appspec.domain.entities if e.domain != "platform"]
+    assert len(user_entities) == 2
+    entity_names = {e.name for e in user_entities}
     assert entity_names == {"AuthToken", "User"}
 
     # Check cross-module reference

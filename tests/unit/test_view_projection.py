@@ -137,8 +137,10 @@ surface company_list "Company List":
 """
         module = _build_module_ir(dsl)
         appspec = build_appspec([module], "test_app")
-        assert len(appspec.surfaces) == 1
-        assert appspec.surfaces[0].view_ref == "CompanyListView"
+        # Filter out synthetic admin surfaces (name starts with "_admin_")
+        user_surfaces = [s for s in appspec.surfaces if not s.name.startswith("_admin_")]
+        assert len(user_surfaces) == 1
+        assert user_surfaces[0].view_ref == "CompanyListView"
 
     def test_unknown_view_ref_error(self) -> None:
         from dazzle.core.linker import build_appspec

@@ -72,8 +72,12 @@ def appspec():
 
 @pytest.fixture(scope="module")
 def entity_map(appspec):
-    """Map of entity name -> EntitySpec for quick lookup."""
-    return {e.name: e for e in appspec.domain.entities}
+    """Map of entity name -> EntitySpec for quick lookup (domain entities only).
+
+    Synthetic platform entities (domain="platform") are excluded so RBAC checks
+    focus on user-declared business entities.
+    """
+    return {e.name: e for e in appspec.domain.entities if e.domain != "platform"}
 
 
 # ---------------------------------------------------------------------------
@@ -164,11 +168,13 @@ class TestPolicyCompleteness:
         )
 
     def test_all_eight_entities_present(self, appspec) -> None:
-        """The example declares exactly 8 entities."""
-        entity_names = [e.name for e in appspec.domain.entities]
+        """The example declares exactly 8 domain entities (excluding synthetic platform entities)."""
+        # Filter out synthetic platform entities (domain="platform") added by the linker
+        domain_entities = [e for e in appspec.domain.entities if e.domain != "platform"]
+        entity_names = [e.name for e in domain_entities]
         for name in ALL_ENTITIES:
             assert name in entity_names, f"Missing entity: {name}"
-        assert len(appspec.domain.entities) == 8
+        assert len(domain_entities) == 8
 
     def test_every_entity_has_permit_rules(self, entity_map) -> None:
         """Every entity should have at least one PERMIT rule."""

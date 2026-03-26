@@ -163,6 +163,616 @@
           'state_machine': None,
           'title': 'Task',
         }),
+        dict({
+          'access': dict({
+            'permissions': list([
+              dict({
+                'condition': None,
+                'effect': <PolicyEffect.PERMIT: 'permit'>,
+                'operation': <PermissionKind.READ: 'read'>,
+                'personas': list([
+                  'admin',
+                  'super_admin',
+                ]),
+                'require_auth': True,
+              }),
+              dict({
+                'condition': None,
+                'effect': <PolicyEffect.PERMIT: 'permit'>,
+                'operation': <PermissionKind.LIST: 'list'>,
+                'personas': list([
+                  'admin',
+                  'super_admin',
+                ]),
+                'require_auth': True,
+              }),
+            ]),
+            'scopes': list([
+            ]),
+            'visibility': list([
+            ]),
+          }),
+          'archetype_kind': None,
+          'audit': None,
+          'bulk': None,
+          'computed_fields': list([
+          ]),
+          'constraints': list([
+          ]),
+          'display_field': None,
+          'domain': 'platform',
+          'examples': list([
+          ]),
+          'extends': list([
+          ]),
+          'fields': list([
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.PK: 'pk'>,
+              ]),
+              'name': 'id',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.UUID: 'uuid'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.REQUIRED: 'required'>,
+              ]),
+              'name': 'component',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 100,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.REQUIRED: 'required'>,
+              ]),
+              'name': 'status',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': list([
+                  'healthy',
+                  'degraded',
+                  'unhealthy',
+                ]),
+                'kind': <FieldTypeKind.ENUM: 'enum'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'message',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.TEXT: 'text'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'latency_ms',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.FLOAT: 'float'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': 'now',
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'checked_at',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.DATETIME: 'datetime'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+          ]),
+          'graph_edge': None,
+          'graph_node': None,
+          'intent': 'Live health-check status for each platform component',
+          'invariants': list([
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'SystemHealth',
+          'patterns': list([
+            'system',
+            'monitoring',
+          ]),
+          'publishes': list([
+          ]),
+          'seed_template': None,
+          'soft_delete': False,
+          'source': None,
+          'state_machine': None,
+          'title': 'System Health',
+        }),
+        dict({
+          'access': dict({
+            'permissions': list([
+              dict({
+                'condition': None,
+                'effect': <PolicyEffect.PERMIT: 'permit'>,
+                'operation': <PermissionKind.READ: 'read'>,
+                'personas': list([
+                  'admin',
+                  'super_admin',
+                ]),
+                'require_auth': True,
+              }),
+              dict({
+                'condition': None,
+                'effect': <PolicyEffect.PERMIT: 'permit'>,
+                'operation': <PermissionKind.LIST: 'list'>,
+                'personas': list([
+                  'admin',
+                  'super_admin',
+                ]),
+                'require_auth': True,
+              }),
+            ]),
+            'scopes': list([
+            ]),
+            'visibility': list([
+            ]),
+          }),
+          'archetype_kind': None,
+          'audit': None,
+          'bulk': None,
+          'computed_fields': list([
+          ]),
+          'constraints': list([
+          ]),
+          'display_field': None,
+          'domain': 'platform',
+          'examples': list([
+          ]),
+          'extends': list([
+          ]),
+          'fields': list([
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.PK: 'pk'>,
+              ]),
+              'name': 'id',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.UUID: 'uuid'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.REQUIRED: 'required'>,
+              ]),
+              'name': 'name',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 200,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.REQUIRED: 'required'>,
+              ]),
+              'name': 'value',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.FLOAT: 'float'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'unit',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 50,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'tags',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.TEXT: 'text'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'bucket_start',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.DATETIME: 'datetime'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'resolution',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 10,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+          ]),
+          'graph_edge': None,
+          'graph_node': None,
+          'intent': 'Time-series platform metrics collected by the runtime',
+          'invariants': list([
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'SystemMetric',
+          'patterns': list([
+            'system',
+            'monitoring',
+          ]),
+          'publishes': list([
+          ]),
+          'seed_template': None,
+          'soft_delete': False,
+          'source': None,
+          'state_machine': None,
+          'title': 'System Metric',
+        }),
+        dict({
+          'access': dict({
+            'permissions': list([
+              dict({
+                'condition': None,
+                'effect': <PolicyEffect.PERMIT: 'permit'>,
+                'operation': <PermissionKind.READ: 'read'>,
+                'personas': list([
+                  'admin',
+                  'super_admin',
+                ]),
+                'require_auth': True,
+              }),
+              dict({
+                'condition': None,
+                'effect': <PolicyEffect.PERMIT: 'permit'>,
+                'operation': <PermissionKind.LIST: 'list'>,
+                'personas': list([
+                  'admin',
+                  'super_admin',
+                ]),
+                'require_auth': True,
+              }),
+            ]),
+            'scopes': list([
+            ]),
+            'visibility': list([
+            ]),
+          }),
+          'archetype_kind': None,
+          'audit': None,
+          'bulk': None,
+          'computed_fields': list([
+          ]),
+          'constraints': list([
+          ]),
+          'display_field': None,
+          'domain': 'platform',
+          'examples': list([
+          ]),
+          'extends': list([
+          ]),
+          'fields': list([
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.PK: 'pk'>,
+              ]),
+              'name': 'id',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.UUID: 'uuid'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+                <FieldModifier.REQUIRED: 'required'>,
+              ]),
+              'name': 'version',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 50,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'previous_version',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 50,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'deployed_by',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 200,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': 'now',
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'deployed_at',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.DATETIME: 'datetime'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': 'pending',
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'status',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': list([
+                  'pending',
+                  'in_progress',
+                  'completed',
+                  'failed',
+                  'rolled_back',
+                ]),
+                'kind': <FieldTypeKind.ENUM: 'enum'>,
+                'max_length': None,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+            dict({
+              'default': None,
+              'default_expr': None,
+              'modifiers': list([
+              ]),
+              'name': 'rollback_of',
+              'type': dict({
+                'currency_code': None,
+                'enum_values': None,
+                'kind': <FieldTypeKind.STR: 'str'>,
+                'max_length': 50,
+                'max_size': None,
+                'precision': None,
+                'readonly': False,
+                'ref_entity': None,
+                'relationship_behavior': None,
+                'scale': None,
+                'via_entity': None,
+              }),
+            }),
+          ]),
+          'graph_edge': None,
+          'graph_node': None,
+          'intent': 'Immutable record of every deployment with rollback lineage',
+          'invariants': list([
+          ]),
+          'is_singleton': False,
+          'is_tenant_root': False,
+          'name': 'DeployHistory',
+          'patterns': list([
+            'system',
+            'audit',
+          ]),
+          'publishes': list([
+          ]),
+          'seed_template': None,
+          'soft_delete': False,
+          'source': None,
+          'state_machine': None,
+          'title': 'Deploy History',
+        }),
       ]),
     }),
     'domain_services': list([
@@ -179,10 +789,42 @@
     ]),
     'fk_graph': dict({
       '_edges': dict({
+        'DeployHistory': dict({
+        }),
+        'SystemHealth': dict({
+        }),
+        'SystemMetric': dict({
+        }),
         'Task': dict({
         }),
       }),
       '_fields': dict({
+        'DeployHistory': set({
+          'deployed_at',
+          'deployed_by',
+          'id',
+          'previous_version',
+          'rollback_of',
+          'status',
+          'version',
+        }),
+        'SystemHealth': set({
+          'checked_at',
+          'component',
+          'id',
+          'latency_ms',
+          'message',
+          'status',
+        }),
+        'SystemMetric': set({
+          'bucket_start',
+          'id',
+          'name',
+          'resolution',
+          'tags',
+          'unit',
+          'value',
+        }),
         'Task': set({
           'created_at',
           'description',
@@ -445,6 +1087,136 @@
         'ux': None,
         'view_ref': None,
       }),
+      dict({
+        'access': dict({
+          'allow_personas': list([
+            'admin',
+            'super_admin',
+          ]),
+          'deny_personas': list([
+          ]),
+          'redirect_unauthenticated': '/',
+          'require_auth': True,
+        }),
+        'actions': list([
+        ]),
+        'entity_ref': 'SystemHealth',
+        'mode': <SurfaceMode.LIST: 'list'>,
+        'name': '_admin_health',
+        'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'search_fields': list([
+        ]),
+        'sections': list([
+          dict({
+            'elements': list([
+              dict({
+                'field_name': 'component',
+                'label': 'Component',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+              dict({
+                'field_name': 'status',
+                'label': 'Status',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+              dict({
+                'field_name': 'message',
+                'label': 'Message',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+              dict({
+                'field_name': 'checked_at',
+                'label': 'Checked',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+            ]),
+            'name': 'main',
+            'title': None,
+            'visible': None,
+          }),
+        ]),
+        'source': None,
+        'title': 'System Health',
+        'ux': None,
+        'view_ref': None,
+      }),
+      dict({
+        'access': dict({
+          'allow_personas': list([
+            'admin',
+            'super_admin',
+          ]),
+          'deny_personas': list([
+          ]),
+          'redirect_unauthenticated': '/',
+          'require_auth': True,
+        }),
+        'actions': list([
+        ]),
+        'entity_ref': 'DeployHistory',
+        'mode': <SurfaceMode.LIST: 'list'>,
+        'name': '_admin_deploys',
+        'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'search_fields': list([
+        ]),
+        'sections': list([
+          dict({
+            'elements': list([
+              dict({
+                'field_name': 'version',
+                'label': 'Version',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+              dict({
+                'field_name': 'status',
+                'label': 'Status',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+              dict({
+                'field_name': 'deployed_by',
+                'label': 'Deployed By',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+              dict({
+                'field_name': 'deployed_at',
+                'label': 'Deployed At',
+                'options': dict({
+                }),
+                'visible': None,
+                'when_expr': None,
+              }),
+            ]),
+            'name': 'main',
+            'title': None,
+            'visible': None,
+          }),
+        ]),
+        'source': None,
+        'title': 'Deploy History',
+        'ux': None,
+        'view_ref': None,
+      }),
     ]),
     'templates': list([
     ]),
@@ -461,6 +1233,107 @@
     'webhooks': list([
     ]),
     'workspaces': list([
+      dict({
+        'access': dict({
+          'allow_personas': list([
+            'admin',
+            'super_admin',
+          ]),
+          'deny_personas': list([
+          ]),
+          'level': <WorkspaceAccessLevel.PERSONA: 'persona'>,
+          'redirect_unauthenticated': '/login',
+        }),
+        'context_selector': None,
+        'name': '_platform_admin',
+        'nav_groups': list([
+          dict({
+            'collapsed': False,
+            'icon': None,
+            'items': list([
+              dict({
+                'entity': 'health',
+                'icon': None,
+              }),
+            ]),
+            'label': 'Observability',
+          }),
+          dict({
+            'collapsed': False,
+            'icon': None,
+            'items': list([
+              dict({
+                'entity': 'deploys',
+                'icon': None,
+              }),
+            ]),
+            'label': 'Operations',
+          }),
+        ]),
+        'purpose': None,
+        'regions': list([
+          dict({
+            'action': None,
+            'aggregates': dict({
+            }),
+            'date_field': None,
+            'date_range': False,
+            'display': <DisplayMode.GRID: 'grid'>,
+            'empty_message': None,
+            'filter': None,
+            'group_by': None,
+            'heatmap_columns': None,
+            'heatmap_rows': None,
+            'heatmap_thresholds': list([
+            ]),
+            'heatmap_value': None,
+            'limit': None,
+            'name': 'health',
+            'progress_complete_at': None,
+            'progress_stages': list([
+            ]),
+            'sort': list([
+            ]),
+            'source': 'SystemHealth',
+            'source_filters': dict({
+            }),
+            'sources': list([
+            ]),
+          }),
+          dict({
+            'action': None,
+            'aggregates': dict({
+            }),
+            'date_field': None,
+            'date_range': False,
+            'display': <DisplayMode.LIST: 'list'>,
+            'empty_message': None,
+            'filter': None,
+            'group_by': None,
+            'heatmap_columns': None,
+            'heatmap_rows': None,
+            'heatmap_thresholds': list([
+            ]),
+            'heatmap_value': None,
+            'limit': None,
+            'name': 'deploys',
+            'progress_complete_at': None,
+            'progress_stages': list([
+            ]),
+            'sort': list([
+            ]),
+            'source': 'DeployHistory',
+            'source_filters': dict({
+            }),
+            'sources': list([
+            ]),
+          }),
+        ]),
+        'source': None,
+        'stage': None,
+        'title': 'Platform Admin',
+        'ux': None,
+      }),
     ]),
   })
 # ---

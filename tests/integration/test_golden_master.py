@@ -58,16 +58,18 @@ def test_simple_dsl_has_expected_structure(simple_test_dsl_path: Path):
     assert appspec.title == "Simple Test App"
     assert appspec.version == "0.1.0"
 
-    # Check entities
-    assert len(appspec.domain.entities) == 1
-    task_entity = appspec.domain.entities[0]
+    # Check entities — filter out synthetic platform entities (domain="platform")
+    user_entities = [e for e in appspec.domain.entities if e.domain != "platform"]
+    assert len(user_entities) == 1
+    task_entity = user_entities[0]
     assert task_entity.name == "Task"
     assert task_entity.title == "Task"
     assert len(task_entity.fields) == 5  # id, title, description, status, created_at
 
-    # Check surfaces
-    assert len(appspec.surfaces) == 4
-    surface_names = {s.name for s in appspec.surfaces}
+    # Check surfaces — filter out synthetic admin surfaces (name starts with "_admin_")
+    user_surfaces = [s for s in appspec.surfaces if not s.name.startswith("_admin_")]
+    assert len(user_surfaces) == 4
+    surface_names = {s.name for s in user_surfaces}
     assert surface_names == {"task_list", "task_detail", "task_create", "task_edit"}
 
     # Check surface modes

@@ -261,8 +261,14 @@ class TestUXLinking:
         appspec = build_appspec([module], module_name)
 
         assert appspec.name == "urban_canopy"
-        assert len(appspec.surfaces) == 4
-        assert len(appspec.workspaces) == 2
+        # Filter out synthetic admin surfaces (name starts with "_admin_")
+        user_surfaces = [s for s in appspec.surfaces if not s.name.startswith("_admin_")]
+        assert len(user_surfaces) == 4
+        # Filter out synthetic admin workspaces (name starts with "_platform_" or "_tenant_")
+        user_workspaces = [
+            w for w in appspec.workspaces if not w.name.startswith(("_platform_", "_tenant_"))
+        ]
+        assert len(user_workspaces) == 2
 
         # Verify UX preserved after linking
         task_list = next(s for s in appspec.surfaces if s.name == "task_list")

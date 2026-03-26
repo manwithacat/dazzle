@@ -340,15 +340,16 @@ def _build_admin_surfaces(security: SecurityConfig) -> list[SurfaceSpec]:
 # ---------------------------------------------------------------------------
 
 # Each tuple: (name, source, display, profile_gate, tenant_admin_visible, feedback_only, multi_tenant_only)
+# Note: source must be an entity name, not a surface name.
 _REGION_DEFS: list[tuple[str, str, DisplayMode, str | None, bool, bool, bool]] = [
     ("users", "User", DisplayMode.LIST, None, True, False, False),
     ("tenants", "Tenant", DisplayMode.LIST, "standard", False, False, True),
-    ("sessions", "_admin_sessions", DisplayMode.LIST, "standard", True, False, False),
-    ("health", "_admin_health", DisplayMode.GRID, None, True, False, False),
-    ("metrics", "_admin_metrics", DisplayMode.BAR_CHART, "standard", False, False, False),
-    ("processes", "_admin_processes", DisplayMode.LIST, "standard", False, False, False),
-    ("deploys", "_admin_deploys", DisplayMode.LIST, None, True, False, False),
-    ("feedback", "feedback_admin", DisplayMode.LIST, None, True, True, False),
+    ("sessions", "SessionInfo", DisplayMode.LIST, "standard", True, False, False),
+    ("health", "SystemHealth", DisplayMode.GRID, None, True, False, False),
+    ("metrics", "SystemMetric", DisplayMode.BAR_CHART, "standard", False, False, False),
+    ("processes", "ProcessRun", DisplayMode.LIST, "standard", False, False, False),
+    ("deploys", "DeployHistory", DisplayMode.LIST, None, True, False, False),
+    ("feedback", "FeedbackReport", DisplayMode.LIST, None, True, True, False),
 ]
 
 _NAV_GROUPS: list[tuple[str, list[str]]] = [
@@ -364,6 +365,7 @@ def _build_regions(
     multi_tenant: bool,
     feedback_enabled: bool,
     tenant_admin: bool = False,
+    existing_entity_names: set[str] | None = None,
 ) -> list[WorkspaceRegion]:
     """Build WorkspaceRegion list filtered by profile and feature flags.
 
@@ -372,6 +374,10 @@ def _build_regions(
         multi_tenant: Whether the app is multi-tenant.
         feedback_enabled: Whether the feedback widget is enabled.
         tenant_admin: If True, only include regions visible to tenant admins.
+        existing_entity_names: Set of entity names (user-declared + synthetic) already
+            present in the app.  Regions whose source entity is not in this set are
+            silently excluded so the workspace passes validation.  When ``None``,
+            no filtering is applied (all regions that pass other gates are included).
 
     Returns:
         A list of :class:`~dazzle.core.ir.workspaces.WorkspaceRegion` objects.
@@ -391,8 +397,11 @@ def _build_regions(
         # Tenant admin sees only tenant_admin_visible regions
         if tenant_admin and not tenant_visible:
             continue
+        # Skip region if entity-name filtering is enabled and source is missing
+        if existing_entity_names is not None and source not in existing_entity_names:
+            continue
 
-        regions.append(WorkspaceRegion(name=name, source=source, display=display))
+        regions.append(WorkspaceRegion(name=name, source=source, display=display, limit=None))
 
     return regions
 
@@ -419,6 +428,7 @@ def _build_admin_workspaces(
     *,
     multi_tenant: bool,
     feedback_enabled: bool,
+    existing_entity_names: set[str] | None = None,
 ) -> list[WorkspaceSpec]:
     """Build admin workspace(s) for the application.
 
@@ -429,6 +439,10 @@ def _build_admin_workspaces(
         security: Application security configuration.
         multi_tenant: Whether the app is multi-tenant.
         feedback_enabled: Whether the feedback widget is enabled.
+        existing_entity_names: Set of all entity names (user-declared + synthetic)
+            present in the app at workspace-build time.  Used to filter out regions
+            whose source entity is not yet available so the workspace passes linker
+            validation.
 
     Returns:
         A list of :class:`~dazzle.core.ir.workspaces.WorkspaceSpec` objects.
@@ -442,6 +456,7 @@ def _build_admin_workspaces(
         multi_tenant=multi_tenant,
         feedback_enabled=feedback_enabled,
         tenant_admin=False,
+        existing_entity_names=existing_entity_names,
     )
     platform_region_names = {r.name for r in platform_regions}
     platform_nav = _build_nav_groups(platform_region_names)
@@ -465,6 +480,7 @@ def _build_admin_workspaces(
             multi_tenant=multi_tenant,
             feedback_enabled=feedback_enabled,
             tenant_admin=True,
+            existing_entity_names=existing_entity_names,
         )
         tenant_region_names = {r.name for r in tenant_regions}
         tenant_nav = _build_nav_groups(tenant_region_names)
@@ -523,13 +539,22 @@ def build_admin_infrastructure(
 
     admin_entities = _build_admin_entities(security_config)
     admin_surfaces = _build_admin_surfaces(security_config)
+
+    # Build the full set of entity names (user-declared + synthetic) so workspace
+    # region sources are only included when their backing entity actually exists.
+    existing_entity_names = {e.name for e in entities}
+    all_entity_names = existing_entity_names | {e.name for e in admin_entities}
+    # FeedbackReport is added by the linker before calling this function when
+    # feedback is enabled; add it here too so the feedback workspace region passes.
+    if feedback_enabled:
+        all_entity_names.add("FeedbackReport")
+
     admin_workspaces = _build_admin_workspaces(
         security_config,
         multi_tenant=multi_tenant,
         feedback_enabled=feedback_enabled,
+        existing_entity_names=all_entity_names,
     )
-
-    existing_entity_names = {e.name for e in entities}
     existing_workspace_names = {w.name for w in existing_workspaces}
     _check_collisions(
         existing_entity_names=existing_entity_names,
