@@ -556,6 +556,77 @@ def impersonate(
             )
 
 
+@auth_app.command(name="rotate-passwords")
+def rotate_passwords(
+    all_users: Annotated[bool, typer.Option("--all", help="Rotate for all users")] = False,
+    role: Annotated[
+        str | None, typer.Option("--role", "-r", help="Rotate only for users with this role")
+    ] = None,
+    generate: Annotated[
+        bool, typer.Option("--generate", "-g", help="Generate random passwords")
+    ] = False,
+    password: Annotated[
+        str | None, typer.Option("--password", "-p", help="Set explicit password for all users")
+    ] = None,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation")] = False,
+    output_json: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
+    """Rotate passwords for multiple users at once."""
+    if not all_users and not role:
+        console.print("[red]Specify --all or --role to select users.[/red]")
+        raise typer.Exit(1)
+    if not generate and not password:
+        console.print("[red]Specify --generate or --password.[/red]")
+        raise typer.Exit(1)
+    if generate and password:
+        console.print("[red]Use --generate or --password, not both.[/red]")
+        raise typer.Exit(1)
+    if password and len(password) < _MIN_PASSWORD_LENGTH:
+        console.print(f"[red]Password must be at least {_MIN_PASSWORD_LENGTH} characters.[/red]")
+        raise typer.Exit(1)
+
+    store = _get_auth_store()
+    if role:
+        users = store.list_users(role=role)
+    else:
+        users = store.list_users()
+
+    if not users:
+        console.print("[yellow]No matching users found.[/yellow]")
+        raise typer.Exit(0)
+
+    if not yes:
+        confirm = typer.confirm(f"Rotate passwords for {len(users)} user(s)?")
+        if not confirm:
+            raise typer.Abort()
+
+    results: list[dict[str, Any]] = []
+    for user in users:
+        new_pw = _generate_temp_password() if generate else password
+        store.update_password(user.id, new_pw)
+        revoked = store.delete_user_sessions(user.id)
+        entry: dict[str, Any] = {"email": user.email, "sessions_revoked": revoked}
+        if generate:
+            entry["password"] = new_pw
+        results.append(entry)
+
+    if output_json:
+        console.print_json(json.dumps({"rotated": len(results), "users": results}))
+    else:
+        table = Table(title=f"Rotated {len(results)} password(s)")
+        table.add_column("Email")
+        if generate:
+            table.add_column("New Password")
+        table.add_column("Sessions Revoked")
+        for r in results:
+            row = [r["email"]]
+            if generate:
+                row.append(r["password"])
+            row.append(str(r["sessions_revoked"]))
+            table.add_row(*row)
+        console.print(table)
+
+
 @auth_app.command(name="config")
 def config(
     output_json: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
