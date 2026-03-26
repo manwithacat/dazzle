@@ -32,27 +32,13 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle_back/` | FastAPI runtime (API, auth, channels, events, grants) |
 | `src/dazzle_ui/` | UI runtime — Python/Jinja2 templates rendered server-side, static JS/CSS assets |
 
-## Backward Compatibility Policy
+## Style Guide
 
-**Backward compatibility is not a requirement.** This project has one major user who is fully engaged with the dev process. When making changes:
-
-- **Prefer clean breaks over shims.** Delete old functions, rename freely, change signatures. Never create wrapper functions, re-exports, or compatibility aliases.
-- **Update all callers** in the same commit rather than preserving old APIs.
-- **Communicate breaking changes** via CHANGELOG.md (`### Changed` / `### Removed`) and GitHub issue comments. That is sufficient notice.
-
-## LLM-First Style Guide
-
-This is an LLM-first codebase. Optimize for clarity and predictability over cleverness.
-
-### Python
 - **Type hints required** on all public functions (enforced by mypy)
 - **Pydantic models** for data crossing module boundaries
-- **Explicit dependencies** - no hidden globals or singletons
-- Avoid metaprogramming, monkey-patching, runtime code generation
-
-### General
-- Prefer explicit over magic
-- Keep functions small and single-purpose
+- **Explicit dependencies** — no hidden globals or singletons (ADR-0005)
+- **No backward compat shims** — clean breaks, update all callers in same commit (ADR-0003)
+- Prefer explicit over magic; keep functions small and single-purpose
 - Data shapes in dedicated files (`models.py`)
 - Never edit auto-generated files (marked with `# AUTO-GENERATED`)
 
@@ -168,9 +154,7 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 
 ## MCP / CLI Boundary
 
-**MCP tools** = stateless reads returning data (fast, no side effects). Claude can continue thinking while these run.
-
-**CLI commands** = anything that does work (generates, runs, writes, calls LLMs). Use `dazzle <group> <command>`.
+MCP = stateless reads, CLI = process/writes (ADR-0002). Use `dazzle search <keyword>` to find commands.
 
 ### MCP Tools (24 knowledge/query tools)
 
@@ -279,12 +263,12 @@ The `status activity` MCP operation provides the same data for programmatic poll
 
 ## Architectural Decisions
 
-See `docs/adr/INDEX.md` for the full index. Key decisions that constrain agent proposals:
+See `docs/adr/INDEX.md` for the full index (14 ADRs). Key constraints:
 - **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
 - **No SQLite** — PostgreSQL only (ADR-0008)
 - **No SPA frameworks** — server-side Jinja2 + HTMX (ADR-0011)
-- **No backward compat shims** — clean breaks before v1.0 (ADR-0003)
 - **No field conditions in `permit:`** — use `scope:` with `for:` (ADR-0010)
+- **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
 
 ## Gotchas
 
