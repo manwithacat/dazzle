@@ -127,3 +127,75 @@ def test_inspect_command_default(cli_runner: CliRunner, test_project: Path):
     assert result.exit_code == 0
     # Should show project structure with entities and surfaces
     assert "Entities" in result.stdout or "test_app" in result.stdout
+
+
+# ===========================================================================
+# Discoverability commands: `dazzle commands` and `dazzle search`
+# ===========================================================================
+
+
+class TestCommandsCommand:
+    """Tests for `dazzle commands` — list all CLI commands."""
+
+    def test_commands_lists_output(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["commands"])
+        assert result.exit_code == 0
+        assert "serve" in result.output
+
+    def test_commands_json_output(self, cli_runner: CliRunner) -> None:
+        import json
+
+        result = cli_runner.invoke(app, ["commands", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        assert "serve" in data
+
+    def test_commands_json_entries_have_description(self, cli_runner: CliRunner) -> None:
+        import json
+
+        result = cli_runner.invoke(app, ["commands", "--json"])
+        assert result.exit_code == 0
+        data = json.loads(result.output)
+        for cmd, info in data.items():
+            assert "description" in info, f"'{cmd}' missing description in JSON output"
+
+    def test_commands_category_filter_runtime(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["commands", "--category", "Runtime"])
+        assert result.exit_code == 0
+        assert "serve" in result.output
+
+    def test_commands_category_filter_case_insensitive(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["commands", "--category", "runtime"])
+        assert result.exit_code == 0
+        assert "serve" in result.output
+
+    def test_commands_unknown_category_returns_empty(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["commands", "--category", "NonExistentCategoryXYZ"])
+        # Empty category → no output lines with "dazzle", but exit code still 0
+        assert result.exit_code == 0
+
+
+class TestSearchCommand:
+    """Tests for `dazzle search` — keyword search over commands."""
+
+    def test_search_finds_serve(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["search", "serve"])
+        assert result.exit_code == 0
+        assert "serve" in result.output
+
+    def test_search_finds_validate(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["search", "validate"])
+        assert result.exit_code == 0
+
+    def test_search_no_results_exits_1(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["search", "xyznonexistent999"])
+        assert result.exit_code == 1
+
+    def test_search_no_results_prints_message(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["search", "xyznonexistent999"])
+        assert "No commands found" in result.output
+
+    def test_search_output_contains_dazzle_prefix(self, cli_runner: CliRunner) -> None:
+        result = cli_runner.invoke(app, ["search", "serve"])
+        assert result.exit_code == 0
+        assert "dazzle" in result.output

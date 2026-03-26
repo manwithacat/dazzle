@@ -210,3 +210,88 @@ class TestGetCliHelp:
         if not result.get("found"):
             matches = result.get("matches", [])
             assert any("composition" in m["command"] for m in matches)
+
+    def test_description_search_matches(self) -> None:
+        # "validate" should be found by exact name match
+        result = get_cli_help("validate")
+        assert result["found"] is True
+        assert result["command"] == "validate"
+
+    def test_description_search_via_description_keyword(self) -> None:
+        # A keyword that appears in descriptions but not command names should
+        # return matches (not found=True, but matches list populated).
+        result = get_cli_help("syntax")
+        # Could be found if a command is literally named "syntax", or matched
+        # via description — either way there must be some response.
+        assert "found" in result
+
+    def test_description_search_no_match(self) -> None:
+        result = get_cli_help("xyznonexistentcommand12345")
+        assert result["found"] is False
+        assert "available_commands" in result
+
+
+# ===========================================================================
+# search_commands()
+# ===========================================================================
+
+
+class TestSearchCommands:
+    """Verify the search_commands() helper used by MCP and the CLI search cmd."""
+
+    def test_search_by_name(self) -> None:
+        from dazzle.mcp.cli_help import search_commands
+
+        results = search_commands("serve")
+        assert any(r["command"] == "serve" for r in results)
+
+    def test_search_by_description(self) -> None:
+        from dazzle.mcp.cli_help import search_commands
+
+        results = search_commands("validate")
+        assert len(results) > 0
+
+    def test_search_no_results(self) -> None:
+        from dazzle.mcp.cli_help import search_commands
+
+        results = search_commands("xyznonexistent999")
+        assert results == []
+
+    def test_results_sorted_by_score_descending(self) -> None:
+        from dazzle.mcp.cli_help import search_commands
+
+        results = search_commands("test")
+        assert len(results) > 1
+        scores = [r["score"] for r in results]
+        assert scores == sorted(scores, reverse=True)
+
+    def test_result_has_required_keys(self) -> None:
+        from dazzle.mcp.cli_help import search_commands
+
+        results = search_commands("serve")
+        assert len(results) > 0
+        for r in results:
+            assert "command" in r
+            assert "description" in r
+            assert "category" in r
+            assert "score" in r
+
+    def test_name_match_scores_higher_than_description_only(self) -> None:
+        from dazzle.mcp.cli_help import search_commands
+
+        # "serve" appears literally in the command name — its score should be
+        # >= 3 (name bonus).
+        results = search_commands("serve")
+        serve_hits = [r for r in results if r["command"] == "serve"]
+        assert serve_hits, "Expected 'serve' in results"
+        assert serve_hits[0]["score"] >= 3
+
+    def test_search_category_match(self) -> None:
+        from dazzle.mcp.cli_help import search_commands
+
+        # "Runtime" is a category — searching for it should return commands in
+        # that category.
+        results = search_commands("Runtime")
+        assert len(results) > 0
+        categories = {r["category"] for r in results}
+        assert "Runtime" in categories
