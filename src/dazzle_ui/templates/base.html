@@ -17,7 +17,7 @@
 
   {# Tailwind CSS + DaisyUI — compiled bundle replaces both CDNs (#377) #}
   {% if _tailwind_bundled | default(false) %}
-  <link rel="stylesheet" href="/static/css/dazzle-bundle.css">
+  <link rel="stylesheet" href="{{ 'css/dazzle-bundle.css' | static_url }}">
   {% else %}
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
   <script src="https://cdn.tailwindcss.com"></script>
@@ -30,24 +30,24 @@
   <script defer src="{{ _cdn_base }}/dazzle.min.js"></script>
   {% else %}
   {# HTMX + extensions (vendored) #}
-  <script src="/static/vendor/htmx.min.js"></script>
-  <script src="/static/vendor/htmx-ext-json-enc.js"></script>
-  <script src="/static/vendor/idiomorph-ext.min.js"></script>
-  <script src="/static/vendor/htmx-ext-preload.js"></script>
-  <script src="/static/vendor/htmx-ext-response-targets.js"></script>
-  <script src="/static/vendor/htmx-ext-loading-states.js"></script>
-  <script src="/static/vendor/htmx-ext-sse.js"></script>
+  <script src="{{ 'vendor/htmx.min.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-json-enc.js' | static_url }}"></script>
+  <script src="{{ 'vendor/idiomorph-ext.min.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-preload.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-response-targets.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-loading-states.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-sse.js' | static_url }}"></script>
   {# Alpine.js + plugins #}
-  <script defer src="/static/vendor/sortable.min.js"></script>
-  <script defer src="/static/vendor/alpine-sort.min.js"></script>
-  <script defer src="/static/vendor/alpine-persist.min.js"></script>
-  <script defer src="/static/js/dz-alpine.js"></script>
-  <script defer src="/static/js/workspace-editor.js"></script>
-  <script defer src="/static/vendor/alpine.min.js"></script>
+  <script defer src="{{ 'vendor/sortable.min.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/alpine-sort.min.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/alpine-persist.min.js' | static_url }}"></script>
+  <script defer src="{{ 'js/dz-alpine.js' | static_url }}"></script>
+  <script defer src="{{ 'js/workspace-editor.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/alpine.min.js' | static_url }}"></script>
   {# Dazzle framework CSS (local — framework layer via @import) #}
-  <link rel="stylesheet" href="/static/css/dazzle-framework.css">
-  <script defer src="/static/js/dz-a11y.js"></script>
-  <script defer src="/static/js/dz-islands.js"></script>
+  <link rel="stylesheet" href="{{ 'css/dazzle-framework.css' | static_url }}">
+  <script defer src="{{ 'js/dz-a11y.js' | static_url }}"></script>
+  <script defer src="{{ 'js/dz-islands.js' | static_url }}"></script>
   {% endif %}
 
   {# CSRF token injection for HTMX requests (v1.0.0) #}
@@ -62,10 +62,10 @@
 
   {# Lucide icons (v0.38.0: nav group icons) #}
   {% if not _use_cdn | default(false) %}
-  <script defer src="/static/vendor/lucide.min.js"></script>
+  <script defer src="{{ 'vendor/lucide.min.js' | static_url }}"></script>
   {% else %}
   <script defer src="{{ _cdn_base }}/dazzle-icons.min.js"
-          onerror="this.onerror=null;this.src='/static/vendor/lucide.min.js'"></script>
+          onerror="this.onerror=null;this.src='{{ 'vendor/lucide.min.js' | static_url }}'"></script>
   {% endif %}
 
   {# Design token CSS custom properties #}
@@ -119,8 +119,8 @@
 
   {# Feedback widget — injected when feedback_widget is enabled in DSL #}
   {% if _feedback_widget_enabled | default(false) %}
-  <link rel="stylesheet" href="/static/css/feedback-widget.css">
-  <script src="/static/js/feedback-widget.js"></script>
+  <link rel="stylesheet" href="{{ 'css/feedback-widget.css' | static_url }}">
+  <script src="{{ 'js/feedback-widget.js' | static_url }}"></script>
   <script>
     document.body.dataset.userRole = "{{ user_roles[0]|replace('role_', '') if user_roles else '' }}";
     document.body.dataset.userEmail = "{{ user_email | default('') }}";

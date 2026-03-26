@@ -277,7 +277,8 @@ class TestTemplateReferences:
     def test_base_html_uses_vendor(self) -> None:
         base = Path(__file__).parent.parent.parent / "src" / "dazzle_ui" / "templates" / "base.html"
         content = base.read_text()
-        assert "/static/vendor/htmx.min.js" in content
+        # References use static_url filter for cache busting (#711)
+        assert "vendor/htmx.min.js" in content
 
     def test_site_base_no_unpkg(self) -> None:
         site = (

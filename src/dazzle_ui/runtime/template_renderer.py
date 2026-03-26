@@ -295,6 +295,18 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
         bundled = (project_static / "css" / "dazzle-bundle.css").exists()
     env.globals["_tailwind_bundled"] = bundled
 
+    # Asset fingerprinting manifest — content-hash cache busting (#711)
+    from dazzle_ui.runtime.asset_fingerprint import build_asset_manifest, static_url_filter
+
+    manifest_dirs = [static_dir]
+    if project_templates_dir:
+        project_static = project_templates_dir.parent / "static"
+        if project_static.is_dir():
+            manifest_dirs.insert(0, project_static)
+    _asset_manifest = build_asset_manifest(*manifest_dirs)
+    env.globals["_asset_manifest"] = _asset_manifest
+    env.filters["static_url"] = lambda path: static_url_filter(path, _asset_manifest)
+
     # Custom filters
     env.filters["currency"] = _currency_filter
     env.filters["dateformat"] = _date_filter
