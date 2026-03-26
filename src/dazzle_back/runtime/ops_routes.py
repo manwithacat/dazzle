@@ -48,6 +48,11 @@ from dazzle_back.runtime.ops_services import (
 from dazzle_back.runtime.ops_simulator import OpsSimulator
 from dazzle_back.runtime.sse_stream import SSEStreamManager
 
+DEPRECATION_HEADER_KEY = "X-Dazzle-Deprecated"
+DEPRECATION_HEADER_VALUE = (
+    "Use admin workspace (_platform_admin). Console will be removed in a future release."
+)
+
 # =============================================================================
 # Request/Response Models
 # =============================================================================

@@ -37,6 +37,11 @@ from dazzle_back.runtime._fastapi_compat import (
 from dazzle_back.runtime.health_aggregator import HealthAggregator
 from dazzle_back.runtime.ops_database import OpsDatabase
 
+DEPRECATION_HEADER_KEY = "X-Dazzle-Deprecated"
+DEPRECATION_HEADER_VALUE = (
+    "Use admin workspace (_platform_admin). Console will be removed in a future release."
+)
+
 logger = logging.getLogger("dazzle.console")
 
 # Template directory (same Jinja2 env as DNR UI)
