@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.12] - 2026-03-26
+
+### Added
+- Universal admin workspace: linker auto-generates `_platform_admin` (and `_tenant_admin` for multi-tenant apps) with profile-gated regions for health, metrics, deploys, processes, sessions, users, and feedback (#686)
+- Five synthetic platform entities: `SystemHealth`, `SystemMetric`, `DeployHistory`, `ProcessRun`, `SessionInfo` — backed by existing observability stores (#686)
+- `SystemEntityStore` adapter: routes reads for virtual entities to health aggregator, metrics store, and process monitor instead of PostgreSQL (#686)
+- Collision detection: `LinkError` raised if user-declared entities/workspaces conflict with synthetic admin names (#686)
+- Admin LIST surfaces for all synthetic entities with admin-persona access control (#686)
+
+### Deprecated
+- Founder console routes (`/_ops/`, `/_console/`) — `X-Dazzle-Deprecated` header added, will be removed in a future release (#686)
+
 ## [0.48.11] - 2026-03-25
 
 ### Fixed

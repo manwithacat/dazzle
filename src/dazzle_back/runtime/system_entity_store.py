@@ -8,6 +8,7 @@ are blocked — these entities are read-only projections.
 
 from __future__ import annotations
 
+import builtins
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -55,7 +56,8 @@ class SystemEntityStore:
     async def delete(self, record_id: str) -> None:
         raise NotImplementedError(f"{self.entity_name} is read-only")
 
-    def _list_health(self) -> list[dict[str, Any]]:
+    def _list_health(self) -> builtins.list[dict[str, Any]]:
+        assert self._health_aggregator is not None
         system_health = self._health_aggregator.get_latest()
         results: list[dict[str, Any]] = []
         for comp in system_health.components:
@@ -72,7 +74,8 @@ class SystemEntityStore:
             )
         return results
 
-    def _list_metrics(self) -> list[dict[str, Any]]:
+    def _list_metrics(self) -> builtins.list[dict[str, Any]]:
+        assert self._metrics_store is not None
         metric_names = self._metrics_store.get_metric_names()
         results: list[dict[str, Any]] = []
         for name in metric_names:
@@ -91,7 +94,8 @@ class SystemEntityStore:
                 )
         return results
 
-    def _list_process_runs(self, limit: int | None = None) -> list[dict[str, Any]]:
+    def _list_process_runs(self, limit: int | None = None) -> builtins.list[dict[str, Any]]:
+        assert self._process_monitor is not None
         runs = self._process_monitor.get_recent_runs(count=limit or 20)
         results: list[dict[str, Any]] = []
         for run in runs:
