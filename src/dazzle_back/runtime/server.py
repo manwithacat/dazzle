@@ -532,9 +532,17 @@ class DazzleBackendApp:
             logging.getLogger(__name__).warning("Auto-migrate create_all: %s", exc)
 
         # Create _dazzle_params framework table (#572)
-        from dazzle_back.runtime.migrations import ensure_dazzle_params_table
+        from dazzle_back.runtime.migrations import (
+            ensure_dazzle_params_table,
+            ensure_framework_entity_columns,
+        )
 
         ensure_dazzle_params_table(self._db_manager)
+
+        # Sync columns for framework-managed entities (#712).
+        # create_all() only creates missing tables — this adds missing columns
+        # to existing tables (e.g. idempotency_key added to FeedbackReport in #693).
+        ensure_framework_entity_columns(self._db_manager, list(self._entities))
 
         # Build param resolver from AppSpec (#572)
         from dazzle_back.runtime.param_store import ParamResolver
