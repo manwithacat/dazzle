@@ -191,23 +191,6 @@ dazzle mock scenarios|fire-webhook|inject-error|scaffold-scenario
 dazzle contribution templates|create|validate|examples
 ```
 
-## Vendor Integration Workflow
-
-When integrating a third-party API:
-1. `dazzle api-pack search` (MCP) — check for existing pack
-2. `dazzle api-pack scaffold` (CLI) — create pack TOML (from OpenAPI or blank)
-   - Save to `.dazzle/api_packs/<vendor>/<name>.toml`
-3. `dazzle api-pack generate-dsl` (CLI) — generate service + foreign_model DSL blocks
-4. Write integration + mapping DSL blocks
-5. `dazzle serve --local` — mocks auto-start for all pack references
-6. `dazzle mock fire-webhook` (CLI) — test webhook handling
-7. `mock request_log` (MCP) — verify integration calls
-8. `dazzle mock scenarios` (CLI) — test edge cases
-
-### Project-Local Packs
-Place custom packs in `.dazzle/api_packs/<vendor>/<name>.toml`.
-Project-local packs override built-in packs with the same name.
-
 ## PyPI Package
 
 - **Package name**: `dazzle-dsl` (the name `dazzle` is taken on PyPI)
