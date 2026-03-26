@@ -99,4 +99,6 @@ FEEDBACK_REPORT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...]
     ("status", "enum[new,triaged,in_progress,resolved,verified,wont_fix,duplicate]", (), "new"),
     # Idempotency — deduplicates resubmissions from page reload / navigation (#693)
     ("idempotency_key", "str(36)", ("unique",), None),
+    # Notification tracking — prevents repeat toasts on page load (#721)
+    ("notification_sent", "bool", (), "false"),
 )

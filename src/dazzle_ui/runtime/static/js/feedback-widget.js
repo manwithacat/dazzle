@@ -43,6 +43,7 @@
     this._buildUI();
     this._bindShortcut();
     this._retryPending();
+    this._checkResolved();
   }
 
   /* ------------------------------------------------------------------ */
@@ -445,6 +446,55 @@
     } catch (_) {
       /* noop */
     }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Resolved-report notification (#721)                                  */
+  /* ------------------------------------------------------------------ */
+
+  FeedbackWidget.prototype._checkResolved = function () {
+    var email = (document.body.dataset.userEmail || "").trim();
+    if (!email) return;
+    var self = this;
+    fetch(
+      "/feedbackreports?reported_by=" +
+        encodeURIComponent(email) +
+        "&status=resolved&notification_sent=false",
+      { credentials: "same-origin" },
+    )
+      .then(function (resp) {
+        if (!resp.ok) return;
+        return resp.json();
+      })
+      .then(function (data) {
+        if (!data) return;
+        var items = data.items || data;
+        if (!Array.isArray(items) || !items.length) return;
+        items.forEach(function (report) {
+          var desc = (report.description || "").substring(0, 60);
+          self._showToast('Your feedback "' + desc + '" has been resolved.');
+          self._markNotified(report.id);
+        });
+      })
+      .catch(function () {
+        /* silent — best-effort notification */
+      });
+  };
+
+  FeedbackWidget.prototype._markNotified = function (reportId) {
+    var csrfToken = "";
+    var csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    if (csrfMeta) csrfToken = csrfMeta.getAttribute("content") || "";
+    var headers = { "Content-Type": "application/json" };
+    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+    fetch("/feedbackreports/" + reportId, {
+      method: "PUT",
+      headers: headers,
+      credentials: "same-origin",
+      body: JSON.stringify({ notification_sent: true }),
+    }).catch(function () {
+      /* silent */
+    });
   };
 
   /* ------------------------------------------------------------------ */

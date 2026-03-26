@@ -112,6 +112,8 @@ class TestFeedbackReportFields:
         assert "nav_history" in field_names
         # Status lifecycle
         assert "status" in field_names
+        # Notification tracking (#721)
+        assert "notification_sent" in field_names
         # Audit
         assert "reported_by" in field_names
         assert "created_at" in field_names
@@ -624,3 +626,59 @@ class TestFeedbackReportPutEndpoint:
             and s.domain_operation.kind.value == "update"
         ]
         assert len(update_services) == 1
+
+
+# ---------------------------------------------------------------------------
+# 9. Notification tracking field (#721)
+# ---------------------------------------------------------------------------
+
+
+class TestFeedbackReportNotificationField:
+    """notification_sent field for resolved-report notifications."""
+
+    def test_notification_sent_field_exists(self) -> None:
+        """FEEDBACK_REPORT_FIELDS includes notification_sent."""
+        from dazzle.core.ir.feedback_widget import FEEDBACK_REPORT_FIELDS
+
+        field_names = {f[0] for f in FEEDBACK_REPORT_FIELDS}
+        assert "notification_sent" in field_names
+
+    def test_notification_sent_is_bool_default_false(self) -> None:
+        """notification_sent is a bool field defaulting to false."""
+        from dazzle.core.ir.feedback_widget import FEEDBACK_REPORT_FIELDS
+
+        field = next(f for f in FEEDBACK_REPORT_FIELDS if f[0] == "notification_sent")
+        name, type_str, modifiers, default = field
+        assert type_str == "bool"
+        assert default == "false"
+
+    def test_auto_entity_has_notification_sent(self) -> None:
+        """Auto-generated FeedbackReport entity includes notification_sent."""
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.core.ir import ModuleIR
+        from dazzle.core.linker import build_appspec
+
+        dsl = (
+            'module test\napp test "Test"\n\n'
+            'entity User "User":\n'
+            "  id: uuid pk\n"
+            "  name: str(100)\n\n"
+            "feedback_widget: enabled\n"
+        )
+        mod_name, app_name, app_title, app_config, uses, fragment = parse_dsl(dsl, Path("test.dsl"))
+        module = ModuleIR(
+            name=mod_name or "test",
+            file=Path("test.dsl"),
+            app_name=app_name,
+            app_title=app_title,
+            app_config=app_config,
+            uses=uses,
+            fragment=fragment,
+        )
+        app = build_appspec([module], module.name)
+        entity = app.get_entity("FeedbackReport")
+        assert entity is not None
+        field_names = {f.name for f in entity.fields}
+        assert "notification_sent" in field_names
