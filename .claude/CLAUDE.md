@@ -32,6 +32,10 @@ DSL Files → Parser → IR (AppSpec) → Dazzle Runtime (live app)
 | `src/dazzle_back/` | FastAPI runtime (API, auth, channels, events, grants) |
 | `src/dazzle_ui/` | UI runtime — Python/Jinja2 templates rendered server-side, static JS/CSS assets |
 
+## Project Layout Convention
+
+When creating custom Python code in a Dazzle project (not the framework itself), follow the recommended layout. Production code goes in `app/<category>/` (e.g., `app/sync/`, `app/render/`, `app/db/`). One-shot scripts go in `scripts/`. Don't create flat dumping-ground directories. See `docs/reference/project-layout.md` for the full convention.
+
 ## Style Guide
 
 - **Type hints required** on all public functions (enforced by mypy)
