@@ -8,8 +8,11 @@
 # 4. Use retry and PII policies for production readiness
 
 module llm_ticket_classifier
-app ticket_classifier "Support Ticket Classifier"
+app ticket_classifier "Support Ticket Classifier":
+  security_profile: basic
 
+persona admin "Administrator":
+  default_workspace: _platform_admin
 
 # =============================================================================
 # LLM Model Definitions

@@ -7,7 +7,14 @@
 
 module contact_manager.core
 
-app contact_manager "Contact Manager"
+app contact_manager "Contact Manager":
+  security_profile: basic
+
+persona admin "Administrator":
+  default_workspace: _platform_admin
+
+persona user "User":
+  default_workspace: contacts
 
 # Entity for contact information with LLM cognition metadata
 entity Contact "Contact":

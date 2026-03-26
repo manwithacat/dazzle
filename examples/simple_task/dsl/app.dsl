@@ -16,7 +16,8 @@
 
 module simple_task.core
 
-app simple_task "Team Task Manager"
+app simple_task "Team Task Manager":
+  security_profile: basic
 
 feedback_widget: enabled
 

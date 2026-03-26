@@ -8,11 +8,15 @@
 
 module fieldtest_hub.core
 
-app fieldtest_hub "FieldTest Hub"
+app fieldtest_hub "FieldTest Hub":
+  security_profile: basic
 
 # =============================================================================
 # PERSONAS
 # =============================================================================
+
+persona admin "Administrator":
+  default_workspace: _platform_admin
 
 persona engineer "Engineer":
   goals:

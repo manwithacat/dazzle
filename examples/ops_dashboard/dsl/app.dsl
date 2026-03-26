@@ -7,7 +7,8 @@
 
 module ops_dashboard.core
 
-app ops_dashboard "Operations Dashboard"
+app ops_dashboard "Operations Dashboard":
+  security_profile: basic
 
 # =============================================================================
 # Entities with v0.7.0 Business Logic
@@ -83,6 +84,9 @@ entity Alert "Alert":
 # =============================================================================
 # Persona
 # =============================================================================
+
+persona admin "Administrator":
+  default_workspace: _platform_admin
 
 persona ops_engineer "Operations Engineer":
   goals:

@@ -11,7 +11,8 @@
 
 module support_tickets.core
 
-app support_tickets "Support Tickets"
+app support_tickets "Support Tickets":
+  security_profile: basic
 
 # =============================================================================
 # ARCHETYPES - Reusable entity patterns
@@ -351,6 +352,9 @@ workspace my_tickets "My Tickets":
 # =============================================================================
 # PERSONAS - User archetypes for testing
 # =============================================================================
+
+persona admin "Administrator":
+  default_workspace: _platform_admin
 
 persona customer "Customer":
   description: "End user submitting support requests and tracking their status"

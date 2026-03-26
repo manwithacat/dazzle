@@ -1,5 +1,5 @@
 story ST-001 "User creates a new Contact":
-  actor: User
+  actor: user
   trigger: form_submitted
   scope: [Contact]
   given:
@@ -9,7 +9,7 @@ story ST-001 "User creates a new Contact":
     - "User sees confirmation message"
 
 story ST-002 "User creates a new Contact":
-  actor: User
+  actor: user
   trigger: form_submitted
   scope: [Contact]
   given:
@@ -20,7 +20,7 @@ story ST-002 "User creates a new Contact":
 
 story ST-003 "User creates a new Contact":
   status: accepted
-  actor: User
+  actor: user
   trigger: form_submitted
   scope: [Contact]
   given:
