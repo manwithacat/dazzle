@@ -203,6 +203,11 @@ app.command(name="migrate")(migrate_command)
 app.command(name="schema")(schema_command)
 app.command(name="check")(check_command)
 
+# Database shell command
+from dazzle.cli.dbshell import dbshell_command  # noqa: E402
+
+app.command(name="dbshell")(dbshell_command)
+
 
 # =============================================================================
 # Sub-apps
