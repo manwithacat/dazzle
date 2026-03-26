@@ -634,7 +634,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="knowledge",
-            description="Knowledge lookup: concept, examples, cli_help, workflow, inference, get_spec, search_commands. Note: Static content also available via MCP Resources.",
+            description="Knowledge lookup: concept, examples, cli_help, workflow, inference, changelog, get_spec, search_commands. Note: Static content also available via MCP Resources.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -646,6 +646,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "cli_help",
                             "workflow",
                             "inference",
+                            "changelog",
                             "get_spec",
                             "search_commands",
                         ],
@@ -685,6 +686,10 @@ def get_consolidated_tools() -> list[Tool]:
                     "list_all": {
                         "type": "boolean",
                         "description": "List all triggers (for inference)",
+                    },
+                    "since": {
+                        "type": "string",
+                        "description": "Version filter (for changelog, e.g. '0.48.0')",
                     },
                 },
                 "required": ["operation"],

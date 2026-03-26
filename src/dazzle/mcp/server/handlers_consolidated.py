@@ -483,6 +483,7 @@ _knowledge_standalone: Callable[[dict[str, Any]], str] = _make_standalone_handle
         "cli_help": f"{_MOD_KNOW}:get_cli_help_handler",
         "workflow": f"{_MOD_KNOW}:get_workflow_guide_handler",
         "inference": f"{_MOD_KNOW}:lookup_inference_handler",
+        "changelog": f"{_MOD_KNOW}:get_changelog_handler",
     },
 )
 

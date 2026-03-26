@@ -174,3 +174,85 @@ class TestVersionInfoInHandler:
 
         assert result["found"] is True
         assert "version_info" not in result
+
+
+import json  # noqa: E402
+
+
+class TestChangelogHandler:
+    """Tests for the knowledge changelog handler operation."""
+
+    def test_changelog_handler_returns_entries(self) -> None:
+        """changelog handler returns structured entries."""
+        from unittest.mock import MagicMock, patch
+
+        mock_entities = []
+        for version, guidance in [
+            ("0.48.12", ["Rule A", "Rule B"]),
+            ("0.48.8", ["Rule C"]),
+        ]:
+            entity = MagicMock()
+            entity.entity_id = f"changelog:v{version}"
+            entity.name = f"v{version}"
+            entity.entity_type = "changelog"
+            entity.metadata = {
+                "source": "framework",
+                "version": version,
+                "guidance": guidance,
+            }
+            mock_entities.append(entity)
+
+        mock_graph = MagicMock()
+        mock_graph.list_entities.return_value = mock_entities
+
+        with patch("dazzle.mcp.server.handlers.knowledge._get_kg", return_value=mock_graph):
+            from dazzle.mcp.server.handlers.knowledge import get_changelog_handler
+
+            result_str = get_changelog_handler({"_progress": MagicMock()})
+            result = json.loads(result_str)
+
+        assert "current_version" in result
+        assert "entries" in result
+        assert len(result["entries"]) == 2
+        assert result["entries"][0]["version"] == "0.48.12"
+        assert result["total_entries"] == 2
+
+    def test_changelog_handler_respects_since(self) -> None:
+        """changelog handler filters by since parameter."""
+        from unittest.mock import MagicMock, patch
+
+        mock_entities = []
+        for version, guidance in [
+            ("0.48.12", ["Rule A"]),
+            ("0.48.8", ["Rule B"]),
+            ("0.48.0", ["Rule C"]),
+        ]:
+            entity = MagicMock()
+            entity.entity_id = f"changelog:v{version}"
+            entity.name = f"v{version}"
+            entity.entity_type = "changelog"
+            entity.metadata = {
+                "source": "framework",
+                "version": version,
+                "guidance": guidance,
+            }
+            mock_entities.append(entity)
+
+        mock_graph = MagicMock()
+        mock_graph.list_entities.return_value = mock_entities
+
+        with patch("dazzle.mcp.server.handlers.knowledge._get_kg", return_value=mock_graph):
+            from dazzle.mcp.server.handlers.knowledge import get_changelog_handler
+
+            result_str = get_changelog_handler(
+                {
+                    "since": "0.48.8",
+                    "_progress": MagicMock(),
+                }
+            )
+            result = json.loads(result_str)
+
+        versions = [e["version"] for e in result["entries"]]
+        assert "0.48.0" not in versions
+        assert "0.48.8" in versions
+        assert "0.48.12" in versions

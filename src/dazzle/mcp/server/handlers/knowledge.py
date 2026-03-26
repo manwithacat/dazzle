@@ -8,10 +8,12 @@ and inference pattern lookup.
 import json
 from typing import Any
 
+from dazzle.mcp._graph_access import get_kg as _get_kg
 from dazzle.mcp.cli_help import get_cli_help, get_workflow_guide
 from dazzle.mcp.examples import search_examples
 from dazzle.mcp.inference import list_all_patterns, lookup_inference
 from dazzle.mcp.semantics import lookup_concept
+from dazzle.mcp.semantics_kb import MCP_SEMANTICS_VERSION
 
 from .common import error_response, extract_progress, wrap_handler_errors
 
@@ -101,3 +103,46 @@ def lookup_inference_handler(args: dict[str, Any]) -> str:
 
     result = lookup_inference(query, detail=detail)
     return json.dumps(result, indent=2)
+
+
+@wrap_handler_errors
+def get_changelog_handler(args: dict[str, Any]) -> str:
+    """Get Agent Guidance entries from recent releases."""
+    progress = extract_progress(args)
+    progress.log_sync("Loading changelog guidance...")
+
+    since = args.get("since")
+    limit = 5
+
+    graph = _get_kg()
+    if graph is not None:
+        from packaging.version import Version
+
+        entities = graph.list_entities(entity_type="changelog", limit=50)
+        entries = []
+        for e in entities:
+            version = e.metadata.get("version", "")
+            guidance = e.metadata.get("guidance", [])
+            if guidance:
+                entries.append({"version": version, "guidance": guidance})
+
+        entries.sort(key=lambda e: Version(e["version"]), reverse=True)
+
+        if since:
+            since_ver = Version(since)
+            entries = [e for e in entries if Version(e["version"]) >= since_ver]
+
+        entries = entries[:limit]
+    else:
+        from dazzle.mcp.semantics_kb.changelog import parse_changelog_guidance
+
+        entries = parse_changelog_guidance(since=since, limit=limit)
+
+    return json.dumps(
+        {
+            "current_version": MCP_SEMANTICS_VERSION,
+            "entries": entries,
+            "total_entries": len(entries),
+        },
+        indent=2,
+    )
