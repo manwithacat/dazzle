@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.15] - 2026-03-26
+
+### Added
+- Admin workspace: `LogEntry` virtual entity and `_admin_logs` region — log viewer backed by `get_recent_logs()` with level filtering (#699)
+- Admin workspace: `EventTrace` virtual entity and `_admin_events` region — event explorer backed by event bus replay API (#702)
+- Feedback widget: resolved-report notification — toast on page load when reports are resolved, `notification_sent` tracking field (#721)
+
 ## [0.48.14] - 2026-03-26
 
 ### Removed
