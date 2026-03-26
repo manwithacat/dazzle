@@ -73,7 +73,7 @@ def create_fragment_router(
         source: str = Query(..., description="Source integration name"),
         q: str = Query("", description="Search query"),
         min_chars: int = Query(3, description="Minimum characters before search"),
-    ) -> Response:
+    ) -> Any:
         """Search an external API source and return rendered result items."""
         if len(q) < min_chars:
             # min_chars is validated as int by FastAPI; explicit int() for static analysis
@@ -153,7 +153,7 @@ def create_fragment_router(
         request: Request,
         source: str = Query(..., description="Source integration name"),
         id: str = Query(..., description="Selected item ID"),
-    ) -> Response:
+    ) -> Any:
         """Fetch a full record and return OOB swap fragments for autofill fields."""
         source_config = sources.get(source)
         if not source_config:

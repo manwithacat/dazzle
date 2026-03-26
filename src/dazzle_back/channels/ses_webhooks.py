@@ -217,13 +217,12 @@ def register_ses_webhook(app: FastAPI) -> None:
     try:
         from fastapi import Request
         from fastapi.responses import JSONResponse
-        from starlette.responses import Response
     except ImportError:
         logger.debug("FastAPI not available, skipping SES webhook registration")
         return
 
     @app.post("/webhooks/ses/notifications")  # type: ignore[misc,untyped-decorator,unused-ignore]
-    async def ses_webhook(request: Request) -> Response:
+    async def ses_webhook(request: Request) -> Any:
         """Handle incoming SNS notifications from SES."""
         body = await request.body()
         result = await handle_sns_notification(body)
