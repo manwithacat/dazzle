@@ -206,6 +206,11 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No field conditions in `permit:`** — use `scope:` with `for:` (ADR-0010)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
 
+## Ship Discipline
+
+- **Clean worktree**: Every push must leave `git status` clean. After shipping, check for untracked or modified files (especially `dist/`) and commit them before moving on.
+- **Bump on every fix**: Run `/bump patch` after bug fixes before pushing. Every push gets a unique version for deployment traceability.
+
 ## Gotchas
 
 - **MCP test isolation**: Tests that mock `mcp.*` modules pollute `sys.modules`. The `tests/unit/conftest.py` 3-phase fixture handles this — don't bypass it.
