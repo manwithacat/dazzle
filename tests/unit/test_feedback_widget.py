@@ -457,12 +457,13 @@ class TestFeedbackWidgetSurfaces:
         return build_appspec([module], module.name)
 
     def test_generates_entity_and_surfaces(self) -> None:
-        """feedback_widget: enabled produces 1 entity + 2 surfaces."""
+        """feedback_widget: enabled produces 1 entity + 3 surfaces."""
         app = self._link(self._DSL_ENABLED)
         assert app.get_entity("FeedbackReport") is not None
         surface_names = {s.name for s in app.surfaces}
         assert "feedback_create" in surface_names
         assert "feedback_admin" in surface_names
+        assert "feedback_edit" in surface_names
 
     def test_disabled_no_surfaces(self) -> None:
         """feedback_widget: disabled produces no FeedbackReport surfaces."""
@@ -554,3 +555,74 @@ class TestFeedbackWidgetSurfaces:
         assert edit.access is not None
         assert edit.access.require_auth is True
         assert "admin" in edit.access.allow_personas
+
+
+# ---------------------------------------------------------------------------
+# 8. PUT endpoint generation (#720)
+# ---------------------------------------------------------------------------
+
+
+class TestFeedbackReportPutEndpoint:
+    """Verify that feedback_edit surface generates a PUT endpoint via surface converter."""
+
+    _DSL_ENABLED = (
+        'module test\napp test "Test"\n\n'
+        'entity User "User":\n'
+        "  id: uuid pk\n"
+        "  name: str(100)\n\n"
+        "feedback_widget: enabled\n"
+    )
+
+    def _build_app(self) -> object:
+        from pathlib import Path
+
+        from dazzle.core.dsl_parser_impl import parse_dsl
+        from dazzle.core.ir import ModuleIR
+        from dazzle.core.linker import build_appspec
+
+        mod_name, app_name, app_title, app_config, uses, fragment = parse_dsl(
+            self._DSL_ENABLED, Path("test.dsl")
+        )
+        module = ModuleIR(
+            name=mod_name or "test",
+            file=Path("test.dsl"),
+            app_name=app_name,
+            app_title=app_title,
+            app_config=app_config,
+            uses=uses,
+            fragment=fragment,
+        )
+        return build_appspec([module], module.name)
+
+    def test_put_endpoint_registered(self) -> None:
+        """feedback_edit surface produces a PUT endpoint at /feedbackreports/{id}."""
+        from dazzle_back.converters.surface_converter import (
+            convert_surfaces_to_services,
+        )
+
+        app = self._build_app()
+        _services, endpoints = convert_surfaces_to_services(app.surfaces, app.domain)
+        put_endpoints = [
+            ep
+            for ep in endpoints
+            if ep.method.value == "PUT" and "feedbackreport" in ep.path.lower()
+        ]
+        assert len(put_endpoints) == 1
+        assert "{id}" in put_endpoints[0].path
+
+    def test_update_service_created(self) -> None:
+        """feedback_edit surface produces an UPDATE service for FeedbackReport."""
+        from dazzle_back.converters.surface_converter import (
+            convert_surfaces_to_services,
+        )
+
+        app = self._build_app()
+        services, _endpoints = convert_surfaces_to_services(app.surfaces, app.domain)
+        update_services = [
+            s
+            for s in services
+            if s.domain_operation
+            and s.domain_operation.entity == "FeedbackReport"
+            and s.domain_operation.kind.value == "update"
+        ]
+        assert len(update_services) == 1
