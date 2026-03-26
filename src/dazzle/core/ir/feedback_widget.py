@@ -94,8 +94,8 @@ FEEDBACK_REPORT_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...]
     ("reported_by", "str(200)", (), None),
     ("assigned_to", "str(200)", (), None),
     ("resolved_by", "str(200)", (), None),
-    ("created_at", "datetime", (), None),
-    ("updated_at", "datetime", (), None),
+    ("created_at", "datetime", (), "now"),
+    ("updated_at", "datetime", (), "now"),
     ("resolved_at", "datetime", (), None),
     # Lifecycle
     ("status", "enum[new,triaged,in_progress,resolved,verified,wont_fix,duplicate]", (), "new"),

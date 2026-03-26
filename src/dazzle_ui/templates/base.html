@@ -122,7 +122,7 @@
   <link rel="stylesheet" href="/static/css/feedback-widget.css">
   <script src="/static/js/feedback-widget.js"></script>
   <script>
-    document.body.dataset.userRole = "{{ user_roles[0] if user_roles else '' }}";
+    document.body.dataset.userRole = "{{ user_roles[0]|replace('role_', '') if user_roles else '' }}";
     document.body.dataset.userEmail = "{{ user_email | default('') }}";
   </script>
   {% endif %}

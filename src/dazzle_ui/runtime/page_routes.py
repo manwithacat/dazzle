@@ -378,10 +378,13 @@ async def _page_handler(
     if surface_name and surface_name in deps.access_configs:
         ac = deps.access_configs[surface_name]
         user = None
+        user_personas: list[str] | None = None
         if auth_ctx and auth_ctx.is_authenticated and auth_ctx.user:
             user = {"id": getattr(auth_ctx.user, "id", None)}
+            _raw = list(getattr(auth_ctx.user, "roles", []))
+            user_personas = [r.removeprefix("role_") for r in _raw]
         try:
-            check_surface_access(ac, user, is_api_request=False)
+            check_surface_access(ac, user, user_personas=user_personas, is_api_request=False)
         except SurfaceAccessDenied as e:
             if e.is_auth_required and e.redirect_url:
                 return RedirectResponse(url=e.redirect_url, status_code=302)
