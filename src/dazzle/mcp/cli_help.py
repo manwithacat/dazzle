@@ -41,11 +41,32 @@ CATEGORY_MAP: dict[str, str] = {
     "stubs": "Stubs",
     "test": "Testing",
     "vocab": "Vocabulary",
+    "feedback": "Feedback",
+    "tenant": "Tenancy",
+    "rbac": "RBAC",
+    "sentinel": "Quality",
+    "pulse": "Quality",
+    "conformance": "Testing",
+    "demo": "Data",
+    "param": "Configuration",
+    "contribution": "Data",
+    "mock": "Testing",
+    "api-pack": "Integration",
+    "rhythm": "Stories",
+    "test-design": "Testing",
+    "overrides": "Configuration",
+    "compliance": "Compliance",
+    "nightly": "Pipeline",
+    "quality": "Quality",
+    "process": "Process",
+    "backup": "Database",
+    "docs": "Documentation",
     # --- top-level command names → display category ---
     "serve": "Runtime",
     "build": "Code Generation",
     "build-ui": "Code Generation",
     "build-api": "Code Generation",
+    "build-css": "Code Generation",
     "info": "Runtime",
     "stop": "Runtime",
     "rebuild": "Runtime",
@@ -408,14 +429,24 @@ def get_cli_help(command: str | None = None) -> dict[str, Any]:
                 **cli_commands[cmd_normalized],
             }
 
-    # Partial match
-    matches = [cmd for cmd in cli_commands if cmd_normalized in cmd or cmd in cmd_normalized]
+    # Search by name AND description
+    query_lower = cmd_normalized.lower()
+    matches = []
+    for cmd, info in cli_commands.items():
+        desc = info.get("description", "").lower()
+        if query_lower in cmd or cmd in cmd_normalized or query_lower in desc:
+            matches.append(cmd)
+
     if matches:
+        results = []
+        for m in sorted(matches):
+            desc = cli_commands[m].get("description", "")
+            results.append({"command": m, "description": desc})
         return {
             "command": command,
             "found": False,
-            "suggestions": matches,
-            "hint": f"Did you mean one of: {', '.join(matches)}?",
+            "matches": results,
+            "hint": f"Found {len(results)} commands matching '{command}'",
         }
 
     return {
@@ -424,6 +455,37 @@ def get_cli_help(command: str | None = None) -> dict[str, Any]:
         "error": f"Command '{command}' not found",
         "available_commands": list(cli_commands.keys()),
     }
+
+
+def search_commands(query: str) -> list[dict[str, Any]]:
+    """Search commands by keyword across names, descriptions, and categories.
+
+    Used by MCP knowledge tool and dazzle search CLI command.
+    """
+    cli_commands = _get_commands()
+    query_lower = query.lower()
+    results = []
+
+    for cmd, info in cli_commands.items():
+        score = 0
+        if query_lower in cmd:
+            score += 3  # Name match is strongest
+        if query_lower in info.get("description", "").lower():
+            score += 2  # Description match
+        if query_lower in info.get("category", "").lower():
+            score += 1  # Category match
+
+        if score > 0:
+            results.append(
+                {
+                    "command": cmd,
+                    "description": info.get("description", ""),
+                    "category": info.get("category", "Other"),
+                    "score": score,
+                }
+            )
+
+    return sorted(results, key=lambda x: (-x["score"], x["command"]))
 
 
 def get_workflow_guide(workflow: str) -> dict[str, Any]:

@@ -119,6 +119,58 @@ app.command(name="grammar")(grammar_command)
 
 
 # =============================================================================
+# Discoverability Commands
+# =============================================================================
+
+
+@app.command(name="commands")
+def commands_command(
+    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category"),
+    json_output: bool = typer.Option(False, "--json", help="JSON output"),
+) -> None:
+    """List all available CLI commands with descriptions."""
+    from dazzle.mcp.cli_help import _get_commands
+
+    cmds = _get_commands()
+    if category:
+        cmds = {k: v for k, v in cmds.items() if v.get("category", "").lower() == category.lower()}
+
+    if json_output:
+        import json
+
+        typer.echo(json.dumps(cmds, indent=2))
+        return
+
+    # Group by category
+    by_cat: dict[str, list[tuple[str, str]]] = {}
+    for cmd, info in sorted(cmds.items()):
+        cat = info.get("category", "Other")
+        by_cat.setdefault(cat, []).append((cmd, info.get("description", "")))
+
+    for cat in sorted(by_cat):
+        typer.echo(f"\n{cat}:")
+        for cmd, desc in by_cat[cat]:
+            typer.echo(f"  dazzle {cmd:30s} {desc[:60]}")
+
+
+@app.command(name="search")
+def search_command(
+    keyword: str = typer.Argument(..., help="Keyword to search for"),
+) -> None:
+    """Search commands by keyword (name, description, or category)."""
+    from dazzle.mcp.cli_help import search_commands
+
+    results = search_commands(keyword)
+    if not results:
+        typer.echo(f"No commands found matching '{keyword}'")
+        raise typer.Exit(1)
+
+    typer.echo(f"Commands matching '{keyword}':\n")
+    for r in results:
+        typer.echo(f"  dazzle {r['command']:30s} {r['description'][:60]}")
+
+
+# =============================================================================
 # Runtime Commands (formerly under 'dnr' sub-app, now top-level)
 # =============================================================================
 from dazzle.cli.runtime_impl import (  # noqa: E402

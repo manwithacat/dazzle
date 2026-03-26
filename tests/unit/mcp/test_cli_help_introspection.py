@@ -195,8 +195,8 @@ class TestGetCliHelp:
     def test_partial_match_suggestions(self) -> None:
         result = get_cli_help("val")
         assert result["found"] is False
-        assert "suggestions" in result
-        assert "validate" in result["suggestions"]
+        assert "matches" in result
+        assert any(m["command"] == "validate" for m in result["matches"])
 
     def test_new_commands_found(self) -> None:
         for cmd in ("pipeline run", "composition audit", "discovery coherence"):
@@ -208,5 +208,5 @@ class TestGetCliHelp:
         # "composition audit" and "composition report".
         result = get_cli_help("composition")
         if not result.get("found"):
-            suggestions = result.get("suggestions", [])
-            assert any("composition" in s for s in suggestions)
+            matches = result.get("matches", [])
+            assert any("composition" in m["command"] for m in matches)

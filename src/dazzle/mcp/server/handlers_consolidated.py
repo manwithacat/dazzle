@@ -501,6 +501,13 @@ def handle_knowledge(arguments: dict[str, Any]) -> str:
     # get_spec needs project context; all other ops are standalone
     if arguments.get("operation") == "get_spec":
         return _knowledge_project(arguments)
+    if arguments.get("operation") == "search_commands":
+        import json
+
+        from dazzle.mcp.cli_help import search_commands
+
+        query = arguments.get("query", "")
+        return json.dumps(search_commands(query))
     return _knowledge_standalone(arguments)
 
 

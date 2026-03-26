@@ -636,7 +636,7 @@ def get_consolidated_tools() -> list[Tool]:
         # =====================================================================
         Tool(
             name="knowledge",
-            description="Knowledge lookup: concept, examples, cli_help, workflow, inference, get_spec. Note: Static content also available via MCP Resources.",
+            description="Knowledge lookup: concept, examples, cli_help, workflow, inference, get_spec, search_commands. Note: Static content also available via MCP Resources.",
             inputSchema={
                 "type": "object",
                 "properties": {
@@ -649,6 +649,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "workflow",
                             "inference",
                             "get_spec",
+                            "search_commands",
                         ],
                         "description": "Operation to perform",
                     },
