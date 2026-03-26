@@ -148,6 +148,10 @@ best_practices = ["✅ Focus on user intent, not implementation", "✅ Answer 'w
 
 [concepts.scope]
 category = "UX Semantic Layer (v0.2)"
+since_version = "0.2.0"
+changed_in = [
+  { version = "0.48.0", note = "Scope rules now compile to formal predicate algebra with FK graph validation" },
+]
 doc_page = "ux"
 doc_order = 4
 definition = "Filter expression defining what data a persona can see. Must be either 'all' or a comparison expression."

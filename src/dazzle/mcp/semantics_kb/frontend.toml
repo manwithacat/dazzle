@@ -711,6 +711,10 @@ cognition_tips = [
 
 [concepts.static_assets]
 category = "Frontend"
+since_version = "0.48.8"
+changed_in = [
+  { version = "0.48.12", note = "Content-hash cache busting via static_url Jinja2 filter" },
+]
 doc_page = "frontend"
 doc_order = 10
 definition = """Static asset serving convention for Dazzle projects. Project-level images and assets \

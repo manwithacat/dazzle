@@ -287,6 +287,10 @@ best_practices = ["Use anonymous visibility for public-facing content", "Authent
 
 [concepts.surface_access]
 category = "Business Logic"
+since_version = "0.45.0"
+changed_in = [
+  { version = "0.48.0", note = "permit: now role-only; field conditions moved to scope: blocks" },
+]
 doc_page = "access-control"
 doc_order = 5
 definition = "Access control on surfaces (UI screens). Controls who can view and interact with a surface. Three levels: public (no auth), authenticated (any logged-in user), or persona-restricted (named personas only). Used by E2E test generators to create protected-route tests."

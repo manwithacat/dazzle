@@ -405,6 +405,7 @@ implemented_by = [
 
 [concepts.predicate_compilation]
 category = "Runtime Contract"
+since_version = "0.48.0"
 definition = """
 The multi-stage compilation chain that transforms DSL scope rules into
 SQL WHERE clauses. Each stage can introduce fidelity loss.
