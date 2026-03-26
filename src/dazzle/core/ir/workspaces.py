@@ -63,6 +63,7 @@ class DisplayMode(StrEnum):
     QUEUE = "queue"  # v0.33.0: Review queue with inline actions
     TABBED_LIST = "tabbed_list"  # v0.33.0: Tabbed multi-source list
     HEATMAP = "heatmap"  # v0.44.0: Heat-map matrix view
+    DIAGRAM = "diagram"  # v0.48.15: Entity relationship diagram
     PROGRESS = "progress"  # v0.44.0: Progress bar view
     ACTIVITY_FEED = "activity_feed"  # v0.44.0: Activity feed / timeline display
     TREE = "tree"  # v0.44.0: Tree / hierarchy display

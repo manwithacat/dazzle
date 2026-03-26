@@ -1266,6 +1266,10 @@
                 'entity': 'deploys',
                 'icon': None,
               }),
+              dict({
+                'entity': 'app_map',
+                'icon': None,
+              }),
             ]),
             'label': 'Operations',
           }),
@@ -1323,6 +1327,34 @@
             'sort': list([
             ]),
             'source': 'DeployHistory',
+            'source_filters': dict({
+            }),
+            'sources': list([
+            ]),
+          }),
+          dict({
+            'action': None,
+            'aggregates': dict({
+            }),
+            'date_field': None,
+            'date_range': False,
+            'display': <DisplayMode.DIAGRAM: 'diagram'>,
+            'empty_message': None,
+            'filter': None,
+            'group_by': None,
+            'heatmap_columns': None,
+            'heatmap_rows': None,
+            'heatmap_thresholds': list([
+            ]),
+            'heatmap_value': None,
+            'limit': None,
+            'name': 'app_map',
+            'progress_complete_at': None,
+            'progress_stages': list([
+            ]),
+            'sort': list([
+            ]),
+            'source': None,
             'source_filters': dict({
             }),
             'sources': list([

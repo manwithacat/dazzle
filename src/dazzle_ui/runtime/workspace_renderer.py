@@ -78,6 +78,8 @@ class RegionContext(BaseModel):
     col_span: int = 12  # Resolved column span (4, 6, 8, or 12)
     hidden: bool = False  # User has hidden this region
     template: str = "workspace/regions/list.html"  # Region display template
+    # Diagram data (v0.48.15: DIAGRAM display mode)
+    diagram_data: str = ""  # Mermaid diagram source for DIAGRAM regions
 
 
 class WorkspaceContext(BaseModel):
@@ -117,6 +119,38 @@ def _default_col_span(stage: str, index: int) -> int:
     return pattern[min(index, len(pattern) - 1)]
 
 
+def _build_diagram_data(display_mode: str, app_spec: Any) -> str:
+    """Generate a Mermaid entity-relationship diagram for DIAGRAM regions."""
+    if display_mode != "DIAGRAM" or app_spec is None:
+        return ""
+    lines = ["erDiagram"]
+    domain = getattr(app_spec, "domain", None)
+    if domain is None:
+        return ""
+    entities = getattr(domain, "entities", [])
+    entity_names = {e.name for e in entities}
+    for entity in entities:
+        if getattr(entity, "domain", "") == "platform":
+            continue
+        lines.append(f"    {entity.name} {{")
+        for field in entity.fields[:8]:
+            kind = getattr(field.type, "kind", "str")
+            kind_str = kind.value if hasattr(kind, "value") else str(kind)
+            lines.append(f"        {kind_str} {field.name}")
+        if len(entity.fields) > 8:
+            lines.append(f"        string _plus_{len(entity.fields) - 8}_more")
+        lines.append("    }")
+    for entity in entities:
+        if getattr(entity, "domain", "") == "platform":
+            continue
+        for field in entity.fields:
+            ref = getattr(field.type, "ref_entity", None)
+            if ref and ref in entity_names:
+                label = field.name
+                lines.append(f"    {entity.name} }}o--|| {ref} : {label}")
+    return "\n".join(lines)
+
+
 DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "LIST": "workspace/regions/list.html",
     "GRID": "workspace/regions/grid.html",
@@ -133,6 +167,7 @@ DISPLAY_TEMPLATE_MAP: dict[str, str] = {
     "PROGRESS": "workspace/regions/progress.html",
     "ACTIVITY_FEED": "workspace/regions/activity_feed.html",
     "TREE": "workspace/regions/tree.html",
+    "DIAGRAM": "workspace/regions/diagram.html",
 }
 
 # Stage → fold count: how many regions to load eagerly above the fold (#378)
@@ -305,6 +340,7 @@ def build_workspace_context(
                 date_range=bool(getattr(region, "date_range", False)),
                 col_span=col_span,
                 template=template,
+                diagram_data=_build_diagram_data(display_mode, app_spec),
             )
         )
 

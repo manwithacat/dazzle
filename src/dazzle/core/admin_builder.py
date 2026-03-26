@@ -362,8 +362,8 @@ def _build_admin_surfaces(security: SecurityConfig) -> list[SurfaceSpec]:
 # ---------------------------------------------------------------------------
 
 # Each tuple: (name, source, display, profile_gate, tenant_admin_visible, feedback_only, multi_tenant_only)
-# Note: source must be an entity name, not a surface name.
-_REGION_DEFS: list[tuple[str, str, DisplayMode, str | None, bool, bool, bool]] = [
+# Note: source is an entity name or None for sourceless regions (e.g. DIAGRAM).
+_REGION_DEFS: list[tuple[str, str | None, DisplayMode, str | None, bool, bool, bool]] = [
     ("users", "User", DisplayMode.LIST, None, True, False, False),
     ("tenants", "Tenant", DisplayMode.LIST, "standard", False, False, True),
     ("sessions", "SessionInfo", DisplayMode.LIST, "standard", True, False, False),
@@ -374,12 +374,13 @@ _REGION_DEFS: list[tuple[str, str, DisplayMode, str | None, bool, bool, bool]] =
     ("feedback", "FeedbackReport", DisplayMode.LIST, None, True, True, False),
     ("logs", "LogEntry", DisplayMode.LIST, "standard", False, False, False),
     ("events", "EventTrace", DisplayMode.LIST, "standard", False, False, False),
+    ("app_map", None, DisplayMode.DIAGRAM, None, False, False, False),
 ]
 
 _NAV_GROUPS: list[tuple[str, list[str]]] = [
     ("Management", ["users", "tenants", "sessions"]),
     ("Observability", ["health", "metrics", "processes", "logs"]),
-    ("Operations", ["deploys", "feedback", "events"]),
+    ("Operations", ["deploys", "feedback", "events", "app_map"]),
 ]
 
 
@@ -422,7 +423,8 @@ def _build_regions(
         if tenant_admin and not tenant_visible:
             continue
         # Skip region if entity-name filtering is enabled and source is missing
-        if existing_entity_names is not None and source not in existing_entity_names:
+        # (sourceless regions like DIAGRAM are always included)
+        if source and existing_entity_names is not None and source not in existing_entity_names:
             continue
 
         regions.append(WorkspaceRegion(name=name, source=source, display=display, limit=None))
