@@ -664,6 +664,10 @@ class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
                     used BOOLEAN DEFAULT FALSE
                 )
             """)
+            # Magic link tokens for one-time authentication (#695)
+            from dazzle_back.runtime.auth.magic_link import MAGIC_LINKS_DDL
+
+            cursor.execute(MAGIC_LINKS_DDL)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)")
             cursor.execute(
