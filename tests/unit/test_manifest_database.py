@@ -8,6 +8,7 @@ import pytest
 from dazzle.core.manifest import (
     _DEFAULT_DATABASE_URL,
     DatabaseConfig,
+    EnvironmentProfile,
     ProjectManifest,
     _normalise_postgres_scheme,
     load_manifest,
@@ -252,3 +253,67 @@ class TestLoadManifestCdn:
         )
         mf = load_manifest(toml_path)
         assert mf.cdn is False
+
+
+class TestLoadManifestEnvironments:
+    def test_no_environments_section(self, tmp_path: Path) -> None:
+        """Backward compat: no [environments] → empty dict."""
+        toml_path = _write_toml(tmp_path)
+        mf = load_manifest(toml_path)
+        assert mf.environments == {}
+
+    def test_single_environment(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [environments.development]
+                database_url = "postgresql://localhost:5432/myapp_dev"
+            """),
+        )
+        mf = load_manifest(toml_path)
+        assert "development" in mf.environments
+        profile = mf.environments["development"]
+        assert isinstance(profile, EnvironmentProfile)
+        assert profile.database_url == "postgresql://localhost:5432/myapp_dev"
+        assert profile.database_url_env == ""
+        assert profile.heroku_app == ""
+
+    def test_multiple_environments(self, tmp_path: Path) -> None:
+        toml_path = _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [environments.staging]
+                database_url_env = "STAGING_DB_URL"
+                heroku_app = "myapp-staging"
+
+                [environments.production]
+                database_url_env = "PROD_DB_URL"
+                heroku_app = "myapp-prod"
+            """),
+        )
+        mf = load_manifest(toml_path)
+        assert len(mf.environments) == 2
+        assert mf.environments["staging"].database_url_env == "STAGING_DB_URL"
+        assert mf.environments["staging"].heroku_app == "myapp-staging"
+        assert mf.environments["production"].heroku_app == "myapp-prod"
+
+    def test_freeform_environment_names(self, tmp_path: Path) -> None:
+        """Environment names are freeform — blue/green, demo, etc."""
+        toml_path = _write_toml(
+            tmp_path,
+            textwrap.dedent("""\
+
+                [environments.blue]
+                database_url_env = "BLUE_DB"
+
+                [environments.green]
+                database_url_env = "GREEN_DB"
+
+                [environments.demo]
+                database_url = "postgresql://localhost:5432/demo"
+            """),
+        )
+        mf = load_manifest(toml_path)
+        assert set(mf.environments.keys()) == {"blue", "green", "demo"}

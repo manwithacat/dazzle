@@ -263,6 +263,15 @@ class DatabaseConfig:
     url: str = "postgresql://localhost:5432/dazzle"
 
 
+@dataclass
+class EnvironmentProfile:
+    """Per-environment configuration (database connection, Heroku app)."""
+
+    database_url: str = ""
+    database_url_env: str = ""
+    heroku_app: str = ""
+
+
 # =============================================================================
 # Dev Configuration (v0.24.0)
 # =============================================================================
@@ -342,6 +351,7 @@ class ProjectManifest:
     framework_version: str | None = None
     cdn: bool = False  # Local-first; opt-in via [ui] cdn = true in dazzle.toml
     favicon: str | None = None  # Override favicon path; set [ui] favicon = "/static/my-icon.svg"
+    environments: dict[str, EnvironmentProfile] = field(default_factory=dict)
 
 
 def check_framework_version(manifest: ProjectManifest) -> None:
@@ -542,6 +552,17 @@ def load_manifest(path: Path) -> ProjectManifest:
     cdn_enabled = ui_data.get("cdn", False)
     favicon_path = ui_data.get("favicon")
 
+    # Parse environment profiles
+    env_data = data.get("environments", {})
+    environments: dict[str, EnvironmentProfile] = {}
+    for env_name, env_config in env_data.items():
+        if isinstance(env_config, dict):
+            environments[env_name] = EnvironmentProfile(
+                database_url=env_config.get("database_url", ""),
+                database_url_env=env_config.get("database_url_env", ""),
+                heroku_app=env_config.get("heroku_app", ""),
+            )
+
     return ProjectManifest(
         name=project.get("name", "unnamed"),
         version=project.get("version", "0.0.0"),
@@ -559,6 +580,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         framework_version=project.get("framework_version"),
         cdn=cdn_enabled,
         favicon=favicon_path,
+        environments=environments,
     )
 
 
