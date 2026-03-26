@@ -16,3 +16,4 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0012](0012-alembic-migrations.md) — Alembic for schema migrations. No hand-rolled migration planners.
 - [0013](0013-unified-knowledge-graph.md) — One per-project KG with TOML seed. No separate knowledge systems.
 - [0014](0014-no-future-annotations-in-routes.md) — No `from __future__ import annotations` in FastAPI route files. Breaks OpenAPI.
+- [0015](0015-tigerbeetle-ledgers.md) — TigerBeetle for double-entry ledgers. Optional dependency, DSL `ledger`/`transaction` constructs.

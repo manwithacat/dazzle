@@ -98,33 +98,6 @@ surface task_list "Tasks":
 
 Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and a `for:` clause naming the personas.
 
-### TigerBeetle Ledgers
-
-```dsl
-ledger CustomerWallet "Customer Wallet":
-  account_code: 1001
-  ledger_id: 1
-  account_type: asset
-  currency: GBP
-  flags: debits_must_not_exceed_credits
-  sync_to: Customer.balance_cache
-
-transaction RecordPayment "Record Payment":
-  execution: async
-  priority: high
-
-  transfer revenue:
-    debit: CustomerWallet
-    credit: Revenue
-    amount: payment.amount
-    code: 1
-    flags: linked
-
-  idempotency_key: payment.id
-```
-
-**Account types**: `asset`, `liability`, `equity`, `revenue`, `expense`
-
 ## Extending
 
 ### Adding DSL Constructs
