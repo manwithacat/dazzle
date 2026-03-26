@@ -205,6 +205,7 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No SPA frameworks** — server-side Jinja2 + HTMX (ADR-0011)
 - **No field conditions in `permit:`** — use `scope:` with `for:` (ADR-0010)
 - **No `from __future__ import annotations`** in FastAPI route files (ADR-0014)
+- **All schema changes via Alembic** — including framework entities (FeedbackReport, AIJob, admin entities). No raw ALTER TABLE. Use `dazzle db revision -m "description"` then `dazzle db upgrade` (ADR-0017)
 
 ## Ship Discipline
 

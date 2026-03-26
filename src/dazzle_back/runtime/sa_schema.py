@@ -189,6 +189,20 @@ def _field_to_column(
 # ---------------------------------------------------------------------------
 
 
+_VIRTUAL_ENTITY_NAMES: frozenset[str] = frozenset(
+    {
+        "SystemHealth",
+        "SystemMetric",
+        "ProcessRun",
+    }
+)
+"""Entities backed by non-PostgreSQL stores (Redis, in-memory).
+
+These must be excluded from SA metadata so ``create_all()`` and Alembic
+autogenerate do not create or diff PostgreSQL tables for them.
+"""
+
+
 def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
     """Convert a list of EntitySpec into a SQLAlchemy ``MetaData``.
 
@@ -201,6 +215,9 @@ def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
     marked with ``use_alter=True`` so that the constraint is emitted as
     a separate ``ALTER TABLE`` statement after all tables are created.
 
+    Virtual entities (backed by Redis/in-memory) are excluded — they have
+    no PostgreSQL table.
+
     Args:
         entities: DSL entity specifications.
 
@@ -209,8 +226,12 @@ def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
     """
     sa = _ensure_sa()
     metadata: sqlalchemy.MetaData = cast("sqlalchemy.MetaData", sa.MetaData())
-    entity_names = {e.name for e in entities}
-    circular_edges = _find_circular_refs(entities)
+
+    # Filter out virtual entities — no PostgreSQL table for these.
+    db_entities = [e for e in entities if e.name not in _VIRTUAL_ENTITY_NAMES]
+
+    entity_names = {e.name for e in db_entities}
+    circular_edges = _find_circular_refs(db_entities)
 
     if circular_edges:
         involved = {a for a, _ in circular_edges} | {b for _, b in circular_edges}
@@ -219,7 +240,7 @@ def build_metadata(entities: list[EntitySpec]) -> sqlalchemy.MetaData:
             ", ".join(sorted(involved)),
         )
 
-    for entity in entities:
+    for entity in db_entities:
         columns = []
 
         # Ensure an 'id' column exists

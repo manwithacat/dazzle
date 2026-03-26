@@ -18,3 +18,4 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0014](0014-no-future-annotations-in-routes.md) — No `from __future__ import annotations` in FastAPI route files. Breaks OpenAPI.
 - [0015](0015-tigerbeetle-ledgers.md) — TigerBeetle for double-entry ledgers. Optional dependency, DSL `ledger`/`transaction` constructs.
 - [0016](0016-vendor-integration-workflow.md) — API Packs for vendor integration. TOML-driven mocks, webhook testing, DSL generation.
+- [0017](0017-schema-migrations-via-alembic.md) — All schema changes via Alembic, including framework entities. No raw DDL at startup.
