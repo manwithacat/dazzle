@@ -7,7 +7,6 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-import httpx
 import typer
 
 from dazzle.cli.common import resolve_project
@@ -190,6 +189,8 @@ async def run_scope_verification(
 
     if not targets:
         return report
+
+    import httpx
 
     async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
         # Login as admin

@@ -323,8 +323,8 @@ class TestRunScopeVerification:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("dazzle.cli.rbac.httpx") as mock_httpx:
-            mock_httpx.AsyncClient.return_value = mock_client
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_httpx.return_value = mock_client
             report = await run_scope_verification(
                 appspec, "http://localhost:8000", "admin@example.com", "admin"
             )
@@ -376,8 +376,8 @@ class TestRunScopeVerification:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("dazzle.cli.rbac.httpx") as mock_httpx:
-            mock_httpx.AsyncClient.return_value = mock_client
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_httpx.return_value = mock_client
             report = await run_scope_verification(
                 appspec, "http://localhost:8000", "admin@example.com", "admin"
             )
@@ -417,8 +417,8 @@ class TestRunScopeVerification:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("dazzle.cli.rbac.httpx") as mock_httpx:
-            mock_httpx.AsyncClient.return_value = mock_client
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_httpx.return_value = mock_client
             report = await run_scope_verification(
                 appspec, "http://localhost:8000", "admin@example.com", "admin"
             )
@@ -453,8 +453,8 @@ class TestRunScopeVerification:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("dazzle.cli.rbac.httpx") as mock_httpx:
-            mock_httpx.AsyncClient.return_value = mock_client
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_httpx.return_value = mock_client
             report = await run_scope_verification(
                 appspec, "http://localhost:8000", "admin@example.com", "admin"
             )
@@ -512,8 +512,8 @@ class TestRunScopeVerification:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("dazzle.cli.rbac.httpx") as mock_httpx:
-            mock_httpx.AsyncClient.return_value = mock_client
+        with patch("httpx.AsyncClient") as mock_httpx:
+            mock_httpx.return_value = mock_client
             report = await run_scope_verification(
                 appspec, "http://localhost:8000", "admin@example.com", "admin"
             )
