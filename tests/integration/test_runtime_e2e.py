@@ -244,6 +244,17 @@ class DazzleLocalServerManager:
                 except OSError:
                     pass
 
+    def get_server_stderr(self, tail: int = 100) -> str:
+        """Read the last N lines of server stderr for diagnostics."""
+        if self._stderr_file is None:
+            return ""
+        try:
+            with open(self._stderr_file.name) as f:
+                lines = f.readlines()
+                return "".join(lines[-tail:])
+        except OSError:
+            return ""
+
     def __exit__(self, exc_type: type | None, exc_val: Exception | None, exc_tb: object) -> None:
         self._terminate()
 
@@ -303,7 +314,11 @@ class TestSimpleTaskE2E:
     def test_openapi_schema_available(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that OpenAPI JSON schema is available."""
         resp = _request_with_retry("GET", f"{simple_task_server.api_url}/openapi.json")
-        assert resp.status_code == 200, f"OpenAPI returned {resp.status_code}: {resp.text[:500]}"
+        assert resp.status_code == 200, (
+            f"OpenAPI returned {resp.status_code}: {resp.text[:200]}\n"
+            f"--- Server stderr (last 50 lines) ---\n"
+            f"{simple_task_server.get_server_stderr(50)}"
+        )
         data = resp.json()
         assert "openapi" in data
         assert "paths" in data
