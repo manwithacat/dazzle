@@ -119,3 +119,58 @@ class TestVersionFieldsInSeed:
         assert len(changed_in) >= 1
         assert changed_in[0]["version"]
         assert changed_in[0]["note"]
+
+
+class TestVersionInfoInHandler:
+    """Tests for version_info block in knowledge handler concept response."""
+
+    def test_handler_includes_version_info_when_present(self) -> None:
+        """lookup_concept returns version_info for annotated concepts."""
+        from unittest.mock import MagicMock, patch
+
+        mock_entity = MagicMock()
+        mock_entity.entity_type = "concept"
+        mock_entity.metadata = {
+            "source": "framework",
+            "category": "Framework Feature",
+            "definition": "A feature",
+            "since_version": "0.48.0",
+            "changed_in": [{"version": "0.48.12", "note": "Added stuff"}],
+        }
+
+        mock_graph = MagicMock()
+        mock_graph.lookup_concept.return_value = mock_entity
+
+        with patch("dazzle.mcp.semantics_kb._get_kg", return_value=mock_graph):
+            from dazzle.mcp.semantics_kb import lookup_concept
+
+            result = lookup_concept("test_feature")
+
+        assert result["found"] is True
+        assert "version_info" in result
+        assert result["version_info"]["since"] == "0.48.0"
+        assert len(result["version_info"]["changes"]) == 1
+        assert result["version_info"]["changes"][0]["version"] == "0.48.12"
+
+    def test_handler_omits_version_info_when_absent(self) -> None:
+        """lookup_concept omits version_info for unannotated concepts."""
+        from unittest.mock import MagicMock, patch
+
+        mock_entity = MagicMock()
+        mock_entity.entity_type = "concept"
+        mock_entity.metadata = {
+            "source": "framework",
+            "category": "Core",
+            "definition": "Old concept",
+        }
+
+        mock_graph = MagicMock()
+        mock_graph.lookup_concept.return_value = mock_entity
+
+        with patch("dazzle.mcp.semantics_kb._get_kg", return_value=mock_graph):
+            from dazzle.mcp.semantics_kb import lookup_concept
+
+            result = lookup_concept("old_concept")
+
+        assert result["found"] is True
+        assert "version_info" not in result

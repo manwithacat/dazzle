@@ -403,6 +403,16 @@ def lookup_concept(term: str) -> dict[str, Any] | None:
         ):
             if key in meta and meta[key]:
                 result[key] = meta[key]
+
+        # Build version_info block from structured version fields
+        version_info: dict[str, Any] = {}
+        if meta.get("since_version"):
+            version_info["since"] = meta["since_version"]
+        if meta.get("changed_in"):
+            version_info["changes"] = meta["changed_in"]
+        if version_info:
+            result["version_info"] = version_info
+
         return result
 
     # Normalize for special-case and fuzzy search
