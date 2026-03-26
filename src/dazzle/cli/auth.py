@@ -61,6 +61,14 @@ def _generate_temp_password(length: int = 16) -> str:
     return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
+def _parse_ttl(ttl_str: str) -> int:
+    """Parse a TTL string like '5m', '1h', '30s' into seconds."""
+    units = {"s": 1, "m": 60, "h": 3600}
+    if ttl_str[-1] in units:
+        return int(ttl_str[:-1]) * units[ttl_str[-1]]
+    return int(ttl_str)
+
+
 def _resolve_user(store: Any, identifier: str) -> Any:
     """Resolve a user by UUID or email. Returns UserRecord or None."""
     try:
@@ -485,6 +493,67 @@ def flush_sessions(
         console.print_json(json.dumps({"deleted": deleted}))
     else:
         console.print(f"[green]Deleted {deleted} session(s).[/green]")
+
+
+@auth_app.command(name="impersonate")
+def impersonate(
+    identifier: Annotated[str, typer.Argument(help="User email or UUID")],
+    url: Annotated[
+        bool, typer.Option("--url", help="Generate a one-time login URL instead of cookie")
+    ] = False,
+    ttl: Annotated[str, typer.Option("--ttl", help="Session/token TTL (e.g. 5m, 1h, 30s)")] = "30m",
+    output_json: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
+    """Generate a session or one-time login URL for any user."""
+    import socket
+    from datetime import timedelta
+
+    from dazzle_back.runtime.auth.magic_link import create_magic_link
+
+    store = _get_auth_store()
+    user = _resolve_user(store, identifier)
+
+    if not user:
+        console.print(f"[red]User not found: {identifier}[/red]")
+        raise typer.Exit(1)
+
+    ttl_seconds = _parse_ttl(ttl)
+    created_by = f"cli@{socket.gethostname()}"
+
+    if url:
+        token = create_magic_link(
+            store, user_id=str(user.id), ttl_seconds=ttl_seconds, created_by=created_by
+        )
+        link = f"http://localhost:8000/_auth/magic/{token}"
+        if output_json:
+            console.print_json(
+                json.dumps({"email": user.email, "magic_link": link, "ttl_seconds": ttl_seconds})
+            )
+        else:
+            console.print(f"[green]Magic link for:[/green] {user.email}")
+            console.print(f"  [yellow]{link}[/yellow]")
+            console.print(f"  Expires in: {ttl}")
+            console.print("  [dim]Single use — link is consumed on first visit.[/dim]")
+    else:
+        session = store.create_session(user, expires_in=timedelta(seconds=ttl_seconds))
+        if output_json:
+            console.print_json(
+                json.dumps(
+                    {
+                        "email": user.email,
+                        "session_id": session.id,
+                        "cookie": f"dazzle_session={session.id}; Path=/; HttpOnly",
+                        "ttl_seconds": ttl_seconds,
+                    }
+                )
+            )
+        else:
+            console.print(f"[green]Session created for:[/green] {user.email}")
+            console.print(f"  [yellow]Cookie: dazzle_session={session.id}[/yellow]")
+            console.print(f"  Expires in: {ttl}")
+            console.print(
+                "  [dim]Paste in browser devtools or use: curl -b 'dazzle_session=...'[/dim]"
+            )
 
 
 @auth_app.command(name="config")
