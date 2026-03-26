@@ -303,7 +303,7 @@ class TestSimpleTaskE2E:
     def test_openapi_schema_available(self, simple_task_server: DazzleLocalServerManager) -> None:
         """Test that OpenAPI JSON schema is available."""
         resp = _request_with_retry("GET", f"{simple_task_server.api_url}/openapi.json")
-        assert resp.status_code == 200
+        assert resp.status_code == 200, f"OpenAPI returned {resp.status_code}: {resp.text[:500]}"
         data = resp.json()
         assert "openapi" in data
         assert "paths" in data
