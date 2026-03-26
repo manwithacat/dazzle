@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.13] - 2026-03-26
+
+### Fixed
+- Feedback widget: all buttons now have `type="button"` — prevents Safari scroll glitch on first click inside `hx-boost` bodies (#722)
+- Feedback widget: removed `textarea.focus()` on panel open — eliminates iPad Safari white bar from virtual keyboard reservation (#723)
+- Feedback widget: panel height changed from `100vh` to `100dvh` — tracks dynamic viewport excluding virtual keyboard on mobile Safari (#723)
+
 ## [0.48.12] - 2026-03-26
 
 ### Added
