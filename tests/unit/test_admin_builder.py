@@ -13,11 +13,14 @@ from __future__ import annotations
 
 import pytest
 
+from dazzle.core import ir
 from dazzle.core.errors import LinkError
 from dazzle.core.ir.admin_entities import (
     ADMIN_ENTITY_DEFS,
     VIRTUAL_ENTITY_NAMES,
 )
+from dazzle.core.ir.feedback_widget import FeedbackWidgetSpec
+from dazzle.core.ir.module import AppConfigSpec
 from dazzle.core.ir.security import SecurityConfig, SecurityProfile
 from dazzle.core.ir.surfaces import SurfaceMode
 
@@ -417,3 +420,91 @@ class TestBuildAdminWorkspaces:
             f"Expected BASIC ({len(basic_platform.regions)}) < STANDARD "
             f"({len(standard_platform.regions)}) region count"
         )
+
+
+# ---------------------------------------------------------------------------
+# Task 6 — build_admin_infrastructure entry point tests
+# ---------------------------------------------------------------------------
+
+
+class TestBuildAdminInfrastructure:
+    """build_admin_infrastructure top-level entry point."""
+
+    def test_returns_entities_surfaces_workspaces(self) -> None:
+        """Standard profile returns 5 entities, >0 surfaces, and 1 workspace."""
+        from dazzle.core.admin_builder import build_admin_infrastructure
+
+        security = _make_security(SecurityProfile.STANDARD)
+        app_config = AppConfigSpec(security_profile="standard", multi_tenant=False)
+        entities, surfaces, workspaces = build_admin_infrastructure(
+            entities=[],
+            surfaces=[],
+            security_config=security,
+            app_config=app_config,
+            feedback_widget=None,
+            existing_workspaces=[],
+        )
+        assert len(entities) == 5
+        assert len(surfaces) > 0
+        assert len(workspaces) == 1
+
+    def test_collision_with_existing_entity(self) -> None:
+        """User entity named SystemHealth raises LinkError."""
+        from dazzle.core.admin_builder import build_admin_infrastructure
+
+        security = _make_security(SecurityProfile.BASIC)
+        app_config = AppConfigSpec(security_profile="basic")
+        colliding = ir.EntitySpec(
+            name="SystemHealth",
+            title="My Health",
+            fields=[
+                ir.FieldSpec(
+                    name="id",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.UUID),
+                    modifiers=[ir.FieldModifier.PK],
+                )
+            ],
+        )
+        with pytest.raises(LinkError, match="SystemHealth"):
+            build_admin_infrastructure(
+                entities=[colliding],
+                surfaces=[],
+                security_config=security,
+                app_config=app_config,
+                feedback_widget=None,
+                existing_workspaces=[],
+            )
+
+    def test_multi_tenant_generates_two_workspaces(self) -> None:
+        """Multi-tenant app generates _platform_admin and _tenant_admin."""
+        from dazzle.core.admin_builder import build_admin_infrastructure
+
+        security = _make_security(SecurityProfile.STANDARD, multi_tenant=True)
+        app_config = AppConfigSpec(security_profile="standard", multi_tenant=True)
+        _, _, workspaces = build_admin_infrastructure(
+            entities=[],
+            surfaces=[],
+            security_config=security,
+            app_config=app_config,
+            feedback_widget=None,
+            existing_workspaces=[],
+        )
+        assert {w.name for w in workspaces} == {"_platform_admin", "_tenant_admin"}
+
+    def test_feedback_enabled_includes_feedback_region(self) -> None:
+        """Enabled feedback widget causes 'feedback' region to appear in _platform_admin."""
+        from dazzle.core.admin_builder import build_admin_infrastructure
+
+        security = _make_security(SecurityProfile.STANDARD)
+        app_config = AppConfigSpec(security_profile="standard")
+        fw = FeedbackWidgetSpec(enabled=True)
+        _, _, workspaces = build_admin_infrastructure(
+            entities=[],
+            surfaces=[],
+            security_config=security,
+            app_config=app_config,
+            feedback_widget=fw,
+            existing_workspaces=[],
+        )
+        platform = next(w for w in workspaces if w.name == "_platform_admin")
+        assert "feedback" in {r.name for r in platform.regions}

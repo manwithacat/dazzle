@@ -12,6 +12,7 @@ from __future__ import annotations
 from dazzle.core import ir
 from dazzle.core.errors import LinkError
 from dazzle.core.ir.admin_entities import ADMIN_ENTITY_DEFS
+from dazzle.core.ir.feedback_widget import FeedbackWidgetSpec
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
 from dazzle.core.ir.security import SecurityConfig, SecurityProfile
 from dazzle.core.ir.surfaces import (
@@ -481,3 +482,60 @@ def _build_admin_workspaces(
         )
 
     return workspaces
+
+
+# ---------------------------------------------------------------------------
+# Top-level entry point
+# ---------------------------------------------------------------------------
+
+
+def build_admin_infrastructure(
+    *,
+    entities: list[ir.EntitySpec],
+    surfaces: list[ir.SurfaceSpec],
+    security_config: SecurityConfig,
+    app_config: ir.AppConfigSpec | None,
+    feedback_widget: FeedbackWidgetSpec | None,
+    existing_workspaces: list[WorkspaceSpec],
+) -> tuple[list[ir.EntitySpec], list[ir.SurfaceSpec], list[WorkspaceSpec]]:
+    """Build all admin infrastructure: entities, surfaces, workspaces.
+
+    This is the single entry point called from the linker.
+
+    Args:
+        entities: User-declared entities (used for collision detection only).
+        surfaces: User-declared surfaces (unused; reserved for future checks).
+        security_config: Active security configuration for the app.
+        app_config: Optional app-level configuration (provides multi_tenant flag).
+        feedback_widget: Optional feedback widget spec (provides enabled flag).
+        existing_workspaces: User-declared workspaces (used for collision detection).
+
+    Returns:
+        A 3-tuple of ``(admin_entities, admin_surfaces, admin_workspaces)`` ready
+        to be merged into the app's domain.
+
+    Raises:
+        :class:`~dazzle.core.errors.LinkError`: If any generated name collides with
+            a user-declared entity or workspace name.
+    """
+    multi_tenant = app_config.multi_tenant if app_config else False
+    feedback_enabled = feedback_widget is not None and feedback_widget.enabled
+
+    admin_entities = _build_admin_entities(security_config)
+    admin_surfaces = _build_admin_surfaces(security_config)
+    admin_workspaces = _build_admin_workspaces(
+        security_config,
+        multi_tenant=multi_tenant,
+        feedback_enabled=feedback_enabled,
+    )
+
+    existing_entity_names = {e.name for e in entities}
+    existing_workspace_names = {w.name for w in existing_workspaces}
+    _check_collisions(
+        existing_entity_names=existing_entity_names,
+        existing_workspace_names=existing_workspace_names,
+        synthetic_entity_names={e.name for e in admin_entities},
+        synthetic_workspace_names={w.name for w in admin_workspaces},
+    )
+
+    return admin_entities, admin_surfaces, admin_workspaces

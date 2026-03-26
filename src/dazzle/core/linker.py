@@ -125,6 +125,20 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
             _build_feedback_edit_surface(),
         ]
 
+    # 9c. Auto-generate admin platform entities, surfaces, and workspaces (#686)
+    from .admin_builder import build_admin_infrastructure
+
+    admin_entities, admin_surfaces, admin_workspaces = build_admin_infrastructure(
+        entities=entities,
+        surfaces=surfaces,
+        security_config=security_config,
+        app_config=root_module.app_config,
+        feedback_widget=merged_fragment.feedback_widget,
+        existing_workspaces=merged_fragment.workspaces,
+    )
+    entities = [*entities, *admin_entities]
+    surfaces = [*surfaces, *admin_surfaces]
+
     # 10. Build FK graph and compile scope predicates
     from .ir.fk_graph import FKGraph
     from .ir.predicate_builder import build_scope_predicate
@@ -140,7 +154,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         domain=ir.DomainSpec(entities=entities),
         fk_graph=fk_graph,
         surfaces=surfaces,
-        workspaces=merged_fragment.workspaces,
+        workspaces=[*merged_fragment.workspaces, *admin_workspaces],
         experiences=merged_fragment.experiences,
         apis=merged_fragment.apis,
         foreign_models=merged_fragment.foreign_models,
