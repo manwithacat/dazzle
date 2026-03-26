@@ -4,12 +4,12 @@ Backend specification type definitions.
 This module exports all backend specification types.
 """
 
+from dazzle.core.access import AccessOperationKind
 from dazzle_back.specs.auth import (
     AccessAuthContext,
     AccessComparisonKind,
     AccessConditionSpec,
     AccessLogicalKind,
-    AccessOperationKind,
     AccessPolicyEffect,
     AuthRuleSpec,
     EntityAccessSpec,

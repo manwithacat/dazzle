@@ -39,6 +39,7 @@ def _make_deps(
     surface_mode: dict[str, str] | None = None,
     route_entity: dict[str, str] | None = None,
 ) -> Any:
+    from dazzle_back.runtime.access_evaluator import evaluate_permission
     from dazzle_ui.runtime.page_routes import _PageDeps
 
     return _PageDeps(
@@ -52,6 +53,7 @@ def _make_deps(
         surface_entity=surface_entity or {},
         surface_mode=surface_mode or {},
         route_entity=route_entity or {},
+        evaluate_permission=evaluate_permission,
     )
 
 

@@ -788,7 +788,7 @@ def _build_cedar_handler(
     is_create: bool,
 ) -> Callable[..., Any]:
     """Build a Cedar-policy-checked handler (with or without id param)."""
-    from dazzle_back.specs.auth import AccessOperationKind
+    from dazzle.core.access import AccessOperationKind
 
     _op_kind = getattr(AccessOperationKind, operation.upper())
 
@@ -1388,7 +1388,7 @@ async def _list_handler_body(
     # filters that can't be evaluated without a record — those pass the gate
     # and are enforced at query time by scope predicates. (#502, #503)
     if cedar_access_spec and is_authenticated and auth_context:
-        from dazzle_back.specs.auth import AccessOperationKind
+        from dazzle.core.access import AccessOperationKind
 
         list_rules = [
             r for r in cedar_access_spec.permissions if r.operation == AccessOperationKind.LIST
@@ -1760,10 +1760,9 @@ def create_read_handler(
         async def _read_cedar(
             id: UUID, request: Request, auth_context: AuthContext = Depends(optional_auth_dep)
         ) -> Any:
-            from dazzle.core.access import AccessDecision
+            from dazzle.core.access import AccessDecision, AccessOperationKind
             from dazzle_back.runtime.access_evaluator import evaluate_permission
             from dazzle_back.runtime.audit_log import measure_evaluation_time
-            from dazzle_back.specs.auth import AccessOperationKind
 
             result = await service.execute(operation="read", id=id, include=auto_include)
             if result is None:

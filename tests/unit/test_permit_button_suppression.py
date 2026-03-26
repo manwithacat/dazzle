@@ -36,6 +36,7 @@ def _make_deps(
     entity_cedar_specs: dict[str, Any] | None = None,
     surface_entity: dict[str, str] | None = None,
 ) -> Any:
+    from dazzle_back.runtime.access_evaluator import evaluate_permission
     from dazzle_ui.runtime.page_routes import _PageDeps
 
     return _PageDeps(
@@ -47,6 +48,7 @@ def _make_deps(
         surface_workspace=surface_workspace or {},
         entity_cedar_specs=entity_cedar_specs or {},
         surface_entity=surface_entity or {},
+        evaluate_permission=evaluate_permission,
     )
 
 
