@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.14] - 2026-03-26
+
+### Removed
+- Removed unnecessary `from __future__ import annotations` from 547 files — ban-by-default policy, retained with `# required:` justification in ~145 files with genuine forward references (#717)
+
+### Fixed
+- Feedback widget PUT endpoint: added test coverage verifying surface converter generates PUT endpoint and UPDATE service for FeedbackReport (#720)
+
 ## [0.48.13] - 2026-03-26
 
 ### Fixed
