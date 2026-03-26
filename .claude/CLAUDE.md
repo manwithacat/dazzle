@@ -129,7 +129,7 @@ All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `f
 
 MCP = stateless reads, CLI = process/writes (ADR-0002). Use `dazzle search <keyword>` to find commands.
 
-### MCP Tools (24 knowledge/query tools)
+### MCP Tools
 
 | Tool | Operations |
 |------|-----------|
@@ -199,7 +199,7 @@ dazzle contribution templates|create|validate|examples
 
 ## Architectural Decisions
 
-See `docs/adr/INDEX.md` for the full index (14 ADRs). Key constraints:
+See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **No new singletons** — use `RuntimeServices` or `ServerState` (ADR-0005)
 - **No SQLite** — PostgreSQL only (ADR-0008)
 - **No SPA frameworks** — server-side Jinja2 + HTMX (ADR-0011)
