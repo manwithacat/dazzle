@@ -17,7 +17,10 @@ STATIC_CSS = (
 )
 
 # Canonical order — must match dazzle-framework.css, css_loader.py, build_dist.py
-CANONICAL_ORDER = ["dazzle-layer.css", "design-system.css", "dz.css", "site-sections.css"]
+# Layered files go into @layer framework; unlayered files are appended after.
+LAYERED_ORDER = ["dazzle-layer.css", "design-system.css", "site-sections.css"]
+UNLAYERED_FILES = ["dz.css"]
+ALL_CSS_FILES = LAYERED_ORDER + UNLAYERED_FILES
 
 
 class TestFrameworkCssEntryPoint:
@@ -27,18 +30,24 @@ class TestFrameworkCssEntryPoint:
     def test_imports_in_canonical_order(self) -> None:
         content = (STATIC_CSS / "dazzle-framework.css").read_text()
         positions = []
-        for filename in CANONICAL_ORDER:
+        for filename in ALL_CSS_FILES:
             pos = content.find(filename)
             assert pos != -1, f"{filename} not found in dazzle-framework.css"
             positions.append(pos)
         assert positions == sorted(positions), (
-            f"Import order does not match canonical: {CANONICAL_ORDER}"
+            f"Import order does not match canonical: {ALL_CSS_FILES}"
         )
 
-    def test_all_imports_use_layer_framework(self) -> None:
+    def test_layered_imports_use_layer_framework(self) -> None:
         content = (STATIC_CSS / "dazzle-framework.css").read_text()
-        for filename in CANONICAL_ORDER:
+        for filename in LAYERED_ORDER:
             assert f'@import "{filename}" layer(framework)' in content
+
+    def test_unlayered_imports_have_no_layer(self) -> None:
+        content = (STATIC_CSS / "dazzle-framework.css").read_text()
+        for filename in UNLAYERED_FILES:
+            assert f'@import "{filename}"' in content
+            assert f'@import "{filename}" layer(' not in content
 
     def test_no_feedback_widget_import(self) -> None:
         content = (STATIC_CSS / "dazzle-framework.css").read_text()
@@ -75,9 +84,10 @@ class TestCdnDefault:
 
 class TestCssLoader:
     def test_canonical_order(self) -> None:
-        from dazzle_ui.runtime.css_loader import CSS_SOURCE_FILES
+        from dazzle_ui.runtime.css_loader import CSS_SOURCE_FILES, CSS_UNLAYERED_FILES
 
-        assert CSS_SOURCE_FILES == CANONICAL_ORDER
+        assert CSS_SOURCE_FILES == LAYERED_ORDER
+        assert CSS_UNLAYERED_FILES == UNLAYERED_FILES
 
     def test_output_contains_layer_declaration(self) -> None:
         from dazzle_ui.runtime.css_loader import get_bundled_css
@@ -85,11 +95,19 @@ class TestCssLoader:
         css = get_bundled_css()
         assert "@layer base, framework, app, overrides;" in css
 
-    def test_output_wraps_files_in_layer_framework(self) -> None:
+    def test_output_wraps_layered_files_in_layer_framework(self) -> None:
         from dazzle_ui.runtime.css_loader import get_bundled_css
 
         css = get_bundled_css()
-        assert css.count("@layer framework {") == len(CANONICAL_ORDER)
+        assert css.count("@layer framework {") == len(LAYERED_ORDER)
+
+    def test_unlayered_files_not_in_layer(self) -> None:
+        from dazzle_ui.runtime.css_loader import get_bundled_css
+
+        css = get_bundled_css()
+        assert "unlayered" in css
+        for filename in UNLAYERED_FILES:
+            assert filename in css
 
     def test_output_contains_source_map(self) -> None:
         from dazzle_ui.runtime.css_loader import get_bundled_css
@@ -110,7 +128,7 @@ class TestCssLoader:
         b64 = css[start:end]
         source_map = json.loads(base64.b64decode(b64))
         assert source_map["version"] == 3
-        for f in CANONICAL_ORDER:
+        for f in ALL_CSS_FILES:
             assert f in source_map["sources"]
 
 

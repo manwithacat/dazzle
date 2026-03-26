@@ -3,5 +3,8 @@
    build_dist.py and css_loader.py must use the same order. */
 @import "dazzle-layer.css" layer(framework);
 @import "design-system.css" layer(framework);
-@import "dz.css" layer(framework);
 @import "site-sections.css" layer(framework);
+/* dz.css must be unlayered so its sidebar overrides beat DaisyUI's
+   drawer base styles (which are also unlayered in dazzle-bundle.css).
+   Layered styles always lose to unlayered styles in the CSS cascade. */
+@import "dz.css";
