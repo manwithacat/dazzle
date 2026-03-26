@@ -277,3 +277,41 @@ class TestSeedSceneStoryRelations:
         count = _seed_module.seed_scene_story_relations(graph, app_spec)
 
         assert count == 0
+
+
+class TestSeedChangelogGuidance:
+    """Tests for changelog guidance seeding into KG."""
+
+    def test_seed_creates_changelog_entities(self) -> None:
+        """Seeding creates changelog entities from CHANGELOG.md."""
+        graph = KnowledgeGraph(":memory:")
+        _seed_module.seed_framework_knowledge(graph)
+
+        changelog_entities = graph.list_entities(entity_type="changelog", limit=50)
+        assert len(changelog_entities) >= 1
+
+    def test_changelog_entity_has_guidance(self) -> None:
+        """Changelog entities store guidance bullets in metadata."""
+        graph = KnowledgeGraph(":memory:")
+        _seed_module.seed_framework_knowledge(graph)
+
+        changelog_entities = graph.list_entities(entity_type="changelog", limit=50)
+        has_guidance = any(e.metadata.get("guidance") for e in changelog_entities)
+        assert has_guidance
+
+    def test_changelog_entity_id_format(self) -> None:
+        """Changelog entity IDs follow changelog:vX.Y.Z format."""
+        graph = KnowledgeGraph(":memory:")
+        _seed_module.seed_framework_knowledge(graph)
+
+        changelog_entities = graph.list_entities(entity_type="changelog", limit=50)
+        for e in changelog_entities:
+            assert e.id.startswith("changelog:v")
+
+    def test_seed_stats_include_changelog(self) -> None:
+        """Seed stats dict includes changelog_entries count."""
+        graph = KnowledgeGraph(":memory:")
+        stats = _seed_module.seed_framework_knowledge(graph)
+
+        assert "changelog_entries" in stats
+        assert stats["changelog_entries"] >= 1

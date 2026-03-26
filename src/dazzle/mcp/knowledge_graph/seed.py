@@ -73,6 +73,7 @@ def seed_framework_knowledge(graph: KnowledgeGraph) -> dict[str, int]:
         "concepts": 0,
         "patterns": 0,
         "inference_entries": 0,
+        "changelog_entries": 0,
         "aliases": 0,
         "relations": 0,
     }
@@ -97,15 +98,19 @@ def seed_framework_knowledge(graph: KnowledgeGraph) -> dict[str, int]:
         # Load and seed inference KB
         _seed_inference_kb(graph, stats)
 
+        # Load and seed changelog guidance
+        _seed_changelog(graph, stats)
+
         # Write seed version
         graph.set_seed_meta("seed_version", compute_seed_version())
 
         logger.info(
             "Seeded framework knowledge: %d concepts, %d patterns, "
-            "%d inference entries, %d aliases, %d relations",
+            "%d inference entries, %d changelog entries, %d aliases, %d relations",
             stats["concepts"],
             stats["patterns"],
             stats["inference_entries"],
+            stats["changelog_entries"],
             stats["aliases"],
             stats["relations"],
         )
@@ -306,3 +311,25 @@ def _seed_inference_kb(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
                 },
             )
             stats["inference_entries"] += 1
+
+
+def _seed_changelog(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
+    """Seed Agent Guidance entries from CHANGELOG.md into the KG."""
+    from dazzle.mcp.semantics_kb.changelog import parse_changelog_guidance
+
+    entries = parse_changelog_guidance(limit=50)
+
+    for entry in entries:
+        version = entry["version"]
+        entity_id = f"changelog:v{version}"
+        graph.create_entity(
+            entity_id=entity_id,
+            name=f"v{version}",
+            entity_type="changelog",
+            metadata={
+                "source": "framework",
+                "version": version,
+                "guidance": entry["guidance"],
+            },
+        )
+        stats["changelog_entries"] += 1
