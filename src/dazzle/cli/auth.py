@@ -451,6 +451,42 @@ def cleanup_sessions(
         console.print(f"[green]Removed {removed} expired session(s).[/green]")
 
 
+@auth_app.command(name="flush-sessions")
+def flush_sessions(
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation")] = False,
+    expired: Annotated[
+        bool, typer.Option("--expired", help="Only remove expired sessions")
+    ] = False,
+    user: Annotated[
+        str | None,
+        typer.Option("--user", "-u", help="Flush sessions for specific user (email or UUID)"),
+    ] = None,
+    output_json: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,
+) -> None:
+    """Flush sessions — all, expired only, or for a specific user."""
+    store = _get_auth_store()
+
+    if expired:
+        deleted = store.cleanup_expired_sessions()
+    elif user:
+        resolved = _resolve_user(store, user)
+        if not resolved:
+            console.print(f"[red]User not found: {user}[/red]")
+            raise typer.Exit(1)
+        deleted = store.delete_user_sessions(resolved.id)
+    else:
+        if not yes:
+            confirm = typer.confirm("Delete ALL sessions? Every user will be logged out.")
+            if not confirm:
+                raise typer.Abort()
+        deleted = store.delete_all_sessions()
+
+    if output_json:
+        console.print_json(json.dumps({"deleted": deleted}))
+    else:
+        console.print(f"[green]Deleted {deleted} session(s).[/green]")
+
+
 @auth_app.command(name="config")
 def config(
     output_json: Annotated[bool, typer.Option("--json", help="Output as JSON")] = False,

@@ -570,6 +570,10 @@ class SessionStoreMixin:
             )
         )
 
+    def delete_all_sessions(self) -> int:
+        """Delete all sessions for all users. Returns count deleted."""
+        return int(self._execute_modify("DELETE FROM sessions"))
+
 
 class AuthStore(UserStoreMixin, SessionStoreMixin, TwoFactorMixin):
     """
