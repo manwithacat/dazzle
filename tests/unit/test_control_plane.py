@@ -23,84 +23,6 @@ try:
 except ImportError:
     FASTAPI_AVAILABLE = False
 
-# These imports are safe - they only depend on Pydantic
-from dazzle_back.runtime.control_plane import (
-    PersonaContext,
-    RegenerateRequest,
-    ScenarioContext,
-    SetPersonaRequest,
-    SetScenarioRequest,
-)
-
-
-class TestPersonaContext:
-    """Tests for PersonaContext model."""
-
-    def test_persona_context_minimal(self) -> None:
-        """Test creating persona context with minimal fields."""
-        context = PersonaContext(persona_id="teacher")
-        assert context.persona_id == "teacher"
-        assert context.label is None
-
-    def test_persona_context_with_label(self) -> None:
-        """Test creating persona context with label."""
-        context = PersonaContext(persona_id="teacher", label="Teacher")
-        assert context.persona_id == "teacher"
-        assert context.label == "Teacher"
-
-
-class TestScenarioContext:
-    """Tests for ScenarioContext model."""
-
-    def test_scenario_context_minimal(self) -> None:
-        """Test creating scenario context with minimal fields."""
-        context = ScenarioContext(scenario_id="busy_term")
-        assert context.scenario_id == "busy_term"
-        assert context.name is None
-
-    def test_scenario_context_with_name(self) -> None:
-        """Test creating scenario context with name."""
-        context = ScenarioContext(scenario_id="busy_term", name="Busy Term")
-        assert context.scenario_id == "busy_term"
-        assert context.name == "Busy Term"
-
-
-class TestSetPersonaRequest:
-    """Tests for SetPersonaRequest model."""
-
-    def test_set_persona_request(self) -> None:
-        """Test creating set persona request."""
-        request = SetPersonaRequest(persona_id="admin")
-        assert request.persona_id == "admin"
-
-
-class TestSetScenarioRequest:
-    """Tests for SetScenarioRequest model."""
-
-    def test_set_scenario_request(self) -> None:
-        """Test creating set scenario request."""
-        request = SetScenarioRequest(scenario_id="empty")
-        assert request.scenario_id == "empty"
-
-
-class TestRegenerateRequest:
-    """Tests for RegenerateRequest model."""
-
-    def test_regenerate_request_empty(self) -> None:
-        """Test creating regenerate request with defaults."""
-        request = RegenerateRequest()
-        assert request.scenario_id is None
-        assert request.entity_counts is None
-
-    def test_regenerate_request_with_counts(self) -> None:
-        """Test creating regenerate request with entity counts."""
-        request = RegenerateRequest(
-            scenario_id="demo",
-            entity_counts={"Task": 20, "User": 5},
-        )
-        assert request.scenario_id == "demo"
-        assert request.entity_counts == {"Task": 20, "User": 5}
-
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
 class TestControlPlaneIntegration:
@@ -165,14 +87,6 @@ class TestControlPlaneIntegration:
                 appspec,
                 database_url="postgresql://mock/test",
                 enable_dev_mode=True,
-                personas=[
-                    {"id": "admin", "label": "Administrator"},
-                    {"id": "viewer", "label": "Viewer"},
-                ],
-                scenarios=[
-                    {"id": "empty", "name": "Empty State"},
-                    {"id": "demo", "name": "Demo Data"},
-                ],
             )
         return TestClient(app)
 
@@ -181,67 +95,6 @@ class TestControlPlaneIntegration:
         """Provide test client for each test."""
         return shared_test_client
 
-    def test_get_dazzle_state(self, test_client: TestClient) -> None:
-        """Test getting complete control plane state."""
-        response = test_client.get("/dazzle/dev/state")
-        assert response.status_code == 200
-        data = response.json()
-        assert "current_persona" in data
-        assert "current_scenario" in data
-        assert "available_personas" in data
-        assert "available_scenarios" in data
-        assert len(data["available_personas"]) == 2
-        assert len(data["available_scenarios"]) == 2
-
-    def test_get_current_persona_empty(self, test_client: TestClient) -> None:
-        """Test getting current persona when not set."""
-        response = test_client.get("/dazzle/dev/current_persona")
-        assert response.status_code == 200
-        # Returns null when no persona is set
-        assert response.json() is None
-
-    def test_set_and_get_current_persona(self, test_client: TestClient) -> None:
-        """Test setting and getting current persona."""
-        # Set persona
-        set_response = test_client.post(
-            "/dazzle/dev/current_persona",
-            json={"persona_id": "admin"},
-        )
-        assert set_response.status_code == 200
-        data = set_response.json()
-        assert data["persona_id"] == "admin"
-        assert data["label"] == "Administrator"
-
-        # Get persona
-        get_response = test_client.get("/dazzle/dev/current_persona")
-        assert get_response.status_code == 200
-        data = get_response.json()
-        assert data["persona_id"] == "admin"
-
-    def test_get_current_scenario_empty(self, test_client: TestClient) -> None:
-        """Test getting current scenario when not set."""
-        response = test_client.get("/dazzle/dev/current_scenario")
-        assert response.status_code == 200
-        # Returns null when no scenario is set
-
-    def test_set_and_get_current_scenario(self, test_client: TestClient) -> None:
-        """Test setting and getting current scenario."""
-        # Set scenario
-        set_response = test_client.post(
-            "/dazzle/dev/current_scenario",
-            json={"scenario_id": "demo"},
-        )
-        assert set_response.status_code == 200
-        data = set_response.json()
-        assert data["scenario_id"] == "demo"
-        assert data["name"] == "Demo Data"
-
-        # Get scenario
-        get_response = test_client.get("/dazzle/dev/current_scenario")
-        assert get_response.status_code == 200
-        data = get_response.json()
-        assert data["scenario_id"] == "demo"
-
     def test_reset_data(self, test_client: TestClient) -> None:
         """Test resetting all data."""
         response = test_client.post("/dazzle/dev/reset")
@@ -249,18 +102,29 @@ class TestControlPlaneIntegration:
         data = response.json()
         assert data["status"] == "reset_complete"
 
-    def test_regenerate_data(self, test_client: TestClient) -> None:
-        """Test regenerating demo data returns correct response structure."""
+    def test_log_frontend_message(self, test_client: TestClient) -> None:
+        """Test logging a frontend message."""
         response = test_client.post(
-            "/dazzle/dev/regenerate",
-            json={"entity_counts": {"Task": 5}},
+            "/dazzle/dev/log",
+            json={"level": "error", "message": "Something went wrong", "url": "/tasks"},
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "regenerated"
-        assert "counts" in data
-        # With mocked DB, counts may be 0 — just verify the key exists
-        assert "Task" in data["counts"]
+        assert data["status"] == "logged"
+
+    def test_get_logs(self, test_client: TestClient) -> None:
+        """Test retrieving recent logs."""
+        response = test_client.get("/dazzle/dev/logs")
+        assert response.status_code == 200
+        data = response.json()
+        assert "count" in data
+        assert "entries" in data
+        assert "log_file" in data
+
+    def test_get_error_summary(self, test_client: TestClient) -> None:
+        """Test retrieving error summary."""
+        response = test_client.get("/dazzle/dev/logs/errors")
+        assert response.status_code == 200
 
 
 @pytest.mark.skipif(not FASTAPI_AVAILABLE, reason="FastAPI not installed")
@@ -319,12 +183,12 @@ class TestDevModeDisabled:
             )
         return TestClient(app)
 
-    def test_state_not_available(self, test_client: TestClient) -> None:
-        """Test that state endpoint is not available when dev mode disabled."""
-        response = test_client.get("/dazzle/dev/state")
+    def test_reset_not_available(self, test_client: TestClient) -> None:
+        """Test that reset endpoint is not available when dev mode disabled."""
+        response = test_client.post("/dazzle/dev/reset")
         assert response.status_code == 404
 
-    def test_persona_not_available(self, test_client: TestClient) -> None:
-        """Test that persona endpoint is not available when dev mode disabled."""
-        response = test_client.get("/dazzle/dev/current_persona")
+    def test_log_not_available(self, test_client: TestClient) -> None:
+        """Test that log endpoint is not available when dev mode disabled."""
+        response = test_client.post("/dazzle/dev/log", json={"level": "info", "message": "test"})
         assert response.status_code == 404

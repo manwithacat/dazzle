@@ -979,9 +979,6 @@ class DazzleBackendApp:
                 db_manager=self._db_manager,
                 repositories=self._repositories if self._db_manager else None,
                 entities=self._entities,
-                personas=self._personas,
-                scenarios=self._scenarios,
-                auth_store=self._auth_store,
             )
             self._app.include_router(control_plane_router)
 
