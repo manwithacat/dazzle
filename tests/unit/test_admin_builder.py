@@ -71,8 +71,8 @@ class TestFieldTuples:
             )
 
     def test_admin_entity_defs_count(self) -> None:
-        """ADMIN_ENTITY_DEFS contains exactly 5 entity definitions."""
-        assert len(ADMIN_ENTITY_DEFS) == 5
+        """ADMIN_ENTITY_DEFS contains exactly 7 entity definitions."""
+        assert len(ADMIN_ENTITY_DEFS) == 7
 
     def test_virtual_entities_are_subset(self) -> None:
         """VIRTUAL_ENTITY_NAMES is a subset of all entity names in ADMIN_ENTITY_DEFS."""
@@ -91,7 +91,7 @@ class TestBuildAdminEntities:
     """_build_admin_entities profile-gating and EntitySpec correctness."""
 
     def test_basic_profile_gets_all_profile_entities(self) -> None:
-        """BASIC profile receives only entities with no profile gate (3 of 5)."""
+        """BASIC profile receives only entities with no profile gate (3 of 7)."""
         from dazzle.core.admin_builder import _build_admin_entities
 
         security = _make_security(SecurityProfile.BASIC)
@@ -103,22 +103,34 @@ class TestBuildAdminEntities:
         # profile_gate="standard" entities should NOT be present for basic
         assert "ProcessRun" not in names
         assert "SessionInfo" not in names
+        assert "LogEntry" not in names
+        assert "EventTrace" not in names
 
     def test_standard_profile_gets_all_entities(self) -> None:
-        """STANDARD profile receives all 5 admin entities."""
+        """STANDARD profile receives all 7 admin entities."""
         from dazzle.core.admin_builder import _build_admin_entities
 
         security = _make_security(SecurityProfile.STANDARD)
         entities = _build_admin_entities(security)
-        assert len(entities) == 5
+        assert len(entities) == 7
 
     def test_strict_profile_gets_all_entities(self) -> None:
-        """STRICT profile receives all 5 admin entities."""
+        """STRICT profile receives all 7 admin entities."""
         from dazzle.core.admin_builder import _build_admin_entities
 
         security = _make_security(SecurityProfile.STRICT)
         entities = _build_admin_entities(security)
-        assert len(entities) == 5
+        assert len(entities) == 7
+
+    def test_standard_profile_includes_log_and_event_entities(self) -> None:
+        """STANDARD profile includes LogEntry and EventTrace."""
+        from dazzle.core.admin_builder import _build_admin_entities
+
+        security = _make_security(SecurityProfile.STANDARD)
+        entities = _build_admin_entities(security)
+        names = {e.name for e in entities}
+        assert "LogEntry" in names
+        assert "EventTrace" in names
 
     def test_entities_have_platform_domain(self) -> None:
         """All generated entities carry domain='platform'."""
@@ -442,7 +454,7 @@ class TestBuildAdminInfrastructure:
             feedback_widget=None,
             existing_workspaces=[],
         )
-        assert len(entities) == 5
+        assert len(entities) == 7
         assert len(surfaces) > 0
         assert len(workspaces) == 1
 

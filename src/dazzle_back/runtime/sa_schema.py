@@ -194,6 +194,8 @@ _VIRTUAL_ENTITY_NAMES: frozenset[str] = frozenset(
         "SystemHealth",
         "SystemMetric",
         "ProcessRun",
+        "LogEntry",
+        "EventTrace",
     }
 )
 """Entities backed by non-PostgreSQL stores (Redis, in-memory).

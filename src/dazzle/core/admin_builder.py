@@ -288,6 +288,30 @@ _ADMIN_SURFACE_DEFS: list[tuple[str, str, str, list[tuple[str, str]], str | None
         ],
         "standard",
     ),
+    (
+        "_admin_logs",
+        "LogEntry",
+        "Application Logs",
+        [
+            ("timestamp", "Time"),
+            ("level", "Level"),
+            ("component", "Component"),
+            ("message", "Message"),
+        ],
+        "standard",
+    ),
+    (
+        "_admin_events",
+        "EventTrace",
+        "Event Traces",
+        [
+            ("topic", "Topic"),
+            ("event_type", "Type"),
+            ("key", "Key"),
+            ("timestamp", "Time"),
+        ],
+        "standard",
+    ),
 ]
 
 
@@ -348,12 +372,14 @@ _REGION_DEFS: list[tuple[str, str, DisplayMode, str | None, bool, bool, bool]] =
     ("processes", "ProcessRun", DisplayMode.LIST, "standard", False, False, False),
     ("deploys", "DeployHistory", DisplayMode.LIST, None, True, False, False),
     ("feedback", "FeedbackReport", DisplayMode.LIST, None, True, True, False),
+    ("logs", "LogEntry", DisplayMode.LIST, "standard", False, False, False),
+    ("events", "EventTrace", DisplayMode.LIST, "standard", False, False, False),
 ]
 
 _NAV_GROUPS: list[tuple[str, list[str]]] = [
     ("Management", ["users", "tenants", "sessions"]),
-    ("Observability", ["health", "metrics", "processes"]),
-    ("Operations", ["deploys", "feedback"]),
+    ("Observability", ["health", "metrics", "processes", "logs"]),
+    ("Operations", ["deploys", "feedback", "events"]),
 ]
 
 

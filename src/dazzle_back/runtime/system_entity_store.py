@@ -22,11 +22,15 @@ class SystemEntityStore:
         health_aggregator: Any | None = None,
         metrics_store: Any | None = None,
         process_monitor: Any | None = None,
+        log_store: Any | None = None,
+        event_framework: Any | None = None,
     ) -> None:
         self.entity_name = entity_name
         self._health_aggregator = health_aggregator
         self._metrics_store = metrics_store
         self._process_monitor = process_monitor
+        self._log_store = log_store
+        self._event_framework = event_framework
 
     async def list(
         self,
@@ -40,6 +44,10 @@ class SystemEntityStore:
             return self._list_metrics()
         elif self.entity_name == "ProcessRun":
             return self._list_process_runs(limit=limit)
+        elif self.entity_name == "LogEntry":
+            return self._list_log_entries(filters=filters, limit=limit)
+        elif self.entity_name == "EventTrace":
+            return await self._list_event_traces(limit=limit)
         raise ValueError(f"Unknown virtual entity: {self.entity_name}")
 
     async def get(self, record_id: str) -> dict[str, Any] | None:
@@ -114,4 +122,72 @@ class SystemEntityStore:
                     "error": run.error,
                 }
             )
+        return results
+
+    def _list_log_entries(
+        self,
+        filters: dict[str, Any] | None = None,
+        limit: int | None = None,
+    ) -> builtins.list[dict[str, Any]]:
+        from dazzle_back.runtime.logging import get_recent_logs
+
+        level = None
+        if filters and "level" in filters:
+            level = filters["level"]
+        raw = get_recent_logs(count=limit or 50, level=level)
+        results: list[dict[str, Any]] = []
+        for entry in raw:
+            results.append(
+                {
+                    "id": str(
+                        uuid.uuid5(
+                            uuid.NAMESPACE_DNS,
+                            f"log-{entry.get('timestamp', '')}-{entry.get('message', '')[:50]}",
+                        )
+                    ),
+                    "timestamp": entry.get("timestamp"),
+                    "level": entry.get("level", "INFO"),
+                    "component": entry.get("logger", entry.get("component", "")),
+                    "message": entry.get("message", ""),
+                    "source": entry.get("source", entry.get("filename", "")),
+                }
+            )
+        return results
+
+    async def _list_event_traces(
+        self,
+        limit: int | None = None,
+    ) -> builtins.list[dict[str, Any]]:
+        if self._event_framework is None:
+            return []
+        results: list[dict[str, Any]] = []
+        try:
+            bus = self._event_framework.bus
+            topics = await bus.list_topics()
+            for topic in topics[: limit or 10]:
+                events: list[Any] = []
+                async for envelope in bus.replay(topic, limit=limit or 20):
+                    events.append(envelope)
+                for env in events:
+                    payload_str = ""
+                    if hasattr(env, "payload"):
+                        import json
+
+                        try:
+                            payload_str = json.dumps(env.payload)[:200]
+                        except (TypeError, ValueError):
+                            payload_str = str(env.payload)[:200]
+                    results.append(
+                        {
+                            "id": str(getattr(env, "id", uuid.uuid4())),
+                            "topic": topic,
+                            "event_type": getattr(env, "event_type", ""),
+                            "key": getattr(env, "key", ""),
+                            "timestamp": getattr(env, "timestamp", datetime.now(UTC)),
+                            "payload_preview": payload_str,
+                            "correlation_id": str(getattr(env, "correlation_id", "")),
+                        }
+                    )
+        except Exception:
+            pass  # best-effort — event bus may not be initialized
         return results

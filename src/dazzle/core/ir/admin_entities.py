@@ -66,6 +66,25 @@ PROCESS_RUN_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = (
     ("error", "text", (), None),
 )
 
+LOG_ENTRY_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = (
+    ("id", "uuid", ("pk",), None),
+    ("timestamp", "datetime", (), "now"),
+    ("level", "enum[DEBUG,INFO,WARNING,ERROR,CRITICAL]", ("required",), None),
+    ("component", "str(200)", (), None),
+    ("message", "text", ("required",), None),
+    ("source", "str(200)", (), None),
+)
+
+EVENT_TRACE_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = (
+    ("id", "uuid", ("pk",), None),
+    ("topic", "str(200)", ("required",), None),
+    ("event_type", "str(200)", (), None),
+    ("key", "str(200)", (), None),
+    ("timestamp", "datetime", (), "now"),
+    ("payload_preview", "text", (), None),
+    ("correlation_id", "str(36)", (), None),
+)
+
 SESSION_INFO_FIELDS: tuple[tuple[str, str, tuple[str, ...], str | None], ...] = (
     ("id", "uuid", ("pk",), None),
     ("user_id", "str(200)", ("required",), None),
@@ -87,6 +106,8 @@ VIRTUAL_ENTITY_NAMES: frozenset[str] = frozenset(
         "SystemHealth",
         "SystemMetric",
         "ProcessRun",
+        "LogEntry",
+        "EventTrace",
     }
 )
 
@@ -152,6 +173,22 @@ ADMIN_ENTITY_DEFS: tuple[
         "Active and historical user session records for security audit",
         SESSION_INFO_FIELDS,
         ["system", "audit"],
+        "standard",  # standard + strict only
+    ),
+    (
+        "LogEntry",
+        "Log Entry",
+        "Recent application log entries for debugging and audit",
+        LOG_ENTRY_FIELDS,
+        ["system", "monitoring"],
+        "standard",  # standard + strict only
+    ),
+    (
+        "EventTrace",
+        "Event Trace",
+        "Event bus trace records for topic inspection and replay debugging",
+        EVENT_TRACE_FIELDS,
+        ["system", "monitoring"],
         "standard",  # standard + strict only
     ),
 )
