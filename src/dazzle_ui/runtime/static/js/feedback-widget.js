@@ -145,6 +145,7 @@
 
     // Floating button
     this._btn = document.createElement("button");
+    this._btn.type = "button";
     this._btn.className = "dz-feedback-btn";
     this._btn.setAttribute("aria-label", "Send feedback");
     this._btn.setAttribute("title", "Send feedback (`)");
@@ -174,6 +175,7 @@
     var h3 = document.createElement("h3");
     h3.textContent = "Send Feedback";
     var closeBtn = document.createElement("button");
+    closeBtn.type = "button";
     closeBtn.className = "dz-feedback-close";
     closeBtn.setAttribute("aria-label", "Close feedback panel");
     closeBtn.textContent = "\u00d7";
@@ -199,6 +201,7 @@
     ["bug", "ux", "visual", "behaviour", "enhancement", "other"].forEach(
       function (cat) {
         var btn = document.createElement("button");
+        btn.type = "button";
         btn.className = "dz-feedback-cat-btn";
         btn.setAttribute("data-category", cat);
         btn.textContent = cat;
@@ -220,6 +223,7 @@
     sevRow.className = "dz-feedback-severities";
     ["blocker", "annoying", "minor"].forEach(function (sev) {
       var btn = document.createElement("button");
+      btn.type = "button";
       btn.className = "dz-feedback-sev-btn";
       if (sev === "minor") btn.classList.add("selected");
       btn.setAttribute("data-severity", sev);
@@ -244,6 +248,7 @@
 
     // Submit
     this._submitBtn = document.createElement("button");
+    this._submitBtn.type = "button";
     this._submitBtn.className = "dz-feedback-submit";
     this._submitBtn.textContent = "Submit Feedback";
     this._submitBtn.addEventListener("click", function () {
@@ -306,7 +311,6 @@
     this._idempotencyKey = crypto.randomUUID();
     this._panel.classList.add("open");
     this._backdrop.classList.add("visible");
-    this._textarea.focus();
   };
 
   FeedbackWidget.prototype.close = function () {
