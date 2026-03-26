@@ -17,9 +17,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `SystemEntityStore` adapter: routes reads for virtual entities to health aggregator, metrics store, and process monitor instead of PostgreSQL (#686)
 - Collision detection: `LinkError` raised if user-declared entities/workspaces conflict with synthetic admin names (#686)
 - Admin LIST surfaces for all synthetic entities with admin-persona access control (#686)
+- Content-hash cache busting: `static_url` Jinja2 filter rewrites asset paths with SHA-256 fingerprints — no build step (#711)
+- Project layout convention: recommended `app/` directory structure for custom Python code; `dazzle init --with-app` scaffold (#715)
+- Security profile reference: `docs/reference/security-profiles.md` with profile comparison and admin region tables (#705)
+- Template override docs: `dz://` prefix, declaration headers, available blocks (#710)
+
+### Fixed
+- Feedback widget retry toast no longer shown on page load — silent mode for background retries (#708)
+- CSS sidebar hidden on desktop — moved `dz.css` out of `@layer(framework)` so overrides beat DaisyUI (#709)
+
+### Changed
+- All schema changes (including framework entities) now go through Alembic — removed raw ALTER TABLE startup path (ADR-0017, #713)
+- Virtual entities (SystemHealth, SystemMetric, ProcessRun) excluded from SA metadata — no phantom PostgreSQL tables (#713)
 
 ### Deprecated
 - Founder console routes (`/_ops/`, `/_console/`) — `X-Dazzle-Deprecated` header added, will be removed in a future release (#686)
+
+### Agent Guidance
+- **Admin workspace entities**: The linker now generates synthetic entities with `domain="platform"`. Tests and tools that count entities should filter these out (e.g., `[e for e in entities if e.domain != "platform"]`).
+- **Entity naming**: Don't declare entities named `SystemHealth`, `SystemMetric`, `DeployHistory`, `ProcessRun`, or `SessionInfo` — these are reserved by the admin workspace and will cause a `LinkError`.
+- **Schema migrations**: Use `dazzle db revision -m "description"` then `dazzle db upgrade` for ALL schema changes, including framework entities. No raw ALTER TABLE (ADR-0017).
+- **Static assets in templates**: Use `{{ 'css/file.css' | static_url }}` instead of bare `/static/css/file.css` paths. The filter adds content-hash fingerprints for cache busting.
+- **Project layout**: Custom Python code goes in `app/<category>/` (db, sync, render, qa, demo). One-shot scripts go in `scripts/`. Don't create flat `pipeline/` directories.
+- **Security profiles**: All three profiles (basic/standard/strict) now include auth and an admin workspace. See `docs/reference/security-profiles.md` for which regions each profile gets.
 
 ## [0.48.11] - 2026-03-25
 
@@ -29,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing favicon `<link>` in app `base.html` — 404 console error on all app pages (#691)
 - `/__test__/reset` now reads `.dazzle/test_credentials.json` for user creation instead of generic emails (#688)
 - Dead-construct lint false positives: surfaces reachable via `nav_group` entity items no longer flagged (#689)
+
+### Agent Guidance
+- **FeedbackReport idempotency**: The `idempotency_key` field (str(36), unique) was added to FeedbackReport in #693. Existing deployments need `dazzle db upgrade` to add the column.
 
 ## [0.48.10] - 2026-03-25
 
@@ -43,6 +66,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `src/dazzle/mcp/runtime_tools/state.py` — module deleted, state migrated to `ServerState` (#673)
 - `get_process_manager()`, `set_process_manager()` global singleton functions (#673)
 - `api_kb.loader.set_project_root()` — cache clearing handled by `ServerState.set_project_root()` (#673)
+
+### Agent Guidance
+- **No new singletons** (ADR-0005): Access runtime services via `Depends(get_services)` in route handlers or `request.app.state.services` in middleware. Do not create module-level mutable state.
 
 ## [0.48.9] - 2026-03-25
 
@@ -67,6 +93,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `css_loader.py` updated with canonical CSS order, `@layer framework` wrappers, and inline source map (#671)
 - `build_dist.py` produces layer-aware `dazzle.min.css` with `@layer framework` wrappers (#671)
 - CI publish workflow rebuilds `dist/` at release time for CDN freshness (#671)
+
+### Agent Guidance
+- **CSS is local-first**: Static CSS/JS are served from the app, not CDN. The CDN path is opt-in via `[ui] cdn = true` in `dazzle.toml`.
+- **Cascade layers**: CSS uses `@layer base, framework, app, overrides`. Framework styles go in `layer(framework)`. Exception: `dz.css` is unlayered so its sidebar overrides beat DaisyUI's unlayered drawer styles.
 
 ## [0.48.7] - 2026-03-25
 
@@ -136,6 +166,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EventInbox`: `placeholder`/`backend_type` parameters removed — always PostgreSQL
 - Canary dependency probe changed from `aiosqlite` to `psycopg` in `null.py`
 
+### Agent Guidance
+- **PostgreSQL only** (ADR-0008): No SQLite code paths remain. All database operations use PostgreSQL via psycopg. Don't propose SQLite as a fallback or dev convenience.
+
 ### Fixed
 - Feedback widget Jinja global set after `configure_project_templates()` to survive env replacement (#649)
 - Workspace grid uses CSS columns for masonry-style card layout — eliminates whitespace gaps (#648)
@@ -165,6 +198,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Unit tests for grant routes (`test_grant_routes.py`)
 
 ## [0.48.0] - 2026-03-24
+
+### Agent Guidance
+- **Grant-based RBAC**: GrantStore is now PostgreSQL-only with atomic state transitions. Use `has_grant()` in state machine guards. See `src/dazzle_back/runtime/grant_routes.py` for the HTTP API.
+- **Template overrides**: Use `{% extends "dz://base.html" %}` to extend framework templates from project overrides. Plain `{% extends "base.html" %}` causes infinite recursion.
 
 ### Changed
 - GrantStore rewritten as PostgreSQL-only — removed all SQLite code paths, `_sql()` helper, and `placeholder` parameter
