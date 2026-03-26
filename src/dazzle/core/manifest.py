@@ -591,14 +591,16 @@ def resolve_database_url(
     manifest: ProjectManifest | None = None,
     *,
     explicit_url: str = "",
+    env_name: str = "",
 ) -> str:
     """Resolve the database URL with clear priority.
 
     Priority:
         1. explicit_url (CLI ``--database-url`` flag)
-        2. ``DATABASE_URL`` environment variable
-        3. ``dazzle.toml`` ``[database].url`` (supports ``env:VAR_NAME`` indirection)
-        4. Default: ``postgresql://localhost:5432/dazzle``
+        2. Environment profile (``--env`` / ``DAZZLE_ENV``)
+        3. ``DATABASE_URL`` environment variable
+        4. ``dazzle.toml`` ``[database].url`` (supports ``env:VAR_NAME`` indirection)
+        5. Default: ``postgresql://localhost:5432/dazzle``
 
     The ``env:VAR_NAME`` syntax in the manifest lets users commit a safe pointer
     (e.g. ``url = "env:DATABASE_URL"``) that resolves at runtime.
@@ -610,12 +612,31 @@ def resolve_database_url(
     if explicit_url:
         return _normalise_postgres_scheme(explicit_url)
 
-    # 2. Environment variable
+    # 2. Environment profile
+    if env_name and manifest is not None:
+        if env_name not in manifest.environments:
+            available = ", ".join(sorted(manifest.environments.keys())) or "(none)"
+            raise SystemExit(
+                f"Unknown environment '{env_name}'. "
+                f"Available: {available}. "
+                f"Check [environments.*] in dazzle.toml."
+            )
+        profile = manifest.environments[env_name]
+        # database_url wins over database_url_env on the same profile
+        if profile.database_url:
+            return _normalise_postgres_scheme(profile.database_url)
+        if profile.database_url_env:
+            resolved = os.environ.get(profile.database_url_env, "")
+            if resolved:
+                return _normalise_postgres_scheme(resolved)
+        # Profile set but neither field resolved — fall through
+
+    # 3. Environment variable
     env_url = os.environ.get("DATABASE_URL", "")
     if env_url:
         return _normalise_postgres_scheme(env_url)
 
-    # 3. Manifest [database].url
+    # 4. Manifest [database].url
     if manifest is not None:
         manifest_url = manifest.database.url
         if manifest_url.startswith("env:"):
@@ -627,7 +648,7 @@ def resolve_database_url(
         elif manifest_url and manifest_url != _DEFAULT_DATABASE_URL:
             return _normalise_postgres_scheme(manifest_url)
 
-    # 4. Default
+    # 5. Default
     return _DEFAULT_DATABASE_URL
 
 
