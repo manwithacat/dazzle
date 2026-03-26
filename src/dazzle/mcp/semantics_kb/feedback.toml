@@ -2,6 +2,12 @@
 
 [concepts.feedback_widget]
 category = "Framework Feature"
+since_version = "0.48.0"
+changed_in = [
+  { version = "0.48.15", note = "Resolved-report notification toast on page load" },
+  { version = "0.48.13", note = "Mobile Safari fixes: button type, focus removal, dvh viewport" },
+  { version = "0.48.12", note = "Retry toast suppressed on background retries" },
+]
 definition = """
 In-app feedback collection. When `feedback_widget: enabled` is declared in the DSL,
 the framework auto-generates a FeedbackReport entity, three synthetic surfaces

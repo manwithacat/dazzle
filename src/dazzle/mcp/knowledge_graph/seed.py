@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 6  # v6: feedback_widget concepts + triage workflow
+SEED_SCHEMA_VERSION = 7  # v7: version-aware concept metadata (#716)
 
 
 def compute_seed_version() -> str:
@@ -148,17 +148,24 @@ def _seed_semantic_kb(graph: KnowledgeGraph, stats: dict[str, int]) -> None:
     # Seed concepts as entities
     for name, concept_data in concepts.items():
         entity_id = f"concept:{name}"
+        metadata: dict[str, Any] = {
+            "source": "framework",
+            "category": concept_data.get("category", ""),
+            "definition": concept_data.get("definition", ""),
+            "syntax": concept_data.get("syntax", ""),
+            "example": concept_data.get("example", ""),
+        }
+        # Version tracking fields (optional)
+        if "since_version" in concept_data:
+            metadata["since_version"] = concept_data["since_version"]
+        if "changed_in" in concept_data:
+            metadata["changed_in"] = concept_data["changed_in"]
+
         graph.create_entity(
             entity_id=entity_id,
             name=name,
             entity_type="concept",
-            metadata={
-                "source": "framework",
-                "category": concept_data.get("category", ""),
-                "definition": concept_data.get("definition", ""),
-                "syntax": concept_data.get("syntax", ""),
-                "example": concept_data.get("example", ""),
-            },
+            metadata=metadata,
         )
         stats["concepts"] += 1
 
