@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.16] - 2026-03-26
+
+### Added
+- Admin workspace: `DIAGRAM` display mode — entity relationship diagrams rendered via Mermaid JS (#700)
+- Admin workspace: app map region showing entity FK graph in Operations nav group (#700)
+- Admin workspace: deploy trigger actions — "Trigger Deploy" header button and per-row "Rollback" on deploys region (#701)
+- Admin workspace: `_REGION_ACTIONS` / `_ROW_ACTIONS` action button system for admin regions (#701)
+- Admin API: `POST /_admin/api/deploys/trigger` and `POST /_admin/api/deploys/{id}/rollback` endpoints (super_admin only) (#701)
+
 ## [0.48.15] - 2026-03-26
 
 ### Added
