@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.1] - 2026-03-26
+
+### Changed
+- All tutorial examples now declare `security_profile: basic` and an `admin` persona — aligns with auth-universal philosophy (#704)
+- `llm_ticket_classifier` example: added `[auth]` section to `dazzle.toml` (#704)
+- `contact_manager` stories: fixed actor references to match declared persona IDs (#704)
+
+### Agent Guidance
+- **Examples are auth-universal**: All tutorial examples now have auth enabled, an `admin` persona, and `security_profile: basic`. When scaffolding new apps from examples, this is the expected baseline.
+
 ## [0.49.0] - 2026-03-26
 
 ### Added
