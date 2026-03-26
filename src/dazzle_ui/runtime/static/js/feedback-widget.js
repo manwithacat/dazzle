@@ -424,14 +424,14 @@
     try {
       var pending = JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
       if (!pending.length) return;
+      // Clear storage first to prevent duplicate retries on reload (#693)
+      localStorage.removeItem(PENDING_KEY);
       var now = Date.now();
-      var kept = [];
       var self = this;
       pending.forEach(function (item) {
         if (now - item.ts > PENDING_MAX_AGE_MS) return;
         self._doPost(item.payload, item.key);
       });
-      localStorage.setItem(PENDING_KEY, JSON.stringify(kept));
     } catch (_) {
       /* noop */
     }

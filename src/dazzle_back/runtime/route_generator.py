@@ -21,6 +21,7 @@ from dazzle_back.runtime._fastapi_compat import (
     Request,
 )
 from dazzle_back.runtime._fastapi_compat import APIRouter as _APIRouter
+from dazzle_back.runtime.repository import ConstraintViolationError
 from dazzle_back.specs.endpoint import EndpointSpec, HttpMethod
 from dazzle_back.specs.service import OperationKind, ServiceSpec
 
@@ -1857,8 +1858,23 @@ def create_create_handler(
         **_extra: Any,
     ) -> Any:
         body = await _parse_request_body(request)
+
+        # Inject idempotency key from header if present (#693)
+        idem_key = request.headers.get("x-idempotency-key")
+        if idem_key and "idempotency_key" not in body:
+            body["idempotency_key"] = idem_key
+
         data = input_schema.model_validate(body)
-        result = await service.execute(operation="create", data=data)
+
+        # Handle idempotent duplicate: unique constraint on idempotency_key
+        # returns a 200 instead of the normal 422 constraint error.
+        try:
+            result = await service.execute(operation="create", data=data)
+        except ConstraintViolationError as exc:
+            if idem_key and exc.field == "idempotency_key":
+                return {"status": "duplicate", "message": "Already submitted"}
+            raise
+
         return _with_htmx_triggers(
             request, result, entity_name, "created", redirect_url=_build_redirect_url(result)
         )
