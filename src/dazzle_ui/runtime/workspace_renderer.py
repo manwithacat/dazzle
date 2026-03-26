@@ -80,6 +80,8 @@ class RegionContext(BaseModel):
     template: str = "workspace/regions/list.html"  # Region display template
     # Diagram data (v0.48.15: DIAGRAM display mode)
     diagram_data: str = ""  # Mermaid diagram source for DIAGRAM regions
+    # Region actions (v0.48.15: action buttons on region header)
+    region_actions: list[dict[str, str]] = Field(default_factory=list)
 
 
 class WorkspaceContext(BaseModel):
@@ -117,6 +119,18 @@ def _default_col_span(stage: str, index: int) -> int:
     if isinstance(pattern, int):
         return pattern
     return pattern[min(index, len(pattern) - 1)]
+
+
+def _get_admin_region_actions(workspace_name: str, region_name: str) -> list[dict[str, str]]:
+    """Get action button definitions for admin workspace regions."""
+    if not workspace_name.startswith("_") or not workspace_name.endswith("_admin"):
+        return []
+    try:
+        from dazzle.core.admin_builder import get_region_actions
+
+        return get_region_actions(region_name)
+    except ImportError:
+        return []
 
 
 def _build_diagram_data(display_mode: str, app_spec: Any) -> str:
@@ -341,6 +355,7 @@ def build_workspace_context(
                 col_span=col_span,
                 template=template,
                 diagram_data=_build_diagram_data(display_mode, app_spec),
+                region_actions=_get_admin_region_actions(workspace.name, region.name),
             )
         )
 

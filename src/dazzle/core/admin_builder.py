@@ -383,6 +383,43 @@ _NAV_GROUPS: list[tuple[str, list[str]]] = [
     ("Operations", ["deploys", "feedback", "events", "app_map"]),
 ]
 
+# Actions available on admin regions (region_name -> list of action defs)
+# Each action: {"label": str, "endpoint": str, "method": str, "confirm": str, "persona": str}
+_REGION_ACTIONS: dict[str, list[dict[str, str]]] = {
+    "deploys": [
+        {
+            "label": "Trigger Deploy",
+            "endpoint": "/_admin/api/deploys/trigger",
+            "method": "POST",
+            "confirm": "Trigger a new deployment?",
+            "persona": "super_admin",
+        },
+    ],
+}
+
+# Row-level actions (shown per item)
+_ROW_ACTIONS: dict[str, list[dict[str, str]]] = {
+    "deploys": [
+        {
+            "label": "Rollback",
+            "endpoint": "/_admin/api/deploys/{id}/rollback",
+            "method": "POST",
+            "confirm": "Roll back to this deployment?",
+            "persona": "super_admin",
+        },
+    ],
+}
+
+
+def get_region_actions(region_name: str) -> list[dict[str, str]]:
+    """Get header-level actions for an admin workspace region."""
+    return list(_REGION_ACTIONS.get(region_name, []))
+
+
+def get_row_actions(region_name: str) -> list[dict[str, str]]:
+    """Get row-level actions for an admin workspace region."""
+    return list(_ROW_ACTIONS.get(region_name, []))
+
 
 def _build_regions(
     security: SecurityConfig,
