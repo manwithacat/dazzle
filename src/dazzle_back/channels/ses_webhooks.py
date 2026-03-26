@@ -8,14 +8,9 @@ Handles:
 - SES Delivery notifications
 """
 
-from __future__ import annotations
-
 import json
 import logging
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from fastapi import FastAPI
+from typing import Any
 
 logger = logging.getLogger("dazzle.channels.ses_webhooks")
 
@@ -206,7 +201,7 @@ async def handle_sns_notification(body: bytes) -> dict[str, Any]:
     return {"event_type": "ignored", "message_type": message_type}
 
 
-def register_ses_webhook(app: FastAPI) -> None:
+def register_ses_webhook(app: Any) -> None:
     """Register SES webhook endpoint on a FastAPI app.
 
     POST /webhooks/ses/notifications

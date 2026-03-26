@@ -5,8 +5,6 @@ Initializes optional features: audit logger, metadata store, file service.
 Runs last so it can report on other subsystems' state.
 """
 
-from __future__ import annotations
-
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any

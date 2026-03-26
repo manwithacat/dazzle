@@ -8,13 +8,10 @@ The context is attached to every GraphQL request and provides:
 - Request metadata
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from starlette.requests import Request
+from starlette.requests import Request
 
 
 @dataclass(frozen=True)

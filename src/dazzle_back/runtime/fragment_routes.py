@@ -4,20 +4,15 @@ Provides search and select endpoints that proxy to configured external
 API sources and return rendered HTML fragments.
 """
 
-from __future__ import annotations
-
 import logging
 from html import escape as html_escape
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import HTMLResponse
 from starlette.responses import Response
 
 from dazzle_back.runtime.http_utils import http_call_with_retry
-
-if TYPE_CHECKING:
-    from dazzle_back.runtime.api_cache import ApiResponseCache
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +30,7 @@ def _html(content: str) -> Response:
 def create_fragment_router(
     fragment_sources: dict[str, dict[str, Any]] | None = None,
     app_spec: Any | None = None,
-    cache: ApiResponseCache | None = None,
+    cache: Any | None = None,
 ) -> APIRouter:
     """Create the fragment routes router.
 

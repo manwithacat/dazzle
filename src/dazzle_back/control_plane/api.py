@@ -4,18 +4,15 @@ Control Plane API endpoints.
 Provides JSON APIs for metrics, logs, health, processes, and configuration.
 """
 
-from __future__ import annotations
-
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from .log_store import LogStore
-    from .metrics_store import MetricsStore
-    from .process_monitor import ProcessMonitor
+from .log_store import LogStore
+from .metrics_store import MetricsStore
+from .process_monitor import ProcessMonitor
 
 router = APIRouter(tags=["API"])
 

@@ -8,8 +8,6 @@ Supports:
 - Dev mode (no auth if password not configured)
 """
 
-from __future__ import annotations
-
 import asyncio
 import hmac
 import logging
@@ -17,13 +15,9 @@ import os
 import secrets
 import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials, HTTPBearer
-
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 

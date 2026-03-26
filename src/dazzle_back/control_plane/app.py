@@ -4,19 +4,14 @@ Control Plane FastAPI Application.
 Provides the dashboard and API endpoints for observability.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 from fastapi import FastAPI
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
 
 logger = logging.getLogger(__name__)
 

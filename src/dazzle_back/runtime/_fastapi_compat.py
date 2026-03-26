@@ -9,8 +9,6 @@ When FastAPI is not installed every symbol is set to ``None`` so that
 ``if not FASTAPI_AVAILABLE`` guards still work correctly at runtime.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 # ---------------------------------------------------------------------------

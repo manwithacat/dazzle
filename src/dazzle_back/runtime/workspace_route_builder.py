@@ -4,10 +4,8 @@ Houses ``WorkspaceRouteBuilder`` which was previously defined inline in
 ``server.py``.
 """
 
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from dazzle.core.ir import AppSpec
 from dazzle_back.runtime.auth import AuthMiddleware
@@ -18,9 +16,6 @@ from dazzle_back.runtime.workspace_rendering import (
     _workspace_batch_handler,
     _workspace_region_handler,
 )
-
-if TYPE_CHECKING:
-    from fastapi import FastAPI
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +32,7 @@ class WorkspaceRouteBuilder:
     def __init__(
         self,
         *,
-        app: FastAPI,
+        app: Any,
         appspec: AppSpec,
         entities: list[Any],
         repositories: dict[str, Any],

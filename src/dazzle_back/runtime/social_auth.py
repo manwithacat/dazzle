@@ -4,13 +4,11 @@ OAuth2 Social Login for mobile clients.
 Supports Google, Apple, and GitHub authentication via ID tokens or OAuth codes.
 """
 
-from __future__ import annotations
-
 import logging
 import secrets
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -20,13 +18,11 @@ from dazzle_back.runtime._fastapi_compat import (
     HTTPException,
     Request,
 )
+from dazzle_back.runtime.auth import AuthStore, UserRecord
+from dazzle_back.runtime.jwt_auth import JWTService
+from dazzle_back.runtime.token_store import TokenStore
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from dazzle_back.runtime.auth import AuthStore, UserRecord
-    from dazzle_back.runtime.jwt_auth import JWTService
-    from dazzle_back.runtime.token_store import TokenStore
 
 
 # =============================================================================

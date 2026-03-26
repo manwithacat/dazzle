@@ -14,19 +14,14 @@ Analytics types:
 All analytics are tenant-scoped to ensure data isolation.
 """
 
-from __future__ import annotations
-
 import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
 
 from dazzle_back.runtime.ops_database import AnalyticsEvent, OpsDatabase
-
-if TYPE_CHECKING:
-    from dazzle_back.events.bus import EventBus
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +93,7 @@ class AnalyticsCollector:
     def __init__(
         self,
         ops_db: OpsDatabase,
-        event_bus: EventBus | None = None,
+        event_bus: Any | None = None,
         config: AnalyticsConfig | None = None,
     ):
         """

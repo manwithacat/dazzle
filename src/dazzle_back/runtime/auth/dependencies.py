@@ -1,7 +1,5 @@
 """FastAPI dependencies for protected routes."""
 
-from __future__ import annotations
-
 from collections.abc import Awaitable, Callable
 
 from dazzle_back.runtime._fastapi_compat import FASTAPI_AVAILABLE, FastAPIRequest

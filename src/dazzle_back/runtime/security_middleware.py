@@ -7,14 +7,8 @@ Provides configurable security based on security profile:
 - Request origin validation
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from fastapi import FastAPI
-
+from typing import Any
 
 # =============================================================================
 # Security Headers Configuration
@@ -236,7 +230,7 @@ def create_security_headers_middleware(config: SecurityHeadersConfig) -> Any:
 
 
 def apply_security_middleware(
-    app: FastAPI,
+    app: Any,
     security_profile: str,
     cors_origins: list[str] | None = None,
     enable_headers: bool = True,

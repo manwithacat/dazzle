@@ -4,8 +4,6 @@ Runtime server - creates and runs a FastAPI application from AppSpec.
 This module provides the main entry point for running a Dazzle backend application.
 """
 
-from __future__ import annotations
-
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -17,6 +15,7 @@ from pydantic import BaseModel
 from dazzle.core.ir import AppSpec
 from dazzle_back.runtime._fastapi_compat import (
     FASTAPI_AVAILABLE,
+    FastAPI,
 )
 from dazzle_back.runtime._fastapi_compat import FastAPI as _FastAPI
 from dazzle_back.runtime.auth import (
@@ -55,11 +54,8 @@ if FASTAPI_AVAILABLE:
 else:
     RouteGenerator = None  # type: ignore[assignment,misc]
 
-# FastAPI is optional - use TYPE_CHECKING for type hints
 if TYPE_CHECKING:
-    from fastapi import FastAPI
-
-    from dazzle_back.runtime.pg_backend import PostgresBackend
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +226,7 @@ class DazzleBackendApp:
         self._schemas: dict[str, dict[str, type[BaseModel]]] = {}
         self._services: dict[str, Any] = {}
         self._repositories: dict[str, Any] = {}
-        self._db_manager: PostgresBackend | None = None
+        self._db_manager: Any = None
         self._auth_store: AuthStore | None = None
         self._auth_middleware: AuthMiddleware | None = None
         self._file_service: FileService | None = None

@@ -7,21 +7,17 @@ Automatically tracks:
 - Error count (http_errors_total)
 """
 
-from __future__ import annotations
-
 import re
 import time
 from collections.abc import Awaitable, Callable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
 from .emitter import MetricsEmitter
-
-if TYPE_CHECKING:
-    from starlette.types import ASGIApp
 
 # Type alias for the call_next function
 RequestResponseEndpoint = Callable[[Request], Awaitable[Response]]

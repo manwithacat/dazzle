@@ -1,14 +1,9 @@
 """Authentication middleware for FastAPI."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from typing import Any
 
 from .models import AuthContext
 from .store import AuthStore
-
-if TYPE_CHECKING:
-    from fastapi import Request as FastAPIRequest
 
 
 class AuthMiddleware:
@@ -49,7 +44,7 @@ class AuthMiddleware:
             "/webhooks/ses/notifications",
         ]
 
-    def get_auth_context(self, request: FastAPIRequest) -> AuthContext:
+    def get_auth_context(self, request: Any) -> AuthContext:
         """
         Get auth context from request.
 

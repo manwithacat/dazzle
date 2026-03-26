@@ -4,8 +4,6 @@ JWT Bearer token middleware for FastAPI.
 Provides authentication middleware that validates JWT tokens from mobile clients.
 """
 
-from __future__ import annotations
-
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 

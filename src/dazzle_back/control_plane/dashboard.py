@@ -4,8 +4,6 @@ Dashboard routes and templates for Dazzle Control Plane.
 Uses HTMX + DaisyUI (matching Dazzle's frontend stack).
 """
 
-from __future__ import annotations
-
 import html
 import json
 import logging

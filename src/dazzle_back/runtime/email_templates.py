@@ -17,18 +17,15 @@ Usage:
     )
 """
 
-from __future__ import annotations
-
 import html
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from urllib.parse import urlencode
 from uuid import uuid4
 
-if TYPE_CHECKING:
-    from dazzle_back.runtime.ops_database import OpsDatabase
+from dazzle_back.runtime.ops_database import OpsDatabase
 
 
 def _utcnow() -> datetime:

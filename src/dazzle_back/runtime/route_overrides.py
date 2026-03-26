@@ -16,8 +16,6 @@ When project routes are registered before generated routes,
 FastAPI's first-match behavior ensures the project handler wins.
 """
 
-from __future__ import annotations
-
 import importlib.util
 import logging
 import re

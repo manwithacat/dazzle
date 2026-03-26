@@ -12,8 +12,6 @@ Key features:
 - Tenant-scoped streams for multi-tenant analytics
 """
 
-from __future__ import annotations
-
 import asyncio
 import json
 import logging
@@ -21,12 +19,8 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 from uuid import uuid4
-
-if TYPE_CHECKING:
-    from dazzle_back.events.bus import EventBus
-    from dazzle_back.events.envelope import EventEnvelope
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +98,7 @@ class SSEStreamManager:
 
     def __init__(
         self,
-        event_bus: EventBus,
+        event_bus: Any,
         heartbeat_interval: float = 30.0,
     ):
         """
@@ -172,7 +166,7 @@ class SSEStreamManager:
 
             await asyncio.sleep(0.1)  # Small delay between polls
 
-    async def _handle_envelope(self, envelope: EventEnvelope) -> None:
+    async def _handle_envelope(self, envelope: Any) -> None:
         """Handle incoming event envelope and route to subscribers."""
         # Determine which streams this event belongs to
         event_type = envelope.event_type
