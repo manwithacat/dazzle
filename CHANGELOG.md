@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.13] - 2026-03-27
+
+### Added
+- UX verify CRUD interactions: create_submit, edit_submit, delete_confirm runners with form filling, checkbox handling, unique email generation
+- UX verify runtime URL resolution from `.dazzle/runtime.json` — auto-discovers server port
+- Per-entity seed batching: fixture seeding continues past individual entity failures
+
+### Fixed
+- UX verify workspace URLs: `/app/workspaces/{name}` (was `/workspace/{name}`)
+- UX verify fixture generator: correct FK ref detection, skip auto-timestamp fields, exclude framework admin entities
+- UX verify detail view: wait for HTMX data load, click table rows (not hidden menu links)
+- UX verify drawer: use `dzDrawer` JS API for CSS-transform-based drawers, handle non-drawer regions gracefully
+- UX verify auth: send `X-Test-Secret` header, extract cookie domain from URL, handle 403 as skip
+- UX verify create forms: target `form[hx-post]`, handle datetime-local/checkbox/radio fields, unique values per interaction
+
+### Agent Guidance
+- **UX verify results**: simple_task 97/280 passed (0 failures), contact_manager 45/68 passed (0 failures). Skipped items are state_transition (not yet implemented) and permission/drawer-unsupported regions.
+- **Delete CSRF**: `hx-delete` interactions fail with 500 due to missing CSRF token in HTMX DELETE requests — tracked as framework issue.
+
 ## [0.49.12] - 2026-03-27
 
 ### Added

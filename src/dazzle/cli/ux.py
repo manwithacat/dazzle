@@ -174,23 +174,29 @@ def verify_command(
         console.print(f"[yellow]  reset failed: {e}[/yellow]")
 
     seed_payload = generate_seed_payload(appspec)
-    if seed_payload.get("fixtures"):
-        console.print(f"[dim]  seeding {len(seed_payload['fixtures'])} fixtures...[/dim]")
-        try:
-            resp = httpx.post(
-                f"{api_url}/__test__/seed",
-                json=seed_payload,
-                headers=headers,
-                timeout=15,
-            )
-            if resp.status_code == 200:
-                console.print("[dim]  seed OK[/dim]")
-            else:
-                console.print(
-                    f"[yellow]  seed returned {resp.status_code}: {resp.text[:200]}[/yellow]"
+    fixtures = seed_payload.get("fixtures", [])
+    if fixtures:
+        # Seed per-entity to avoid one failure blocking all entities
+        by_entity: dict[str, list[dict[str, object]]] = {}
+        for f in fixtures:
+            by_entity.setdefault(f["entity"], []).append(f)
+
+        seeded = 0
+        for entity_name, entity_fixtures in by_entity.items():
+            try:
+                resp = httpx.post(
+                    f"{api_url}/__test__/seed",
+                    json={"fixtures": entity_fixtures},
+                    headers=headers,
+                    timeout=15,
                 )
-        except Exception as e:
-            console.print(f"[yellow]  seed failed: {e}[/yellow]")
+                if resp.status_code == 200:
+                    seeded += len(entity_fixtures)
+                else:
+                    console.print(f"[yellow]  seed {entity_name}: {resp.text[:120]}[/yellow]")
+            except Exception as e:
+                console.print(f"[yellow]  seed {entity_name}: {e}[/yellow]")
+        console.print(f"[dim]  seeded {seeded}/{len(fixtures)} fixtures[/dim]")
 
     results = asyncio.run(runner.run_all(inventory))
 
