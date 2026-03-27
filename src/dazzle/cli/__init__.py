@@ -259,6 +259,7 @@ from dazzle.cli.stubs import stubs_app  # noqa: E402
 from dazzle.cli.tenant import tenant_app  # noqa: E402
 from dazzle.cli.test_design import test_design_app  # noqa: E402
 from dazzle.cli.testing import test_app  # noqa: E402
+from dazzle.cli.ux import ux_app  # noqa: E402
 from dazzle.cli.vocab import vocab_app  # noqa: E402
 
 app.add_typer(api_pack_app, name="api-pack")
@@ -298,6 +299,7 @@ app.add_typer(mock_app, name="mock")
 app.add_typer(process_app, name="process")
 app.add_typer(rhythm_app, name="rhythm")
 app.add_typer(sentinel_app, name="sentinel")
+app.add_typer(ux_app, name="ux")
 app.add_typer(test_design_app, name="test-design")
 app.add_typer(overrides_app, name="overrides")
 app.add_typer(param_app, name="param")
