@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.12] - 2026-03-27
+
+### Added
+- UX Verification system (Layer A): `dazzle ux verify` for deterministic interaction testing derived from the DSL
+  - Interaction inventory: AppSpec → enumerable list of every testable interaction (280 for simple_task)
+  - Structural HTML assertions: fast no-browser checks for back buttons, submit buttons, ARIA, duplicate IDs
+  - Playwright runner: real browser interaction verification with per-persona sessions and screenshot capture
+  - Postgres test harness: create/drop test database lifecycle management
+  - Fixture generator: deterministic seed data from DSL entities
+  - Report generator: coverage percentage, markdown/JSON output, failure gallery
+- `dazzle db baseline` command for fresh database deployment — generates CREATE TABLE migration from DSL (#742)
+
+### Fixed
+- Test routes: replaced `functools.partial` with closures — fixes 422 on `/__test__/seed` and `/__test__/authenticate` (#743)
+- Detail page Back button: context-aware — closes drawer when inside one, `history.back()` on full pages (#744, #745)
+
+### Agent Guidance
+- **UX verification**: Run `dazzle ux verify --structural` for fast HTML checks, `dazzle ux verify` for full browser verification. Coverage metric = interactions_tested / interactions_enumerated.
+- **Fresh DB deployment**: Use `dazzle db baseline --apply` instead of `stamp` + empty revision.
+
 ## [0.49.11] - 2026-03-27
 
 ### Fixed
