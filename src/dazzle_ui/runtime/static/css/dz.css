@@ -250,3 +250,21 @@ dialog[open] {
     transform: scale(1);
   }
 }
+
+/* ── Workspace drag-and-drop feedback ──────────────────────────────── */
+
+.sortable-ghost {
+  opacity: 0.4;
+  border: 2px dashed oklch(var(--p));
+  border-radius: var(--rounded-box, 1rem);
+}
+
+.sortable-drag {
+  opacity: 1;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  transform: scale(1.02);
+}
+
+.sortable-chosen {
+  cursor: grabbing;
+}

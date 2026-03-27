@@ -66,6 +66,7 @@ document.addEventListener("alpine:init", () => {
         body: JSON.stringify({ preferences: prefs }),
       }).then(() => {
         this.editing = false;
+        if (window.dz?.toast) window.dz.toast("Layout saved", "success");
         location.reload();
       });
     },
