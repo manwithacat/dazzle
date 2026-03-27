@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.3] - 2026-03-27
+
+### Fixed
+- `dazzle db revision` now writes migration files to project directory (`.dazzle/migrations/versions/`) instead of the framework's package directory (#724)
+- Alembic config uses `version_locations` to chain framework + project migrations — upgrade/downgrade discovers both
+- Framework alembic directory located via `dazzle_back` package path (works with pip installs, not just editable dev mode)
+
+### Agent Guidance
+- **Migration output path**: `dazzle db revision` writes to `.dazzle/migrations/versions/` in the project directory. Framework migrations and project migrations are chained via Alembic's `version_locations`. Never write to the Python package directory.
+
 ## [0.49.2] - 2026-03-26
 
 ### Added
