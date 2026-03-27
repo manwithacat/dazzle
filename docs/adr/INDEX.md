@@ -19,3 +19,4 @@ Architectural Decision Records for the Dazzle project. Agent-scannable: each lin
 - [0015](0015-tigerbeetle-ledgers.md) — TigerBeetle for double-entry ledgers. Optional dependency, DSL `ledger`/`transaction` constructs.
 - [0016](0016-vendor-integration-workflow.md) — API Packs for vendor integration. TOML-driven mocks, webhook testing, DSL generation.
 - [0017](0017-schema-migrations-via-alembic.md) — All schema changes via Alembic, including framework entities. No raw DDL at startup.
+- [0018](0018-project-local-file-writes.md) — All file writes go to the project directory. Never write to the Python package directory.
