@@ -185,7 +185,7 @@ dazzle pitch review|update|enrich|init-assets
 dazzle sentinel scan|suppress
 
 # Database operations
-dazzle db status|verify|reset|cleanup
+dazzle db status|verify|reset|cleanup|stamp
 dazzle tenant create|list|status|suspend|activate
 
 # Data & integration

@@ -7,6 +7,7 @@ Wraps Alembic's programmatic API for managing PostgreSQL schema migrations:
 - downgrade: Rollback migrations
 - current:  Show current revision
 - history:  Show migration history
+- stamp:    Mark a revision as applied without running it
 """
 
 import asyncio
@@ -182,6 +183,30 @@ def history_command(
         command.history(cfg, verbose=verbose)
     except Exception as e:
         console.print(f"[red]Failed to get history: {e}[/red]")
+        raise typer.Exit(1)
+
+
+@db_app.command(name="stamp")
+def stamp_command(
+    revision: str = typer.Argument(
+        ...,
+        help="Revision to stamp (e.g. 'head' or a specific revision hash)",
+    ),
+) -> None:
+    """Mark a revision as applied without running its migration.
+
+    Use when the database already has schema changes applied manually
+    and you need to update the Alembic version table to match.
+    """
+    from alembic import command
+
+    cfg = _get_alembic_cfg()
+
+    try:
+        command.stamp(cfg, revision)
+        console.print(f"[green]Stamped at: {revision}[/green]")
+    except Exception as e:
+        console.print(f"[red]Stamp failed: {e}[/red]")
         raise typer.Exit(1)
 
 

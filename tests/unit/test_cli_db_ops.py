@@ -1,4 +1,4 @@
-"""Tests for dazzle db status/verify/reset/cleanup CLI commands."""
+"""Tests for dazzle db CLI commands (status, verify, reset, cleanup, stamp)."""
 
 from unittest.mock import MagicMock, patch
 
@@ -93,3 +93,35 @@ class TestDbCleanupCommand:
 
         result = runner.invoke(db_app, ["cleanup", "--dry-run"])
         assert result.exit_code == 0
+
+
+class TestDbStampCommand:
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.stamp")
+    def test_stamp_head(self, mock_stamp: MagicMock, mock_cfg: MagicMock) -> None:
+        """'dazzle db stamp head' calls alembic.command.stamp with 'head'."""
+        result = runner.invoke(db_app, ["stamp", "head"])
+        assert result.exit_code == 0
+        mock_stamp.assert_called_once_with(mock_cfg.return_value, "head")
+        assert "Stamped at: head" in result.output
+
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.stamp")
+    def test_stamp_specific_revision(self, mock_stamp: MagicMock, mock_cfg: MagicMock) -> None:
+        """'dazzle db stamp <rev>' calls alembic.command.stamp with that rev."""
+        result = runner.invoke(db_app, ["stamp", "6ff3f549985c"])
+        assert result.exit_code == 0
+        mock_stamp.assert_called_once_with(mock_cfg.return_value, "6ff3f549985c")
+
+    def test_stamp_requires_revision_arg(self) -> None:
+        """'dazzle db stamp' without argument shows error."""
+        result = runner.invoke(db_app, ["stamp"])
+        assert result.exit_code != 0
+
+    @patch("dazzle.cli.db._get_alembic_cfg")
+    @patch("alembic.command.stamp", side_effect=Exception("DB unreachable"))
+    def test_stamp_failure(self, mock_stamp: MagicMock, mock_cfg: MagicMock) -> None:
+        """Stamp failure prints error and exits with code 1."""
+        result = runner.invoke(db_app, ["stamp", "head"])
+        assert result.exit_code == 1
+        assert "Stamp failed" in result.output
