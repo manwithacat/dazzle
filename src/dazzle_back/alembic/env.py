@@ -65,7 +65,7 @@ def _load_target_metadata() -> sqlalchemy.MetaData:
                 entities = convert_entities(appspec.domain.entities)
                 return build_metadata(entities)
     except Exception:
-        logger.debug("Failed to load target metadata from DSL", exc_info=True)
+        logger.warning("Failed to load target metadata from DSL", exc_info=True)
 
     # Fallback: empty metadata
     import sqlalchemy

@@ -210,6 +210,85 @@ def stamp_command(
         raise typer.Exit(1)
 
 
+@db_app.command(name="baseline")
+def baseline_command(
+    database_url: str = typer.Option("", "--database-url", help="Database URL override"),
+    apply: bool = typer.Option(
+        False,
+        "--apply",
+        help="Immediately upgrade after generating the baseline revision",
+    ),
+) -> None:
+    """Generate a baseline migration that creates all DSL-declared tables.
+
+    Use this for first-time deployment to a fresh database. The command
+    diffs the DSL entities against the target database and generates a
+    migration with all CREATE TABLE statements.
+
+    Workflow for fresh deployment:
+        dazzle db baseline --apply          # Generate + apply in one step
+        # or:
+        dazzle db baseline                  # Generate only
+        dazzle db upgrade                   # Apply separately
+
+    Do NOT use 'stamp' + empty baseline for fresh databases — that marks
+    the schema as current without creating tables.
+    """
+    from alembic import command
+
+    cfg = _get_alembic_cfg()
+    url = _resolve_url(database_url)
+    if url:
+        cfg.set_main_option("sqlalchemy.url", url)
+
+    # Validate that DSL metadata is loadable and non-empty
+    try:
+        from dazzle_back.alembic.env import _load_target_metadata
+
+        metadata = _load_target_metadata()
+        table_count = len(metadata.tables)
+        if table_count == 0:
+            console.print(
+                "[red]No tables found in DSL metadata.[/red]\n"
+                "  Ensure you're running from a project directory with dazzle.toml\n"
+                "  and DSL files that declare entities."
+            )
+            raise typer.Exit(1)
+        console.print(f"[dim]DSL declares {table_count} tables[/dim]")
+    except ImportError:
+        console.print("[yellow]Could not validate DSL metadata — proceeding anyway[/yellow]")
+
+    project_versions = str(_get_project_versions_dir())
+
+    try:
+        rev = command.revision(
+            cfg,
+            message="baseline: create all tables",
+            autogenerate=True,
+            version_path=project_versions,
+        )
+        if rev is None:
+            console.print(
+                "[yellow]No schema changes detected.[/yellow]\n"
+                "  If the target database already has tables, use 'dazzle db stamp head'\n"
+                "  instead to mark the existing schema as current."
+            )
+            return
+
+        console.print(f"[green]Baseline revision created: {rev.revision}[/green]")
+        console.print(f"[dim]  → {project_versions}/[/dim]")
+
+        if apply:
+            command.upgrade(cfg, "head")
+            console.print("[green]Baseline applied — all tables created.[/green]")
+        else:
+            console.print("[dim]Run 'dazzle db upgrade' to apply.[/dim]")
+
+    except Exception as e:
+        console.print(f"[red]Baseline failed: {e}[/red]")
+        raise typer.Exit(1)
+
+
 @db_app.command(name="migrate")
 def migrate_command(
     database_url: str = typer.Option("", "--database-url", help="Database URL override"),
