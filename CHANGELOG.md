@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.8] - 2026-03-27
+
+### Added
+- DSL parser fuzzer — three-layer hybrid fuzzer (LLM generation, grammar-aware mutation, token-level mutation) with classification oracle detecting hangs, crashes, and poor error messages (#732)
+- `dazzle sentinel fuzz` CLI command — run fuzz campaigns against the parser with configurable layers, sample counts, and timeout
+- MCP `sentinel` tool: new `fuzz_summary` operation for on-demand parser fuzz reports
+- Hypothesis-powered parser fuzz test suite — 7 property-based tests covering arbitrary input, DSL-like text, and 5 mutation strategies
+
+### Fixed
+- `parse_duration()` in process parser now raises `ParseError` instead of `ValueError` on invalid duration strings — found by the fuzzer (#732)
+
+### Agent Guidance
+- **Parser fuzzing**: Run `dazzle sentinel fuzz --layer mutate --samples 100` to check parser robustness. The fuzzer found a `ValueError` bug and a parser hang (#733) during initial development — use it after parser changes.
+
 ## [0.49.7] - 2026-03-27
 
 ### Fixed
