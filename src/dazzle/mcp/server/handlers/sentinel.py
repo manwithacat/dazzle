@@ -1,7 +1,7 @@
 """
 MCP handler for the Sentinel failure-mode detection tool.
 
-Operations: scan, findings, suppress, status, history
+Operations: scan, findings, suppress, status, history, fuzz_summary
 """
 
 import json
@@ -238,3 +238,31 @@ def history_handler(project_path: Path, args: dict[str, Any]) -> str:
         sentinel_history_impl(project_path=project_path, limit=args.get("limit", 10)),
         indent=2,
     )
+
+
+# ---------------------------------------------------------------------------
+# fuzz_summary
+# ---------------------------------------------------------------------------
+
+
+def sentinel_fuzz_summary_impl(
+    examples_dir: Path,
+    samples: int,
+) -> str:
+    """Run a small mutation-only fuzz campaign and return the markdown report."""
+    from dazzle.testing.fuzzer import generate_report, run_campaign
+
+    results = run_campaign(examples_dir, layers=["mutate"], samples_per_layer=samples)
+    return generate_report(results)
+
+
+@wrap_handler_errors
+def fuzz_summary_handler(project_path: Path, args: dict[str, Any]) -> str:
+    """Run a small fuzz campaign and return the markdown report."""
+    samples = int(args.get("samples", 10))
+    # Use the project path itself as the examples dir (it contains .dsl files)
+    report = sentinel_fuzz_summary_impl(
+        examples_dir=project_path,
+        samples=samples,
+    )
+    return report

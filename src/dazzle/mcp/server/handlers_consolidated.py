@@ -1157,6 +1157,7 @@ handle_sentinel: Callable[[dict[str, Any]], str] = _make_project_handler(
         "findings": f"{_MOD_SENT}:findings_handler",
         "status": f"{_MOD_SENT}:status_handler",
         "history": f"{_MOD_SENT}:history_handler",
+        "fuzz_summary": f"{_MOD_SENT}:fuzz_summary_handler",
     },
 )
 

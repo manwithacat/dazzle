@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from dazzle.mcp.server.handlers.sentinel import (
     findings_handler,
+    fuzz_summary_handler,
     history_handler,
     scan_handler,
     status_handler,
@@ -227,3 +228,29 @@ class TestHistoryHandler:
             store.save_scan(_scan_result())
         result = json.loads(history_handler(tmp_path, {"limit": 2}))
         assert result["count"] == 2
+
+
+# =============================================================================
+# fuzz_summary_handler
+# =============================================================================
+
+
+class TestFuzzSummaryHandler:
+    @patch("dazzle.mcp.server.handlers.sentinel.sentinel_fuzz_summary_impl")
+    def test_returns_markdown_report(self, mock_impl: MagicMock, tmp_path: Path) -> None:
+        mock_impl.return_value = "# Fuzz Report\n\n0 samples"
+        result = fuzz_summary_handler(tmp_path, {})
+        assert "# Fuzz" in result
+        mock_impl.assert_called_once_with(examples_dir=tmp_path, samples=10)
+
+    @patch("dazzle.mcp.server.handlers.sentinel.sentinel_fuzz_summary_impl")
+    def test_respects_samples_arg(self, mock_impl: MagicMock, tmp_path: Path) -> None:
+        mock_impl.return_value = "# Fuzz Report\n\n5 samples"
+        fuzz_summary_handler(tmp_path, {"samples": 5})
+        mock_impl.assert_called_once_with(examples_dir=tmp_path, samples=5)
+
+    @patch("dazzle.mcp.server.handlers.sentinel.sentinel_fuzz_summary_impl")
+    def test_error_propagates_as_json(self, mock_impl: MagicMock, tmp_path: Path) -> None:
+        mock_impl.side_effect = RuntimeError("corpus empty")
+        result = json.loads(fuzz_summary_handler(tmp_path, {}))
+        assert "error" in result

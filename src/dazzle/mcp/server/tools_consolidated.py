@@ -1265,7 +1265,8 @@ def get_consolidated_tools() -> list[Tool]:
             description=(
                 "Sentinel operations: findings (get findings from latest/specific scan), "
                 "status (available agents and last scan), "
-                "history (list recent scans). "
+                "history (list recent scans), "
+                "fuzz_summary (run a small mutation fuzz campaign and return the markdown report). "
                 "Deterministic static analysis of the IR — no source code scanning."
             ),
             inputSchema={
@@ -1277,6 +1278,7 @@ def get_consolidated_tools() -> list[Tool]:
                             "findings",
                             "status",
                             "history",
+                            "fuzz_summary",
                         ],
                         "description": "Operation to perform",
                     },
@@ -1300,6 +1302,10 @@ def get_consolidated_tools() -> list[Tool]:
                     "limit": {
                         "type": "integer",
                         "description": "Max scans to return (for history). Default: 10.",
+                    },
+                    "samples": {
+                        "type": "integer",
+                        "description": "Samples per layer for fuzz_summary. Default: 10.",
                     },
                     **PROJECT_PATH_SCHEMA,
                 },
