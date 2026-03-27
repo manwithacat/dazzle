@@ -431,6 +431,15 @@ class ServiceParserMixin:
             if self.match(TokenType.STEP):
                 step = self.parse_experience_step()
                 steps.append(step)
+            elif self.match(TokenType.EOF):
+                self.error("Unexpected end of file inside experience block")
+            else:
+                token = self.current_token()
+                self.error(
+                    f"Expected 'step' inside experience block, "
+                    f"got '{token.value}'. "
+                    f"Each step must begin with the 'step' keyword."
+                )
 
         self.expect(TokenType.DEDENT)
 
