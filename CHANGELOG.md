@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.4] - 2026-03-27
+
+### Added
+- PythonAuditAgent (PA) sentinel agent — detects obsolete Python patterns in user project code (#726)
+- Three detection layers: ruff profile (UP/PTH/ASYNC/C4/SIM), semgrep ruleset (8 rules for deprecated stdlib), and 6 `@heuristic` AST-based methods for LLM training-bias patterns
+- Semgrep ruleset at `src/dazzle/sentinel/rules/python_audit.yml` covering distutils, pkg_resources, cgi, imp, asyncio.get_event_loop, nose, toml PyPI package, and datetime.timezone.utc
+- LLM-bias heuristics: requests-in-async (PA-LLM-01), manual dunders (PA-LLM-03), unittest-in-pytest (PA-LLM-04), setup.py alongside pyproject.toml (PA-LLM-05), pip-when-uv-available (PA-LLM-06)
+- Python version filtering — findings with min_version above project target are excluded
+- Orchestrator now passes `project_path` through to agents that need it
+
+### Agent Guidance
+- **PA agent**: Results appear via existing `sentinel findings`/`status`/`history` MCP tools — no new MCP operations. PA scans user project code (app/, scripts/, root .py files), never framework code.
+
 ## [0.49.3] - 2026-03-27
 
 ### Fixed
