@@ -54,8 +54,18 @@ def main_callback(
         is_eager=True,
         help="Show version and environment information",
     ),
+    env: str = typer.Option(
+        "",
+        "--env",
+        help="Environment profile from dazzle.toml (e.g. staging, production)",
+    ),
 ) -> None:
     """DAZZLE CLI main callback for global options."""
+    from dazzle.cli.env import resolve_env_name, set_active_env
+
+    resolved = resolve_env_name(env)
+    if resolved:
+        set_active_env(resolved)
 
 
 # =============================================================================
