@@ -16,7 +16,6 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -481,25 +480,38 @@ def create_test_routes(
         dependencies=[Depends(_verify_test_secret)],
     )
 
+    # Use closures instead of functools.partial — FastAPI can't introspect
+    # partial objects to identify Pydantic models as body parameters (#743).
+
+    async def seed(request: SeedRequest) -> SeedResponse:
+        return await _seed_fixtures(deps, request)
+
+    async def reset() -> dict[str, str]:
+        return await _reset_test_data(deps)
+
+    async def snapshot() -> SnapshotResponse:
+        return await _get_snapshot(deps)
+
+    async def authenticate(request: AuthenticateRequest) -> Any:
+        return await _authenticate_test_user(deps, request)
+
+    async def entity_data(entity_name: str) -> list[dict[str, Any]]:
+        return await _get_entity_data(deps, entity_name)
+
+    async def entity_count(entity_name: str) -> dict[str, int]:
+        return await _get_entity_count(deps, entity_name)
+
+    async def entity_delete(entity_name: str, entity_id: str) -> dict[str, str]:
+        return await _delete_entity(deps, entity_name, entity_id)
+
+    router.add_api_route("/seed", seed, methods=["POST"], response_model=SeedResponse)
+    router.add_api_route("/reset", reset, methods=["POST"])
+    router.add_api_route("/snapshot", snapshot, methods=["GET"], response_model=SnapshotResponse)
     router.add_api_route(
-        "/seed", partial(_seed_fixtures, deps), methods=["POST"], response_model=SeedResponse
+        "/authenticate", authenticate, methods=["POST"], response_model=AuthenticateResponse
     )
-    router.add_api_route("/reset", partial(_reset_test_data, deps), methods=["POST"])
-    router.add_api_route(
-        "/snapshot", partial(_get_snapshot, deps), methods=["GET"], response_model=SnapshotResponse
-    )
-    router.add_api_route(
-        "/authenticate",
-        partial(_authenticate_test_user, deps),
-        methods=["POST"],
-        response_model=AuthenticateResponse,
-    )
-    router.add_api_route("/entity/{entity_name}", partial(_get_entity_data, deps), methods=["GET"])
-    router.add_api_route(
-        "/entity/{entity_name}/count", partial(_get_entity_count, deps), methods=["GET"]
-    )
-    router.add_api_route(
-        "/entity/{entity_name}/{entity_id}", partial(_delete_entity, deps), methods=["DELETE"]
-    )
+    router.add_api_route("/entity/{entity_name}", entity_data, methods=["GET"])
+    router.add_api_route("/entity/{entity_name}/count", entity_count, methods=["GET"])
+    router.add_api_route("/entity/{entity_name}/{entity_id}", entity_delete, methods=["DELETE"])
 
     return router
