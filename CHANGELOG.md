@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.2] - 2026-03-26
+
+### Added
+- Environment profiles: `[environments.<name>]` sections in `dazzle.toml` for per-environment database configuration (#718)
+- Global `--env` CLI flag and `DAZZLE_ENV` environment variable to select active profile (#718)
+- `EnvironmentProfile` dataclass with `database_url`, `database_url_env`, and `heroku_app` fields (#718)
+- `environment_profiles` concept in semantics KB with resolution priority documentation (#718)
+- Commented-out `[environments.*]` example in blank project template (#718)
+
+### Changed
+- `resolve_database_url()` now accepts `env_name` parameter — inserted at priority #2 between explicit URL and DATABASE_URL env var (#718)
+- All database-touching CLI commands (db, dbshell, tenant, serve --local, backup) thread `env_name` through to URL resolution (#718)
+
+### Agent Guidance
+- **Environment profiles**: Use `[environments.<name>]` in `dazzle.toml` to declare per-environment database connections. Select via `--env <name>` or `DAZZLE_ENV`. Profile names are freeform (development, staging, production, blue, green, demo, etc.).
+- **Resolution priority**: `--database-url` > `--env` profile > `DATABASE_URL` env var > `[database].url` > default. Document this in comments when using profiles.
+- **CI/CD**: Set `DAZZLE_ENV=production` in deployment config instead of passing `--env` to every command.
+
 ## [0.49.1] - 2026-03-26
 
 ### Changed
