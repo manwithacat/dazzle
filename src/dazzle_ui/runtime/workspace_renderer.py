@@ -254,6 +254,9 @@ def build_workspace_context(
         template = DISPLAY_TEMPLATE_MAP.get(display_mode, "workspace/regions/list.html")
 
         col_span = _default_col_span(stage, idx)
+        # Kanban needs full width for horizontal scroll to work
+        if display_mode == "KANBAN":
+            col_span = 12
 
         # Serialise sort specs
         sort_specs = []

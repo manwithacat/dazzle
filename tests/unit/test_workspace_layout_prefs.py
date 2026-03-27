@@ -52,6 +52,16 @@ class TestColSpanDefaults:
         spans = [r.col_span for r in ctx.regions]
         assert spans == [12, 6, 6, 4, 4, 4]
 
+    def test_kanban_always_full_width(self) -> None:
+        """Kanban regions should be col_span=12 regardless of stage defaults."""
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = _make_workspace("command_center", region_count=4)
+        # Override region 3 (which would normally get col_span=4) to KANBAN
+        ws.regions[3].display = "KANBAN"
+        ctx = build_workspace_context(ws)
+        assert ctx.regions[3].col_span == 12
+
     def test_no_stage_defaults_to_12(self) -> None:
         from dazzle_ui.runtime.workspace_renderer import build_workspace_context
 
