@@ -269,9 +269,15 @@ def serve_command(
             from alembic.config import Config as AlembicConfig
             from alembic.util.exc import CommandError
 
-            alembic_dir = Path(__file__).resolve().parents[3] / "dazzle_back" / "alembic"
-            cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
-            cfg.set_main_option("script_location", str(alembic_dir))
+            from dazzle.cli.db import _get_framework_alembic_dir, _get_project_versions_dir
+
+            framework_dir = _get_framework_alembic_dir()
+            cfg = AlembicConfig(str(framework_dir / "alembic.ini"))
+            cfg.set_main_option("script_location", str(framework_dir))
+            cfg.set_main_option(
+                "version_locations",
+                f"{framework_dir / 'versions'} {_get_project_versions_dir()}",
+            )
             cfg.set_main_option("sqlalchemy.url", database_url)
 
             try:

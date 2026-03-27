@@ -10,7 +10,6 @@ Wraps Alembic's programmatic API for managing PostgreSQL schema migrations:
 """
 
 import asyncio
-import os
 from pathlib import Path
 from typing import Any
 
@@ -27,20 +26,52 @@ db_app = typer.Typer(
 console = Console()
 
 
+def _get_framework_alembic_dir() -> Path:
+    """Locate the framework's alembic directory (env.py, templates, INI)."""
+    # Works both in editable installs and pip-installed packages
+    try:
+        import dazzle_back
+
+        return (Path(dazzle_back.__file__).resolve().parent / "alembic").resolve()
+    except (ImportError, AttributeError):
+        # Fallback for dev layout
+        return (Path(__file__).resolve().parents[2] / "dazzle_back" / "alembic").resolve()
+
+
+def _get_project_versions_dir() -> Path:
+    """Return the project-local migrations directory, creating it if needed."""
+    project_root = Path.cwd().resolve()
+    versions_dir = project_root / ".dazzle" / "migrations" / "versions"
+    versions_dir.mkdir(parents=True, exist_ok=True)
+    return versions_dir
+
+
 def _get_alembic_cfg() -> Any:
-    """Build an Alembic Config pointing to dazzle_back's alembic directory."""
+    """Build an Alembic Config with framework env.py + project-local versions.
+
+    The framework's alembic directory provides env.py, migration template,
+    and alembic.ini. The version_locations option chains the framework's
+    built-in migrations with the project's local migrations directory.
+    New revisions are written to the project directory via --version-path.
+    """
     from alembic.config import Config as AlembicConfig
 
-    alembic_dir = (Path(__file__).resolve().parents[2] / "dazzle_back" / "alembic").resolve()
-    ini_path = alembic_dir / "alembic.ini"
+    framework_dir = _get_framework_alembic_dir()
+    ini_path = framework_dir / "alembic.ini"
 
     cfg = AlembicConfig(str(ini_path))
-    cfg.set_main_option("script_location", str(alembic_dir))
+    cfg.set_main_option("script_location", str(framework_dir))
 
-    # Override sqlalchemy.url from environment if available
-    db_url = os.environ.get("DATABASE_URL", "")
-    if db_url:
-        cfg.set_main_option("sqlalchemy.url", db_url)
+    # Chain framework + project version directories so upgrade/downgrade
+    # discovers migrations from both locations
+    framework_versions = str(framework_dir / "versions")
+    project_versions = str(_get_project_versions_dir())
+    cfg.set_main_option("version_locations", f"{framework_versions} {project_versions}")
+
+    # Override sqlalchemy.url from resolved database URL
+    url = _resolve_url("")
+    if url:
+        cfg.set_main_option("sqlalchemy.url", url)
 
     return cfg
 
@@ -59,14 +90,21 @@ def revision_command(
         help="Auto-detect schema changes from DSL entities",
     ),
 ) -> None:
-    """Generate a new migration revision."""
+    """Generate a new migration revision into the project directory."""
     from alembic import command
 
     cfg = _get_alembic_cfg()
+    project_versions = str(_get_project_versions_dir())
 
     try:
-        command.revision(cfg, message=message, autogenerate=autogenerate)
+        command.revision(
+            cfg,
+            message=message,
+            autogenerate=autogenerate,
+            version_path=project_versions,
+        )
         console.print(f"[green]Migration revision created: {message}[/green]")
+        console.print(f"[dim]  → {project_versions}/[/dim]")
     except Exception as e:
         console.print(f"[red]Failed to create revision: {e}[/red]")
         raise typer.Exit(1)
