@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from dazzle.core.manifest import resolve_api_url
+
 if TYPE_CHECKING:
     from dazzle.core.ir import AppSpec, EntitySpec, FieldSpec
     from dazzle.core.ir.surfaces import SurfaceSpec
@@ -31,7 +33,7 @@ def generate_openapi(spec: AppSpec) -> dict[str, Any]:
             "description": spec.title or f"API for {spec.name}",
             "version": "1.0.0",
         },
-        "servers": [{"url": "http://localhost:8000", "description": "Development server"}],
+        "servers": [{"url": resolve_api_url(), "description": "Development server"}],
         "paths": {},
         "components": {
             "schemas": {},

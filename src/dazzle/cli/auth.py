@@ -15,6 +15,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from dazzle.core.manifest import resolve_api_url
+
 auth_app = typer.Typer(
     help="Manage authentication users and sessions",
     no_args_is_help=True,
@@ -522,7 +524,7 @@ def impersonate(
         token = create_magic_link(
             store, user_id=str(user.id), ttl_seconds=ttl_seconds, created_by=created_by
         )
-        link = f"http://localhost:8000/_auth/magic/{token}"
+        link = f"{resolve_api_url()}/_auth/magic/{token}"
         if output_json:
             console.print_json(
                 json.dumps({"email": user.email, "magic_link": link, "ttl_seconds": ttl_seconds})

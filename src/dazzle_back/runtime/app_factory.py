@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from dazzle.core.ir import AppSpec
+from dazzle.core.manifest import resolve_api_url
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -437,7 +438,7 @@ def assemble_post_build_routes(
     project_root: Path | None = None,
     sitespec_data: dict[str, Any] | None = None,
     theme_css: str = "",
-    backend_url: str = "http://127.0.0.1:8000",
+    backend_url: str | None = None,
     bundled_css: str = "",
 ) -> None:
     """Mount all post-build routes on a FastAPI app in the correct order.
@@ -456,6 +457,9 @@ def assemble_post_build_routes(
     8. 404 handler (if sitespec)
     9. Route validation via ``validate_routes()``
     """
+    if backend_url is None:
+        backend_url = resolve_api_url()
+
     # Resolve auth context callable once — used by both site and app routes
     get_auth_context = None
     if builder.auth_middleware:
@@ -806,7 +810,7 @@ def create_app_factory(
         project_root=project_root,
         sitespec_data=sitespec_data,
         theme_css=theme_css,
-        backend_url=os.environ.get("BACKEND_URL", "http://127.0.0.1:8000"),
+        backend_url=os.environ.get("BACKEND_URL") or None,
     )
 
     # Log startup info

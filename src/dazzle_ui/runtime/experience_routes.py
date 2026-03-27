@@ -19,6 +19,7 @@ from typing import Any
 
 from dazzle.core import ir
 from dazzle.core.ir.experiences import StepKind
+from dazzle.core.manifest import resolve_api_url
 from dazzle.core.strings import to_api_plural
 from dazzle_ui.utils.expression_eval import evaluate_simple_condition
 
@@ -592,7 +593,7 @@ async def _experience_step_post(
 
 def create_experience_routes(
     appspec: ir.AppSpec,
-    backend_url: str = "http://127.0.0.1:8000",
+    backend_url: str | None = None,
     theme_css: str = "",
     get_auth_context: Callable[..., Any] | None = None,
     app_prefix: str = "",
@@ -613,6 +614,9 @@ def create_experience_routes(
     """
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is not installed")
+
+    if backend_url is None:
+        backend_url = resolve_api_url()
 
     from dazzle_ui.runtime.experience_persistence import ExperienceProgressStore
 

@@ -21,6 +21,7 @@ from typing import Any
 
 from dazzle.core import ir
 from dazzle.core.access import AccessOperationKind, AccessRuntimeContext
+from dazzle.core.manifest import resolve_api_url
 
 logger = logging.getLogger(__name__)
 
@@ -968,7 +969,7 @@ async def _root_redirect(
 
 def create_page_routes(
     appspec: ir.AppSpec,
-    backend_url: str = "http://127.0.0.1:8000",
+    backend_url: str | None = None,
     theme_css: str = "",
     get_auth_context: Callable[..., Any] | None = None,
     app_prefix: str = "",
@@ -997,6 +998,9 @@ def create_page_routes(
     """
     if not FASTAPI_AVAILABLE:
         raise RuntimeError("FastAPI is not installed")
+
+    if backend_url is None:
+        backend_url = resolve_api_url()
 
     from dazzle_ui.converters.template_compiler import compile_appspec_to_templates
     from dazzle_ui.runtime.surface_access import SurfaceAccessConfig
