@@ -399,7 +399,7 @@ class WorkspaceRouteBuilder:
                         )
                     )
 
-                self._init_workspace_entity_routes(workspaces, app)
+            self._init_workspace_entity_routes(workspaces, app)
 
             logging.getLogger("dazzle.server").info(
                 "Workspace routes initialized for %s workspace(s)",
