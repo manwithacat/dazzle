@@ -240,6 +240,21 @@ class StackConfig:
 
 
 @dataclass
+class URLsConfig:
+    """Site and API URL configuration.
+
+    Examples in dazzle.toml:
+
+        [urls]
+        site_url = "https://myapp.com"
+        api_url = "https://api.myapp.com"
+    """
+
+    site_url: str = "http://localhost:3000"
+    api_url: str = "http://localhost:8000"
+
+
+@dataclass
 class DatabaseConfig:
     """Database connection configuration.
 
@@ -345,6 +360,7 @@ class ProjectManifest:
     shell: ShellConfig = field(default_factory=ShellConfig)
     theme: ThemeConfig = field(default_factory=ThemeConfig)
     auth: AuthConfig = field(default_factory=AuthConfig)
+    urls: URLsConfig = field(default_factory=URLsConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     dev: DevConfig = field(default_factory=DevConfig)
     tenant: TenantConfig = field(default_factory=TenantConfig)
@@ -547,6 +563,13 @@ def load_manifest(path: Path) -> ProjectManifest:
         base_domain=tenant_data.get("base_domain", ""),
     )
 
+    # Parse URLs config
+    urls_data = data.get("urls", {})
+    urls_config = URLsConfig(
+        site_url=urls_data.get("site_url", "http://localhost:3000"),
+        api_url=urls_data.get("api_url", "http://localhost:8000"),
+    )
+
     # Parse [ui] config
     ui_data = data.get("ui", {})
     cdn_enabled = ui_data.get("cdn", False)
@@ -574,6 +597,7 @@ def load_manifest(path: Path) -> ProjectManifest:
         shell=shell_config,
         theme=theme_config,
         auth=auth_config,
+        urls=urls_config,
         database=database_config,
         dev=dev_config,
         tenant=tenant_config,
@@ -657,3 +681,43 @@ def _normalise_postgres_scheme(url: str) -> str:
     if url.startswith("postgres://"):
         return "postgresql://" + url[len("postgres://") :]
     return url
+
+
+_DEFAULT_SITE_URL = "http://localhost:3000"
+_DEFAULT_API_URL = "http://localhost:8000"
+
+
+def resolve_site_url(manifest: ProjectManifest | None = None) -> str:
+    """Resolve the site (frontend) URL.
+
+    Priority:
+        1. ``DAZZLE_SITE_URL`` environment variable
+        2. ``dazzle.toml`` ``[urls].site_url``
+        3. Default: ``http://localhost:3000``
+    """
+    env_url = os.environ.get("DAZZLE_SITE_URL", "")
+    if env_url:
+        return env_url.rstrip("/")
+
+    if manifest is not None and manifest.urls.site_url != _DEFAULT_SITE_URL:
+        return manifest.urls.site_url.rstrip("/")
+
+    return _DEFAULT_SITE_URL
+
+
+def resolve_api_url(manifest: ProjectManifest | None = None) -> str:
+    """Resolve the API (backend) URL.
+
+    Priority:
+        1. ``DAZZLE_API_URL`` environment variable
+        2. ``dazzle.toml`` ``[urls].api_url``
+        3. Default: ``http://localhost:8000``
+    """
+    env_url = os.environ.get("DAZZLE_API_URL", "")
+    if env_url:
+        return env_url.rstrip("/")
+
+    if manifest is not None and manifest.urls.api_url != _DEFAULT_API_URL:
+        return manifest.urls.api_url.rstrip("/")
+
+    return _DEFAULT_API_URL
