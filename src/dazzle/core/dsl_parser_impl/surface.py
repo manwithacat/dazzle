@@ -25,6 +25,7 @@ class SurfaceParserMixin:
         current_token: Any
         expect_identifier_or_keyword: Any
         skip_newlines: Any
+        error: Any
         file: Any
         parse_ux_block: Any
         parse_persona_variant: Any  # From UXParserMixin

@@ -25,6 +25,7 @@ class ConditionParserMixin:
         match: Any
         current_token: Any
         expect_identifier_or_keyword: Any
+        peek_token: Any
         file: Any
         _parse_literal_value: Any
         _parse_date_expr: Any  # From TypeParserMixin
@@ -89,23 +90,35 @@ class ConditionParserMixin:
             self.expect(TokenType.RPAREN)
             return ir.ConditionExpr(role_check=ir.RoleCheck(role_name=role_name))
 
-        # Catch bare 'owner' keyword — guide to scope: block pattern
+        # Catch bare 'owner' keyword — guide to scope: block pattern.
+        # Only trigger when 'owner' is standalone (followed by newline/or/and),
+        # NOT when it's a field path like 'owner.team_id = current_team'.
         if self.match(TokenType.OWNER):
-            token = self.current_token()
-            raise make_parse_error(
-                "'owner' is not a standalone keyword in permit: rules.\n"
-                "Row-level ownership belongs in a scope: block:\n\n"
-                "  scope:\n"
-                "    read: owner_id = current_user\n"
-                "      for: reader, author\n"
-                "    update: owner_id = current_user\n"
-                "      for: reader, author\n\n"
-                "Use the actual field name (owner_id, user_id, created_by, etc.) "
-                "with '= current_user'. See concept 'access_rules' in the knowledge base.",
-                self.file,
-                token.line,
-                token.column,
-            )
+            next_tok = self.peek_token()
+            if next_tok.type in (
+                TokenType.NEWLINE,
+                TokenType.OR,
+                TokenType.AND,
+                TokenType.RPAREN,
+                TokenType.DEDENT,
+                TokenType.EOF,
+            ):
+                token = self.current_token()
+                raise make_parse_error(
+                    "'owner' is not a standalone keyword in permit: rules.\n"
+                    "Row-level ownership belongs in a scope: block:\n\n"
+                    "  scope:\n"
+                    "    read: owner_id = current_user\n"
+                    "      for: reader, author\n"
+                    "    update: owner_id = current_user\n"
+                    "      for: reader, author\n\n"
+                    "Use the actual field name (owner_id, user_id, created_by, etc.) "
+                    "with '= current_user'. See concept 'access_rules' in the knowledge base.",
+                    self.file,
+                    token.line,
+                    token.column,
+                )
+            # Otherwise fall through — 'owner' is a field name (e.g. owner.team_id = ...)
 
         # Handle has_grant("relation", scope_field) - grant check (v0.42.0)
         if self.match(TokenType.IDENTIFIER) and self.current_token().value == "has_grant":
