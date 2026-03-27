@@ -9,12 +9,13 @@ from dazzle.sentinel.agents.integration_dependency import IntegrationDependencyA
 from dazzle.sentinel.agents.multi_tenancy import MultiTenancyAgent
 from dazzle.sentinel.agents.operational_hygiene import OperationalHygieneAgent
 from dazzle.sentinel.agents.performance_resource import PerformanceResourceAgent
+from dazzle.sentinel.agents.python_audit import PythonAuditAgent
 
 
 class TestGetAllAgents:
-    def test_returns_eight_agents(self) -> None:
+    def test_returns_nine_agents(self) -> None:
         agents = get_all_agents()
-        assert len(agents) == 8
+        assert len(agents) == 9
 
     def test_agent_types(self) -> None:
         agents = get_all_agents()
@@ -28,6 +29,7 @@ class TestGetAllAgents:
             PerformanceResourceAgent,
             OperationalHygieneAgent,
             BusinessLogicAgent,
+            PythonAuditAgent,
         }
 
     def test_unique_agent_ids(self) -> None:
@@ -46,5 +48,5 @@ class TestGetAgent:
         assert get_agent("UNKNOWN") is None
 
     def test_all_registered_ids(self) -> None:
-        for agent_id in ("DI", "AA", "MT", "ID", "DS", "PR", "OP", "BL"):
+        for agent_id in ("DI", "AA", "MT", "ID", "DS", "PR", "OP", "BL", "PA"):
             assert get_agent(agent_id) is not None

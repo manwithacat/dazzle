@@ -36,6 +36,7 @@ class ScanOrchestrator:
     """Run sentinel agents against an AppSpec and manage findings lifecycle."""
 
     def __init__(self, project_path: Path) -> None:
+        self._project_path = project_path
         self._store = FindingStore(project_path)
 
     def run_scan(self, appspec: AppSpec, config: ScanConfig | None = None) -> ScanResult:
@@ -46,7 +47,7 @@ class ScanOrchestrator:
         # Select agents
         from .agents import get_all_agents
 
-        agents = get_all_agents()
+        agents = get_all_agents(project_path=self._project_path)
         if config.agents:
             wanted = set(config.agents)
             agents = [a for a in agents if a.agent_id in wanted]

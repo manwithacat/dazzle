@@ -4,13 +4,14 @@ Agent registry for Sentinel detection agents.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .base import DetectionAgent
 
 
-def get_all_agents() -> list[DetectionAgent]:
+def get_all_agents(*, project_path: Path | None = None) -> list[DetectionAgent]:
     """Return an instance of every registered detection agent."""
     from .auth_authorization import AuthAuthorizationAgent
     from .business_logic import BusinessLogicAgent
@@ -31,13 +32,13 @@ def get_all_agents() -> list[DetectionAgent]:
         PerformanceResourceAgent(),
         OperationalHygieneAgent(),
         BusinessLogicAgent(),
-        PythonAuditAgent(),
+        PythonAuditAgent(project_path=project_path),
     ]
 
 
-def get_agent(agent_id: str) -> DetectionAgent | None:
+def get_agent(agent_id: str, *, project_path: Path | None = None) -> DetectionAgent | None:
     """Return a single agent by its ID string."""
-    for agent in get_all_agents():
+    for agent in get_all_agents(project_path=project_path):
         if agent.agent_id.value == agent_id:
             return agent
     return None
