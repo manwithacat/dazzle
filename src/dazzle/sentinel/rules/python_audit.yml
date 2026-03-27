@@ -1,0 +1,91 @@
+rules:
+  - id: PA-SG-distutils
+    patterns:
+      - pattern-either:
+          - pattern: import distutils
+          - pattern: from distutils import ...
+    message: "distutils removed in Python 3.12. Use setuptools or packaging."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      min_python: "3.12"
+      sentinel_severity: HIGH
+
+  - id: PA-SG-pkg-resources
+    patterns:
+      - pattern-either:
+          - pattern: import pkg_resources
+          - pattern: from pkg_resources import ...
+    message: "pkg_resources is deprecated. Use importlib.metadata or importlib.resources."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      min_python: "3.9"
+      sentinel_severity: MEDIUM
+
+  - id: PA-SG-cgi
+    patterns:
+      - pattern-either:
+          - pattern: import cgi
+          - pattern: import cgitb
+          - pattern: from cgi import ...
+    message: "cgi module removed in Python 3.13. Use urllib.parse or a framework."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      min_python: "3.13"
+      sentinel_severity: HIGH
+
+  - id: PA-SG-imp
+    patterns:
+      - pattern-either:
+          - pattern: import imp
+          - pattern: from imp import ...
+    message: "imp module removed in Python 3.12. Use importlib."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      min_python: "3.12"
+      sentinel_severity: HIGH
+
+  - id: PA-SG-event-loop
+    pattern: asyncio.get_event_loop()
+    message: "asyncio.get_event_loop() deprecated in 3.10. Use asyncio.get_running_loop() or asyncio.run()."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      min_python: "3.10"
+      sentinel_severity: HIGH
+
+  - id: PA-SG-timezone-utc
+    pattern: datetime.timezone.utc
+    message: "Use datetime.UTC (Python 3.11+) instead of datetime.timezone.utc."
+    languages: [python]
+    severity: INFO
+    metadata:
+      min_python: "3.11"
+      sentinel_severity: INFO
+
+  - id: PA-SG-nose
+    patterns:
+      - pattern-either:
+          - pattern: import nose
+          - pattern: from nose import ...
+    message: "nose is abandoned. Migrate to pytest."
+    languages: [python]
+    severity: ERROR
+    metadata:
+      min_python: "3.0"
+      sentinel_severity: HIGH
+
+  - id: PA-SG-toml-pypi
+    patterns:
+      - pattern-either:
+          - pattern: import toml
+          - pattern: from toml import ...
+    message: "Use tomllib (stdlib 3.11+) instead of the toml PyPI package."
+    languages: [python]
+    severity: WARNING
+    metadata:
+      min_python: "3.11"
+      sentinel_severity: MEDIUM
