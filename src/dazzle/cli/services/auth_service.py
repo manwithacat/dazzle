@@ -122,6 +122,31 @@ class AuthService:
         result: int = self._store.cleanup_expired_sessions()
         return result
 
+    def create_session(
+        self,
+        user: Any,
+        expires_in: Any = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+    ) -> Any:
+        """Create a new session for a user. Returns SessionRecord."""
+        from datetime import timedelta
+
+        kwargs: dict[str, Any] = {"user": user}
+        if expires_in is not None:
+            kwargs["expires_in"] = expires_in
+        else:
+            kwargs["expires_in"] = timedelta(days=7)
+        if ip_address is not None:
+            kwargs["ip_address"] = ip_address
+        if user_agent is not None:
+            kwargs["user_agent"] = user_agent
+        return self._store.create_session(**kwargs)
+
+    def _execute_modify(self, query: str, params: tuple[object, ...] = ()) -> int:
+        """Execute a modification query via the underlying store."""
+        return self._store._execute_modify(query, params)
+
     # ----- Aggregate / stats -----
 
     def count_users(self, active_only: bool = False) -> int:
