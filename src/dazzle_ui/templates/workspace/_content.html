@@ -64,16 +64,16 @@
     </button>
   </div>
 
-  <div class="columns-1 md:columns-2 gap-4"
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-4"
        x-sort="onReorder"
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>
     {% for region in workspace.regions %}
     {% if region.source_tabs %}
     {# Multi-source tabbed region: render tabs inline, each panel lazy-loads independently #}
-    <div class="break-inside-avoid mb-4 transition-all duration-200"
-         :class="[(regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) >= 12 ? '[column-span:all]' : '', regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
-         :style="(regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) >= 12 ? 'column-span: all' : ''"
+    <div class="transition-all duration-200"
+         :class="[regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
+         :style="'grid-column: span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12) + ' / span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12)"
          x-show="!regions.find(r => r.name === '{{ region.name }}')?.hidden || editing"
          data-region-name="{{ region.name }}"
          id="region-{{ region.name }}">
@@ -100,9 +100,9 @@
       {% include 'workspace/regions/tabbed_list.html' with context %}
     </div>
     {% else %}
-    <div class="break-inside-avoid mb-4 transition-all duration-200"
-         :class="[(regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) >= 12 ? '[column-span:all]' : '', regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
-         :style="(regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) >= 12 ? 'column-span: all' : ''"
+    <div class="transition-all duration-200"
+         :class="[regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
+         :style="'grid-column: span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12) + ' / span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12)"
          x-show="!regions.find(r => r.name === '{{ region.name }}')?.hidden || editing"
          data-region-name="{{ region.name }}"
          id="region-{{ region.name }}"
