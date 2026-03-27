@@ -55,7 +55,11 @@ def parse_duration(s: str) -> int:
     """
     match = re.match(r"^(\d+)([smhd])$", s.strip())
     if not match:
-        raise ValueError(f"Invalid duration format: {s}")
+        from dazzle.core.errors import ParseError
+
+        raise ParseError(
+            f"Invalid duration format: '{s}' — expected format like '30s', '5m', '2h', '7d'"
+        )
 
     value = int(match.group(1))
     unit = match.group(2)
