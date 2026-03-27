@@ -20,6 +20,7 @@ def get_all_agents() -> list[DetectionAgent]:
     from .multi_tenancy import MultiTenancyAgent
     from .operational_hygiene import OperationalHygieneAgent
     from .performance_resource import PerformanceResourceAgent
+    from .python_audit import PythonAuditAgent
 
     return [
         DataIntegrityAgent(),
@@ -30,6 +31,7 @@ def get_all_agents() -> list[DetectionAgent]:
         PerformanceResourceAgent(),
         OperationalHygieneAgent(),
         BusinessLogicAgent(),
+        PythonAuditAgent(),
     ]
 
 

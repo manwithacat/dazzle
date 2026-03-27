@@ -56,6 +56,7 @@ class AgentId(StrEnum):
     PR = "PR"
     OP = "OP"
     BL = "BL"
+    PA = "PA"
 
 
 class RemediationEffort(StrEnum):
