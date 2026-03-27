@@ -120,8 +120,8 @@ def create_grant_routes(
             store = _get_store()
             grants = store.list_grants(
                 scope_entity=scope_entity,
-                scope_id=scope_id,
-                principal_id=principal_id,
+                scope_id=_parse_uuid(scope_id, "scope_id") if scope_id else None,
+                principal_id=_parse_uuid(principal_id, "principal_id") if principal_id else None,
                 status=status,
             )
             return {"grants": grants}

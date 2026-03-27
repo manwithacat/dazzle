@@ -83,6 +83,20 @@ class GrantStore:
             CREATE INDEX IF NOT EXISTS idx_grant_events_grant_id
             ON _grant_events (grant_id)
         """)
+        # Migrate legacy TEXT columns to UUID for tables created before v0.49.8
+        cursor.execute("""
+            DO $$
+            BEGIN
+                IF EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name = '_grants'
+                      AND column_name = 'principal_id'
+                      AND data_type = 'text'
+                ) THEN
+                    ALTER TABLE _grants ALTER COLUMN principal_id TYPE uuid USING principal_id::uuid;
+                END IF;
+            END $$
+        """)
         self._conn.commit()
 
     def _record_event(
