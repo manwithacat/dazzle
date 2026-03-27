@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.7] - 2026-03-27
+
+### Fixed
+- DSL parser: infinite loop on unsupported syntax in surface section blocks — now raises a clear `ParseError` (#731)
+- DSL parser: bare `owner` in `permit:` now gives actionable guidance pointing to the correct `scope:` block pattern (#729)
+- Added `ownership_pattern` concept to semantics KB for MCP knowledge tool discoverability (#729)
+
+### Agent Guidance
+- **Ownership pattern**: Row-level ownership uses `scope:` blocks, not `permit:`. Write `scope: read: user_id = current_user for: reader` — there is no standalone `owner` keyword. See KB concept `ownership_pattern`.
+
 ## [0.49.6] - 2026-03-27
 
 ### Added
