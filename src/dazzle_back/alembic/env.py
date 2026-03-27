@@ -81,11 +81,16 @@ target_metadata = _load_target_metadata()
 
 
 def _get_url() -> str:
-    """Get database URL from env or alembic config.
+    """Get database URL from alembic config or env.
 
-    Ensures the URL uses the psycopg (v3) driver for SQLAlchemy.
+    Prefers ``sqlalchemy.url`` (already normalised by ``db.py``) over the raw
+    ``DATABASE_URL`` env var.  Handles Heroku's ``postgres://`` scheme and
+    ensures the psycopg v3 driver is used.
     """
-    url = os.environ.get("DATABASE_URL") or config.get_main_option("sqlalchemy.url", "")
+    url = config.get_main_option("sqlalchemy.url", "") or os.environ.get("DATABASE_URL", "")
+    # Heroku uses the deprecated postgres:// scheme — normalise it
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
     # Ensure SQLAlchemy uses psycopg v3, not psycopg2
     if url.startswith("postgresql://"):
         url = url.replace("postgresql://", "postgresql+psycopg://", 1)
