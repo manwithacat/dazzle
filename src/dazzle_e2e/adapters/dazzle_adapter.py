@@ -11,6 +11,7 @@ from typing import Any
 import httpx
 
 from dazzle.core.ir import FixtureSpec
+from dazzle.core.manifest import resolve_api_url, resolve_site_url
 from dazzle_e2e.adapters.base import BaseAdapter
 
 logger = logging.getLogger(__name__)
@@ -25,8 +26,8 @@ class DazzleAdapter(BaseAdapter):
 
     def __init__(
         self,
-        base_url: str = "http://localhost:3000",
-        api_url: str = "http://localhost:8000",
+        base_url: str | None = None,
+        api_url: str | None = None,
         timeout: float = 30.0,
     ) -> None:
         """
@@ -37,6 +38,10 @@ class DazzleAdapter(BaseAdapter):
             api_url: API URL (default: http://localhost:8000)
             timeout: HTTP request timeout in seconds
         """
+        if base_url is None:
+            base_url = resolve_site_url()
+        if api_url is None:
+            api_url = resolve_api_url()
         super().__init__(base_url, api_url)
         self.timeout = timeout
         self._client: httpx.AsyncClient | None = None

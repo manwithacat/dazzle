@@ -23,6 +23,8 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.manifest import resolve_api_url, resolve_site_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,8 +37,8 @@ class E2ERunOptions:
     tag: str | None = None
     flow_id: str | None = None
     timeout: int = 30000
-    base_url: str = "http://localhost:3000"
-    api_url: str = "http://localhost:8000"
+    base_url: str = field(default_factory=resolve_site_url)
+    api_url: str = field(default_factory=resolve_api_url)
 
 
 @dataclass

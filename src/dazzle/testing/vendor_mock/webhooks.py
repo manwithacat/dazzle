@@ -20,6 +20,8 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.manifest import resolve_api_url
+
 logger = logging.getLogger(__name__)
 
 
@@ -277,13 +279,15 @@ class WebhookDispatcher:
 
     def __init__(
         self,
-        target_base_url: str = "http://localhost:8000",
+        target_base_url: str | None = None,
         *,
         signing_secret: str = "test-webhook-secret",
         vendor_secrets: dict[str, str] | None = None,
         webhook_paths: dict[str, str] | None = None,
         packs: list[Any] | None = None,
     ) -> None:
+        if target_base_url is None:
+            target_base_url = resolve_api_url()
         self._base_url = target_base_url.rstrip("/")
         self._default_secret = signing_secret
         self._vendor_secrets = vendor_secrets or {}

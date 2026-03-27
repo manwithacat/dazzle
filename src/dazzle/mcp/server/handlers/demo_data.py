@@ -8,6 +8,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.manifest import resolve_api_url
+
 from .common import error_response, extract_progress, load_project_appspec, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
@@ -392,13 +394,15 @@ def demo_generate_impl(
 def demo_load_impl(
     project_root: Path,
     *,
-    base_url: str = "http://localhost:8000",
+    base_url: str | None = None,
     email: str | None = None,
     password: str | None = None,
     data_dir_str: str | None = None,
     filter_entities: list[str] | None = None,
 ) -> dict[str, Any]:
     """Load demo data seed files into a running instance via REST API."""
+    if base_url is None:
+        base_url = resolve_api_url()
     from dazzle.demo_data.loader import (
         DemoDataLoader,
         find_seed_files,
@@ -674,7 +678,7 @@ def generate_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
 def load_demo_data_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Load demo data seed files into a running instance via REST API."""
     progress = extract_progress(args)
-    base_url = args.get("base_url", "http://localhost:8000")
+    base_url = args.get("base_url") or resolve_api_url()
     progress.log_sync("Loading demo data...")
     result = demo_load_impl(
         project_root,

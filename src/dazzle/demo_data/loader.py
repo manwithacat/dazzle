@@ -17,6 +17,7 @@ from typing import Any
 
 import httpx
 
+from dazzle.core.manifest import resolve_api_url
 from dazzle.core.strings import to_api_plural
 
 logger = logging.getLogger("dazzle.demo_data")
@@ -167,10 +168,12 @@ class DemoDataLoader:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:8000",
+        base_url: str | None = None,
         email: str | None = None,
         password: str | None = None,
     ):
+        if base_url is None:
+            base_url = resolve_api_url()
         self.base_url = base_url.rstrip("/")
         self.email = email
         self.password = password

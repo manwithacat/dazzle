@@ -8,6 +8,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.manifest import resolve_api_url
+
 from .common import error_response, extract_progress, wrap_async_handler_errors, wrap_handler_errors
 
 logger = logging.getLogger("dazzle.mcp")
@@ -23,13 +25,15 @@ def dsl_test_generate_impl(
     *,
     fmt: str = "json",
     save: bool = False,
-    base_url: str = "http://localhost:8000",
+    base_url: str | None = None,
 ) -> dict[str, Any]:
     """Generate tests from DSL/AppSpec definitions.
 
     Returns a dict with generation summary (or raises on error).
     For ``fmt="bash"`` the dict contains ``{"script": <str>, ...}``.
     """
+    if base_url is None:
+        base_url = resolve_api_url()
     if fmt == "bash":
         from dazzle.core.project import load_project
         from dazzle.testing.curl_test_generator import CurlTestGenerator
@@ -569,7 +573,7 @@ def dsl_test_verify_story_impl(
 async def dsl_test_diff_personas_impl(
     project_root: Path,
     *,
-    base_url: str = "http://localhost:8000",
+    base_url: str | None = None,
     route: str | None = None,
     routes: list[str] | None = None,
     persona_ids: list[str] | None = None,
@@ -598,7 +602,7 @@ def _generate_bash_tests(project_root: Path, args: dict[str, Any]) -> str:
     from dazzle.testing.curl_test_generator import CurlTestGenerator
 
     appspec = load_project(project_root)
-    base_url = args.get("base_url", "http://localhost:8000")
+    base_url = args.get("base_url") or resolve_api_url()
     generator = CurlTestGenerator(appspec, base_url=base_url, project_root=project_root)
     script = generator.generate()
 
@@ -761,7 +765,7 @@ def generate_dsl_tests_handler(project_root: Path, args: dict[str, Any]) -> str:
     try:
         fmt = args.get("format", "json")
         save = args.get("save", False)
-        base_url = args.get("base_url", "http://localhost:8000")
+        base_url = args.get("base_url") or resolve_api_url()
 
         result = dsl_test_generate_impl(
             project_root,
@@ -872,7 +876,7 @@ async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> s
         from dazzle.core.project import load_project
         from dazzle.testing.session_manager import SessionManager
 
-        base_url = args.get("base_url", "http://localhost:8000")
+        base_url = args.get("base_url") or resolve_api_url()
         force = args.get("force", False)
 
         appspec = load_project(project_root)
@@ -906,7 +910,7 @@ async def create_sessions_handler(project_root: Path, args: dict[str, Any]) -> s
 async def diff_personas_handler(project_root: Path, args: dict[str, Any]) -> str:
     """Compare route responses across personas."""
     try:
-        base_url: str = args.get("base_url", "http://localhost:8000")
+        base_url: str = args.get("base_url") or resolve_api_url()
         route: str | None = args.get("route")
         routes: list[str] | None = args.get("routes")
         persona_ids: list[str] | None = args.get("persona_ids")

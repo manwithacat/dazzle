@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 
 from dazzle.core.http_client import async_retrying_request
+from dazzle.core.manifest import resolve_site_url
 
 
 def _get_server_url(project_root: Path | None = None) -> str:
@@ -31,7 +32,7 @@ def _get_server_url(project_root: Path | None = None) -> str:
             return f"http://127.0.0.1:{port}"
         except (json.JSONDecodeError, KeyError):
             pass
-    return "http://127.0.0.1:3000"
+    return resolve_site_url()
 
 
 def _auth_cookies(project_root: Path | None = None) -> dict[str, Any]:

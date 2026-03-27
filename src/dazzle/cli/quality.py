@@ -5,6 +5,8 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from dazzle.core.manifest import resolve_site_url
+
 quality_app = typer.Typer(help="Quality pipeline scaffolding.", no_args_is_help=True)
 console = Console()
 
@@ -32,7 +34,7 @@ def init_command() -> None:
             workspace_table_lines.append(f"| {p_name} | {ws.name} |")
 
     # Site URL from sitespec or default
-    site_url = "http://localhost:3000"
+    site_url = resolve_site_url()
 
     placeholders = {
         "persona_list": (

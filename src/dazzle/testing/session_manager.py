@@ -24,6 +24,8 @@ from typing import Any
 import httpx
 from pydantic import BaseModel, Field
 
+from dazzle.core.manifest import resolve_api_url
+
 logger = logging.getLogger("dazzle.testing.session_manager")
 
 
@@ -87,9 +89,11 @@ class SessionManager:
     def __init__(
         self,
         project_path: Path,
-        base_url: str = "http://localhost:8000",
+        base_url: str | None = None,
     ):
         self.project_path = Path(project_path)
+        if base_url is None:
+            base_url = resolve_api_url()
         self.base_url = base_url.rstrip("/")
         self.sessions_dir = self.project_path / ".dazzle" / "test_sessions"
         self.manifest_path = self.sessions_dir / "manifest.json"

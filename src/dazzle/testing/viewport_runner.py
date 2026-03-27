@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from dazzle.core.manifest import resolve_api_url, resolve_site_url
 from dazzle.testing.viewport import (
     VIEWPORT_MATRIX,
     ComponentPattern,
@@ -35,11 +36,11 @@ class ViewportRunOptions:
 
     headless: bool = True
     viewports: list[str] | None = None  # Keys from VIEWPORT_MATRIX; None → all
-    base_url: str = "http://localhost:3000"
+    base_url: str = field(default_factory=resolve_site_url)
     timeout: int = 10_000
     include_suggestions: bool = True
     persona_id: str | None = None
-    api_base_url: str = "http://localhost:8000"
+    api_base_url: str = field(default_factory=resolve_api_url)
     capture_screenshots: bool = False
     update_baselines: bool = False
     screenshot_threshold: float = 0.01

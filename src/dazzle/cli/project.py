@@ -29,7 +29,7 @@ from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.init_impl import InitError, init_project, list_examples
 from dazzle.core.linker import build_appspec
 from dazzle.core.lint import lint_appspec
-from dazzle.core.manifest import load_manifest
+from dazzle.core.manifest import load_manifest, resolve_api_url, resolve_site_url
 from dazzle.core.parser import parse_modules
 
 if TYPE_CHECKING:
@@ -937,10 +937,12 @@ def example_command(
         console.print(Text(f"  cd {path}", style="cyan bold"))
         console.print(Text("  dazzle serve", style="cyan bold"))
         console.print()
+        _api_url = resolve_api_url()
+        _site_url = resolve_site_url()
         console.print(Text("This will start:", style="bright_black"))
-        console.print(Text("  • Backend API at http://localhost:8000", style="bright_black"))
-        console.print(Text("  • Frontend UI at http://localhost:3000", style="bright_black"))
-        console.print(Text("  • API docs at http://localhost:8000/docs", style="bright_black"))
+        console.print(Text(f"  • Backend API at {_api_url}", style="bright_black"))
+        console.print(Text(f"  • Frontend UI at {_site_url}", style="bright_black"))
+        console.print(Text(f"  • API docs at {_api_url}/docs", style="bright_black"))
 
         console.print()
         console.print()

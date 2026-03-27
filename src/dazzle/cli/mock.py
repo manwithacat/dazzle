@@ -11,6 +11,7 @@ from typing import Any
 import typer
 
 from dazzle.cli.utils import load_project_appspec
+from dazzle.core.manifest import resolve_api_url
 
 mock_app = typer.Typer(help="Vendor mock server management")
 
@@ -156,7 +157,7 @@ def scenario_cmd(
 def webhook_cmd(
     vendor: str = typer.Argument(..., help="Vendor name (e.g. sumsub_kyc)"),
     event: str | None = typer.Argument(None, help="Event name (e.g. applicant_reviewed)"),
-    target: str = typer.Option("http://localhost:8000", "--target", "-t", help="Target URL"),
+    target: str = typer.Option(resolve_api_url(), "--target", "-t", help="Target URL"),
     data: str | None = typer.Option(None, "--data", "-d", help="JSON payload overrides"),
     list_all: bool = typer.Option(False, "--list", "-l", help="List available events"),
 ) -> None:

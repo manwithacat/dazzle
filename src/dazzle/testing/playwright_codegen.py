@@ -499,11 +499,10 @@ from typing import Any
 import pytest
 from playwright.sync_api import Browser, ConsoleMessage, Page, sync_playwright
 
+from dazzle.core.manifest import resolve_api_url, resolve_site_url
+
 # Project root (for runtime file discovery)
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-
-DEFAULT_UI_URL = "http://localhost:3000"
-DEFAULT_API_URL = "http://localhost:8000"
 
 
 def _load_runtime_ports() -> tuple[str, str]:
@@ -514,12 +513,12 @@ def _load_runtime_ports() -> tuple[str, str]:
             with open(runtime_file) as f:
                 data = json.load(f)
             return (
-                data.get("ui_url", DEFAULT_UI_URL),
-                data.get("api_url", DEFAULT_API_URL),
+                data.get("ui_url", resolve_site_url()),
+                data.get("api_url", resolve_api_url()),
             )
         except (json.JSONDecodeError, KeyError):
             pass
-    return DEFAULT_UI_URL, DEFAULT_API_URL
+    return resolve_site_url(), resolve_api_url()
 
 
 # ---- Console diagnostics --------------------------------------------------
