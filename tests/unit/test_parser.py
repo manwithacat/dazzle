@@ -2983,5 +2983,33 @@ entity Thing "Thing":
             parse_dsl(dsl, Path("test.dsl"))
 
 
+class TestSurfaceSectionInfiniteLoop:
+    """Regression tests for #731 — parser must not hang on unsupported syntax."""
+
+    def test_unsupported_token_in_section_raises_error(self):
+        """Field with `: required` modifier should error, not loop."""
+        import pytest
+
+        from dazzle.core.errors import ParseError
+
+        dsl = """\
+module test.core
+app test_app "Test"
+
+entity Campaign "Campaign":
+  id: uuid pk
+  name: str(200) required
+
+surface campaign_create "Create Campaign":
+  uses entity Campaign
+  mode: create
+  section details "Details":
+    field name "Name": required
+    field description "Brief"
+"""
+        with pytest.raises(ParseError, match="Unexpected"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+
 if __name__ == "__main__":
     main()

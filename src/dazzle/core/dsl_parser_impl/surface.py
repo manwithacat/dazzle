@@ -281,6 +281,13 @@ class SurfaceParserMixin:
 
                 self.skip_newlines()
 
+            else:
+                token = self.current_token()
+                self.error(
+                    f"Unexpected '{token.value}' in surface section — "
+                    f"only 'field' declarations are supported here"
+                )
+
         self.expect(TokenType.DEDENT)
 
         return ir.SurfaceSection(
