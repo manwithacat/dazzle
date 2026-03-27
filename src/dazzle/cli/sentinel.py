@@ -5,6 +5,8 @@ from pathlib import Path
 
 import typer
 
+from dazzle.testing.fuzzer import generate_report, run_campaign
+
 sentinel_app = typer.Typer(
     help="SaaS Sentinel — failure-mode detection for Dazzle applications.",
     no_args_is_help=True,
@@ -173,6 +175,60 @@ def sentinel_status(
     else:
         typer.echo("\n  No scans yet")
     typer.echo()
+
+
+@sentinel_app.command("fuzz")
+def sentinel_fuzz(
+    samples: int = typer.Option(100, "--samples", "-n", help="Samples per layer"),
+    layer: str = typer.Option(None, "--layer", "-l", help="Layer to run: llm, mutate, or all"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Generate inputs without classifying"),
+    timeout: float = typer.Option(5.0, "--timeout", "-t", help="Parser timeout in seconds"),
+    output: str = typer.Option(None, "--output", "-o", help="Save report to file"),
+) -> None:
+    """Run parser fuzz campaign to discover error surface gaps."""
+    from dazzle.testing.fuzzer import Classification
+
+    # Find examples directory
+    examples_dir = Path.cwd() / "examples"
+    if not examples_dir.exists():
+        import dazzle
+
+        pkg_root = Path(dazzle.__file__).resolve().parents[1]
+        examples_dir = pkg_root / "examples"
+
+    if not examples_dir.exists():
+        typer.echo("No examples/ directory found for seed corpus.", err=True)
+        raise typer.Exit(code=1)
+
+    layers = [layer] if layer else None
+
+    typer.echo(f"Running fuzz campaign: {samples} samples/layer, timeout={timeout}s")
+    if dry_run:
+        typer.echo("(dry run — generating inputs only)")
+
+    results = run_campaign(
+        examples_dir=examples_dir,
+        layers=layers,
+        samples_per_layer=samples,
+        timeout_seconds=timeout,
+        dry_run=dry_run,
+    )
+
+    if dry_run:
+        typer.echo(f"Generated {len(results)} inputs (not classified)")
+        return
+
+    report = generate_report(results)
+    typer.echo(report)
+
+    if output:
+        Path(output).write_text(report, encoding="utf-8")
+        typer.echo(f"\nReport saved to {output}")
+
+    # Exit with error code if bugs found
+    bugs = [r for r in results if r.classification in (Classification.HANG, Classification.CRASH)]
+    if bugs:
+        raise typer.Exit(code=1)
 
 
 @sentinel_app.command("history")
