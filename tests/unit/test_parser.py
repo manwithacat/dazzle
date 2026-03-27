@@ -3011,5 +3011,51 @@ surface campaign_create "Create Campaign":
             parse_dsl(dsl, Path("test.dsl"))
 
 
+class TestOwnerKeywordGuidance:
+    """Tests for #729 — bare 'owner' in permit: gives helpful guidance."""
+
+    def test_owner_in_permit_gives_scope_guidance(self):
+        """'owner' in permit: should error with scope: block guidance."""
+        import pytest
+
+        from dazzle.core.errors import ParseError
+
+        dsl = """\
+module test.core
+app test_app "Test"
+
+entity Progress "Progress":
+  id: uuid pk
+  user_id: ref User required
+  chapter: int = 1
+
+  permit:
+    read: owner
+    update: owner
+"""
+        with pytest.raises(ParseError, match="scope"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+    def test_owner_or_role_in_permit_gives_scope_guidance(self):
+        """'owner or role(admin)' in permit: should also guide to scope:."""
+        import pytest
+
+        from dazzle.core.errors import ParseError
+
+        dsl = """\
+module test.core
+app test_app "Test"
+
+entity Progress "Progress":
+  id: uuid pk
+  user_id: ref User required
+
+  permit:
+    read: owner or role(admin)
+"""
+        with pytest.raises(ParseError, match="scope"):
+            parse_dsl(dsl, Path("test.dsl"))
+
+
 if __name__ == "__main__":
     main()

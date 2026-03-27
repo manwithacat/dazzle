@@ -132,6 +132,49 @@ implemented_by = [
     "dazzle.conformance.derivation.derive_conformance_cases (conformance testing)",
 ]
 
+[concepts.ownership_pattern]
+category = "Business Logic (v0.42)"
+doc_page = "access-control"
+doc_order = 3
+definition = """Row-level ownership filtering for personal data. Uses scope: blocks (not permit:) because ownership is a row-level concern. The permit: block controls WHO (role checks), the scope: block controls WHICH ROWS (field conditions). There is no 'owner' keyword — use the actual field name with '= current_user'."""
+syntax = '''
+entity ReadingProgress "Reading Progress":
+  id: uuid pk
+  user_id: ref User required
+  work: ref Work required
+  chapter: int = 1
+  progress_pct: float = 0.0
+
+  permit:
+    create: role(reader) or role(author) or role(admin)
+    read: role(reader) or role(author) or role(admin)
+    update: role(reader) or role(author) or role(admin)
+    delete: role(admin)
+
+  scope:
+    read: user_id = current_user
+      for: reader, author
+    update: user_id = current_user
+      for: reader, author
+    read: all
+      for: admin
+'''
+related = ["access_rules", "scope_runtime", "cedar_rbac"]
+important_notes = [
+    "'owner' is NOT a keyword — use the actual field name: user_id, owner_id, created_by, etc.",
+    "Ownership goes in scope: blocks, not permit: blocks (ADR-0010)",
+    "permit: defines WHO can access (role checks) — scope: defines WHICH ROWS they see (field conditions)",
+    "Common ownership fields: user_id, owner_id, created_by, author_id",
+    "Combine with 'or role(admin)' in permit: for admin override, then 'all for: admin' in scope: for full visibility",
+    "Anti-pattern: broad role checks in permit: without scope: — gives every authenticated user access to all rows",
+]
+best_practices = [
+    "Always pair ownership permit: rules with a scope: block that filters by the owner field",
+    "Use 'all for: admin' in scope: to give admins visibility to all rows",
+    "Name the ownership field explicitly (user_id, not just 'user') for clarity",
+    "Add a ref constraint on the ownership field to link to the User entity",
+]
+
 [concepts.computed_field]
 category = "Business Logic (v0.7)"
 doc_page = "entities"

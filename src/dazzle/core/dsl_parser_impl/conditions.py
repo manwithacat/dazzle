@@ -89,6 +89,24 @@ class ConditionParserMixin:
             self.expect(TokenType.RPAREN)
             return ir.ConditionExpr(role_check=ir.RoleCheck(role_name=role_name))
 
+        # Catch bare 'owner' keyword — guide to scope: block pattern
+        if self.match(TokenType.OWNER):
+            token = self.current_token()
+            raise make_parse_error(
+                "'owner' is not a standalone keyword in permit: rules.\n"
+                "Row-level ownership belongs in a scope: block:\n\n"
+                "  scope:\n"
+                "    read: owner_id = current_user\n"
+                "      for: reader, author\n"
+                "    update: owner_id = current_user\n"
+                "      for: reader, author\n\n"
+                "Use the actual field name (owner_id, user_id, created_by, etc.) "
+                "with '= current_user'. See concept 'access_rules' in the knowledge base.",
+                self.file,
+                token.line,
+                token.column,
+            )
+
         # Handle has_grant("relation", scope_field) - grant check (v0.42.0)
         if self.match(TokenType.IDENTIFIER) and self.current_token().value == "has_grant":
             self.advance()
