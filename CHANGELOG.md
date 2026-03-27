@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.5] - 2026-03-27
+
+### Fixed
+- Alembic `env.py` now normalizes Heroku's `postgres://` scheme to `postgresql://` before adding the psycopg driver — fixes `Can't load plugin: sqlalchemy.dialects:postgres` on Heroku (#727)
+- `_get_url()` now prefers `sqlalchemy.url` (already normalized by `db.py`) over raw `DATABASE_URL` env var
+
 ## [0.49.4] - 2026-03-27
 
 ### Added
