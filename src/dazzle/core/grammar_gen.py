@@ -1842,8 +1842,7 @@ def write_grammar(output_path: Path | None = None) -> Path:
         Path to the written file
     """
     if output_path is None:
-        project_root = Path(__file__).resolve().parents[3]
-        output_path = project_root / "docs" / "reference" / "grammar.md"
+        output_path = Path.cwd() / "docs" / "reference" / "grammar.md"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     content = generate_grammar()

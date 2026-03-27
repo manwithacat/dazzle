@@ -58,7 +58,12 @@ class TenantProvisioner:
         from alembic import command
         from alembic.config import Config as AlembicConfig
 
-        alembic_dir = Path(__file__).resolve().parents[2] / "dazzle_back" / "alembic"
+        try:
+            import dazzle_back
+
+            alembic_dir = Path(dazzle_back.__file__).resolve().parent / "alembic"
+        except (ImportError, AttributeError):
+            alembic_dir = Path(__file__).resolve().parents[2] / "dazzle_back" / "alembic"
         cfg = AlembicConfig(str(alembic_dir / "alembic.ini"))
         cfg.set_main_option("script_location", str(alembic_dir))
         cfg.set_main_option("sqlalchemy.url", self._db_url)

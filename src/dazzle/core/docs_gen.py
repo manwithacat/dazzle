@@ -19,8 +19,17 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 _KB_DIR = Path(__file__).parent.parent / "mcp" / "semantics_kb"
-_DOCS_DIR = Path(__file__).parent.parent.parent.parent / "docs" / "reference"
-_README_PATH = Path(__file__).parent.parent.parent.parent / "README.md"
+
+
+def _project_docs_dir() -> Path:
+    """Resolve docs/reference/ relative to CWD (project root), not package dir."""
+    return Path.cwd() / "docs" / "reference"
+
+
+def _project_readme_path() -> Path:
+    """Resolve README.md relative to CWD (project root), not package dir."""
+    return Path.cwd() / "README.md"
+
 
 _HEADER = (
     "> **Auto-generated** from knowledge base TOML files by `docs_gen.py`.\n"
@@ -101,7 +110,7 @@ def generate_reference_docs(kb_dir: Path | None = None) -> dict[str, str]:
 
 def write_reference_docs(output_dir: Path | None = None) -> list[Path]:
     """Write reference docs to disk. Returns list of paths written."""
-    out = output_dir or _DOCS_DIR
+    out = output_dir or _project_docs_dir()
     out.mkdir(parents=True, exist_ok=True)
     docs = generate_reference_docs()
     paths: list[Path] = []
@@ -163,7 +172,7 @@ def inject_readme_feature_table(readme_path: Path | None = None) -> bool:
     them with a markdown table of pages.
     Returns ``True`` if README was modified, ``False`` if markers not found.
     """
-    path = readme_path or _README_PATH
+    path = readme_path or _project_readme_path()
     if not path.exists():
         return False
     text = path.read_text()
