@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.11] - 2026-03-27
+
+### Fixed
+- Depth-N FK path scoping: subqueries now `SELECT "id"` instead of FK field values, fixing 0-row results on multi-hop scope rules (#738)
+- Kanban regions default to `col_span=12` (full width) regardless of stage defaults (#739)
+- Workspace layout: replaced CSS `columns-2` with CSS Grid (`grid-cols-12`) to eliminate heading/content misalignment from multi-column fragmentation (#741)
+- Workspace drag-and-drop: added visual feedback — ghost opacity + dashed border, drag elevation + scale, grab cursor, save toast (#740)
+
 ## [0.49.10] - 2026-03-27
 
 ### Added
