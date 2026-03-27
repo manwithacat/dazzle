@@ -225,4 +225,4 @@ See `docs/adr/INDEX.md` for the full index. Key constraints:
 - **KG re-seeding**: `ensure_seeded()` checks a version key; bump it in `seed.py` when TOML data changes.
 
 ---
-**Version**: 0.49.8 | **Python**: 3.12+ | **Status**: Production Ready
+**Version**: 0.49.9 | **Python**: 3.12+ | **Status**: Production Ready

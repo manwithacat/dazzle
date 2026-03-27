@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.9] - 2026-03-27
+
+### Fixed
+- Parser hang in experience block on unexpected tokens — missing `else` branch caused infinite loop when non-`step` token appeared (#733)
+- `_grants.principal_id` TEXT→UUID migration for tables created before v0.49.8 + route type coercion to prevent psycopg binary protocol mismatch (#734)
+- `AuthService` now delegates `create_session()` and `_execute_modify()` to underlying `AuthStore` — fixes `dazzle auth impersonate` crash (#735)
+
 ## [0.49.8] - 2026-03-27
 
 ### Added
