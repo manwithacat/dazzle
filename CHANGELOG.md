@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.10] - 2026-03-27
+
+### Added
+- Centralized URL configuration: `[urls]` section in `dazzle.toml` with `site_url` and `api_url` fields (#736)
+- `resolve_site_url()` and `resolve_api_url()` helpers with env var → toml → localhost default cascade
+- Env vars `DAZZLE_SITE_URL` and `DAZZLE_API_URL` override toml values
+
+### Changed
+- ~19 files across runtime, testing, CLI, and MCP handlers now use URL resolvers instead of hardcoded localhost URLs (#736)
+
+### Agent Guidance
+- **URL configuration**: Set `DAZZLE_SITE_URL` / `DAZZLE_API_URL` env vars or add `[urls]` to `dazzle.toml` to change default URLs. All tools, magic links, OpenAPI specs, and test infrastructure respect the cascade.
+
 ## [0.49.9] - 2026-03-27
 
 ### Fixed
