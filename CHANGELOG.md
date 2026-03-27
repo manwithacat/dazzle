@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.6] - 2026-03-27
+
+### Added
+- `dazzle db stamp` CLI command — marks a revision as applied without running migrations, wraps `alembic.command.stamp()` (#728)
+
+### Fixed
+- `grammar_gen.write_grammar()`, `docs_gen.write_reference_docs()`, and `docs_gen.inject_readme_feature_table()` now write to project directory (CWD) instead of package directory (ADR-0018, #725)
+- `tenant/provisioner.py` locates alembic dir via `import dazzle_back` for pip install compatibility (#725)
+
 ## [0.49.5] - 2026-03-27
 
 ### Fixed
