@@ -9,10 +9,10 @@ Three detection layers:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from dazzle.sentinel.agents.base import DetectionAgent, heuristic
-from dazzle.sentinel.models import AgentId
+from dazzle.sentinel.models import AgentId, Severity
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
@@ -24,18 +24,19 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
-def _ruff_severity(code: str) -> str:
-    """Map ruff rule code prefix to sentinel severity."""
-    from dazzle.sentinel.models import Severity
+_RUFF_SEVERITY: dict[str, Severity] = {
+    "UP": Severity.LOW,
+    "PTH": Severity.INFO,
+    "ASYNC": Severity.MEDIUM,
+    "C": Severity.INFO,
+    "SIM": Severity.INFO,
+}
 
+
+def _ruff_severity(code: str) -> Severity:
+    """Map ruff rule code prefix to sentinel severity."""
     prefix = code.rstrip("0123456789")
-    return {
-        "UP": Severity.LOW,
-        "PTH": Severity.INFO,
-        "ASYNC": Severity.MEDIUM,
-        "C": Severity.INFO,
-        "SIM": Severity.INFO,
-    }.get(prefix, Severity.INFO)
+    return _RUFF_SEVERITY.get(prefix, Severity.INFO)
 
 
 def _should_include(min_version_str: str, target: tuple[int, int]) -> bool:
@@ -154,7 +155,7 @@ class PythonAuditAgent(DetectionAgent):
 
         return self._parse_ruff_findings(items)
 
-    def _parse_ruff_findings(self, items: list[dict]) -> list[Finding]:
+    def _parse_ruff_findings(self, items: list[dict[str, Any]]) -> list[Finding]:
         """Convert ruff JSON items to Finding objects."""
         from dazzle.sentinel.models import (
             Confidence,
@@ -243,7 +244,7 @@ class PythonAuditAgent(DetectionAgent):
 
         return self._parse_semgrep_findings(data)
 
-    def _parse_semgrep_findings(self, data: dict) -> list[Finding]:
+    def _parse_semgrep_findings(self, data: dict[str, Any]) -> list[Finding]:
         """Convert semgrep JSON output to Finding objects."""
         from dazzle.sentinel.models import (
             Confidence,
