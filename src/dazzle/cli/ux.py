@@ -1,6 +1,7 @@
 """CLI commands for UX verification."""
 
 import asyncio
+import json as _json
 from pathlib import Path
 
 import typer
@@ -12,6 +13,43 @@ ux_app = typer.Typer(
     help="UX verification — deterministic interaction testing.",
     no_args_is_help=True,
 )
+
+
+def _resolve_runtime_urls(project_root: Path) -> tuple[str, str]:
+    """Resolve site_url and api_url from runtime.json or env/manifest.
+
+    Priority:
+        1. DAZZLE_SITE_URL / DAZZLE_API_URL environment variables
+        2. .dazzle/runtime.json written by ``dazzle serve``
+        3. Manifest [urls] section
+        4. Defaults (localhost:3000 / localhost:8000)
+
+    In DNR mode the UI and API share a single port, so api_url falls back
+    to site_url when runtime.json is present but api_url is unreachable.
+    """
+    import os
+
+    from dazzle.core.manifest import resolve_api_url, resolve_site_url
+
+    env_site = os.environ.get("DAZZLE_SITE_URL", "")
+    env_api = os.environ.get("DAZZLE_API_URL", "")
+    if env_site and env_api:
+        return env_site.rstrip("/"), env_api.rstrip("/")
+
+    runtime_json = project_root / ".dazzle" / "runtime.json"
+    if runtime_json.exists():
+        try:
+            data = _json.loads(runtime_json.read_text())
+            site = data.get("ui_url", "")
+            if site:
+                # DNR serves UI + API on the same port; api_url in
+                # runtime.json points at a separate port that only exists
+                # in Docker/split mode.  Use site_url for both.
+                return site.rstrip("/"), site.rstrip("/")
+        except Exception:
+            pass
+
+    return resolve_site_url(), resolve_api_url()
 
 
 def _run_structural_only() -> int:
@@ -52,6 +90,9 @@ def verify_command(
     Derives an interaction inventory from the DSL, boots the app against
     a test database, and verifies every framework-generated interaction.
 
+    Assumes the app is already running via ``dazzle serve --local``.
+    The command reads ``.dazzle/runtime.json`` to discover the server URL.
+
     Examples:
         dazzle ux verify                    # Full verification
         dazzle ux verify --structural       # HTML checks only (fast)
@@ -62,8 +103,7 @@ def verify_command(
         raise typer.Exit(_run_structural_only())
 
     from dazzle.core.appspec_loader import load_project_appspec
-    from dazzle.core.manifest import resolve_api_url, resolve_site_url
-    from dazzle.testing.ux.harness import PostgresHarness, check_postgres_available
+    from dazzle.testing.ux.harness import check_postgres_available
     from dazzle.testing.ux.inventory import generate_inventory
     from dazzle.testing.ux.report import generate_report
     from dazzle.testing.ux.runner import InteractionRunner
@@ -105,15 +145,8 @@ def verify_command(
         )
         raise typer.Exit(1)
 
-    # Run with harness (TODO: use harness to boot app, seed, and teardown)
-    _harness = PostgresHarness(
-        project_name=project_name,
-        db_url=harness_url,
-        keep_db=keep_db,
-    )
-
-    site_url = resolve_site_url()
-    api_url = resolve_api_url()
+    # Resolve URLs from runtime.json (written by dazzle serve)
+    site_url, api_url = _resolve_runtime_urls(project_root)
 
     runner = InteractionRunner(
         site_url=site_url,
@@ -122,17 +155,49 @@ def verify_command(
     )
 
     console.print(f"[bold]Running UX verification for {project_name}...[/bold]")
+    console.print(f"[dim]  site: {site_url}  api: {api_url}[/dim]")
 
-    # TODO: Full harness integration (boot app, seed, run, teardown)
-    # For now, assume app is already running
+    # Reset + seed test data so we start from a known state
+    import httpx
+
+    from dazzle.testing.ux.fixtures import generate_seed_payload
+
+    headers = runner._test_headers()
+    console.print("[dim]  resetting test data...[/dim]")
+    try:
+        resp = httpx.post(f"{api_url}/__test__/reset", headers=headers, timeout=10)
+        if resp.status_code == 200:
+            console.print("[dim]  reset OK[/dim]")
+        else:
+            console.print(f"[yellow]  reset returned {resp.status_code}[/yellow]")
+    except Exception as e:
+        console.print(f"[yellow]  reset failed: {e}[/yellow]")
+
+    seed_payload = generate_seed_payload(appspec)
+    if seed_payload.get("fixtures"):
+        console.print(f"[dim]  seeding {len(seed_payload['fixtures'])} fixtures...[/dim]")
+        try:
+            resp = httpx.post(
+                f"{api_url}/__test__/seed",
+                json=seed_payload,
+                headers=headers,
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                console.print("[dim]  seed OK[/dim]")
+            else:
+                console.print(
+                    f"[yellow]  seed returned {resp.status_code}: {resp.text[:200]}[/yellow]"
+                )
+        except Exception as e:
+            console.print(f"[yellow]  seed failed: {e}[/yellow]")
+
     results = asyncio.run(runner.run_all(inventory))
 
     report = generate_report(results, [])
 
     if format_ == "json":
-        import json
-
-        console.print_json(json.dumps(report.to_json(), indent=2))
+        console.print_json(_json.dumps(report.to_json(), indent=2))
     else:
         console.print(report.to_markdown())
 

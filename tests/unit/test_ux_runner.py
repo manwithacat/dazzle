@@ -15,7 +15,7 @@ class TestBuildPageUrl:
         url = _build_page_url(
             "", "", "workspace", "http://localhost:3000", workspace="teacher_dashboard"
         )
-        assert url == "http://localhost:3000/workspace/teacher_dashboard"
+        assert url == "http://localhost:3000/app/workspaces/teacher_dashboard"
 
 
 class TestRunnerConfig:

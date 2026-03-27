@@ -20,6 +20,11 @@ def _generate_field_value(field_name: str, field_type: str, entity_name: str, in
         # Deterministic UUID from entity name + index
         return str(uuid.uuid5(uuid.NAMESPACE_DNS, f"{entity_name}.{index}"))
 
+    # Field-name-aware generation (overrides type-based)
+    # Use ux-verify prefix to avoid collisions with auth demo users
+    if field_name == "email" or "email" in field_name:
+        return f"uxv-{index + 1}@{entity_name.lower()}.test"
+
     if "str" in t or "text" in t:
         return f"Test {field_name} {index + 1}"
     if t == "email":
@@ -63,16 +68,33 @@ def generate_seed_payload(
     appspec: AppSpec,
     rows_per_entity: int = 5,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Generate a seed payload for /__test__/seed.
+    """Generate a seed payload for ``/__test__/seed``.
 
     Returns:
-        Dict with "fixtures" key containing list of fixture dicts.
+        Dict with ``fixtures`` key containing list of fixture dicts.
+        FK references use the ``refs`` field so the seed endpoint can
+        resolve fixture IDs to real entity UUIDs.
     """
     fixtures: list[dict[str, Any]] = []
-    refs: dict[str, str] = {}  # entity_name -> first fixture ID for FK resolution
+    first_fixture_id: dict[str, str] = {}  # entity_name -> first fixture ID
 
-    # Generate fixtures for entities that have surfaces (testable via UX)
-    surfaced_entities = {s.entity_ref for s in appspec.surfaces if s.entity_ref}
+    # Generate fixtures for user-defined entities that have surfaces.
+    # Exclude framework-generated entities (platform admin) — they may
+    # not have DB tables and aren't the focus of UX verification.
+    _FRAMEWORK_ENTITIES = frozenset(
+        {
+            "AIJob",
+            "FeedbackReport",
+            "SystemHealth",
+            "SystemMetric",
+            "DeployHistory",
+        }
+    )
+    surfaced_entities = {
+        s.entity_ref
+        for s in appspec.surfaces
+        if s.entity_ref and s.entity_ref not in _FRAMEWORK_ENTITIES
+    }
 
     for entity in appspec.domain.entities:
         if entity.name not in surfaced_entities:
@@ -81,6 +103,7 @@ def generate_seed_payload(
         for i in range(rows_per_entity):
             fixture_id = f"{entity.name.lower()}_{i}"
             data: dict[str, Any] = {}
+            fixture_refs: dict[str, str] = {}
 
             for field in entity.fields:
                 # Skip auto-generated fields
@@ -89,16 +112,19 @@ def generate_seed_payload(
                 modifiers = (
                     [str(m) for m in (field.modifiers or [])] if hasattr(field, "modifiers") else []
                 )
-
-                # Handle FK references
-                type_str = _get_field_type_str(field.type)
-                if "ref" in type_str.lower() or hasattr(field.type, "ref_entity"):
-                    ref_entity = getattr(field.type, "ref_entity", None)
-                    if ref_entity and ref_entity in refs:
-                        data[field.name] = refs[ref_entity]
+                # Skip auto-timestamp fields
+                if "auto_add" in modifiers or "auto_update" in modifiers:
                     continue
 
-                # Skip optional fields sometimes
+                # Handle FK references — use refs dict for seed endpoint resolution
+                type_str = _get_field_type_str(field.type)
+                ref_entity = getattr(field.type, "ref_entity", None)
+                if ref_entity is not None or type_str.lower() == "ref":
+                    if ref_entity and ref_entity in first_fixture_id:
+                        fixture_refs[field.name] = first_fixture_id[ref_entity]
+                    continue
+
+                # Skip optional fields sometimes (keep data payload small)
                 is_required = "required" in modifiers or "pk" in modifiers
                 if not is_required and i > 2:
                     continue
@@ -114,15 +140,17 @@ def generate_seed_payload(
                 if value is not None:
                     data[field.name] = value
 
-            fixture = {
+            fixture: dict[str, Any] = {
                 "id": fixture_id,
                 "entity": entity.name,
                 "data": data,
             }
+            if fixture_refs:
+                fixture["refs"] = fixture_refs
             fixtures.append(fixture)
 
             # Track first fixture ID for FK resolution
-            if entity.name not in refs:
-                refs[entity.name] = fixture_id
+            if entity.name not in first_fixture_id:
+                first_fixture_id[entity.name] = fixture_id
 
     return {"fixtures": fixtures}
