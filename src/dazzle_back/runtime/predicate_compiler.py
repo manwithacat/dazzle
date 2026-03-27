@@ -185,9 +185,9 @@ def _compile_path_check(
     is::
 
         "manuscript_id" IN (
-            SELECT "assessment_event_id" FROM "Manuscript"
+            SELECT "id" FROM "Manuscript"
             WHERE "assessment_event_id" IN (
-                SELECT "school_id" FROM "AssessmentEvent"
+                SELECT "id" FROM "AssessmentEvent"
                 WHERE "school_id" = %s
             )
         )
@@ -241,20 +241,19 @@ def _compile_path_check(
     # the terminal comparison field.
     _last_from, last_fk_field, last_target_entity = hops[-1]
 
-    # Innermost: SELECT terminal_field FROM final_entity WHERE <condition>
+    # Innermost: SELECT "id" FROM final_entity WHERE <condition>
+    # We select PKs so the parent subquery can match its FK against them.
     inner_sql = (
-        f"SELECT {quote_identifier(terminal_field)} "
-        f"FROM {_qualify_table(last_target_entity, schema)} "
-        f"WHERE {innermost_condition}"
+        f'SELECT "id" FROM {_qualify_table(last_target_entity, schema)} WHERE {innermost_condition}'
     )
-    # The FK column in the preceding entity that we need to match against
-    # this subquery is last_fk_field (from the last hop's source entity).
+    # The FK column in the preceding entity that points into this subquery
     inner_match_fk = last_fk_field
 
     # Walk remaining hops outward (second-to-last toward root, reversed)
     for _from_entity, fk_field, target_entity in reversed(hops[:-1]):
+        # Each layer: SELECT "id" FROM intermediate WHERE fk_to_next IN (deeper)
         inner_sql = (
-            f"SELECT {quote_identifier(fk_field)} "
+            f'SELECT "id" '
             f"FROM {_qualify_table(target_entity, schema)} "
             f"WHERE {quote_identifier(inner_match_fk)} IN ({inner_sql})"
         )

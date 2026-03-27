@@ -78,6 +78,7 @@ class TestUserAttrCheck:
 
 class TestPathCheck:
     def test_depth_1(self) -> None:
+        """manuscript.student_id = current_user → subquery on Manuscript."""
         p = PathCheck(
             path=["manuscript", "student_id"],
             op=CompOp.EQ,
@@ -85,20 +86,26 @@ class TestPathCheck:
         )
         sql, params = compile_predicate(p, "Feedback", _simple_graph())
         assert '"manuscript_id" IN' in sql
-        assert '"Manuscript"' in sql
-        assert '"student_id"' in sql
+        assert 'SELECT "id" FROM "Manuscript"' in sql
+        assert '"student_id" = %s' in sql
 
     def test_depth_2(self) -> None:
+        """manuscript.assessment_event.school_id = current_user.school
+        Each subquery SELECTs "id" so parent IN matches PKs, not FK values."""
         p = PathCheck(
             path=["manuscript", "assessment_event", "school_id"],
             op=CompOp.EQ,
             value=ValueRef(user_attr="school"),
         )
         sql, params = compile_predicate(p, "Feedback", _simple_graph())
+        # Root: manuscript_id IN (...)
         assert '"manuscript_id" IN' in sql
+        # Middle layer: SELECT "id" FROM Manuscript WHERE assessment_event_id IN (...)
+        assert 'SELECT "id" FROM "Manuscript"' in sql
         assert '"assessment_event_id" IN' in sql
-        assert '"AssessmentEvent"' in sql
-        assert '"school_id"' in sql
+        # Innermost: SELECT "id" FROM AssessmentEvent WHERE school_id = %s
+        assert 'SELECT "id" FROM "AssessmentEvent"' in sql
+        assert '"school_id" =' in sql
 
 
 class TestExistsCheck:
@@ -191,6 +198,8 @@ class TestSchemaQualification:
         sql, _ = compile_predicate(p, "Feedback", _simple_graph(), schema="tenant_xyz")
         assert '"tenant_xyz"."AssessmentEvent"' in sql
         assert '"tenant_xyz"."Manuscript"' in sql
+        assert 'SELECT "id" FROM "tenant_xyz"."Manuscript"' in sql
+        assert 'SELECT "id" FROM "tenant_xyz"."AssessmentEvent"' in sql
 
     def test_bool_composite_threads_schema(self) -> None:
         left = ExistsCheck(
