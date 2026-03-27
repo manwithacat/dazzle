@@ -33,22 +33,24 @@ def _check_tenant_enabled() -> None:
 
 
 def _get_registry() -> Any:
+    from dazzle.cli.env import get_active_env
     from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle.tenant.registry import TenantRegistry
 
     manifest = load_manifest(Path("dazzle.toml").resolve())
-    db_url = resolve_database_url(manifest)
+    db_url = resolve_database_url(manifest, env_name=get_active_env())
     return TenantRegistry(db_url)
 
 
 def _get_provisioner() -> Any:
+    from dazzle.cli.env import get_active_env
     from dazzle.cli.utils import load_project_appspec
     from dazzle.core.manifest import load_manifest, resolve_database_url
     from dazzle.tenant.provisioner import TenantProvisioner
 
     project_root = Path.cwd().resolve()
     manifest = load_manifest(project_root / "dazzle.toml")
-    db_url = resolve_database_url(manifest)
+    db_url = resolve_database_url(manifest, env_name=get_active_env())
     appspec = load_project_appspec(project_root)
     return TenantProvisioner(db_url, appspec)
 

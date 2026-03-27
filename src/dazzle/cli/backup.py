@@ -22,19 +22,12 @@ backup_app = typer.Typer(help="Backup and restore project data.")
 
 
 def _resolve_database_url(manifest_path: Path) -> str:
-    """Resolve DATABASE_URL from env or manifest."""
-    url = os.environ.get("DATABASE_URL", "")
-    if not url:
-        try:
-            mf = load_manifest(manifest_path)
-            url = mf.database.url
-            if url.startswith("env:"):
-                url = os.environ.get(url[4:], "")
-        except Exception:
-            logger.debug("Could not load manifest for DB URL", exc_info=True)
-    if url.startswith("postgres://"):
-        url = url.replace("postgres://", "postgresql://", 1)
-    return url
+    """Resolve DATABASE_URL from env profile, env, or manifest."""
+    from dazzle.cli.env import get_active_env
+    from dazzle.core.manifest import resolve_database_url
+
+    manifest = load_manifest(manifest_path) if manifest_path.exists() else None
+    return resolve_database_url(manifest, env_name=get_active_env())
 
 
 def _parse_pg_url(url: str) -> dict[str, str]:

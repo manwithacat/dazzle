@@ -35,7 +35,9 @@ class AuthService:
         if mpath.exists():
             manifest = load_manifest(mpath)
 
-        url = resolve_database_url(manifest, explicit_url=explicit)
+        from dazzle.cli.env import get_active_env
+
+        url = resolve_database_url(manifest, explicit_url=explicit, env_name=get_active_env())
         return cls(url)
 
     # ----- User CRUD -----

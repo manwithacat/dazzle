@@ -64,9 +64,10 @@ class BuildService:
 
     def resolve_database_url(self, explicit_url: str = "") -> str:
         """Resolve the database URL from manifest/env/default."""
+        from dazzle.cli.env import get_active_env
         from dazzle.core.manifest import load_manifest, resolve_database_url
 
         manifest = None
         if self._manifest_path.exists():
             manifest = load_manifest(self._manifest_path)
-        return resolve_database_url(manifest, explicit_url=explicit_url)
+        return resolve_database_url(manifest, explicit_url=explicit_url, env_name=get_active_env())

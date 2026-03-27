@@ -13,10 +13,11 @@ def resolve_db_url(
     *,
     explicit_url: str = "",
     project_root: Path | None = None,
+    env_name: str = "",
 ) -> str:
     """Resolve the database URL.
 
-    Priority: explicit_url > DATABASE_URL env > dazzle.toml > default.
+    Priority: explicit_url > env profile > DATABASE_URL env > dazzle.toml > default.
     Delegates to dazzle.core.manifest.resolve_database_url.
     """
     manifest = None
@@ -25,7 +26,7 @@ def resolve_db_url(
         if toml_path.exists():
             manifest = load_manifest(toml_path)
 
-    return resolve_database_url(manifest, explicit_url=explicit_url)
+    return resolve_database_url(manifest, explicit_url=explicit_url, env_name=env_name)
 
 
 async def get_connection(

@@ -11,16 +11,21 @@ console = Console()
 
 
 def _resolve_db_url(database_url: str | None = None) -> str:
-    """Resolve database URL from explicit arg, manifest, or env."""
+    """Resolve DB URL with env profile support."""
     from pathlib import Path
 
+    from dazzle.cli.env import get_active_env
     from dazzle.core.manifest import load_manifest, resolve_database_url
 
     manifest = None
-    manifest_path = Path.cwd() / "dazzle.toml"
-    if manifest_path.exists():
-        manifest = load_manifest(manifest_path)
-    return resolve_database_url(manifest, explicit_url=database_url or "")
+    toml_path = Path.cwd().resolve() / "dazzle.toml"
+    if toml_path.exists():
+        manifest = load_manifest(toml_path)
+    return resolve_database_url(
+        manifest,
+        explicit_url=database_url or "",
+        env_name=get_active_env(),
+    )
 
 
 def dbshell_command(

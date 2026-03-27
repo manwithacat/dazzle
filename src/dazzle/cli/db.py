@@ -278,9 +278,14 @@ def _resolve_tenant_schema(tenant: str) -> str:
 
 def _resolve_url(database_url: str) -> str:
     """Resolve database URL from flag, env, or manifest."""
+    from dazzle.cli.env import get_active_env
     from dazzle.db.connection import resolve_db_url
 
-    return resolve_db_url(explicit_url=database_url, project_root=Path.cwd().resolve())
+    return resolve_db_url(
+        explicit_url=database_url,
+        project_root=Path.cwd().resolve(),
+        env_name=get_active_env(),
+    )
 
 
 @db_app.command(name="status")
