@@ -6,3 +6,23 @@ framework_version = "~0.38"
 
 [modules]
 paths = ["./dsl"]
+
+[auth]
+enabled = true
+provider = "session"
+allow_registration = true
+
+# Environment profiles — select via: dazzle <command> --env <name>
+# Or set DAZZLE_ENV=<name> for CI/CD.
+# Priority: --database-url > --env profile > DATABASE_URL > [database].url > default
+#
+# [environments.development]
+# database_url = "postgresql://localhost:5432/{{project_name}}_dev"
+#
+# [environments.staging]
+# database_url_env = "HEROKU_POSTGRESQL_COPPER_URL"
+# heroku_app = "{{project_name}}-staging"
+#
+# [environments.production]
+# database_url_env = "HEROKU_POSTGRESQL_COPPER_URL"
+# heroku_app = "{{project_name}}-prod"

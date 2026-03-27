@@ -1118,3 +1118,44 @@ llm_config:
 '''
 related = ["llm_config", "llm_model", "llm_intent"]
 best_practices = ["Set concurrency lower than rate_limits to leave headroom", "Fast-tier models (haiku) can handle higher concurrency", "Quality-tier models should have lower concurrency to manage costs", "Monitor budget_alert_usd to catch runaway LLM usage"]
+
+[concepts.environment_profiles]
+category = "Project Configuration"
+since_version = "0.49.2"
+definition = """
+Per-environment database configuration in dazzle.toml. Declare [environments.<name>] sections \
+with database_url (literal) or database_url_env (env var indirection) and optional heroku_app. \
+Select at runtime via --env flag or DAZZLE_ENV environment variable. Profile names are freeform \
+strings — development/staging/production, blue/green, demo, per-developer, etc.
+
+Resolution priority:
+1. --database-url (explicit CLI flag — always wins)
+2. --env profile (database_url or database_url_env from named profile)
+3. DATABASE_URL environment variable
+4. dazzle.toml [database].url
+5. Default: postgresql://localhost:5432/dazzle
+"""
+syntax = '''
+[environments.development]
+database_url = "postgresql://localhost:5432/myapp_dev"
+
+[environments.staging]
+database_url_env = "HEROKU_POSTGRESQL_COPPER_URL"
+heroku_app = "myapp-staging"
+
+[environments.production]
+database_url_env = "HEROKU_POSTGRESQL_COPPER_URL"
+heroku_app = "myapp-prod"
+'''
+example = '''
+# Select environment via CLI flag
+dazzle db status --env staging
+
+# Or via environment variable (CI/CD)
+export DAZZLE_ENV=production
+dazzle db status
+
+# --database-url always wins, regardless of --env
+dazzle db status --env production --database-url postgresql://override:5432/db
+'''
+related = ["authentication", "schedule"]

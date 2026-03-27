@@ -265,6 +265,9 @@ ALIASES = {
     "variable_availability": "template_variable_flow",
     "jinja_variables": "template_variable_flow",
     "include_context": "template_variable_flow",
+    # Environment profiles
+    "env_profiles": "environment_profiles",
+    "dazzle_env": "environment_profiles",
 }
 
 
