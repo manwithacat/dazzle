@@ -1226,6 +1226,8 @@
     'title': 'Simple Test App',
     'transactions': list([
     ]),
+    'triples': list([
+    ]),
     'ux': None,
     'version': '0.1.0',
     'views': list([

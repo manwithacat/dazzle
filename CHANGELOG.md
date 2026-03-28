@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-03-28
+
+### Added
+- **IR Triple Enrichment** (Layer A): Cache (Entity, Surface, Persona) triples in AppSpec at link time
+  - `WidgetKind` enum: deterministic widget resolution from field types (mirrors template compiler)
+  - `SurfaceFieldTriple`: per-field rendering metadata (widget, required, FK status)
+  - `SurfaceActionTriple`: per-surface action with permission-based visibility
+  - `VerifiableTriple`: atomic unit of verifiable behavior — fields + actions per persona
+  - `derive_triples()`: pure function in linker step 10b, no UI imports
+  - AppSpec getters: `get_triple()`, `get_triples_for_entity()`, `get_triples_for_persona()`
+- **Reconciliation Engine** (Layer C): Back-propagate contract failures to DSL levers
+  - `DiagnosisKind`: 7 failure categories (widget_mismatch, action_missing, permission_gap, template_bug, etc.)
+  - `DSLLever`: points to specific DSL construct with current/suggested values
+  - `Diagnosis`: structured failure report with levers for agent-driven convergence
+  - `reconcile()`: deterministic diagnosis from contract + triple + HTML
+
+### Changed
+- Contract generation (`contracts.py`) rewritten as thin mapper over `appspec.triples` — ~130 lines of derivation logic removed
+- `/ux-converge` command updated to use reconciler for automated failure classification
+
+### Agent Guidance
+- **IR Triples**: `appspec.triples` contains pre-computed (Entity, Surface, Persona) triples. Use `appspec.get_triple(entity, surface, persona)` instead of re-deriving from raw IR.
+- **Reconciler**: When a contract fails, call `reconcile(contract, triple, html, entities, surfaces)` to get a `Diagnosis` with `levers` pointing to the DSL change that would fix it. No more manual backward reasoning.
+- **Convergence loop**: `/ux-converge` now uses the reconciler. Each failure produces a structured diagnosis → apply lever → re-verify → converge.
+
 ## [0.49.14] - 2026-03-28
 
 ### Added

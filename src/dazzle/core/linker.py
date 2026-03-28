@@ -146,6 +146,11 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
     fk_graph = FKGraph.from_entities(list(entities))
     entities = _compile_scope_predicates(entities, fk_graph, build_scope_predicate)
 
+    # 10b. Derive verifiable triples
+    from .ir.triples import derive_triples
+
+    triples = derive_triples(entities, surfaces, merged_fragment.personas)
+
     # 11. Build final AppSpec
     return ir.AppSpec(
         name=app_name,
@@ -153,6 +158,7 @@ def build_appspec(modules: list[ir.ModuleIR], root_module_name: str) -> ir.AppSp
         version="0.1.0",
         domain=ir.DomainSpec(entities=entities),
         fk_graph=fk_graph,
+        triples=triples,
         surfaces=surfaces,
         workspaces=[*merged_fragment.workspaces, *admin_workspaces],
         experiences=merged_fragment.experiences,

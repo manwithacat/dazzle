@@ -686,6 +686,14 @@ from .themespec import (
     VisualTreatment,
 )
 
+# Triples (v0.50.0 IR Triple Enrichment)
+from .triples import (
+    SurfaceActionTriple,
+    SurfaceFieldTriple,
+    VerifiableTriple,
+    WidgetKind,
+)
+
 # UX Semantic Layer
 from .ux import (
     AttentionSignal,
@@ -920,6 +928,11 @@ __all__ = [
     "InvariantSpec",
     # Personas (v0.8.5)
     "PersonaSpec",
+    # Triples (v0.50.0 IR Triple Enrichment)
+    "SurfaceActionTriple",
+    "SurfaceFieldTriple",
+    "VerifiableTriple",
+    "WidgetKind",
     # Predicate Algebra (Scope row-level security)
     "BoolComposite",
     "BoolOp",

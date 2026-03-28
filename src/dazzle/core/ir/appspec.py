@@ -71,6 +71,7 @@ from .sla import SLASpec
 from .stories import StorySpec
 from .surfaces import SurfaceSpec
 from .tests import TestSpec
+from .triples import VerifiableTriple
 from .views import ViewSpec
 from .webhooks import WebhookSpec
 from .workspaces import WorkspaceSpec
@@ -186,6 +187,9 @@ class AppSpec(BaseModel):
     # Typed as Any to avoid circular import: FKGraph is a dataclass from ir.fk_graph
     # and importing it here would create import cycles with the linker.
     fk_graph: Any = None
+
+    # Verifiable triples (v0.50.0 IR Triple Enrichment)
+    triples: list[VerifiableTriple] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 
@@ -347,6 +351,23 @@ class AppSpec(BaseModel):
     def get_grant_schemas_by_scope(self, entity_name: str) -> list[GrantSchemaSpec]:
         """Get all grant schemas scoped to a specific entity."""
         return [s for s in self.grant_schemas if s.scope == entity_name]
+
+    # Triple getters (v0.50.0 IR Triple Enrichment)
+
+    def get_triples_for_entity(self, entity: str) -> list[VerifiableTriple]:
+        """Get all triples for a given entity."""
+        return [t for t in self.triples if t.entity == entity]
+
+    def get_triples_for_persona(self, persona: str) -> list[VerifiableTriple]:
+        """Get all triples for a given persona."""
+        return [t for t in self.triples if t.persona == persona]
+
+    def get_triple(self, entity: str, surface: str, persona: str) -> VerifiableTriple | None:
+        """Get a specific triple by entity, surface, and persona."""
+        for t in self.triples:
+            if t.entity == entity and t.surface == surface and t.persona == persona:
+                return t
+        return None
 
     # Messaging getters (v0.9.0)
 

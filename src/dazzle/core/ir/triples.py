@@ -21,6 +21,7 @@ are migrated here so the IR layer owns the derivation logic independently
 of the testing layer.
 """
 
+from collections.abc import Sequence
 from enum import StrEnum
 
 from pydantic import BaseModel, ConfigDict
@@ -196,8 +197,8 @@ def _rule_matches_persona(rule: object, persona_id: str) -> bool:
 
 
 def get_permitted_personas(
-    entities: list[object],
-    personas: list[object],
+    entities: Sequence[object],
+    personas: Sequence[object],
     entity_name: str,
     operation: object,
 ) -> list[str]:
@@ -277,9 +278,9 @@ class SurfaceActionTriple(BaseModel):
 def resolve_surface_actions(
     entity: object,
     surface: object,
-    all_surfaces: list[object],
-    personas: list[object],
-    entities: list[object],
+    all_surfaces: Sequence[object],
+    personas: Sequence[object],
+    entities: Sequence[object],
 ) -> list[SurfaceActionTriple]:
     """Derive the set of user-facing action triples for a surface.
 
@@ -538,9 +539,9 @@ def _resolve_surface_fields(
 
 
 def derive_triples(
-    entities: list[object],
-    surfaces: list[object],
-    personas: list[object],
+    entities: Sequence[object],
+    surfaces: Sequence[object],
+    personas: Sequence[object],
 ) -> list[VerifiableTriple]:
     """Derive the full set of verifiable triples for an app.
 
