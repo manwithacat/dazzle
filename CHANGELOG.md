@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.6] - 2026-03-28
+
+### Added
+- **`widget=` DSL syntax**: Surface field declarations now support `widget=value` annotations (e.g., `field description "Description" widget=rich_text`). The parser already supported `key=value` options via the `source=` pattern — this commit wires `widget` through the template compiler to `FieldContext.widget`, completing the DSL-to-template pipeline.
+- All three Phase 5 example apps updated with `widget=` annotations on appropriate fields
+
+### Agent Guidance
+- Use `widget=value` on surface field lines to override the default field rendering. Supported values: `rich_text`, `combobox`, `tags`, `picker`, `range`, `color`, `slider`. The value flows through `SurfaceElement.options["widget"]` → template compiler → `FieldContext.widget` → `form_field.html` macro.
+- The `widget=` option is parsed as a generic key-value pair — no parser changes were needed.
+
 ## [0.51.5] - 2026-03-28
 
 ### Added
