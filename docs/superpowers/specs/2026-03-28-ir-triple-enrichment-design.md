@@ -1,9 +1,20 @@
-# IR Triple Enrichment — Design Spec
+# IR Triple Enrichment + Reconciliation — Design Spec
 
 **Date:** 2026-03-28
 **Status:** Approved
 **Prerequisite:** ADR-0019 (Surface Triple as Atomic Unit of Verifiable Behavior)
 **Replaces:** Empirical triple derivation in `contracts.py`
+
+## Goal
+
+Build a convergence process that produces a **stable optimal model** of a business domain. The process is finite — it converges and stops — not an eternal monitoring loop.
+
+The three layers:
+1. **Triples** (Layer A) — cache (Entity, Surface, Persona) decisions in the IR at link time
+2. **Contracts** (Layer B, exists) — verify rendered HTML matches triple expectations
+3. **Reconciliation** (Layer C, new) — when contracts fail, back-propagate from the failure to the DSL lever that controls it, producing a concrete fix suggestion
+
+The convergence loop (`/ux-converge`) already exists. What's missing is the reconciliation step between "failure detected" and "fix applied" — currently performed by agent reasoning, which is slow and error-prone.
 
 ## Problem
 
@@ -12,12 +23,13 @@ The UX contract verification system (v0.49.14) derives (Entity, Surface, Persona
 - **Slow**: requires a running server to derive triples
 - **Fragile**: the contract generator had to learn FK widget resolution, persona routing, and surface mode gates through 3 convergence cycles
 - **Duplicative**: the information already exists across the parser, linker, and template engine — it's just not assembled in one place
+- **No back-propagation**: when a contract fails, the agent must manually trace backward through the compiler to determine what DSL change would fix it
 
 ## Solution
 
-Enrich the AppSpec IR to cache derived triples at link time. Downstream consumers (contract verification, validation, compliance) read them directly instead of re-deriving from HTML.
+Enrich the AppSpec IR to cache derived triples at link time. Add a reconciliation engine that, given a contract failure and the corresponding triple, produces a structured diagnosis pointing to the DSL levers that control the outcome.
 
-**Approach:** Eager computation in the linker (step 10b), stored as `triples: list[VerifiableTriple]` on AppSpec. Contract generation becomes a thin mapper over IR triples.
+**Approach:** Eager computation in the linker (step 10b), stored as `triples: list[VerifiableTriple]` on AppSpec. Contract generation becomes a thin mapper over IR triples. Reconciliation reads the triple + failure + HTML and emits a `Diagnosis`.
 
 ## Data Models
 
@@ -222,6 +234,111 @@ The permission helper functions (`_rule_matches_persona`, `_get_permitted_person
 - Workspace renderer — regions unchanged
 - Contract checker / HTMX client — consume `Contract` objects as before
 
+## Layer C: Reconciliation Engine
+
+New file: `src/dazzle/testing/ux/reconciler.py`
+
+### The Problem It Solves
+
+When a contract fails, the agent currently has to:
+1. Read the failure message ("expected text_input for `school_id`, got search_select")
+2. Mentally trace backward through the compiler (why search_select? REF? `_id` suffix? `source=`?)
+3. Decide: is the contract wrong or is the DSL wrong?
+4. Construct the fix
+
+Steps 2-3 are where agents burn tokens and make mistakes. The reconciler replaces that reasoning with a deterministic lookup.
+
+### Data Model
+
+```python
+class DiagnosisKind(StrEnum):
+    WIDGET_MISMATCH = "widget_mismatch"       # field renders as unexpected widget
+    ACTION_MISSING = "action_missing"         # expected action not in HTML
+    ACTION_UNEXPECTED = "action_unexpected"   # action in HTML but shouldn't be
+    FIELD_MISSING = "field_missing"           # expected field not in HTML
+    PERMISSION_GAP = "permission_gap"         # persona lacks expected permission
+    SURFACE_MISSING = "surface_missing"       # no surface for expected mode
+    TEMPLATE_BUG = "template_bug"             # HTML genuinely wrong (not a DSL issue)
+
+class DSLLever(BaseModel, frozen=True):
+    """A specific DSL construct that controls the observed behavior."""
+    file: str              # DSL file path (from source location)
+    construct: str         # "entity.Task.fields.school_id", "entity.Task.access.permit"
+    current_value: str     # what it says now
+    suggested_value: str   # what it should say to fix the mismatch
+    explanation: str       # human-readable "because" sentence
+
+class Diagnosis(BaseModel, frozen=True):
+    """Back-propagation result: why a contract failed and what to change."""
+    contract_id: str
+    kind: DiagnosisKind
+    triple: str            # "{entity}.{surface}.{persona}" for context
+    observation: str       # what the HTML actually showed
+    expectation: str       # what the contract expected
+    levers: list[DSLLever] # DSL changes that would reconcile the mismatch
+    category: str          # maps to /ux-converge classification table
+```
+
+### Reconciliation Rules
+
+Each contract failure type maps to a diagnostic path:
+
+| Failure | Diagnosis | DSL Lever |
+|---------|-----------|-----------|
+| Field renders as wrong widget | `WIDGET_MISMATCH` | Field type in entity definition, or `source=` option in surface element |
+| Edit button missing | `ACTION_MISSING` | `permit update` rule on entity, or missing `edit` surface |
+| Delete button missing | `ACTION_MISSING` | `permit delete` rule on entity |
+| Create link missing | `ACTION_MISSING` | `permit create` rule on entity, or missing `create` surface |
+| Transition button missing | `ACTION_MISSING` | State machine definition on entity |
+| Action present but shouldn't be | `ACTION_UNEXPECTED` | `forbid` rule missing, or persona list on `permit` rule |
+| Required field missing from form | `FIELD_MISSING` | Surface section elements list |
+| Persona can't access page | `PERMISSION_GAP` | `permit` rules + persona list |
+| HTML element genuinely absent | `TEMPLATE_BUG` | Not a DSL issue — template fix needed |
+
+### reconcile() Function
+
+```python
+def reconcile(
+    contract: Contract,
+    triple: VerifiableTriple | None,
+    html: str,
+    appspec_entities: list[EntitySpec],
+    appspec_surfaces: list[SurfaceSpec],
+) -> Diagnosis:
+```
+
+The function:
+1. Compares the contract's expectation against the HTML (what the checker already does)
+2. Looks up the triple to understand what the IR predicted
+3. If triple matches HTML but not contract → contract generation bug
+4. If triple matches contract but not HTML → template bug
+5. If triple doesn't exist → surface/permission gap in DSL
+6. For each mismatch, walks the IR backward to find the DSL construct that controls it
+
+### Integration with /ux-converge
+
+The convergence loop's classification step (Step 2) currently relies on agent reasoning. With reconciliation:
+
+```
+BEFORE (agent-driven):
+  failure → agent reads HTML → agent guesses category → agent constructs fix
+
+AFTER (reconciler-driven):
+  failure → reconcile(contract, triple, html) → Diagnosis with DSL levers
+  → agent applies suggested fix (or files issue if TEMPLATE_BUG)
+```
+
+The `/ux-converge` command gains a `--reconcile` flag (default on) that runs the reconciler on each failure and includes the `Diagnosis` in the cycle output. The agent reads the diagnosis instead of reverse-engineering the cause.
+
+### Convergence Criteria
+
+The process converges when:
+- **Zero failures** → stable optimal model, done
+- **All remaining are TEMPLATE_BUG** → DSL is correct, template fixes needed (filed as issues)
+- **Diagnosis produces no actionable levers** → genuinely stuck, report and stop
+
+The key property: **convergence is finite**. Each cycle either reduces failures (progress) or classifies all remaining as non-DSL (termination). The reconciler prevents infinite loops by ensuring the same failure always gets the same diagnosis.
+
 ## Performance
 
 Measured from example apps:
@@ -256,6 +373,18 @@ Run `derive_triples()` on `simple_task` and `fieldtest_hub` appspecs, assert tri
 
 For `fieldtest_hub`, verify that the new contracts generated from triples produce identical `contract_id` values as the current `generate_contracts()`. This proves the rewrite is behavior-preserving before deleting the old derivation code.
 
+### Reconciler Tests (`tests/unit/test_reconciler.py`)
+
+1. **Widget mismatch** — field triple says `SEARCH_SELECT`, HTML has text input → diagnosis with lever pointing to entity field type
+2. **Action missing** — triple says `edit_link` visible, HTML has no edit link → diagnosis with lever pointing to `permit update` rule
+3. **Permission gap** — no triple for persona+entity → diagnosis with lever pointing to missing `permit` rule
+4. **Template bug** — triple says field present, contract says present, HTML missing → `TEMPLATE_BUG` diagnosis with no DSL lever
+5. **Contract-triple agreement** — when triple and HTML agree, no diagnosis needed (contract was wrong)
+
+### Convergence Smoke Test
+
+Run the full loop on `fieldtest_hub`: derive triples → generate contracts → check against HTML → reconcile failures → verify all diagnoses have at least one lever or are classified as `TEMPLATE_BUG`. This validates the end-to-end path.
+
 ## Files Changed
 
 | File | Change |
@@ -265,4 +394,7 @@ For `fieldtest_hub`, verify that the new contracts generated from triples produc
 | `src/dazzle/core/ir/appspec.py` | Add `triples` field + 3 convenience getters |
 | `src/dazzle/core/linker.py` | Add step 10b calling `derive_triples()` |
 | `src/dazzle/testing/ux/contracts.py` | Rewrite as thin mapper over `appspec.triples` |
+| `src/dazzle/testing/ux/reconciler.py` | **New** — `Diagnosis`, `DSLLever`, `reconcile()` |
+| `.claude/commands/ux-converge.md` | Add `--reconcile` flag, update classification to use reconciler output |
 | `tests/unit/test_triples.py` | **New** — widget, action, assembly, parity tests |
+| `tests/unit/test_reconciler.py` | **New** — mismatch diagnosis, lever identification, convergence smoke |
