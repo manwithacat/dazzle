@@ -35,6 +35,7 @@ class TokenType(Enum):
     USES = "uses"
     MODE = "mode"
     SECTION = "section"
+    RELATED = "related"
     FIELD = "field"
     ACTION = "action"
     STEP = "step"
