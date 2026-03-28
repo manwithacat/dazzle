@@ -797,3 +797,92 @@ class TestDeriveTriples:
         field_names = {f.field_name for f in triples[0].fields}
         assert "title" in field_names
         assert "notes" not in field_names
+
+
+# ---------------------------------------------------------------------------
+# TestLinkerIntegration
+# ---------------------------------------------------------------------------
+
+
+class TestLinkerIntegration:
+    """Integration tests: derive_triples wired into the linker pipeline."""
+
+    def test_simple_task_has_triples(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        appspec = load_project_appspec(Path("examples/simple_task"))
+        assert len(appspec.triples) > 0
+
+    def test_fieldtest_hub_has_triples(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        appspec = load_project_appspec(Path("examples/fieldtest_hub"))
+        assert len(appspec.triples) > 0
+
+    def test_get_triple_getter(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        appspec = load_project_appspec(Path("examples/simple_task"))
+        if appspec.triples:
+            t = appspec.triples[0]
+            found = appspec.get_triple(t.entity, t.surface, t.persona)
+            assert found is not None
+            assert found.entity == t.entity
+
+    def test_get_triples_for_entity(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        appspec = load_project_appspec(Path("examples/simple_task"))
+        if appspec.triples:
+            entity_name = appspec.triples[0].entity
+            results = appspec.get_triples_for_entity(entity_name)
+            assert all(t.entity == entity_name for t in results)
+
+    def test_get_triples_for_persona(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+
+        appspec = load_project_appspec(Path("examples/simple_task"))
+        if appspec.triples:
+            persona = appspec.triples[0].persona
+            results = appspec.get_triples_for_persona(persona)
+            assert all(t.persona == persona for t in results)
+
+
+# ---------------------------------------------------------------------------
+# TestContractParity — ensure generate_contracts produces expected output
+# ---------------------------------------------------------------------------
+
+
+class TestContractParity:
+    def test_fieldtest_hub_produces_contracts(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.testing.ux.contracts import generate_contracts
+
+        appspec = load_project_appspec(Path("examples/fieldtest_hub"))
+        contracts = generate_contracts(appspec)
+        assert len(contracts) > 0
+        kinds = {str(c.kind) for c in contracts}
+        assert "list_page" in kinds
+        assert "rbac" in kinds
+
+    def test_simple_task_produces_contracts(self) -> None:
+        from pathlib import Path
+
+        from dazzle.core.appspec_loader import load_project_appspec
+        from dazzle.testing.ux.contracts import generate_contracts
+
+        appspec = load_project_appspec(Path("examples/simple_task"))
+        contracts = generate_contracts(appspec)
+        assert len(contracts) > 0

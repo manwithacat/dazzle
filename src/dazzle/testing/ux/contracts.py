@@ -15,7 +15,6 @@ from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from dazzle.core.ir.appspec import AppSpec
-    from dazzle.core.ir.domain import PermissionKind
 
 
 class ContractKind(StrEnum):
@@ -212,184 +211,103 @@ _FRAMEWORK_ENTITIES: frozenset[str] = frozenset(
 )
 
 
-def _condition_matches_role(condition: object, role: str) -> bool:
-    """Return True if a ConditionExpr contains a role_check matching *role*."""
-    if condition is None:
-        return False
-    role_check = getattr(condition, "role_check", None)
-    if role_check is not None:
-        return getattr(role_check, "role_name", None) == role
-    left = getattr(condition, "left", None)
-    right = getattr(condition, "right", None)
-    if left is not None or right is not None:
-        return _condition_matches_role(left, role) or _condition_matches_role(right, role)
-    return False
-
-
-def _condition_is_pure_role_only(condition: object) -> bool:
-    """Return True if condition is exclusively role_check nodes (no field comparisons)."""
-    if condition is None:
-        return False
-    if getattr(condition, "comparison", None) is not None:
-        return False
-    if getattr(condition, "grant_check", None) is not None:
-        return False
-    if getattr(condition, "role_check", None) is not None:
-        return True
-    left = getattr(condition, "left", None)
-    right = getattr(condition, "right", None)
-    if left is not None or right is not None:
-        left_pure = _condition_is_pure_role_only(left) if left is not None else True
-        right_pure = _condition_is_pure_role_only(right) if right is not None else True
-        return left_pure and right_pure
-    return False
-
-
-def _rule_matches_persona(rule: object, persona_id: str) -> bool:
-    """Return True if a PermissionRule applies to the given persona ID.
-
-    Personas whose ID matches a role name in the condition are treated as
-    having that role for the purpose of static contract generation.
-    """
-    personas = getattr(rule, "personas", [])
-    condition = getattr(rule, "condition", None)
-    if not personas:
-        if _condition_is_pure_role_only(condition):
-            return _condition_matches_role(condition, persona_id)
-        return True  # No restriction — open to all authenticated
-    if persona_id in personas:
-        return True
-    if _condition_matches_role(condition, persona_id):
-        return True
-    return False
-
-
-def _get_permitted_personas(
-    appspec: AppSpec, entity_name: str, operation: PermissionKind
-) -> list[str]:
-    """Return persona IDs that have a permit rule for the given operation."""
-    entity = next((e for e in appspec.domain.entities if e.name == entity_name), None)
-    if not entity or not entity.access:
-        return [p.id for p in appspec.personas]
-    permitted: set[str] = set()
-    for rule in entity.access.permissions:
-        if rule.operation == operation:
-            if rule.personas:
-                permitted.update(rule.personas)
-            else:
-                # Check if condition is a pure role gate
-                condition = getattr(rule, "condition", None)
-                if _condition_is_pure_role_only(condition):
-                    # Only personas whose ID matches a role in the condition
-                    for p in appspec.personas:
-                        if _condition_matches_role(condition, p.id):
-                            permitted.add(p.id)
-                else:
-                    return [p.id for p in appspec.personas]
-    return list(permitted)
-
-
 def generate_contracts(appspec: AppSpec) -> list[Contract]:
-    """Generate the full set of UX contracts from an AppSpec."""
+    """Generate the full set of UX contracts from an AppSpec.
+
+    Reads from ``appspec.triples`` (the pre-computed VerifiableTriple list)
+    and maps each triple to the appropriate Contract subclass.  RBAC contracts
+    are derived from the permission helpers in ``dazzle.core.ir.triples``.
+    Workspace contracts are generated directly from the appspec (workspaces
+    don't participate in the triple model).
+    """
     from dazzle.core.ir.domain import PermissionKind
+    from dazzle.core.ir.triples import get_permitted_personas
 
     contracts: list[Contract] = []
 
-    # Map entity names → their surfaces (skip framework entities)
-    entity_surfaces: dict[str, list] = {}
-    for surface in appspec.surfaces:
-        if surface.entity_ref and surface.entity_ref not in _FRAMEWORK_ENTITIES:
-            entity_surfaces.setdefault(surface.entity_ref, []).append(surface)
+    # Track which entities have already emitted each CRUD contract kind
+    # to avoid duplicates when multiple surfaces exist for the same entity.
+    seen_list: set[tuple[str, str]] = set()  # (entity, surface)
+    seen_create: set[str] = set()
+    seen_edit: set[str] = set()
+    seen_detail: set[str] = set()
+    seen_rbac_entities: set[str] = set()
 
-    for entity in appspec.domain.entities:
-        if entity.name in _FRAMEWORK_ENTITIES:
-            continue
-        surfaces = entity_surfaces.get(entity.name, [])
-        if not surfaces:
-            continue
+    for triple in appspec.triples:
+        entity_name = triple.entity
+        surface_name = triple.surface
+        mode = (
+            str(triple.surface_mode.value)
+            if hasattr(triple.surface_mode, "value")
+            else str(triple.surface_mode)
+        )
 
-        # Collect non-auto, non-id field info
-        all_fields: list[str] = []
-        required_fields: list[str] = []
-        editable_fields: list[str] = []
-        for f in entity.fields:
-            if f.name == "id":
-                continue
-            modifiers = [str(m) for m in (f.modifiers or [])]
-            if "auto_add" in modifiers or "auto_update" in modifiers:
-                continue
-            # FK reference fields render as search-selects, not plain inputs.
-            # Detect by ref_entity attribute OR _id suffix convention.
-            ref_entity = getattr(f.type, "ref_entity", None)
-            is_fk = ref_entity is not None or (f.name.endswith("_id") and f.name != "id")
-            all_fields.append(f.name)
-            if "required" in modifiers and not is_fk:
-                required_fields.append(f.name)
-            if not is_fk:
-                editable_fields.append(f.name)
+        # Derive field lists from the triple's field metadata
+        all_fields = [f.field_name for f in triple.fields]
+        required_fields = [f.field_name for f in triple.fields if f.is_required and not f.is_fk]
+        editable_fields = [f.field_name for f in triple.fields if not f.is_fk]
 
-        # ListPageContract — one per list-mode surface
-        for surface_spec in surfaces:
-            mode = (
-                str(surface_spec.mode.value)
-                if hasattr(surface_spec.mode, "value")
-                else str(surface_spec.mode)
-            )
-            if mode == "list":
-                # Collect field names from sections
-                section_fields: list[str] = []
-                for section in getattr(surface_spec, "sections", []):
-                    for elem in getattr(section, "elements", []):
-                        fname = getattr(elem, "field_name", None) or getattr(elem, "name", None)
-                        if fname:
-                            section_fields.append(fname)
+        # ListPageContract — one per (entity, surface) with list mode
+        if mode == "list":
+            key = (entity_name, surface_name)
+            if key not in seen_list:
+                seen_list.add(key)
                 contracts.append(
                     ListPageContract(
-                        entity=entity.name,
-                        surface=surface_spec.name,
-                        fields=section_fields if section_fields else all_fields,
+                        entity=entity_name,
+                        surface=surface_name,
+                        fields=all_fields,
                     )
                 )
 
-        # Determine which surface modes exist for this entity
-        surface_modes = {
-            str(s.mode.value) if hasattr(s.mode, "value") else str(s.mode) for s in surfaces
-        }
-
-        # CreateFormContract — only if entity has a create surface
-        if "create" in surface_modes:
+        # CreateFormContract — one per entity with a create surface
+        if mode == "create" and entity_name not in seen_create:
+            seen_create.add(entity_name)
             contracts.append(
                 CreateFormContract(
-                    entity=entity.name,
+                    entity=entity_name,
                     required_fields=required_fields,
                     all_fields=all_fields,
                 )
             )
 
-        # EditFormContract — only if entity has an edit surface
-        if "edit" in surface_modes:
+        # EditFormContract — one per entity with an edit surface
+        if mode == "edit" and entity_name not in seen_edit:
+            seen_edit.add(entity_name)
             contracts.append(
                 EditFormContract(
-                    entity=entity.name,
+                    entity=entity_name,
                     editable_fields=editable_fields,
                 )
             )
 
-        # DetailViewContract — only if entity has a view surface
-        if "view" in surface_modes:
+        # DetailViewContract — one per entity with a view surface
+        if mode == "view" and entity_name not in seen_detail:
+            seen_detail.add(entity_name)
+
+            # Look up entity for state machine transitions
+            entity_spec = appspec.get_entity(entity_name)
             transitions: list[str] = []
-            if entity.state_machine:
-                for t in entity.state_machine.transitions:
+            if entity_spec and entity_spec.state_machine:
+                for t in entity_spec.state_machine.transitions:
                     from_s = t.from_state if isinstance(t.from_state, str) else t.from_state.name
                     to_s = t.to_state if isinstance(t.to_state, str) else t.to_state.name
                     transitions.append(f"{from_s}\u2192{to_s}")
 
-            has_edit = bool(_get_permitted_personas(appspec, entity.name, PermissionKind.UPDATE))
-            has_delete = bool(_get_permitted_personas(appspec, entity.name, PermissionKind.DELETE))
+            has_edit = bool(
+                get_permitted_personas(
+                    appspec.domain.entities, appspec.personas, entity_name, PermissionKind.UPDATE
+                )
+            )
+            has_delete = bool(
+                get_permitted_personas(
+                    appspec.domain.entities, appspec.personas, entity_name, PermissionKind.DELETE
+                )
+            )
 
             contracts.append(
                 DetailViewContract(
-                    entity=entity.name,
+                    entity=entity_name,
                     fields=all_fields,
                     has_edit=has_edit,
                     has_delete=has_delete,
@@ -397,26 +315,32 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
                 )
             )
 
-        # RBACContract — one per entity × persona × operation
-        all_personas = [p.id for p in appspec.personas]
-        for operation in (
-            PermissionKind.LIST,
-            PermissionKind.CREATE,
-            PermissionKind.UPDATE,
-            PermissionKind.DELETE,
-        ):
-            permitted = set(_get_permitted_personas(appspec, entity.name, operation))
-            for pid in all_personas:
-                contracts.append(
-                    RBACContract(
-                        entity=entity.name,
-                        persona=pid,
-                        operation=str(operation),
-                        expected_present=pid in permitted,
+        # RBACContract — one per entity × persona × operation (emitted once per entity)
+        if entity_name not in seen_rbac_entities:
+            seen_rbac_entities.add(entity_name)
+            all_persona_ids = [p.id for p in appspec.personas]
+            for operation in (
+                PermissionKind.LIST,
+                PermissionKind.CREATE,
+                PermissionKind.UPDATE,
+                PermissionKind.DELETE,
+            ):
+                permitted = set(
+                    get_permitted_personas(
+                        appspec.domain.entities, appspec.personas, entity_name, operation
                     )
                 )
+                for pid in all_persona_ids:
+                    contracts.append(
+                        RBACContract(
+                            entity=entity_name,
+                            persona=pid,
+                            operation=str(operation),
+                            expected_present=pid in permitted,
+                        )
+                    )
 
-    # WorkspaceContracts
+    # WorkspaceContracts — workspaces don't use triples
     for workspace in appspec.workspaces:
         region_names = [r.name for r in getattr(workspace, "regions", [])]
         contracts.append(
