@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.1] - 2026-03-28
+
+### Added
+- **UX Component Expansion — Phase 1 (Foundation)**: Infrastructure for expanding Dazzle's native UX component inventory
+  - Vendor HTMX extensions: `remove-me` (auto-dismiss), `class-tools` (timed CSS), `multi-swap` (multi-target), `path-deps` (auto-refresh)
+  - Vendor Alpine.js plugins: `@alpinejs/anchor` (Floating UI positioning), `@alpinejs/collapse` (smooth accordion), `@alpinejs/focus` (focus trapping)
+  - `dz-component-bridge.js`: Lifecycle bridge for vendored widgets across HTMX DOM swaps — mount/unmount/registerWidget API on `window.dz.bridge`
+  - `response_helpers.py`: Server-side `with_toast()` and `with_oob()` helpers for HTMX OOB swaps
+  - `asset_manifest.py`: Derives required vendor JS assets from surface field `widget:` hints for conditional loading
+  - `base.html`: `#dz-toast-container`, `#dz-modal-slot`, `#dz-dynamic-assets` container elements; conditional vendor asset loading block
+
+### Agent Guidance
+- Use `with_toast(response, message, level)` from `dazzle_back.runtime.response_helpers` to append auto-dismissing toast notifications to any HTMX response. Use `with_oob()` for generic OOB swaps.
+- Vendor widget libraries register via `window.dz.bridge.registerWidget(type, { mount, unmount })`. The bridge handles HTMX swap lifecycle automatically.
+- `collect_required_assets(surface)` from `asset_manifest.py` returns the set of vendor asset keys a page needs. Pass as `required_assets` in template context.
+
 ## [0.51.0] - 2026-03-28
 
 ### Added
