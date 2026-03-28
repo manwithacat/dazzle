@@ -8,3 +8,4 @@
    drawer base styles (which are also unlayered in dazzle-bundle.css).
    Layered styles always lose to unlayered styles in the CSS cascade. */
 @import "dz.css";
+@import "dz-widgets.css";

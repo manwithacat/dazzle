@@ -1,0 +1,209 @@
+/**
+ * dz-widgets.css — DaisyUI-aligned theme overrides for vendored widget libraries.
+ *
+ * Overrides default styles of Tom Select, Flatpickr, Pickr, and Quill
+ * to match DaisyUI v4 design tokens. Loaded conditionally via asset_manifest.
+ */
+
+/* ── Tom Select ──────────────────────────────────────────────────────── */
+
+.ts-wrapper {
+  font-family: inherit;
+}
+
+.ts-wrapper .ts-control {
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-btn, 0.5rem);
+  background-color: oklch(var(--b1));
+  color: oklch(var(--bc));
+  padding: 0.5rem 0.75rem;
+  min-height: 2.5rem;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease;
+}
+
+.ts-wrapper .ts-control:focus,
+.ts-wrapper.focus .ts-control {
+  border-color: oklch(var(--p));
+  outline: 2px solid oklch(var(--p) / 0.2);
+  outline-offset: 2px;
+}
+
+.ts-wrapper .ts-dropdown {
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-box, 1rem);
+  background-color: oklch(var(--b1));
+  color: oklch(var(--bc));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  margin-top: 4px;
+}
+
+.ts-wrapper .ts-dropdown .option {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.ts-wrapper .ts-dropdown .option.active {
+  background-color: oklch(var(--p) / 0.1);
+  color: oklch(var(--p));
+}
+
+.ts-wrapper .ts-dropdown .option:hover {
+  background-color: oklch(var(--b2));
+}
+
+/* Tag/chip styling for multi-select and tags mode */
+.ts-wrapper .ts-control .item {
+  background-color: oklch(var(--p) / 0.1);
+  color: oklch(var(--p));
+  border: none;
+  border-radius: var(--rounded-badge, 1.9rem);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.ts-wrapper .ts-control .item .remove {
+  border-left: none;
+  color: oklch(var(--p) / 0.5);
+}
+
+.ts-wrapper .ts-control .item .remove:hover {
+  color: oklch(var(--er));
+}
+
+/* ── Flatpickr ───────────────────────────────────────────────────────── */
+
+.flatpickr-calendar {
+  font-family: inherit;
+  background: oklch(var(--b1));
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-box, 1rem);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.flatpickr-months .flatpickr-month {
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+}
+
+.flatpickr-day {
+  color: oklch(var(--bc));
+  border-radius: var(--rounded-btn, 0.5rem);
+}
+
+.flatpickr-day:hover {
+  background: oklch(var(--b2));
+  border-color: oklch(var(--b2));
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  background: oklch(var(--p));
+  border-color: oklch(var(--p));
+  color: oklch(var(--pc));
+}
+
+.flatpickr-day.inRange {
+  background: oklch(var(--p) / 0.1);
+  border-color: oklch(var(--p) / 0.1);
+  box-shadow: -5px 0 0 oklch(var(--p) / 0.1), 5px 0 0 oklch(var(--p) / 0.1);
+}
+
+.flatpickr-day.today:not(.selected) {
+  border-color: oklch(var(--p));
+}
+
+.flatpickr-weekday {
+  color: oklch(var(--bc) / 0.5);
+  font-weight: 600;
+}
+
+/* ── Pickr ───────────────────────────────────────────────────────────── */
+
+.pickr .pcr-button {
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-btn, 0.5rem);
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.pcr-app {
+  font-family: inherit;
+  background: oklch(var(--b1));
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-box, 1rem);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.pcr-app .pcr-interaction input {
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-btn, 0.5rem);
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+  font-family: inherit;
+  font-size: 0.875rem;
+}
+
+.pcr-app .pcr-interaction .pcr-save {
+  background: oklch(var(--p));
+  color: oklch(var(--pc));
+  border-radius: var(--rounded-btn, 0.5rem);
+}
+
+/* ── Quill ───────────────────────────────────────────────────────────── */
+
+.ql-container {
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: oklch(var(--bc));
+}
+
+.ql-toolbar.ql-snow {
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-box, 1rem) var(--rounded-box, 1rem) 0 0;
+  background: oklch(var(--b2));
+  font-family: inherit;
+}
+
+.ql-container.ql-snow {
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-top: none;
+  border-radius: 0 0 var(--rounded-box, 1rem) var(--rounded-box, 1rem);
+  background: oklch(var(--b1));
+}
+
+.ql-snow .ql-picker-label {
+  color: oklch(var(--bc));
+}
+
+.ql-snow .ql-stroke {
+  stroke: oklch(var(--bc));
+}
+
+.ql-snow .ql-fill {
+  fill: oklch(var(--bc));
+}
+
+.ql-snow .ql-picker-options {
+  background: oklch(var(--b1));
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: var(--rounded-box, 1rem);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.ql-editor {
+  min-height: 8rem;
+  padding: 0.75rem 1rem;
+}
+
+.ql-editor.ql-blank::before {
+  color: oklch(var(--bc) / 0.4);
+  font-style: normal;
+}
