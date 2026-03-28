@@ -38,6 +38,7 @@ class DiagnosisKind(StrEnum):
     FIELD_MISSING = "field_missing"
     PERMISSION_GAP = "permission_gap"
     SURFACE_MISSING = "surface_missing"
+    TRIPLE_SUSPECT = "triple_suspect"
     TEMPLATE_BUG = "template_bug"
 
 
@@ -227,7 +228,37 @@ def reconcile(
             levers=[_field_lever(entity, surface)],
         )
 
-    # 5. Default fallback → TEMPLATE_BUG
+    # 5. Cross-check: is the triple itself suspect?
+    # Re-derive widget from raw entity field and compare to triple.
+    if triple is not None and isinstance(contract, (CreateFormContract, EditFormContract)):
+        field_name = getattr(contract, "field", None)
+        if field_name and triple.fields:
+            triple_field = next((f for f in triple.fields if f.field_name == field_name), None)
+            if triple_field:
+                raw_entity = next((e for e in appspec_entities if e.name == entity), None)
+                if raw_entity:
+                    raw_field = next((f for f in raw_entity.fields if f.name == field_name), None)
+                    if raw_field and raw_field.type:
+                        from dazzle.core.ir.triples import resolve_widget
+
+                        expected_widget = resolve_widget(raw_field)
+                        if str(expected_widget.value) != str(triple_field.widget.value):
+                            return Diagnosis(
+                                contract_id=contract.contract_id,
+                                kind=DiagnosisKind.TRIPLE_SUSPECT,
+                                triple=label,
+                                observation=(
+                                    f"Triple widget '{triple_field.widget}' disagrees with "
+                                    f"re-derived widget '{expected_widget}' for field "
+                                    f"'{field_name}'"
+                                ),
+                                expectation=(
+                                    "Triple derivation and raw entity should agree on widget type"
+                                ),
+                                levers=[],
+                            )
+
+    # 6. Default fallback → TEMPLATE_BUG
     return Diagnosis(
         contract_id=contract.contract_id,
         kind=DiagnosisKind.TEMPLATE_BUG,
