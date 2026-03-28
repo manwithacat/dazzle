@@ -786,6 +786,8 @@ __all__ = [
     "UXSpec",
     # Surfaces
     "BusinessPriority",
+    "RelatedDisplayMode",
+    "RelatedGroup",
     "SurfaceMode",
     "SurfaceTrigger",
     "OutcomeKind",

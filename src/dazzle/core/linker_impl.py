@@ -1007,9 +1007,9 @@ def validate_references(symbols: SymbolTable) -> list[str]:
 
                     # Check FK back to parent entity
                     if surface.entity_ref:
-                        ref_entity = symbols.entities[entity_in_show]
+                        related_entity = symbols.entities[entity_in_show]
                         has_fk = False
-                        for f in ref_entity.fields:
+                        for f in related_entity.fields:
                             if (
                                 f.type.kind == ir.FieldTypeKind.REF
                                 and f.type.ref_entity == surface.entity_ref

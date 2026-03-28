@@ -221,6 +221,7 @@ class SurfaceParserMixin:
         if not show:
             self.error("related block requires a 'show:' field with at least one entity")
 
+        assert display is not None  # narrowing for mypy (error() raises above)
         return ir.RelatedGroup(
             name=name,
             title=title,
