@@ -477,13 +477,14 @@ class TestRelatedEntityTabs:
         detail_ctx = contexts.get("/company/{id}")
         assert detail_ctx is not None
         assert detail_ctx.detail is not None
-        assert len(detail_ctx.detail.related_tabs) == 2
+        assert len(detail_ctx.detail.related_groups) == 1
+        assert len(detail_ctx.detail.related_groups[0].tabs) == 2
 
     def test_related_tab_labels(self):
         """Related tabs use the referenced entity's title."""
         appspec = self._make_hub_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         labels = {t.label for t in tabs}
         assert "Contact" in labels
         assert "Task" in labels
@@ -492,7 +493,7 @@ class TestRelatedEntityTabs:
         """Each tab stores the FK field name for filtering."""
         appspec = self._make_hub_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         for tab in tabs:
             assert tab.filter_field == "company"
 
@@ -500,7 +501,7 @@ class TestRelatedEntityTabs:
         """Each tab has the correct API endpoint for its entity."""
         appspec = self._make_hub_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         endpoints = {t.entity_name: t.api_endpoint for t in tabs}
         assert endpoints["Contact"] == "/contacts"
         assert endpoints["Task"] == "/tasks"
@@ -509,7 +510,7 @@ class TestRelatedEntityTabs:
         """Related tab columns exclude the FK field (company) and PK."""
         appspec = self._make_hub_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         contact_tab = next(t for t in tabs if t.entity_name == "Contact")
         col_keys = [c.key for c in contact_tab.columns]
         assert "company" not in col_keys
@@ -521,7 +522,7 @@ class TestRelatedEntityTabs:
         """Related tabs have a create URL."""
         appspec = self._make_hub_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         contact_tab = next(t for t in tabs if t.entity_name == "Contact")
         assert contact_tab.create_url == "/contact/create"
 
@@ -529,7 +530,7 @@ class TestRelatedEntityTabs:
         """Related tabs have a detail URL template."""
         appspec = self._make_hub_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         contact_tab = next(t for t in tabs if t.entity_name == "Contact")
         assert contact_tab.detail_url_template == "/contact/{id}"
 
@@ -560,7 +561,7 @@ class TestRelatedEntityTabs:
         contexts = compile_appspec_to_templates(appspec)
         detail_ctx = contexts["/contact/{id}"]
         assert detail_ctx.detail is not None
-        assert len(detail_ctx.detail.related_tabs) == 0
+        assert len(detail_ctx.detail.related_groups) == 0
 
     def test_compile_surface_to_context_with_reverse_refs(self):
         """compile_surface_to_context passes reverse_refs to view surfaces."""
@@ -579,8 +580,9 @@ class TestRelatedEntityTabs:
             reverse_refs=[("Contact", "company", contact)],
         )
         assert ctx.detail is not None
-        assert len(ctx.detail.related_tabs) == 1
-        assert ctx.detail.related_tabs[0].entity_name == "Contact"
+        assert len(ctx.detail.related_groups) == 1
+        assert len(ctx.detail.related_groups[0].tabs) == 1
+        assert ctx.detail.related_groups[0].tabs[0].entity_name == "Contact"
 
 
 def _audit_log_entity() -> ir.EntitySpec:
@@ -658,7 +660,7 @@ class TestPolymorphicFKTabs:
         detail_ctx = contexts.get("/company/{id}")
         assert detail_ctx is not None
         assert detail_ctx.detail is not None
-        tabs = detail_ctx.detail.related_tabs
+        tabs = detail_ctx.detail.related_groups[0].tabs
         audit_tabs = [t for t in tabs if t.entity_name == "AuditLog"]
         assert len(audit_tabs) == 1
 
@@ -669,7 +671,7 @@ class TestPolymorphicFKTabs:
         detail_ctx = contexts.get("/soletrader/{id}")
         assert detail_ctx is not None
         assert detail_ctx.detail is not None
-        tabs = detail_ctx.detail.related_tabs
+        tabs = detail_ctx.detail.related_groups[0].tabs
         audit_tabs = [t for t in tabs if t.entity_name == "AuditLog"]
         assert len(audit_tabs) == 1
 
@@ -677,7 +679,7 @@ class TestPolymorphicFKTabs:
         """Polymorphic tab stores the type discriminator field and value."""
         appspec = self._make_poly_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
         assert audit_tab.filter_type_field == "entity_type"
         assert audit_tab.filter_type_value == "company"
@@ -688,7 +690,7 @@ class TestPolymorphicFKTabs:
         appspec = self._make_poly_appspec()
         contexts = compile_appspec_to_templates(appspec)
         # SoleTrader should get type_value="sole_trader"
-        tabs = contexts["/soletrader/{id}"].detail.related_tabs
+        tabs = contexts["/soletrader/{id}"].detail.related_groups[0].tabs
         audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
         assert audit_tab.filter_type_value == "sole_trader"
 
@@ -696,7 +698,7 @@ class TestPolymorphicFKTabs:
         """Polymorphic tab columns exclude both entity_type and entity_id."""
         appspec = self._make_poly_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
         col_keys = [c.key for c in audit_tab.columns]
         assert "entity_type" not in col_keys
@@ -707,7 +709,7 @@ class TestPolymorphicFKTabs:
         """Polymorphic tab uses the correct API endpoint."""
         appspec = self._make_poly_appspec()
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
+        tabs = contexts["/company/{id}"].detail.related_groups[0].tabs
         audit_tab = next(t for t in tabs if t.entity_name == "AuditLog")
         assert audit_tab.api_endpoint == "/auditlogs"
 
@@ -747,8 +749,7 @@ class TestPolymorphicFKTabs:
             ],
         )
         contexts = compile_appspec_to_templates(appspec)
-        tabs = contexts["/company/{id}"].detail.related_tabs
-        assert len(tabs) == 0
+        assert len(contexts["/company/{id}"].detail.related_groups) == 0
 
     def test_compile_surface_to_context_with_poly_refs(self):
         """compile_surface_to_context passes poly_refs to view surfaces."""
@@ -767,8 +768,9 @@ class TestPolymorphicFKTabs:
             poly_refs=[("AuditLog", "entity_type", "entity_id", "company", audit)],
         )
         assert ctx.detail is not None
-        assert len(ctx.detail.related_tabs) == 1
-        tab = ctx.detail.related_tabs[0]
+        assert len(ctx.detail.related_groups) == 1
+        assert len(ctx.detail.related_groups[0].tabs) == 1
+        tab = ctx.detail.related_groups[0].tabs[0]
         assert tab.entity_name == "AuditLog"
         assert tab.filter_type_field == "entity_type"
         assert tab.filter_type_value == "company"
@@ -1141,3 +1143,98 @@ class TestRelatedGroupContext:
         assert group.display == "status_cards"
         assert len(group.tabs) == 1
         assert group.is_auto is False
+
+
+class TestRelatedGroupCompiler:
+    """Tests for related group compilation."""
+
+    def test_view_surface_with_related_groups(self):
+        """VIEW surface with related_groups produces RelatedGroupContext."""
+        company = _company_entity()
+        contact = _contact_entity()
+        task = _task_entity()
+        appspec = ir.AppSpec(
+            name="test_app",
+            title="Test App",
+            version="0.1.0",
+            domain=ir.DomainSpec(entities=[company, contact, task]),
+            surfaces=[
+                ir.SurfaceSpec(
+                    name="company_detail",
+                    title="Company Detail",
+                    entity_ref="Company",
+                    mode=SurfaceMode.VIEW,
+                    related_groups=[
+                        ir.RelatedGroup(
+                            name="people",
+                            title="People",
+                            display=ir.RelatedDisplayMode.STATUS_CARDS,
+                            show=["Contact"],
+                        ),
+                    ],
+                ),
+            ],
+        )
+        contexts = compile_appspec_to_templates(appspec)
+        detail_ctx = contexts["/company/{id}"]
+        assert len(detail_ctx.detail.related_groups) == 2
+        people_group = detail_ctx.detail.related_groups[0]
+        assert people_group.label == "People"
+        assert people_group.display == "status_cards"
+        assert people_group.is_auto is False
+        assert len(people_group.tabs) == 1
+        assert people_group.tabs[0].entity_name == "Contact"
+        other_group = detail_ctx.detail.related_groups[1]
+        assert other_group.display == "table"
+        assert other_group.is_auto is True
+        assert len(other_group.tabs) == 1
+        assert other_group.tabs[0].entity_name == "Task"
+
+    def test_view_surface_without_related_groups_auto_groups(self):
+        """VIEW surface without related_groups auto-groups all tabs."""
+        company = _company_entity()
+        contact = _contact_entity()
+        task = _task_entity()
+        appspec = ir.AppSpec(
+            name="test_app",
+            title="Test App",
+            version="0.1.0",
+            domain=ir.DomainSpec(entities=[company, contact, task]),
+            surfaces=[
+                ir.SurfaceSpec(
+                    name="company_list",
+                    title="Companies",
+                    entity_ref="Company",
+                    mode=SurfaceMode.LIST,
+                    actions=[],
+                ),
+                ir.SurfaceSpec(
+                    name="company_detail",
+                    title="Company Detail",
+                    entity_ref="Company",
+                    mode=SurfaceMode.VIEW,
+                    actions=[],
+                ),
+                ir.SurfaceSpec(
+                    name="contact_list",
+                    title="Contacts",
+                    entity_ref="Contact",
+                    mode=SurfaceMode.LIST,
+                    actions=[],
+                ),
+                ir.SurfaceSpec(
+                    name="task_list",
+                    title="Tasks",
+                    entity_ref="Task",
+                    mode=SurfaceMode.LIST,
+                    actions=[],
+                ),
+            ],
+        )
+        contexts = compile_appspec_to_templates(appspec)
+        detail_ctx = contexts["/company/{id}"]
+        assert len(detail_ctx.detail.related_groups) == 1
+        auto_group = detail_ctx.detail.related_groups[0]
+        assert auto_group.is_auto is True
+        assert auto_group.display == "table"
+        assert len(auto_group.tabs) == 2

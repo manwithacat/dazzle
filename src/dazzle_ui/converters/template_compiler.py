@@ -25,6 +25,7 @@ from dazzle_ui.runtime.template_context import (
     FormSectionContext,
     NavItemContext,
     PageContext,
+    RelatedGroupContext,
     RelatedTabContext,
     ReviewActionContext,
     ReviewContext,
@@ -832,6 +833,46 @@ def _compile_view_surface(
             )
         )
 
+    # Group related tabs by surface-declared related groups
+    related_groups_ctx: list[RelatedGroupContext] = []
+    if surface.related_groups:
+        claimed: set[str] = set()
+        for group in surface.related_groups:
+            group_tabs = [t for t in related_tabs if t.entity_name in group.show]
+            claimed.update(group.show)
+            if group_tabs:
+                related_groups_ctx.append(
+                    RelatedGroupContext(
+                        group_id=f"group-{group.name}",
+                        label=group.title or group.name.replace("_", " ").title(),
+                        display=group.display.value,
+                        tabs=group_tabs,
+                    )
+                )
+        # Auto-group unclaimed tabs into "Other"
+        unclaimed = [t for t in related_tabs if t.entity_name not in claimed]
+        if unclaimed:
+            related_groups_ctx.append(
+                RelatedGroupContext(
+                    group_id="group-other",
+                    label="Other",
+                    display="table",
+                    tabs=unclaimed,
+                    is_auto=True,
+                )
+            )
+    elif related_tabs:
+        # No related groups declared — auto-group everything
+        related_groups_ctx.append(
+            RelatedGroupContext(
+                group_id="group-auto",
+                label="Related",
+                display="table",
+                tabs=related_tabs,
+                is_auto=True,
+            )
+        )
+
     # Build external link actions from surface actions with EXTERNAL outcomes
     external_links: list[ExternalLinkAction] = []
     for action in surface.actions:
@@ -859,7 +900,7 @@ def _compile_view_surface(
             back_url=f"{app_prefix}/{entity_slug}",
             transitions=transitions,
             status_field=status_field,
-            related_tabs=related_tabs,
+            related_groups=related_groups_ctx,
             external_link_actions=external_links,
         ),
     )
