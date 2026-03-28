@@ -35,27 +35,33 @@ Parse the output to extract: total contracts, passed, failed, pending, and each 
 
 ## Step 2: Classify Each Failure
 
-For each failed contract, fetch the actual HTML and determine the category:
+For each failed contract, run the reconciler to get a structured diagnosis:
 
-| Category | Signal | Action |
-|----------|--------|--------|
-| **Checker calibration** | HTML has the element but checker assertion is wrong (wrong selector, wrong attribute name) | Fix `contract_checker.py` |
-| **Contract generation** | Wrong persona, missing surface mode gate, incorrect permission derivation | Fix `contracts.py` |
-| **CLI routing** | 403 because wrong persona authenticated, entity ID not found | Fix `ux.py` |
-| **Template bug** | HTML genuinely missing the element the DSL says should be there | Fix the template in `src/dazzle_ui/` |
-| **Permission model gap** | DSL says permitted but template doesn't render the action | Investigate DSL vs template, fix whichever is wrong |
-| **Genuine framework issue** | Unfixable without major work | File GitHub issue, skip |
-
-### How to classify
-
-For each failure, run:
 ```python
-# Fetch the actual page HTML
+from dazzle.testing.ux.reconciler import reconcile
+
+diagnosis = reconcile(contract, triple, html, appspec.domain.entities, appspec.surfaces)
+# diagnosis.kind → category (WIDGET_MISMATCH, ACTION_MISSING, TEMPLATE_BUG, etc.)
+# diagnosis.levers → specific DSL changes to fix the issue
+# diagnosis.category → maps to fix strategy below
+```
+
+The reconciler replaces manual classification. Read `diagnosis.levers` for the specific DSL construct and suggested value.
+
+| Category | diagnosis.kind | Action |
+|----------|---------------|--------|
+| **DSL fix** | `ACTION_MISSING`, `PERMISSION_GAP`, `SURFACE_MISSING`, `WIDGET_MISMATCH` | Apply `diagnosis.levers` suggestion to DSL file |
+| **Contract calibration** | `ACTION_UNEXPECTED`, `FIELD_MISSING` | Fix contract generation or checker |
+| **Template bug** | `TEMPLATE_BUG` | Fix template in `src/dazzle_ui/`, or file GitHub issue |
+
+### Fallback: manual classification
+
+If the reconciler doesn't produce a useful diagnosis (e.g. empty levers for a non-template issue), fall back to manual investigation:
+
+```python
 import httpx
 resp = httpx.get(url, cookies=session_cookie)
-# Search for the expected element
-# If found with different attribute → checker calibration
-# If not found at all → template bug or permission gap
+# Search for the expected element in HTML
 ```
 
 Use a subagent to investigate multiple failures in parallel when there are 3+.
