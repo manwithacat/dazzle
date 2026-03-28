@@ -87,7 +87,7 @@ surface showcase_create "Create Showcase":
     field is_featured "Featured (checkbox)"
   section date_inputs:
     field start_date "Start Date (date)" widget=picker
-    field end_date "End Date (date)" widget=range
+    field end_date "End Date (date)" widget=picker
     field due_datetime "Due (datetime)" widget=picker
   section numeric_inputs:
     field priority "Priority (number)" widget=slider
@@ -133,7 +133,7 @@ surface showcase_edit "Edit Showcase":
     field is_featured "Featured"
   section dates:
     field start_date "Start Date" widget=picker
-    field end_date "End Date" widget=range
+    field end_date "End Date" widget=picker
     field due_datetime "Due" widget=picker
   section numeric:
     field priority "Priority" widget=slider

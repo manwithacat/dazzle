@@ -229,11 +229,11 @@ surface project_detail "Project Detail":
   mode: view
   section main:
     field name "Name"
-    field description "Description" widget=rich_text
-    field owner "Owner" widget=combobox
+    field description "Description"
+    field owner "Owner"
     field status "Status"
-    field start_date "Start" widget=picker
-    field target_date "Target" widget=picker
+    field start_date "Start"
+    field target_date "Target"
 
   related tasks "Tasks":
     display: table
@@ -250,9 +250,9 @@ surface task_list "Tasks":
     field title "Title"
     field status "Status"
     field priority "Priority"
-    field assigned_to "Assignee" widget=combobox
-    field due_date "Due" widget=picker
-    field labels "Labels" widget=tags
+    field assigned_to "Assignee"
+    field due_date "Due"
+    field labels "Labels"
 
 surface task_create "New Task":
   uses entity Task
@@ -274,12 +274,12 @@ surface task_detail "Task Detail":
   mode: view
   section main:
     field title "Title"
-    field description "Description" widget=rich_text
+    field description "Description"
     field status "Status"
     field priority "Priority"
-    field assigned_to "Assignee" widget=combobox
-    field due_date "Due Date" widget=picker
-    field labels "Labels" widget=tags
+    field assigned_to "Assignee"
+    field due_date "Due Date"
+    field labels "Labels"
     field estimated_hours "Estimate"
 
   related comments "Discussion":
@@ -317,3 +317,33 @@ surface comment_create "Add Comment":
   mode: create
   section main:
     field body "Comment" widget=rich_text
+
+surface project_edit "Edit Project":
+  uses entity Project
+  mode: edit
+  section details:
+    field name "Project Name"
+    field description "Description" widget=rich_text
+    field owner "Owner" widget=combobox
+    field start_date "Start Date" widget=picker
+    field target_date "Target Date" widget=picker
+
+surface milestone_list "Milestones":
+  uses entity Milestone
+  mode: list
+  section main:
+    field name "Name"
+    field status "Status"
+    field parent_project "Project"
+    field start_date "Start"
+    field end_date "End"
+
+surface milestone_edit "Edit Milestone":
+  uses entity Milestone
+  mode: edit
+  section main:
+    field name "Name"
+    field description "Description" widget=rich_text
+    field status "Status"
+    field start_date "Start Date" widget=picker
+    field end_date "End Date" widget=picker

@@ -178,10 +178,10 @@ surface brand_detail "Brand Detail":
   mode: view
   section main:
     field name "Name"
-    field description "Description" widget=rich_text
-    field primary_color "Primary" widget=color
-    field secondary_color "Secondary" widget=color
-    field accent_color "Accent" widget=color
+    field description "Description"
+    field primary_color "Primary"
+    field secondary_color "Secondary"
+    field accent_color "Accent"
 
   related assets "Assets":
     display: status_cards
@@ -198,9 +198,9 @@ surface asset_list "Assets":
     field name "Name"
     field asset_type "Type"
     field status "Status"
-    field brand "Brand" widget=combobox
-    field tags "Tags" widget=tags
-    field quality_score "Quality" widget=slider
+    field brand "Brand"
+    field tags "Tags"
+    field quality_score "Quality"
 
 surface asset_create "New Asset":
   uses entity Asset
@@ -220,12 +220,12 @@ surface asset_detail "Asset Detail":
   mode: view
   section main:
     field name "Name"
-    field description "Description" widget=rich_text
+    field description "Description"
     field asset_type "Type"
     field status "Status"
-    field brand "Brand" widget=combobox
-    field tags "Tags" widget=tags
-    field quality_score "Quality" widget=slider
+    field brand "Brand"
+    field tags "Tags"
+    field quality_score "Quality"
 
   related feedback "Feedback":
     display: table
@@ -257,11 +257,11 @@ surface campaign_detail "Campaign Detail":
   mode: view
   section main:
     field name "Name"
-    field description "Brief" widget=rich_text
-    field brand "Brand" widget=combobox
+    field description "Brief"
+    field brand "Brand"
     field status "Status"
-    field start_date "Start" widget=picker
-    field end_date "End" widget=picker
+    field start_date "Start"
+    field end_date "End"
     field budget "Budget"
 
 surface feedback_create "Add Feedback":
@@ -270,3 +270,36 @@ surface feedback_create "Add Feedback":
   section main:
     field rating "Rating" widget=slider
     field comment "Comment" widget=rich_text
+
+surface brand_edit "Edit Brand":
+  uses entity Brand
+  mode: edit
+  section identity:
+    field name "Brand Name"
+    field description "Description" widget=rich_text
+  section colors:
+    field primary_color "Primary Color" widget=color
+    field secondary_color "Secondary Color" widget=color
+    field accent_color "Accent Color" widget=color
+
+surface campaign_list "Campaigns":
+  uses entity Campaign
+  mode: list
+  section main:
+    field name "Name"
+    field brand "Brand"
+    field status "Status"
+    field start_date "Start"
+    field end_date "End"
+
+surface campaign_edit "Edit Campaign":
+  uses entity Campaign
+  mode: edit
+  section details:
+    field name "Campaign Name"
+    field description "Brief" widget=rich_text
+    field brand "Brand" widget=combobox
+  section schedule:
+    field start_date "Start Date" widget=picker
+    field end_date "End Date" widget=picker
+    field budget "Budget"
