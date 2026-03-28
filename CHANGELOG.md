@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-03-28
+
+### Added
+- **Related Display Intent**: `related` DSL block on `mode: view` surfaces for grouped, mode-specific related entity presentation
+  - `RelatedDisplayMode` enum: `table`, `status_cards`, `file_list` (closed, extensible per minor version)
+  - `RelatedGroup` IR type: name, title, display mode, entity list — validated at link time
+  - Parser: `related name "Title": display: mode; show: Entity1, Entity2` syntax
+  - Linker validation: entity existence, FK path to parent, no duplicates across groups, view-mode only
+  - `RelatedGroupContext` replaces flat `related_tabs` on `DetailContext`
+  - Template compiler groups tabs by declared groups; ungrouped entities auto-collect into "Other" with `display: table`
+  - Three fragment templates: `related_table_group.html`, `related_status_cards.html`, `related_file_list.html`
+  - `VerifiableTriple.related_groups` for contract verification of detail page layout
+
+### Agent Guidance
+- Use `related` blocks on `mode: view` surfaces to control how related entities appear on detail pages. Without them, behavior is unchanged (all reverse-FK entities as table tabs). With them, named entities render with declared display modes; unlisted entities auto-group into "Other".
+
 ## [0.50.0] - 2026-03-28
 
 ### Added
