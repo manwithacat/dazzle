@@ -24,7 +24,7 @@ of the testing layer.
 from collections.abc import Sequence
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from dazzle.core.ir.fields import FieldSpec, FieldTypeKind
 
@@ -456,6 +456,7 @@ class VerifiableTriple(BaseModel):
     surface_mode: object  # SurfaceMode — typed as object to avoid import cycle
     actions: list[str]
     fields: list[SurfaceFieldTriple]
+    related_groups: list[str] = Field(default_factory=list)
 
 
 def _resolve_surface_fields(
@@ -580,6 +581,8 @@ def derive_triples(
             fields = _resolve_surface_fields(entity, surface)
             actions = resolve_surface_actions(entity, surface, surfaces, personas, entities)
 
+            surface_related_groups = [g.name for g in getattr(surface, "related_groups", [])]
+
             for persona in personas:
                 persona_id: str = getattr(persona, "id", str(persona))
                 # Filter actions to those visible to this persona
@@ -595,6 +598,7 @@ def derive_triples(
                         surface_mode=surface_mode,
                         actions=persona_actions,
                         fields=fields,
+                        related_groups=surface_related_groups,
                     )
                 )
 

@@ -917,3 +917,201 @@ class TestEnumFilterLabels:
         ftype, opts = _infer_filter_type(field, None, "status", enums=[enum_spec])
         assert opts[0] == {"value": "in_progress", "label": "In Progress"}
         assert opts[1] == {"value": "done", "label": "Done"}  # fallback
+
+
+class TestRelatedGroupValidation:
+    """Tests for related group validation in the linker."""
+
+    def test_related_group_unknown_entity(self):
+        """Related group referencing unknown entity produces validation error."""
+        from dazzle.core.linker_impl import SymbolTable, validate_references
+
+        surface = ir.SurfaceSpec(
+            name="contact_detail",
+            title="Contact Detail",
+            entity_ref="Contact",
+            mode=ir.SurfaceMode.VIEW,
+            related_groups=[
+                ir.RelatedGroup(
+                    name="compliance",
+                    title="Compliance",
+                    display=ir.RelatedDisplayMode.STATUS_CARDS,
+                    show=["NonExistentEntity"],
+                ),
+            ],
+        )
+        contact = _contact_entity()
+        symbols = SymbolTable()
+        symbols.add_entity(contact, "test")
+        symbols.add_surface(surface, "test")
+        errors = validate_references(symbols)
+        assert any("NonExistentEntity" in e and "unknown entity" in e.lower() for e in errors)
+
+    def test_related_group_no_fk_to_parent(self):
+        """Related group entity without FK to surface entity produces error."""
+        from dazzle.core.linker_impl import SymbolTable, validate_references
+
+        standalone = ir.EntitySpec(
+            name="Standalone",
+            title="Standalone",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(name="value", type=ir.FieldType(kind=ir.FieldTypeKind.STR)),
+            ],
+        )
+        contact = _contact_entity()
+        surface = ir.SurfaceSpec(
+            name="contact_detail",
+            title="Contact Detail",
+            entity_ref="Contact",
+            mode=ir.SurfaceMode.VIEW,
+            related_groups=[
+                ir.RelatedGroup(
+                    name="misc",
+                    title="Misc",
+                    display=ir.RelatedDisplayMode.TABLE,
+                    show=["Standalone"],
+                ),
+            ],
+        )
+        symbols = SymbolTable()
+        symbols.add_entity(contact, "test")
+        symbols.add_entity(standalone, "test")
+        symbols.add_surface(surface, "test")
+        errors = validate_references(symbols)
+        assert any("Standalone" in e and "no FK" in e.lower() for e in errors)
+
+    def test_related_group_duplicate_entity(self):
+        """Same entity in two related groups produces validation error."""
+        from dazzle.core.linker_impl import SymbolTable, validate_references
+
+        tax_return = ir.EntitySpec(
+            name="TaxReturn",
+            title="Tax Return",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="contact",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Contact"),
+                ),
+            ],
+        )
+        contact = _contact_entity()
+        surface = ir.SurfaceSpec(
+            name="contact_detail",
+            title="Contact Detail",
+            entity_ref="Contact",
+            mode=ir.SurfaceMode.VIEW,
+            related_groups=[
+                ir.RelatedGroup(
+                    name="a", title="A", display=ir.RelatedDisplayMode.TABLE, show=["TaxReturn"]
+                ),
+                ir.RelatedGroup(
+                    name="b", title="B", display=ir.RelatedDisplayMode.TABLE, show=["TaxReturn"]
+                ),
+            ],
+        )
+        symbols = SymbolTable()
+        symbols.add_entity(contact, "test")
+        symbols.add_entity(tax_return, "test")
+        symbols.add_surface(surface, "test")
+        errors = validate_references(symbols)
+        assert any(
+            "TaxReturn" in e and ("duplicate" in e.lower() or "appears in both" in e.lower())
+            for e in errors
+        )
+
+    def test_related_group_on_non_view_surface(self):
+        """Related group on a list surface produces validation error."""
+        from dazzle.core.linker_impl import SymbolTable, validate_references
+
+        contact = _contact_entity()
+        surface = ir.SurfaceSpec(
+            name="contact_list",
+            title="Contacts",
+            entity_ref="Contact",
+            mode=ir.SurfaceMode.LIST,
+            related_groups=[
+                ir.RelatedGroup(
+                    name="a", title="A", display=ir.RelatedDisplayMode.TABLE, show=["TaxReturn"]
+                ),
+            ],
+        )
+        symbols = SymbolTable()
+        symbols.add_entity(contact, "test")
+        symbols.add_surface(surface, "test")
+        errors = validate_references(symbols)
+        assert any("related" in e.lower() and "view" in e.lower() for e in errors)
+
+
+class TestTripleRelatedGroups:
+    """Tests for related_groups on VerifiableTriple."""
+
+    def test_triple_includes_related_groups(self):
+        """VerifiableTriple includes related_groups from surface."""
+        from dazzle.core.ir.triples import derive_triples
+
+        contact = _contact_entity()
+        tax_return = ir.EntitySpec(
+            name="TaxReturn",
+            title="Tax Return",
+            fields=[
+                ir.FieldSpec(name="id", type=ir.FieldType(kind=ir.FieldTypeKind.UUID)),
+                ir.FieldSpec(
+                    name="contact",
+                    type=ir.FieldType(kind=ir.FieldTypeKind.REF, ref_entity="Contact"),
+                ),
+            ],
+        )
+        surface = ir.SurfaceSpec(
+            name="contact_detail",
+            title="Contact Detail",
+            entity_ref="Contact",
+            mode=ir.SurfaceMode.VIEW,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[
+                        ir.SurfaceElement(field_name="full_name"),
+                    ],
+                ),
+            ],
+            related_groups=[
+                ir.RelatedGroup(
+                    name="compliance",
+                    title="Compliance",
+                    display=ir.RelatedDisplayMode.STATUS_CARDS,
+                    show=["TaxReturn"],
+                ),
+            ],
+        )
+        persona = ir.PersonaSpec(id="admin", label="Admin")
+
+        triples = derive_triples([contact, tax_return], [surface], [persona])
+        triple = next(t for t in triples if t.surface == "contact_detail")
+        assert triple.related_groups == ["compliance"]
+
+    def test_triple_empty_related_groups_when_no_groups(self):
+        """VerifiableTriple has empty related_groups when surface has none."""
+        from dazzle.core.ir.triples import derive_triples
+
+        contact = _contact_entity()
+        surface = ir.SurfaceSpec(
+            name="contact_detail",
+            title="Contact Detail",
+            entity_ref="Contact",
+            mode=ir.SurfaceMode.VIEW,
+            sections=[
+                ir.SurfaceSection(
+                    name="main",
+                    elements=[
+                        ir.SurfaceElement(field_name="full_name"),
+                    ],
+                ),
+            ],
+        )
+        persona = ir.PersonaSpec(id="admin", label="Admin")
+
+        triples = derive_triples([contact], [surface], [persona])
+        triple = next(t for t in triples if t.surface == "contact_detail")
+        assert triple.related_groups == []
