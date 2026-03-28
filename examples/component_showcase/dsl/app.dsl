@@ -78,24 +78,24 @@ surface showcase_create "Create Showcase":
   mode: create
   section text_inputs:
     field title "Plain Text Input"
-    field description "Rich Text (textarea)"
-    field notes "Notes (textarea)"
+    field description "Rich Text (textarea)" widget=rich_text
+    field notes "Notes (textarea)" widget=rich_text
   section selection_inputs:
     field status "Status (select)"
     field category "Category (select)"
-    field assigned_to "Assigned To (ref)"
+    field assigned_to "Assigned To (ref)" widget=combobox
     field is_featured "Featured (checkbox)"
   section date_inputs:
-    field start_date "Start Date (date)"
-    field end_date "End Date (date)"
-    field due_datetime "Due (datetime)"
+    field start_date "Start Date (date)" widget=picker
+    field end_date "End Date (date)" widget=range
+    field due_datetime "Due (datetime)" widget=picker
   section numeric_inputs:
-    field priority "Priority (number)"
-    field rating "Rating (number)"
+    field priority "Priority (number)" widget=slider
+    field rating "Rating (number)" widget=slider
     field budget "Budget (decimal)"
   section other_inputs:
-    field color_hex "Color Hex (text)"
-    field tags "Tags (text)"
+    field color_hex "Color Hex (text)" widget=color
+    field tags "Tags (text)" widget=tags
     field attachment "Attachment (file)"
 
 surface showcase_detail "Showcase Detail":
@@ -124,24 +124,24 @@ surface showcase_edit "Edit Showcase":
   mode: edit
   section text_inputs:
     field title "Title"
-    field description "Description"
-    field notes "Notes"
+    field description "Description" widget=rich_text
+    field notes "Notes" widget=rich_text
   section selection_inputs:
     field status "Status"
     field category "Category"
-    field assigned_to "Assigned To"
+    field assigned_to "Assigned To" widget=combobox
     field is_featured "Featured"
   section dates:
-    field start_date "Start Date"
-    field end_date "End Date"
-    field due_datetime "Due"
+    field start_date "Start Date" widget=picker
+    field end_date "End Date" widget=range
+    field due_datetime "Due" widget=picker
   section numeric:
-    field priority "Priority"
-    field rating "Rating"
+    field priority "Priority" widget=slider
+    field rating "Rating" widget=slider
     field budget "Budget"
   section other:
-    field color_hex "Color"
-    field tags "Tags"
+    field color_hex "Color" widget=color
+    field tags "Tags" widget=tags
 
 # ── Workspace ────────────────────────────────────────────────────────
 
