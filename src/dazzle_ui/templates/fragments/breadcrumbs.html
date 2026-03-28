@@ -1,0 +1,17 @@
+{# Breadcrumb navigation trail — DaisyUI breadcrumbs component #}
+{# Parameters: crumbs (list of Crumb objects with .label and .url) #}
+{% if crumbs and crumbs | length > 1 %}
+<div class="breadcrumbs text-sm" aria-label="Breadcrumb">
+  <ul>
+    {% for crumb in crumbs %}
+    <li>
+      {% if crumb.url %}
+      <a href="{{ crumb.url }}" hx-get="{{ crumb.url }}" hx-push-url="true" hx-target="body">{{ crumb.label }}</a>
+      {% else %}
+      <span aria-current="page">{{ crumb.label }}</span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
