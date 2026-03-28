@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.8] - 2026-03-28
+
+### Fixed
+- **component_showcase**: `widget=range` on `end_date` (date field) changed to `widget=picker` — range picker returns unparseable string for date columns
+- **All examples**: Removed no-op `widget=` annotations from `mode: view` and `mode: list` surfaces — detail_view.html and filterable_table.html do not check `field.widget`
+- **project_tracker**: Added missing `project_edit`, `milestone_list`, `milestone_edit` surfaces — previously had broken Edit button (404)
+- **design_studio**: Added missing `brand_edit`, `campaign_list`, `campaign_edit` surfaces — previously couldn't update brands or browse campaigns
+
+### Agent Guidance
+- `widget=` annotations are only effective on `mode: create` and `mode: edit` surfaces. Do not add them to `mode: view` or `mode: list` surfaces — the templates ignore them.
+- `widget=range` (date range picker) should only be used on `str` fields, not `date` fields. A date range returns a compound string ("YYYY-MM-DD to YYYY-MM-DD") that cannot be stored in a scalar date column.
+
 ## [0.51.7] - 2026-03-28
 
 ### Fixed
