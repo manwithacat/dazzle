@@ -50,9 +50,9 @@ def _has_tag_with_attr(tags: Tags, tag: str, attr: str, value: str) -> bool:
 def _check_list_page(contract: ListPageContract, tags: Tags) -> list[str]:
     errors: list[str] = []
 
-    # Must have <table data-dazzle-table="Entity">
-    if not _has_tag_with_attr(tags, "table", "data-dazzle-table", contract.entity):
-        errors.append(f'Missing <table data-dazzle-table="{contract.entity}"> for list page')
+    # Must have data-dazzle-table="Entity" (on a container div, not the table itself)
+    if not _has_attr_containing(tags, "data-dazzle-table", contract.entity):
+        errors.append(f'Missing element with data-dazzle-table="{contract.entity}" for list page')
 
     # Must have at least one row with hx-get (clickable row)
     if not _has_attr_containing(tags, "hx-get", f"/app/{contract.entity.lower()}/"):
@@ -108,9 +108,10 @@ def _check_create_form(contract: CreateFormContract, tags: Tags) -> list[str]:
 def _check_edit_form(contract: EditFormContract, tags: Tags) -> list[str]:
     errors: list[str] = []
 
-    # Must have <form> with hx-post
-    if not _has_attr_containing(tags, "hx-post", ""):
-        errors.append("Missing <form> with hx-post attribute")
+    # Must have <form> with hx-post or hx-put (edit forms use hx-put)
+    has_form = _has_attr_containing(tags, "hx-post", "") or _has_attr_containing(tags, "hx-put", "")
+    if not has_form:
+        errors.append("Missing <form> with hx-post or hx-put attribute")
 
     # Must have a submit button
     has_submit = False
@@ -216,8 +217,10 @@ def _check_rbac(contract: RBACContract, tags: Tags) -> list[str]:
             found = True
 
     elif operation in ("list", "LIST"):
-        # Look for list table
-        if _has_tag_with_attr(tags, "table", "data-dazzle-table", contract.entity):
+        # Look for the entity container (data-dazzle-table or data-entity)
+        if _has_attr_containing(tags, "data-dazzle-table", contract.entity):
+            found = True
+        elif _has_attr_containing(tags, "data-entity", contract.entity):
             found = True
 
     if contract.expected_present and not found:

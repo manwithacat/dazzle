@@ -346,43 +346,51 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
                     )
                 )
 
-        # CreateFormContract — one per entity
-        contracts.append(
-            CreateFormContract(
-                entity=entity.name,
-                required_fields=required_fields,
-                all_fields=all_fields,
+        # Determine which surface modes exist for this entity
+        surface_modes = {
+            str(s.mode.value) if hasattr(s.mode, "value") else str(s.mode) for s in surfaces
+        }
+
+        # CreateFormContract — only if entity has a create surface
+        if "create" in surface_modes:
+            contracts.append(
+                CreateFormContract(
+                    entity=entity.name,
+                    required_fields=required_fields,
+                    all_fields=all_fields,
+                )
             )
-        )
 
-        # EditFormContract — one per entity
-        contracts.append(
-            EditFormContract(
-                entity=entity.name,
-                editable_fields=editable_fields,
+        # EditFormContract — only if entity has an edit surface
+        if "edit" in surface_modes:
+            contracts.append(
+                EditFormContract(
+                    entity=entity.name,
+                    editable_fields=editable_fields,
+                )
             )
-        )
 
-        # DetailViewContract — one per entity
-        transitions: list[str] = []
-        if entity.state_machine:
-            for t in entity.state_machine.transitions:
-                from_s = t.from_state if isinstance(t.from_state, str) else t.from_state.name
-                to_s = t.to_state if isinstance(t.to_state, str) else t.to_state.name
-                transitions.append(f"{from_s}\u2192{to_s}")
+        # DetailViewContract — only if entity has a view surface
+        if "view" in surface_modes:
+            transitions: list[str] = []
+            if entity.state_machine:
+                for t in entity.state_machine.transitions:
+                    from_s = t.from_state if isinstance(t.from_state, str) else t.from_state.name
+                    to_s = t.to_state if isinstance(t.to_state, str) else t.to_state.name
+                    transitions.append(f"{from_s}\u2192{to_s}")
 
-        has_edit = bool(_get_permitted_personas(appspec, entity.name, PermissionKind.UPDATE))
-        has_delete = bool(_get_permitted_personas(appspec, entity.name, PermissionKind.DELETE))
+            has_edit = bool(_get_permitted_personas(appspec, entity.name, PermissionKind.UPDATE))
+            has_delete = bool(_get_permitted_personas(appspec, entity.name, PermissionKind.DELETE))
 
-        contracts.append(
-            DetailViewContract(
-                entity=entity.name,
-                fields=all_fields,
-                has_edit=has_edit,
-                has_delete=has_delete,
-                transitions=transitions,
+            contracts.append(
+                DetailViewContract(
+                    entity=entity.name,
+                    fields=all_fields,
+                    has_edit=has_edit,
+                    has_delete=has_delete,
+                    transitions=transitions,
+                )
             )
-        )
 
         # RBACContract — one per entity × persona × operation
         all_personas = [p.id for p in appspec.personas]
