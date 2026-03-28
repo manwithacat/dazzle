@@ -4,6 +4,7 @@ Scans entities, surfaces, and workspaces for structural patterns where
 layout capabilities would improve the user experience.
 """
 
+from dazzle.core.ir.domain import EntitySpec
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
 from dazzle.core.ir.workspaces import DisplayMode, WorkspaceSpec
@@ -18,7 +19,7 @@ _FORM_MODES = {SurfaceMode.CREATE, SurfaceMode.EDIT}
 
 
 def check_layout_relevance(
-    entities: list,
+    entities: list[EntitySpec],
     surfaces: list[SurfaceSpec],
     workspaces: list[WorkspaceSpec],
 ) -> list[Relevance]:

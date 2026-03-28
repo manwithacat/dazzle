@@ -5,6 +5,7 @@ Alpine/HTMX interactive component capabilities would improve the user
 experience.
 """
 
+from dazzle.core.ir.domain import EntitySpec
 from dazzle.core.ir.fields import FieldTypeKind
 from dazzle.core.ir.surfaces import SurfaceSpec
 from dazzle.core.ir.workspaces import DisplayMode, WorkspaceSpec
@@ -16,7 +17,7 @@ _COMMAND_PALETTE_SURFACE_THRESHOLD = 5
 
 
 def check_component_relevance(
-    entities: list,
+    entities: list[EntitySpec],
     surfaces: list[SurfaceSpec],
     workspaces: list[WorkspaceSpec],
     *,

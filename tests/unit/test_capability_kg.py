@@ -3,6 +3,8 @@
 import tomllib
 from pathlib import Path
 
+_TOML_PATH = Path(__file__).resolve().parents[2] / "src/dazzle/mcp/semantics_kb/capabilities.toml"
+
 
 class TestCapabilitiesToml:
     def test_toml_file_is_valid(self):
@@ -49,3 +51,41 @@ class TestCapabilitiesToml:
         }
         for key in expected:
             assert key in concept_ids, f"Missing: {key}"
+
+
+class TestRegressionCrossCheck:
+    def test_every_capability_key_has_toml_entry(self):
+        """Cross-check: every capability key produced by rules has a TOML entry."""
+        with open(_TOML_PATH, "rb") as f:
+            data = tomllib.load(f)
+        concept_ids = set(data.get("concepts", {}).keys())
+        expected_keys = {
+            "widget_rich_text",
+            "widget_combobox",
+            "widget_picker",
+            "widget_tags",
+            "widget_color",
+            "widget_slider",
+            "layout_kanban",
+            "layout_timeline",
+            "layout_related_groups",
+            "layout_multi_section",
+            "component_command_palette",
+            "component_toggle_group",
+            "completeness_unreachable",
+            "completeness_missing_edit",
+            "completeness_missing_list",
+            "completeness_missing_create",
+        }
+        for key in expected_keys:
+            assert key in concept_ids, f"Missing TOML entry for: {key}"
+
+    def test_every_non_completeness_entry_has_demonstrated_in(self):
+        """Every non-completeness TOML entry should list at least one example app."""
+        with open(_TOML_PATH, "rb") as f:
+            data = tomllib.load(f)
+        for name, entry in data.get("concepts", {}).items():
+            if name.startswith("completeness_"):
+                continue
+            demos = entry.get("demonstrated_in", [])
+            assert len(demos) >= 1, f"{name} has no demonstrated_in entries"

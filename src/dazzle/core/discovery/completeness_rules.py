@@ -32,7 +32,7 @@ _MODE_LABEL: dict[SurfaceMode, str] = {
 
 
 def check_completeness_relevance(
-    entities: list,
+    entities: list[EntitySpec],
     surfaces: list[SurfaceSpec],
 ) -> list[Relevance]:
     """Return Relevance items for CRUD completeness gaps.
@@ -61,8 +61,7 @@ def check_completeness_relevance(
 
     results: list[Relevance] = []
 
-    for entity in entities:
-        entity_spec: EntitySpec = entity
+    for entity_spec in entities:
         if entity_spec.access is None or not entity_spec.access.permissions:
             continue
 
