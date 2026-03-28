@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.5] - 2026-03-28
+
+### Added
+- **UX Component Expansion — Phase 5 (Example Apps)**: Three new example apps exercising the expanded component inventory
+  - `examples/project_tracker` — Project management app: 6 entities (User, Project, Milestone, Task, Comment, Attachment), kanban board, timeline, status cards, related groups, multi-section forms
+  - `examples/design_studio` — Brand/design asset management: 5 entities (User, Brand, Asset, Campaign, Feedback), asset gallery grid, review queue, brand color fields, campaign scheduling
+  - `examples/component_showcase` — Kitchen-sink gallery: single "Showcase" entity with every field type, all widget-capable fields exercised from one create/edit form
+
+### Agent Guidance
+- The `widget:` syntax is NOT yet implemented in the DSL parser — it exists at the template/rendering layer only. Example apps use standard DSL field types. Widget rendering will be activated when the parser supports `widget=` annotations on surface fields (planned for a future minor version).
+- Each example validates cleanly (`dazzle validate`). Framework-generated `FeedbackReport` warnings are expected when `feedback_widget: enabled`.
+
 ## [0.51.4] - 2026-03-28
 
 ### Added
