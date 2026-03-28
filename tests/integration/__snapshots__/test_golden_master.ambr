@@ -903,6 +903,8 @@
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': 'task_list',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'related_groups': list([
+        ]),
         'search_fields': list([
         ]),
         'sections': list([
@@ -947,6 +949,8 @@
         'mode': <SurfaceMode.VIEW: 'view'>,
         'name': 'task_detail',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'related_groups': list([
+        ]),
         'search_fields': list([
         ]),
         'sections': list([
@@ -999,6 +1003,8 @@
         'mode': <SurfaceMode.CREATE: 'create'>,
         'name': 'task_create',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'related_groups': list([
+        ]),
         'search_fields': list([
         ]),
         'sections': list([
@@ -1043,6 +1049,8 @@
         'mode': <SurfaceMode.EDIT: 'edit'>,
         'name': 'task_edit',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'related_groups': list([
+        ]),
         'search_fields': list([
         ]),
         'sections': list([
@@ -1104,6 +1112,8 @@
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_health',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'related_groups': list([
+        ]),
         'search_fields': list([
         ]),
         'sections': list([
@@ -1169,6 +1179,8 @@
         'mode': <SurfaceMode.LIST: 'list'>,
         'name': '_admin_deploys',
         'priority': <BusinessPriority.MEDIUM: 'medium'>,
+        'related_groups': list([
+        ]),
         'search_fields': list([
         ]),
         'sections': list([

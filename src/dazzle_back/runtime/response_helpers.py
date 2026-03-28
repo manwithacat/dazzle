@@ -61,7 +61,7 @@ def with_oob(
 
 def _append_html(response: HTMLResponse, fragment: str) -> HTMLResponse:
     """Append HTML fragment to an existing HTMLResponse, preserving headers and status."""
-    existing_body = response.body.decode("utf-8")
+    existing_body = bytes(response.body).decode("utf-8")
     new_body = existing_body + fragment
     new_response = HTMLResponse(
         content=new_body,
