@@ -558,3 +558,242 @@ class TestResolveSurfaceActions:
         by_action = {t.action: t for t in result}
         assert set(by_action["list"].visible_to) == {"admin", "viewer"}
         assert set(by_action["create_link"].visible_to) == {"admin"}
+
+
+# ---------------------------------------------------------------------------
+# TestDeriveTriples
+# ---------------------------------------------------------------------------
+
+
+class TestDeriveTriples:
+    """Tests for derive_triples() and supporting helpers."""
+
+    def _entity_with_fields(
+        self,
+        name: str,
+        extra_fields: list[FieldSpec] | None = None,
+        permissions: list[tuple[PermissionKind, list[str]]] | None = None,
+    ) -> EntitySpec:
+        """Build an entity with a PK field plus optional extra fields."""
+        fields = [
+            FieldSpec(
+                name="id",
+                type=FieldType(kind=FieldTypeKind.UUID),
+                modifiers=[FieldModifier.PK],
+            )
+        ]
+        if extra_fields:
+            fields.extend(extra_fields)
+        access: AccessSpec | None = None
+        if permissions is not None:
+            rules = [
+                PermissionRule(
+                    operation=op,
+                    personas=personas,
+                    effect=PolicyEffect.PERMIT,
+                )
+                for op, personas in permissions
+            ]
+            access = AccessSpec(permissions=rules)
+        return EntitySpec(name=name, fields=fields, access=access)
+
+    def test_basic_triple_count(self) -> None:
+        """derive_triples produces one triple per (entity × surface × persona)
+        where the persona has at least one permitted action."""
+        from dazzle.core.ir.triples import derive_triples
+
+        entity = self._entity_with_fields(
+            "Task",
+            permissions=[(PermissionKind.READ, [])],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin", "viewer")
+
+        triples = derive_triples([entity], [surface], personas)
+        # Both personas can READ → both should appear
+        assert len(triples) == 2
+        persona_ids = {t.persona for t in triples}
+        assert persona_ids == {"admin", "viewer"}
+
+    def test_triple_fields_populated(self) -> None:
+        """Triple records entity name, surface name, persona, mode, actions and fields."""
+        from dazzle.core.ir.triples import VerifiableTriple, derive_triples
+
+        title_field = FieldSpec(
+            name="title",
+            type=FieldType(kind=FieldTypeKind.STR),
+            modifiers=[FieldModifier.REQUIRED],
+        )
+        entity = self._entity_with_fields(
+            "Task",
+            extra_fields=[title_field],
+            permissions=[(PermissionKind.READ, [])],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin")
+
+        triples = derive_triples([entity], [surface], personas)
+        assert len(triples) == 1
+        t: VerifiableTriple = triples[0]
+        assert t.entity == "Task"
+        assert t.surface == "task_list"
+        assert t.persona == "admin"
+        assert t.surface_mode == SurfaceMode.LIST
+        # At minimum the list action should be present
+        assert any("list" in a for a in t.actions)
+        # title field should appear in fields (PK id excluded)
+        field_names = {f.field_name for f in t.fields}
+        assert "title" in field_names
+        assert "id" not in field_names
+
+    def test_framework_entities_excluded(self) -> None:
+        """Framework entities (AIJob, FeedbackReport, etc.) are skipped."""
+        from dazzle.core.ir.triples import derive_triples
+
+        framework_names = [
+            "AIJob",
+            "FeedbackReport",
+            "SystemHealth",
+            "SystemMetric",
+            "DeployHistory",
+        ]
+        entities = [self._entity_with_fields(name) for name in framework_names]
+        task = self._entity_with_fields("Task", permissions=[(PermissionKind.READ, [])])
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin")
+
+        triples = derive_triples(entities + [task], [surface], personas)
+        entity_names = {t.entity for t in triples}
+        for fw in framework_names:
+            assert fw not in entity_names
+        assert "Task" in entity_names
+
+    def test_entity_without_surfaces_produces_no_triples(self) -> None:
+        """If an entity has no surfaces, no triples are emitted."""
+        from dazzle.core.ir.triples import derive_triples
+
+        entity = self._entity_with_fields("Task", permissions=[(PermissionKind.READ, [])])
+        personas = _make_personas("admin")
+
+        triples = derive_triples([entity], [], personas)
+        assert triples == []
+
+    def test_persona_actions_filtered_by_permission(self) -> None:
+        """Admin sees create_link; viewer doesn't."""
+        from dazzle.core.ir.triples import derive_triples
+
+        entity = self._entity_with_fields(
+            "Task",
+            permissions=[
+                (PermissionKind.READ, []),
+                (PermissionKind.CREATE, ["admin"]),
+            ],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin", "viewer")
+
+        triples = derive_triples([entity], [surface], personas)
+        by_persona = {t.persona: t for t in triples}
+
+        assert "admin" in by_persona
+        assert "viewer" in by_persona
+        # Admin should see create_link; viewer should not
+        assert "create_link" in by_persona["admin"].actions
+        assert "create_link" not in by_persona["viewer"].actions
+
+    def test_fields_exclude_pk_and_auto(self) -> None:
+        """PK and auto_add/auto_update fields are excluded from field triples."""
+        from dazzle.core.ir.triples import derive_triples
+
+        auto_add_field = FieldSpec(
+            name="created_at",
+            type=FieldType(kind=FieldTypeKind.DATETIME),
+            modifiers=[FieldModifier.AUTO_ADD],
+        )
+        auto_update_field = FieldSpec(
+            name="updated_at",
+            type=FieldType(kind=FieldTypeKind.DATETIME),
+            modifiers=[FieldModifier.AUTO_UPDATE],
+        )
+        title_field = FieldSpec(
+            name="title",
+            type=FieldType(kind=FieldTypeKind.STR),
+            modifiers=[FieldModifier.REQUIRED],
+        )
+        entity = self._entity_with_fields(
+            "Task",
+            extra_fields=[auto_add_field, auto_update_field, title_field],
+            permissions=[(PermissionKind.READ, [])],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin")
+
+        triples = derive_triples([entity], [surface], personas)
+        assert len(triples) == 1
+        field_names = {f.field_name for f in triples[0].fields}
+        assert "id" not in field_names
+        assert "created_at" not in field_names
+        assert "updated_at" not in field_names
+        assert "title" in field_names
+
+    def test_fk_fields_not_required_in_triple(self) -> None:
+        """FK fields that are required in the entity carry is_required=False in the triple."""
+        from dazzle.core.ir.triples import derive_triples
+
+        fk_field = FieldSpec(
+            name="project",
+            type=FieldType(kind=FieldTypeKind.REF, ref_entity="Project"),
+            modifiers=[FieldModifier.REQUIRED],
+        )
+        entity = self._entity_with_fields(
+            "Task",
+            extra_fields=[fk_field],
+            permissions=[(PermissionKind.READ, [])],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin")
+
+        triples = derive_triples([entity], [surface], personas)
+        assert len(triples) == 1
+        field_triples = {f.field_name: f for f in triples[0].fields}
+        assert "project" in field_triples
+        # FK field should be is_required=False in the triple
+        assert field_triples["project"].is_required is False
+
+    def test_surface_sections_used_when_present(self) -> None:
+        """When the surface declares sections, only those fields appear in the triple."""
+        from dazzle.core.ir.surfaces import SurfaceElement, SurfaceSection
+        from dazzle.core.ir.triples import derive_triples
+
+        title_field = FieldSpec(
+            name="title",
+            type=FieldType(kind=FieldTypeKind.STR),
+            modifiers=[FieldModifier.REQUIRED],
+        )
+        notes_field = FieldSpec(
+            name="notes",
+            type=FieldType(kind=FieldTypeKind.TEXT),
+        )
+        entity = self._entity_with_fields(
+            "Task",
+            extra_fields=[title_field, notes_field],
+            permissions=[(PermissionKind.READ, [])],
+        )
+        # Surface only declares title, not notes
+        section = SurfaceSection(
+            name="main",
+            elements=[SurfaceElement(field_name="title")],
+        )
+        surface = SurfaceSpec(
+            name="task_list",
+            entity_ref="Task",
+            mode=SurfaceMode.LIST,
+            sections=[section],
+        )
+        personas = _make_personas("admin")
+
+        triples = derive_triples([entity], [surface], personas)
+        assert len(triples) == 1
+        field_names = {f.field_name for f in triples[0].fields}
+        assert "title" in field_names
+        assert "notes" not in field_names

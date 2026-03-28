@@ -408,3 +408,193 @@ def resolve_surface_actions(
         )
 
     return triples
+
+
+# ---------------------------------------------------------------------------
+# VerifiableTriple + derive_triples
+# ---------------------------------------------------------------------------
+
+# Framework-generated entities that must be excluded from triple derivation.
+# These are created by DSL constructs (llm_intent, feedback_widget, etc.) and
+# should never appear as verifiable surface triples.
+_FRAMEWORK_ENTITIES: frozenset[str] = frozenset(
+    {
+        "AIJob",
+        "FeedbackReport",
+        "SystemHealth",
+        "SystemMetric",
+        "DeployHistory",
+    }
+)
+
+
+class VerifiableTriple(BaseModel):
+    """Atomic unit of verifiable UI behaviour: (Entity, Surface, Persona).
+
+    Each triple captures everything the contract verification layer needs to
+    assert correct behaviour for one persona on one surface: which entity is
+    being displayed, the surface mode, which actions the persona can perform,
+    and which fields should be present.
+
+    Attributes:
+        entity: Name of the entity this surface is bound to.
+        surface: Name of the surface (DSL identifier).
+        persona: ID of the persona for which this triple was derived.
+        surface_mode: The ``SurfaceMode`` of the surface.
+        actions: Action identifiers the persona can perform (e.g. ``"list"``,
+            ``"create_link"``, ``"edit_submit"``).
+        fields: Field-level triples describing widget, FK status and
+            requiredness for each visible field.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    entity: str
+    surface: str
+    persona: str
+    surface_mode: object  # SurfaceMode — typed as object to avoid import cycle
+    actions: list[str]
+    fields: list[SurfaceFieldTriple]
+
+
+def _resolve_surface_fields(
+    entity: object,
+    surface: object,
+) -> list[SurfaceFieldTriple]:
+    """Build field triples for a surface.
+
+    If the surface has sections with elements, only the declared elements are
+    included (respecting any ``source=`` option which marks the field as a
+    FK search-select).  When no sections exist, all entity fields are used,
+    excluding PK (``FieldModifier.PK``) and auto-managed fields
+    (``FieldModifier.AUTO_ADD``, ``FieldModifier.AUTO_UPDATE``).
+
+    FK fields — those with a ``ref_entity`` or whose name ends in ``_id``
+    (UUID kind) — carry ``is_required=False`` in the triple even when marked
+    ``required`` in the entity, because FK search-selects handle validation
+    differently from plain inputs.
+
+    Args:
+        entity: An ``EntitySpec`` instance.
+        surface: A ``SurfaceSpec`` instance.
+
+    Returns:
+        A list of ``SurfaceFieldTriple`` instances.
+    """
+    from dazzle.core.ir.fields import FieldModifier, FieldTypeKind
+
+    entity_fields: dict[str, object] = {
+        getattr(f, "name", ""): f for f in getattr(entity, "fields", [])
+    }
+
+    def _build_triple(field_spec: object, *, has_source: bool = False) -> SurfaceFieldTriple:
+        fname = getattr(field_spec, "name", "")
+        ftype = getattr(field_spec, "type", None)
+        modifiers = getattr(field_spec, "modifiers", [])
+        ref_entity = getattr(ftype, "ref_entity", None) if ftype is not None else None
+        ftype_kind = getattr(ftype, "kind", None) if ftype is not None else None
+
+        is_fk = ref_entity is not None or (
+            ftype_kind == FieldTypeKind.UUID and fname != "id" and fname.endswith("_id")
+        )
+        # FK fields: is_required=False in the triple regardless of entity modifier
+        raw_required = FieldModifier.REQUIRED in modifiers
+        is_required = raw_required and not is_fk
+
+        widget = resolve_widget(field_spec, has_source=has_source)  # type: ignore[arg-type]
+        return SurfaceFieldTriple(
+            field_name=fname,
+            widget=widget,
+            is_required=is_required,
+            is_fk=is_fk,
+            ref_entity=ref_entity,
+        )
+
+    _EXCLUDED_MODIFIERS = {FieldModifier.PK, FieldModifier.AUTO_ADD, FieldModifier.AUTO_UPDATE}
+
+    # If surface has sections with elements, use those
+    sections = getattr(surface, "sections", [])
+    elements_found: list[tuple[object, bool]] = []  # (field_spec, has_source)
+    for section in sections:
+        for element in getattr(section, "elements", []):
+            field_name = getattr(element, "field_name", "")
+            options = getattr(element, "options", {}) or {}
+            has_source = bool(options.get("source"))
+            field_spec = entity_fields.get(field_name)
+            if field_spec is not None:
+                elements_found.append((field_spec, has_source))
+
+    if elements_found:
+        return [_build_triple(fs, has_source=hs) for fs, hs in elements_found]
+
+    # Fallback: all entity fields excluding PK and auto-managed
+    result: list[SurfaceFieldTriple] = []
+    for field_spec in getattr(entity, "fields", []):
+        modifiers = getattr(field_spec, "modifiers", [])
+        if any(m in _EXCLUDED_MODIFIERS for m in modifiers):
+            continue
+        result.append(_build_triple(field_spec))
+    return result
+
+
+def derive_triples(
+    entities: list[object],
+    surfaces: list[object],
+    personas: list[object],
+) -> list[VerifiableTriple]:
+    """Derive the full set of verifiable triples for an app.
+
+    A triple is emitted for each (entity, surface, persona) combination where:
+    - The entity is not a framework-generated entity.
+    - The surface is bound to the entity (``entity_ref`` matches).
+    - The persona has at least one permitted action on that surface.
+
+    Args:
+        entities: All ``EntitySpec`` instances from the app.
+        surfaces: All ``SurfaceSpec`` instances from the app.
+        personas: All ``PersonaSpec`` instances from the app.
+
+    Returns:
+        A list of ``VerifiableTriple`` instances.
+    """
+    # Index surfaces by entity_ref for O(1) lookup
+    surfaces_by_entity: dict[str, list[object]] = {}
+    for surface in surfaces:
+        entity_ref = getattr(surface, "entity_ref", None)
+        if entity_ref:
+            surfaces_by_entity.setdefault(entity_ref, []).append(surface)
+
+    triples: list[VerifiableTriple] = []
+
+    for entity in entities:
+        entity_name: str = getattr(entity, "name", "")
+        if entity_name in _FRAMEWORK_ENTITIES:
+            continue
+
+        entity_surfaces = surfaces_by_entity.get(entity_name, [])
+        for surface in entity_surfaces:
+            surface_name: str = getattr(surface, "name", "")
+            surface_mode = getattr(surface, "mode", None)
+
+            fields = _resolve_surface_fields(entity, surface)
+            actions = resolve_surface_actions(entity, surface, surfaces, personas, entities)
+
+            for persona in personas:
+                persona_id: str = getattr(persona, "id", str(persona))
+                # Filter actions to those visible to this persona
+                persona_actions = [a.action for a in actions if persona_id in a.visible_to]
+                if not persona_actions:
+                    continue  # Persona has no permitted actions → skip
+
+                triples.append(
+                    VerifiableTriple(
+                        entity=entity_name,
+                        surface=surface_name,
+                        persona=persona_id,
+                        surface_mode=surface_mode,
+                        actions=persona_actions,
+                        fields=fields,
+                    )
+                )
+
+    return triples
