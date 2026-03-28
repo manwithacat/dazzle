@@ -503,6 +503,9 @@ def _build_form_fields(
             if source_ctx:
                 form_type = "search_select"
 
+        # Widget override from DSL: field name "Label" widget=rich_text
+        widget_hint = element_options.get("widget")
+
         extra: dict[str, Any] = {}
         if form_type == "file" and field_spec and field_spec.type:
             accept_override = element_options.get("accept")
@@ -523,6 +526,7 @@ def _build_form_fields(
                 options=options,
                 source=source_ctx,
                 extra=extra,
+                widget=widget_hint,
                 when_expr=when_expr_str,
                 visible_condition=vis_cond,
             )
@@ -577,6 +581,9 @@ def _build_form_sections(
                 if source_ctx:
                     form_type = "search_select"
 
+            # Widget override from DSL: field name "Label" widget=rich_text
+            widget_hint = element.options.get("widget")
+
             extra: dict[str, Any] = {}
             if form_type == "file" and field_spec and field_spec.type:
                 accept_override = element.options.get("accept")
@@ -602,6 +609,7 @@ def _build_form_sections(
                     options=options,
                     source=source_ctx,
                     extra=extra,
+                    widget=widget_hint,
                     when_expr=when_str,
                     visible_condition=vis,
                 )

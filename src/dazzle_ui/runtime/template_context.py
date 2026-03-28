@@ -73,6 +73,9 @@ class FieldContext(BaseModel):
     default: Any = None
     source: FieldSourceContext | None = None  # Dynamic data source (e.g. search_select)
     extra: dict[str, Any] = Field(default_factory=dict)  # Extra metadata (e.g. money field config)
+    widget: str | None = (
+        None  # Widget override (e.g. rich_text, combobox, tags, picker, color, slider)
+    )
     when_expr: str = ""  # Serialized when: condition from surface element
     visible: bool = True  # Evaluated at render time against record data
     visible_condition: dict[str, Any] | None = None  # Role-based visibility (v0.42.0)
