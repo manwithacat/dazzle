@@ -225,7 +225,7 @@ def get_permitted_personas(
         return [getattr(p, "id", str(p)) for p in personas]
 
     permitted: set[str] = set()
-    access = entity.access
+    access = getattr(entity, "access", None)
     for rule in getattr(access, "permissions", []):
         if getattr(rule, "operation", None) != operation:
             continue

@@ -275,6 +275,13 @@ def baseline_command(
             )
             return
 
+        # command.revision() can return Script | list[Script | None]; take the first element if list
+        if isinstance(rev, list):
+            rev = rev[0]
+        if rev is None:
+            console.print("[yellow]No revision was created.[/yellow]")
+            return
+
         console.print(f"[green]Baseline revision created: {rev.revision}[/green]")
         console.print(f"[dim]  → {project_versions}/[/dim]")
 

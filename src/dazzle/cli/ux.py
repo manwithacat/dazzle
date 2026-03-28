@@ -3,6 +3,7 @@
 import asyncio
 import json as _json
 from pathlib import Path
+from typing import Any
 
 import typer
 from rich.console import Console
@@ -132,7 +133,9 @@ def _run_contracts(
         from dazzle.core.ir.domain import PermissionKind
         from dazzle.core.ir.triples import get_permitted_personas as _get_permitted_personas_raw
 
-        def _get_permitted_personas(appspec_arg, entity_name, operation):
+        def _get_permitted_personas(
+            appspec_arg: Any, entity_name: str, operation: object
+        ) -> list[str]:
             return _get_permitted_personas_raw(
                 list(appspec_arg.domain.entities),
                 appspec_arg.personas,
@@ -269,13 +272,13 @@ def _run_contracts(
                         if not eid:
                             # Try to fetch an entity ID
                             try:
-                                id_resp = await persona_client.get_full_page(
+                                htmx_resp = await persona_client.get_full_page(
                                     f"/__test__/entity/{rc.entity}"
                                 )
-                                if id_resp.status == 200:
+                                if htmx_resp.status == 200:
                                     import json as _j
 
-                                    items = _j.loads(id_resp.html)
+                                    items = _j.loads(htmx_resp.html)
                                     if items:
                                         eid = str(items[0].get("id", ""))
                                         entity_ids[rc.entity] = eid
