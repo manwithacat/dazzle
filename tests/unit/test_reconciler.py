@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import pytest
 
-from dazzle.core.ir.triples import SurfaceFieldTriple, VerifiableTriple, WidgetKind
+from dazzle.core.ir.triples import ActionTriple, SurfaceFieldTriple, VerifiableTriple, WidgetKind
 from dazzle.testing.ux.contracts import (
     CreateFormContract,
     DetailViewContract,
@@ -27,6 +27,10 @@ from dazzle.testing.ux.reconciler import (
 # ---------------------------------------------------------------------------
 
 
+def _make_action(action: str, permission: str = "read") -> ActionTriple:
+    return ActionTriple(action=action, permission=permission)
+
+
 def _make_triple(
     entity: str = "Task",
     surface: str = "task_list",
@@ -35,12 +39,13 @@ def _make_triple(
     actions: list[str] | None = None,
     fields: list[SurfaceFieldTriple] | None = None,
 ) -> VerifiableTriple:
+    action_strs = actions or ["list"]
     return VerifiableTriple(
         entity=entity,
         surface=surface,
         persona=persona,
         surface_mode=mode,
-        actions=actions or ["list"],
+        actions=[_make_action(a) for a in action_strs],
         fields=fields or [],
     )
 

@@ -640,7 +640,7 @@ class TestDeriveTriples:
         assert t.persona == "admin"
         assert t.surface_mode == SurfaceMode.LIST
         # At minimum the list action should be present
-        assert any("list" in a for a in t.actions)
+        assert any("list" in a for a in t.action_names)
         # title field should appear in fields (PK id excluded)
         field_names = {f.field_name for f in t.fields}
         assert "title" in field_names
@@ -698,8 +698,8 @@ class TestDeriveTriples:
         assert "admin" in by_persona
         assert "viewer" in by_persona
         # Admin should see create_link; viewer should not
-        assert "create_link" in by_persona["admin"].actions
-        assert "create_link" not in by_persona["viewer"].actions
+        assert "create_link" in by_persona["admin"].action_names
+        assert "create_link" not in by_persona["viewer"].action_names
 
     def test_fields_exclude_pk_and_auto(self) -> None:
         """PK and auto_add/auto_update fields are excluded from field triples."""

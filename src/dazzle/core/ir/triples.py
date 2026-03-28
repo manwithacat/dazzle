@@ -412,6 +412,20 @@ def resolve_surface_actions(
 
 
 # ---------------------------------------------------------------------------
+# ActionTriple
+# ---------------------------------------------------------------------------
+
+
+class ActionTriple(BaseModel):
+    """Action with permission provenance for diagnostic traceability."""
+
+    model_config = ConfigDict(frozen=True)
+
+    action: str
+    permission: str  # PermissionKind value as string
+
+
+# ---------------------------------------------------------------------------
 # VerifiableTriple + derive_triples
 # ---------------------------------------------------------------------------
 
@@ -442,8 +456,8 @@ class VerifiableTriple(BaseModel):
         surface: Name of the surface (DSL identifier).
         persona: ID of the persona for which this triple was derived.
         surface_mode: The ``SurfaceMode`` of the surface.
-        actions: Action identifiers the persona can perform (e.g. ``"list"``,
-            ``"create_link"``, ``"edit_submit"``).
+        actions: Action triples with permission provenance (e.g.
+            ``ActionTriple(action="list", permission="read")``).
         fields: Field-level triples describing widget, FK status and
             requiredness for each visible field.
     """
@@ -454,9 +468,14 @@ class VerifiableTriple(BaseModel):
     surface: str
     persona: str
     surface_mode: object  # SurfaceMode — typed as object to avoid import cycle
-    actions: list[str]
+    actions: list[ActionTriple]
     fields: list[SurfaceFieldTriple]
     related_groups: list[str] = Field(default_factory=list)
+
+    @property
+    def action_names(self) -> list[str]:
+        """Action names for backward-compatible checks."""
+        return [a.action for a in self.actions]
 
 
 def _resolve_surface_fields(
@@ -586,7 +605,11 @@ def derive_triples(
             for persona in personas:
                 persona_id: str = getattr(persona, "id", str(persona))
                 # Filter actions to those visible to this persona
-                persona_actions = [a.action for a in actions if persona_id in a.visible_to]
+                persona_actions = [
+                    ActionTriple(action=a.action, permission=str(a.requires_permission))
+                    for a in actions
+                    if persona_id in a.visible_to
+                ]
                 if not persona_actions:
                     continue  # Persona has no permitted actions → skip
 

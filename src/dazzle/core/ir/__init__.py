@@ -690,6 +690,7 @@ from .themespec import (
 
 # Triples (v0.50.0 IR Triple Enrichment)
 from .triples import (
+    ActionTriple,
     SurfaceActionTriple,
     SurfaceFieldTriple,
     VerifiableTriple,
@@ -933,6 +934,7 @@ __all__ = [
     # Personas (v0.8.5)
     "PersonaSpec",
     # Triples (v0.50.0 IR Triple Enrichment)
+    "ActionTriple",
     "SurfaceActionTriple",
     "SurfaceFieldTriple",
     "VerifiableTriple",
