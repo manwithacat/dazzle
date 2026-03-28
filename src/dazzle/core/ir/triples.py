@@ -570,6 +570,12 @@ def derive_triples(
     - The surface is bound to the entity (``entity_ref`` matches).
     - The persona has at least one permitted action on that surface.
 
+    Invariant: Triple derivation depends only on entities, surfaces, and
+    personas — never on FK graph resolution or scope predicates. Scope
+    predicates affect query-time row filtering, not surface-level
+    visibility or field availability. If this invariant changes, the
+    triple derivation must be updated to account for scope state.
+
     Args:
         entities: All ``EntitySpec`` instances from the app.
         surfaces: All ``SurfaceSpec`` instances from the app.
