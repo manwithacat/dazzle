@@ -1,0 +1,55 @@
+{# Status cards — grid of cards with status badge for each related entity #}
+{% for tab in group.tabs %}
+{% if tab.visible | default(true) %}
+<div class="mb-4">
+  {% if group.tabs | length > 1 %}
+  <h4 class="text-sm font-medium text-base-content/70 mb-2">{{ tab.label }}</h4>
+  {% endif %}
+
+  {% if tab.create_url %}
+  <div class="flex justify-end mb-2">
+    <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}"
+       class="btn btn-primary btn-sm"
+       data-dazzle-action="{{ tab.entity_name }}.create">
+      + New {{ tab.label }}
+    </a>
+  </div>
+  {% endif %}
+
+  {% if tab.rows %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    {% for item in tab.rows %}
+    <div class="card bg-base-100 shadow-sm border border-base-200 hover:shadow-md transition-shadow cursor-pointer"
+         {% if tab.detail_url_template %}
+         hx-get="{{ tab.detail_url_template.replace('{id}', item.id | string) }}"
+         hx-push-url="true"
+         hx-target="body"
+         hx-swap="innerHTML"
+         {% endif %}>
+      <div class="card-body p-4">
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            {% for col in tab.columns[:3] %}
+            {% if loop.first %}
+            <p class="font-medium truncate">{{ item[col.key] | default("—") }}</p>
+            {% else %}
+            <p class="text-sm text-base-content/60 truncate">{{ item[col.key] | default("—") }}</p>
+            {% endif %}
+            {% endfor %}
+          </div>
+          {% for col in tab.columns if col.type == "badge" %}
+          {% if loop.first %}
+          <span class="badge badge-sm {{ item[col.key] | badge_class }} shrink-0">{{ item[col.key] | default("") }}</span>
+          {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-center py-6 text-base-content/50">No {{ tab.label | lower }} found.</p>
+  {% endif %}
+</div>
+{% endif %}
+{% endfor %}

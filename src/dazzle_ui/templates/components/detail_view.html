@@ -1,6 +1,6 @@
 {# Detail view component - displays entity fields as a definition list #}
 {% if detail %}
-<div class="{% if detail.related_tabs %}max-w-5xl{% else %}max-w-3xl{% endif %}" data-dazzle-entity="{{ detail.entity_name }}">
+<div class="{% if detail.related_groups %}max-w-5xl{% else %}max-w-3xl{% endif %}" data-dazzle-entity="{{ detail.entity_name }}">
   {# Header with actions #}
   {% block detail_header %}
   <div class="flex items-center justify-between mb-6">
@@ -124,97 +124,25 @@
   </div>
   {% endblock detail_fields %}
 
-  {# Related entity tabs (hub-and-spoke, #301) #}
-  {% if detail.related_tabs %}
-  {% block detail_related_tabs %}
-  {# Related tabs — uses Alpine for tab state #}
-  {% set first_tab_id = detail.related_tabs[0].tab_id if detail.related_tabs else '' %}
-  <div class="mt-6" data-dazzle-related="{{ detail.entity_name }}" x-data="{ activeTab: '{{ first_tab_id }}' }">
-    {# Tab navigation with count badges #}
-    <div class="tabs tabs-bordered" role="tablist">
-      {% for tab in detail.related_tabs %}
-      {% if tab.visible | default(true) %}
-      <button class="tab"
-              :class="activeTab === '{{ tab.tab_id }}' && 'tab-active'"
-              role="tab"
-              :aria-selected="activeTab === '{{ tab.tab_id }}'"
-              @click="activeTab = '{{ tab.tab_id }}'">
-        {{ tab.label }}
-        <span class="badge badge-sm ml-1">{{ tab.total }}</span>
-      </button>
-      {% endif %}
-      {% endfor %}
-    </div>
-
-    {# Tab panels #}
-    {% for tab in detail.related_tabs %}
-    {% if tab.visible | default(true) %}
-    <div x-show="activeTab === '{{ tab.tab_id }}'" role="tabpanel">
-      <div class="card bg-base-100 shadow-sm mt-2">
-        <div class="card-body p-0">
-          {% if tab.create_url %}
-          <div class="flex justify-end p-3 pb-0">
-            <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}{% if tab.filter_type_field %}&amp;{{ tab.filter_type_field }}={{ tab.filter_type_value }}{% endif %}"
-               class="btn btn-primary btn-sm"
-               data-dazzle-action="{{ tab.entity_name }}.create">
-              + New {{ tab.label }}
-            </a>
-          </div>
-          {% endif %}
-
-          <div class="overflow-x-auto">
-            <table class="table table-zebra w-full" data-entity="{{ tab.entity_name }}">
-              <thead>
-                <tr>
-                  {% for col in tab.columns %}
-                  <th scope="col">{{ col.label }}</th>
-                  {% endfor %}
-                </tr>
-              </thead>
-              <tbody>
-                {% if tab.rows %}
-                {% for item in tab.rows %}
-                <tr class="hover cursor-pointer"
-                    {% if tab.detail_url_template %}
-                    hx-get="{{ tab.detail_url_template.replace('{id}', item.id | string) }}"
-                    hx-push-url="true"
-                    hx-target="body"
-                    hx-swap="innerHTML"
-                    {% endif %}>
-                  {% for col in tab.columns %}
-                  <td>
-                    {% if col.type == "badge" %}
-                      <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
-                    {% elif col.type == "bool" %}
-                      {{ item[col.key] | bool_icon }}
-                    {% elif col.type == "date" %}
-                      {{ item[col.key] | dateformat }}
-                    {% elif col.type == "currency" %}
-                      {{ item[col.key] | currency(col.currency_code or "GBP") }}
-                    {% else %}
-                      {{ item[col.key] | default("") | truncate_text }}
-                    {% endif %}
-                  </td>
-                  {% endfor %}
-                </tr>
-                {% endfor %}
-                {% else %}
-                <tr>
-                  <td colspan="{{ tab.columns | length }}" class="text-center py-8 text-base-content/50">
-                    No {{ tab.label | lower }} found.
-                  </td>
-                </tr>
-                {% endif %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
+  {# Related entity groups (#related-display-intent) #}
+  {% if detail.related_groups %}
+  {% block detail_related_groups %}
+  {% for group in detail.related_groups %}
+  <div class="mt-6" data-dazzle-related-group="{{ group.group_id }}">
+    {% if detail.related_groups | length > 1 or not group.is_auto %}
+    <h3 class="text-lg font-semibold mb-3">{{ group.label }}</h3>
     {% endif %}
-    {% endfor %}
+
+    {% if group.display == "status_cards" %}
+      {% include "fragments/related_status_cards.html" %}
+    {% elif group.display == "file_list" %}
+      {% include "fragments/related_file_list.html" %}
+    {% else %}
+      {% include "fragments/related_table_group.html" %}
+    {% endif %}
   </div>
-  {% endblock detail_related_tabs %}
+  {% endfor %}
+  {% endblock detail_related_groups %}
   {% endif %}
 </div>
 {% endif %}

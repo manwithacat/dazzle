@@ -507,10 +507,11 @@ async def _page_handler(
                         _field.visible = False
 
             # Hide related tabs whose visible_condition doesn't match (#501)
-            for _tab in req_detail.related_tabs:
-                if _tab.visible_condition:
-                    if not evaluate_condition(_tab.visible_condition, {}, _role_ctx):
-                        _tab.visible = False
+            for _group in req_detail.related_groups:
+                for _tab in _group.tabs:
+                    if _tab.visible_condition:
+                        if not evaluate_condition(_tab.visible_condition, {}, _role_ctx):
+                            _tab.visible = False
 
         # Suppress Edit/Delete buttons when permit rules deny the operation
         # or when the workspace declares read_only for the user's persona (#550, #552).
@@ -547,7 +548,7 @@ async def _page_handler(
                 _a.api_url = _a.api_url.replace("{id}", str(path_id))
 
         # Fetch related entity data for tabs (hub-and-spoke, #301)
-        if req_detail.related_tabs and path_id:
+        if req_detail.related_groups and path_id:
             import urllib.parse
 
             async def _fetch_related_tab(tab: Any, _id: str, _backend: str, _ck: Any) -> None:
@@ -573,10 +574,11 @@ async def _page_handler(
                         exc_info=True,
                     )
 
+            all_tabs = [tab for _group in req_detail.related_groups for tab in _group.tabs]
             await asyncio.gather(
                 *[
                     _fetch_related_tab(tab, str(path_id), effective_backend_url, _cookies)
-                    for tab in req_detail.related_tabs
+                    for tab in all_tabs
                 ]
             )
 
