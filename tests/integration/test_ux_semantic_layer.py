@@ -295,7 +295,7 @@ class TestUXValidation:
         )
 
         appspec = build_appspec([module], module_name)
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings, _relevance = lint_appspec(appspec)
 
         # Should have no errors for valid UX
         assert len(errors) == 0
@@ -337,7 +337,7 @@ surface task_list "Tasks":
         )
 
         appspec = build_appspec([module], module_name)
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings, _relevance = lint_appspec(appspec)
 
         # Should catch the invalid field reference
         assert any("nonexistent_field" in e for e in errors)

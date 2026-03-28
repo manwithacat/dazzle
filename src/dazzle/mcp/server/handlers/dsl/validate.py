@@ -79,13 +79,31 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     app_spec = load_project_appspec(project_root)
 
     progress.log_sync("Running lint checks...")
-    errors, warnings = lint_appspec(app_spec, extended=extended)
+    errors, warnings, relevance = lint_appspec(app_spec, extended=extended)
+
+    if args.get("suppress_relevance"):
+        relevance = []
+
+    relevance_items = [
+        {
+            "context": r.context,
+            "capability": r.capability,
+            "category": r.category,
+            "kg_entity": r.kg_entity,
+            "examples": [
+                {"app": e.app, "file": e.file, "line": e.line, "context": e.context}
+                for e in r.examples
+            ],
+        }
+        for r in relevance
+    ]
 
     return json.dumps(
         {
             "errors": len(errors),
             "warnings": len(warnings),
             "issues": [str(e) for e in errors] + [str(w) for w in warnings],
+            "relevance": relevance_items,
         },
         indent=2,
     )
@@ -108,7 +126,7 @@ def get_unified_issues(project_root: Path, args: dict[str, Any]) -> str:
 
     # Run lint
     progress.log_sync("Running lint checks...")
-    lint_errors, lint_warnings = lint_appspec(app_spec, extended=extended)
+    lint_errors, lint_warnings, _relevance = lint_appspec(app_spec, extended=extended)
 
     # Run compliance inference
     progress.log_sync("Inferring compliance requirements...")

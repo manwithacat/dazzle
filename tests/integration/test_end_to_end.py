@@ -69,7 +69,7 @@ surface post_create "Create Post":
     assert appspec.title == "My Application"
 
     # Step 4: Validate
-    errors, warnings = lint_appspec(appspec, extended=True)
+    errors, warnings, _relevance = lint_appspec(appspec, extended=True)
     assert len(errors) == 0, f"Unexpected errors: {errors}"
     # May have warnings (unused entities, etc.) but no errors
 
@@ -154,7 +154,7 @@ surface user_list "Users":
     assert token_field.type.ref_entity == "AuthToken"
 
     # Validate
-    errors, warnings = lint_appspec(appspec)
+    errors, warnings, _relevance = lint_appspec(appspec)
     assert len(errors) == 0
 
 
@@ -212,6 +212,6 @@ surface task_detail:
     appspec = build_appspec(modules, "test.app")
 
     # Should have validation error
-    errors, warnings = lint_appspec(appspec)
+    errors, warnings, _relevance = lint_appspec(appspec)
     assert len(errors) > 0
     assert any("nonexistent_field" in err for err in errors)

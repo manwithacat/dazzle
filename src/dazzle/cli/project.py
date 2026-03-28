@@ -75,6 +75,7 @@ def _print_human_diagnostics(
     errors: list[str],
     warnings: list[str],
     appspec: ir.AppSpec | None = None,
+    relevance: list | None = None,
 ) -> None:
     """Print diagnostics in human-readable format."""
     if errors:
@@ -97,6 +98,15 @@ def _print_human_diagnostics(
             typer.echo(
                 f"  {entity_count} entities, {surface_count} surfaces, {workspace_count} workspaces"
             )
+
+    if relevance:
+        typer.echo(f"\nRelevant capabilities ({len(relevance)}):")
+        for r in relevance:
+            example_ref = ""
+            if r.examples:
+                e = r.examples[0]
+                example_ref = f" in {e.app}/{e.file}:{e.line}"
+            typer.echo(f"  {r.context} — {r.capability}{example_ref}")
 
 
 def _print_vscode_diagnostics(errors: list[str], warnings: list[str], root: Path) -> None:
@@ -406,12 +416,12 @@ def validate_command(
 
     try:
         appspec = load_project_appspec(root)
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings, relevance = lint_appspec(appspec)
 
         if format == "vscode":
             _print_vscode_diagnostics(errors, warnings, root)
         else:
-            _print_human_diagnostics(errors, warnings, appspec)
+            _print_human_diagnostics(errors, warnings, appspec, relevance=relevance)
 
         if errors:
             raise typer.Exit(code=1)
@@ -479,12 +489,12 @@ def lint_command(
 
         modules = parse_modules(dsl_files)
         appspec = build_appspec(modules, mf.project_root)
-        errors, warnings = lint_appspec(appspec, extended=True)
+        errors, warnings, relevance = lint_appspec(appspec, extended=True)
 
         if format == "vscode":
             _print_vscode_diagnostics(errors, warnings, root)
         else:
-            _print_human_diagnostics(errors, warnings)
+            _print_human_diagnostics(errors, warnings, relevance=relevance)
 
         if errors:
             raise typer.Exit(code=1)

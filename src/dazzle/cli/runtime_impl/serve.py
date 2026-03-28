@@ -434,7 +434,7 @@ def serve_command(
     try:
         appspec = load_project_appspec(root)
 
-        errors, _ = lint_appspec(appspec)
+        errors, _, _relevance = lint_appspec(appspec)
         if errors:
             typer.echo("Cannot serve; spec has validation errors:", err=True)
             for err in errors:

@@ -499,7 +499,7 @@ def lint_project(project_root: Path, args: dict[str, Any]) -> str:
     try:
         app_spec = load_project_appspec(project_root)
 
-        warnings, _ = lint_appspec(app_spec, extended=extended)
+        warnings, _, _relevance = lint_appspec(app_spec, extended=extended)
 
         return json.dumps(
             {"warnings": len(warnings), "issues": [str(w) for w in warnings]},

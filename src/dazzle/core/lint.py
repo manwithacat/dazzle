@@ -1,4 +1,5 @@
 from . import ir
+from .discovery import Relevance, suggest_capabilities
 from .validator import (
     extended_lint,
     validate_approvals,
@@ -23,7 +24,9 @@ from .validator import (
 )
 
 
-def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str], list[str]]:
+def lint_appspec(
+    appspec: ir.AppSpec, extended: bool = False
+) -> tuple[list[str], list[str], list[Relevance]]:
     """
     Validate AppSpec for semantic errors and warnings.
 
@@ -45,9 +48,10 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
         extended: If True, perform extended lint checks (naming, unused code)
 
     Returns:
-        Tuple of (errors, warnings)
+        Tuple of (errors, warnings, relevance)
         - errors: List of error messages that must be fixed
         - warnings: List of warnings that should be addressed
+        - relevance: List of contextual capability suggestions
     """
     all_errors: list[str] = []
     all_warnings: list[str] = []
@@ -150,4 +154,7 @@ def lint_appspec(appspec: ir.AppSpec, extended: bool = False) -> tuple[list[str]
     link_warnings = appspec.metadata.get("link_warnings", [])
     all_warnings.extend(link_warnings)
 
-    return all_errors, all_warnings
+    # Capability discovery — suggest relevant capabilities based on AppSpec content
+    relevance = suggest_capabilities(appspec)
+
+    return all_errors, all_warnings, relevance

@@ -25,7 +25,8 @@ class BuildService:
         """Lint an AppSpec. Returns (errors, warnings)."""
         from dazzle.core.lint import lint_appspec
 
-        return lint_appspec(appspec)
+        errors, warnings, _relevance = lint_appspec(appspec)
+        return errors, warnings
 
     def plan_migrations(self, database_url: str, entities: Any) -> Any:
         """Check for pending migrations. Returns True if changes detected."""

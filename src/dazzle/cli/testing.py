@@ -82,7 +82,7 @@ def test_generate(
     try:
         appspec = load_project_appspec(root)
 
-        errors, warnings = lint_appspec(appspec)
+        errors, warnings, _relevance = lint_appspec(appspec)
         for warn in warnings:
             typer.echo(f"WARNING: {warn}", err=True)
 
@@ -352,7 +352,7 @@ def _run_legacy_tests(
     try:
         appspec = load_project_appspec(root)
 
-        errors, _ = lint_appspec(appspec)
+        errors, _, _relevance = lint_appspec(appspec)
         if errors:
             typer.echo("Cannot run tests; spec has validation errors:", err=True)
             for err in errors:

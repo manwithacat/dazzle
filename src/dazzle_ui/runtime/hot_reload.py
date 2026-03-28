@@ -444,8 +444,8 @@ def create_reload_callback(
             # Link modules
             app_spec = build_appspec(modules, manifest.project_root)
 
-            # Validate - lint_appspec returns (errors, warnings) tuple
-            errors, warnings = lint_appspec(app_spec)
+            # Validate - lint_appspec returns (errors, warnings, relevance) tuple
+            errors, warnings, _relevance = lint_appspec(app_spec)
             if errors:
                 for error in errors:
                     print(f"[Dazzle] Validation error: {error}")

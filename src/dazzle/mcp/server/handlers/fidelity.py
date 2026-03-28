@@ -35,7 +35,7 @@ def score_fidelity_handler(project_path: Path, arguments: dict[str, Any]) -> str
     progress.log_sync("Linting DSL...")
     from dazzle.core.lint import lint_appspec
 
-    lint_errors, lint_warnings = lint_appspec(appspec)
+    lint_errors, lint_warnings, _relevance = lint_appspec(appspec)
     if lint_errors:
         return json.dumps(
             {
