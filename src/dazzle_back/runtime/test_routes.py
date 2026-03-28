@@ -202,12 +202,23 @@ async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
     uses the emails and passwords defined there instead of generic
     defaults so that generated auth tests work without extra config (#688).
     """
-    with deps.db_manager.connection() as conn:
-        for sql in deps.entity_sql.values():
-            try:
+    # Delete each entity in its own connection so FK violations on one
+    # table don't abort the transaction and poison subsequent deletes.
+    for sql in deps.entity_sql.values():
+        try:
+            with deps.db_manager.connection() as conn:
                 conn.execute(sql.delete_all)
-            except Exception:
-                logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
+        except Exception:
+            logger.debug("Table %s might not exist yet", sql.name, exc_info=True)
+
+    # Also clear the auth store's users table (not the entity table) so
+    # fixture-created auth users from previous runs don't block re-seeding.
+    if deps.auth_store is not None:
+        try:
+            with deps.db_manager.connection() as conn:
+                conn.execute('DELETE FROM "users"')
+        except Exception:
+            logger.debug("Could not clear auth users table", exc_info=True)
 
     # Load project-specific credentials if available (#688)
     creds_personas: dict[str, dict[str, str]] = {}
