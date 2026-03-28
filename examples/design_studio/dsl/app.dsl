@@ -167,21 +167,21 @@ surface brand_create "New Brand":
   mode: create
   section identity:
     field name "Brand Name"
-    field description "Description"
+    field description "Description" widget=rich_text
   section colors:
-    field primary_color "Primary Color"
-    field secondary_color "Secondary Color"
-    field accent_color "Accent Color"
+    field primary_color "Primary Color" widget=color
+    field secondary_color "Secondary Color" widget=color
+    field accent_color "Accent Color" widget=color
 
 surface brand_detail "Brand Detail":
   uses entity Brand
   mode: view
   section main:
     field name "Name"
-    field description "Description"
-    field primary_color "Primary"
-    field secondary_color "Secondary"
-    field accent_color "Accent"
+    field description "Description" widget=rich_text
+    field primary_color "Primary" widget=color
+    field secondary_color "Secondary" widget=color
+    field accent_color "Accent" widget=color
 
   related assets "Assets":
     display: status_cards
@@ -198,21 +198,21 @@ surface asset_list "Assets":
     field name "Name"
     field asset_type "Type"
     field status "Status"
-    field brand "Brand"
-    field tags "Tags"
-    field quality_score "Quality"
+    field brand "Brand" widget=combobox
+    field tags "Tags" widget=tags
+    field quality_score "Quality" widget=slider
 
 surface asset_create "New Asset":
   uses entity Asset
   mode: create
   section details:
     field name "Asset Name"
-    field description "Description"
-    field brand "Brand"
+    field description "Description" widget=rich_text
+    field brand "Brand" widget=combobox
     field asset_type "Type"
   section metadata:
-    field tags "Tags"
-    field quality_score "Quality Score"
+    field tags "Tags" widget=tags
+    field quality_score "Quality Score" widget=slider
     field file "File"
 
 surface asset_detail "Asset Detail":
@@ -220,12 +220,12 @@ surface asset_detail "Asset Detail":
   mode: view
   section main:
     field name "Name"
-    field description "Description"
+    field description "Description" widget=rich_text
     field asset_type "Type"
     field status "Status"
-    field brand "Brand"
-    field tags "Tags"
-    field quality_score "Quality"
+    field brand "Brand" widget=combobox
+    field tags "Tags" widget=tags
+    field quality_score "Quality" widget=slider
 
   related feedback "Feedback":
     display: table
@@ -236,20 +236,20 @@ surface asset_edit "Edit Asset":
   mode: edit
   section details:
     field name "Name"
-    field description "Description"
-    field tags "Tags"
-    field quality_score "Quality"
+    field description "Description" widget=rich_text
+    field tags "Tags" widget=tags
+    field quality_score "Quality" widget=slider
 
 surface campaign_create "New Campaign":
   uses entity Campaign
   mode: create
   section details:
     field name "Campaign Name"
-    field description "Brief"
-    field brand "Brand"
+    field description "Brief" widget=rich_text
+    field brand "Brand" widget=combobox
   section schedule:
-    field start_date "Start Date"
-    field end_date "End Date"
+    field start_date "Start Date" widget=picker
+    field end_date "End Date" widget=picker
     field budget "Budget"
 
 surface campaign_detail "Campaign Detail":
@@ -257,16 +257,16 @@ surface campaign_detail "Campaign Detail":
   mode: view
   section main:
     field name "Name"
-    field description "Brief"
-    field brand "Brand"
+    field description "Brief" widget=rich_text
+    field brand "Brand" widget=combobox
     field status "Status"
-    field start_date "Start"
-    field end_date "End"
+    field start_date "Start" widget=picker
+    field end_date "End" widget=picker
     field budget "Budget"
 
 surface feedback_create "Add Feedback":
   uses entity Feedback
   mode: create
   section main:
-    field rating "Rating"
-    field comment "Comment"
+    field rating "Rating" widget=slider
+    field comment "Comment" widget=rich_text
