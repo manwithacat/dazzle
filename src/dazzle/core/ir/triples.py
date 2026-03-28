@@ -1,16 +1,24 @@
 """
-Widget resolution and SurfaceFieldTriple IR types.
+Widget resolution, permission helpers, and surface action derivation for DAZZLE IR.
 
 This module provides:
 - WidgetKind: enumeration of UI widget types
 - _WIDGET_MAP: mapping from FieldTypeKind to WidgetKind
 - resolve_widget(): derives the correct widget for a FieldSpec
 - SurfaceFieldTriple: frozen Pydantic model capturing per-field UI metadata
+- Permission helpers (_condition_matches_role, _condition_is_pure_role_only,
+  _rule_matches_persona, get_permitted_personas): static permission analysis
+- SurfaceActionTriple: frozen Pydantic model capturing per-action UI metadata
+- resolve_surface_actions(): derives the set of actions for a surface
 
 The widget mapping mirrors the form-type logic in
 ``dazzle_ui/converters/template_compiler.py`` but lives in the IR layer
 with no UI-layer imports, making it available to static analysis, testing
 and the contract verification layer.
+
+Permission helpers were originally in ``dazzle.testing.ux.contracts`` and
+are migrated here so the IR layer owns the derivation logic independently
+of the testing layer.
 """
 
 from enum import StrEnum
@@ -115,3 +123,288 @@ class SurfaceFieldTriple(BaseModel):
     is_required: bool
     is_fk: bool
     ref_entity: str | None
+
+
+# ---------------------------------------------------------------------------
+# Permission helpers
+# ---------------------------------------------------------------------------
+
+
+def _condition_matches_role(condition: object, role: str) -> bool:
+    """Return True if a ConditionExpr tree contains a role_check matching *role*.
+
+    Uses duck-typing via ``getattr`` so the IR condition types are not imported
+    at module level (avoids circular imports).
+    """
+    if condition is None:
+        return False
+    role_check = getattr(condition, "role_check", None)
+    if role_check is not None:
+        return getattr(role_check, "role_name", None) == role
+    left = getattr(condition, "left", None)
+    right = getattr(condition, "right", None)
+    if left is not None or right is not None:
+        return _condition_matches_role(left, role) or _condition_matches_role(right, role)
+    return False
+
+
+def _condition_is_pure_role_only(condition: object) -> bool:
+    """Return True if the condition tree contains only role_check nodes.
+
+    A condition is "pure role only" when it has no field comparisons
+    (``comparison``) and no grant checks (``grant_check``).  Such a condition
+    can be mapped directly to a persona list by matching role names against
+    persona IDs.
+    """
+    if condition is None:
+        return False
+    if getattr(condition, "comparison", None) is not None:
+        return False
+    if getattr(condition, "grant_check", None) is not None:
+        return False
+    if getattr(condition, "role_check", None) is not None:
+        return True
+    left = getattr(condition, "left", None)
+    right = getattr(condition, "right", None)
+    if left is not None or right is not None:
+        left_pure = _condition_is_pure_role_only(left) if left is not None else True
+        right_pure = _condition_is_pure_role_only(right) if right is not None else True
+        return left_pure and right_pure
+    return False
+
+
+def _rule_matches_persona(rule: object, persona_id: str) -> bool:
+    """Return True if a PermissionRule applies to the given persona ID.
+
+    Evaluation order:
+    1. If the rule has explicit ``personas``, check membership.
+    2. If the condition is a pure role gate, check whether the role name
+       matches the persona ID.
+    3. Otherwise (open rule), return True — any authenticated persona matches.
+    """
+    personas = getattr(rule, "personas", [])
+    condition = getattr(rule, "condition", None)
+    if not personas:
+        if _condition_is_pure_role_only(condition):
+            return _condition_matches_role(condition, persona_id)
+        return True  # open to all authenticated
+    if persona_id in personas:
+        return True
+    if _condition_matches_role(condition, persona_id):
+        return True
+    return False
+
+
+def get_permitted_personas(
+    entities: list[object],
+    personas: list[object],
+    entity_name: str,
+    operation: object,
+) -> list[str]:
+    """Return persona IDs that hold a PERMIT rule for *operation* on *entity_name*.
+
+    Args:
+        entities: Sequence of ``EntitySpec`` instances to search.
+        personas: Sequence of ``PersonaSpec`` instances (provides the full set
+            of known persona IDs).
+        entity_name: The entity to check permissions against.
+        operation: A ``PermissionKind`` value naming the operation
+            (``create``, ``read``, ``update``, ``delete``, ``list``).
+
+    Returns:
+        A list of persona IDs.  When the entity has no access spec the full
+        persona list is returned (open-by-default).  When the access spec
+        exists but has no rule for *operation* an empty list is returned
+        (deny-by-default for that operation).
+    """
+    from dazzle.core.ir.domain import PolicyEffect
+
+    entity = next((e for e in entities if getattr(e, "name", None) == entity_name), None)
+    if entity is None or not getattr(entity, "access", None):
+        return [getattr(p, "id", str(p)) for p in personas]
+
+    permitted: set[str] = set()
+    access = entity.access
+    for rule in getattr(access, "permissions", []):
+        if getattr(rule, "operation", None) != operation:
+            continue
+        effect = getattr(rule, "effect", PolicyEffect.PERMIT)
+        if effect != PolicyEffect.PERMIT:
+            continue
+        rule_personas: list[str] = getattr(rule, "personas", [])
+        if rule_personas:
+            permitted.update(rule_personas)
+        else:
+            condition = getattr(rule, "condition", None)
+            if _condition_is_pure_role_only(condition):
+                for p in personas:
+                    pid = getattr(p, "id", str(p))
+                    if _condition_matches_role(condition, pid):
+                        permitted.add(pid)
+            else:
+                # Open rule — all personas permitted
+                return [getattr(p, "id", str(p)) for p in personas]
+
+    return list(permitted)
+
+
+# ---------------------------------------------------------------------------
+# SurfaceActionTriple + resolve_surface_actions
+# ---------------------------------------------------------------------------
+
+
+class SurfaceActionTriple(BaseModel):
+    """Frozen snapshot of a derived user-facing action for a surface.
+
+    Captures the action name, the permission kind that governs it, and the
+    set of persona IDs that can see/perform the action.
+
+    Attributes:
+        action: Canonical action identifier (e.g. ``"list"``, ``"create_link"``,
+            ``"edit_link"``, ``"delete_button"``, ``"transition:open->closed"``,
+            ``"create_submit"``, ``"edit_submit"``).
+        requires_permission: The ``PermissionKind`` that controls this action.
+        visible_to: Persona IDs permitted to perform this action.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    action: str
+    requires_permission: object  # PermissionKind — typed as object to avoid import cycle
+    visible_to: list[str]
+
+
+def resolve_surface_actions(
+    entity: object,
+    surface: object,
+    all_surfaces: list[object],
+    personas: list[object],
+    entities: list[object],
+) -> list[SurfaceActionTriple]:
+    """Derive the set of user-facing action triples for a surface.
+
+    Derives actions based on the surface mode and the permission rules on the
+    entity.  The derivation rules are:
+
+    * ``list`` → always ``list`` + ``detail_link``; ``create_link`` if CREATE
+      is permitted to at least one persona.
+    * ``view`` → ``edit_link`` if UPDATE is permitted AND a sibling edit
+      surface exists for the entity; ``delete_button`` if DELETE is permitted;
+      ``transition:{from}->{to}`` for each non-auto state transition.
+    * ``create`` → ``create_submit`` only.
+    * ``edit`` → ``edit_submit`` only.
+
+    Args:
+        entity: An ``EntitySpec`` instance.
+        surface: A ``SurfaceSpec`` instance for which actions are derived.
+        all_surfaces: All ``SurfaceSpec`` instances in the app (used to detect
+            sibling edit surfaces for view-mode ``edit_link``).
+        personas: All ``PersonaSpec`` instances.
+        entities: All ``EntitySpec`` instances (passed to
+            ``get_permitted_personas``).
+
+    Returns:
+        A list of ``SurfaceActionTriple`` instances, one per derived action.
+    """
+    from dazzle.core.ir.domain import PermissionKind
+    from dazzle.core.ir.state_machine import TransitionTrigger
+    from dazzle.core.ir.surfaces import SurfaceMode
+
+    entity_name: str = getattr(entity, "name", "")
+    mode: SurfaceMode = getattr(surface, "mode", SurfaceMode.CUSTOM)
+
+    def _permitted(op: PermissionKind) -> list[str]:
+        return get_permitted_personas(entities, personas, entity_name, op)
+
+    triples: list[SurfaceActionTriple] = []
+
+    if mode == SurfaceMode.LIST:
+        read_permitted = _permitted(PermissionKind.READ)
+        triples.append(
+            SurfaceActionTriple(
+                action="list",
+                requires_permission=PermissionKind.READ,
+                visible_to=read_permitted,
+            )
+        )
+        triples.append(
+            SurfaceActionTriple(
+                action="detail_link",
+                requires_permission=PermissionKind.READ,
+                visible_to=read_permitted,
+            )
+        )
+        create_permitted = _permitted(PermissionKind.CREATE)
+        if create_permitted:
+            triples.append(
+                SurfaceActionTriple(
+                    action="create_link",
+                    requires_permission=PermissionKind.CREATE,
+                    visible_to=create_permitted,
+                )
+            )
+
+    elif mode == SurfaceMode.VIEW:
+        update_permitted = _permitted(PermissionKind.UPDATE)
+        if update_permitted:
+            # Only add edit_link if there is a sibling edit surface for this entity
+            has_edit_surface = any(
+                getattr(s, "mode", None) == SurfaceMode.EDIT
+                and getattr(s, "entity_ref", None) == entity_name
+                for s in all_surfaces
+            )
+            if has_edit_surface:
+                triples.append(
+                    SurfaceActionTriple(
+                        action="edit_link",
+                        requires_permission=PermissionKind.UPDATE,
+                        visible_to=update_permitted,
+                    )
+                )
+
+        delete_permitted = _permitted(PermissionKind.DELETE)
+        if delete_permitted:
+            triples.append(
+                SurfaceActionTriple(
+                    action="delete_button",
+                    requires_permission=PermissionKind.DELETE,
+                    visible_to=delete_permitted,
+                )
+            )
+
+        # State machine transitions (manual only)
+        sm = getattr(entity, "state_machine", None)
+        if sm is not None:
+            for transition in getattr(sm, "transitions", []):
+                trigger = getattr(transition, "trigger", None)
+                if trigger == TransitionTrigger.AUTO:
+                    continue
+                from_state = getattr(transition, "from_state", "")
+                to_state = getattr(transition, "to_state", "")
+                triples.append(
+                    SurfaceActionTriple(
+                        action=f"transition:{from_state}->{to_state}",
+                        requires_permission=PermissionKind.UPDATE,
+                        visible_to=_permitted(PermissionKind.UPDATE),
+                    )
+                )
+
+    elif mode == SurfaceMode.CREATE:
+        triples.append(
+            SurfaceActionTriple(
+                action="create_submit",
+                requires_permission=PermissionKind.CREATE,
+                visible_to=_permitted(PermissionKind.CREATE),
+            )
+        )
+
+    elif mode == SurfaceMode.EDIT:
+        triples.append(
+            SurfaceActionTriple(
+                action="edit_submit",
+                requires_permission=PermissionKind.UPDATE,
+                visible_to=_permitted(PermissionKind.UPDATE),
+            )
+        )
+
+    return triples

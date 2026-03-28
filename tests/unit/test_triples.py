@@ -7,13 +7,32 @@ Covers:
 - _id suffix convention: uuid field ending in _id → SEARCH_SELECT, plain 'id' → TEXT_INPUT
 - has_source=True override → SEARCH_SELECT
 - SurfaceFieldTriple construction (basic field and FK field)
+- get_permitted_personas() permission helper
+- resolve_surface_actions() action derivation
 """
 
 import pytest
 from pydantic import ValidationError
 
+from dazzle.core.ir.domain import (
+    AccessSpec,
+    EntitySpec,
+    PermissionKind,
+    PermissionRule,
+    PolicyEffect,
+)
 from dazzle.core.ir.fields import FieldModifier, FieldSpec, FieldType, FieldTypeKind
-from dazzle.core.ir.triples import SurfaceFieldTriple, WidgetKind, resolve_widget
+from dazzle.core.ir.personas import PersonaSpec
+from dazzle.core.ir.state_machine import StateMachineSpec, StateTransition, TransitionTrigger
+from dazzle.core.ir.surfaces import SurfaceMode, SurfaceSpec
+from dazzle.core.ir.triples import (
+    SurfaceActionTriple,
+    SurfaceFieldTriple,
+    WidgetKind,
+    get_permitted_personas,
+    resolve_surface_actions,
+    resolve_widget,
+)
 
 
 def _make_field(
@@ -227,3 +246,315 @@ class TestSurfaceFieldTriple:
         )
         assert triple.is_required is False
         assert triple.widget == WidgetKind.TEXTAREA
+
+
+# ---------------------------------------------------------------------------
+# Helpers for permission + action tests
+# ---------------------------------------------------------------------------
+
+
+def _make_entity(
+    name: str,
+    permissions: list[tuple[PermissionKind, list[str]]] | None = None,
+    state_machine: StateMachineSpec | None = None,
+) -> EntitySpec:
+    """Build a minimal EntitySpec with optional permissions and state machine."""
+    access: AccessSpec | None = None
+    if permissions is not None:
+        rules = [
+            PermissionRule(
+                operation=op,
+                personas=personas,
+                effect=PolicyEffect.PERMIT,
+            )
+            for op, personas in permissions
+        ]
+        access = AccessSpec(permissions=rules)
+    return EntitySpec(
+        name=name,
+        fields=[
+            FieldSpec(
+                name="id",
+                type=FieldType(kind=FieldTypeKind.UUID),
+                modifiers=[FieldModifier.PK],
+            )
+        ],
+        access=access,
+        state_machine=state_machine,
+    )
+
+
+def _make_surface(name: str, entity_ref: str, mode: SurfaceMode) -> SurfaceSpec:
+    """Build a minimal SurfaceSpec."""
+    return SurfaceSpec(name=name, entity_ref=entity_ref, mode=mode)
+
+
+def _make_personas(*ids: str) -> list[PersonaSpec]:
+    """Build a list of PersonaSpec from IDs."""
+    return [PersonaSpec(id=pid, label=pid.capitalize()) for pid in ids]
+
+
+# ---------------------------------------------------------------------------
+# TestGetPermittedPersonas
+# ---------------------------------------------------------------------------
+
+
+class TestGetPermittedPersonas:
+    def test_open_permissions_all_personas(self) -> None:
+        """A permit rule with no personas list returns all personas."""
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.READ, [])],
+        )
+        personas = _make_personas("admin", "viewer", "editor")
+        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
+        assert set(result) == {"admin", "viewer", "editor"}
+
+    def test_restricted_to_named_personas_only(self) -> None:
+        """A permit rule naming specific personas returns only those IDs."""
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.UPDATE, ["editor", "admin"])],
+        )
+        personas = _make_personas("admin", "viewer", "editor")
+        result = get_permitted_personas([entity], personas, "Task", PermissionKind.UPDATE)
+        assert set(result) == {"editor", "admin"}
+
+    def test_no_access_spec_defaults_to_all_personas(self) -> None:
+        """Entity with no access spec at all defaults to all personas."""
+        entity = _make_entity("Task")  # no permissions
+        personas = _make_personas("admin", "viewer")
+        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
+        assert set(result) == {"admin", "viewer"}
+
+    def test_entity_not_found_returns_all_personas(self) -> None:
+        """Requesting an unknown entity name returns all personas (safe default)."""
+        entity = _make_entity("Task", permissions=[(PermissionKind.READ, ["admin"])])
+        personas = _make_personas("admin", "viewer")
+        result = get_permitted_personas([entity], personas, "Other", PermissionKind.READ)
+        assert set(result) == {"admin", "viewer"}
+
+    def test_operation_without_rule_returns_empty(self) -> None:
+        """If the entity has access spec but no rule for the operation, returns empty."""
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.READ, ["admin"])],
+        )
+        personas = _make_personas("admin", "viewer")
+        # DELETE has no rule, so permitted set is empty
+        result = get_permitted_personas([entity], personas, "Task", PermissionKind.DELETE)
+        assert result == []
+
+    def test_multiple_rules_same_operation_union(self) -> None:
+        """Multiple permit rules for the same operation produce a union."""
+        entity = _make_entity(
+            "Task",
+            permissions=[
+                (PermissionKind.READ, ["admin"]),
+                (PermissionKind.READ, ["viewer"]),
+            ],
+        )
+        personas = _make_personas("admin", "viewer", "editor")
+        result = get_permitted_personas([entity], personas, "Task", PermissionKind.READ)
+        assert set(result) == {"admin", "viewer"}
+
+
+# ---------------------------------------------------------------------------
+# TestResolveSurfaceActions
+# ---------------------------------------------------------------------------
+
+
+class TestResolveSurfaceActions:
+    def test_list_mode_basic_actions(self) -> None:
+        """List mode always has list and detail_link actions."""
+        entity = _make_entity("Task", permissions=[(PermissionKind.READ, [])])
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "list" in action_names
+        assert "detail_link" in action_names
+
+    def test_list_mode_create_link_when_create_permitted(self) -> None:
+        """List mode includes create_link when CREATE is permitted to any persona."""
+        entity = _make_entity(
+            "Task",
+            permissions=[
+                (PermissionKind.READ, []),
+                (PermissionKind.CREATE, ["admin"]),
+            ],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin", "viewer")
+        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "create_link" in action_names
+
+    def test_list_mode_no_create_link_when_create_not_permitted(self) -> None:
+        """List mode omits create_link when there is no CREATE rule."""
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.READ, [])],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "create_link" not in action_names
+
+    def test_view_mode_no_edit_surface(self) -> None:
+        """View mode without a sibling edit surface has no edit_link action."""
+        entity = _make_entity(
+            "Task",
+            permissions=[
+                (PermissionKind.READ, []),
+                (PermissionKind.UPDATE, ["admin"]),
+            ],
+        )
+        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "edit_link" not in action_names
+
+    def test_view_mode_with_edit_surface(self) -> None:
+        """View mode includes edit_link when an edit surface for the entity exists."""
+        entity = _make_entity(
+            "Task",
+            permissions=[
+                (PermissionKind.READ, []),
+                (PermissionKind.UPDATE, ["admin"]),
+            ],
+        )
+        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
+        edit_surface = _make_surface("task_edit", "Task", SurfaceMode.EDIT)
+        personas = _make_personas("admin")
+        all_surfaces = [view_surface, edit_surface]
+        result = resolve_surface_actions(entity, view_surface, all_surfaces, personas, [entity])
+        action_names = [t.action for t in result]
+        assert "edit_link" in action_names
+
+    def test_view_mode_with_delete_permission(self) -> None:
+        """View mode includes delete_button when DELETE is permitted."""
+        entity = _make_entity(
+            "Task",
+            permissions=[
+                (PermissionKind.READ, []),
+                (PermissionKind.DELETE, ["admin"]),
+            ],
+        )
+        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "delete_button" in action_names
+
+    def test_view_mode_no_delete_when_not_permitted(self) -> None:
+        """View mode omits delete_button when there is no DELETE rule."""
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.READ, [])],
+        )
+        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "delete_button" not in action_names
+
+    def test_view_mode_with_transitions(self) -> None:
+        """View mode emits transition:{name} actions for manual state transitions."""
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["open", "closed"],
+            transitions=[
+                StateTransition(
+                    from_state="open",
+                    to_state="closed",
+                    trigger=TransitionTrigger.MANUAL,
+                ),
+            ],
+        )
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.READ, [])],
+            state_machine=sm,
+        )
+        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "transition:open->closed" in action_names
+
+    def test_view_mode_auto_transitions_excluded(self) -> None:
+        """Auto transitions are NOT surfaced as user-facing actions."""
+        sm = StateMachineSpec(
+            status_field="status",
+            states=["pending", "done"],
+            transitions=[
+                StateTransition(
+                    from_state="pending",
+                    to_state="done",
+                    trigger=TransitionTrigger.AUTO,
+                ),
+            ],
+        )
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.READ, [])],
+            state_machine=sm,
+        )
+        view_surface = _make_surface("task_view", "Task", SurfaceMode.VIEW)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, view_surface, [view_surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert "transition:pending->done" not in action_names
+
+    def test_create_mode_gives_create_submit(self) -> None:
+        """Create mode gives only create_submit action."""
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.CREATE, [])],
+        )
+        surface = _make_surface("task_create", "Task", SurfaceMode.CREATE)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert action_names == ["create_submit"]
+
+    def test_edit_mode_gives_edit_submit(self) -> None:
+        """Edit mode gives only edit_submit action."""
+        entity = _make_entity(
+            "Task",
+            permissions=[(PermissionKind.UPDATE, [])],
+        )
+        surface = _make_surface("task_edit", "Task", SurfaceMode.EDIT)
+        personas = _make_personas("admin")
+        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
+        action_names = [t.action for t in result]
+        assert action_names == ["edit_submit"]
+
+    def test_surface_action_triple_is_frozen(self) -> None:
+        """SurfaceActionTriple must be immutable."""
+        triple = SurfaceActionTriple(
+            action="list",
+            requires_permission=PermissionKind.READ,
+            visible_to=["admin"],
+        )
+        with pytest.raises(ValidationError):
+            triple.action = "other"  # type: ignore[misc]
+
+    def test_visible_to_reflects_permitted_personas(self) -> None:
+        """visible_to on action triples reflects which personas are permitted."""
+        entity = _make_entity(
+            "Task",
+            permissions=[
+                (PermissionKind.READ, ["admin", "viewer"]),
+                (PermissionKind.CREATE, ["admin"]),
+            ],
+        )
+        surface = _make_surface("task_list", "Task", SurfaceMode.LIST)
+        personas = _make_personas("admin", "viewer", "editor")
+        result = resolve_surface_actions(entity, surface, [surface], personas, [entity])
+        by_action = {t.action: t for t in result}
+        assert set(by_action["list"].visible_to) == {"admin", "viewer"}
+        assert set(by_action["create_link"].visible_to) == {"admin"}
