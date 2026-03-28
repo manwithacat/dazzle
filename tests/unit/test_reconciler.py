@@ -382,3 +382,168 @@ class TestDiagnosisModel:
             expectation="exp",
         )
         assert diag.category == ""
+
+
+# ---------------------------------------------------------------------------
+# TestReconcilerDiagnosis — synthetic failure cases
+# ---------------------------------------------------------------------------
+
+
+class TestReconcilerDiagnosis:
+    """Synthetic failure tests ensuring the reconciler maps contract failures
+    to the correct DiagnosisKind with accurate levers."""
+
+    def test_rbac_action_missing_diagnosis(self) -> None:
+        """RBAC contract expects action present → ACTION_MISSING when absent from HTML."""
+        contract = RBACContract(
+            entity="Task", persona="admin", operation="create", expected_present=True
+        )
+        contract.status = "failed"
+        contract.error = "Expected create action but not found in DOM"
+
+        triple = _make_triple(
+            entity="Task",
+            surface="task_list",
+            persona="admin",
+            actions=["list", "create_link"],
+        )
+
+        diag = reconcile(
+            contract=contract,
+            triple=triple,
+            html="<div><table><tr><td>Title</td></tr></table></div>",
+            appspec_entities=[],
+            appspec_surfaces=[],
+        )
+
+        assert diag.kind == DiagnosisKind.ACTION_MISSING
+        assert diag.contract_id == contract.contract_id
+        assert "Task" in diag.triple
+        assert any("permit" in lv.construct for lv in diag.levers)
+
+    def test_rbac_action_unexpected_diagnosis(self) -> None:
+        """RBAC contract expects action absent → ACTION_UNEXPECTED when found in HTML."""
+        contract = RBACContract(
+            entity="Task", persona="viewer", operation="delete", expected_present=False
+        )
+        contract.status = "failed"
+        contract.error = "Found delete button but viewer should not see it"
+
+        triple = _make_triple(entity="Task", persona="viewer", actions=["list"])
+
+        diag = reconcile(
+            contract=contract,
+            triple=triple,
+            html='<div><button class="delete">Delete</button></div>',
+            appspec_entities=[],
+            appspec_surfaces=[],
+        )
+
+        assert diag.kind == DiagnosisKind.ACTION_UNEXPECTED
+        assert diag.contract_id == contract.contract_id
+        assert any("access" in lv.construct for lv in diag.levers)
+
+    def test_field_missing_diagnosis(self) -> None:
+        """CreateFormContract with a missing field → FIELD_MISSING."""
+        contract = CreateFormContract(
+            entity="Task",
+            required_fields=["title", "description"],
+            all_fields=["title", "description", "status"],
+        )
+        contract.status = "failed"
+        contract.error = "Missing field: status"
+
+        triple = _make_triple(
+            entity="Task",
+            surface="task_create",
+            mode="create",
+            actions=["create_submit"],
+            fields=[
+                _make_field("title", required=True),
+                _make_field("description"),
+                _make_field("status"),
+            ],
+        )
+
+        diag = reconcile(
+            contract=contract,
+            triple=triple,
+            html='<form><input name="title"><textarea name="description"></textarea></form>',
+            appspec_entities=[],
+            appspec_surfaces=[],
+        )
+
+        assert diag.kind == DiagnosisKind.FIELD_MISSING
+        assert len(diag.levers) >= 1
+        assert "section" in diag.levers[0].construct or "element" in diag.levers[0].construct
+
+    def test_no_triple_returns_permission_gap(self) -> None:
+        """When triple is None, reconciler must return PERMISSION_GAP."""
+        contract = CreateFormContract(
+            entity="Task",
+            required_fields=["title"],
+            all_fields=["title"],
+        )
+        contract.status = "failed"
+        contract.error = "Page not accessible"
+
+        diag = reconcile(
+            contract=contract,
+            triple=None,
+            html="<div>403</div>",
+            appspec_entities=[],
+            appspec_surfaces=[],
+        )
+
+        assert diag.kind == DiagnosisKind.PERMISSION_GAP
+        assert "Task" in diag.triple
+        assert len(diag.levers) >= 1
+
+    def test_triple_suspect_widget_mismatch(self) -> None:
+        """When triple widget disagrees with raw entity re-derivation → TRIPLE_SUSPECT."""
+        from dazzle.core.ir.domain import EntitySpec
+        from dazzle.core.ir.fields import FieldSpec, FieldType, FieldTypeKind
+
+        # Raw entity has a TEXT field (should be textarea)
+        raw_field = FieldSpec(
+            name="notes",
+            type=FieldType(kind=FieldTypeKind.TEXT),
+        )
+        raw_entity = EntitySpec(
+            name="Task",
+            fields=[raw_field],
+        )
+
+        # Triple claims TEXT_INPUT (wrong — should be TEXTAREA for TEXT kind)
+        wrong_field = SurfaceFieldTriple(
+            field_name="notes",
+            widget=WidgetKind.TEXT_INPUT,  # Deliberately wrong
+            is_required=False,
+            is_fk=False,
+            ref_entity=None,
+        )
+        triple = _make_triple(
+            entity="Task",
+            surface="task_edit",
+            mode="edit",
+            actions=["edit_submit"],
+            fields=[wrong_field],
+        )
+
+        contract = EditFormContract(entity="Task", editable_fields=["notes"])
+        contract.status = "failed"
+        contract.error = "Widget type mismatch for notes"
+        # Set the field attr so the cross-check can find it
+        contract.field = "notes"  # type: ignore[attr-defined]
+
+        diag = reconcile(
+            contract=contract,
+            triple=triple,
+            html='<form><input name="notes" type="text"></form>',
+            appspec_entities=[raw_entity],
+            appspec_surfaces=[],
+        )
+
+        assert diag.kind == DiagnosisKind.TRIPLE_SUSPECT
+        assert "notes" in diag.observation
+        assert "textarea" in diag.observation.lower() or "TEXTAREA" in diag.observation
