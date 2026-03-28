@@ -229,11 +229,11 @@ surface project_detail "Project Detail":
   mode: view
   section main:
     field name "Name"
-    field description "Description"
-    field owner "Owner"
+    field description "Description" widget=rich_text
+    field owner "Owner" widget=combobox
     field status "Status"
-    field start_date "Start"
-    field target_date "Target"
+    field start_date "Start" widget=picker
+    field target_date "Target" widget=picker
 
   related tasks "Tasks":
     display: table
@@ -250,9 +250,9 @@ surface task_list "Tasks":
     field title "Title"
     field status "Status"
     field priority "Priority"
-    field assigned_to "Assignee"
-    field due_date "Due"
-    field labels "Labels"
+    field assigned_to "Assignee" widget=combobox
+    field due_date "Due" widget=picker
+    field labels "Labels" widget=tags
 
 surface task_create "New Task":
   uses entity Task
@@ -274,12 +274,12 @@ surface task_detail "Task Detail":
   mode: view
   section main:
     field title "Title"
-    field description "Description"
+    field description "Description" widget=rich_text
     field status "Status"
     field priority "Priority"
-    field assigned_to "Assignee"
-    field due_date "Due Date"
-    field labels "Labels"
+    field assigned_to "Assignee" widget=combobox
+    field due_date "Due Date" widget=picker
+    field labels "Labels" widget=tags
     field estimated_hours "Estimate"
 
   related comments "Discussion":
