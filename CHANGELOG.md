@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.9] - 2026-03-28
+
+### Fixed
+- **CI green badge**: Resolved all 12 mypy errors across 4 files — triples.py (getattr for object attrs), service.py (mixin method type ignores), ux.py (function annotations + HtmxResponse typing), db.py (union type guard for Alembic revision)
+
 ## [0.51.8] - 2026-03-28
 
 ### Fixed
