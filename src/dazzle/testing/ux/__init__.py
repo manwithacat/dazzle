@@ -8,6 +8,8 @@ Usage:
     inventory = generate_inventory(appspec)
 """
 
+from dazzle.testing.ux.baseline import Baseline, compare_results
+from dazzle.testing.ux.contracts import Contract, ContractKind, generate_contracts
 from dazzle.testing.ux.inventory import (
     Interaction,
     InteractionClass,
@@ -22,13 +24,18 @@ from dazzle.testing.ux.structural import (
 )
 
 __all__ = [
+    "Baseline",
+    "Contract",
+    "ContractKind",
     "Interaction",
     "InteractionClass",
-    "generate_inventory",
-    "UXReport",
-    "generate_report",
     "StructuralResult",
+    "UXReport",
     "check_detail_view",
     "check_form",
     "check_html",
+    "compare_results",
+    "generate_contracts",
+    "generate_inventory",
+    "generate_report",
 ]

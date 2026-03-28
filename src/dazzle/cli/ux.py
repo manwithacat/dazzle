@@ -71,10 +71,204 @@ def _run_structural_only() -> int:
     return 0
 
 
+def _run_contracts(
+    project_root: Path,
+    strict: bool = False,
+    update_baseline: bool = False,
+    persona_filter: str = "",
+    entity_filter: str = "",
+) -> int:
+    """Run contract verification against a live Dazzle app (no browser)."""
+    from dazzle.core.appspec_loader import load_project_appspec
+    from dazzle.testing.ux.baseline import Baseline, BaselineDiff, compare_results
+    from dazzle.testing.ux.contract_checker import check_contract
+    from dazzle.testing.ux.contracts import RBACContract, generate_contracts
+    from dazzle.testing.ux.htmx_client import HtmxClient
+
+    # Load AppSpec
+    try:
+        appspec = load_project_appspec(project_root)
+    except Exception as e:
+        console.print(f"[red]Failed to load project: {e}[/red]")
+        return 1
+
+    # Generate contracts
+    contracts = generate_contracts(appspec)
+    console.print(f"[dim]Generated {len(contracts)} contracts[/dim]")
+
+    # Apply filters
+    if entity_filter:
+        contracts = [
+            c
+            for c in contracts
+            if getattr(c, "entity", "") == entity_filter
+            or getattr(c, "workspace", "") == entity_filter
+        ]
+        console.print(
+            f"[dim]Filtered to entity '{entity_filter}': {len(contracts)} contracts[/dim]"
+        )
+    if persona_filter:
+        contracts = [
+            c for c in contracts if not isinstance(c, RBACContract) or c.persona == persona_filter
+        ]
+        console.print(
+            f"[dim]Filtered to persona '{persona_filter}': {len(contracts)} contracts[/dim]"
+        )
+
+    if not contracts:
+        console.print("[yellow]No contracts to verify.[/yellow]")
+        return 0
+
+    # Resolve URLs
+    site_url, _api_url = _resolve_runtime_urls(project_root)
+    client = HtmxClient(base_url=site_url)
+
+    console.print("[bold]Running contract verification...[/bold]")
+    console.print(f"[dim]  site: {site_url}[/dim]")
+
+    async def _run() -> None:
+        # Authenticate as admin for non-RBAC contracts
+        ok = await client.authenticate("admin")
+        if not ok:
+            console.print("[yellow]  admin auth failed — some checks may fail[/yellow]")
+
+        # Separate RBAC and non-RBAC contracts
+        rbac_contracts = [c for c in contracts if isinstance(c, RBACContract)]
+        other_contracts = [c for c in contracts if not isinstance(c, RBACContract)]
+
+        # ------------------------------------------------------------------
+        # Non-RBAC contracts
+        # ------------------------------------------------------------------
+        entity_ids: dict[str, str] = {}  # entity name -> first ID
+
+        for contract in other_contracts:
+            path = contract.url_path
+            if "{id}" in path:
+                ent_name = getattr(contract, "entity", "")
+                if ent_name and ent_name not in entity_ids:
+                    try:
+                        import httpx
+
+                        async with httpx.AsyncClient() as http:
+                            id_resp = await http.get(
+                                f"{site_url}/__test__/entity/{ent_name}",
+                                timeout=10,
+                            )
+                        if id_resp.status_code == 200:
+                            items = id_resp.json()
+                            if items:
+                                entity_ids[ent_name] = str(
+                                    items[0].get("id", "")
+                                    if isinstance(items[0], dict)
+                                    else items[0]
+                                )
+                    except Exception:
+                        pass
+                eid = entity_ids.get(ent_name, "")
+                if not eid:
+                    contract.status = "pending"
+                    contract.error = f"No test entity found for {ent_name}"
+                    continue
+                path = path.replace("{id}", eid)
+
+            try:
+                page_resp = await client.get_full_page(path)
+                check_contract(contract, page_resp.html)
+            except Exception as e:
+                contract.status = "failed"
+                contract.error = str(e)
+
+        # ------------------------------------------------------------------
+        # RBAC contracts — group by persona, authenticate once per persona
+        # ------------------------------------------------------------------
+        personas_grouped: dict[str, list[RBACContract]] = {}
+        for rc in rbac_contracts:
+            personas_grouped.setdefault(rc.persona, []).append(rc)
+
+        for pid, persona_contracts in personas_grouped.items():
+            persona_client = HtmxClient(base_url=site_url)
+            auth_ok = await persona_client.authenticate(pid)
+            if not auth_ok:
+                for rc in persona_contracts:
+                    rc.status = "failed"
+                    rc.error = f"Authentication failed for persona '{pid}'"
+                continue
+
+            for rc in persona_contracts:
+                try:
+                    page_resp = await persona_client.get_full_page(rc.url_path)
+                    check_contract(rc, page_resp.html)
+                except Exception as e:
+                    rc.status = "failed"
+                    rc.error = str(e)
+
+    asyncio.run(_run())
+
+    # Tally results
+    passed = sum(1 for c in contracts if c.status == "passed")
+    failed = sum(1 for c in contracts if c.status == "failed")
+    pending = sum(1 for c in contracts if c.status == "pending")
+
+    console.print(f"\n[bold]Contracts: {passed} passed, {failed} failed, {pending} pending[/bold]")
+
+    # Show failures
+    for c in contracts:
+        if c.status == "failed":
+            label = f"{c.kind.value}"
+            ent = getattr(c, "entity", "") or getattr(c, "workspace", "")
+            if ent:
+                label += f":{ent}"
+            if isinstance(c, RBACContract):
+                label += f":{c.persona}:{c.operation}"
+            console.print(f"  [red]FAIL[/red] {label} — {c.error}")
+
+    # Baseline comparison
+    baseline_path = project_root / ".dazzle" / "ux_baseline.json"
+    old_baseline = Baseline.load(baseline_path)
+
+    new_baseline = Baseline(
+        total=len(contracts),
+        passed=passed,
+        failed=failed,
+        contracts={c.contract_id: c.status for c in contracts if c.status != "pending"},
+    )
+
+    if old_baseline.contracts:
+        diff: BaselineDiff = compare_results(old_baseline, new_baseline)
+        if diff.regressions:
+            console.print(f"\n[red]Regressions ({len(diff.regressions)}):[/red]")
+            for cid in diff.regressions:
+                console.print(f"  [red]↓[/red] {cid}")
+        if diff.fixed:
+            console.print(f"\n[green]Fixed ({len(diff.fixed)}):[/green]")
+            for cid in diff.fixed:
+                console.print(f"  [green]↑[/green] {cid}")
+        if diff.new_failures:
+            console.print(f"\n[yellow]New failures ({len(diff.new_failures)}):[/yellow]")
+            for cid in diff.new_failures:
+                console.print(f"  [yellow]•[/yellow] {cid}")
+
+    if update_baseline:
+        new_baseline.save(baseline_path)
+        console.print(f"[dim]Baseline updated: {baseline_path}[/dim]")
+
+    if strict and failed > 0:
+        return 1
+    return 0
+
+
 @ux_app.command("verify")
 def verify_command(
     structural: bool = typer.Option(
         False, "--structural", help="Structural checks only (no browser)"
+    ),
+    contracts: bool = typer.Option(
+        False, "--contracts", help="Run contract verification (no browser)"
+    ),
+    browser: bool = typer.Option(False, "--browser", help="Run Playwright browser tests only"),
+    strict: bool = typer.Option(False, "--strict", help="Exit 1 on any contract failure"),
+    update_baseline: bool = typer.Option(
+        False, "--update-baseline", help="Update baseline after run"
     ),
     persona: str = typer.Option("", "--persona", help="Filter to specific persona"),
     entity: str = typer.Option("", "--entity", help="Filter to specific entity"),
@@ -94,13 +288,42 @@ def verify_command(
     The command reads ``.dazzle/runtime.json`` to discover the server URL.
 
     Examples:
-        dazzle ux verify                    # Full verification
+        dazzle ux verify                    # Full verification (contracts + browser)
+        dazzle ux verify --contracts        # Contract checks only (fast, no browser)
+        dazzle ux verify --browser          # Playwright browser tests only
         dazzle ux verify --structural       # HTML checks only (fast)
         dazzle ux verify --persona teacher  # Filter by persona
         dazzle ux verify --headed           # Watch the browser
     """
     if structural:
         raise typer.Exit(_run_structural_only())
+
+    project_root = Path.cwd().resolve()
+
+    # Route: --contracts only
+    if contracts and not browser:
+        raise typer.Exit(
+            _run_contracts(
+                project_root,
+                strict=strict,
+                update_baseline=update_baseline,
+                persona_filter=persona,
+                entity_filter=entity,
+            )
+        )
+
+    # Route: --browser only — skip contracts, run Playwright below
+    # Route: neither flag — run contracts first, then browser
+    if not browser:
+        rc = _run_contracts(
+            project_root,
+            strict=strict,
+            update_baseline=update_baseline,
+            persona_filter=persona,
+            entity_filter=entity,
+        )
+        if strict and rc != 0:
+            raise typer.Exit(rc)
 
     from dazzle.core.appspec_loader import load_project_appspec
     from dazzle.testing.ux.harness import check_postgres_available

@@ -21,3 +21,41 @@ class TestUxVerifyCLI:
         result = runner.invoke(ux_app, ["--help"])
         assert result.exit_code == 0
         assert "verify" in result.output.lower() or "UX" in result.output
+
+
+class TestVerifyContractsFlag:
+    def test_contracts_flag_accepted(self) -> None:
+        import inspect
+
+        from dazzle.cli.ux import verify_command
+
+        sig = inspect.signature(verify_command)
+        param_names = list(sig.parameters.keys())
+        assert "contracts" in param_names
+
+    def test_browser_flag_accepted(self) -> None:
+        import inspect
+
+        from dazzle.cli.ux import verify_command
+
+        sig = inspect.signature(verify_command)
+        param_names = list(sig.parameters.keys())
+        assert "browser" in param_names
+
+    def test_strict_flag_accepted(self) -> None:
+        import inspect
+
+        from dazzle.cli.ux import verify_command
+
+        sig = inspect.signature(verify_command)
+        param_names = list(sig.parameters.keys())
+        assert "strict" in param_names
+
+    def test_update_baseline_flag_accepted(self) -> None:
+        import inspect
+
+        from dazzle.cli.ux import verify_command
+
+        sig = inspect.signature(verify_command)
+        param_names = list(sig.parameters.keys())
+        assert "update_baseline" in param_names
