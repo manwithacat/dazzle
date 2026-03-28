@@ -3168,6 +3168,95 @@ surface task_detail "Task Detail":
         surface = fragment.surfaces[0]
         assert surface.related_groups == []
 
+    def test_widget_after_visible_on_field(self):
+        """widget= after visible: should parse correctly (#754)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+persona admin "Admin":
+  role: admin
+
+entity Task "Task":
+  id: uuid pk
+  date_of_birth: date
+
+  permit:
+    create: role(admin)
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  section main:
+    field date_of_birth "Date of Birth" visible: role(admin) widget=picker
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        elem = surface.sections[0].elements[0]
+        assert elem.field_name == "date_of_birth"
+        assert elem.options.get("widget") == "picker"
+        assert elem.visible is not None
+
+    def test_widget_before_visible_on_field(self):
+        """widget= before visible: should still work."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+persona admin "Admin":
+  role: admin
+
+entity Task "Task":
+  id: uuid pk
+  date_of_birth: date
+
+  permit:
+    create: role(admin)
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  section main:
+    field date_of_birth "Date of Birth" widget=picker visible: role(admin)
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        elem = surface.sections[0].elements[0]
+        assert elem.field_name == "date_of_birth"
+        assert elem.options.get("widget") == "picker"
+        assert elem.visible is not None
+
+    def test_widget_after_compound_visible(self):
+        """widget= after compound visible: condition (#754)."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+persona admin "Admin":
+  role: admin
+persona manager "Manager":
+  role: manager
+
+entity Task "Task":
+  id: uuid pk
+  date_of_birth: date
+
+  permit:
+    create: role(admin) or role(manager)
+
+surface task_create "Create Task":
+  uses entity Task
+  mode: create
+  section main:
+    field date_of_birth "Date of Birth" visible: role(admin) or role(manager) widget=picker
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        elem = surface.sections[0].elements[0]
+        assert elem.field_name == "date_of_birth"
+        assert elem.options.get("widget") == "picker"
+        assert elem.visible is not None
+
 
 if __name__ == "__main__":
     main()

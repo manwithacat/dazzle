@@ -24,6 +24,7 @@ class SurfaceParserMixin:
         match: Any
         current_token: Any
         expect_identifier_or_keyword: Any
+        peek_token: Any
         skip_newlines: Any
         error: Any
         file: Any
@@ -322,19 +323,39 @@ class SurfaceParserMixin:
                             opt_val += "." + self.expect_identifier_or_keyword().value
                     options[opt_key] = opt_val
 
-                # v0.42.0: Parse optional visible: role condition
+                # Parse optional visible:, when:, and trailing key=value options
+                # in any order.  This allows e.g.:
+                #   field x "X" visible: role(admin) widget=picker
+                #   field x "X" widget=picker visible: role(admin)
                 field_visible = None
-                if self.match(TokenType.VISIBLE):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    field_visible = self.parse_condition_expr()
-
-                # v0.30.0: Parse optional when: condition
                 when_expr = None
-                if self.match(TokenType.WHEN):
-                    self.advance()
-                    self.expect(TokenType.COLON)
-                    when_expr = self.collect_line_as_expr()
+                while True:
+                    if self.match(TokenType.VISIBLE):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        field_visible = self.parse_condition_expr()
+                    elif self.match(TokenType.WHEN):
+                        self.advance()
+                        self.expect(TokenType.COLON)
+                        when_expr = self.collect_line_as_expr()
+                    elif self.match(TokenType.SOURCE) or self.match(TokenType.IDENTIFIER):
+                        # Trailing key=value option (e.g. widget=picker after visible:)
+                        peek = self.peek_token()
+                        if peek and peek.type == TokenType.EQUALS:
+                            opt_key = self.advance().value
+                            self.expect(TokenType.EQUALS)
+                            if self.match(TokenType.STRING):
+                                opt_val = self.advance().value
+                            else:
+                                opt_val = self.expect_identifier_or_keyword().value
+                                while self.match(TokenType.DOT):
+                                    self.advance()
+                                    opt_val += "." + self.expect_identifier_or_keyword().value
+                            options[opt_key] = opt_val
+                        else:
+                            break
+                    else:
+                        break
 
                 elements.append(
                     ir.SurfaceElement(
