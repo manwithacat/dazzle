@@ -1,0 +1,20 @@
+{# Toggle group — exclusive or multi-select button group #}
+{# Parameters: options (list of {value: str, label: str}), name (str), multi (bool, default: false), initial (str|None) #}
+{% set multi = multi | default(false) %}
+<div x-data="dzToggleGroup"
+     data-dz-multi="{{ 'true' if multi else 'false' }}"
+     {% if initial %}data-dz-value="{{ initial }}"{% endif %}
+     role="{{ 'group' if multi else 'radiogroup' }}"
+     aria-label="{{ label | default(name) }}"
+     class="join">
+  <input type="hidden" name="{{ name }}" :value="multi ? (value || []).join(',') : (value || '')">
+  {% for option in options %}
+  <button type="button"
+          @click="toggle('{{ option.value }}')"
+          :class="isSelected('{{ option.value }}') ? 'btn-primary' : 'btn-ghost'"
+          :aria-pressed="isSelected('{{ option.value }}')"
+          class="btn join-item btn-sm">
+    {{ option.label }}
+  </button>
+  {% endfor %}
+</div>

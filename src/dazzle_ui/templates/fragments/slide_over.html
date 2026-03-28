@@ -1,0 +1,45 @@
+{# Enhanced slide-over — Alpine dzSlideOver with configurable width and focus trap #}
+{# Parameters: panel_id (str, default: 'dz-slideover'), width (str: sm|md|lg|xl|full, default: md), title (str) #}
+{% set panel_id = panel_id | default('dz-slideover') %}
+{% set width = width | default('md') %}
+<div x-data="dzSlideOver" data-dz-width="{{ width }}" id="{{ panel_id }}"
+     x-trap.noscroll="open">
+
+  {# Backdrop #}
+  <div x-show="open"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       @click="hide()"
+       class="fixed inset-0 bg-black/30 z-40">
+  </div>
+
+  {# Panel #}
+  <div x-show="open"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="translate-x-full"
+       x-transition:enter-end="translate-x-0"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="translate-x-0"
+       x-transition:leave-end="translate-x-full"
+       :class="widthClass()"
+       role="dialog" aria-modal="true" :aria-labelledby="'{{ panel_id }}-title'"
+       class="fixed inset-y-0 right-0 z-50 w-full bg-base-100 shadow-xl overflow-y-auto transform">
+
+    {# Header #}
+    <div class="flex items-center justify-between p-4 border-b border-base-300">
+      <h3 class="text-lg font-semibold" id="{{ panel_id }}-title">{{ title | default('Details') }}</h3>
+      <button @click="hide()" class="btn btn-ghost btn-sm btn-circle" aria-label="Close">&times;</button>
+    </div>
+
+    {# Content — HTMX swaps into here #}
+    <div id="{{ panel_id }}-content" class="p-4">
+      {% block slideover_content %}
+      <p class="text-base-content/50">Select an item to view details.</p>
+      {% endblock %}
+    </div>
+  </div>
+</div>

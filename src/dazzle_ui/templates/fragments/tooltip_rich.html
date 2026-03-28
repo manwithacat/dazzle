@@ -1,0 +1,29 @@
+{# Rich tooltip — HTML content tooltip with show/hide delay #}
+{# Parameters: content (str|html), position (str, default: top), show_delay (int ms, default: 200), hide_delay (int ms, default: 100) #}
+{% set position = position | default('top') %}
+<div x-data="dzTooltip" class="relative inline-block"
+     data-dz-delay="{{ show_delay | default(200) }}"
+     data-dz-hide-delay="{{ hide_delay | default(100) }}"
+     @mouseenter="show()" @mouseleave="hide()"
+     @focusin="show()" @focusout="hide()">
+
+  {# Trigger — wraps caller content #}
+  {% block tooltip_trigger %}
+  {{ trigger | safe if trigger else '' }}
+  {% endblock %}
+
+  {# Tooltip content #}
+  <div x-show="visible"
+       x-transition:enter="transition ease-out duration-100"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-75"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       x-anchor.{{ position }}="$el.parentElement"
+       role="tooltip"
+       class="absolute z-50 px-3 py-2 text-sm bg-neutral text-neutral-content rounded-box shadow-lg max-w-xs"
+       :aria-hidden="!visible">
+    {{ content | safe }}
+  </div>
+</div>

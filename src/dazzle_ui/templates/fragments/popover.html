@@ -1,0 +1,27 @@
+{# Popover — anchored floating content panel #}
+{# Parameters: trigger_text (str), position (str: top|bottom|left|right, default: bottom) #}
+{% set position = position | default('bottom') %}
+<div x-data="dzPopover" class="relative inline-block">
+  {# Trigger #}
+  <button @click="toggle()" type="button"
+          :aria-expanded="open"
+          class="btn btn-ghost btn-sm">
+    {{ trigger_text | default('More') }}
+  </button>
+
+  {# Content panel #}
+  <div x-show="open"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       x-transition:leave="transition ease-in duration-100"
+       x-transition:leave-start="opacity-100 scale-100"
+       x-transition:leave-end="opacity-0 scale-95"
+       x-anchor.{{ position }}="$el.previousElementSibling"
+       role="dialog"
+       class="absolute z-50 mt-1 p-3 bg-base-100 border border-base-300 rounded-box shadow-lg min-w-48">
+    {% block popover_content %}
+    {{ content | safe if content else '' }}
+    {% endblock %}
+  </div>
+</div>
