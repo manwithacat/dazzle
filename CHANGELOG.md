@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.4] - 2026-03-28
+
+### Added
+- **UX Component Expansion — Phase 4 (Vendored Widget Libraries)**: Complex input components via battle-tested JS libraries
+  - **Tom Select** (v2.5.2, Apache 2.0): Combobox, multi-select, and tag input — `data-dz-widget="combobox|multiselect|tags"`
+  - **Flatpickr** (v4.6.13, MIT): Date picker and date range picker — `data-dz-widget="datepicker|daterange"`
+  - **Pickr** (v1.9.1, MIT): Color picker with nano theme — `data-dz-widget="colorpicker"`
+  - **Quill** (v2.0.3, BSD-3): Rich text editor with snow theme — `data-dz-widget="richtext"`
+  - Range slider with live value tooltip — `data-dz-widget="range-tooltip"`
+  - `dz-widget-registry.js`: Bridge handler registrations for all 8 widget types (mount/unmount lifecycle)
+  - `dz-widgets.css`: DaisyUI v4 theme overrides for all vendored libraries (oklch color tokens, radius, fonts)
+  - `form_field.html` macro: 8 new `widget:` cases — combobox, multi_select, tags, picker, range, color, rich_text, slider
+  - Conditional loading via `asset_manifest.py` — vendored JS/CSS only loads on pages that use the widgets
+
+### Agent Guidance
+- Set `widget:` on surface fields to use vendored widgets. The `form_field.html` macro checks `field.widget` before `field.type`.
+- Widget elements use `data-dz-widget` attributes. The component bridge (`dz-component-bridge.js`) handles HTMX swap lifecycle. `dz-widget-registry.js` registers all mount/unmount handlers.
+- Tom Select covers three use cases: `combobox` (single select with search), `multiselect` (multi with remove buttons), `tags` (free-form tag creation).
+
 ## [0.51.3] - 2026-03-28
 
 ### Added
