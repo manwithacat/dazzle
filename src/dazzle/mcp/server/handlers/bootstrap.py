@@ -271,6 +271,12 @@ def _build_instructions(has_questions: bool, questions: list[dict[str, Any]]) ->
                 "11. Validate with dsl(operation='validate')",
                 "12. Run dsl(operation='lint', extended=true) for quality check",
                 (
+                    "12a. Review the 'Relevant capabilities' section of the lint output. "
+                    "Consider whether any surfaced capabilities (widgets, layout modes, "
+                    "components) are applicable to your generated DSL and incorporate them "
+                    "before proceeding."
+                ),
+                (
                     "13. Run dsl(operation='fidelity') to verify each surface has all "
                     "fields the entity defines. Fix any missing fields."
                 ),
