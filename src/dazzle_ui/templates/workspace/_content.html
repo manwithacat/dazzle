@@ -7,7 +7,7 @@
 
   {% if workspace.context_options_url %}
   <div class="mb-4 flex items-center gap-2">
-    <label class="text-sm font-medium" for="dz-context-selector">{{ workspace.context_selector_entity.replace('_', ' ') }}:</label>
+    <label class="text-sm font-medium" for="dz-context-selector">{{ workspace.context_selector_label or workspace.context_selector_entity.replace('_', ' ') }}:</label>
     <select id="dz-context-selector" class="select select-bordered select-sm">
       <option value="">All</option>
     </select>

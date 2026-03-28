@@ -96,6 +96,7 @@ class WorkspaceContext(BaseModel):
     sse_url: str = ""  # SSE stream URL (empty = no live updates)
     fold_count: int = 3  # Regions above the fold (eager load); rest use intersect
     context_selector_entity: str = ""  # v0.38.0: entity for context selector
+    context_selector_label: str = ""  # Human-readable label for context selector
     context_options_url: str = ""  # API URL to fetch context options
 
 
@@ -366,9 +367,16 @@ def build_workspace_context(
     ctx_entity = ""
     ctx_options_url = ""
     ctx_sel = getattr(workspace, "context_selector", None)
+    ctx_label = ""
     if ctx_sel:
         ctx_entity = ctx_sel.entity
         ctx_options_url = f"/api/workspaces/{workspace.name}/context-options"
+        # Use DSL title if available, else split PascalCase
+        ctx_label = _entity_titles.get(ctx_entity, "")
+        if not ctx_label or ctx_label == ctx_entity:
+            import re
+
+            ctx_label = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", ctx_entity)
 
     return WorkspaceContext(
         name=workspace.name,
@@ -379,6 +387,7 @@ def build_workspace_context(
         endpoint=f"/api/workspaces/{workspace.name}",
         fold_count=fold_count,
         context_selector_entity=ctx_entity,
+        context_selector_label=ctx_label,
         context_options_url=ctx_options_url,
     )
 
