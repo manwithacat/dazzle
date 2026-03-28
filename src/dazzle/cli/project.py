@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 import typer
 
 from dazzle.cli.utils import load_project_appspec
+from dazzle.core.discovery import Relevance
 from dazzle.core.errors import DazzleError, ParseError
 from dazzle.core.fileset import discover_dsl_files
 from dazzle.core.init_impl import InitError, init_project, list_examples
@@ -75,7 +76,7 @@ def _print_human_diagnostics(
     errors: list[str],
     warnings: list[str],
     appspec: ir.AppSpec | None = None,
-    relevance: list | None = None,
+    relevance: list[Relevance] | None = None,
 ) -> None:
     """Print diagnostics in human-readable format."""
     if errors:
