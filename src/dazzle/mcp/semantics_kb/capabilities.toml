@@ -1,0 +1,127 @@
+[meta]
+category = "UX Capabilities"
+version = "0.51.9"
+
+[concepts.widget_rich_text]
+category = "Widget"
+definition = "Rich text editing via Quill v2 for formatted content"
+syntax = 'field description "Description" widget=rich_text'
+applies_to = "text fields on create/edit surfaces"
+demonstrated_in = ["component_showcase", "project_tracker", "design_studio"]
+related = ["widget_combobox", "widget_picker"]
+
+[concepts.widget_combobox]
+category = "Widget"
+definition = "Searchable single-select dropdown via Tom Select for entity references"
+syntax = 'field assigned_to "Assignee" widget=combobox'
+applies_to = "ref fields on create/edit surfaces"
+demonstrated_in = ["component_showcase", "project_tracker", "design_studio"]
+related = ["widget_rich_text", "widget_tags"]
+
+[concepts.widget_picker]
+category = "Widget"
+definition = "Date/time picker via Flatpickr for date and datetime fields"
+syntax = 'field due_date "Due Date" widget=picker'
+applies_to = "date and datetime fields on create/edit surfaces"
+demonstrated_in = ["component_showcase", "project_tracker"]
+related = ["widget_rich_text", "widget_slider"]
+
+[concepts.widget_tags]
+category = "Widget"
+definition = "Multi-value tag input via Tom Select for free-form labels"
+syntax = 'field tags "Tags" widget=tags'
+applies_to = "str fields with tag/label/keyword semantics on create/edit surfaces"
+demonstrated_in = ["component_showcase"]
+related = ["widget_combobox"]
+
+[concepts.widget_color]
+category = "Widget"
+definition = "Color picker via Pickr for hex color values"
+syntax = 'field color_hex "Color" widget=color'
+applies_to = "str(7) fields with color semantics on create/edit surfaces"
+demonstrated_in = ["component_showcase"]
+related = ["widget_slider"]
+
+[concepts.widget_slider]
+category = "Widget"
+definition = "Numeric slider for bounded integer values like scores, ratings, priority"
+syntax = 'field priority "Priority" widget=slider'
+applies_to = "int fields with score/rating/priority/level semantics on create/edit surfaces"
+demonstrated_in = ["component_showcase"]
+related = ["widget_picker", "widget_color"]
+
+[concepts.layout_kanban]
+category = "Layout"
+definition = "Kanban board workspace display for entities with state machine transitions"
+syntax = "region tasks source=Task display: kanban"
+applies_to = "entities with transitions: block"
+demonstrated_in = ["project_tracker"]
+related = ["layout_timeline"]
+
+[concepts.layout_timeline]
+category = "Layout"
+definition = "Timeline workspace display for entities with date fields"
+syntax = "region milestones source=Milestone display: timeline"
+applies_to = "entities with date or datetime fields"
+demonstrated_in = ["project_tracker"]
+related = ["layout_kanban"]
+
+[concepts.layout_related_groups]
+category = "Layout"
+definition = "Grouped display of related entities on detail/view surfaces"
+syntax = "related:\n  group \"Items\":\n    entity Task display: table\n    entity Document display: file_list"
+applies_to = "view surfaces with 3+ related entities"
+demonstrated_in = ["project_tracker"]
+related = ["layout_multi_section"]
+
+[concepts.layout_multi_section]
+category = "Layout"
+definition = "Multi-section form layout for create/edit surfaces with many fields"
+syntax = "section details:\n  field title\nsection metadata:\n  field tags"
+applies_to = "create/edit surfaces with 5+ fields in a single section"
+demonstrated_in = ["component_showcase"]
+related = ["layout_related_groups"]
+
+[concepts.component_command_palette]
+category = "Component"
+definition = "Cmd+K command palette for quick navigation across surfaces"
+syntax = "fragment: command_palette"
+applies_to = "apps with 5+ surfaces"
+demonstrated_in = ["project_tracker"]
+related = ["component_toggle_group"]
+
+[concepts.component_toggle_group]
+category = "Component"
+definition = "Toggle group for filtering grid views by enum status values"
+syntax = "Alpine x-data toggle component on workspace"
+applies_to = "entities with enum status field displayed in grid workspace"
+demonstrated_in = ["component_showcase"]
+related = ["component_command_palette"]
+
+[concepts.completeness_unreachable]
+category = "Completeness"
+definition = "Entity has permissions defined but no surfaces — users cannot reach it"
+syntax = "surface task_list uses entity Task mode: list"
+applies_to = "entities with permissions but zero surfaces"
+related = ["completeness_missing_edit", "completeness_missing_list"]
+
+[concepts.completeness_missing_edit]
+category = "Completeness"
+definition = "Entity has update permission but no edit surface"
+syntax = "surface task_edit uses entity Task mode: edit"
+applies_to = "entities with update permission but no mode: edit surface"
+related = ["completeness_missing_list", "completeness_missing_create"]
+
+[concepts.completeness_missing_list]
+category = "Completeness"
+definition = "Entity has list permission but no list surface"
+syntax = "surface task_list uses entity Task mode: list"
+applies_to = "entities with list permission but no mode: list surface"
+related = ["completeness_missing_edit", "completeness_missing_create"]
+
+[concepts.completeness_missing_create]
+category = "Completeness"
+definition = "Entity has create permission but no create surface"
+syntax = "surface task_create uses entity Task mode: create"
+applies_to = "entities with create permission but no mode: create surface"
+related = ["completeness_missing_edit", "completeness_missing_list"]

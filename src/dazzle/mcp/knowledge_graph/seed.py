@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Bump this when the mapping logic changes to trigger a re-seed
-SEED_SCHEMA_VERSION = 7  # v7: version-aware concept metadata (#716)
+SEED_SCHEMA_VERSION = 8  # v8: capability discovery KG entries
 
 
 def compute_seed_version() -> str:
