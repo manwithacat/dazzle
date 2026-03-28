@@ -130,7 +130,15 @@ def _run_contracts(
         # Build per-persona clients: non-RBAC contracts need a persona
         # that actually has access to the entity (not always admin).
         from dazzle.core.ir.domain import PermissionKind
-        from dazzle.testing.ux.contracts import _get_permitted_personas
+        from dazzle.core.ir.triples import get_permitted_personas as _get_permitted_personas_raw
+
+        def _get_permitted_personas(appspec_arg, entity_name, operation):
+            return _get_permitted_personas_raw(
+                list(appspec_arg.domain.entities),
+                appspec_arg.personas,
+                entity_name,
+                operation,
+            )
 
         # Separate RBAC and non-RBAC contracts
         rbac_contracts = [c for c in contracts if isinstance(c, RBACContract)]
