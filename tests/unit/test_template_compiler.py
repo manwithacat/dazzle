@@ -1115,3 +1115,29 @@ class TestTripleRelatedGroups:
         triples = derive_triples([contact], [surface], [persona])
         triple = next(t for t in triples if t.surface == "contact_detail")
         assert triple.related_groups == []
+
+
+class TestRelatedGroupContext:
+    """Tests for RelatedGroupContext model."""
+
+    def test_related_group_context_model(self):
+        """RelatedGroupContext wraps RelatedTabContext with display mode."""
+        from dazzle_ui.runtime.template_context import RelatedGroupContext, RelatedTabContext
+
+        tab = RelatedTabContext(
+            tab_id="tab-tax-return",
+            label="Tax Return",
+            entity_name="TaxReturn",
+            api_endpoint="/tax-returns",
+            filter_field="contact",
+            columns=[],
+        )
+        group = RelatedGroupContext(
+            group_id="group-compliance",
+            label="Compliance",
+            display="status_cards",
+            tabs=[tab],
+        )
+        assert group.display == "status_cards"
+        assert len(group.tabs) == 1
+        assert group.is_auto is False

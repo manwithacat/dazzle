@@ -160,6 +160,16 @@ class RelatedTabContext(BaseModel):
     visible_condition: dict[str, Any] | None = None
 
 
+class RelatedGroupContext(BaseModel):
+    """A group of related entity tabs with a shared display mode."""
+
+    group_id: str  # DOM id (e.g. "group-compliance")
+    label: str  # Display label (e.g. "Compliance")
+    display: str  # "table", "status_cards", "file_list"
+    tabs: list[RelatedTabContext]  # Individual entities in this group
+    is_auto: bool = False  # True for the auto-generated "Other" group
+
+
 class ExternalLinkAction(BaseModel):
     """External URL action link on a detail page."""
 
@@ -191,7 +201,7 @@ class DetailContext(BaseModel):
     back_url: str = "/"
     transitions: list[TransitionContext] = Field(default_factory=list)
     status_field: str = "status"
-    related_tabs: list[RelatedTabContext] = Field(default_factory=list)
+    related_groups: list[RelatedGroupContext] = Field(default_factory=list)
     integration_actions: list[IntegrationActionContext] = Field(default_factory=list)
     external_link_actions: list[ExternalLinkAction] = Field(default_factory=list)
 
