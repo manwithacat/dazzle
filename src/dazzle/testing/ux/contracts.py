@@ -318,10 +318,15 @@ def generate_contracts(appspec: AppSpec) -> list[Contract]:
             modifiers = [str(m) for m in (f.modifiers or [])]
             if "auto_add" in modifiers or "auto_update" in modifiers:
                 continue
+            # FK reference fields render as search-selects, not plain inputs.
+            # Detect by ref_entity attribute OR _id suffix convention.
+            ref_entity = getattr(f.type, "ref_entity", None)
+            is_fk = ref_entity is not None or (f.name.endswith("_id") and f.name != "id")
             all_fields.append(f.name)
-            if "required" in modifiers:
+            if "required" in modifiers and not is_fk:
                 required_fields.append(f.name)
-            editable_fields.append(f.name)
+            if not is_fk:
+                editable_fields.append(f.name)
 
         # ListPageContract — one per list-mode surface
         for surface_spec in surfaces:

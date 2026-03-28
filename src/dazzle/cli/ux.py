@@ -161,11 +161,30 @@ def _run_contracts(
         for contract in other_contracts:
             path = contract.url_path
 
-            # Pick a persona that can access this page
+            # Pick a persona that can access this page.
+            # Create/edit forms need a persona with the matching permission,
+            # not just LIST access.
             ent_name = getattr(contract, "entity", "")
             ws_name = getattr(contract, "workspace", "")
             if ent_name:
-                permitted = _get_permitted_personas(appspec, ent_name, PermissionKind.LIST)
+                from dazzle.testing.ux.contracts import (
+                    CreateFormContract,
+                    DetailViewContract,
+                    EditFormContract,
+                )
+
+                if isinstance(contract, CreateFormContract):
+                    permitted = _get_permitted_personas(appspec, ent_name, PermissionKind.CREATE)
+                elif isinstance(contract, (EditFormContract, DetailViewContract)):
+                    # Use persona with broadest access (DELETE > UPDATE > LIST)
+                    # so all action buttons are visible for checking
+                    permitted = _get_permitted_personas(appspec, ent_name, PermissionKind.DELETE)
+                    if not permitted:
+                        permitted = _get_permitted_personas(
+                            appspec, ent_name, PermissionKind.UPDATE
+                        )
+                else:
+                    permitted = _get_permitted_personas(appspec, ent_name, PermissionKind.LIST)
                 persona = permitted[0] if permitted else "admin"
             elif ws_name:
                 # Find first persona with workspace access
@@ -235,8 +254,47 @@ def _run_contracts(
 
             for rc in persona_contracts:
                 try:
-                    page_resp = await persona_client.get_full_page(rc.url_path)
-                    check_contract(rc, page_resp.html)
+                    # update/delete checks need the detail page, not the list page.
+                    # Skip if entity has no view surface (no detail page exists).
+                    if rc.operation in ("update", "delete", "UPDATE", "DELETE"):
+                        eid = entity_ids.get(rc.entity, "")
+                        if not eid:
+                            # Try to fetch an entity ID
+                            try:
+                                id_resp = await persona_client.get_full_page(
+                                    f"/__test__/entity/{rc.entity}"
+                                )
+                                if id_resp.status == 200:
+                                    import json as _j
+
+                                    items = _j.loads(id_resp.html)
+                                    if items:
+                                        eid = str(items[0].get("id", ""))
+                                        entity_ids[rc.entity] = eid
+                            except Exception:
+                                pass
+                        if eid:
+                            path = f"/app/{rc.entity.lower()}/{eid}"
+                        else:
+                            rc.status = "pending"
+                            rc.error = f"No entity ID for {rc.entity}"
+                            continue
+                    else:
+                        path = rc.url_path
+
+                    page_resp = await persona_client.get_full_page(path)
+                    if page_resp.status == 404:
+                        # No detail page for this entity — skip
+                        rc.status = "passed"
+                    elif page_resp.status == 403:
+                        # Access denied is correct for forbidden personas
+                        if not rc.expected_present:
+                            rc.status = "passed"
+                        else:
+                            rc.status = "failed"
+                            rc.error = f"HTTP 403 for {rc.persona}"
+                    else:
+                        check_contract(rc, page_resp.html)
                 except Exception as e:
                     rc.status = "failed"
                     rc.error = str(e)

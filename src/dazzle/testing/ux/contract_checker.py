@@ -60,16 +60,9 @@ def _check_list_page(contract: ListPageContract, tags: Tags) -> list[str]:
         if not _has_attr_containing(tags, "hx-get", ""):
             errors.append("No clickable rows found (expected hx-get on <tr>)")
 
-    # Must have a create link
-    has_create_link = False
-    for tag_name, attrs in tags:
-        if tag_name == "a":
-            href = attrs.get("href", "") or ""
-            if "create" in href.lower():
-                has_create_link = True
-                break
-    if not has_create_link:
-        errors.append("Missing create link (expected <a> with href containing 'create')")
+    # Note: create link presence depends on the persona's CREATE permission,
+    # which is verified by the RBAC create contract. Don't assert it here
+    # since the list page may be checked with a LIST-only persona.
 
     return errors
 

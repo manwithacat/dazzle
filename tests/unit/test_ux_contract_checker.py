@@ -64,14 +64,14 @@ class TestCheckListPage:
         assert result.status == "failed"
         assert "data-dazzle-table" in result.error
 
-    def test_fails_missing_create_link(self) -> None:
+    def test_passes_without_create_link(self) -> None:
+        """Create link is persona-dependent — verified by RBAC contracts, not list page."""
         html = (
             '<table data-dazzle-table="Task"><tbody><tr hx-get="/app/task/1"></tr></tbody></table>'
         )
         contract = ListPageContract(entity="Task", surface="task_list", fields=[])
         result = check_contract(contract, html)
-        assert result.status == "failed"
-        assert "create" in result.error.lower()
+        assert result.status == "passed", result.error
 
 
 class TestCheckCreateForm:
