@@ -5,6 +5,7 @@ This module contains the top-level AppSpec that represents
 a complete, linked application definition.
 """
 
+from functools import cached_property
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -354,20 +355,38 @@ class AppSpec(BaseModel):
 
     # Triple getters (v0.50.0 IR Triple Enrichment)
 
+    @cached_property
+    def _triple_index(self) -> dict[tuple[str, str, str], VerifiableTriple]:
+        """Hash index for O(1) triple lookup by (entity, surface, persona)."""
+        return {(t.entity, t.surface, t.persona): t for t in self.triples}
+
+    @cached_property
+    def _triples_by_entity(self) -> dict[str, list[VerifiableTriple]]:
+        """Index triples by entity name."""
+        idx: dict[str, list[VerifiableTriple]] = {}
+        for t in self.triples:
+            idx.setdefault(t.entity, []).append(t)
+        return idx
+
+    @cached_property
+    def _triples_by_persona(self) -> dict[str, list[VerifiableTriple]]:
+        """Index triples by persona ID."""
+        idx: dict[str, list[VerifiableTriple]] = {}
+        for t in self.triples:
+            idx.setdefault(t.persona, []).append(t)
+        return idx
+
     def get_triples_for_entity(self, entity: str) -> list[VerifiableTriple]:
         """Get all triples for a given entity."""
-        return [t for t in self.triples if t.entity == entity]
+        return self._triples_by_entity.get(entity, [])
 
     def get_triples_for_persona(self, persona: str) -> list[VerifiableTriple]:
         """Get all triples for a given persona."""
-        return [t for t in self.triples if t.persona == persona]
+        return self._triples_by_persona.get(persona, [])
 
     def get_triple(self, entity: str, surface: str, persona: str) -> VerifiableTriple | None:
         """Get a specific triple by entity, surface, and persona."""
-        for t in self.triples:
-            if t.entity == entity and t.surface == surface and t.persona == persona:
-                return t
-        return None
+        return self._triple_index.get((entity, surface, persona))
 
     # Messaging getters (v0.9.0)
 
