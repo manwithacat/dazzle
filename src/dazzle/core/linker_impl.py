@@ -977,6 +977,52 @@ def validate_references(symbols: SymbolTable) -> list[str]:
                         f"unknown integration '{outcome.target}'"
                     )
 
+        # Validate related groups (display intent)
+        if surface.related_groups:
+            if surface.mode != ir.SurfaceMode.VIEW:
+                errors.append(
+                    f"Surface '{surface_name}' has related blocks but is not mode: view "
+                    f"(related blocks are only valid on view surfaces)"
+                )
+
+            seen_entities: set[str] = set()
+            for group in surface.related_groups:
+                for entity_in_show in group.show:
+                    # Check entity exists
+                    if entity_in_show not in symbols.entities:
+                        errors.append(
+                            f"Surface '{surface_name}' related group '{group.name}' "
+                            f"references unknown entity '{entity_in_show}'"
+                        )
+                        continue
+
+                    # Check duplicate across groups
+                    if entity_in_show in seen_entities:
+                        errors.append(
+                            f"Surface '{surface_name}': entity '{entity_in_show}' "
+                            f"appears in both related group '{group.name}' and a "
+                            f"previous group (duplicate)"
+                        )
+                    seen_entities.add(entity_in_show)
+
+                    # Check FK back to parent entity
+                    if surface.entity_ref:
+                        ref_entity = symbols.entities[entity_in_show]
+                        has_fk = False
+                        for f in ref_entity.fields:
+                            if (
+                                f.type.kind == ir.FieldTypeKind.REF
+                                and f.type.ref_entity == surface.entity_ref
+                            ):
+                                has_fk = True
+                                break
+                        if not has_fk:
+                            errors.append(
+                                f"Surface '{surface_name}' related group '{group.name}': "
+                                f"entity '{entity_in_show}' has no FK to "
+                                f"'{surface.entity_ref}'"
+                            )
+
     # Validate experience references
     for experience_name, experience in symbols.experiences.items():
         # Check if start step exists

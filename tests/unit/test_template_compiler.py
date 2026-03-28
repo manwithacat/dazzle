@@ -979,7 +979,7 @@ class TestRelatedGroupValidation:
         symbols.add_entity(standalone, "test")
         symbols.add_surface(surface, "test")
         errors = validate_references(symbols)
-        assert any("Standalone" in e and "no FK" in e.lower() for e in errors)
+        assert any("Standalone" in e and "no fk" in e.lower() for e in errors)
 
     def test_related_group_duplicate_entity(self):
         """Same entity in two related groups produces validation error."""
