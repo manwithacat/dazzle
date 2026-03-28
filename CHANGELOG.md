@@ -9,6 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.49.14] - 2026-03-28
+
+### Added
+- **UX Contract Verification** (Layer B): `dazzle ux verify --contracts` — fast, httpx-based DOM assertion system derived from AppSpec
+  - Contract generation: mechanically derives ListPage, CreateForm, EditForm, DetailView, Workspace, and RBAC contracts from the DSL
+  - Contract checker: parses rendered HTML and asserts DOM structure (hx-* attributes, form fields, action buttons, region presence)
+  - HTMX client: simulates browser HTMX requests with correct headers (HX-Request, HX-Target, CSRF)
+  - Baseline ratchet: tracks pass/fail per contract across runs, detects regressions and fixes
+  - RBAC contracts: verifies UI enforcement of every permit/forbid rule per persona (compliance evidence)
+  - Performance: ~25 seconds for full verification vs 5+ minutes for Playwright
+- Context selector label: human-readable names from DSL title or PascalCase splitting (#747)
+- Feedback widget: validation toast when category not selected (#746)
+
+### Fixed
+- Workspace routes registered once instead of N× per workspace (#750)
+- Workspace drawer reopens after backdrop close — removed vestigial `history.replaceState` (#748)
+- DELETE handler returns 409 on FK constraint instead of 500 (#749)
+- `/__test__/reset` clears each entity table in separate connection to avoid FK-aborted transactions (#751)
+- `/__test__/seed` rolls back created entities on failure to prevent partial state (#753)
+- UX inventory: deduplicated CRUD interactions to one per entity×persona (#752)
+- Contract checker: calibrated against real HTML patterns (data-dazzle-table on div, hx-put for edit forms, surface-mode-gated contracts)
+
+### Agent Guidance
+- **Contract verification**: Run `dazzle ux verify --contracts` for fast DOM assertion (no browser). Use `--update-baseline` to save results, `--strict` to fail on any violation. 41/48 contracts pass on simple_task; 7 RBAC mismatches are genuine permission model issues.
+- **Ratchet model**: Baseline stored in `.dazzle/ux-verify/baseline.json`. Regressions (passed→failed) are flagged prominently. Target: converge to zero failures.
+
 ## [0.49.13] - 2026-03-27
 
 ### Added
