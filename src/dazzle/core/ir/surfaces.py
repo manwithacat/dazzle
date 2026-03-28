@@ -29,6 +29,32 @@ class BusinessPriority(StrEnum):
     LOW = "low"
 
 
+class RelatedDisplayMode(StrEnum):
+    """Display modes for related entity groups on detail pages."""
+
+    TABLE = "table"
+    STATUS_CARDS = "status_cards"
+    FILE_LIST = "file_list"
+
+
+class RelatedGroup(BaseModel):
+    """A named group of related entities with a shared display mode.
+
+    Attributes:
+        name: Group identifier (DSL name, e.g. "compliance")
+        title: Human-readable label (e.g. "Compliance")
+        display: How to render the group's entities
+        show: Entity names to include (validated at link time)
+    """
+
+    name: str
+    title: str | None = None
+    display: RelatedDisplayMode
+    show: list[str]
+
+    model_config = ConfigDict(frozen=True)
+
+
 class SurfaceMode(StrEnum):
     """Modes that define surface behavior."""
 
@@ -192,6 +218,7 @@ class SurfaceSpec(BaseModel):
     search_fields: list[str] = Field(default_factory=list)
     # v0.31.0: Source location for error reporting
     source: SourceLocation | None = None
+    related_groups: list[RelatedGroup] = Field(default_factory=list)
 
     model_config = ConfigDict(frozen=True)
 

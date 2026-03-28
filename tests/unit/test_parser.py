@@ -3057,5 +3057,21 @@ entity Progress "Progress":
             parse_dsl(dsl, Path("test.dsl"))
 
 
+class TestSurfaceParsing:
+    def test_related_group_ir_types(self):
+        """RelatedDisplayMode and RelatedGroup IR types exist."""
+        from dazzle.core.ir import RelatedDisplayMode, RelatedGroup
+
+        group = RelatedGroup(
+            name="compliance",
+            title="Compliance",
+            display=RelatedDisplayMode.STATUS_CARDS,
+            show=["SelfAssessmentReturn", "VATReturn"],
+        )
+        assert group.name == "compliance"
+        assert group.display == RelatedDisplayMode.STATUS_CARDS
+        assert group.show == ["SelfAssessmentReturn", "VATReturn"]
+
+
 if __name__ == "__main__":
     main()

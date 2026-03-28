@@ -630,6 +630,8 @@ from .surfaces import (
     BusinessPriority,
     Outcome,
     OutcomeKind,
+    RelatedDisplayMode,
+    RelatedGroup,
     SurfaceAccessSpec,
     SurfaceAction,
     SurfaceElement,
