@@ -3072,6 +3072,102 @@ class TestSurfaceParsing:
         assert group.display == RelatedDisplayMode.STATUS_CARDS
         assert group.show == ["SelfAssessmentReturn", "VATReturn"]
 
+    def test_parse_surface_related_block(self):
+        """Surface with a related block parses correctly."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Contact "Contact":
+  id: uuid pk
+  first_name: str(100) required
+
+entity TaxReturn "Tax Return":
+  id: uuid pk
+  contact: ref Contact
+  status: str(50)
+
+surface contact_detail "Contact Detail":
+  uses entity Contact
+  mode: view
+  section main:
+    field first_name "First Name"
+  related compliance "Compliance":
+    display: status_cards
+    show: TaxReturn
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert len(surface.related_groups) == 1
+        group = surface.related_groups[0]
+        assert group.name == "compliance"
+        assert group.title == "Compliance"
+        assert group.display.value == "status_cards"
+        assert group.show == ["TaxReturn"]
+
+    def test_parse_surface_multiple_related_blocks(self):
+        """Surface with multiple related blocks and multi-entity show."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Contact "Contact":
+  id: uuid pk
+  name: str(100) required
+
+entity TaxReturn "Tax Return":
+  id: uuid pk
+  contact: ref Contact
+
+entity Deadline "Deadline":
+  id: uuid pk
+  contact: ref Contact
+
+entity Document "Document":
+  id: uuid pk
+  contact: ref Contact
+
+surface contact_detail "Contact Detail":
+  uses entity Contact
+  mode: view
+  section main:
+    field name "Name"
+  related compliance "Compliance":
+    display: status_cards
+    show: TaxReturn, Deadline
+  related documents "Documents":
+    display: file_list
+    show: Document
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert len(surface.related_groups) == 2
+        assert surface.related_groups[0].name == "compliance"
+        assert surface.related_groups[0].show == ["TaxReturn", "Deadline"]
+        assert surface.related_groups[1].name == "documents"
+        assert surface.related_groups[1].display.value == "file_list"
+        assert surface.related_groups[1].show == ["Document"]
+
+    def test_parse_surface_no_related_blocks(self):
+        """Surface without related blocks has empty related_groups."""
+        dsl = """
+module test.core
+app test_app "Test App"
+
+entity Task "Task":
+  id: uuid pk
+  title: str(200) required
+
+surface task_detail "Task Detail":
+  uses entity Task
+  mode: view
+  section main:
+    field title "Title"
+"""
+        _, _, _, _, _, fragment = parse_dsl(dsl, Path("test.dsl"))
+        surface = fragment.surfaces[0]
+        assert surface.related_groups == []
+
 
 if __name__ == "__main__":
     main()

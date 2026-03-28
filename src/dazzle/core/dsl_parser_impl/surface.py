@@ -49,6 +49,7 @@ class SurfaceParserMixin:
         access_spec = None
         search_fields: list[str] = []
         persona_variants: list[ir.PersonaVariant] = []
+        related_groups: list[ir.RelatedGroup] = []
 
         while not self.match(TokenType.DEDENT):
             self.skip_newlines()
@@ -126,6 +127,11 @@ class SurfaceParserMixin:
                 variant = self.parse_persona_variant()
                 persona_variants.append(variant)
 
+            # related name "title": (related display group)
+            elif self.match(TokenType.RELATED):
+                group = self._parse_related_group()
+                related_groups.append(group)
+
             else:
                 break
 
@@ -160,7 +166,66 @@ class SurfaceParserMixin:
             ux=ux_spec,
             access=access_spec,
             search_fields=search_fields,
+            related_groups=related_groups,
             source=loc,
+        )
+
+    def _parse_related_group(self) -> ir.RelatedGroup:
+        """Parse a related block inside a surface.
+
+        Syntax::
+
+            related name "Title":
+              display: table|status_cards|file_list
+              show: EntityA, EntityB
+        """
+        self.advance()  # consume 'related'
+        name = self.expect(TokenType.IDENTIFIER).value
+        title = None
+        if self.match(TokenType.STRING):
+            title = self.advance().value
+        self.expect(TokenType.COLON)
+        self.skip_newlines()
+        self.expect(TokenType.INDENT)
+
+        display = None
+        show: list[str] = []
+
+        while not self.match(TokenType.DEDENT):
+            self.skip_newlines()
+            if self.match(TokenType.DEDENT):
+                break
+
+            token = self.current_token()
+            if token.value == "display":
+                self.advance()
+                self.expect(TokenType.COLON)
+                mode_token = self.expect_identifier_or_keyword()
+                display = ir.RelatedDisplayMode(mode_token.value)
+                self.skip_newlines()
+            elif token.value == "show":
+                self.advance()
+                self.expect(TokenType.COLON)
+                show.append(self.expect(TokenType.IDENTIFIER).value)
+                while self.match(TokenType.COMMA):
+                    self.advance()
+                    show.append(self.expect(TokenType.IDENTIFIER).value)
+                self.skip_newlines()
+            else:
+                break
+
+        self.expect(TokenType.DEDENT)
+
+        if display is None:
+            self.error("related block requires a 'display:' field")
+        if not show:
+            self.error("related block requires a 'show:' field with at least one entity")
+
+        return ir.RelatedGroup(
+            name=name,
+            title=title,
+            display=display,
+            show=show,
         )
 
     def _parse_surface_access(self) -> ir.SurfaceAccessSpec:
