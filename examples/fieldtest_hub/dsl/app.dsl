@@ -58,7 +58,7 @@ entity Device "Device":
   manufacturer: str(200)
   firmware_version: str(50)
   status: enum[prototype,active,recalled,retired]=prototype
-  assigned_tester_id: uuid
+  assigned_tester_id: ref Tester
   deployed_at: datetime
   created_at: datetime auto_add
   updated_at: datetime auto_update
@@ -118,8 +118,8 @@ entity Tester "Tester":
 # Entity: IssueReport
 entity IssueReport "Issue Report":
   id: uuid pk
-  device_id: uuid required
-  reported_by_id: uuid required
+  device_id: ref Device required
+  reported_by_id: ref Tester required
   category: enum[battery,connectivity,mechanical,overheating,crash,other]=other
   severity: enum[low,medium,high,critical]=medium
   description: text required
@@ -153,10 +153,12 @@ entity IssueReport "Issue Report":
     list: role(engineer) or role(manager) or role(tester)
     read: role(engineer) or role(manager) or role(tester)
     create: role(tester) or role(engineer)
-    update: role(engineer)
+    update: role(engineer) or role(tester)
     delete: role(engineer)
   scope:
     list: reported_by_id = current_user
+      for: tester
+    update: reported_by_id = current_user
       for: tester
     list: all
       for: engineer, manager
@@ -168,8 +170,8 @@ entity IssueReport "Issue Report":
 # Entity: TestSession
 entity TestSession "Test Session":
   id: uuid pk
-  device_id: uuid required
-  tester_id: uuid required
+  device_id: ref Device required
+  tester_id: ref Tester required
   duration_minutes: int
   environment: enum[indoor,outdoor,vehicle,industrial,other]=indoor
   temperature: decimal(5,2)
@@ -234,8 +236,8 @@ entity FirmwareRelease "Firmware Release":
 entity Task "Task":
   id: uuid pk
   type: enum[debugging,hardware_replacement,firmware_update,recall_request]=debugging
-  created_by_id: uuid required
-  assigned_to_id: uuid
+  created_by_id: ref Tester required
+  assigned_to_id: ref Tester
   status: enum[open,in_progress,completed,cancelled]=open
   notes: text
   created_at: datetime auto_add
@@ -259,7 +261,7 @@ entity Task "Task":
     list: role(engineer) or role(manager) or role(tester)
     read: role(engineer) or role(manager) or role(tester)
     create: role(engineer) or role(manager)
-    update: role(engineer) or role(tester)
+    update: role(engineer) or role(manager) or role(tester)
     delete: role(engineer)
   scope:
     list: assigned_to_id = current_user
