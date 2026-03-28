@@ -135,12 +135,15 @@ async def _seed_fixtures(deps: _TestDeps, request: SeedRequest) -> SeedResponse:
     Seed test fixtures into the database.
 
     Creates entities from fixture specifications, resolving references
-    between fixtures.
+    between fixtures. On failure, rolls back by deleting all entities
+    created in this batch so callers don't get partial state.
     """
     import uuid
 
     created: dict[str, Any] = {}
     id_mapping: dict[str, str] = {}  # fixture_id -> actual entity id
+    # Track created entity IDs for rollback
+    created_ids: list[tuple[str, str]] = []  # (entity_name, entity_id)
 
     # First pass: generate IDs for all fixtures
     for fixture in request.fixtures:
@@ -156,6 +159,7 @@ async def _seed_fixtures(deps: _TestDeps, request: SeedRequest) -> SeedResponse:
         repo = deps.repositories.get(entity_name)
 
         if not repo:
+            _rollback_created(deps, created_ids)
             raise HTTPException(
                 status_code=400,
                 detail="Unknown entity: " + entity_name,
@@ -180,14 +184,29 @@ async def _seed_fixtures(deps: _TestDeps, request: SeedRequest) -> SeedResponse:
         try:
             entity = await repo.create(data)
             created[fixture.id] = entity.model_dump() if hasattr(entity, "model_dump") else data
+            created_ids.append((entity_name, data["id"]))
         except Exception as e:
             logger.error("Failed to create %s: %s", entity_name, e)
+            _rollback_created(deps, created_ids)
             raise HTTPException(
                 status_code=400,
                 detail=f"Failed to create {entity_name}: {e}",
             )
 
     return SeedResponse(created=created)
+
+
+def _rollback_created(deps: _TestDeps, created_ids: list[tuple[str, str]]) -> None:
+    """Delete entities created during a failed seed batch (best-effort)."""
+    for entity_name, entity_id in reversed(created_ids):
+        sql_obj = deps.entity_sql.get(entity_name)
+        if not sql_obj:
+            continue
+        try:
+            with deps.db_manager.connection() as conn:
+                conn.execute(sql_obj.delete_by_id, (entity_id,))
+        except Exception:
+            logger.debug("Rollback delete failed for %s/%s", entity_name, entity_id)
 
 
 async def _reset_test_data(deps: _TestDeps) -> dict[str, str]:
