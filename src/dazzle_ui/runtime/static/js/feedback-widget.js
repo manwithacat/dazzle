@@ -325,7 +325,14 @@
 
   FeedbackWidget.prototype._submit = function () {
     var description = (this._textarea.value || "").trim();
-    if (!description || !this._category) return;
+    if (!this._category) {
+      this._showToast("Please select a category.");
+      return;
+    }
+    if (!description) {
+      this._showToast("Please describe the issue.");
+      return;
+    }
 
     if (!this._checkRateLimit()) {
       this._showToast("Rate limit reached \u2014 try again later.");
