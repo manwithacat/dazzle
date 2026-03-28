@@ -400,10 +400,20 @@ class Repository(Generic[T]):
         sql = f'DELETE FROM {table} WHERE "id" = {ph}'
 
         start = time.perf_counter()
-        with self.db.connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(sql, (str(id),))
-            rowcount = cursor.rowcount
+        try:
+            with self.db.connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(sql, (str(id),))
+                rowcount = cursor.rowcount
+        except Exception as exc:
+            # Catch FK constraint violations and re-raise as a clear error
+            # so the route handler can return 409 instead of 500.
+            exc_str = str(exc)
+            if "ForeignKeyViolation" in type(exc).__name__ or "foreign key" in exc_str.lower():
+                raise ValueError(
+                    f"Cannot delete {self.table_name}: referenced by other records"
+                ) from exc
+            raise
         latency_ms = (time.perf_counter() - start) * 1000
         self._record_query("delete", latency_ms, rows=rowcount)
 

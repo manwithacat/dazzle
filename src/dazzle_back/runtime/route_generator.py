@@ -2987,7 +2987,11 @@ def generate_crud_routes(
     # Delete
     @router.delete(f"{prefix}/{{id}}", tags=tags, summary=f"Delete {entity_name}")
     async def delete_item(id: UUID, request: Request) -> Any:
-        result = await service.execute(operation="delete", id=id)
+        try:
+            result = await service.execute(operation="delete", id=id)
+        except ValueError as exc:
+            # FK constraint violation — entity is referenced by child records
+            raise HTTPException(status_code=409, detail=str(exc))
         if not result:
             raise HTTPException(status_code=404, detail="Not found")
         return _with_htmx_triggers(
