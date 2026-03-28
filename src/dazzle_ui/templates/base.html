@@ -37,10 +37,17 @@
   <script src="{{ 'vendor/htmx-ext-response-targets.js' | static_url }}"></script>
   <script src="{{ 'vendor/htmx-ext-loading-states.js' | static_url }}"></script>
   <script src="{{ 'vendor/htmx-ext-sse.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-remove-me.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-class-tools.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-multi-swap.js' | static_url }}"></script>
+  <script src="{{ 'vendor/htmx-ext-path-deps.js' | static_url }}"></script>
   {# Alpine.js + plugins #}
   <script defer src="{{ 'vendor/sortable.min.js' | static_url }}"></script>
   <script defer src="{{ 'vendor/alpine-sort.min.js' | static_url }}"></script>
   <script defer src="{{ 'vendor/alpine-persist.min.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/alpine-anchor.min.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/alpine-collapse.min.js' | static_url }}"></script>
+  <script defer src="{{ 'vendor/alpine-focus.min.js' | static_url }}"></script>
   <script defer src="{{ 'js/dz-alpine.js' | static_url }}"></script>
   <script defer src="{{ 'js/workspace-editor.js' | static_url }}"></script>
   <script defer src="{{ 'vendor/alpine.min.js' | static_url }}"></script>
@@ -94,7 +101,7 @@
   {% block head_extra %}{% endblock %}
 </head>
 {% endif %}
-<body class="min-h-screen bg-base-200" style="font-family: var(--font-sans)" hx-boost="true" hx-ext="morph,preload,response-targets,loading-states">
+<body class="min-h-screen bg-base-200" style="font-family: var(--font-sans)" hx-boost="true" hx-ext="morph,preload,response-targets,loading-states,remove-me,class-tools,multi-swap,path-deps">
   {% block body %}
   {% endblock %}
 
@@ -108,6 +115,15 @@
       </div>
     </template>
   </div>
+
+  {# Toast container for HTMX OOB-driven toasts (remove-me auto-dismiss) #}
+  <div id="dz-toast-container" class="toast toast-end toast-top" aria-live="polite"></div>
+
+  {# Modal slot for server-loaded modals #}
+  <div id="dz-modal-slot"></div>
+
+  {# Dynamic asset loader for HTMX-swapped widget dependencies #}
+  <div id="dz-dynamic-assets"></div>
 
   {# Screen-reader page announcer for hx-boost navigation #}
   <div id="dz-page-announcer" aria-live="assertive" aria-atomic="true" class="sr-only"></div>
@@ -125,6 +141,26 @@
     document.body.dataset.userRole = "{{ user_roles[0]|replace('role_', '') if user_roles else '' }}";
     document.body.dataset.userEmail = "{{ user_email | default('') }}";
   </script>
+  {% endif %}
+
+  {# Conditional vendor widget assets — populated by asset_manifest #}
+  {% if required_assets is defined %}
+  {% if "tom-select" in required_assets %}
+  <link rel="stylesheet" href="{{ 'vendor/tom-select.css' | static_url }}">
+  <script defer src="{{ 'vendor/tom-select.min.js' | static_url }}"></script>
+  {% endif %}
+  {% if "flatpickr" in required_assets %}
+  <link rel="stylesheet" href="{{ 'vendor/flatpickr.css' | static_url }}">
+  <script defer src="{{ 'vendor/flatpickr.min.js' | static_url }}"></script>
+  {% endif %}
+  {% if "pickr" in required_assets %}
+  <link rel="stylesheet" href="{{ 'vendor/pickr.css' | static_url }}">
+  <script defer src="{{ 'vendor/pickr.min.js' | static_url }}"></script>
+  {% endif %}
+  {% if "quill" in required_assets %}
+  <link rel="stylesheet" href="{{ 'vendor/quill.snow.css' | static_url }}">
+  <script defer src="{{ 'vendor/quill.min.js' | static_url }}"></script>
+  {% endif %}
   {% endif %}
 
   {% block scripts_extra %}{% endblock %}
