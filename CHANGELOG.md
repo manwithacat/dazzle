@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.2] - 2026-03-28
+
+### Added
+- **UX Component Expansion — Phase 2 (Server-Driven Components)**: Template fragments and HTMX patterns
+  - `toast.html` fragment: auto-dismissing notifications via `remove-me` extension
+  - `alert_banner.html` fragment: full-width dismissible banners with Alpine.js
+  - `breadcrumbs.html` fragment + `breadcrumbs.py` module: server-side route-to-breadcrumb derivation with DaisyUI styling and HTMX navigation
+  - `steps_indicator.html` fragment: DaisyUI steps component for multi-step wizard flows
+  - `accordion.html` fragment: collapsible sections with optional HTMX lazy-load on first open
+  - `skeleton_patterns.html` macros: reusable skeleton presets (table rows, cards, detail views)
+  - `modal.html` component: general-purpose server-loaded modal using native `<dialog>` element
+
+### Agent Guidance
+- Use `build_breadcrumb_trail(path, overrides)` from `dazzle_back.runtime.breadcrumbs` to derive breadcrumb trails. Pass the result as `crumbs` to the breadcrumbs fragment.
+- For accordion lazy-loading, set `endpoint` on a section to trigger HTMX fetch on first open; leave it `None` for static content.
+- Skeleton macros are importable: `{% from "fragments/skeleton_patterns.html" import skeleton_table_rows, skeleton_card, skeleton_detail %}`.
+
 ## [0.51.1] - 2026-03-28
 
 ### Added
