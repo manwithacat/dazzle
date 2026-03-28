@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.7] - 2026-03-28
+
+### Fixed
+- **Duplicated widget map**: `_field_type_to_form_type()` in template_compiler.py now delegates to canonical `resolve_widget()` from triples.py — single source of truth, 9 previously missing field type kinds covered
+- **Flattened action provenance**: `VerifiableTriple.actions` now carries `ActionTriple` with `action` + `permission` fields instead of bare strings — reconciler can trace permission grants for ACTION_UNEXPECTED diagnoses
+- **TEMPLATE_BUG catch-all**: New `TRIPLE_SUSPECT` diagnosis kind — reconciler cross-checks triple widget against re-derived widget from raw entity field before falling through to TEMPLATE_BUG
+- **O(n) triple lookups**: `AppSpec.get_triple()`, `get_triples_for_entity()`, `get_triples_for_persona()` now use `@cached_property` dict indexes for O(1) lookups
+
+### Added
+- Scope predicate invariant documented on `derive_triples()` — triples depend only on entities, surfaces, and personas, never FK graph or scope predicates
+- 5 synthetic failure tests for reconciler diagnosis paths (ACTION_MISSING, ACTION_UNEXPECTED, FIELD_MISSING, PERMISSION_GAP, TRIPLE_SUSPECT)
+
+### Agent Guidance
+- `VerifiableTriple.actions` is now `list[ActionTriple]`, not `list[str]`. Use `triple.action_names` for backward-compatible string list access.
+- The template compiler no longer has its own widget map — it imports `resolve_widget()` from `dazzle.core.ir.triples`. When adding new `FieldTypeKind` values, only update `_WIDGET_MAP` in triples.py.
+
 ## [0.51.6] - 2026-03-28
 
 ### Added
