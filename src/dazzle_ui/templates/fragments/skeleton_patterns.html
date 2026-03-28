@@ -1,0 +1,47 @@
+{# Skeleton loading patterns — DaisyUI skeleton component presets #}
+{# Usage: {% from "fragments/skeleton_patterns.html" import skeleton_table_rows, skeleton_card, skeleton_detail %} #}
+
+{% macro skeleton_table_rows(rows=5, cols=4) %}
+{# Skeleton table body — shimmer rows for table loading state #}
+{% for _ in range(rows) %}
+<tr>
+  {% for _ in range(cols) %}
+  <td><div class="skeleton h-4 w-full"></div></td>
+  {% endfor %}
+</tr>
+{% endfor %}
+{% endmacro %}
+
+{% macro skeleton_card() %}
+{# Skeleton card — shimmer card for grid loading state #}
+<div class="card bg-base-100 border border-base-300">
+  <div class="card-body gap-3">
+    <div class="skeleton h-4 w-3/4"></div>
+    <div class="skeleton h-3 w-1/2"></div>
+    <div class="skeleton h-3 w-full"></div>
+    <div class="skeleton h-3 w-5/6"></div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro skeleton_detail() %}
+{# Skeleton detail view — shimmer fields for detail loading state #}
+<div class="space-y-4">
+  <div class="skeleton h-6 w-1/3"></div>
+  {% for _ in range(4) %}
+  <div class="flex gap-4">
+    <div class="skeleton h-4 w-24"></div>
+    <div class="skeleton h-4 w-48"></div>
+  </div>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+{% macro skeleton_cards(count=6) %}
+{# Grid of skeleton cards #}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for _ in range(count) %}
+  {{ skeleton_card() }}
+  {% endfor %}
+</div>
+{% endmacro %}

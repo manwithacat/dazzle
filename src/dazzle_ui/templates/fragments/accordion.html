@@ -1,0 +1,28 @@
+{# Accordion / collapsible sections — DaisyUI collapse with optional lazy-load #}
+{# Parameters: sections (list of {id: str, title: str, content: str|None, endpoint: str|None}) #}
+{# If endpoint is provided, content lazy-loads on first open via HTMX #}
+{% for section in sections %}
+<div class="collapse collapse-arrow bg-base-100 border border-base-300 {% if not loop.first %}mt-1{% endif %}"
+     {% if section.endpoint %}x-collapse{% endif %}>
+  {% if section.endpoint %}
+  {# Lazy-loaded: fetch content on first open #}
+  <details hx-get="{{ section.endpoint }}"
+           hx-trigger="toggle once"
+           hx-target="#accordion-content-{{ section.id }}"
+           hx-swap="innerHTML">
+    <summary class="collapse-title font-medium">{{ section.title }}</summary>
+    <div class="collapse-content" id="accordion-content-{{ section.id }}">
+      <span class="loading loading-dots loading-sm"></span>
+    </div>
+  </details>
+  {% else %}
+  {# Static content #}
+  <details {% if loop.first %}open{% endif %}>
+    <summary class="collapse-title font-medium">{{ section.title }}</summary>
+    <div class="collapse-content">
+      {{ section.content | safe }}
+    </div>
+  </details>
+  {% endif %}
+</div>
+{% endfor %}

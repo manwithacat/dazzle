@@ -1,0 +1,11 @@
+{# Visual step indicator for multi-step flows — DaisyUI steps component #}
+{# Parameters: steps (list of {label: str}), current_step (int, 1-based) #}
+{% set current = current_step | default(1) %}
+<ul class="steps w-full">
+  {% for step in steps %}
+  <li class="step{% if loop.index <= current %} step-primary{% endif %}"
+      {% if loop.index == current %}aria-current="step"{% endif %}>
+    {{ step.label }}
+  </li>
+  {% endfor %}
+</ul>

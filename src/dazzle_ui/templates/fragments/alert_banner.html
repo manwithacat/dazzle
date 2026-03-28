@@ -1,0 +1,14 @@
+{# Full-width alert banner — for page-level messages #}
+{# Parameters: message (str), level (str: success|error|warning|info), dismissible (bool, default: true), icon (str, optional) #}
+{% set level = level | default('info') %}
+{% set dismissible = dismissible | default(true) %}
+<div class="alert alert-{{ level }} rounded-none" role="alert"
+     {% if dismissible %}x-data="{ show: true }" x-show="show" x-transition{% endif %}>
+  {% if icon %}
+  <i data-lucide="{{ icon }}" class="w-5 h-5"></i>
+  {% endif %}
+  <span>{{ message }}</span>
+  {% if dismissible %}
+  <button @click="show = false" class="btn btn-ghost btn-sm btn-circle" aria-label="Dismiss">&times;</button>
+  {% endif %}
+</div>

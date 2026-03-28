@@ -1,0 +1,6 @@
+{# Auto-dismissing toast notification — used by with_toast() response helper #}
+{# Parameters: message (str), level (str: success|error|warning|info, default: info) #}
+{% set level = level | default('info') %}
+<div class="alert alert-{{ level }}" remove-me="5s" role="alert">
+  <span>{{ message }}</span>
+</div>

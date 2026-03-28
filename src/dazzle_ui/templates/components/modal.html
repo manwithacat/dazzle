@@ -1,0 +1,35 @@
+{# General-purpose server-loaded modal — uses native <dialog> element #}
+{# Parameters: modal_id (str, default: 'dz-modal'), title (str), size (str: sm|md|lg|xl, default: md) #}
+{# Usage: server returns this template via hx-get, then JS calls dialog.showModal() #}
+{% set modal_id = modal_id | default('dz-modal') %}
+{% set size = size | default('md') %}
+{% set size_classes = {
+  'sm': 'max-w-sm',
+  'md': 'max-w-lg',
+  'lg': 'max-w-2xl',
+  'xl': 'max-w-4xl',
+} %}
+<dialog id="{{ modal_id }}" class="modal">
+  <div class="modal-box {{ size_classes.get(size, 'max-w-lg') }}">
+    {% if title %}
+    <h3 class="text-lg font-bold">{{ title }}</h3>
+    {% endif %}
+
+    {# Close button #}
+    <form method="dialog" class="absolute right-4 top-4">
+      <button class="btn btn-ghost btn-sm btn-circle" aria-label="Close">&times;</button>
+    </form>
+
+    {# Content — caller fills this #}
+    <div class="py-4">
+      {% block modal_content %}
+      {{ content | safe if content else '' }}
+      {% endblock %}
+    </div>
+  </div>
+
+  {# Backdrop click to close #}
+  <form method="dialog" class="modal-backdrop">
+    <button aria-label="Close">close</button>
+  </form>
+</dialog>
