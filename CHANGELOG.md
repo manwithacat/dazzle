@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.3] - 2026-03-28
+
+### Added
+- **UX Component Expansion — Phase 3 (Alpine Interactive Components)**: 6 new Alpine.js components with Jinja2 fragments
+  - `dzPopover` + `popover.html`: Anchored floating content panel with click-outside dismiss
+  - `dzTooltip` + `tooltip_rich.html`: Rich HTML tooltip with configurable show/hide delays
+  - `dzContextMenu` + `context_menu.html`: Right-click positioned menu with divider support
+  - `dzCommandPalette` + `command_palette.html`: Cmd+K spotlight search with fuzzy filter, keyboard navigation, grouped actions
+  - `dzSlideOver` + `slide_over.html`: Side sheet overlay with 5 width presets, focus trapping, HTMX content loading
+  - `dzToggleGroup` + `toggle_group.html`: Exclusive or multi-select button group with hidden input sync
+
+### Agent Guidance
+- All Phase 3 components are registered in `dz-alpine.js` and have matching fragments in `templates/fragments/`.
+- `dzCommandPalette` accepts actions as a JSON array via `data-dz-actions` attribute or Jinja2 `actions` variable. Actions have `label`, `url`, optional `group` and `icon`.
+- `dzSlideOver` listens for `dz:slideover-open` window event — dispatch from HTMX `hx-on::after-settle`.
+- `dzToggleGroup` syncs to a hidden input for form submission. Use `multi=True` for multi-select mode.
+
 ## [0.51.2] - 2026-03-28
 
 ### Added
