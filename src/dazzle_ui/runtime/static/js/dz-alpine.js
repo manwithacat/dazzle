@@ -12,6 +12,12 @@
  *  - dzMoney          — multi-currency minor unit field
  *  - dzFileUpload     — drag-and-drop file upload
  *  - dzWizard         — multi-step form wizard
+ *  - dzPopover        — anchored floating content panel
+ *  - dzTooltip        — rich content tooltip with show/hide delay
+ *  - dzContextMenu    — right-click context menu
+ *  - dzCommandPalette — spotlight-style command palette (Cmd+K)
+ *  - dzSlideOver      — side sheet overlay with width control
+ *  - dzToggleGroup    — exclusive or multi-select button group
  */
 
 document.addEventListener("alpine:init", () => {
@@ -477,6 +483,233 @@ document.addEventListener("alpine:init", () => {
     },
     isCurrent(idx) {
       return idx === this.step;
+    },
+  }));
+
+  // ── Popover ───────────────────────────────────────────────────────────
+
+  Alpine.data("dzPopover", () => ({
+    open: false,
+
+    toggle() {
+      this.open = !this.open;
+    },
+    show() {
+      this.open = true;
+    },
+    hide() {
+      this.open = false;
+      this.$dispatch("dz:close");
+    },
+
+    init() {
+      // Close on Escape
+      this.$el.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && this.open) this.hide();
+      });
+      // Close on click outside
+      document.addEventListener("click", (e) => {
+        if (this.open && !this.$el.contains(e.target)) this.hide();
+      });
+    },
+  }));
+
+  // ── Rich Tooltip ──────────────────────────────────────────────────────
+
+  Alpine.data("dzTooltip", () => ({
+    visible: false,
+    _showTimer: null,
+    _hideTimer: null,
+
+    showDelay() {
+      return parseInt(this.$el.dataset.dzDelay || "200", 10);
+    },
+    hideDelay() {
+      return parseInt(this.$el.dataset.dzHideDelay || "100", 10);
+    },
+
+    show() {
+      clearTimeout(this._hideTimer);
+      this._showTimer = setTimeout(() => {
+        this.visible = true;
+      }, this.showDelay());
+    },
+    hide() {
+      clearTimeout(this._showTimer);
+      this._hideTimer = setTimeout(() => {
+        this.visible = false;
+      }, this.hideDelay());
+    },
+  }));
+
+  // ── Context Menu ──────────────────────────────────────────────────────
+
+  Alpine.data("dzContextMenu", () => ({
+    open: false,
+    x: 0,
+    y: 0,
+
+    onContextMenu(e) {
+      e.preventDefault();
+      this.x = e.clientX;
+      this.y = e.clientY;
+      this.open = true;
+    },
+    close() {
+      this.open = false;
+    },
+
+    init() {
+      this.$el.addEventListener("contextmenu", (e) => this.onContextMenu(e));
+      document.addEventListener("click", () => {
+        if (this.open) this.close();
+      });
+      this.$el.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && this.open) this.close();
+      });
+    },
+  }));
+
+  // ── Command Palette ───────────────────────────────────────────────────
+
+  Alpine.data("dzCommandPalette", () => ({
+    open: false,
+    query: "",
+    selectedIndex: 0,
+    actions: [],
+
+    get filtered() {
+      if (!this.query) return this.actions;
+      const q = this.query.toLowerCase();
+      return this.actions.filter(
+        (a) =>
+          a.label.toLowerCase().includes(q) ||
+          (a.group && a.group.toLowerCase().includes(q)),
+      );
+    },
+
+    toggle() {
+      this.open = !this.open;
+      if (this.open) {
+        this.query = "";
+        this.selectedIndex = 0;
+        this.$nextTick(() => this.$refs.searchInput?.focus());
+      }
+    },
+    close() {
+      this.open = false;
+      this.query = "";
+    },
+    select(action) {
+      this.close();
+      if (action.url) window.location.href = action.url;
+      if (action.handler) action.handler();
+      this.$dispatch("dz:select", { action });
+    },
+
+    onKeyDown(e) {
+      const items = this.filtered;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        this.selectedIndex = Math.min(this.selectedIndex + 1, items.length - 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+      } else if (e.key === "Enter" && items.length > 0) {
+        e.preventDefault();
+        this.select(items[this.selectedIndex]);
+      }
+    },
+
+    init() {
+      // Parse actions from data attribute
+      try {
+        this.actions = JSON.parse(this.$el.dataset.dzActions || "[]");
+      } catch (_) {
+        this.actions = [];
+      }
+      // Global keyboard shortcut: Cmd+K / Ctrl+K
+      document.addEventListener("keydown", (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+          e.preventDefault();
+          this.toggle();
+        }
+        if (e.key === "Escape" && this.open) this.close();
+      });
+    },
+  }));
+
+  // ── Slide-Over (Enhanced) ─────────────────────────────────────────────
+
+  Alpine.data("dzSlideOver", () => ({
+    open: false,
+    _width: "md",
+
+    widthClass() {
+      const map = {
+        sm: "max-w-sm",
+        md: "max-w-md",
+        lg: "max-w-lg",
+        xl: "max-w-xl",
+        full: "max-w-full",
+      };
+      return map[this._width] || "max-w-md";
+    },
+
+    show() {
+      this.open = true;
+      this.$dispatch("dz:open");
+    },
+    hide() {
+      this.open = false;
+      this.$dispatch("dz:close");
+    },
+
+    init() {
+      this._width = this.$el.dataset.dzWidth || "md";
+      // Listen for open event from HTMX triggers
+      window.addEventListener("dz:slideover-open", () => this.show());
+      this.$el.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && this.open) this.hide();
+      });
+    },
+  }));
+
+  // ── Toggle Group ──────────────────────────────────────────────────────
+
+  Alpine.data("dzToggleGroup", () => ({
+    value: null,
+    multi: false,
+
+    init() {
+      this.multi = this.$el.dataset.dzMulti === "true";
+      const initial = this.$el.dataset.dzValue;
+      if (initial) {
+        this.value = this.multi ? initial.split(",") : initial;
+      } else {
+        this.value = this.multi ? [] : null;
+      }
+    },
+
+    isSelected(val) {
+      return this.multi ? (this.value || []).includes(val) : this.value === val;
+    },
+
+    toggle(val) {
+      if (this.multi) {
+        const arr = this.value || [];
+        const idx = arr.indexOf(val);
+        this.value = idx >= 0 ? arr.filter((v) => v !== val) : [...arr, val];
+      } else {
+        this.value = this.value === val ? null : val;
+      }
+      // Sync to hidden input
+      const hidden = this.$el.querySelector("input[type=hidden]");
+      if (hidden)
+        hidden.value = this.multi
+          ? (this.value || []).join(",")
+          : this.value || "";
+      this.$dispatch("dz:select", { value: this.value });
     },
   }));
 });
