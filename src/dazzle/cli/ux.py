@@ -127,24 +127,59 @@ def _run_contracts(
     console.print(f"[dim]  site: {site_url}[/dim]")
 
     async def _run() -> None:
-        # Authenticate as admin for non-RBAC contracts
-        ok = await client.authenticate("admin")
-        if not ok:
-            console.print("[yellow]  admin auth failed — some checks may fail[/yellow]")
+        # Build per-persona clients: non-RBAC contracts need a persona
+        # that actually has access to the entity (not always admin).
+        from dazzle.core.ir.domain import PermissionKind
+        from dazzle.testing.ux.contracts import _get_permitted_personas
 
         # Separate RBAC and non-RBAC contracts
         rbac_contracts = [c for c in contracts if isinstance(c, RBACContract)]
         other_contracts = [c for c in contracts if not isinstance(c, RBACContract)]
 
+        # Cache authenticated clients by persona
+        persona_clients: dict[str, HtmxClient] = {}
+
+        async def _get_client(persona: str) -> HtmxClient:
+            if persona not in persona_clients:
+                c = HtmxClient(base_url=site_url)
+                ok = await c.authenticate(persona)
+                if ok:
+                    persona_clients[persona] = c
+                else:
+                    console.print(f"[yellow]  auth failed for {persona}[/yellow]")
+            return persona_clients.get(persona, client)
+
+        # Authenticate admin as fallback
+        await client.authenticate("admin")
+        persona_clients["admin"] = client
+
         # ------------------------------------------------------------------
-        # Non-RBAC contracts
+        # Non-RBAC contracts — use a persona with LIST access
         # ------------------------------------------------------------------
         entity_ids: dict[str, str] = {}  # entity name -> first ID
 
         for contract in other_contracts:
             path = contract.url_path
+
+            # Pick a persona that can access this page
+            ent_name = getattr(contract, "entity", "")
+            ws_name = getattr(contract, "workspace", "")
+            if ent_name:
+                permitted = _get_permitted_personas(appspec, ent_name, PermissionKind.LIST)
+                persona = permitted[0] if permitted else "admin"
+            elif ws_name:
+                # Find first persona with workspace access
+                ws_spec = next((w for w in appspec.workspaces if w.name == ws_name), None)
+                if ws_spec and ws_spec.access and ws_spec.access.allow_personas:
+                    persona = ws_spec.access.allow_personas[0]
+                else:
+                    persona = appspec.personas[0].id if appspec.personas else "admin"
+            else:
+                persona = "admin"
+
+            active_client = await _get_client(persona)
+
             if "{id}" in path:
-                ent_name = getattr(contract, "entity", "")
                 if ent_name and ent_name not in entity_ids:
                     try:
                         import httpx
@@ -172,8 +207,12 @@ def _run_contracts(
                 path = path.replace("{id}", eid)
 
             try:
-                page_resp = await client.get_full_page(path)
-                check_contract(contract, page_resp.html)
+                page_resp = await active_client.get_full_page(path)
+                if page_resp.status == 403:
+                    contract.status = "failed"
+                    contract.error = f"HTTP 403 as {persona}"
+                else:
+                    check_contract(contract, page_resp.html)
             except Exception as e:
                 contract.status = "failed"
                 contract.error = str(e)
