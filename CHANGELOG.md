@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.10] - 2026-03-28
+
+### Added
+- **Capability discovery**: New `src/dazzle/core/discovery/` package surfaces relevant Dazzle capabilities (widgets, layouts, components, completeness gaps) to agents at lint time using contextual references to working example apps
+- **Widget rules**: Detects text fields without `widget=rich_text`, ref fields without `widget=combobox`, date fields without `widget=picker`, and name-pattern matches for tags, color, slider
+- **Layout rules**: Identifies entities with transitions but no kanban workspace, date fields but no timeline, view surfaces with 3+ related entities but no groups, and large single-section forms
+- **Component rules**: Suggests `dzCommandPalette` for apps with 5+ surfaces, toggle groups for enum status + grid displays
+- **Completeness rules**: Flags entities with permissions but missing CRUD surfaces (edit, list, create) or no surfaces at all
+- **Example index**: Scans example apps to build capability key → `ExampleRef` mappings with file paths and line numbers
+- **KG seeding**: New `capabilities.toml` with 18 capability concepts seeded into knowledge graph (seed schema v8)
+- **Lint integration**: `dazzle lint` and `dsl operation=lint` now include a "Relevant capabilities" section after errors/warnings
+- **Bootstrap integration**: Added step 12a in bootstrap agent instructions to review capability relevance after DSL generation
+- **Quiet mode**: `suppress_relevance=true` on MCP calls or `suppress=True` in API suppresses relevance output
+
+### Agent Guidance
+- After generating DSL, run `dsl operation=lint` and review the "Relevant capabilities" section. Each item references a working example app with file and line number — use these as concrete patterns, not prescriptions.
+- Query `knowledge(operation='concept', term='widget_rich_text')` (or any capability key) for deeper exploration of what's available.
+
 ## [0.51.9] - 2026-03-28
 
 ### Fixed
