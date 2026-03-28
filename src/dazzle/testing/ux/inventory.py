@@ -92,6 +92,7 @@ def generate_inventory(appspec: AppSpec) -> list[Interaction]:
         if not surfaces:
             continue  # No UI surface = not testable via UX
 
+        # Surface-specific interactions (one per surface)
         for surface_name in surfaces:
             surface_spec = next((s for s in appspec.surfaces if s.name == surface_name), None)
             if not surface_spec:
@@ -103,7 +104,7 @@ def generate_inventory(appspec: AppSpec) -> list[Interaction]:
                 else str(surface_spec.mode)
             )
 
-            # PAGE_LOAD — for each persona with list/read permission
+            # PAGE_LOAD — per surface × persona
             for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.LIST):
                 interactions.append(
                     Interaction(
@@ -115,7 +116,7 @@ def generate_inventory(appspec: AppSpec) -> list[Interaction]:
                     )
                 )
 
-            # DETAIL_VIEW — for each persona with read permission
+            # DETAIL_VIEW — per list-mode surface × persona
             if mode == "list":
                 for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.READ):
                     interactions.append(
@@ -128,43 +129,7 @@ def generate_inventory(appspec: AppSpec) -> list[Interaction]:
                         )
                     )
 
-            # CREATE_SUBMIT — for each persona with create permission
-            for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.CREATE):
-                interactions.append(
-                    Interaction(
-                        cls=InteractionClass.CREATE_SUBMIT,
-                        entity=entity.name,
-                        persona=pid,
-                        surface=surface_name,
-                        description=f"Create {entity.name} as {pid}",
-                    )
-                )
-
-            # EDIT_SUBMIT — for each persona with update permission
-            for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.UPDATE):
-                interactions.append(
-                    Interaction(
-                        cls=InteractionClass.EDIT_SUBMIT,
-                        entity=entity.name,
-                        persona=pid,
-                        surface=surface_name,
-                        description=f"Edit {entity.name} as {pid}",
-                    )
-                )
-
-            # DELETE_CONFIRM — for each persona with delete permission
-            for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.DELETE):
-                interactions.append(
-                    Interaction(
-                        cls=InteractionClass.DELETE_CONFIRM,
-                        entity=entity.name,
-                        persona=pid,
-                        surface=surface_name,
-                        description=f"Delete {entity.name} as {pid}",
-                    )
-                )
-
-            # ACCESS_DENIED — for each persona WITHOUT list permission
+            # ACCESS_DENIED — per surface × denied persona
             for pid in _get_denied_personas(appspec, entity.name, PermissionKind.LIST):
                 interactions.append(
                     Interaction(
@@ -175,6 +140,37 @@ def generate_inventory(appspec: AppSpec) -> list[Interaction]:
                         description=f"Access denied {surface_name} for {pid}",
                     )
                 )
+
+        # Entity-level CRUD interactions (one per entity × persona, not per surface)
+        for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.CREATE):
+            interactions.append(
+                Interaction(
+                    cls=InteractionClass.CREATE_SUBMIT,
+                    entity=entity.name,
+                    persona=pid,
+                    description=f"Create {entity.name} as {pid}",
+                )
+            )
+
+        for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.UPDATE):
+            interactions.append(
+                Interaction(
+                    cls=InteractionClass.EDIT_SUBMIT,
+                    entity=entity.name,
+                    persona=pid,
+                    description=f"Edit {entity.name} as {pid}",
+                )
+            )
+
+        for pid in _get_permitted_personas(appspec, entity.name, PermissionKind.DELETE):
+            interactions.append(
+                Interaction(
+                    cls=InteractionClass.DELETE_CONFIRM,
+                    entity=entity.name,
+                    persona=pid,
+                    description=f"Delete {entity.name} as {pid}",
+                )
+            )
 
         # STATE_TRANSITION — for entities with state machines
         if entity.state_machine:
