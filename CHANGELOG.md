@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.11] - 2026-03-28
+
+### Fixed
+- **Parser**: `widget=` can now appear after `visible:` on surface field declarations (#754). Previously, `field x "X" visible: role(admin) widget=picker` failed with "Unexpected 'widget'" — the parser now accepts key=value options, `visible:`, and `when:` in any order.
+
 ## [0.51.10] - 2026-03-28
 
 ### Added
