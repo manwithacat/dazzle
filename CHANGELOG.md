@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.12] - 2026-03-29
+
+### Fixed
+- **Display**: Enum/state fields now show human-readable Title Case instead of raw snake_case values in tables and detail views (#755). Added centralized `humanize` Jinja2 filter.
+- **Display**: Grid and list workspace regions no longer show raw UUIDs for ref fields when FK expansion is missing (#756). Unexpanded refs now show "-" instead of the UUID string.
+
 ## [0.51.11] - 2026-03-28
 
 ### Fixed
