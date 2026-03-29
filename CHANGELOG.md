@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.16] - 2026-03-29
+
+### Fixed
+- **Display**: FK fields in detail views no longer render as raw Python dicts (#761). `_get_field_spec` now falls back to relation name + `_id` lookup; template else-branch applies `ref_display` filter for mapping values.
+- **Display**: Datetime fields (`created_at`, `updated_at`) now format as "27 Mar 2026" instead of raw ISO strings (#760). `_field_type_to_column_type` detects `_at` suffix for framework-injected timestamp columns.
+- **Workspace**: Customize button drag-and-drop now gated to edit mode via `x-sort:disabled` (#758). Added visual lift feedback CSS on drag handles.
+- **Filter bar**: Ref/FK fields now render as select dropdowns instead of free-text inputs (#759). Alpine.js-driven `<select>` fetches options from the referenced entity's API on page load.
+
 ## [0.51.15] - 2026-03-29
 
 ### Fixed
