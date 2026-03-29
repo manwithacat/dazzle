@@ -31,7 +31,7 @@
                 {% if col.ref_route and ref.get("id") %}
                   <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary" onclick="event.stopPropagation()">{{ display_name }}</a>
                 {% else %}{{ display_name }}{% endif %}
-              {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
+              {% elif display_name %}{{ display_name }}{% elif ref %}-{% else %}-{% endif %}
             {% else %}
               {{ item[col.key] | default("") | truncate_text }}
             {% endif %}
