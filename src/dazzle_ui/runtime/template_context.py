@@ -30,6 +30,8 @@ class ColumnContext(BaseModel):
     filterable: bool = False
     filter_type: str = "text"  # text, select
     filter_options: list[dict[str, str]] = Field(default_factory=list)
+    filter_ref_entity: str = ""  # referenced entity name for ref/belongs_to filters
+    filter_ref_api: str = ""  # API list endpoint for ref entity (e.g. /clients)
     hidden: bool = False
     currency_code: str = ""
     visible_condition: dict[str, Any] | None = None  # Role-based visibility (#585)

@@ -7,7 +7,42 @@
     <label class="label py-0">
       <span class="label-text text-xs">{{ col.label }}</span>
     </label>
-    {% if col.filter_type == "select" %}
+    {% if col.filter_type == "select" and col.filter_ref_entity %}
+    {# Ref/belongs_to filter: select with dynamically loaded options from the referenced entity API #}
+    <select name="filter[{{ col.key }}]"
+            class="select select-bordered select-sm w-full"
+            hx-get="{{ table.api_endpoint }}"
+            hx-target="{{ tbody_target }}"
+            hx-swap="innerHTML"
+            hx-trigger="change"
+            hx-include="closest [data-dz-table]"
+            hx-headers='{"Accept": "text/html"}'
+            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading"
+            x-data="{ options: [], loading: true }"
+            x-init="
+              fetch('{{ col.filter_ref_api }}?page_size=200', { headers: { 'Accept': 'application/json' } })
+                .then(r => r.json())
+                .then(data => {
+                  const items = data.items || [];
+                  const display = (item) => {
+                    return item.__display__ || item.name || item.company_name
+                      || ((item.first_name || '') + ' ' + (item.last_name || '')).trim()
+                      || item.title || item.label || item.email || item.id || '';
+                  };
+                  options = items.map(i => ({ value: i.id, label: display(i) }));
+                  loading = false;
+                })
+                .catch(() => { loading = false; })
+            ">
+      <option value="">All</option>
+      <template x-for="opt in options" :key="opt.value">
+        <option :value="opt.value"
+                x-text="opt.label"
+                :selected="'{{ table.filter_values.get(col.key, '') if table.filter_values else '' }}' === opt.value">
+        </option>
+      </template>
+    </select>
+    {% elif col.filter_type == "select" %}
     <select name="filter[{{ col.key }}]"
             class="select select-bordered select-sm w-full"
             hx-get="{{ table.api_endpoint }}"

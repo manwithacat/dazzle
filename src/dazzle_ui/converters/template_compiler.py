@@ -266,6 +266,8 @@ def _infer_filter_type(
                 {"value": "true", "label": "Yes"},
                 {"value": "false", "label": "No"},
             ]
+        if kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO):
+            return "select", []  # options populated via HTMX at render time
     # Check state machine field
     if entity and entity.state_machine:
         sm = entity.state_machine
@@ -333,6 +335,16 @@ def _build_columns(
                 # Element visible: takes precedence; fall back to section visible (#585)
                 _el_vis = getattr(element, "visible", None)
                 _col_vis = _el_vis.model_dump() if _el_vis else _section_vis_cond
+                # Ref entity name for ref/belongs_to filter dropdowns
+                _ref_ent = (
+                    field_spec.type.ref_entity
+                    if field_spec
+                    and field_spec.type
+                    and field_spec.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO)
+                    and field_spec.type.ref_entity
+                    else ""
+                )
+                _ref_api = f"/{to_api_plural(_ref_ent)}" if _ref_ent else ""
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -342,6 +354,8 @@ def _build_columns(
                         filterable=filterable and not is_sensitive,
                         filter_type=filter_type,
                         filter_options=filter_options,
+                        filter_ref_entity=_ref_ent,
+                        filter_ref_api=_ref_api,
                         currency_code=col_currency,
                         visible_condition=_col_vis,
                     )
@@ -371,6 +385,14 @@ def _build_columns(
                 col_type = (
                     "sensitive" if is_sensitive else _field_type_to_column_type(field, field.name)
                 )
+                _ref_ent = (
+                    field.type.ref_entity
+                    if field.type
+                    and field.type.kind in (FieldTypeKind.REF, FieldTypeKind.BELONGS_TO)
+                    and field.type.ref_entity
+                    else ""
+                )
+                _ref_api = f"/{to_api_plural(_ref_ent)}" if _ref_ent else ""
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -380,6 +402,8 @@ def _build_columns(
                         filterable=filterable,
                         filter_type=filter_type,
                         filter_options=filter_options,
+                        filter_ref_entity=_ref_ent,
+                        filter_ref_api=_ref_api,
                         currency_code=col_currency,
                     )
                 )

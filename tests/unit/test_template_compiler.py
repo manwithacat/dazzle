@@ -921,6 +921,64 @@ class TestEnumFilterLabels:
         assert opts[1] == {"value": "done", "label": "Done"}  # fallback
 
 
+class TestRefFilterType:
+    """Tests for #759 — ref/belongs_to fields render as select dropdowns."""
+
+    def test_ref_field_returns_select_filter_type(self):
+        """REF fields should infer filter_type 'select' with empty options."""
+        from dazzle_ui.converters.template_compiler import _infer_filter_type
+
+        field = ir.FieldSpec(
+            name="client_id",
+            type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="Client"),
+        )
+        ftype, opts = _infer_filter_type(field, None, "client_id")
+        assert ftype == "select"
+        assert opts == []
+
+    def test_belongs_to_field_returns_select_filter_type(self):
+        """BELONGS_TO fields should infer filter_type 'select' with empty options."""
+        from dazzle_ui.converters.template_compiler import _infer_filter_type
+
+        field = ir.FieldSpec(
+            name="order_id",
+            type=ir.FieldType(kind=FieldTypeKind.BELONGS_TO, ref_entity="Order"),
+        )
+        ftype, opts = _infer_filter_type(field, None, "order_id")
+        assert ftype == "select"
+        assert opts == []
+
+    def test_ref_column_has_ref_entity_and_api(self):
+        """ColumnContext for a filterable ref field includes ref entity name and API URL."""
+        from dazzle_ui.converters.template_compiler import _build_columns
+
+        entity = ir.EntitySpec(
+            name="Task",
+            fields=[
+                ir.FieldSpec(
+                    name="id", type=ir.FieldType(kind=FieldTypeKind.UUID), is_primary_key=True
+                ),
+                ir.FieldSpec(
+                    name="assignee_id",
+                    type=ir.FieldType(kind=FieldTypeKind.REF, ref_entity="User"),
+                ),
+            ],
+        )
+        surface = ir.SurfaceSpec(
+            name="task_list",
+            title="Tasks",
+            entity_ref="Task",
+            mode=SurfaceMode.LIST,
+        )
+        ux = ir.UXSpec(filter=["assignee_id"])
+        cols = _build_columns(surface, entity, ux_spec=ux)
+        assignee_col = next(c for c in cols if c.key == "assignee")
+        assert assignee_col.filterable is True
+        assert assignee_col.filter_type == "select"
+        assert assignee_col.filter_ref_entity == "User"
+        assert assignee_col.filter_ref_api == "/users"
+
+
 class TestRelatedGroupValidation:
     """Tests for related group validation in the linker."""
 
