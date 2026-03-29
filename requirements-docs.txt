@@ -1,3 +1,4 @@
 mkdocs>=1.5
 mkdocs-material>=9.5
 pymdown-extensions>=10.0
+pygments>=2.18,<2.20  # 2.20.0 breaks pymdownx highlight (filename=None → AttributeError)
