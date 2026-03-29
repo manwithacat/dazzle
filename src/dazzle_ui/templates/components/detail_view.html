@@ -113,7 +113,13 @@
               {% set display_val = detail.item.get(rel_name ~ "_display", "") or detail.item.get(field.name ~ "_display", "") %}
               {% if display_val %}{{ display_val }}{% elif value is mapping %}{{ value.get("name") or value.get("title") or value.get("label") or value.get("email") or value.get("id", "—") }}{% elif value %}{{ value }}{% else %}—{% endif %}
             {% else %}
-              {% if field.type == "enum" %}{{ value | default("—") | humanize }}{% else %}{{ value | default("—") }}{% endif %}
+              {% if value is mapping %}
+                {{ value | ref_display }}
+              {% elif field.type == "enum" %}
+                {{ value | default("—") | humanize }}
+              {% else %}
+                {{ value | default("—") }}
+              {% endif %}
             {% endif %}
           </dd>
         </div>

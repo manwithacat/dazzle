@@ -190,12 +190,31 @@ def _field_type_to_form_type(field_spec: ir.FieldSpec | None) -> str:
 
 
 def _get_field_spec(entity: ir.EntitySpec | None, field_name: str) -> ir.FieldSpec | None:
-    """Look up a field spec from an entity by name."""
+    """Look up a field spec from an entity by name.
+
+    When the exact name isn't found, tries ``field_name + "_id"`` so that
+    surfaces using the relation name (e.g. ``field school``) resolve to the
+    underlying FK column (``school_id``) and get the correct ref type.
+    """
     if not entity or not entity.fields:
         return None
     for field in entity.fields:
         if field.name == field_name:
             return field
+    # Fallback: try the _id suffixed name for FK / belongs_to relations
+    if not field_name.endswith("_id"):
+        fk_name = field_name + "_id"
+        for field in entity.fields:
+            if (
+                field.name == fk_name
+                and field.type
+                and field.type.kind
+                in (
+                    FieldTypeKind.REF,
+                    FieldTypeKind.BELONGS_TO,
+                )
+            ):
+                return field
     return None
 
 
