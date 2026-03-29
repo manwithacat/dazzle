@@ -118,9 +118,21 @@ def _build_currency_options(
     return options
 
 
-def _field_type_to_column_type(field_spec: ir.FieldSpec | None) -> str:
-    """Map an IR field type to a table column display type."""
+def _field_type_to_column_type(
+    field_spec: ir.FieldSpec | None,
+    field_name: str = "",
+) -> str:
+    """Map an IR field type to a table column display type.
+
+    When *field_spec* is ``None`` (e.g. framework-injected timestamp columns
+    like ``created_at`` / ``updated_at``), the *field_name* is used as a
+    heuristic: names ending with ``_at`` are treated as date columns so the
+    template renders them through the ``dateformat`` filter instead of as raw
+    ISO-8601 text.
+    """
     if not field_spec or not field_spec.type:
+        if field_name.endswith("_at"):
+            return "date"
         return "text"
     kind = field_spec.type.kind
     type_map = {
@@ -312,7 +324,11 @@ def _build_columns(
                     )
                 # Sensitive fields are masked in list views (show last 4 chars)
                 is_sensitive = bool(field_spec and field_spec.is_sensitive)
-                col_type = "sensitive" if is_sensitive else _field_type_to_column_type(field_spec)
+                col_type = (
+                    "sensitive"
+                    if is_sensitive
+                    else _field_type_to_column_type(field_spec, element.field_name)
+                )
                 col_label = element.label or col_key.replace("_", " ").title()
                 # Element visible: takes precedence; fall back to section visible (#585)
                 _el_vis = getattr(element, "visible", None)
@@ -352,7 +368,9 @@ def _build_columns(
                     FieldTypeKind.BELONGS_TO,
                 ):
                     col_key = field.name[:-3] if field.name.endswith("_id") else field.name
-                col_type = "sensitive" if is_sensitive else _field_type_to_column_type(field)
+                col_type = (
+                    "sensitive" if is_sensitive else _field_type_to_column_type(field, field.name)
+                )
                 columns.append(
                     ColumnContext(
                         key=col_key,
@@ -777,7 +795,7 @@ def _build_entity_columns(entity: ir.EntitySpec) -> list[ColumnContext]:
             ColumnContext(
                 key=col_key,
                 label=col_key.replace("_", " ").title(),
-                type=_field_type_to_column_type(field),
+                type=_field_type_to_column_type(field, field.name),
                 currency_code=col_currency,
             )
         )
