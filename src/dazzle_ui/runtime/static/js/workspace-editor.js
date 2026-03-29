@@ -24,6 +24,12 @@ document.addEventListener("alpine:init", () => {
     toggleEdit() {
       this._snapshot = JSON.parse(JSON.stringify(this.regions));
       this.editing = true;
+      // Allow Alpine Sort to pick up the disabled→enabled transition.
+      this.$nextTick(() => {
+        this.$el
+          .querySelectorAll("[x-sort\\:handle]")
+          .forEach((h) => h.classList.add("cursor-grab"));
+      });
     },
 
     onReorder(item, position) {

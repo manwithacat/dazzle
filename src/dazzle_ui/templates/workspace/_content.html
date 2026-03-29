@@ -65,7 +65,7 @@
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-12 gap-4"
-       x-sort="onReorder"
+       x-sort="onReorder" x-sort:disabled="!editing"
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>
     {% for region in workspace.regions %}
@@ -80,7 +80,7 @@
       {# Edit mode controls #}
       <div x-show="editing" x-transition class="mb-1 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="cursor-grab active:cursor-grabbing" x-sort:handle>
+          <span class="cursor-grab active:cursor-grabbing active:ring-2 active:ring-blue-300 active:shadow-lg rounded p-0.5" x-sort:handle>
             <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
           </span>
           <div class="join">
@@ -114,7 +114,7 @@
       {# Edit mode controls #}
       <div x-show="editing" x-transition class="mb-1 flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="cursor-grab active:cursor-grabbing" x-sort:handle>
+          <span class="cursor-grab active:cursor-grabbing active:ring-2 active:ring-blue-300 active:shadow-lg rounded p-0.5" x-sort:handle>
             <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
           </span>
           <div class="join">
