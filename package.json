@@ -1,0 +1,29 @@
+{
+  "name": "dazzle",
+  "version": "1.0.0",
+  "description": "**Model your business. Ship your product. Pass your audit.**",
+  "main": "eslint.config.js",
+  "directories": {
+    "doc": "docs",
+    "example": "examples",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/manwithacat/dazzle.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/manwithacat/dazzle/issues"
+  },
+  "homepage": "https://github.com/manwithacat/dazzle#readme",
+  "devDependencies": {
+    "eslint": "^10.1.0"
+  }
+}
