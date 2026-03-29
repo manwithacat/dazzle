@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.15] - 2026-03-29
+
+### Fixed
+- **PyPI**: Fixed `ModuleNotFoundError: No module named 'httpx'` on `dazzle --help` in PyPI installs. The sentinel CLI eagerly imported `dazzle.testing.fuzzer` at module level, which pulled in `httpx` via the e2e_runner import chain. Now lazy-imported inside the `fuzz` command.
+
 ## [0.51.14] - 2026-03-29
 
 ### Added
