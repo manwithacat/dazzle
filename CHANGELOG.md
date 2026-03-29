@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.13] - 2026-03-29
+
+### Added
+- **HTML template linting**: Added djLint static analysis for all 102 Jinja2 templates — catches unclosed/mismatched tags deterministically without rendering. Configured in `pyproject.toml` with structural rules only.
+- **Rendered HTML validation**: New `HTMLBalanceChecker` validates balanced open/close tags on rendered template output for 18 key templates (fragments, workspace regions, components).
+- **Test suite**: `tests/unit/test_template_html.py` with 24 tests covering both static and rendered HTML quality checks.
+
+### Fixed
+- **Workspace**: Fixed unclosed `<div>` in list region template causing titles to render inline with content instead of above it (#757).
+
 ## [0.51.12] - 2026-03-29
 
 ### Fixed
