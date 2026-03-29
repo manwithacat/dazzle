@@ -5,8 +5,6 @@ from pathlib import Path
 
 import typer
 
-from dazzle.testing.fuzzer import generate_report, run_campaign
-
 sentinel_app = typer.Typer(
     help="SaaS Sentinel — failure-mode detection for Dazzle applications.",
     no_args_is_help=True,
@@ -186,7 +184,7 @@ def sentinel_fuzz(
     output: str = typer.Option(None, "--output", "-o", help="Save report to file"),
 ) -> None:
     """Run parser fuzz campaign to discover error surface gaps."""
-    from dazzle.testing.fuzzer import Classification
+    from dazzle.testing.fuzzer import Classification, generate_report, run_campaign
 
     # Find examples directory
     examples_dir = Path.cwd() / "examples"
