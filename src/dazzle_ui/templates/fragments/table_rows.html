@@ -22,7 +22,7 @@
   {% if not col.hidden %}
   <td data-dz-col="{{ col.key }}">
     {% if col.type == "badge" %}
-      <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+      <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") | humanize }}</span>
     {% elif col.type == "bool" %}
       {{ item[col.key] | bool_icon }}
     {% elif col.type == "date" %}

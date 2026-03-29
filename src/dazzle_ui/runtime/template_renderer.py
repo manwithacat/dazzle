@@ -185,6 +185,17 @@ def _basename_or_url_filter(value: Any) -> str:
     return text
 
 
+def _humanize_filter(value: Any) -> str:
+    """Convert snake_case or slug values to human-readable Title Case.
+
+    E.g. ``in_progress`` → ``In Progress``, ``needs_review`` → ``Needs Review``.
+    """
+    if value is None:
+        return ""
+    text = str(value)
+    return text.replace("_", " ").title()
+
+
 def _ref_display_name(value: Any, fallback: str = "") -> str:
     """Extract a human-readable display name from a ref dict.
 
@@ -317,6 +328,7 @@ def create_jinja_env(project_templates_dir: Path | None = None) -> Environment:
     env.filters["slugify"] = _slugify_filter
     env.filters["basename_or_url"] = _basename_or_url_filter
     env.filters["ref_display"] = _ref_display_filter
+    env.filters["humanize"] = _humanize_filter
 
     return env
 
