@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.14] - 2026-03-29
+
+### Added
+- **JS quality checks**: ESLint structural linting for 8 source JS files (no-undef, no-unreachable, no-dupe-keys, valid-typeof). Flat config with browser + framework globals (Alpine, htmx, Quill, etc.).
+- **Dist syntax validation**: `node --check` validates composed `dist/*.js` bundles are parseable — catches concatenation errors.
+- **Test suite**: `tests/unit/test_js_quality.py` with ESLint + dist syntax checks, skips gracefully if node/npx unavailable.
+
+### Fixed
+- **vitest.config.js**: Fixed typo `dazzle_dnr_ui` → `dazzle_ui` in include path.
+
 ## [0.51.13] - 2026-03-29
 
 ### Added
