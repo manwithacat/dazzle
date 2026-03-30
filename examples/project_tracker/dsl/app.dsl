@@ -318,6 +318,26 @@ surface comment_create "Add Comment":
   section main:
     field body "Comment" widget=rich_text
 
+surface comment_list "Comments":
+  uses entity Comment
+  mode: list
+  section main:
+    field task "Task"
+    field author "Author"
+    field body "Comment"
+    field created_at "Date"
+  ux:
+    sort: created_at desc
+    filter: task, author
+    empty: "No comments yet."
+
+surface comment_edit "Edit Comment":
+  uses entity Comment
+  mode: edit
+  access: persona(admin)
+  section main:
+    field body "Comment" widget=rich_text
+
 surface project_edit "Edit Project":
   uses entity Project
   mode: edit
