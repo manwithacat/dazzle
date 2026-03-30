@@ -153,7 +153,9 @@ def _field_to_column(
 
     # Nullable / required
     if field.name != "id":
-        kwargs["nullable"] = not field.required
+        kwargs["nullable"] = not (
+            getattr(field, "is_required", None) or getattr(field, "required", False)
+        )
 
     # Unique
     if getattr(field, "is_unique", False) or getattr(field, "unique", False):
