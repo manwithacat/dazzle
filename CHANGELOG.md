@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.53.1] - 2026-03-30
+
+### Fixed
+- **SA schema**: `_field_to_column` accessed `field.required` which doesn't exist on IR `FieldSpec` (it has `is_required`). Now uses `getattr` fallback to support both FieldSpec types. Fixes NOT NULL columns for optional fields like `FeedbackReport.reported_by` (#762).
+- **QA capture**: `build_capture_plan()` only checked `appspec.archetypes` (always empty for projects using `personas` keyword). Now falls back to `appspec.personas`. Unblocks `dazzle qa visual` and `dazzle qa capture` for all example apps (#763).
+
 ## [0.53.0] - 2026-03-30
 
 ### Added
