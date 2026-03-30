@@ -166,6 +166,37 @@ surface system_detail "System Detail":
     field cpu_usage "CPU Usage"
     field memory_usage "Memory Usage"
 
+surface system_create "Register System":
+  uses entity System
+  mode: create
+  access: persona(admin)
+  section main "New System":
+    field name "Name"
+    field service_type "Service Type"
+  ux:
+    purpose: "Register a new system for monitoring"
+
+surface system_edit "Edit System":
+  uses entity System
+  mode: edit
+  access: persona(admin)
+  section main "Edit System":
+    field name "Name"
+    field service_type "Service Type"
+    field status "Status"
+  ux:
+    purpose: "Update system details and status"
+
+surface alert_create "Create Alert":
+  uses entity Alert
+  mode: create
+  section main "New Alert":
+    field system "System"
+    field severity "Severity"
+    field message "Message"
+  ux:
+    purpose: "Manually create an alert for a system"
+
 surface alert_list "Alerts":
   uses entity Alert
   mode: list
