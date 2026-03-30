@@ -1,0 +1,15 @@
+{# Card picker popover — lists available regions from the catalog #}
+<div x-show="showPicker" x-transition
+     @click.away="showPicker = false"
+     class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 bg-base-100 shadow-xl rounded-lg border border-base-300 p-3 z-50 max-h-64 overflow-y-auto">
+  <h4 class="text-sm font-semibold mb-2">Add a card</h4>
+  <template x-for="item in catalog" :key="item.name">
+    <button @click="addCard(item.name)"
+            class="w-full text-left px-3 py-2 rounded hover:bg-base-200 flex items-center gap-2 text-sm">
+      <span class="badge badge-sm badge-ghost" x-text="item.display.toLowerCase()"></span>
+      <span x-text="item.title"></span>
+      <span class="text-xs opacity-50 ml-auto" x-text="item.entity"></span>
+    </button>
+  </template>
+  <div x-show="catalog.length === 0" class="text-sm opacity-50 py-2">No widgets available.</div>
+</div>
