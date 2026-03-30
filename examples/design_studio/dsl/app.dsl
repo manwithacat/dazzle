@@ -127,6 +127,10 @@ entity Feedback "Design Feedback":
     update: role(admin)
     delete: role(admin)
 
+  scope:
+    list: all
+      for: admin, designer, reviewer
+
 # ── Workspaces ───────────────────────────────────────────────────────
 
 workspace studio_dashboard "Studio Dashboard":
@@ -267,6 +271,28 @@ surface campaign_detail "Campaign Detail":
 surface feedback_create "Add Feedback":
   uses entity Feedback
   mode: create
+  section main:
+    field rating "Rating" widget=slider
+    field comment "Comment" widget=rich_text
+
+surface feedback_list "Feedback":
+  uses entity Feedback
+  mode: list
+  section main:
+    field asset "Asset"
+    field reviewer "Reviewer"
+    field rating "Rating"
+    field comment "Comment"
+    field created_at "Date"
+  ux:
+    sort: created_at desc
+    filter: asset, reviewer
+    empty: "No feedback submitted yet."
+
+surface feedback_edit "Edit Feedback":
+  uses entity Feedback
+  mode: edit
+  access: persona(admin)
   section main:
     field rating "Rating" widget=slider
     field comment "Comment" widget=rich_text
