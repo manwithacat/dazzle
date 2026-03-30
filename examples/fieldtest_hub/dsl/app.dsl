@@ -634,6 +634,19 @@ surface test_session_create "Log Test Session":
         tester_id: current_user
         environment: indoor
 
+surface test_session_edit "Edit Test Session":
+  uses entity TestSession
+  mode: edit
+
+  section main "Edit Test Session":
+    field duration_minutes "Duration (minutes)"
+    field environment "Environment"
+    field temperature "Temperature"
+    field notes "Notes"
+
+  ux:
+    purpose: "Update test session details after testing"
+
 # Surface: Firmware Release Timeline
 surface firmware_release_list "Firmware Releases":
   uses entity FirmwareRelease
