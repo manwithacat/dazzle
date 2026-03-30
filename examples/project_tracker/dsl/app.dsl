@@ -367,3 +367,24 @@ surface milestone_edit "Edit Milestone":
     field status "Status"
     field start_date "Start Date" widget=picker
     field end_date "End Date" widget=picker
+
+surface attachment_list "Attachments":
+  uses entity Attachment
+  mode: list
+  section main:
+    field task "Task"
+    field filename "File"
+    field uploaded_by "Uploaded By"
+    field created_at "Date"
+  ux:
+    sort: created_at desc
+    filter: task
+    empty: "No attachments uploaded yet."
+
+surface attachment_create "Upload Attachment":
+  uses entity Attachment
+  mode: create
+  section main:
+    field task "Task"
+    field file "File"
+    field filename "Filename"
