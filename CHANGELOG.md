@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.52.0] - 2026-03-30
+
+### Added
+- **QA toolkit**: New `src/dazzle/qa/` package — visual quality evaluation via Claude Vision, Playwright screenshot capture, process lifecycle management, and findings aggregation. Generalized from AegisMark's autonomous quality assessment approach.
+- **CLI**: `dazzle qa visual` evaluates running apps against 8 quality categories (text_wrapping, truncation, title_formatting, column_layout, empty_state, alignment, readability, data_quality). Returns structured findings with severity and fix suggestions.
+- **CLI**: `dazzle qa capture` captures screenshots per persona per workspace without LLM evaluation — useful for debugging and baselines.
+- **Evaluator**: Pluggable `QAEvaluator` protocol with `ClaudeEvaluator` default (via `[llm]` extra). Prompt adapted from AegisMark's battle-tested visual quality assessment.
+- **Server lifecycle**: `serve_app()` context manager starts Dazzle apps as subprocesses with health polling. Accepts `--url` for already-running instances.
+- **`/improve` integration**: New `visual_quality` gap type with tiered discovery — DSL gaps first (free), visual QA when exhausted (LLM cost). Findings feed into the existing OBSERVE → ENHANCE → VERIFY loop.
+
+### Agent Guidance
+- When `/improve` exhausts all DSL-level gaps (lint, validate, conformance, fidelity), it now automatically runs `dazzle qa visual` to discover display bugs (raw UUIDs, broken layouts, missing empty states). Visual findings become backlog items with fix routing by category.
+- `dazzle qa visual --app <name>` works against any example app. Use `--url` for deployed instances.
+
 ## [0.51.16] - 2026-03-29
 
 ### Fixed
