@@ -38,6 +38,7 @@ If `dev_docs/improve-backlog.md` does not exist:
    - `cd examples/{app} && dazzle lint 2>&1` — record lint violations
    - Use `mcp__dazzle__conformance` with `operation=summary` — record conformance gaps
    - Use `mcp__dazzle__dsl` with `operation=fidelity` — record fidelity gaps
+   - If LLM available: `cd examples/{app} && dazzle qa visual --json 2>&1` — record visual quality findings
 4. Write `dev_docs/improve-backlog.md` with all discovered gaps as PENDING items
 5. Write `dev_docs/improve-log.md` with header
 6. Continue to OBSERVE
@@ -64,6 +65,23 @@ If `$ARGUMENTS` is provided, filter to only that app name.
 5. Pick next PENDING gap (priority: critical > warning > info, then by app alphabetical)
 6. Mark IN_PROGRESS
 
+### Tiered Gap Discovery
+
+When all existing backlog gaps are DONE or BLOCKED and re-scanning DSL finds no new PENDING gaps:
+
+**Tier 1 (every cycle, free):** Re-scan DSL gaps
+- Already handled above: `dazzle validate`, `dazzle lint`, conformance, fidelity
+
+**Tier 2 (when Tier 1 exhausted, medium cost):** Visual quality assessment
+- For each example app, run: `cd examples/{app} && dazzle qa visual --json 2>&1`
+- Parse JSON output for findings
+- Add each finding to the backlog as gap type `visual_quality` with:
+  - Description: `[{category}] {description} at {location}`
+  - Severity: high → critical, medium → warning, low → info
+- Skip if `dazzle qa visual` is not available (missing LLM dependency)
+
+**Tier 3 (future):** Story verification — reserved for story sidecar integration.
+
 ## Step 2: ENHANCE
 
 Based on gap type:
@@ -73,6 +91,13 @@ Based on gap type:
 **Conformance gap** → Add missing `scope:` or `permit:` blocks
 **Fidelity gap** → Add missing surface fields, entity fields, or UX blocks
 **Missing surface** → Add a new surface definition
+
+**Visual quality finding** → Determine fix type from finding category and suggestion:
+- `data_quality` → Template or filter fix in `src/dazzle_ui/` (raw UUIDs, None values, dict display)
+- `title_formatting` → Template HTML structure fix (heading hierarchy)
+- `alignment`/`column_layout` → CSS or Tailwind class fix
+- `empty_state` → Add empty state messaging to template fragments
+- If the fix requires a framework-level change (not app-specific DSL), file a GitHub issue and mark the gap BLOCKED
 
 **Gate:** Run `cd examples/{app} && dazzle validate 2>&1`. Must pass with zero new errors/warnings beyond the known baseline.
 
@@ -97,6 +122,7 @@ Run verification appropriate to the gap type:
 | Conformance | `mcp__dazzle__conformance operation=summary` — case count should increase or gap should close |
 | Fidelity | `mcp__dazzle__dsl operation=fidelity` — gap should be resolved |
 | Surface | `mcp__dazzle__dsl operation=inspect_surface entity_name={entity}` — surface should exist |
+| Visual quality | `cd examples/{app} && dazzle qa visual --json 2>&1` — finding should not reappear |
 
 If verification fails: increment attempts, log the failure, retry from ENHANCE (if < 3 attempts).
 
