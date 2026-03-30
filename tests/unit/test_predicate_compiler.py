@@ -173,7 +173,7 @@ class TestExistsFieldReference:
     """via bindings that reference root entity fields generate column refs (#764)."""
 
     def test_field_binding_generates_column_ref(self) -> None:
-        """student_profile binding should reference MarkingResult.student_profile_id."""
+        """student_profile binding should reference MarkingResult.student_profile (bare name)."""
         p = ExistsCheck(
             target_entity="ParentContact",
             bindings=[
@@ -182,20 +182,22 @@ class TestExistsFieldReference:
             ],
         )
         sql, params = compile_predicate(p, "MarkingResult", _simple_graph())
-        assert '"MarkingResult"."student_profile_id"' in sql
+        # Dazzle FK columns use bare field names — no _id suffix
+        assert '"MarkingResult"."student_profile"' in sql
         # current_user should be a param, not a column ref
         assert len(params) == 1
 
-    def test_field_binding_with_id_suffix_preserved(self) -> None:
-        """If target already ends in _id, don't double-append."""
+    def test_field_binding_bare_name_no_id_appended(self) -> None:
+        """Field references should NOT append _id — Dazzle FK columns are bare names."""
         p = ExistsCheck(
             target_entity="Junction",
             bindings=[
-                ExistsBinding(junction_field="fk", target="other_id"),
+                ExistsBinding(junction_field="fk", target="other_entity"),
             ],
         )
         sql, params = compile_predicate(p, "Root", _simple_graph())
-        assert '"Root"."other_id"' in sql
+        assert '"Root"."other_entity"' in sql
+        assert '"Root"."other_entity_id"' not in sql
         assert params == []
 
 

@@ -297,9 +297,9 @@ def _compile_exists_check(
             conditions.append(f"{jf} {op} %s")
             params.append(UserAttrRef(attr))
         else:
-            # Bind to a column on the root entity (field reference)
-            col_name = target_val if target_val.endswith("_id") else f"{target_val}_id"
-            root_col = f"{quote_identifier(entity_name)}.{quote_identifier(col_name)}"
+            # Bind to a column on the root entity (field reference).
+            # Dazzle FK columns use bare field names (no _id suffix).
+            root_col = f"{quote_identifier(entity_name)}.{quote_identifier(target_val)}"
             conditions.append(f"{jf} {op} {root_col}")
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
