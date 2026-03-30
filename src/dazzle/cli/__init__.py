@@ -249,6 +249,7 @@ from dazzle.cli.pipeline import pipeline_app  # noqa: E402
 from dazzle.cli.pitch import pitch_app  # noqa: E402
 from dazzle.cli.process_cli import process_app  # noqa: E402
 from dazzle.cli.pulse import pulse_app  # noqa: E402
+from dazzle.cli.qa import qa_app  # noqa: E402
 from dazzle.cli.quality import quality_app  # noqa: E402
 from dazzle.cli.rbac import rbac_app  # noqa: E402
 from dazzle.cli.rhythm import rhythm_app  # noqa: E402
@@ -298,6 +299,7 @@ app.add_typer(mcp_app, name="mcp")
 app.add_typer(mock_app, name="mock")
 app.add_typer(process_app, name="process")
 app.add_typer(rhythm_app, name="rhythm")
+app.add_typer(qa_app, name="qa")
 app.add_typer(sentinel_app, name="sentinel")
 app.add_typer(ux_app, name="ux")
 app.add_typer(test_design_app, name="test-design")
