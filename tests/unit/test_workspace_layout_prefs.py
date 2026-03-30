@@ -100,6 +100,7 @@ class TestApplyLayoutPreferences:
         assert [r.name for r in result.regions] == reversed_order
 
     def test_hidden_regions_flagged(self) -> None:
+        """v1 hidden regions are dropped during auto-migration to v2."""
         import json
 
         from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
@@ -107,9 +108,8 @@ class TestApplyLayoutPreferences:
         ctx = self._make_ctx(3)
         prefs = {f"workspace.{ctx.name}.layout": json.dumps({"hidden": ["region_1"]})}
         result = apply_layout_preferences(ctx, prefs)
-        assert result.regions[0].hidden is False
-        assert result.regions[1].hidden is True
-        assert result.regions[2].hidden is False
+        assert len(result.regions) == 2
+        assert all(r.name != "region_1" for r in result.regions)
 
     def test_width_overrides(self) -> None:
         import json
@@ -149,7 +149,8 @@ class TestApplyLayoutPreferences:
         result = apply_layout_preferences(ctx, prefs)
         assert [r.name for r in result.regions] == ["region_0", "region_1", "region_2"]
 
-    def test_fold_count_skips_hidden_regions(self) -> None:
+    def test_fold_count_after_hidden_drop(self) -> None:
+        """Hidden regions are dropped in v2 migration; fold_count unchanged."""
         import json
 
         from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
@@ -157,10 +158,12 @@ class TestApplyLayoutPreferences:
         ctx = self._make_ctx(3)
         prefs = {f"workspace.{ctx.name}.layout": json.dumps({"hidden": ["region_0"]})}
         result = apply_layout_preferences(ctx, prefs)
-        # hidden regions should not affect fold_count (fold_count is unchanged)
+        # hidden regions are dropped (not present), fold_count is unchanged
         assert result.fold_count == ctx.fold_count
+        assert len(result.regions) == 2
 
     def test_round_trip_json(self) -> None:
+        """v1 layout auto-migrates to v2; hidden regions are dropped."""
         import json
 
         from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
@@ -174,18 +177,178 @@ class TestApplyLayoutPreferences:
         prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
         result = apply_layout_preferences(ctx, prefs)
 
-        # Verify order
-        assert [r.name for r in result.regions] == ["region_2", "region_0", "region_1"]
-        # Verify hidden
-        assert result.regions[2].hidden is True
-        # Verify widths
-        assert result.regions[1].col_span == 6
-        assert result.regions[0].col_span == 4
+        # region_1 is hidden → dropped in v2 migration
+        assert [r.name for r in result.regions] == ["region_2", "region_0"]
+        # Verify widths preserved
+        assert result.regions[1].col_span == 6  # region_0
+        assert result.regions[0].col_span == 4  # region_2
 
         # Serialize and deserialize — result must be JSON-serialisable via Pydantic
         serialised = result.model_dump_json()
         restored = result.__class__.model_validate_json(serialised)
-        assert [r.name for r in restored.regions] == ["region_2", "region_0", "region_1"]
+        assert [r.name for r in restored.regions] == ["region_2", "region_0"]
+
+
+class TestLayoutV2:
+    """v2 layout schema — card-instance model."""
+
+    def _make_ctx(self, region_count: int = 3) -> object:
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = _make_workspace("scanner_table", region_count=region_count)
+        return build_workspace_context(ws)
+
+    def test_v2_card_order(self) -> None:
+        """v2 cards list determines region order."""
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        layout = {
+            "version": 2,
+            "cards": [
+                {"id": "c1", "region": "region_2", "col_span": 12, "row_order": 0},
+                {"id": "c2", "region": "region_0", "col_span": 6, "row_order": 1},
+            ],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        assert [r.name for r in result.regions] == ["region_2", "region_0"]
+        assert result.regions[0].col_span == 12
+        assert result.regions[1].col_span == 6
+
+    def test_v2_duplicate_regions(self) -> None:
+        """Same DSL region can appear multiple times in v2."""
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(2)
+        layout = {
+            "version": 2,
+            "cards": [
+                {"id": "c1", "region": "region_0", "col_span": 6, "row_order": 0},
+                {"id": "c2", "region": "region_0", "col_span": 6, "row_order": 1},
+                {"id": "c3", "region": "region_1", "col_span": 12, "row_order": 2},
+            ],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        assert len(result.regions) == 3
+        assert result.regions[0].name == "region_0"
+        assert result.regions[1].name == "region_0"
+        assert result.regions[2].name == "region_1"
+
+    def test_v2_ghost_region_skipped(self) -> None:
+        """Cards referencing non-existent DSL regions are skipped."""
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(2)
+        layout = {
+            "version": 2,
+            "cards": [
+                {"id": "c1", "region": "region_0", "col_span": 12, "row_order": 0},
+                {"id": "c2", "region": "ghost_region", "col_span": 6, "row_order": 1},
+                {"id": "c3", "region": "region_1", "col_span": 12, "row_order": 2},
+            ],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        assert [r.name for r in result.regions] == ["region_0", "region_1"]
+
+    def test_v2_col_span_3_allowed(self) -> None:
+        """col_span=3 is valid in v2 (quarter-width cards)."""
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(2)
+        layout = {
+            "version": 2,
+            "cards": [
+                {"id": "c1", "region": "region_0", "col_span": 3, "row_order": 0},
+                {"id": "c2", "region": "region_1", "col_span": 12, "row_order": 1},
+            ],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        assert result.regions[0].col_span == 3
+
+    def test_v2_invalid_col_span_keeps_default(self) -> None:
+        """Invalid col_span keeps the DSL default."""
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(2)
+        layout = {
+            "version": 2,
+            "cards": [
+                {"id": "c1", "region": "region_0", "col_span": 5, "row_order": 0},
+            ],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        # scanner_table default is 12
+        assert result.regions[0].col_span == 12
+
+
+class TestV1ToV2Migration:
+    """migrate_v1_to_v2 converts old layout format to card instances."""
+
+    def test_order_and_width_preserved(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+
+        v1 = {"order": ["b", "a"], "hidden": [], "widths": {"b": 6, "a": 4}}
+        result = migrate_v1_to_v2(v1, ["a", "b"])
+        assert result["version"] == 2
+        cards = result["cards"]
+        assert len(cards) == 2
+        assert cards[0]["region"] == "b"
+        assert cards[0]["col_span"] == 6
+        assert cards[0]["row_order"] == 0
+        assert cards[1]["region"] == "a"
+        assert cards[1]["col_span"] == 4
+        assert cards[1]["row_order"] == 1
+
+    def test_hidden_cards_dropped(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+
+        v1 = {"order": ["a", "b", "c"], "hidden": ["b"], "widths": {}}
+        result = migrate_v1_to_v2(v1, ["a", "b", "c"])
+        regions = [c["region"] for c in result["cards"]]
+        assert "b" not in regions
+        assert regions == ["a", "c"]
+
+    def test_ghost_regions_dropped(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+
+        v1 = {"order": ["a", "ghost", "b"], "hidden": [], "widths": {}}
+        result = migrate_v1_to_v2(v1, ["a", "b"])
+        regions = [c["region"] for c in result["cards"]]
+        assert regions == ["a", "b"]
+
+    def test_unique_id_assignment(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+
+        v1 = {"order": ["x", "y", "z"], "hidden": [], "widths": {}}
+        result = migrate_v1_to_v2(v1, ["x", "y", "z"])
+        ids = [c["id"] for c in result["cards"]]
+        assert ids == ["migrated-0", "migrated-1", "migrated-2"]
+        # All unique
+        assert len(set(ids)) == 3
+
+    def test_new_dsl_regions_appended(self) -> None:
+        """Regions in DSL but not in v1 order are appended."""
+        from dazzle_ui.runtime.workspace_renderer import migrate_v1_to_v2
+
+        v1 = {"order": ["a"], "hidden": [], "widths": {}}
+        result = migrate_v1_to_v2(v1, ["a", "b"])
+        regions = [c["region"] for c in result["cards"]]
+        assert regions == ["a", "b"]
 
 
 def _make_workspace(stage: str, region_count: int = 3) -> object:
