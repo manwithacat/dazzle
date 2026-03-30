@@ -44,6 +44,29 @@ surface shape_detail "Shape Detail":
     field realm
     field creator
 
+surface shape_create "Create Shape":
+  uses entity Shape
+  mode: create
+  section main:
+    field name "Name"
+    field form "Form"
+    field colour "Colour"
+    field material "Material"
+    field realm "Realm"
+  ux:
+    purpose: "Create a new shape in a realm"
+
+surface shape_edit "Edit Shape":
+  uses entity Shape
+  mode: edit
+  section main:
+    field name "Name"
+    field form "Form"
+    field colour "Colour"
+    field material "Material"
+  ux:
+    purpose: "Modify shape properties"
+
 surface inscription_list "Inscriptions":
   uses entity Inscription
   mode: list
