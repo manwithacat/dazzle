@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.53.0] - 2026-03-30
+
+### Added
+- **Dashboard builder**: Replaces the workspace editor with a full card-based dashboard builder. SortableJS drag-to-reorder, snap-grid drag-to-resize (3/4/6/8/12 columns), add/remove cards from DSL-defined catalog, auto-save with 500ms debounce, always-on interactions (no edit mode toggle).
+- **Layout schema v2**: Card-instance model where each card is an independent instance referencing a DSL region. Supports duplicate cards of the same type. Automatic v1→v2 migration preserves existing user layouts.
+- **Catalog endpoint**: `build_catalog()` returns available widgets per workspace for the "Add Card" picker. Layout JSON data island now includes catalog metadata.
+- **Card picker popover**: `_card_picker.html` template lists available regions grouped by display type and entity.
+
+### Changed
+- **Breaking**: Alpine Sort plugin removed, replaced by SortableJS (vendored). `workspace-editor.js` replaced by `dashboard-builder.js`.
+- **Breaking**: Layout preference format changed from v1 `{order, hidden, widths}` to v2 `{version: 2, cards: [{id, region, col_span, row_order}]}`. Hidden cards are dropped (not flagged) in v2. Auto-migration is seamless.
+
+### Agent Guidance
+- AegisMark agents building customizable dashboards should use DSL `workspace` blocks to define the card catalog. End users compose their own layouts via the dashboard builder UI. No code changes needed — the framework handles drag-drop, resize, and persistence automatically.
+- Valid `col_span` snap points: 3, 4, 6, 8, 12. The old 6/12-only restriction is gone.
+
 ## [0.52.0] - 2026-03-30
 
 ### Added
