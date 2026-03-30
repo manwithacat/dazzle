@@ -286,6 +286,30 @@ surface task_comments "Task Comments":
     filter: author
     empty: "No comments yet. Start the discussion!"
 
+# Comment Create - inline comment form on task detail
+surface comment_create "Add Comment":
+  uses entity TaskComment
+  mode: create
+
+  section main "New Comment":
+    field content "Comment"
+
+  ux:
+    purpose: "Add a comment to a task"
+
+# Comment Edit - admin-only editing of comments
+surface comment_edit "Edit Comment":
+  uses entity TaskComment
+  mode: edit
+
+  access: persona(admin)
+
+  section main "Edit Comment":
+    field content "Comment"
+
+  ux:
+    purpose: "Edit an existing comment"
+
 # Task Create Form
 surface task_create "Create Task":
   uses entity Task
@@ -373,6 +397,23 @@ surface user_create "Add Team Member":
 
   ux:
     purpose: "Add a new team member"
+
+# User Edit (admin only)
+surface user_edit "Edit Team Member":
+  uses entity User
+  mode: edit
+
+  access: persona(admin)
+
+  section main "Edit Team Member":
+    field name "Name"
+    field email "Email"
+    field role "Role"
+    field department "Department"
+    field is_active "Active"
+
+  ux:
+    purpose: "Update team member details"
 
 # =============================================================================
 # Workspaces - role-based dashboards
