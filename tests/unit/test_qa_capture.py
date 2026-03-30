@@ -99,3 +99,23 @@ def test_build_capture_plan_persona_id_fallback() -> None:
     targets = build_capture_plan(appspec)
     assert len(targets) == 1
     assert targets[0].persona == "agent"
+
+
+def test_build_capture_plan_reads_personas_attr() -> None:
+    """build_capture_plan reads .personas when .archetypes is missing (#763)."""
+    ws = MagicMock()
+    ws.name = "dashboard"
+
+    persona = MagicMock()
+    persona.name = "admin"
+    persona.id = "admin"
+
+    appspec = MagicMock(spec=[])
+    appspec.workspaces = [ws]
+    appspec.personas = [persona]
+    # archetypes is NOT set — simulates real DSL AppSpec
+
+    targets = build_capture_plan(appspec)
+    assert len(targets) == 1
+    assert targets[0].persona == "admin"
+    assert targets[0].workspace == "dashboard"

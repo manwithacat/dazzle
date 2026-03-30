@@ -59,13 +59,15 @@ def build_capture_plan(appspec: Any) -> list[CaptureTarget]:
 
     Args:
         appspec: A loaded Dazzle AppSpec (or any object exposing
-            ``.workspaces`` and ``.archetypes`` iterables).
+            ``.workspaces`` and ``.personas`` (or ``.archetypes``) iterables).
 
     Returns:
         Ordered list of :class:`CaptureTarget` instances.
     """
     workspaces = list(getattr(appspec, "workspaces", None) or [])
-    personas = list(getattr(appspec, "archetypes", None) or [])
+    personas = list(
+        getattr(appspec, "archetypes", None) or getattr(appspec, "personas", None) or []
+    )
 
     if not workspaces or not personas:
         return []
