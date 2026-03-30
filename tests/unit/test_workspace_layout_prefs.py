@@ -374,6 +374,92 @@ class TestV1ToV2Migration:
         assert regions == ["a", "b"]
 
 
+class TestDashboardRoundTrip:
+    """Full round-trip: default → add card → reorder → resize → persist."""
+
+    def _make_ctx(self, region_count: int = 3) -> object:
+        from dazzle_ui.runtime.workspace_renderer import build_workspace_context
+
+        ws = _make_workspace("scanner_table", region_count=region_count)
+        return build_workspace_context(ws)
+
+    def test_default_layout_matches_dsl(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        result = apply_layout_preferences(ctx, {})
+        assert [r.name for r in result.regions] == ["region_0", "region_1", "region_2"]
+
+    def test_add_duplicate_card_and_persist(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(2)
+        layout = {
+            "version": 2,
+            "cards": [
+                {"id": "card-0", "region": "region_0", "col_span": 12, "row_order": 0},
+                {"id": "card-1", "region": "region_1", "col_span": 6, "row_order": 1},
+                {"id": "card-2", "region": "region_0", "col_span": 4, "row_order": 2},
+            ],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        assert len(result.regions) == 3
+        assert result.regions[0].name == "region_0"
+        assert result.regions[0].col_span == 12
+        assert result.regions[2].name == "region_0"
+        assert result.regions[2].col_span == 4
+
+    def test_remove_card_persists(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(3)
+        layout = {
+            "version": 2,
+            "cards": [
+                {"id": "card-0", "region": "region_0", "col_span": 12, "row_order": 0},
+                {"id": "card-2", "region": "region_2", "col_span": 6, "row_order": 1},
+            ],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        assert len(result.regions) == 2
+        assert [r.name for r in result.regions] == ["region_0", "region_2"]
+
+    def test_resize_snap_values_respected(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(1)
+        for span in [3, 4, 6, 8, 12]:
+            layout = {
+                "version": 2,
+                "cards": [{"id": "c", "region": "region_0", "col_span": span, "row_order": 0}],
+            }
+            prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+            result = apply_layout_preferences(ctx, prefs)
+            assert result.regions[0].col_span == span, f"span={span} not applied"
+
+    def test_invalid_span_uses_default(self) -> None:
+        import json
+
+        from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+
+        ctx = self._make_ctx(1)
+        layout = {
+            "version": 2,
+            "cards": [{"id": "c", "region": "region_0", "col_span": 7, "row_order": 0}],
+        }
+        prefs = {f"workspace.{ctx.name}.layout": json.dumps(layout)}
+        result = apply_layout_preferences(ctx, prefs)
+        assert result.regions[0].col_span == 12
+
+
 def _make_workspace(stage: str, region_count: int = 3) -> object:
     from types import SimpleNamespace
 
