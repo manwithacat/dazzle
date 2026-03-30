@@ -1,6 +1,6 @@
-{# Layout JSON embedded as a data island to avoid JSON-in-HTML-attribute escaping (#635) #}
+{# Layout JSON embedded as a data island (#635) #}
 <script type="application/json" id="dz-workspace-layout">{{ layout_json | safe }}</script>
-<div class="p-4" x-data="dzWorkspaceEditor('{{ workspace.name }}')">
+<div class="p-4" x-data="dzDashboardBuilder()">
   {% if workspace.purpose %}
   <p class="text-sm opacity-60 mb-4">{{ workspace.purpose }}</p>
   {% endif %}
@@ -18,7 +18,6 @@
     if (!sel) return;
     var wsName = {{ workspace.name | tojson }};
     var prefKey = 'workspace.' + wsName + '.context';
-    // Fetch options from JSON endpoint
     fetch({{ workspace.context_options_url | tojson }})
       .then(function(r) { return r.json(); })
       .then(function(data) {
@@ -28,14 +27,12 @@
           o.textContent = opt.label;
           sel.appendChild(o);
         });
-        // Restore saved preference
         var saved = window.dzPrefs ? window.dzPrefs.get(prefKey) : null;
         if (saved) { sel.value = saved; sel.dispatchEvent(new Event('change')); }
       });
     sel.addEventListener('change', function() {
       var val = sel.value;
       if (window.dzPrefs) { if (val) window.dzPrefs.set(prefKey, val); else window.dzPrefs.del(prefKey); }
-      // Refresh all region endpoints with context_id param (#634)
       document.querySelectorAll('[id^="region-"][hx-get]').forEach(function(el) {
         var url = el.getAttribute('hx-get');
         var base = url.split('?')[0];
@@ -45,8 +42,6 @@
         var newUrl = base + (qs ? '?' + qs : '');
         el.setAttribute('hx-get', newUrl);
         htmx.process(el);
-        // Force an unconditional request — htmx.trigger('load') does not
-        // re-fire 'intersect once' triggers on below-fold regions.
         htmx.ajax('GET', newUrl, {target: '#' + el.id, swap: 'innerHTML'});
       });
     });
@@ -54,120 +49,79 @@
   </script>
   {% endif %}
 
+  {# Dashboard header with reset menu #}
   <div class="flex items-center justify-end mb-4">
-    <button @click="toggleEdit()" class="btn btn-sm btn-ghost gap-1" x-show="!editing" x-transition>
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-      </svg>
-      Customize
-    </button>
+    <div class="dropdown dropdown-end">
+      <label tabindex="0" class="btn btn-sm btn-ghost">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
+        </svg>
+      </label>
+      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50">
+        <li><a @click="resetLayout()">Reset to default layout</a></li>
+      </ul>
+    </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-4"
-       x-sort="onReorder" x-sort:disabled="!editing"
+  {# Card grid — SortableJS container #}
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-4" data-dashboard-grid
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>
-    {% for region in workspace.regions %}
-    {% if region.source_tabs %}
-    {# Multi-source tabbed region: render tabs inline, each panel lazy-loads independently #}
-    <div class="transition-all duration-200"
-         :class="[regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
-         :style="'grid-column: span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12) + ' / span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12)"
-         x-show="!regions.find(r => r.name === '{{ region.name }}')?.hidden || editing"
-         data-region-name="{{ region.name }}"
-         id="region-{{ region.name }}">
-      {# Edit mode controls #}
-      <div x-show="editing" x-transition class="mb-1 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="cursor-grab active:cursor-grabbing active:ring-2 active:ring-blue-300 active:shadow-lg rounded p-0.5" x-sort:handle>
+    <template x-for="card in cards" :key="card.id">
+      <div class="transition-all duration-200 relative group"
+           :data-card-id="card.id"
+           :style="'grid-column: span ' + Math.min(card.col_span, 12) + ' / span ' + Math.min(card.col_span, 12)">
+        {# Drag handle — visible on hover #}
+        <div class="absolute -top-0 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10" data-drag-handle>
+          <span class="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-base-200">
             <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
           </span>
-          <div class="join">
-            <button class="btn btn-xs join-item" :class="{'btn-primary': (regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) < 12}" @click="setWidth('{{ region.name }}', 6)">Column</button>
-            <button class="btn btn-xs join-item" :class="{'btn-primary': (regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) >= 12}" @click="setWidth('{{ region.name }}', 12)">Full</button>
-          </div>
         </div>
-        <button class="btn btn-ghost btn-xs" @click="toggleVisibility('{{ region.name }}')">
-          <template x-if="!regions.find(r => r.name === '{{ region.name }}')?.hidden">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          </template>
-          <template x-if="regions.find(r => r.name === '{{ region.name }}')?.hidden">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/></svg>
-          </template>
+        {# Remove button — visible on hover #}
+        <button @click="removeCard(card.id)"
+                class="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 btn btn-circle btn-xs btn-ghost">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-      </div>
-      {% include 'workspace/regions/tabbed_list.html' with context %}
-    </div>
-    {% else %}
-    <div class="transition-all duration-200"
-         :class="[regions.find(r => r.name === '{{ region.name }}')?.hidden ? 'opacity-40' : '']"
-         :style="'grid-column: span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12) + ' / span ' + Math.min((regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}), 12)"
-         x-show="!regions.find(r => r.name === '{{ region.name }}')?.hidden || editing"
-         data-region-name="{{ region.name }}"
-         id="region-{{ region.name }}"
-         {% if region.endpoint %}
-         hx-get="{{ region.endpoint }}"
-         hx-trigger="{% if not region.hidden and loop.index <= workspace.fold_count %}load{% else %}intersect once{% endif %}{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
-         hx-swap="innerHTML"
-         {% endif %}>
-      {# Edit mode controls #}
-      <div x-show="editing" x-transition class="mb-1 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <span class="cursor-grab active:cursor-grabbing active:ring-2 active:ring-blue-300 active:shadow-lg rounded p-0.5" x-sort:handle>
-            <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
-          </span>
-          <div class="join">
-            <button class="btn btn-xs join-item" :class="{'btn-primary': (regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) < 12}" @click="setWidth('{{ region.name }}', 6)">Column</button>
-            <button class="btn btn-xs join-item" :class="{'btn-primary': (regions.find(r => r.name === '{{ region.name }}')?.col_span ?? {{ region.col_span }}) >= 12}" @click="setWidth('{{ region.name }}', 12)">Full</button>
+        {# Card content — HTMX lazy-loaded #}
+        <div class="card bg-base-100 shadow-sm"
+             :id="'region-' + card.region + '-' + card.id"
+             :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
+             hx-trigger="intersect once{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
+             hx-swap="innerHTML">
+          <div class="card-body">
+            <h3 class="card-title text-sm" x-text="card.title"></h3>
+            <div class="space-y-3 py-2">
+              <div class="dz-skeleton dz-skeleton-text-lg"></div>
+              <div class="dz-skeleton dz-skeleton-text" style="width: 90%"></div>
+              <div class="dz-skeleton dz-skeleton-text" style="width: 75%"></div>
+            </div>
           </div>
         </div>
-        <button class="btn btn-ghost btn-xs" @click="toggleVisibility('{{ region.name }}')">
-          <template x-if="!regions.find(r => r.name === '{{ region.name }}')?.hidden">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          </template>
-          <template x-if="regions.find(r => r.name === '{{ region.name }}')?.hidden">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M3 3l18 18"/></svg>
-          </template>
-        </button>
+        {# Resize handle — right edge #}
+        <div @mousedown="startResize(card.id, $event)"
+             @touchstart="startResize(card.id, $event)"
+             class="absolute top-0 right-0 w-1 h-full cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-primary/30 transition-opacity rounded-r"></div>
       </div>
-      {# Skeleton placeholder while loading #}
-      <div class="card bg-base-100 shadow-sm">
-        <div class="card-body">
-          <h3 class="card-title text-sm">{{ region.title }}</h3>
-          {% if region.endpoint %}
-          <div class="space-y-3 py-2">
-            <div class="dz-skeleton dz-skeleton-text-lg"></div>
-            <div class="dz-skeleton dz-skeleton-text" style="width: 90%"></div>
-            <div class="dz-skeleton dz-skeleton-text" style="width: 75%"></div>
-            <div class="dz-skeleton dz-skeleton-text" style="width: 85%"></div>
-          </div>
-          {% else %}
-          <p class="text-sm opacity-50">{{ region.empty_message }}</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    {% endif %}
-    {% endfor %}
+    </template>
   </div>
 
-  {# Floating toolbar — edit mode only #}
-  <div x-show="editing" x-transition
-       class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-base-100 shadow-xl rounded-lg border border-base-300 px-4 py-3 flex items-center gap-3">
-    <button @click="save()" class="btn btn-primary btn-sm">Save layout</button>
-    <button @click="cancel()" class="btn btn-ghost btn-sm">Cancel</button>
-    <button @click="reset()" class="btn btn-ghost btn-sm text-error">Reset to default</button>
+  {# Add Card button #}
+  <div class="relative flex justify-center mt-4">
+    <button @click="showPicker = !showPicker"
+            class="btn btn-sm btn-ghost btn-wide border-2 border-dashed border-base-300 hover:border-primary">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+      Add Card
+    </button>
+    {% include 'workspace/_card_picker.html' %}
   </div>
 </div>
 
-{# Detail drawer: slide-over panel for workspace action/ref clicks #}
+{# Detail drawer (unchanged) #}
 <div id="dz-drawer-backdrop"
      class="fixed inset-0 z-40 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300"
      onclick="window.dzDrawer.close()"></div>
 <aside id="dz-detail-drawer"
-       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-base-100 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out"
-       >
+       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-base-100 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out">
   <div class="flex items-center justify-between px-4 py-3 border-b border-base-200 bg-base-100 shrink-0">
     <button class="btn btn-ghost btn-sm gap-1" onclick="window.dzDrawer.close()">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -204,34 +158,28 @@
     }
   };
 
-  // Open drawer when detail content is swapped in (triggered by server)
   document.body.addEventListener('dz:drawerOpen', function(e) {
     var url = (e.detail && e.detail.url) || '';
     window.dzDrawer.open(url);
   });
 
-  // Intercept link clicks inside drawer
   content.addEventListener('click', function(e) {
     var link = e.target.closest('a[href]');
     if (!link) return;
-    // Skip links that already have hx-get (HTMX handles those)
     if (link.hasAttribute('hx-get')) return;
     var href = link.getAttribute('href');
     if (!href || href === '#') return;
-    // "Back" button: close drawer
     if (link.textContent.trim().match(/back/i)) {
       e.preventDefault();
       window.dzDrawer.close();
       return;
     }
-    // Internal links: load in drawer
     if (href.startsWith('/')) {
       e.preventDefault();
       htmx.ajax('GET', href, {target: '#dz-detail-drawer-content', swap: 'innerHTML'});
     }
   });
 
-  // Escape key closes drawer
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape' && window.dzDrawer.isOpen) {
       window.dzDrawer.close();

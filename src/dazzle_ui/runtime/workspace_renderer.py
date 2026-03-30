@@ -392,15 +392,60 @@ def build_workspace_context(
     )
 
 
+_VALID_COL_SPANS = {3, 4, 6, 8, 12}
+
+
+def migrate_v1_to_v2(
+    v1_layout: dict[str, Any],
+    dsl_region_names: list[str],
+) -> dict[str, Any]:
+    """Convert a v1 layout ``{order, hidden, widths}`` to v2 card-instance format.
+
+    Hidden cards are dropped (not included).  Ghost regions (names not in
+    *dsl_region_names*) are skipped.  DSL regions not listed in the v1 order
+    are appended at the end.  Each card receives a unique ``migrated-{i}`` id.
+    """
+    valid_names = set(dsl_region_names)
+    saved_order: list[str] = v1_layout.get("order", [])
+    hidden_set: set[str] = set(v1_layout.get("hidden", []))
+    widths: dict[str, int] = v1_layout.get("widths", {})
+
+    # Build ordered list: saved order first, then unseen DSL regions
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for name in saved_order:
+        if name in valid_names and name not in hidden_set:
+            ordered.append(name)
+            seen.add(name)
+    for name in dsl_region_names:
+        if name not in seen and name not in hidden_set:
+            ordered.append(name)
+
+    cards: list[dict[str, Any]] = []
+    for i, region_name in enumerate(ordered):
+        card: dict[str, Any] = {
+            "id": f"migrated-{i}",
+            "region": region_name,
+            "col_span": widths.get(region_name, 0),
+            "row_order": i,
+        }
+        # Only keep valid col_span values; 0 means "use DSL default"
+        if card["col_span"] not in _VALID_COL_SPANS:
+            card["col_span"] = 0
+        cards.append(card)
+
+    return {"version": 2, "cards": cards}
+
+
 def apply_layout_preferences(
     ctx: WorkspaceContext,
     user_prefs: dict[str, str],
 ) -> WorkspaceContext:
     """Merge user layout preferences with DSL defaults.
 
-    Reads ``workspace.{name}.layout`` from *user_prefs* and applies
-    ordering, visibility, and width overrides.  Returns *ctx* unchanged
-    if no preference exists.
+    Reads ``workspace.{name}.layout`` from *user_prefs* and applies the
+    card-instance layout.  Supports both v1 (auto-migrated) and v2 layouts.
+    Returns *ctx* unchanged if no preference exists.
     """
     import json
 
@@ -414,35 +459,47 @@ def apply_layout_preferences(
     except (json.JSONDecodeError, TypeError):
         return ctx
 
-    saved_order: list[str] = layout.get("order", [])
-    hidden_set: set[str] = set(layout.get("hidden", []))
-    widths: dict[str, int] = layout.get("widths", {})
+    # Auto-migrate v1 → v2
+    dsl_region_names = [r.name for r in ctx.regions]
+    if layout.get("version") != 2:
+        layout = migrate_v1_to_v2(layout, dsl_region_names)
 
-    # Deep-copy regions to avoid mutating the shared startup context
-    region_map = {r.name: r.model_copy(deep=True) for r in ctx.regions}
+    # Build region map for deep-copying DSL region templates
+    region_map = {r.name: r for r in ctx.regions}
 
-    # Reorder: saved order first (skip deleted), then append new DSL regions
+    # Build region instances from v2 cards list
+    cards: list[dict[str, Any]] = layout.get("cards", [])
+    # Sort by row_order to ensure deterministic ordering
+    cards.sort(key=lambda c: c.get("row_order", 0))
+
     ordered: list[RegionContext] = []
-    seen: set[str] = set()
-    for name in saved_order:
-        if name in region_map:
-            ordered.append(region_map[name])
-            seen.add(name)
-    for r in ctx.regions:
-        if r.name not in seen:
-            ordered.append(region_map[r.name])
-
-    # Apply hidden flag and width overrides
-    for r in ordered:
-        if r.name in hidden_set:
-            r.hidden = True
-        if r.name in widths:
-            span = widths[r.name]
-            if span in (4, 6, 8, 12):
-                r.col_span = span
+    for card in cards:
+        region_name = card.get("region", "")
+        if region_name not in region_map:
+            # Ghost region — skip
+            continue
+        # Deep-copy to allow duplicate cards of the same region
+        region = region_map[region_name].model_copy(deep=True)
+        col_span = card.get("col_span", 0)
+        if col_span in _VALID_COL_SPANS:
+            region.col_span = col_span
+        ordered.append(region)
 
     # Return a new context to avoid mutating the shared startup object
     return ctx.model_copy(update={"regions": ordered})
+
+
+def build_catalog(ctx: WorkspaceContext) -> list[dict[str, str]]:
+    """Build the widget catalog for a workspace's card picker."""
+    return [
+        {
+            "name": r.name,
+            "title": r.title or r.name.replace("_", " ").title(),
+            "display": r.display,
+            "entity": r.source,
+        }
+        for r in ctx.regions
+    ]
 
 
 def _resolve_fk_field(
