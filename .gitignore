@@ -106,3 +106,5 @@ dev_docs/
 .dazzle/session-log.txt
 .worktrees/
 .claude/projects/
+.claude/scheduled_tasks.lock
+.superpowers/
