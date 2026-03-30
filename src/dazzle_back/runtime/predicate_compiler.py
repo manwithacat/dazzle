@@ -297,9 +297,10 @@ def _compile_exists_check(
             conditions.append(f"{jf} {op} %s")
             params.append(UserAttrRef(attr))
         else:
-            # Treat as a literal field reference or literal value
-            conditions.append(f"{jf} {op} %s")
-            params.append(target_val)
+            # Bind to a column on the root entity (field reference)
+            col_name = target_val if target_val.endswith("_id") else f"{target_val}_id"
+            root_col = f"{quote_identifier(entity_name)}.{quote_identifier(col_name)}"
+            conditions.append(f"{jf} {op} {root_col}")
 
     where_clause = " AND ".join(conditions) if conditions else "1=1"
     exists_kw = "NOT EXISTS" if predicate.negated else "EXISTS"

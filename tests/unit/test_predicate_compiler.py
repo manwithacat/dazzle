@@ -169,6 +169,36 @@ class TestTerminals:
         assert params == []
 
 
+class TestExistsFieldReference:
+    """via bindings that reference root entity fields generate column refs (#764)."""
+
+    def test_field_binding_generates_column_ref(self) -> None:
+        """student_profile binding should reference MarkingResult.student_profile_id."""
+        p = ExistsCheck(
+            target_entity="ParentContact",
+            bindings=[
+                ExistsBinding(junction_field="student_id", target="student_profile"),
+                ExistsBinding(junction_field="parent_user_id", target="current_user"),
+            ],
+        )
+        sql, params = compile_predicate(p, "MarkingResult", _simple_graph())
+        assert '"MarkingResult"."student_profile_id"' in sql
+        # current_user should be a param, not a column ref
+        assert len(params) == 1
+
+    def test_field_binding_with_id_suffix_preserved(self) -> None:
+        """If target already ends in _id, don't double-append."""
+        p = ExistsCheck(
+            target_entity="Junction",
+            bindings=[
+                ExistsBinding(junction_field="fk", target="other_id"),
+            ],
+        )
+        sql, params = compile_predicate(p, "Root", _simple_graph())
+        assert '"Root"."other_id"' in sql
+        assert params == []
+
+
 class TestSchemaQualification:
     """Test schema-qualified table names for tenant isolation (#621)."""
 
