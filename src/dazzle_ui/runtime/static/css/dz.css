@@ -251,20 +251,20 @@ dialog[open] {
   }
 }
 
-/* ── Workspace drag-and-drop feedback ──────────────────────────────── */
-
+/* Dashboard builder: SortableJS drag feedback */
 .sortable-ghost {
-  opacity: 0.4;
-  border: 2px dashed oklch(var(--p));
+  opacity: 0.3;
+}
+.sortable-chosen {
+  box-shadow: 0 0 0 2px oklch(var(--p));
   border-radius: var(--rounded-box, 1rem);
 }
-
-.sortable-drag {
-  opacity: 1;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  transform: scale(1.02);
+/* Prevent text selection during resize drag */
+body.select-none {
+  user-select: none;
+  -webkit-user-select: none;
 }
-
-.sortable-chosen {
-  cursor: grabbing;
+body.cursor-col-resize,
+body.cursor-col-resize * {
+  cursor: col-resize !important;
 }
