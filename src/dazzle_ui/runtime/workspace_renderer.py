@@ -489,6 +489,19 @@ def apply_layout_preferences(
     return ctx.model_copy(update={"regions": ordered})
 
 
+def build_catalog(ctx: WorkspaceContext) -> list[dict[str, str]]:
+    """Build the widget catalog for a workspace's card picker."""
+    return [
+        {
+            "name": r.name,
+            "title": r.title or r.name.replace("_", " ").title(),
+            "display": r.display,
+            "entity": r.source,
+        }
+        for r in ctx.regions
+    ]
+
+
 def _resolve_fk_field(
     source_entity: str,
     target_entity: str,

@@ -890,24 +890,30 @@ async def _workspace_handler(
         effective_route = urlparse(htmx.current_url).path
 
     # Apply per-user workspace layout preferences (order, visibility, widths)
-    from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences
+    from dazzle_ui.runtime.workspace_renderer import apply_layout_preferences, build_catalog
 
     render_ws_ctx = apply_layout_preferences(ws_context, user_preferences)
+    catalog = build_catalog(ws_context)
 
-    # Layout JSON is embedded in a <script type="application/json"> data
-    # island rather than inlined in an x-data HTML attribute.  This avoids
-    # the JSON-in-HTML-attribute escaping conflict (#632, #635).
+    # Build v2 card list for the template data island
+    cards_for_json = []
+    for i, r in enumerate(render_ws_ctx.regions):
+        cards_for_json.append(
+            {
+                "id": f"card-{i}",
+                "region": r.name,
+                "title": r.title or r.name.replace("_", " ").title(),
+                "col_span": r.col_span,
+                "row_order": i,
+            }
+        )
+
     layout_json = json.dumps(
         {
-            "regions": [
-                {
-                    "name": r.name,
-                    "title": r.title,
-                    "col_span": r.col_span,
-                    "hidden": r.hidden,
-                }
-                for r in render_ws_ctx.regions
-            ]
+            "version": 2,
+            "cards": cards_for_json,
+            "catalog": catalog,
+            "workspace_name": render_ws_ctx.name,
         }
     )
 

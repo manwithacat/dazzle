@@ -296,6 +296,29 @@ class TestLayoutV2:
         assert result.regions[0].col_span == 12
 
 
+class TestCatalogBuilder:
+    """build_catalog returns available regions for widget picker."""
+
+    def test_returns_all_regions(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import build_catalog, build_workspace_context
+
+        ws = _make_workspace("scanner_table", region_count=3)
+        ctx = build_workspace_context(ws)
+        catalog = build_catalog(ctx)
+        assert len(catalog) == 3
+        assert catalog[0]["name"] == "region_0"
+        assert catalog[0]["title"] == "Region 0"
+
+    def test_includes_display_and_entity(self) -> None:
+        from dazzle_ui.runtime.workspace_renderer import build_catalog, build_workspace_context
+
+        ws = _make_workspace("scanner_table", region_count=1)
+        ctx = build_workspace_context(ws)
+        catalog = build_catalog(ctx)
+        assert catalog[0]["display"] == "LIST"
+        assert catalog[0]["entity"] == "Entity0"
+
+
 class TestV1ToV2Migration:
     """migrate_v1_to_v2 converts old layout format to card instances."""
 
