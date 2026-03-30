@@ -45,6 +45,10 @@ entity Showcase "Component Showcase":
     update: role(admin)
     delete: role(admin)
 
+  scope:
+    list: all
+      for: admin
+
 entity User "User":
   id: uuid pk
   email: str(200) unique required
@@ -58,6 +62,10 @@ entity User "User":
     create: role(admin)
     update: role(admin)
     delete: role(admin)
+
+  scope:
+    list: all
+      for: admin
 
 # ── Surfaces ─────────────────────────────────────────────────────────
 

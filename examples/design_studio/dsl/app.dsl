@@ -39,6 +39,10 @@ entity User "User":
     update: role(admin)
     delete: role(admin)
 
+  scope:
+    list: all
+      for: admin, designer, reviewer
+
 entity Brand "Brand":
   id: uuid pk
   name: str(200) required
@@ -57,6 +61,10 @@ entity Brand "Brand":
     create: role(admin) or role(designer)
     update: role(admin) or role(designer)
     delete: role(admin)
+
+  scope:
+    list: all
+      for: admin, designer, reviewer
 
 entity Asset "Design Asset":
   id: uuid pk
@@ -87,6 +95,10 @@ entity Asset "Design Asset":
     update: role(admin) or role(designer)
     delete: role(admin)
 
+  scope:
+    list: all
+      for: admin, designer, reviewer
+
 entity Campaign "Campaign":
   id: uuid pk
   name: str(200) required
@@ -111,6 +123,10 @@ entity Campaign "Campaign":
     create: role(admin) or role(designer)
     update: role(admin) or role(designer)
     delete: role(admin)
+
+  scope:
+    list: all
+      for: admin, designer, reviewer
 
 entity Feedback "Design Feedback":
   id: uuid pk
