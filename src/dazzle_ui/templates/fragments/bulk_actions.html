@@ -1,38 +1,39 @@
-{# Bulk actions toolbar — Alpine dzTable provides bulkCount and selected state #}
-{# Parameters: entity_name, actions_endpoint, table (for dynamic target ID) #}
-{# State managed by dzTable Alpine component — selected IDs injected via htmx:configRequest #}
-{% set tbody_id = (table.table_id or 'dt-table') + '-body' if table is defined and table else 'dt-table-body' %}
+{# Bulk actions toolbar — delete-only, pure Tailwind #}
+{# State managed by dzTable Alpine component — bulkCount, bulkDelete(), clearSelection() #}
 <div x-show="bulkCount > 0"
-     x-transition
-     class="flex items-center gap-3 p-2 bg-base-200 rounded-lg mb-2">
+     x-cloak
+     x-transition:enter="transition ease-out duration-100"
+     x-transition:enter-start="opacity-0 translate-y-1"
+     x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition ease-in duration-75"
+     x-transition:leave-start="opacity-100 translate-y-0"
+     x-transition:leave-end="opacity-0 translate-y-1"
+     class="flex items-center gap-3">
 
-  <span class="text-sm font-medium">
-    <span x-text="bulkCount">0</span> selected
-  </span>
-
-  <div class="flex gap-1">
-    {% block bulk_action_buttons %}
-    <button class="btn btn-sm btn-ghost"
-            data-dz-bulk-action
-            hx-post="{{ actions_endpoint }}/bulk-update"
-            hx-target="#{{ tbody_id }}"
-            hx-swap="morph:innerHTML"
-            hx-headers='{"Accept": "text/html"}'>
-      Update
-    </button>
-    <button class="btn btn-sm btn-error btn-ghost"
-            data-dz-bulk-action
-            hx-delete="{{ actions_endpoint }}/bulk-delete"
-            hx-target="#{{ tbody_id }}"
-            hx-swap="morph:innerHTML"
-            hx-headers='{"Accept": "text/html"}'
-            hx-confirm="Delete selected {{ entity_name | lower }}s?">
-      Delete
-    </button>
-    {% endblock %}
-  </div>
-
-  <button @click="clearSelection()" class="btn btn-sm btn-ghost ml-auto">
-    Clear
+  {# Delete N items #}
+  <button
+    @click="bulkDelete()"
+    type="button"
+    class="flex items-center gap-1.5 h-8 px-3 rounded-[4px] text-[13px] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.08)] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-colors duration-[120ms]">
+    {# Trash icon #}
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <polyline points="3 6 5 6 21 6"></polyline>
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+      <path d="M10 11v6"></path>
+      <path d="M14 11v6"></path>
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+    </svg>
+    Delete <span x-text="bulkCount">0</span> item<span x-show="bulkCount !== 1">s</span>
   </button>
+
+  {# Clear selection #}
+  <button
+    @click="clearSelection()"
+    type="button"
+    class="text-[13px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-colors duration-[120ms]">
+    Clear selection
+  </button>
+
 </div>

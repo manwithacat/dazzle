@@ -1,38 +1,55 @@
-{# Reusable search input with debounced HTMX search — Alpine for clear button #}
-{# Parameters: endpoint, target (CSS selector), placeholder (optional) #}
+{# Reusable search input — pure Tailwind, same HTMX wiring #}
+{# Parameters: endpoint, target (CSS selector), placeholder (optional), table #}
 {% set placeholder = placeholder | default('Search ' + (table.entity_name|default("") |lower) + '...' if table else 'Search...') %}
 {% set target = target | default('#' + (table.table_id or 'dt-table') + '-body' if table else '#search-results') %}
 {% set search_id = 'dz-search-' + (table.table_id or 'search') if table else 'dz-search' %}
-<div x-data="{ query: '' }" class="form-control">
+<div x-data="{ query: '' }" class="relative flex items-center">
+
   <label for="{{ search_id }}" class="sr-only">
     {{ 'Search ' + table.title if table else 'Search' }}
   </label>
-  <div class="relative">
-    <input type="search"
-           id="{{ search_id }}"
-           name="search"
-           x-model="query"
-           placeholder="{{ placeholder }}"
-           aria-label="{{ 'Search ' + table.title if table else 'Search' }}"
-           class="input input-bordered input-sm w-full max-w-xs pr-8"
-           hx-get="{{ endpoint }}"
-           hx-target="{{ target }}"
-           hx-trigger="keyup changed delay:300ms"
-           hx-swap="innerHTML"
-           hx-include="closest [data-dz-table]"
-           hx-headers='{"Accept": "text/html"}'
-           hx-indicator="{% if table %}#{{ table.table_id or 'dt-table' }}-loading{% else %}next .htmx-indicator{% endif %}" />
-    {# Clear button — shown when query is non-empty #}
-    <button x-show="query.length > 0"
-            x-cloak
-            @click="query = ''; $el.previousElementSibling.value = ''; htmx.trigger($el.previousElementSibling, 'keyup')"
-            type="button"
-            aria-label="Clear search"
-            class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle">
-      <span aria-hidden="true">&times;</span>
-    </button>
-  </div>
+
+  {# Search icon #}
+  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+       class="absolute left-2.5 pointer-events-none text-[hsl(var(--muted-foreground))]"
+       aria-hidden="true">
+    <circle cx="11" cy="11" r="8"></circle>
+    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+  </svg>
+
+  <input type="search"
+         id="{{ search_id }}"
+         name="search"
+         x-model="query"
+         placeholder="{{ placeholder }}"
+         aria-label="{{ 'Search ' + table.title if table else 'Search' }}"
+         class="h-8 w-56 rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] pl-8 pr-7 text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-shadow duration-[120ms]"
+         hx-get="{{ endpoint }}"
+         hx-target="{{ target }}"
+         hx-trigger="keyup changed delay:300ms"
+         hx-swap="innerHTML"
+         hx-include="closest [data-dz-table]"
+         hx-headers='{"Accept": "text/html"}'
+         hx-indicator="{% if table %}#{{ table.table_id or 'dt-table' }}-loading{% else %}next .dz-search-indicator{% endif %}" />
+
+  {# Clear button — shown when query is non-empty #}
+  <button x-show="query.length > 0"
+          x-cloak
+          @click="query = ''; $el.previousElementSibling.value = ''; htmx.trigger($el.previousElementSibling, 'keyup')"
+          type="button"
+          aria-label="Clear search"
+          class="absolute right-2 flex items-center justify-center w-4 h-4 rounded-full text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-colors duration-[120ms]">
+    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  </button>
+
   {% if not table %}
-  <span class="htmx-indicator loading loading-spinner loading-xs mt-1" aria-hidden="true"></span>
+  <span class="dz-search-indicator sr-only" aria-live="polite">Searching…</span>
   {% endif %}
+
 </div>
