@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Table Quality Gate Test Harness</title>
+
+  <!-- Design system tokens (same pattern as test-dashboard.html) -->
+  <style>
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --accent: 240 4.8% 95.9%;
+      --accent-foreground: 240 5.9% 10%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+      --success: 142 76% 36%;
+      --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      padding: 2rem;
+    }
+
+    /* Table chrome */
+    .dz-table-root {
+      position: relative;
+      border: 1px solid hsl(var(--border));
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: hsl(var(--card));
+      z-index: 10;
+    }
+
+    th {
+      position: relative;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: hsl(var(--muted-foreground));
+      border-bottom: 1px solid hsl(var(--border));
+      text-align: left;
+      user-select: none;
+      cursor: pointer;
+    }
+
+    td {
+      padding: 8px 12px;
+      font-size: 13px;
+      color: hsl(var(--foreground));
+      border-bottom: 1px solid hsl(var(--border));
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: hsl(var(--muted)); }
+
+    /* Resize handle */
+    .col-resize-handle {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      cursor: col-resize;
+      background: transparent;
+    }
+    .col-resize-handle:hover {
+      background: hsl(var(--border));
+    }
+
+    /* Badge */
+    .dz-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 500;
+      background: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+    }
+    .dz-badge[data-status="open"] { background: hsl(217 91% 60% / 0.15); color: hsl(217 91% 40%); }
+    .dz-badge[data-status="in_progress"] { background: hsl(38 92% 50% / 0.15); color: hsl(38 92% 35%); }
+    .dz-badge[data-status="done"] { background: hsl(142 76% 36% / 0.15); color: hsl(142 76% 28%); }
+    .dz-badge[data-status="archived"] { background: hsl(var(--muted)); color: hsl(var(--muted-foreground)); }
+
+    /* Inline edit input */
+    .dz-edit-input {
+      width: 100%;
+      padding: 4px 8px;
+      font-size: 13px;
+      border: 1px solid hsl(var(--primary));
+      border-radius: 4px;
+      outline: none;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+    }
+    .dz-edit-input:focus {
+      box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+    }
+
+    /* Select all */
+    .dz-select-none { user-select: none; }
+
+    /* Loading overlay */
+    .dz-loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: hsl(var(--background) / 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+
+    /* Toolbar */
+    .dz-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid hsl(var(--border));
+      background: hsl(var(--card));
+    }
+
+    /* Checkbox */
+    input[type="checkbox"] { cursor: pointer; }
+  </style>
+</head>
+
+<body>
+  <h1 style="font-size:16px;font-weight:600;margin-bottom:1rem;">Data Table Quality Gate Harness</h1>
+
+  <!-- Table root with Alpine component -->
+  <div
+    id="task-table"
+    data-dz-table
+    x-data="dzTable('task-table', '/api/task', {
+      sortField: '',
+      sortDir: 'asc',
+      inlineEditable: ['title', 'status', 'due_date'],
+      bulkActions: true,
+      entityName: 'task'
+    })"
+    @pointermove.window="onResizeMove($event)"
+    @pointerup.window="endResize($event)"
+    class="dz-table-root"
+  >
+    <!-- Loading overlay -->
+    <div class="dz-loading-overlay" x-show="loading" style="display:none;">
+      Loading…
+    </div>
+
+    <!-- Toolbar -->
+    <div class="dz-toolbar">
+      <span style="font-size:13px;color:hsl(var(--muted-foreground));">Tasks</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span x-show="bulkCount > 0" x-text="bulkCount + ' selected'" style="font-size:12px;color:hsl(var(--muted-foreground));"></span>
+        <button
+          x-show="bulkCount > 0"
+          @click="bulkDelete()"
+          style="font-size:12px;padding:4px 10px;border:1px solid hsl(var(--destructive));border-radius:4px;cursor:pointer;color:hsl(var(--destructive));background:transparent;"
+        >Delete</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <table>
+      <colgroup>
+        <col data-col="select" style="width:40px;" />
+        <col data-col="title" style="width:300px;" />
+        <col data-col="status" style="width:160px;" />
+        <col data-col="amount" style="width:120px;" />
+        <col data-col="due_date" style="width:140px;" />
+      </colgroup>
+
+      <thead>
+        <tr>
+          <!-- Select all -->
+          <th data-dz-col="select" style="width:40px;">
+            <input
+              type="checkbox"
+              @change="toggleSelectAll($event.target.checked)"
+              :checked="bulkCount > 0 && bulkCount === $el.closest('table').querySelectorAll('[data-dz-row-id]').length"
+            />
+          </th>
+
+          <!-- Title (sortable) -->
+          <th data-dz-col="title" @click="toggleSort('title')" :aria-sort="ariaSortDir('title')">
+            <span style="display:flex;align-items:center;gap:4px;">
+              Title
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="sortIcon('title')" style="transition:transform 0.15s;"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+            <div class="col-resize-handle cursor-col-resize" @pointerdown.stop="startColumnResize('title', $event)"></div>
+          </th>
+
+          <!-- Status (sortable) -->
+          <th data-dz-col="status" @click="toggleSort('status')" :aria-sort="ariaSortDir('status')">
+            <span style="display:flex;align-items:center;gap:4px;">
+              Status
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="sortIcon('status')" style="transition:transform 0.15s;"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+            <div class="col-resize-handle cursor-col-resize" @pointerdown.stop="startColumnResize('status', $event)"></div>
+          </th>
+
+          <!-- Amount (not sortable, not editable) -->
+          <th data-dz-col="amount" style="text-align:right;">
+            Amount
+            <div class="col-resize-handle cursor-col-resize" @pointerdown.stop="startColumnResize('amount', $event)"></div>
+          </th>
+
+          <!-- Due Date (sortable) -->
+          <th data-dz-col="due_date" @click="toggleSort('due_date')" :aria-sort="ariaSortDir('due_date')">
+            <span style="display:flex;align-items:center;gap:4px;">
+              Due Date
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="sortIcon('due_date')" style="transition:transform 0.15s;"><path d="m6 9 6 6 6-6"/></svg>
+            </span>
+            <div class="col-resize-handle cursor-col-resize" @pointerdown.stop="startColumnResize('due_date', $event)"></div>
+          </th>
+        </tr>
+      </thead>
+
+      <tbody id="task-table-body">
+        <!-- Row 1 -->
+        <tr data-dz-row-id="row-001">
+          <td data-dz-col="select"><input type="checkbox" data-dz-row-select @change="toggleRow('row-001', $event.target.checked)" /></td>
+          <td data-dz-col="title" @dblclick="startEdit('row-001', 'title', 'Design mockups')">
+            <template x-if="isEditing('row-001', 'title')">
+              <input type="text" class="dz-edit-input" x-model="editing.originalValue" @keydown="handleEditKeydown($event)" x-init="$el.focus(); $el.select()" />
+            </template>
+            <template x-if="!isEditing('row-001', 'title')">
+              <span>Design mockups</span>
+            </template>
+          </td>
+          <td data-dz-col="status" @dblclick="startEdit('row-001', 'status', 'open')">
+            <template x-if="isEditing('row-001', 'status')">
+              <select class="dz-edit-input" @keydown="handleEditKeydown($event)" x-init="$el.focus()">
+                <option value="open">open</option>
+                <option value="in_progress">in_progress</option>
+                <option value="done">done</option>
+                <option value="archived">archived</option>
+              </select>
+            </template>
+            <template x-if="!isEditing('row-001', 'status')">
+              <span class="dz-badge" data-status="open">open</span>
+            </template>
+          </td>
+          <td data-dz-col="amount" style="text-align:right;font-variant-numeric:tabular-nums;">$1,200.00</td>
+          <td data-dz-col="due_date" @dblclick="startEdit('row-001', 'due_date', '2026-05-01')">
+            <template x-if="isEditing('row-001', 'due_date')">
+              <input type="date" class="dz-edit-input" value="2026-05-01" @keydown="handleEditKeydown($event)" x-init="$el.focus()" />
+            </template>
+            <template x-if="!isEditing('row-001', 'due_date')">
+              <span>2026-05-01</span>
+            </template>
+          </td>
+        </tr>
+
+        <!-- Row 2 -->
+        <tr data-dz-row-id="row-002">
+          <td data-dz-col="select"><input type="checkbox" data-dz-row-select @change="toggleRow('row-002', $event.target.checked)" /></td>
+          <td data-dz-col="title" @dblclick="startEdit('row-002', 'title', 'Write unit tests')">
+            <template x-if="isEditing('row-002', 'title')">
+              <input type="text" class="dz-edit-input" x-model="editing.originalValue" @keydown="handleEditKeydown($event)" x-init="$el.focus(); $el.select()" />
+            </template>
+            <template x-if="!isEditing('row-002', 'title')">
+              <span>Write unit tests</span>
+            </template>
+          </td>
+          <td data-dz-col="status" @dblclick="startEdit('row-002', 'status', 'in_progress')">
+            <template x-if="isEditing('row-002', 'status')">
+              <select class="dz-edit-input" @keydown="handleEditKeydown($event)" x-init="$el.focus()">
+                <option value="open">open</option>
+                <option value="in_progress" selected>in_progress</option>
+                <option value="done">done</option>
+                <option value="archived">archived</option>
+              </select>
+            </template>
+            <template x-if="!isEditing('row-002', 'status')">
+              <span class="dz-badge" data-status="in_progress">in_progress</span>
+            </template>
+          </td>
+          <td data-dz-col="amount" style="text-align:right;font-variant-numeric:tabular-nums;">$850.00</td>
+          <td data-dz-col="due_date" @dblclick="startEdit('row-002', 'due_date', '2026-05-08')">
+            <template x-if="isEditing('row-002', 'due_date')">
+              <input type="date" class="dz-edit-input" value="2026-05-08" @keydown="handleEditKeydown($event)" x-init="$el.focus()" />
+            </template>
+            <template x-if="!isEditing('row-002', 'due_date')">
+              <span>2026-05-08</span>
+            </template>
+          </td>
+        </tr>
+
+        <!-- Row 3 -->
+        <tr data-dz-row-id="row-003">
+          <td data-dz-col="select"><input type="checkbox" data-dz-row-select @change="toggleRow('row-003', $event.target.checked)" /></td>
+          <td data-dz-col="title" @dblclick="startEdit('row-003', 'title', 'Deploy to staging')">
+            <template x-if="isEditing('row-003', 'title')">
+              <input type="text" class="dz-edit-input" x-model="editing.originalValue" @keydown="handleEditKeydown($event)" x-init="$el.focus(); $el.select()" />
+            </template>
+            <template x-if="!isEditing('row-003', 'title')">
+              <span>Deploy to staging</span>
+            </template>
+          </td>
+          <td data-dz-col="status" @dblclick="startEdit('row-003', 'status', 'done')">
+            <template x-if="isEditing('row-003', 'status')">
+              <select class="dz-edit-input" @keydown="handleEditKeydown($event)" x-init="$el.focus()">
+                <option value="open">open</option>
+                <option value="in_progress">in_progress</option>
+                <option value="done" selected>done</option>
+                <option value="archived">archived</option>
+              </select>
+            </template>
+            <template x-if="!isEditing('row-003', 'status')">
+              <span class="dz-badge" data-status="done">done</span>
+            </template>
+          </td>
+          <td data-dz-col="amount" style="text-align:right;font-variant-numeric:tabular-nums;">$2,100.00</td>
+          <td data-dz-col="due_date" @dblclick="startEdit('row-003', 'due_date', '2026-04-15')">
+            <template x-if="isEditing('row-003', 'due_date')">
+              <input type="date" class="dz-edit-input" value="2026-04-15" @keydown="handleEditKeydown($event)" x-init="$el.focus()" />
+            </template>
+            <template x-if="!isEditing('row-003', 'due_date')">
+              <span>2026-04-15</span>
+            </template>
+          </td>
+        </tr>
+
+        <!-- Row 4 -->
+        <tr data-dz-row-id="row-004">
+          <td data-dz-col="select"><input type="checkbox" data-dz-row-select @change="toggleRow('row-004', $event.target.checked)" /></td>
+          <td data-dz-col="title" @dblclick="startEdit('row-004', 'title', 'Review pull request')">
+            <template x-if="isEditing('row-004', 'title')">
+              <input type="text" class="dz-edit-input" x-model="editing.originalValue" @keydown="handleEditKeydown($event)" x-init="$el.focus(); $el.select()" />
+            </template>
+            <template x-if="!isEditing('row-004', 'title')">
+              <span>Review pull request</span>
+            </template>
+          </td>
+          <td data-dz-col="status" @dblclick="startEdit('row-004', 'status', 'open')">
+            <template x-if="isEditing('row-004', 'status')">
+              <select class="dz-edit-input" @keydown="handleEditKeydown($event)" x-init="$el.focus()">
+                <option value="open" selected>open</option>
+                <option value="in_progress">in_progress</option>
+                <option value="done">done</option>
+                <option value="archived">archived</option>
+              </select>
+            </template>
+            <template x-if="!isEditing('row-004', 'status')">
+              <span class="dz-badge" data-status="open">open</span>
+            </template>
+          </td>
+          <td data-dz-col="amount" style="text-align:right;font-variant-numeric:tabular-nums;">$450.00</td>
+          <td data-dz-col="due_date" @dblclick="startEdit('row-004', 'due_date', '2026-05-12')">
+            <template x-if="isEditing('row-004', 'due_date')">
+              <input type="date" class="dz-edit-input" value="2026-05-12" @keydown="handleEditKeydown($event)" x-init="$el.focus()" />
+            </template>
+            <template x-if="!isEditing('row-004', 'due_date')">
+              <span>2026-05-12</span>
+            </template>
+          </td>
+        </tr>
+
+        <!-- Row 5 -->
+        <tr data-dz-row-id="row-005">
+          <td data-dz-col="select"><input type="checkbox" data-dz-row-select @change="toggleRow('row-005', $event.target.checked)" /></td>
+          <td data-dz-col="title" @dblclick="startEdit('row-005', 'title', 'Update documentation')">
+            <template x-if="isEditing('row-005', 'title')">
+              <input type="text" class="dz-edit-input" x-model="editing.originalValue" @keydown="handleEditKeydown($event)" x-init="$el.focus(); $el.select()" />
+            </template>
+            <template x-if="!isEditing('row-005', 'title')">
+              <span>Update documentation</span>
+            </template>
+          </td>
+          <td data-dz-col="status" @dblclick="startEdit('row-005', 'status', 'in_progress')">
+            <template x-if="isEditing('row-005', 'status')">
+              <select class="dz-edit-input" @keydown="handleEditKeydown($event)" x-init="$el.focus()">
+                <option value="open">open</option>
+                <option value="in_progress" selected>in_progress</option>
+                <option value="done">done</option>
+                <option value="archived">archived</option>
+              </select>
+            </template>
+            <template x-if="!isEditing('row-005', 'status')">
+              <span class="dz-badge" data-status="in_progress">in_progress</span>
+            </template>
+          </td>
+          <td data-dz-col="amount" style="text-align:right;font-variant-numeric:tabular-nums;">$320.00</td>
+          <td data-dz-col="due_date" @dblclick="startEdit('row-005', 'due_date', '2026-05-20')">
+            <template x-if="isEditing('row-005', 'due_date')">
+              <input type="date" class="dz-edit-input" value="2026-05-20" @keydown="handleEditKeydown($event)" x-init="$el.focus()" />
+            </template>
+            <template x-if="!isEditing('row-005', 'due_date')">
+              <span>2026-05-20</span>
+            </template>
+          </td>
+        </tr>
+
+        <!-- Row 6 -->
+        <tr data-dz-row-id="row-006">
+          <td data-dz-col="select"><input type="checkbox" data-dz-row-select @change="toggleRow('row-006', $event.target.checked)" /></td>
+          <td data-dz-col="title" @dblclick="startEdit('row-006', 'title', 'Fix login bug')">
+            <template x-if="isEditing('row-006', 'title')">
+              <input type="text" class="dz-edit-input" x-model="editing.originalValue" @keydown="handleEditKeydown($event)" x-init="$el.focus(); $el.select()" />
+            </template>
+            <template x-if="!isEditing('row-006', 'title')">
+              <span>Fix login bug</span>
+            </template>
+          </td>
+          <td data-dz-col="status" @dblclick="startEdit('row-006', 'status', 'done')">
+            <template x-if="isEditing('row-006', 'status')">
+              <select class="dz-edit-input" @keydown="handleEditKeydown($event)" x-init="$el.focus()">
+                <option value="open">open</option>
+                <option value="in_progress">in_progress</option>
+                <option value="done" selected>done</option>
+                <option value="archived">archived</option>
+              </select>
+            </template>
+            <template x-if="!isEditing('row-006', 'status')">
+              <span class="dz-badge" data-status="done">done</span>
+            </template>
+          </td>
+          <td data-dz-col="amount" style="text-align:right;font-variant-numeric:tabular-nums;">$750.00</td>
+          <td data-dz-col="due_date" @dblclick="startEdit('row-006', 'due_date', '2026-04-22')">
+            <template x-if="isEditing('row-006', 'due_date')">
+              <input type="date" class="dz-edit-input" value="2026-04-22" @keydown="handleEditKeydown($event)" x-init="$el.focus()" />
+            </template>
+            <template x-if="!isEditing('row-006', 'due_date')">
+              <span>2026-04-22</span>
+            </template>
+          </td>
+        </tr>
+
+        <!-- Row 7 -->
+        <tr data-dz-row-id="row-007">
+          <td data-dz-col="select"><input type="checkbox" data-dz-row-select @change="toggleRow('row-007', $event.target.checked)" /></td>
+          <td data-dz-col="title" @dblclick="startEdit('row-007', 'title', 'Performance audit')">
+            <template x-if="isEditing('row-007', 'title')">
+              <input type="text" class="dz-edit-input" x-model="editing.originalValue" @keydown="handleEditKeydown($event)" x-init="$el.focus(); $el.select()" />
+            </template>
+            <template x-if="!isEditing('row-007', 'title')">
+              <span>Performance audit</span>
+            </template>
+          </td>
+          <td data-dz-col="status" @dblclick="startEdit('row-007', 'status', 'open')">
+            <template x-if="isEditing('row-007', 'status')">
+              <select class="dz-edit-input" @keydown="handleEditKeydown($event)" x-init="$el.focus()">
+                <option value="open" selected>open</option>
+                <option value="in_progress">in_progress</option>
+                <option value="done">done</option>
+                <option value="archived">archived</option>
+              </select>
+            </template>
+            <template x-if="!isEditing('row-007', 'status')">
+              <span class="dz-badge" data-status="open">open</span>
+            </template>
+          </td>
+          <td data-dz-col="amount" style="text-align:right;font-variant-numeric:tabular-nums;">$1,600.00</td>
+          <td data-dz-col="due_date" @dblclick="startEdit('row-007', 'due_date', '2026-06-01')">
+            <template x-if="isEditing('row-007', 'due_date')">
+              <input type="date" class="dz-edit-input" value="2026-06-01" @keydown="handleEditKeydown($event)" x-init="$el.focus()" />
+            </template>
+            <template x-if="!isEditing('row-007', 'due_date')">
+              <span>2026-06-01</span>
+            </template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Script order: dz-alpine.js FIRST, then Alpine — Alpine must load LAST -->
+  <script src="js/dz-alpine.js"></script>
+  <script src="vendor/alpine.min.js" defer></script>
+
+  <!-- Quality Gate Tests -->
+  <script>
+    /**
+     * Quality gate test suite for the dzTable Alpine component.
+     * Each method returns true on pass, throws on failure.
+     * window.qualityGates.runAll() returns { allPass, results }.
+     *
+     * Tests run against the live Alpine component on the page.
+     * Usage in Playwright: window.qualityGates.testSortCycle()
+     */
+
+    function _getComponent() {
+      const el = document.querySelector('[x-data]');
+      if (!el) throw new Error('No x-data element found');
+      const data = Alpine.$data(el);
+      if (!data) throw new Error('Alpine.$data returned null — Alpine not initialised yet');
+      return data;
+    }
+
+    window.qualityGates = {
+
+      /**
+       * Gate 1: Sort cycle — unsorted → asc → desc → unsorted
+       * Verifies the tri-state toggleSort state machine.
+       */
+      testSortCycle() {
+        const c = _getComponent();
+
+        // Reset to known state
+        c.sortField = '';
+        c.sortDir = 'asc';
+
+        // Override reload to be a no-op during unit testing
+        const originalReload = c.reload;
+        c.reload = () => {};
+
+        try {
+          // Step 1: unsorted → asc (new column)
+          c.toggleSort('title');
+          if (c.sortField !== 'title') throw new Error(`Expected sortField='title', got '${c.sortField}'`);
+          if (c.sortDir !== 'asc') throw new Error(`Expected sortDir='asc' after first click, got '${c.sortDir}'`);
+
+          // Step 2: asc → desc (same column)
+          c.toggleSort('title');
+          if (c.sortField !== 'title') throw new Error(`Expected sortField='title', got '${c.sortField}'`);
+          if (c.sortDir !== 'desc') throw new Error(`Expected sortDir='desc' after second click, got '${c.sortDir}'`);
+
+          // Step 3: desc → unsorted (third click clears)
+          c.toggleSort('title');
+          if (c.sortField !== '') throw new Error(`Expected sortField='' (cleared), got '${c.sortField}'`);
+          if (c.sortDir !== 'asc') throw new Error(`Expected sortDir='asc' after clear, got '${c.sortDir}'`);
+
+          return true;
+        } finally {
+          c.reload = originalReload;
+        }
+      },
+
+      /**
+       * Gate 2: Column resize — verify state shape and <col> width update.
+       * Calls startColumnResize then onResizeMove and checks the DOM.
+       */
+      testColumnResize() {
+        const c = _getComponent();
+
+        // Ensure resize is null to start
+        c.resize = null;
+
+        // Mock a pointerdown event at x=200
+        const fakePointerDown = { clientX: 200, preventDefault: () => {} };
+        c.startColumnResize('title', fakePointerDown);
+
+        if (!c.resize) throw new Error('resize state not set after startColumnResize');
+        if (c.resize.colKey !== 'title') throw new Error(`resize.colKey expected 'title', got '${c.resize.colKey}'`);
+        if (c.resize.startX !== 200) throw new Error(`resize.startX expected 200, got ${c.resize.startX}`);
+        if (typeof c.resize.startWidth !== 'number') throw new Error('resize.startWidth must be a number');
+
+        const originalWidth = c.resize.startWidth;
+
+        // Simulate moving 100px to the right
+        const fakeMoveEvent = { clientX: 300 };
+        c.onResizeMove(fakeMoveEvent);
+
+        // Verify the <col> element got its width updated
+        const col = document.querySelector('col[data-col="title"]');
+        if (!col) throw new Error('col[data-col="title"] not found in DOM');
+        const styleWidth = col.style.width;
+        if (!styleWidth) throw new Error('<col> style.width not set after onResizeMove');
+
+        const newPx = parseInt(styleWidth, 10);
+        if (newPx <= originalWidth) {
+          // Allow: if originalWidth was 0 (hidden), snapping to 80 minimum is fine
+          // But if originalWidth > 80, moving right should increase the width
+          if (originalWidth > 80 && newPx < originalWidth) {
+            throw new Error(`Width should have increased: original=${originalWidth}, new=${newPx}`);
+          }
+        }
+
+        // Clean up: call endResize and restore cursor
+        const fakeMoveEnd = { clientX: 300 };
+        c.endResize(fakeMoveEnd);
+        if (c.resize !== null) throw new Error('resize should be null after endResize');
+
+        return true;
+      },
+
+      /**
+       * Gate 3: Inline edit lifecycle — startEdit / cancelEdit state transitions.
+       * Tests that editing state is set correctly and originalValue is preserved.
+       */
+      testInlineEditLifecycle() {
+        const c = _getComponent();
+
+        // Ensure clean state
+        c.editing = null;
+
+        // Step 1: startEdit sets editing state
+        c.startEdit('row-001', 'title', 'Design mockups');
+        if (!c.editing) throw new Error('editing should not be null after startEdit');
+        if (c.editing.rowId !== 'row-001') throw new Error(`editing.rowId expected 'row-001', got '${c.editing.rowId}'`);
+        if (c.editing.colKey !== 'title') throw new Error(`editing.colKey expected 'title', got '${c.editing.colKey}'`);
+        if (c.editing.originalValue !== 'Design mockups') throw new Error(`editing.originalValue expected 'Design mockups', got '${c.editing.originalValue}'`);
+        if (c.editing.saving !== false) throw new Error('editing.saving should be false initially');
+        if (c.editing.error !== null) throw new Error('editing.error should be null initially');
+
+        // Step 2: cancelEdit clears editing
+        c.cancelEdit();
+        if (c.editing !== null) throw new Error('editing should be null after cancelEdit');
+
+        // Step 3: startEdit again verifies value is preserved per call
+        c.startEdit('row-002', 'status', 'open');
+        if (!c.editing) throw new Error('editing should not be null on second startEdit');
+        if (c.editing.rowId !== 'row-002') throw new Error(`editing.rowId expected 'row-002', got '${c.editing.rowId}'`);
+        if (c.editing.originalValue !== 'open') throw new Error(`editing.originalValue expected 'open', got '${c.editing.originalValue}'`);
+
+        // Step 4: startEdit on non-editable column should be ignored
+        c.cancelEdit();
+        c.startEdit('row-001', 'amount', '1200');  // amount is not in inlineEditable
+        if (c.editing !== null) throw new Error('startEdit on non-editable column should not set editing');
+
+        return true;
+      },
+
+      /**
+       * Gate 4: Selection persistence — toggle rows, verify Set, clear.
+       * Uses the component's toggleRow / clearSelection methods.
+       */
+      testSelectionPersistence() {
+        const c = _getComponent();
+
+        // Ensure clean state
+        c.clearSelection();
+        if (c.selected.size !== 0) throw new Error('selected should be empty after clearSelection');
+        if (c.bulkCount !== 0) throw new Error('bulkCount should be 0 after clearSelection');
+
+        // Toggle 3 rows individually
+        c.toggleRow('row-001', true);
+        c.toggleRow('row-002', true);
+        c.toggleRow('row-003', true);
+
+        if (c.selected.size !== 3) throw new Error(`Expected 3 selected, got ${c.selected.size}`);
+        if (c.bulkCount !== 3) throw new Error(`Expected bulkCount=3, got ${c.bulkCount}`);
+        if (!c.selected.has('row-001')) throw new Error('row-001 should be in selected');
+        if (!c.selected.has('row-002')) throw new Error('row-002 should be in selected');
+        if (!c.selected.has('row-003')) throw new Error('row-003 should be in selected');
+
+        // Toggle one off
+        c.toggleRow('row-002', false);
+        if (c.selected.size !== 2) throw new Error(`Expected 2 selected after deselect, got ${c.selected.size}`);
+        if (c.bulkCount !== 2) throw new Error(`Expected bulkCount=2, got ${c.bulkCount}`);
+        if (c.selected.has('row-002')) throw new Error('row-002 should not be in selected after deselect');
+
+        // Clear all
+        c.clearSelection();
+        if (c.selected.size !== 0) throw new Error('selected should be empty after clearSelection');
+        if (c.bulkCount !== 0) throw new Error('bulkCount should be 0 after clearSelection');
+
+        return true;
+      },
+
+      /**
+       * Gate 5: Keyboard navigation — nextEditableCell returns correct coordinates.
+       * Verifies: title → status → due_date (skips amount), wraps to next row.
+       * Config: inlineEditable = ['title', 'status', 'due_date']
+       */
+      testKeyboardNav() {
+        const c = _getComponent();
+
+        // Verify inlineEditable config is correct
+        if (!Array.isArray(c.inlineEditable)) throw new Error('inlineEditable must be an array');
+        if (!c.inlineEditable.includes('title')) throw new Error('inlineEditable must contain title');
+        if (!c.inlineEditable.includes('status')) throw new Error('inlineEditable must contain status');
+        if (!c.inlineEditable.includes('due_date')) throw new Error('inlineEditable must contain due_date');
+        if (c.inlineEditable.includes('amount')) throw new Error('amount should not be in inlineEditable (not editable)');
+
+        // Forward: title → status
+        const next1 = c.nextEditableCell('row-001', 'title', 'next');
+        if (!next1) throw new Error('nextEditableCell should not return null for title→status');
+        if (next1.rowId !== 'row-001') throw new Error(`Expected rowId='row-001', got '${next1.rowId}'`);
+        if (next1.colKey !== 'status') throw new Error(`Expected colKey='status' after title, got '${next1.colKey}'`);
+
+        // Forward: status → due_date (skips amount)
+        const next2 = c.nextEditableCell('row-001', 'status', 'next');
+        if (!next2) throw new Error('nextEditableCell should not return null for status→due_date');
+        if (next2.rowId !== 'row-001') throw new Error(`Expected rowId='row-001', got '${next2.rowId}'`);
+        if (next2.colKey !== 'due_date') throw new Error(`Expected colKey='due_date' after status, got '${next2.colKey}'`);
+
+        // Forward: due_date (last editable) → wraps to title of next row
+        const next3 = c.nextEditableCell('row-001', 'due_date', 'next');
+        if (!next3) throw new Error('nextEditableCell should wrap to next row from last editable col');
+        if (next3.rowId !== 'row-002') throw new Error(`Expected rowId='row-002' (wrap), got '${next3.rowId}'`);
+        if (next3.colKey !== 'title') throw new Error(`Expected colKey='title' (wrap to first), got '${next3.colKey}'`);
+
+        // Backward: status → title
+        const prev1 = c.nextEditableCell('row-001', 'status', 'prev');
+        if (!prev1) throw new Error('nextEditableCell should not return null for status→title (prev)');
+        if (prev1.rowId !== 'row-001') throw new Error(`Expected rowId='row-001', got '${prev1.rowId}'`);
+        if (prev1.colKey !== 'title') throw new Error(`Expected colKey='title' going prev from status, got '${prev1.colKey}'`);
+
+        // At beginning of first row going backward → null (no previous row before row-001)
+        const prev2 = c.nextEditableCell('row-001', 'title', 'prev');
+        // This may return null (no row before row-001) — that's valid
+        // Just verify it doesn't throw
+        if (prev2 !== null && typeof prev2 !== 'object') {
+          throw new Error('nextEditableCell(prev from first cell) should return null or a valid object');
+        }
+
+        return true;
+      },
+
+      /**
+       * Run all 5 gate tests and return { allPass, results }.
+       */
+      runAll() {
+        const tests = [
+          'testSortCycle',
+          'testColumnResize',
+          'testInlineEditLifecycle',
+          'testSelectionPersistence',
+          'testKeyboardNav',
+        ];
+        const results = {};
+        let allPass = true;
+
+        for (const name of tests) {
+          try {
+            const passed = this[name]();
+            results[name] = { pass: passed === true, error: null };
+          } catch (err) {
+            allPass = false;
+            results[name] = { pass: false, error: err.message };
+          }
+        }
+
+        // Re-check allPass (some tests may return truthy non-true)
+        allPass = Object.values(results).every(r => r.pass);
+
+        console.log('[QualityGates] Results:', JSON.stringify(results, null, 2));
+        return { allPass, results };
+      },
+    };
+  </script>
+</body>
+</html>
