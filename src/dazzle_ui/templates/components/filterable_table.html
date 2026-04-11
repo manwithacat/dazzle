@@ -8,7 +8,7 @@
       "entityName": table.entity_name
     } | tojson -%}
 <div id="{{ table.table_id }}"
-     data-dz-table="{{ table.entity_name }}"
+     data-dazzle-table="{{ table.entity_name }}"
      x-data="dzTable('{{ table.table_id }}', '{{ table.api_endpoint }}', {{ config_json }})"
      @pointermove.window="onResizeMove($event)"
      @pointerup.window="endResize($event)"
