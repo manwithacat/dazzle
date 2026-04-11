@@ -1,28 +1,95 @@
-{# Table rows fragment — no Alpine, column visibility via data-dz-col #}
+{# table_rows.html — inline-editable row cells, row states, Tab navigation
+   Requires: dzTable Alpine controller (editing, selected, isEditing, startEdit, toggleRow)
+   Row height: h-9 (36px dense). No DaisyUI classes. #}
 {% if table and table.rows %}
 {% set _row_label_col = namespace(key="id") %}
 {% for col in table.columns %}{% if col.type not in ["ref", "badge", "bool", "currency"] and _row_label_col.key == "id" %}{% set _row_label_col.key = col.key %}{% endif %}{% endfor %}
 {% for item in table.rows %}
 {% set _row_label = item[_row_label_col.key] | default(item.id) %}
 {% set _row_label = _row_label | ref_display if _row_label is mapping else _row_label %}
-<tr id="row-{{ item.id }}" class="hover cursor-pointer" data-dazzle-row="{{ table.entity_name }}" data-dz-row-id="{{ item.id }}"
+<tr id="row-{{ item.id }}"
+    data-dazzle-row="{{ table.entity_name }}"
+    data-dz-row-id="{{ item.id }}"
+    :class="{
+      'bg-[hsl(var(--primary)/0.1)]': selected.has('{{ item.id }}'),
+      'hover:bg-[hsl(var(--card))]': !selected.has('{{ item.id }}'),
+      'opacity-70': editing && editing.rowId === '{{ item.id }}' && editing.saving,
+      'border-l-2 border-[hsl(var(--destructive))]': editing && editing.rowId === '{{ item.id }}' && editing.error
+    }"
+    class="group h-9 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+           text-[13px] text-[hsl(var(--foreground))] cursor-pointer"
     {% if table.detail_url_template %}
     hx-get="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
     hx-push-url="true"
     hx-target="body"
     hx-swap="innerHTML"
     {% endif %}>
+
+  {# ── Checkbox cell ─────────────────────────────────────────────────────── #}
   {% if table.bulk_actions %}
-  <td>
-    <input type="checkbox" class="checkbox checkbox-sm" data-dz-row-select
+  <td class="w-10 px-3" onclick="event.stopPropagation()">
+    <label class="sr-only" for="row-check-{{ item.id }}">Select {{ _row_label }}</label>
+    <input type="checkbox"
+           id="row-check-{{ item.id }}"
+           class="w-3.5 h-3.5 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer"
+           :checked="selected.has('{{ item.id }}')"
+           @change="toggleRow('{{ item.id }}')"
            aria-label="Select {{ _row_label }}" />
   </td>
   {% endif %}
+
+  {# ── Data cells ────────────────────────────────────────────────────────── #}
   {% for col in table.columns %}
   {% if not col.hidden %}
-  <td data-dz-col="{{ col.key }}">
+  <td data-dz-col="{{ col.key }}"
+      x-show="isColumnVisible('{{ col.key }}')"
+      {% if col.type in ["currency", "percentage"] %}
+      class="px-3 tabular-nums text-right"
+      {% else %}
+      class="px-3"
+      {% endif %}
+      onclick="event.stopPropagation()">
+
+    {# ── Inline editable cell ──────────────────────────────────────────── #}
+    {% if table.inline_editable and col.key in table.inline_editable %}
+
+    {# Edit mode: input rendered via inline_edit.html #}
+    <template x-if="isEditing('{{ item.id }}', '{{ col.key }}')">
+      {% with edit_row_id=item.id, edit_col=col, edit_value=item[col.key] | default("") %}
+      {% include 'fragments/inline_edit.html' with context %}
+      {% endwith %}
+    </template>
+
+    {# Display mode: double-click to enter edit #}
+    <template x-if="!isEditing('{{ item.id }}', '{{ col.key }}')">
+      <span class="block w-full rounded-[3px] px-1 -mx-1 py-0.5
+                   hover:outline hover:outline-1 hover:outline-[hsl(var(--border))]
+                   hover:cursor-text transition-all duration-[80ms]
+                   [transition-timing-function:cubic-bezier(0.2,0,0,1)] truncate"
+            @dblclick="startEdit('{{ item.id }}', '{{ col.key }}', '{{ item[col.key] | default('') | e }}')"
+            title="{{ item[col.key] | default('') }}">
+        {% if col.type == "badge" %}
+          <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[11px] font-medium
+                       uppercase tracking-[0.04em] {{ item[col.key] | badge_class }}">
+            {{ item[col.key] | default("") | humanize }}
+          </span>
+        {% elif col.type == "bool" %}
+          {{ item[col.key] | bool_icon }}
+        {% elif col.type == "date" %}
+          {{ item[col.key] | dateformat }}
+        {% else %}
+          {{ item[col.key] | default("") | truncate_text }}
+        {% endif %}
+      </span>
+    </template>
+
+    {# ── Non-editable cell — type-specific rendering ───────────────────── #}
+    {% else %}
     {% if col.type == "badge" %}
-      <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") | humanize }}</span>
+      <span class="inline-flex items-center px-1.5 py-0.5 rounded-[3px] text-[11px] font-medium
+                   uppercase tracking-[0.04em] {{ item[col.key] | badge_class }}">
+        {{ item[col.key] | default("") | humanize }}
+      </span>
     {% elif col.type == "bool" %}
       {{ item[col.key] | bool_icon }}
     {% elif col.type == "date" %}
@@ -37,41 +104,81 @@
     {% elif col.type == "percentage" %}
       {{ item[col.key] | default("") }}%
     {% else %}
-      {{ item[col.key] | default("") | truncate_text }}
+      <span class="truncate block max-w-[240px]">{{ item[col.key] | default("") | truncate_text }}</span>
     {% endif %}
+    {% endif %}
+
   </td>
   {% endif %}
   {% endfor %}
-  <td>
-    {# Row action dropdown — uses DaisyUI details-based dropdown, no JS #}
-    <details class="dropdown dropdown-end" onclick="event.stopPropagation()">
-      <summary class="btn btn-ghost btn-xs list-none" aria-label="Actions for {{ _row_label }}">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
-      </summary>
-      <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50" role="menu">
-        {% if table.detail_url_template %}
-        <li role="none"><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}" role="menuitem">View<span class="sr-only"> {{ _row_label }}</span></a></li>
-        <li role="none"><a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit" class="text-warning" data-dazzle-action="{{ table.entity_name }}.edit" role="menuitem">Edit<span class="sr-only"> {{ _row_label }}</span></a></li>
-        {% endif %}
-        <li role="none">
-          <button class="text-error"
-                  role="menuitem"
-                  data-dazzle-action="{{ table.entity_name }}.delete"
-                  hx-delete="{{ table.api_endpoint }}/{{ item.id }}"
-                  hx-confirm="Delete this {{ table.entity_name | lower }}?"
-                  hx-target="closest tr"
-                  hx-swap="outerHTML swap:300ms">
-            Delete<span class="sr-only"> {{ _row_label }}</span>
-          </button>
-        </li>
-      </ul>
-    </details>
+
+  {# ── Row actions — revealed on hover ──────────────────────────────────────── #}
+  <td class="w-16 px-2 text-right" onclick="event.stopPropagation()">
+    <div class="inline-flex items-center gap-0.5 opacity-0 group-hover:opacity-100
+                transition-opacity duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+
+      {# View action #}
+      {% if table.detail_url_template %}
+      <a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}"
+         data-dazzle-action="{{ table.entity_name }}.view"
+         aria-label="View {{ _row_label }}"
+         class="inline-flex items-center justify-center w-7 h-7 rounded-[4px]
+                text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]
+                hover:bg-[hsl(var(--muted)/0.5)]
+                transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+             xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 2.5C4.5 2.5 2.5 5 2.5 7s2 4.5 4.5 4.5S11.5 9 11.5 7 9.5 2.5 7 2.5z"
+                stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/>
+          <circle cx="7" cy="7" r="1.5" stroke="currentColor" stroke-width="1.25"/>
+        </svg>
+      </a>
+
+      {# Edit action #}
+      <a href="{{ table.detail_url_template.replace('{id}', item.id | string) }}/edit"
+         data-dazzle-action="{{ table.entity_name }}.edit"
+         aria-label="Edit {{ _row_label }}"
+         class="inline-flex items-center justify-center w-7 h-7 rounded-[4px]
+                text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]
+                hover:bg-[hsl(var(--muted)/0.5)]
+                transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+             xmlns="http://www.w3.org/2000/svg">
+          <path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"
+                stroke="currentColor" stroke-width="1.25"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+      {% endif %}
+
+      {# Delete action #}
+      <button type="button"
+              data-dazzle-action="{{ table.entity_name }}.delete"
+              aria-label="Delete {{ _row_label }}"
+              hx-delete="{{ table.api_endpoint }}/{{ item.id }}"
+              hx-confirm="Delete this {{ table.entity_name | lower }}?"
+              hx-target="closest tr"
+              hx-swap="outerHTML swap:300ms"
+              class="inline-flex items-center justify-center w-7 h-7 rounded-[4px]
+                     text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]
+                     hover:bg-[hsl(var(--destructive)/0.1)]
+                     transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+             xmlns="http://www.w3.org/2000/svg">
+          <path d="M2 3.5h10M5.5 3.5V2.5h3v1M5.5 6v4M8.5 6v4M3 3.5l.5 8h7l.5-8"
+                stroke="currentColor" stroke-width="1.25"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
   </td>
+
 </tr>
 {% endfor %}
 {% else %}
 <tr>
-  <td colspan="{{ (table.columns | length) + 1 if table else 1 }}" class="text-center py-8 text-base-content/50">
+  <td colspan="{{ (table.columns | length) + (2 if table.bulk_actions else 1) if table else 1 }}"
+      class="text-center py-8 text-[13px] text-[hsl(var(--muted-foreground))]">
     {{ table.empty_message | default("No " + (table.entity_name|default("items"))|lower + " found.") if table else "No items found." }}
   </td>
 </tr>

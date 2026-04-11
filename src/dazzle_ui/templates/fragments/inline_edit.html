@@ -1,40 +1,117 @@
-{# Inline editing fragment — Alpine x-data for edit mode toggle, HTMX for save #}
-{# Parameters: field_name, field_value, endpoint, field_type (default: text) #}
-{% set field_type = field_type | default('text') %}
-<div x-data="{ editing: false }" class="inline-edit-container group">
+{# inline_edit.html — phase-based cell editor, ux-architect/primitives/inline-edit contract
+   Context: edit_row_id (str), edit_col (ColumnContext), edit_value (str)
+   Phases: Display → Editing → Saving → Success/Error → Cancel
+   Rendered inside <td> via x-if in table_rows.html. No DaisyUI classes. #}
+<div class="relative -mx-1 -my-0.5">
 
-  {# Display mode — button for keyboard accessibility #}
-  <button type="button"
-          x-show="!editing"
-          @click="editing = true; $nextTick(() => $el.parentElement.querySelector('input[name]').focus())"
-          class="inline-flex items-center gap-1 hover:bg-base-200 rounded px-1 -mx-1
-                 transition-colors cursor-pointer text-left"
-          aria-label="Edit {{ field_name | replace('_', ' ') }}: {{ field_value }}">
-    <span>{{ field_value }}</span>
-    <svg class="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 group-focus-within:opacity-50 transition-opacity"
-         fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+  {# ── Text input (col type: text / default) ──────────────────────────────── #}
+  {% if edit_col.type not in ["bool", "badge", "date"] %}
+  <input type="text"
+         name="{{ edit_col.key }}"
+         :value="editing ? editing.originalValue : '{{ edit_value | e }}'"
+         :disabled="editing && editing.saving"
+         x-init="$el.focus(); $el.select()"
+         @keydown.enter.prevent="commitEdit($el.value)"
+         @keydown.tab.prevent="commitEdit($el.value)"
+         @keydown.escape.prevent="cancelEdit()"
+         :class="editing && editing.error
+           ? 'border-[hsl(var(--destructive))] focus:ring-[hsl(var(--destructive)/0.3)]'
+           : 'border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary)/0.2)]'"
+         class="w-full h-7 px-2 text-[13px] text-[hsl(var(--foreground))]
+                bg-[hsl(var(--background))] rounded-[3px] border
+                outline-none focus:ring-2 focus:ring-offset-0
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors duration-[80ms]
+                [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         aria-label="Edit {{ edit_col.label }}" />
+
+  {# ── Boolean checkbox (col type: bool) ─────────────────────────────────── #}
+  {% elif edit_col.type == "bool" %}
+  <div class="flex items-center gap-2 h-7 px-1">
+    <input type="checkbox"
+           name="{{ edit_col.key }}"
+           :checked="editing ? (editing.originalValue === 'true' || editing.originalValue === true) : {{ 'true' if edit_value else 'false' }}"
+           :disabled="editing && editing.saving"
+           x-init="$el.focus()"
+           @change="commitEdit($el.checked)"
+           @keydown.escape.prevent="cancelEdit()"
+           class="w-4 h-4 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+           aria-label="Edit {{ edit_col.label }}" />
+    <label class="text-[13px] text-[hsl(var(--muted-foreground))] select-none cursor-pointer">
+      {{ edit_col.label }}
+    </label>
+  </div>
+
+  {# ── Enum select (col type: badge) ──────────────────────────────────────── #}
+  {% elif edit_col.type == "badge" %}
+  <select name="{{ edit_col.key }}"
+          :disabled="editing && editing.saving"
+          x-init="$el.focus()"
+          @change="commitEdit($el.value)"
+          @keydown.escape.prevent="cancelEdit()"
+          :class="editing && editing.error
+            ? 'border-[hsl(var(--destructive))] focus:ring-[hsl(var(--destructive)/0.3)]'
+            : 'border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary)/0.2)]'"
+          class="w-full h-7 px-2 pr-6 text-[13px] text-[hsl(var(--foreground))]
+                 bg-[hsl(var(--background))] rounded-[3px] border
+                 outline-none focus:ring-2 focus:ring-offset-0 appearance-none
+                 disabled:opacity-50 disabled:cursor-not-allowed
+                 transition-colors duration-[80ms]
+                 [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+          aria-label="Edit {{ edit_col.label }}">
+    {% for opt in edit_col.filter_options %}
+    <option value="{{ opt.value }}"
+            {% if opt.value == (edit_value | string) %}selected{% endif %}>
+      {{ opt.label }}
+    </option>
+    {% endfor %}
+  </select>
+
+  {# ── Date input (col type: date) ────────────────────────────────────────── #}
+  {% elif edit_col.type == "date" %}
+  <input type="date"
+         name="{{ edit_col.key }}"
+         :value="editing ? editing.originalValue : '{{ edit_value | e }}'"
+         :disabled="editing && editing.saving"
+         x-init="$el.focus()"
+         @keydown.enter.prevent="commitEdit($el.value)"
+         @keydown.tab.prevent="commitEdit($el.value)"
+         @keydown.escape.prevent="cancelEdit()"
+         :class="editing && editing.error
+           ? 'border-[hsl(var(--destructive))] focus:ring-[hsl(var(--destructive)/0.3)]'
+           : 'border-[hsl(var(--primary))] focus:ring-[hsl(var(--primary)/0.2)]'"
+         class="w-full h-7 px-2 text-[13px] text-[hsl(var(--foreground))]
+                bg-[hsl(var(--background))] rounded-[3px] border
+                outline-none focus:ring-2 focus:ring-offset-0
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transition-colors duration-[80ms]
+                [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         aria-label="Edit {{ edit_col.label }}" />
+  {% endif %}
+
+  {# ── Saving spinner (phase 3: Commit) ───────────────────────────────────── #}
+  <div x-show="editing && editing.saving"
+       aria-hidden="true"
+       class="absolute inset-y-0 right-1 flex items-center pointer-events-none">
+    <svg class="w-3.5 h-3.5 text-[hsl(var(--muted-foreground))] animate-spin"
+         viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle class="opacity-25" cx="12" cy="12" r="10"
+              stroke="currentColor" stroke-width="2"/>
+      <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
     </svg>
-  </button>
+  </div>
 
-  {# Edit mode #}
-  <form x-show="editing"
-        hx-put="{{ endpoint }}"
-        hx-target="closest .inline-edit-container"
-        hx-swap="outerHTML"
-        hx-headers='{"Accept": "text/html"}'
-        hx-indicator="next .htmx-indicator">
-    <div class="flex items-center gap-1">
-      <label for="inline-{{ field_name }}" class="sr-only">{{ field_name | replace('_', ' ') | title }}</label>
-      <input id="inline-{{ field_name }}"
-             type="{{ field_type }}"
-             name="{{ field_name }}"
-             value="{{ field_value }}"
-             @blur="$el.form.requestSubmit()"
-             @keydown.enter.prevent="$el.form.requestSubmit()"
-             @keydown.escape="editing = false"
-             class="input input-bordered input-sm input-ghost w-full" />
-      <span class="htmx-indicator loading loading-spinner loading-xs" aria-hidden="true"></span>
-    </div>
-  </form>
+  {# ── Error message (phase 4: Error) ─────────────────────────────────────── #}
+  <div x-show="editing && editing.error"
+       x-text="editing && editing.error"
+       role="alert"
+       class="absolute top-full left-0 mt-1 z-[50]
+              max-w-[200px] px-2 py-1 rounded-[4px] text-[11px] leading-tight
+              bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))]
+              shadow-[0_2px_4px_rgb(0_0_0/0.12)]
+              whitespace-nowrap pointer-events-none">
+  </div>
+
 </div>
