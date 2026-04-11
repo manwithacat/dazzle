@@ -110,7 +110,7 @@ The audit sink is pluggable: `NullAuditSink` in production (zero overhead), `InM
 
 ## The Shapes Validation App
 
-Rather than testing RBAC against a real domain (where business logic confuses the security picture), Dazzle includes an abstract validation app: `examples/shapes_validation/`.
+Rather than testing RBAC against a real domain (where business logic confuses the security picture), Dazzle includes an abstract validation app: `fixtures/shapes_validation/`.
 
 The domain is geometric: Shapes have a form, colour, and material, and belong to a Realm. Seven personas exercise every RBAC pattern:
 
@@ -135,7 +135,7 @@ The Shapes RBAC matrix runs as a security gate in CI on every push:
 ```yaml
 - name: Validate Shapes RBAC matrix (security gate)
   run: |
-    cd examples/shapes_validation
+    cd fixtures/shapes_validation
     python -m dazzle rbac matrix --format json > /tmp/rbac-matrix.json
     # Fails CI if any entity has PERMIT_UNPROTECTED decisions
 ```

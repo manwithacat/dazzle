@@ -126,7 +126,7 @@ def get_example_metadata() -> dict[str, Any]:
         },
         "pra": {
             "name": "pra",
-            "path": "examples/pra",
+            "path": "fixtures/pra",
             "title": "PRA Reference App",
             "description": "Comprehensive reference app demonstrating experiences (wizards), "
             "processes, services, state machines, and advanced DSL features",
@@ -188,103 +188,8 @@ def get_example_metadata() -> dict[str, Any]:
 
 
 def get_archived_example_metadata() -> dict[str, Any]:
-    """
-    Get metadata about archived DAZZLE example projects.
-
-    These projects are in examples/_archive/ and are not currently maintained.
-    They remain for reference and may be restored in the future.
-    """
-    return {
-        "uptime_monitor": {
-            "name": "uptime_monitor",
-            "path": "examples/_archive/uptime_monitor",
-            "title": "Uptime Monitor",
-            "description": "Single dominant KPI dashboard pattern for executive dashboards and SLA monitoring",
-            "demonstrates": [
-                "entities",
-                "surfaces",
-                "workspace",
-                "archetype_focus_metric",
-                "kpi_dashboard",
-                "aggregates",
-            ],
-            "v0_2_features": ["workspace", "aggregates"],
-            "complexity": "intermediate",
-            "entities": ["Service"],
-            "stage": "focus_metric",
-            "archived": True,
-        },
-        "inventory_scanner": {
-            "name": "inventory_scanner",
-            "path": "examples/_archive/inventory_scanner",
-            "title": "Inventory Scanner",
-            "description": "Data-heavy browsing and filtering pattern for admin panels and catalog browsing",
-            "demonstrates": [
-                "entities",
-                "surfaces",
-                "archetype_scanner_table",
-                "filtering",
-                "data_browsing",
-            ],
-            "v0_2_features": [],
-            "complexity": "intermediate",
-            "entities": ["Product"],
-            "archetype": "SCANNER_TABLE",
-            "archived": True,
-        },
-        "email_client": {
-            "name": "email_client",
-            "path": "examples/_archive/email_client",
-            "title": "Email Client",
-            "description": "Multi-signal dashboard pattern for operations dashboards and notifications",
-            "demonstrates": [
-                "entities",
-                "surfaces",
-                "workspace",
-                "archetype_monitor_wall",
-                "multi_signal",
-                "attention_signals",
-            ],
-            "v0_2_features": ["workspace", "attention_signals"],
-            "complexity": "intermediate",
-            "entities": ["Message"],
-            "archetype": "MONITOR_WALL",
-            "archived": True,
-        },
-        "urban_canopy": {
-            "name": "urban_canopy",
-            "path": "examples/_archive/urban_canopy",
-            "title": "Urban Canopy",
-            "description": "Advanced example demonstrating local vocabulary for domain-specific terminology",
-            "demonstrates": [
-                "entities",
-                "surfaces",
-                "workspace",
-                "local_vocabulary",
-                "domain_patterns",
-            ],
-            "v0_2_features": ["local_vocabulary", "workspace"],
-            "complexity": "advanced",
-            "archived": True,
-        },
-        "archetype_showcase": {
-            "name": "archetype_showcase",
-            "path": "examples/_archive/archetype_showcase",
-            "title": "Archetype Showcase",
-            "description": "Reference implementation demonstrating all available layout archetypes",
-            "demonstrates": [
-                "archetype_dual_pane_flow",
-                "archetype_focus_metric",
-                "archetype_scanner_table",
-                "archetype_monitor_wall",
-                "archetype_command_center",
-            ],
-            "v0_2_features": [],
-            "complexity": "reference",
-            "purpose": "Layout archetype reference",
-            "archived": True,
-        },
-    }
+    """Archived examples have been deleted. Returns empty dict for backward compat."""
+    return {}
 
 
 def search_examples(

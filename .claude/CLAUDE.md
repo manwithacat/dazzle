@@ -121,7 +121,9 @@ dazzle specs asyncapi
 
 ## Examples
 
-All in `examples/`: `simple_task`, `contact_manager`, `ops_dashboard`, `pra`, `fieldtest_hub`, `llm_ticket_classifier`, `support_tickets`, `rbac_validation`
+Working Dazzle apps in `examples/`: `simple_task`, `contact_manager`, `support_tickets`, `ops_dashboard`, `fieldtest_hub`
+
+Internal fixtures in `fixtures/`: `shapes_validation`, `rbac_validation`, `pra`, `component_showcase`, `design_studio`, `project_tracker`, `llm_ticket_classifier`
 
 ## LSP Server
 

@@ -82,7 +82,7 @@ jobs:
 
     - name: Validate Shapes RBAC matrix (security gate)
       run: |
-        cd examples/shapes_validation
+        cd fixtures/shapes_validation
         python -m dazzle rbac matrix --format json > /tmp/rbac-matrix.json
         python3 -c "
         import json, sys

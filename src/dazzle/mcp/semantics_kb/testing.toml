@@ -67,5 +67,5 @@ related = ["capability_discovery", "entity_completeness"]
 category = "Testing"
 doc_page = "testing"
 doc_order = 7
-definition = "NIST SP 800-162 compliance validation for Cedar-style permit/forbid/audit policies. Validates policy completeness, conflict detection, separation of duty, least privilege, default deny, and audit coverage. Uses the policy handler's analysis functions (_analyze, _find_conflicts, _coverage_matrix). Reference implementation: examples/rbac_validation/ and tests/unit/test_rbac_validation.py."
+definition = "NIST SP 800-162 compliance validation for Cedar-style permit/forbid/audit policies. Validates policy completeness, conflict detection, separation of duty, least privilege, default deny, and audit coverage. Uses the policy handler's analysis functions (_analyze, _find_conflicts, _coverage_matrix). Reference implementation: fixtures/rbac_validation/ and tests/unit/test_rbac_validation.py."
 related = ["capability_discovery", "e2e_testing", "access_rules"]
