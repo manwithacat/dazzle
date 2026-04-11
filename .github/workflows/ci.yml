@@ -142,7 +142,7 @@ jobs:
 
     - name: Check DSL files (strict mode)
       run: |
-        for dir in examples/*/; do
+        for dir in examples/*/ fixtures/*/; do
           if [ -f "${dir}dazzle.toml" ]; then
             example=$(basename "$dir")
             echo "Checking DSL for $example..."
@@ -157,8 +157,8 @@ jobs:
         # Install AsyncAPI CLI for validation
         npm install -g @asyncapi/cli
 
-        # Generate and validate AsyncAPI for each example
-        for dir in examples/*/; do
+        # Generate and validate AsyncAPI for each example and fixture
+        for dir in examples/*/ fixtures/*/; do
           if [ -f "${dir}dazzle.toml" ]; then
             example=$(basename "$dir")
             echo "Generating AsyncAPI for $example..."
@@ -247,9 +247,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev,llm,mcp,mobile]"
 
-    - name: Validate all example projects
+    - name: Validate all example and fixture projects
       run: |
-        for dir in examples/*/; do
+        for dir in examples/*/ fixtures/*/; do
           if [ -f "${dir}dazzle.toml" ]; then
             example=$(basename "$dir")
             echo "Validating $example..."
@@ -261,7 +261,7 @@ jobs:
 
     - name: Lint all example DSL files
       run: |
-        for dir in examples/*/; do
+        for dir in examples/*/ fixtures/*/; do
           if [ -f "${dir}dazzle.toml" ]; then
             example=$(basename "$dir")
             echo "Linting $example..."
