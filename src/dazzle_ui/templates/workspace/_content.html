@@ -63,7 +63,7 @@
     </div>
   </div>
 
-  {# Card grid — SortableJS container #}
+  {# Card grid — drag-and-drop container #}
   <div class="grid grid-cols-1 md:grid-cols-12 gap-4" data-dashboard-grid
        {% if workspace.sse_url %}hx-ext="sse"
        sse-connect="{{ workspace.sse_url }}"{% endif %}>
