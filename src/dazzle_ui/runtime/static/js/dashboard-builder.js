@@ -204,8 +204,10 @@ document.addEventListener("alpine:init", () => {
         placeholderIndex: this.cards.findIndex((c) => c.id === cardId),
       };
 
-      cardEl.setPointerCapture(e.pointerId);
       this._dragPointerId = e.pointerId;
+      // Note: we do NOT use setPointerCapture here — it would route
+      // pointermove events to the card element instead of window,
+      // breaking our @pointermove.window handler on the grid container.
     },
 
     onPointerMoveDrag(e) {
@@ -390,8 +392,7 @@ document.addEventListener("alpine:init", () => {
         gridLeft: gridRect.left,
       };
 
-      const target = e.target;
-      if (target.setPointerCapture) target.setPointerCapture(e.pointerId);
+      // No setPointerCapture — we use @pointermove.window on the grid container
       document.body.classList.add("select-none");
       document.body.style.cursor = "col-resize";
     },
