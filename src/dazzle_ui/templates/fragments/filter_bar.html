@@ -1,16 +1,18 @@
-{# Filter bar fragment - renders filter inputs for filterable columns #}
+{# Filter bar fragment — pure Tailwind, same HTMX wiring and filter logic #}
 {% set tbody_target = '#' + (table.table_id or 'dt-table') + '-body' %}
 <div class="flex flex-wrap gap-2 items-end">
   {% for col in table.columns %}
   {% if col.filterable %}
-  <div class="form-control w-40">
-    <label class="label py-0">
-      <span class="label-text text-xs">{{ col.label }}</span>
+  <div class="flex flex-col gap-0.5 w-40">
+
+    <label class="text-[12px] font-medium text-[hsl(var(--muted-foreground))]">
+      {{ col.label }}
     </label>
+
     {% if col.filter_type == "select" and col.filter_ref_entity %}
-    {# Ref/belongs_to filter: select with dynamically loaded options from the referenced entity API #}
+    {# Ref/belongs_to filter: select with dynamically loaded options #}
     <select name="filter[{{ col.key }}]"
-            class="select select-bordered select-sm w-full"
+            class="h-8 w-full rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 text-[13px] text-[hsl(var(--foreground))] outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-shadow duration-[120ms]"
             hx-get="{{ table.api_endpoint }}"
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
@@ -42,9 +44,11 @@
         </option>
       </template>
     </select>
+
     {% elif col.filter_type == "select" %}
+    {# Enum/static select filter #}
     <select name="filter[{{ col.key }}]"
-            class="select select-bordered select-sm w-full"
+            class="h-8 w-full rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 text-[13px] text-[hsl(var(--foreground))] outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-shadow duration-[120ms]"
             hx-get="{{ table.api_endpoint }}"
             hx-target="{{ tbody_target }}"
             hx-swap="innerHTML"
@@ -60,12 +64,14 @@
       </option>
       {% endfor %}
     </select>
+
     {% else %}
+    {# Text filter #}
     <input type="text"
            name="filter[{{ col.key }}]"
-           placeholder="Filter {{ col.label | lower }}..."
+           placeholder="Filter {{ col.label | lower }}…"
            value="{{ table.filter_values.get(col.key, '') if table.filter_values else '' }}"
-           class="input input-bordered input-sm w-full"
+           class="h-8 w-full rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] [transition-timing-function:cubic-bezier(0.2,0,0,1)] transition-shadow duration-[120ms]"
            hx-get="{{ table.api_endpoint }}"
            hx-target="{{ tbody_target }}"
            hx-swap="innerHTML"
@@ -74,6 +80,7 @@
            hx-headers='{"Accept": "text/html"}'
            hx-indicator="#{{ table.table_id or 'dt-table' }}-loading" />
     {% endif %}
+
   </div>
   {% endif %}
   {% endfor %}

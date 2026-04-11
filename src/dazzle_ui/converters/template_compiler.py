@@ -730,6 +730,20 @@ def _compile_list_surface(
         else ("Use search or filters to find results." if search_first else "No items found.")
     )
     table_id = f"dt-{surface.name}"
+
+    # Derive inline-editable columns from field types.
+    # Editable: text, bool, badge (enum), date.
+    # Not editable: pk, ref, computed, sensitive, money, _id FK columns.
+    _EDITABLE_COL_TYPES = {"text", "bool", "badge", "date"}
+    _NON_EDITABLE_KEYS = {"id", "created_at", "updated_at"}
+    inline_editable = [
+        col.key
+        for col in columns
+        if col.type in _EDITABLE_COL_TYPES
+        and col.key not in _NON_EDITABLE_KEYS
+        and not col.key.endswith("_id")
+    ]
+
     return PageContext(
         page_title=surface.title or f"{entity_name} List",
         template="components/filterable_table.html",
@@ -749,6 +763,8 @@ def _compile_list_surface(
             empty_message=empty_message,
             search_first=search_first,
             table_id=table_id,
+            inline_editable=inline_editable,
+            bulk_actions=True,
         ),
     )
 
