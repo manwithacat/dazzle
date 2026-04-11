@@ -1,15 +1,29 @@
 {# Card picker popover — lists available regions from the catalog #}
-<div x-show="showPicker" x-transition
+<div x-show="showPicker"
+     x-transition:enter="transition duration-[140ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+     x-transition:enter-start="opacity-0 -translate-y-1"
+     x-transition:enter-end="opacity-100 translate-y-0"
+     x-transition:leave="transition duration-[80ms]"
+     x-transition:leave-start="opacity-100"
+     x-transition:leave-end="opacity-0"
      @click.away="showPicker = false"
-     class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80 bg-base-100 shadow-xl rounded-lg border border-base-300 p-3 z-50 max-h-64 overflow-y-auto">
-  <h4 class="text-sm font-semibold mb-2">Add a card</h4>
+     class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-80
+            bg-[hsl(var(--popover))] text-[hsl(var(--popover-foreground))]
+            shadow-[0_4px_8px_rgb(0_0_0/0.08),0_2px_4px_rgb(0_0_0/0.04)]
+            rounded-md border border-[hsl(var(--border))]
+            p-3 z-50 max-h-64 overflow-y-auto">
+  <h4 class="text-[12px] font-medium uppercase tracking-[0.04em] text-[hsl(var(--muted-foreground))] mb-2">Add a card</h4>
   <template x-for="item in catalog" :key="item.name">
     <button @click="addCard(item.name)"
-            class="w-full text-left px-3 py-2 rounded hover:bg-base-200 flex items-center gap-2 text-sm">
-      <span class="badge badge-sm badge-ghost" x-text="item.display.toLowerCase()"></span>
-      <span x-text="item.title"></span>
-      <span class="text-xs opacity-50 ml-auto" x-text="item.entity"></span>
+            class="w-full text-left px-3 py-2 rounded-[4px]
+                   hover:bg-[hsl(var(--muted))]
+                   transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+                   flex items-center gap-2 text-[13px]">
+      <span class="px-1.5 py-0.5 rounded-[4px] bg-[hsl(var(--muted))] text-[11px] font-medium text-[hsl(var(--muted-foreground))]"
+            x-text="item.display.toLowerCase()"></span>
+      <span x-text="item.title" class="text-[hsl(var(--foreground))]"></span>
+      <span class="text-[11px] text-[hsl(var(--muted-foreground))] ml-auto" x-text="item.entity"></span>
     </button>
   </template>
-  <div x-show="catalog.length === 0" class="text-sm opacity-50 py-2">No widgets available.</div>
+  <div x-show="catalog.length === 0" class="text-[13px] text-[hsl(var(--muted-foreground))] py-2">No widgets available.</div>
 </div>

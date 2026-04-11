@@ -2,13 +2,14 @@
 <script type="application/json" id="dz-workspace-layout">{{ layout_json | safe }}</script>
 <div class="p-4" x-data="dzDashboardBuilder()">
   {% if workspace.purpose %}
-  <p class="text-sm opacity-60 mb-4">{{ workspace.purpose }}</p>
+  <p class="text-[13px] leading-[18px] text-[hsl(var(--muted-foreground))] mb-4">{{ workspace.purpose }}</p>
   {% endif %}
 
   {% if workspace.context_options_url %}
   <div class="mb-4 flex items-center gap-2">
-    <label class="text-sm font-medium" for="dz-context-selector">{{ workspace.context_selector_label or workspace.context_selector_entity.replace('_', ' ') }}:</label>
-    <select id="dz-context-selector" class="select select-bordered select-sm">
+    <label class="text-[13px] font-medium" for="dz-context-selector">{{ workspace.context_selector_label or workspace.context_selector_entity.replace('_', ' ') }}:</label>
+    <select id="dz-context-selector"
+            class="h-8 rounded-[4px] border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-2 text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring))]">
       <option value="">All</option>
     </select>
   </div>
@@ -49,66 +50,124 @@
   </script>
   {% endif %}
 
-  {# Dashboard header with reset menu #}
-  <div class="flex items-center justify-end mb-4">
-    <div class="dropdown dropdown-end">
-      <label tabindex="0" class="btn btn-sm btn-ghost">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
-        </svg>
-      </label>
-      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50">
-        <li><a @click="resetLayout()">Reset to default layout</a></li>
-      </ul>
-    </div>
+  {# ── Toolbar ── #}
+  <div class="flex items-center justify-end gap-2 mb-4">
+    <div class="flex-1"></div>
+
+    {# Reset button #}
+    <button @click="resetLayout()"
+            class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))]
+                   transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+                   hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]">
+      Reset
+    </button>
+
+    {# Save button — reflects saveState #}
+    <button @click="save()"
+            :disabled="saveState === 'clean' || saveState === 'saving' || saveState === 'saved'"
+            :class="{
+              'text-[hsl(var(--muted-foreground))] cursor-default': saveState === 'clean',
+              'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]': saveState === 'dirty',
+              'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] opacity-70': saveState === 'saving',
+              'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))]': saveState === 'saved',
+              'border-[hsl(var(--destructive))] text-[hsl(var(--destructive))]': saveState === 'error',
+            }"
+            :title="saveState === 'error' ? _saveError : ''"
+            class="h-8 px-3 rounded-[4px] text-[13px] font-medium border border-transparent
+                   transition-all duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+      <span x-show="saveState === 'clean'">Saved</span>
+      <span x-show="saveState === 'dirty'">Save layout</span>
+      <span x-show="saveState === 'saving'" class="flex items-center gap-1">
+        <svg class="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+        Saving
+      </span>
+      <span x-show="saveState === 'saved'" class="flex items-center gap-1">
+        <svg class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+        Saved
+      </span>
+      <span x-show="saveState === 'error'">Retry</span>
+    </button>
   </div>
 
-  {# Card grid — drag-and-drop container #}
-  <div class="grid grid-cols-1 md:grid-cols-12 gap-4" data-dashboard-grid
-       {% if workspace.sse_url %}hx-ext="sse"
-       sse-connect="{{ workspace.sse_url }}"{% endif %}>
+  {# ── Card Grid ── #}
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-4"
+       data-grid-container
+       role="application"
+       aria-label="Dashboard card grid"
+       {% if workspace.sse_url %}hx-ext="sse" sse-connect="{{ workspace.sse_url }}"{% endif %}
+       @pointermove.window="onPointerMoveDrag($event); onPointerMoveResize($event)"
+       @pointerup.window="endDrag($event); endResize($event)">
+
     <template x-for="card in cards" :key="card.id">
-      <div class="transition-all duration-200 relative group"
-           :data-card-id="card.id"
-           :style="'grid-column: span ' + Math.min(card.col_span, 12) + ' / span ' + Math.min(card.col_span, 12)">
-        {# Drag handle — visible on hover #}
-        <div class="absolute -top-0 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10" data-drag-handle>
-          <span class="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-base-200">
-            <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
-          </span>
-        </div>
-        {# Remove button — visible on hover #}
-        <button @click="removeCard(card.id)"
-                class="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 btn btn-circle btn-xs btn-ghost">
-          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-        {# Card content — HTMX lazy-loaded #}
-        <div class="card bg-base-100 shadow-sm"
-             :id="'region-' + card.region + '-' + card.id"
-             :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
-             hx-trigger="intersect once{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
-             hx-swap="innerHTML">
-          <div class="card-body">
-            <h3 class="card-title text-sm" x-text="card.title"></h3>
-            <div class="space-y-3 py-2">
-              <div class="dz-skeleton dz-skeleton-text-lg"></div>
-              <div class="dz-skeleton dz-skeleton-text" style="width: 90%"></div>
-              <div class="dz-skeleton dz-skeleton-text" style="width: 75%"></div>
+      <div :data-card-id="card.id"
+           :style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"
+           :class="{ 'transition-all duration-[200ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]': !isDragging(card.id) && !drag }"
+           tabindex="0"
+           @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
+           class="relative group outline-none focus:ring-2 focus:ring-[hsl(var(--ring))] focus:ring-offset-2 rounded-md">
+
+        {# Card chrome #}
+        <article class="rounded-md border bg-[hsl(var(--card))] overflow-hidden
+                        transition-[border-color,box-shadow] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+                 :class="{
+                   'border-[hsl(var(--border))]': !isResizing(card.id),
+                   'border-dashed border-[hsl(var(--primary))]': isResizing(card.id),
+                 }"
+                 role="article"
+                 :aria-labelledby="'card-title-' + card.id">
+
+          {# Card header — drag handle zone #}
+          <div class="flex items-center justify-between px-4 py-2 cursor-grab active:cursor-grabbing min-h-[36px]"
+               :class="{ 'cursor-grabbing': isDragging(card.id) }"
+               @pointerdown="startDrag(card.id, $event)">
+            <h3 :id="'card-title-' + card.id"
+                class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))] select-none"
+                x-text="card.title"></h3>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-[80ms]">
+              <button @click.stop="removeCard(card.id)"
+                      class="h-6 w-6 flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))]
+                             hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
+                             transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+                      aria-label="Remove card">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
             </div>
           </div>
-        </div>
-        {# Resize handle — right edge #}
-        <div @mousedown="startResize(card.id, $event)"
-             @touchstart="startResize(card.id, $event)"
-             class="absolute top-0 right-0 w-1 h-full cursor-col-resize opacity-0 group-hover:opacity-100 hover:bg-primary/30 transition-opacity rounded-r"></div>
+
+          {# Card body — HTMX lazy-loaded region content #}
+          <div class="px-4 pb-4"
+               :id="'region-' + card.region + '-' + card.id"
+               :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
+               hx-trigger="intersect once{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
+               hx-swap="innerHTML">
+            {# Skeleton loading state #}
+            <div class="space-y-3 py-2 animate-pulse">
+              <div class="h-4 bg-[hsl(var(--muted))] rounded w-3/4"></div>
+              <div class="h-3 bg-[hsl(var(--muted))] rounded w-full"></div>
+              <div class="h-3 bg-[hsl(var(--muted))] rounded w-5/6"></div>
+            </div>
+          </div>
+        </article>
+
+        {# Resize handle — right edge, visible on hover #}
+        <div @pointerdown="startResize(card.id, $event)"
+             class="absolute top-0 right-0 w-1.5 h-full cursor-col-resize
+                    opacity-0 group-hover:opacity-100 transition-opacity duration-[80ms]
+                    hover:bg-[hsl(var(--primary)/0.3)] rounded-r-md"
+             aria-hidden="true"></div>
       </div>
     </template>
   </div>
 
-  {# Add Card button #}
+  {# ── Add Card ── #}
   <div class="relative flex justify-center mt-4">
     <button @click="showPicker = !showPicker"
-            class="btn btn-sm btn-ghost btn-wide border-2 border-dashed border-base-300 hover:border-primary">
+            class="h-8 px-4 text-[13px] font-medium rounded-md
+                   border-2 border-dashed border-[hsl(var(--border))]
+                   text-[hsl(var(--muted-foreground))]
+                   hover:border-[hsl(var(--primary))] hover:text-[hsl(var(--foreground))]
+                   transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+                   flex items-center gap-2">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Add Card
     </button>
@@ -116,20 +175,20 @@
   </div>
 </div>
 
-{# Detail drawer (unchanged) #}
+{# Detail drawer (preserved unchanged) #}
 <div id="dz-drawer-backdrop"
      class="fixed inset-0 z-40 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300"
      onclick="window.dzDrawer.close()"></div>
 <aside id="dz-detail-drawer"
-       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-base-100 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out">
-  <div class="flex items-center justify-between px-4 py-3 border-b border-base-200 bg-base-100 shrink-0">
-    <button class="btn btn-ghost btn-sm gap-1" onclick="window.dzDrawer.close()">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-[hsl(var(--background))] shadow-2xl translate-x-full transition-transform duration-300 ease-in-out">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-[hsl(var(--border))] shrink-0">
+    <button class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] flex items-center gap-1" onclick="window.dzDrawer.close()">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       Close
     </button>
-    <a id="dz-drawer-expand" href="#" class="btn btn-ghost btn-sm gap-1">
+    <a id="dz-drawer-expand" href="#" class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] flex items-center gap-1">
       Open full page
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
     </a>
   </div>
   <div id="dz-detail-drawer-content" class="flex-1 overflow-y-auto p-4"></div>
