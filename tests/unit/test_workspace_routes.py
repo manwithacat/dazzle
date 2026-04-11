@@ -703,11 +703,13 @@ class TestWorkspaceSSEConditional:
         assert "sse:entity.created" in html
 
     def test_regions_still_load_without_sse(self) -> None:
-        """Regions should still have hx-get and load trigger even without SSE."""
+        """Regions should still have hx-get and a non-SSE trigger even without SSE."""
         ws = self._make_workspace_ctx(sse_url="")
         html = render_fragment("workspace/_content.html", workspace=ws)
         assert "hx-get=" in html
-        assert 'hx-trigger="load"' in html
+        # Dashboard rebuild uses intersect-based lazy loading instead of load trigger
+        assert "hx-trigger=" in html
+        assert "intersect" in html
 
 
 # ---------------------------------------------------------------------------

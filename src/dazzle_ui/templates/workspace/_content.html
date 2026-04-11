@@ -8,7 +8,7 @@
   {% if workspace.context_options_url %}
   <div class="mb-4 flex items-center gap-2">
     <label class="text-sm font-medium" for="dz-context-selector">{{ workspace.context_selector_label or workspace.context_selector_entity.replace('_', ' ') }}:</label>
-    <select id="dz-context-selector" class="select select-bordered select-sm">
+    <select id="dz-context-selector" class="border border-zinc-300 dark:border-zinc-600 rounded px-2 py-1 text-sm bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
       <option value="">All</option>
     </select>
   </div>
@@ -51,14 +51,17 @@
 
   {# Dashboard header with reset menu #}
   <div class="flex items-center justify-end mb-4">
-    <div class="dropdown dropdown-end">
-      <label tabindex="0" class="btn btn-sm btn-ghost">
+    <div class="relative" x-data="{ open: false }">
+      <button @click="open = !open" @click.outside="open = false"
+              class="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/>
         </svg>
-      </label>
-      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50">
-        <li><a @click="resetLayout()">Reset to default layout</a></li>
+      </button>
+      <ul x-show="open" x-transition
+          class="absolute right-0 mt-1 w-52 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-lg z-50 py-1">
+        <li><a @click="resetLayout(); open = false"
+               class="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 cursor-pointer">Reset to default layout</a></li>
       </ul>
     </div>
   </div>
@@ -73,23 +76,23 @@
            :style="'grid-column: span ' + Math.min(card.col_span, 12) + ' / span ' + Math.min(card.col_span, 12)">
         {# Drag handle — visible on hover #}
         <div class="absolute -top-0 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10" data-drag-handle>
-          <span class="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-base-200">
+          <span class="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-700">
             <svg class="w-4 h-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/></svg>
           </span>
         </div>
         {# Remove button — visible on hover #}
         <button @click="removeCard(card.id)"
-                class="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 btn btn-circle btn-xs btn-ghost">
+                class="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 w-5 h-5 flex items-center justify-center rounded-full bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 shadow-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
         {# Card content — HTMX lazy-loaded #}
-        <div class="card bg-base-100 shadow-sm"
+        <div class="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-sm overflow-hidden"
              :id="'region-' + card.region + '-' + card.id"
              :hx-get="'/api/workspaces/{{ workspace.name }}/regions/' + card.region"
              hx-trigger="intersect once{% if workspace.sse_url %}, sse:entity.created, sse:entity.updated, sse:entity.deleted{% endif %}"
              hx-swap="innerHTML">
-          <div class="card-body">
-            <h3 class="card-title text-sm" x-text="card.title"></h3>
+          <div class="p-4">
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-2" x-text="card.title"></h3>
             <div class="space-y-3 py-2">
               <div class="dz-skeleton dz-skeleton-text-lg"></div>
               <div class="dz-skeleton dz-skeleton-text" style="width: 90%"></div>
@@ -108,7 +111,7 @@
   {# Add Card button #}
   <div class="relative flex justify-center mt-4">
     <button @click="showPicker = !showPicker"
-            class="btn btn-sm btn-ghost btn-wide border-2 border-dashed border-base-300 hover:border-primary">
+            class="w-full max-w-xs flex items-center justify-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600 text-sm text-zinc-500 dark:text-zinc-400 hover:border-indigo-400 hover:text-indigo-600 dark:hover:border-indigo-500 dark:hover:text-indigo-400 transition-colors bg-transparent">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
       Add Card
     </button>
@@ -121,13 +124,13 @@
      class="fixed inset-0 z-40 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300"
      onclick="window.dzDrawer.close()"></div>
 <aside id="dz-detail-drawer"
-       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-base-100 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out">
-  <div class="flex items-center justify-between px-4 py-3 border-b border-base-200 bg-base-100 shrink-0">
-    <button class="btn btn-ghost btn-sm gap-1" onclick="window.dzDrawer.close()">
+       class="fixed inset-y-0 right-0 z-50 flex flex-col w-full sm:max-w-2xl bg-white dark:bg-zinc-900 shadow-2xl translate-x-full transition-transform duration-300 ease-in-out">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shrink-0">
+    <button class="inline-flex items-center gap-1 px-2 py-1 rounded text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" onclick="window.dzDrawer.close()">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
       Close
     </button>
-    <a id="dz-drawer-expand" href="#" class="btn btn-ghost btn-sm gap-1">
+    <a id="dz-drawer-expand" href="#" class="inline-flex items-center gap-1 px-2 py-1 rounded text-sm text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors">
       Open full page
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
     </a>
