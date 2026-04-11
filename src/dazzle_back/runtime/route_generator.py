@@ -17,6 +17,7 @@ from dazzle_back.runtime._fastapi_compat import (
     Depends,
     HTMLResponse,
     HTTPException,
+    JSONResponse,
     Query,
     Request,
 )
@@ -3001,5 +3002,73 @@ def generate_crud_routes(
             "deleted",
             redirect_url=_htmx_parent_url(request),
         )
+
+    # Patch field — inline edit support for data tables
+    @router.patch(
+        f"{prefix}/{{entity_id}}/field/{{field_name}}",
+        tags=tags,
+        summary=f"Update a single field on {entity_name}",
+    )
+    async def patch_field(entity_id: UUID, field_name: str, request: Request) -> Any:
+        from fastapi.responses import PlainTextResponse
+
+        # Validate: reject protected / computed fields
+        _PROTECTED_FIELDS = {"id", "created_at", "updated_at"}
+        if field_name in _PROTECTED_FIELDS or field_name.endswith("_id"):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Field '{field_name}' is not inline-editable",
+            )
+
+        # Validate: field must exist on the model
+        model_fields = set(model.model_fields.keys()) if hasattr(model, "model_fields") else set()
+        if model_fields and field_name not in model_fields:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Field '{field_name}' does not exist on {entity_name}",
+            )
+
+        # Parse form body
+        form_data = await request.form()
+        value = form_data.get("value")
+
+        result = await service.execute(
+            operation="update",
+            id=entity_id,
+            data={field_name: value},
+        )
+        if result is None:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        # Return the new value as plain text; the template handles rendering
+        updated_value = (
+            result.get(field_name, "")
+            if isinstance(result, dict)
+            else getattr(result, field_name, "")
+        )
+        return PlainTextResponse(content=str(updated_value) if updated_value is not None else "")
+
+    # Bulk delete — batch removal for data table bulk actions
+    @router.post(
+        f"{prefix}/bulk-delete",
+        tags=tags,
+        summary=f"Bulk delete {entity_name} records",
+    )
+    async def bulk_delete(request: Request) -> Any:
+        body = await request.json()
+        ids: list[Any] = body.get("ids", [])
+        if not ids:
+            return JSONResponse({"error": "No IDs provided"}, status_code=422)
+
+        deleted = 0
+        for item_id in ids:
+            try:
+                await service.execute(operation="delete", id=item_id)
+                deleted += 1
+            except Exception:
+                # Skip items the user cannot access or that no longer exist
+                pass
+
+        return JSONResponse({"deleted": deleted, "total": len(ids)})
 
     return router
