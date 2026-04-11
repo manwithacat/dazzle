@@ -1,142 +1,311 @@
-{# Filterable table component — Alpine dzTable for all state #}
+{# filterable_table.html — pure Tailwind data table, ux-architect/components/data-table contract #}
 {% if table %}
-<div id="{{ table.table_id or 'dt-table' }}"
-     class="space-y-4"
-     x-data="dzTable('{{ table.table_id or 'dt-table' }}', '{{ table.api_endpoint }}', '{{ table.sort_field }}', '{{ table.sort_dir }}')"
-     data-dazzle-table="{{ table.entity_name }}">
+{%- set config_json = {
+      "sortField": table.default_sort_field,
+      "sortDir": table.default_sort_dir,
+      "inlineEditable": table.inline_editable,
+      "bulkActions": table.bulk_actions,
+      "entityName": table.entity_name
+    } | tojson -%}
+<div id="{{ table.table_id }}"
+     data-dz-table="{{ table.entity_name }}"
+     x-data="dzTable('{{ table.table_id }}', '{{ table.api_endpoint }}', {{ config_json }})"
+     @pointermove.window="onResizeMove($event)"
+     @pointerup.window="endResize($event)"
+     :aria-busy="loading"
+     class="flex flex-col gap-3">
 
-  {# Header row: title + actions #}
+  {# ── Table header: title + actions ───────────────────────────────────────── #}
   {% block table_header %}
   <div class="flex items-center justify-between">
-    <h2 class="text-2xl font-bold">{{ table.title }}</h2>
-    <div class="flex gap-2">
-      {# Column visibility toggle #}
+    <h2 class="text-[15px] font-medium leading-[22px] tracking-[-0.01em] text-[hsl(var(--foreground))]">
+      {{ table.title }}
+    </h2>
+    <div class="flex items-center gap-2">
+
+      {# Column visibility menu #}
       {% if table.columns | length > 3 %}
-      <div @click.outside="colMenuOpen = false" class="relative">
-        <button @click="colMenuOpen = !colMenuOpen" class="btn btn-ghost btn-sm" aria-label="Toggle column visibility">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="w-4 h-4 stroke-current" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h18M3 8h18M3 12h18M3 16h18M3 20h18"/></svg>
+      <div class="relative" @click.outside="colMenuOpen = false">
+        <button
+          type="button"
+          @click="colMenuOpen = !colMenuOpen"
+          :aria-expanded="colMenuOpen"
+          aria-label="Toggle column visibility"
+          aria-haspopup="menu"
+          class="inline-flex items-center gap-1.5 h-7 px-2 rounded-[4px] text-[12px] font-medium
+                 text-[hsl(var(--muted-foreground))] border border-[hsl(var(--border))]
+                 bg-[hsl(var(--background))] hover:bg-[hsl(var(--card))]
+                 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+                 select-none">
+          {# Columns icon #}
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"
+               xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="1" width="3" height="12" rx="0.5" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="5.5" y="1" width="3" height="12" rx="0.5" stroke="currentColor" stroke-width="1.5"/>
+            <rect x="10" y="1" width="3" height="12" rx="0.5" stroke="currentColor" stroke-width="1.5"/>
+          </svg>
           Columns
         </button>
-        <div x-show="colMenuOpen" x-transition
-             class="absolute right-0 mt-2 w-48 bg-base-100 shadow-lg rounded-box p-2 z-50">
+
+        {# Column visibility dropdown #}
+        <div x-show="colMenuOpen"
+             x-transition:enter="transition duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+             x-transition:enter-start="opacity-0 scale-[0.97]"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-[0.97]"
+             role="menu"
+             class="absolute right-0 top-full mt-1 w-44 z-[100]
+                    bg-[hsl(var(--card))] border border-[hsl(var(--border))]
+                    rounded-[6px] shadow-[0_4px_8px_rgb(0_0_0/0.08),0_2px_4px_rgb(0_0_0/0.04)]
+                    py-1 overflow-hidden">
           {% for col in table.columns %}
           {% if not col.hidden %}
-          <label class="flex items-center gap-2 py-1 px-2 hover:bg-base-200 rounded cursor-pointer">
-            <input type="checkbox" class="checkbox checkbox-xs"
+          <label role="menuitemcheckbox"
+                 class="flex items-center gap-2 px-3 py-1.5 cursor-pointer
+                        text-[13px] text-[hsl(var(--foreground))]
+                        hover:bg-[hsl(var(--muted)/0.5)]
+                        transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+            <input type="checkbox"
+                   class="w-3.5 h-3.5 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer"
                    :checked="isColumnVisible('{{ col.key }}')"
-                   @change="toggleColumn('{{ col.key }}')" />
-            <span class="text-sm">{{ col.label }}</span>
+                   @change="toggleColumn('{{ col.key }}')"
+                   aria-label="Show {{ col.label }} column" />
+            <span>{{ col.label }}</span>
           </label>
           {% endif %}
           {% endfor %}
         </div>
       </div>
       {% endif %}
+
+      {# Create button #}
       {% if table.create_url %}
-      <a href="{{ table.create_url }}" class="btn btn-primary btn-sm" data-dazzle-action="{{ table.entity_name }}.create">+ New {{ table.entity_name }}</a>
+      <a href="{{ table.create_url }}"
+         data-dazzle-action="{{ table.entity_name }}.create"
+         class="inline-flex items-center gap-1 h-7 px-3 rounded-[4px] text-[12px] font-medium
+                bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]
+                hover:opacity-90 transition-opacity duration-[80ms]
+                [transition-timing-function:cubic-bezier(0.2,0,0,1)] select-none">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"
+             xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        New {{ table.entity_name }}
+      </a>
       {% endif %}
     </div>
   </div>
-
   {% endblock table_header %}
 
-  {# Search bar #}
-  {% if table.search_enabled %}
-  {% with endpoint=table.api_endpoint, target='#' + (table.table_id or 'dt-table') + '-body' %}
-  {% include 'fragments/search_input.html' with context %}
-  {% endwith %}
-  {% endif %}
+  {# ── Toolbar: search · filters · bulk actions ─────────────────────────────── #}
+  <div class="flex items-center gap-2 flex-wrap">
+    {# Search — left #}
+    {% if table.search_enabled %}
+    {% with endpoint=table.api_endpoint, target='#' + table.table_id + '-body' %}
+    {% include 'fragments/search_input.html' with context %}
+    {% endwith %}
+    {% endif %}
 
-  {# Filter bar #}
-  {% set has_filters = table.columns | selectattr('filterable') | list | length > 0 %}
-  {% if has_filters %}
-  {% include 'fragments/filter_bar.html' with context %}
-  {% endif %}
-
-  {# Bulk actions toolbar #}
-  {% if table.bulk_actions %}
-  {% with entity_name=table.entity_name, actions_endpoint=table.api_endpoint %}
-  {% include 'fragments/bulk_actions.html' %}
-  {% endwith %}
-  {% endif %}
-
-  {# Skeleton loading indicator #}
-  <div id="{{ table.table_id or 'dt-table' }}-loading" class="htmx-indicator"
-       role="status" aria-label="Loading">
-    <div class="overflow-x-auto">
-      <table class="table table-zebra w-full" aria-hidden="true">
-        <tbody>
-          {% for _ in range(5) %}
-          <tr>
-            {% for col in table.columns %}
-            {% if not col.hidden %}
-            <td data-dz-col="{{ col.key }}"><div class="dz-skeleton dz-skeleton-cell" style="width: {{ range(50, 90) | random }}%"></div></td>
-            {% endif %}
-            {% endfor %}
-            <td><div class="dz-skeleton dz-skeleton-cell" style="width: 40%"></div></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    {# Filter chips — centre, flex-grow #}
+    {%- set has_filters = table.columns | selectattr('filterable') | list | length > 0 -%}
+    {% if has_filters %}
+    <div class="flex-1 min-w-0">
+      {% include 'fragments/filter_bar.html' with context %}
     </div>
-    <span class="sr-only">Loading data...</span>
+    {% endif %}
+
+    {# Bulk actions — right, visible when rows selected #}
+    {% if table.bulk_actions %}
+    {% with entity_name=table.entity_name, actions_endpoint=table.api_endpoint %}
+    {% include 'fragments/bulk_actions.html' with context %}
+    {% endwith %}
+    {% endif %}
   </div>
 
-  {# Table #}
-  <div class="overflow-x-auto" role="region" aria-label="{{ table.title }} table" tabindex="0">
-    <table class="table table-zebra w-full" data-entity="{{ table.entity_name }}"
-           aria-label="{{ table.title }}">
-      <caption class="sr-only">{{ table.title }}</caption>
-      <thead>
-        <tr>
+  {# ── Table scroll + loading overlay container ─────────────────────────────── #}
+  <div class="relative rounded-[6px] border border-[hsl(var(--border))] overflow-hidden">
+
+    {# Loading overlay — sits above the table, dimmed backdrop #}
+    <div x-show="loading"
+         x-transition:enter="transition duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition duration-[140ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         aria-hidden="true"
+         class="absolute inset-0 z-[10] bg-[hsl(var(--background)/0.6)] backdrop-blur-[1px]
+                flex items-center justify-center pointer-events-none">
+      {# Spinner #}
+      <svg class="w-5 h-5 text-[hsl(var(--muted-foreground))] animate-spin" viewBox="0 0 24 24" fill="none"
+           xmlns="http://www.w3.org/2000/svg">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+        <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      </svg>
+      <span class="sr-only">Loading…</span>
+    </div>
+
+    {# Horizontal scroll region #}
+    <div class="overflow-x-auto"
+         role="region"
+         aria-label="{{ table.title }} table"
+         tabindex="0">
+
+      <table class="w-full border-collapse"
+             data-entity="{{ table.entity_name }}"
+             aria-label="{{ table.title }}">
+        <caption class="sr-only">{{ table.title }}</caption>
+
+        {# colgroup — one <col> per visible column. Drives column-resize via pointer events. #}
+        <colgroup>
           {% if table.bulk_actions %}
-          <th scope="col" class="w-10">
-            <input type="checkbox" class="checkbox checkbox-sm"
-                   @change="toggleSelectAll($event.target.checked)"
-                   aria-label="Select all rows" />
-          </th>
+          <col data-col="__select" style="width: 40px">
           {% endif %}
           {% for col in table.columns %}
           {% if not col.hidden %}
-          <th scope="col" data-dz-col="{{ col.key }}"
-              {% if col.sortable %}
-              :aria-sort="ariaSortDir('{{ col.key }}')"
-              {% endif %}>
-            {% if col.sortable %}
-            <button class="inline-flex items-center gap-1 cursor-pointer select-none hover:bg-base-200 rounded px-1 -mx-1"
-                    @click="toggleSort('{{ col.key }}')"
-                    aria-label="Sort by {{ col.label }}">
-              {{ col.label }}
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                   class="w-3 h-3 stroke-current transition-transform"
-                   :class="sortIcon('{{ col.key }}')" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>
-              </svg>
-            </button>
-            {% else %}
-            {{ col.label }}
-            {% endif %}
-          </th>
+          <col data-col="{{ col.key }}"
+               :style="columnWidths['{{ col.key }}'] ? 'width: ' + columnWidths['{{ col.key }}'] + 'px' : ''">
           {% endif %}
           {% endfor %}
-          <th scope="col" class="w-16"><span class="sr-only">Actions</span></th>
-        </tr>
-      </thead>
-      <tbody id="{{ table.table_id or 'dt-table' }}-body"
-             hx-get="{{ table.api_endpoint }}{% if table.sort_field %}?sort={{ table.sort_field }}&dir={{ table.sort_dir }}{% endif %}"
-             {% if not table.search_first %}hx-trigger="load"{% endif %}
-             hx-swap="morph:innerHTML"
-             hx-headers='{"Accept": "text/html"}'
-             hx-indicator="#{{ table.table_id or 'dt-table' }}-loading">
-        {% include 'fragments/table_rows.html' %}
-      </tbody>
-    </table>
+          {# Actions column #}
+          <col data-col="__actions" style="width: 64px">
+        </colgroup>
+
+        {# ── Sticky header ─────────────────────────────────────────────────── #}
+        <thead class="sticky top-0 bg-[hsl(var(--card))] z-10"
+               style="box-shadow: 0 1px 0 hsl(var(--border))">
+          <tr>
+            {# Select-all checkbox #}
+            {% if table.bulk_actions %}
+            <th scope="col"
+                class="w-10 px-3 py-2 text-left">
+              <input type="checkbox"
+                     class="w-3.5 h-3.5 rounded-[2px] accent-[hsl(var(--primary))] cursor-pointer"
+                     @change="toggleSelectAll($event.target.checked)"
+                     :checked="bulkCount > 0 && bulkCount === $el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length"
+                     :indeterminate="bulkCount > 0 && bulkCount < $el.closest('table').querySelectorAll('tbody tr[data-dz-row-id]').length"
+                     aria-label="Select all rows" />
+            </th>
+            {% endif %}
+
+            {# Column headers #}
+            {% for col in table.columns %}
+            {% if not col.hidden %}
+            <th scope="col"
+                data-dz-col="{{ col.key }}"
+                x-show="isColumnVisible('{{ col.key }}')"
+                {% if col.sortable %}:aria-sort="ariaSortDir('{{ col.key }}')"{% endif %}
+                class="relative px-3 py-2 text-left whitespace-nowrap
+                       text-[12px] font-medium uppercase tracking-[0.04em]
+                       text-[hsl(var(--muted-foreground))] select-none">
+
+              {% if col.sortable %}
+              {# Sortable header button #}
+              <button type="button"
+                      @click="toggleSort('{{ col.key }}')"
+                      aria-label="Sort by {{ col.label }}"
+                      class="inline-flex items-center gap-1 cursor-pointer
+                             hover:text-[hsl(var(--foreground))]
+                             transition-colors duration-[80ms]
+                             [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+                {{ col.label }}
+                {# 12px chevron SVG — rotated by Alpine sortIcon() #}
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"
+                     xmlns="http://www.w3.org/2000/svg"
+                     :class="sortIcon('{{ col.key }}')"
+                     class="transition-transform duration-[80ms]
+                            [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+                  <path d="M2 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              {% else %}
+              {{ col.label }}
+              {% endif %}
+
+              {# Resize handle — 4px wide, right edge of th #}
+              <div role="separator"
+                   aria-orientation="vertical"
+                   aria-label="Resize {{ col.label }} column"
+                   @pointerdown="startColumnResize('{{ col.key }}', $event)"
+                   class="absolute top-0 right-0 w-1 h-full cursor-col-resize
+                          hover:bg-[hsl(var(--primary)/0.5)]
+                          transition-colors duration-[80ms]
+                          [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+                          z-10">
+              </div>
+            </th>
+            {% endif %}
+            {% endfor %}
+
+            {# Actions column header #}
+            <th scope="col" class="w-16 px-3 py-2">
+              <span class="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+
+        {# ── Table body — loaded via HTMX ──────────────────────────────────── #}
+        <tbody id="{{ table.table_id }}-body"
+               hx-get="{{ table.api_endpoint }}{% if table.default_sort_field %}?sort={{ table.default_sort_field }}&dir={{ table.default_sort_dir }}{% endif %}"
+               {% if not table.search_first %}hx-trigger="load"{% endif %}
+               hx-swap="morph:innerHTML"
+               hx-headers='{"Accept": "text/html"}'
+               hx-indicator="#{{ table.table_id }}-loading-sr"
+               @htmx:before-request="loading = true"
+               @htmx:after-settle="loading = false"
+               class="divide-y divide-[hsl(var(--border))]">
+          {% include 'fragments/table_rows.html' %}
+        </tbody>
+      </table>
+
+      {# Empty state — visible when tbody has no data rows #}
+      <div id="{{ table.table_id }}-empty"
+           role="status"
+           class="hidden py-16 flex flex-col items-center gap-3
+                  text-[hsl(var(--muted-foreground))]
+                  [&:not(:has(~ tbody tr[data-dz-row-id]))]:flex">
+        {# Empty icon #}
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true"
+             xmlns="http://www.w3.org/2000/svg"
+             class="opacity-30">
+          <rect x="4" y="4" width="32" height="32" rx="4" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 16h16M12 20h10M12 24h8" stroke="currentColor" stroke-width="1.5"
+                stroke-linecap="round"/>
+        </svg>
+        <p class="text-[15px] font-medium text-[hsl(var(--foreground))]">No {{ table.entity_name | lower }}s found</p>
+        <p class="text-[13px]">Try adjusting your search or filter criteria.</p>
+        {% if table.create_url %}
+        <a href="{{ table.create_url }}"
+           class="mt-1 inline-flex items-center gap-1.5 h-8 px-3 rounded-[4px]
+                  text-[13px] font-medium bg-[hsl(var(--primary))]
+                  text-[hsl(var(--primary-foreground))]
+                  hover:opacity-90 transition-opacity duration-[80ms]
+                  [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+            <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          New {{ table.entity_name }}
+        </a>
+        {% endif %}
+      </div>
+
+    </div>{# /overflow-x-auto #}
+  </div>{# /relative rounded border #}
+
+  {# Screen-reader-only HTMX loading indicator (real indicator managed by Alpine loading flag above) #}
+  <div id="{{ table.table_id }}-loading-sr" class="htmx-indicator sr-only"
+       role="status" aria-label="Loading data">
+    Loading…
   </div>
 
-  {# Pagination #}
-  {% if table.pagination_mode == "infinite" %}
-  {% else %}
-  <div id="{{ table.table_id or 'dt-table' }}-pagination">
+  {# ── Footer: pagination ───────────────────────────────────────────────────── #}
+  {% if table.pagination_mode != "infinite" %}
+  <div id="{{ table.table_id }}-pagination"
+       class="flex items-center justify-between">
     {% include 'fragments/table_pagination.html' %}
   </div>
   {% endif %}
@@ -145,5 +314,13 @@
   {% if table.slide_over %}
   {% include 'components/alpine/slide_over.html' %}
   {% endif %}
+
+  {# Screen reader live region for Alpine announcements #}
+  <div id="dz-live-region"
+       aria-live="polite"
+       aria-atomic="true"
+       class="sr-only">
+  </div>
+
 </div>
 {% endif %}
