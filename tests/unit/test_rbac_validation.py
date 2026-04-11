@@ -34,7 +34,7 @@ from dazzle.mcp.server.handlers.policy import (
 # Fixture: load the rbac_validation example once per module
 # ---------------------------------------------------------------------------
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2] / "examples" / "rbac_validation"
+PROJECT_ROOT = Path(__file__).resolve().parents[2] / "fixtures" / "rbac_validation"
 
 ALL_ENTITIES = [
     "Patient",
