@@ -251,14 +251,6 @@ dialog[open] {
   }
 }
 
-/* Dashboard builder: SortableJS drag feedback */
-.sortable-ghost {
-  opacity: 0.3;
-}
-.sortable-chosen {
-  box-shadow: 0 0 0 2px oklch(var(--p));
-  border-radius: var(--rounded-box, 1rem);
-}
 /* Prevent text selection during resize drag */
 body.select-none {
   user-select: none;

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Quality Gate Test Harness</title>
+  <style>
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 240 10% 3.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 240 4.8% 95.9%;
+      --secondary-foreground: 240 5.9% 10%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%;
+      --input: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+      --success: 142 76% 36%;
+      --success-foreground: 0 0% 98%;
+      --dz-border-input: oklch(0 0 0 / 0.15);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Inter, system-ui, sans-serif; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0; }
+    .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    .select-none { user-select: none; }
+    .grid { display: grid; }
+    .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .gap-4 { gap: 1rem; }
+    @media (min-width: 768px) { .md\:grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); } }
+    .p-4 { padding: 1rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .mt-4 { margin-top: 1rem; }
+    .flex { display: flex; }
+    .flex-1 { flex: 1; }
+    .items-center { align-items: center; }
+    .justify-end { justify-content: flex-end; }
+    .justify-center { justify-content: center; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-1 { gap: 0.25rem; }
+    .relative { position: relative; }
+    .group:hover .group-hover\:opacity-100 { opacity: 1; }
+    .outline-none { outline: none; }
+    .w-full { width: 100%; }
+    .text-left { text-align: left; }
+    #test-status { position: fixed; bottom: 0; left: 0; right: 0; background: #111; color: #eee; padding: 8px 16px; font-size: 13px; z-index: 9999; font-family: monospace; }
+    .pass { color: #4cb782; font-weight: bold; }
+    .fail { color: #eb5757; font-weight: bold; }
+  </style>
+  <script defer src="js/dashboard-builder.js"></script>
+  <script defer src="vendor/alpine.min.js"></script>
+</head>
+<body>
+  <script type="application/json" id="dz-workspace-layout">
+  {
+    "cards": [
+      {"id": "card-1", "region": "metrics", "title": "Revenue Metrics", "col_span": 6, "row_order": 0},
+      {"id": "card-2", "region": "activity", "title": "Recent Activity", "col_span": 6, "row_order": 1},
+      {"id": "card-3", "region": "tasks", "title": "Open Tasks", "col_span": 4, "row_order": 2},
+      {"id": "card-4", "region": "chart", "title": "Revenue Trend", "col_span": 8, "row_order": 3}
+    ],
+    "catalog": [
+      {"name": "metrics", "title": "Revenue Metrics", "display": "METRICS", "entity": "Invoice"},
+      {"name": "activity", "title": "Recent Activity", "display": "LIST", "entity": "AuditLog"},
+      {"name": "tasks", "title": "Open Tasks", "display": "LIST", "entity": "Task"},
+      {"name": "chart", "title": "Revenue Trend", "display": "CHART", "entity": "Invoice"},
+      {"name": "users", "title": "Active Users", "display": "METRICS", "entity": "User"}
+    ],
+    "workspace_name": "test_dashboard"
+  }
+  </script>
+
+  <div class="p-4" x-data="dzDashboardBuilder()">
+    <div class="flex items-center justify-end gap-2 mb-4">
+      <div class="flex-1">
+        <span style="font-size:15px;font-weight:500;">Dashboard Quality Gate Test</span>
+      </div>
+      <button @click="resetLayout()" style="height:32px;padding:0 12px;border-radius:4px;font-size:13px;font-weight:500;color:hsl(var(--muted-foreground));cursor:pointer;border:none;background:none;">Reset</button>
+      <button @click="save()" id="save-btn"
+              :disabled="saveState === 'clean' || saveState === 'saving' || saveState === 'saved'"
+              :data-save-state="saveState"
+              :style="{
+                height: '32px', padding: '0 12px', borderRadius: '4px', fontSize: '13px', fontWeight: '500',
+                border: saveState === 'error' ? '1px solid hsl(0 84.2% 60.2%)' : '1px solid transparent',
+                background: (saveState === 'dirty' || saveState === 'saving') ? 'hsl(240 5.9% 10%)' : saveState === 'saved' ? 'hsl(142 76% 36%)' : 'transparent',
+                color: (saveState === 'dirty' || saveState === 'saving' || saveState === 'saved') ? 'hsl(0 0% 98%)' : saveState === 'error' ? 'hsl(0 84.2% 60.2%)' : 'hsl(240 3.8% 46.1%)',
+                cursor: saveState === 'dirty' || saveState === 'error' ? 'pointer' : 'default',
+                transition: 'all 80ms cubic-bezier(0.2, 0, 0, 1)',
+              }">
+        <span x-show="saveState === 'clean'">Saved</span>
+        <span x-show="saveState === 'dirty'">Save layout</span>
+        <span x-show="saveState === 'saving'">Saving...</span>
+        <span x-show="saveState === 'saved'">Done</span>
+        <span x-show="saveState === 'error'">Retry</span>
+      </button>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4" data-grid-container role="application" aria-label="Dashboard card grid"
+         @pointermove.window="onPointerMoveDrag($event); onPointerMoveResize($event)"
+         @pointerup.window="endDrag($event); endResize($event)">
+      <template x-for="card in cards" :key="card.id">
+        <div :data-card-id="card.id"
+             :style="isDragging(card.id) ? dragTransform(card.id) : _colSpanClass(card.col_span)"
+             tabindex="0"
+             @keydown="handleCardKeydown(card.id, $event); handleResizeKeydown(card.id, $event); handleResizeArrow(card.id, $event)"
+             class="relative group outline-none"
+             style="transition: all 200ms cubic-bezier(0.2, 0, 0, 1);">
+          <article :style="{
+                     borderRadius: '6px',
+                     border: isResizing(card.id) ? '1px dashed hsl(240 5.9% 10%)' : '1px solid hsl(240 5.9% 90%)',
+                     background: 'hsl(0 0% 100%)',
+                     overflow: 'hidden',
+                     transition: 'border-color 80ms cubic-bezier(0.2, 0, 0, 1)',
+                   }" role="article" :aria-labelledby="'card-title-' + card.id">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;cursor:grab;min-height:36px;"
+                 :style="{ cursor: isDragging(card.id) ? 'grabbing' : 'grab' }"
+                 @pointerdown="startDrag(card.id, $event)">
+              <h3 :id="'card-title-' + card.id" style="font-size:15px;font-weight:500;line-height:22px;letter-spacing:-0.01em;user-select:none;" x-text="card.title"></h3>
+              <div class="flex items-center gap-1" style="opacity:0;transition:opacity 80ms;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0'">
+                <button @click.stop="removeCard(card.id)" style="height:24px;width:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:none;background:none;color:hsl(240 3.8% 46.1%);cursor:pointer;" aria-label="Remove card">
+                  <svg style="width:14px;height:14px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+            <div style="padding:0 16px 16px;color:hsl(240 3.8% 46.1%);font-size:13px;">
+              Mock content for <span x-text="card.region"></span>
+            </div>
+          </article>
+          <div @pointerdown="startResize(card.id, $event)"
+               style="position:absolute;top:0;right:0;width:6px;height:100%;cursor:col-resize;opacity:0;border-radius:0 6px 6px 0;transition:opacity 80ms;"
+               onmouseover="this.style.opacity='1';this.style.background='hsl(240 5.9% 10% / 0.15)'" onmouseout="this.style.opacity='0';this.style.background='none'"
+               aria-hidden="true"></div>
+        </div>
+      </template>
+    </div>
+
+    <div class="relative flex justify-center mt-4">
+      <button @click="showPicker = !showPicker" id="add-card-btn"
+              style="height:32px;padding:0 16px;font-size:13px;font-weight:500;border-radius:6px;border:2px dashed hsl(240 5.9% 90%);background:none;color:hsl(240 3.8% 46.1%);cursor:pointer;display:flex;align-items:center;gap:8px;">
+        + Add Card
+      </button>
+    </div>
+  </div>
+
+  <div id="test-status">Quality Gates: <span id="gate-results">Ready — run window.qualityGates.runAll() or wait for automation</span></div>
+
+  <script>
+  window.qualityGates = {
+    results: {},
+
+    testDragThreshold() {
+      const comp = Alpine.$data(document.querySelector('[x-data]'));
+      comp.drag = { cardId: 'card-1', startX: 100, startY: 100, offsetX: 0, offsetY: 0, currentX: 100, currentY: 100, phase: 'pressed', placeholderIndex: 0, width: 300, height: 200 };
+      const staysPressedAt0 = comp.drag.phase === 'pressed';
+      comp.onPointerMoveDrag({ clientX: 103, clientY: 100 });
+      const staysPressedAt3px = comp.drag.phase === 'pressed';
+      comp.onPointerMoveDrag({ clientX: 105, clientY: 100 });
+      const transitionsToDragging = comp.drag.phase === 'dragging';
+      comp.drag = null;
+      comp.undoStack = [];
+      document.body.classList.remove('select-none');
+      const pass = staysPressedAt0 && staysPressedAt3px && transitionsToDragging;
+      this.results.dragThreshold = { pass, staysPressedAt0, staysPressedAt3px, transitionsToDragging };
+      return pass;
+    },
+
+    testDragTransform() {
+      const comp = Alpine.$data(document.querySelector('[x-data]'));
+      comp.drag = { cardId: 'card-1', startX: 100, startY: 100, offsetX: 50, offsetY: 25, currentX: 250, currentY: 200, phase: 'dragging', placeholderIndex: 0, width: 300, height: 200 };
+      const style = comp.dragTransform('card-1');
+      const usesTransform = style.includes('transform:translate(');
+      const hasScale = style.includes('scale(1.02)');
+      const hasOpacity = style.includes('opacity:0.95');
+      const hasShadow = style.includes('box-shadow:');
+      const hasZIndex = style.includes('z-index:500');
+      comp.drag = null;
+      const pass = usesTransform && hasScale && hasOpacity && hasShadow && hasZIndex;
+      this.results.dragTransform = { pass, usesTransform, hasScale, hasOpacity, hasShadow, hasZIndex };
+      return pass;
+    },
+
+    testSaveLifecycle() {
+      const comp = Alpine.$data(document.querySelector('[x-data]'));
+      const startsClean = comp.saveState === 'clean';
+      comp._markDirty();
+      const becomesDirty = comp.saveState === 'dirty';
+      comp.saveState = 'clean';
+      const pass = startsClean && becomesDirty;
+      this.results.saveLifecycle = { pass, startsClean, becomesDirty };
+      return pass;
+    },
+
+    testPersistenceBoundary() {
+      const comp = Alpine.$data(document.querySelector('[x-data]'));
+      const dataIsland = JSON.parse(document.getElementById('dz-workspace-layout').textContent);
+      const correctCardCount = comp.cards.length === dataIsland.cards.length;
+      const idsMatch = comp.cards.every((c, i) => c.id === dataIsland.cards[i].id);
+      const pass = correctCardCount && idsMatch;
+      this.results.persistenceBoundary = { pass, correctCardCount, idsMatch, cardCount: comp.cards.length };
+      return pass;
+    },
+
+    testKeyboardAccessibility() {
+      const comp = Alpine.$data(document.querySelector('[x-data]'));
+      comp.toggleKeyboardMove('card-1');
+      const entersMoveMode = comp._keyboardMoveCardId === 'card-1';
+      const origOrder = comp.cards.map(c => c.id);
+      comp.handleCardKeydown('card-1', { key: 'ArrowDown', preventDefault: () => {} });
+      const movedDown = comp.cards[1] && comp.cards[1].id === 'card-1';
+      comp.handleCardKeydown('card-1', { key: 'Escape', preventDefault: () => {} });
+      const exitsMoveMode = comp._keyboardMoveCardId === null;
+      const liveRegion = document.getElementById('dz-live-region');
+      const hasLiveRegion = liveRegion !== null;
+      const hasAriaLive = liveRegion ? liveRegion.getAttribute('aria-live') === 'polite' : false;
+      comp.cards.sort((a, b) => origOrder.indexOf(a.id) - origOrder.indexOf(b.id));
+      comp.undoStack = [];
+      comp.saveState = 'clean';
+      const pass = entersMoveMode && movedDown && exitsMoveMode && hasLiveRegion && hasAriaLive;
+      this.results.keyboardAccessibility = { pass, entersMoveMode, movedDown, exitsMoveMode, hasLiveRegion, hasAriaLive };
+      return pass;
+    },
+
+    runAll() {
+      this.testDragThreshold();
+      this.testDragTransform();
+      this.testSaveLifecycle();
+      this.testPersistenceBoundary();
+      this.testKeyboardAccessibility();
+      const allPass = Object.values(this.results).every(r => r.pass);
+      const el = document.getElementById('gate-results');
+      el.textContent = '';
+      Object.entries(this.results).forEach(([name, r]) => {
+        const span = document.createElement('span');
+        span.className = r.pass ? 'pass' : 'fail';
+        span.textContent = (r.pass ? 'PASS' : 'FAIL') + ' ' + name;
+        el.appendChild(span);
+        el.appendChild(document.createTextNode(' | '));
+      });
+      return { allPass, results: this.results };
+    }
+  };
+  </script>
+</body>
+</html>
