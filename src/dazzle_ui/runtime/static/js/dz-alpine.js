@@ -136,18 +136,48 @@ document.addEventListener("alpine:init", () => {
 
   // ── Data Table ──────────────────────────────────────────────────────
 
-  Alpine.data("dzTable", (tableId, endpoint, initSortField, initSortDir) => ({
-    sortField: initSortField || "",
-    sortDir: initSortDir || "asc",
+  Alpine.data("dzTable", (tableId, endpoint, config) => ({
+    // ── Sort state ──────────────────────────────────────────────────────
+    sortField: (config && config.sortField) || "",
+    sortDir: (config && config.sortDir) || "asc",
+
+    // ── Column visibility ────────────────────────────────────────────────
     hiddenColumns: JSON.parse(
       localStorage.getItem(`dz-cols-${tableId}`) || "[]",
     ),
+
+    // ── Column widths (resize) ───────────────────────────────────────────
+    columnWidths: JSON.parse(
+      localStorage.getItem(`dz-widths-${tableId}`) || "{}",
+    ),
+
+    // ── Selection ────────────────────────────────────────────────────────
     selected: new Set(),
     bulkCount: 0,
+
+    // ── Inline edit state ────────────────────────────────────────────────
+    /** @type {{rowId: string, colKey: string, originalValue: string, saving: boolean, error: string|null}|null} */
+    editing: null,
+
+    // ── Column resize drag state ─────────────────────────────────────────
+    /** @type {{colKey: string, startX: number, startWidth: number}|null} */
+    resize: null,
+
+    // ── Loading / UI state ───────────────────────────────────────────────
+    loading: false,
     colMenuOpen: false,
 
+    // ── Config shortcuts ─────────────────────────────────────────────────
+    /** @type {string[]} */
+    inlineEditable: (config && config.inlineEditable) || [],
+    bulkActionsEnabled: !!(config && config.bulkActions),
+    entityName: (config && config.entityName) || "",
+
+    // ── Lifecycle ────────────────────────────────────────────────────────
     init() {
       this.applyColumnVisibility();
+      this._applyStoredWidths();
+
       // Inject selected IDs into htmx bulk action requests
       this.$el.addEventListener("htmx:configRequest", (e) => {
         const detail = /** @type {CustomEvent} */ (e).detail;
@@ -155,30 +185,80 @@ document.addEventListener("alpine:init", () => {
           detail.parameters["ids"] = Array.from(this.selected);
         }
       });
+
+      // Loading state driven by HTMX events on the table root
+      this.$el.addEventListener("htmx:beforeRequest", () => {
+        this.loading = true;
+      });
+      this.$el.addEventListener("htmx:afterSettle", () => {
+        this.loading = false;
+      });
+      this.$el.addEventListener("htmx:responseError", () => {
+        this.loading = false;
+      });
     },
 
-    // Sort
+    // ── Screen reader announce ────────────────────────────────────────────
+    _announce(msg) {
+      let region = document.getElementById("dz-live-region");
+      if (!region) {
+        region = document.createElement("div");
+        region.id = "dz-live-region";
+        region.setAttribute("role", "status");
+        region.setAttribute("aria-live", "polite");
+        region.setAttribute("aria-atomic", "true");
+        Object.assign(region.style, {
+          position: "absolute",
+          width: "1px",
+          height: "1px",
+          padding: "0",
+          overflow: "hidden",
+          clip: "rect(0,0,0,0)",
+          whiteSpace: "nowrap",
+          border: "0",
+        });
+        document.body.appendChild(region);
+      }
+      region.textContent = "";
+      // Force re-announcement even if text is the same
+      requestAnimationFrame(() => {
+        region.textContent = msg;
+      });
+    },
+
+    // ── Sort ──────────────────────────────────────────────────────────────
     toggleSort(field) {
-      if (this.sortField === field) {
-        this.sortDir = this.sortDir === "asc" ? "desc" : "asc";
-      } else {
+      if (this.sortField !== field) {
+        // New column: start at asc
         this.sortField = field;
         this.sortDir = "asc";
+      } else if (this.sortDir === "asc") {
+        this.sortDir = "desc";
+      } else if (this.sortDir === "desc") {
+        // Third click: clear sort
+        this.sortField = "";
+        this.sortDir = "asc";
+      } else {
+        this.sortDir = "asc";
       }
+      const label = this.sortField
+        ? `Sorted by ${this.sortField} ${this.sortDir}ending`
+        : "Sort cleared";
+      this._announce(label);
       this.reload();
     },
 
     sortIcon(field) {
-      if (this.sortField !== field) return "hidden";
-      return this.sortDir === "desc" ? "rotate-180" : "";
+      if (this.sortField !== field) return "opacity-0 group-hover:opacity-50";
+      return this.sortDir === "desc" ? "rotate-180 opacity-100" : "opacity-100";
     },
 
     ariaSortDir(field) {
       if (this.sortField !== field) return null;
-      return this.sortDir + "ending";
+      return this.sortDir === "asc" ? "ascending" : "descending";
     },
 
-    // Column visibility
+    // ── Column visibility ─────────────────────────────────────────────────
     toggleColumn(key) {
       const idx = this.hiddenColumns.indexOf(key);
       if (idx >= 0) this.hiddenColumns.splice(idx, 1);
@@ -202,7 +282,59 @@ document.addEventListener("alpine:init", () => {
       });
     },
 
-    // Bulk select
+    // ── Column resize ─────────────────────────────────────────────────────
+    _applyStoredWidths() {
+      Object.entries(this.columnWidths).forEach(([colKey, width]) => {
+        const col = this.$el.querySelector(`col[data-col="${colKey}"]`);
+        if (col) /** @type {HTMLElement} */ (col).style.width = `${width}px`;
+      });
+    },
+
+    startColumnResize(colKey, e) {
+      const col = this.$el.querySelector(`col[data-col="${colKey}"]`);
+      if (!col) return;
+      const currentWidth =
+        /** @type {HTMLElement} */ (col).offsetWidth ||
+        parseInt(/** @type {HTMLElement} */ (col).style.width || "160", 10);
+      this.resize = {
+        colKey,
+        startX: e.clientX,
+        startWidth: currentWidth,
+      };
+      document.body.style.cursor = "col-resize";
+      this.$el.classList.add("select-none");
+      e.preventDefault();
+    },
+
+    onResizeMove(e) {
+      if (!this.resize) return;
+      const { colKey, startX, startWidth } = this.resize;
+      const raw = startWidth + (e.clientX - startX);
+      const clamped = Math.min(800, Math.max(80, raw));
+      // Snap to 8px grid
+      const snapped = Math.round(clamped / 8) * 8;
+      const col = this.$el.querySelector(`col[data-col="${colKey}"]`);
+      if (col) /** @type {HTMLElement} */ (col).style.width = `${snapped}px`;
+    },
+
+    endResize(e) {
+      if (!this.resize) return;
+      const { colKey, startX, startWidth } = this.resize;
+      const raw = startWidth + (e.clientX - startX);
+      const clamped = Math.min(800, Math.max(80, raw));
+      const snapped = Math.round(clamped / 8) * 8;
+      // Persist to localStorage
+      this.columnWidths[colKey] = snapped;
+      localStorage.setItem(
+        `dz-widths-${tableId}`,
+        JSON.stringify(this.columnWidths),
+      );
+      document.body.style.cursor = "";
+      this.$el.classList.remove("select-none");
+      this.resize = null;
+    },
+
+    // ── Bulk select ───────────────────────────────────────────────────────
     toggleSelectAll(checked) {
       if (checked) {
         this.$el
@@ -238,7 +370,152 @@ document.addEventListener("alpine:init", () => {
       });
     },
 
-    // HTMX reload with current state
+    // ── Inline edit ────────────────────────────────────────────────────────
+    isEditing(rowId, colKey) {
+      return (
+        this.editing !== null &&
+        this.editing.rowId === rowId &&
+        this.editing.colKey === colKey
+      );
+    },
+
+    startEdit(rowId, colKey, currentValue) {
+      if (!this.inlineEditable.includes(colKey)) return;
+      this.editing = {
+        rowId,
+        colKey,
+        originalValue: String(currentValue ?? ""),
+        saving: false,
+        error: null,
+      };
+    },
+
+    async commitEdit(newValue) {
+      if (!this.editing) return;
+      const { rowId, colKey } = this.editing;
+      this.editing.saving = true;
+      this.editing.error = null;
+      try {
+        const entityPath = this.entityName || tableId;
+        const resp = await fetch(
+          `/api/${entityPath}/${rowId}/field/${colKey}`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({ value: String(newValue) }),
+          },
+        );
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => "Server error");
+          this.editing.saving = false;
+          this.editing.error = text || `Error ${resp.status}`;
+          return;
+        }
+        this.editing = null;
+        this._announce("Saved");
+        // Reload the row to reflect the saved value
+        this.reload();
+      } catch (err) {
+        if (this.editing) {
+          this.editing.saving = false;
+          this.editing.error =
+            err instanceof Error ? err.message : "Network error";
+        }
+      }
+    },
+
+    cancelEdit() {
+      this.editing = null;
+    },
+
+    handleEditKeydown(e) {
+      if (!this.editing) return;
+      const input = /** @type {HTMLInputElement} */ (e.target);
+      if (e.key === "Enter") {
+        e.preventDefault();
+        this.commitEdit(input.value);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        this.cancelEdit();
+      } else if (e.key === "Tab") {
+        e.preventDefault();
+        const value = input.value;
+        const { rowId, colKey } = this.editing;
+        const direction = e.shiftKey ? "prev" : "next";
+        const next = this.nextEditableCell(rowId, colKey, direction);
+        this.commitEdit(value).then(() => {
+          if (next) this.startEdit(next.rowId, next.colKey, "");
+        });
+      }
+    },
+
+    nextEditableCell(rowId, colKey, direction) {
+      const editable = this.inlineEditable;
+      if (!editable.length) return null;
+      const colIdx = editable.indexOf(colKey);
+      if (direction === "next") {
+        if (colIdx < editable.length - 1) {
+          return { rowId, colKey: editable[colIdx + 1] };
+        }
+        // Move to first editable cell in next row
+        const rows = /** @type {NodeListOf<HTMLElement>} */ (
+          this.$el.querySelectorAll("[data-dz-row-id]")
+        );
+        const rowIds = Array.from(rows).map(
+          (r) => r.getAttribute("data-dz-row-id") || "",
+        );
+        const rowIdx = rowIds.indexOf(rowId);
+        if (rowIdx >= 0 && rowIdx < rowIds.length - 1) {
+          return { rowId: rowIds[rowIdx + 1], colKey: editable[0] };
+        }
+        return null;
+      } else {
+        // prev
+        if (colIdx > 0) {
+          return { rowId, colKey: editable[colIdx - 1] };
+        }
+        const rows = /** @type {NodeListOf<HTMLElement>} */ (
+          this.$el.querySelectorAll("[data-dz-row-id]")
+        );
+        const rowIds = Array.from(rows).map(
+          (r) => r.getAttribute("data-dz-row-id") || "",
+        );
+        const rowIdx = rowIds.indexOf(rowId);
+        if (rowIdx > 0) {
+          return {
+            rowId: rowIds[rowIdx - 1],
+            colKey: editable[editable.length - 1],
+          };
+        }
+        return null;
+      }
+    },
+
+    // ── Bulk delete ───────────────────────────────────────────────────────
+    async bulkDelete() {
+      const count = this.selected.size;
+      if (!count) return;
+      if (!confirm(`Delete ${count} item${count === 1 ? "" : "s"}?`)) return;
+      const entityPath = this.entityName || tableId;
+      try {
+        const resp = await fetch(`/api/${entityPath}/bulk-delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: Array.from(this.selected) }),
+        });
+        if (!resp.ok) {
+          window.dz?.toast("Delete failed. Please try again.", "error");
+          return;
+        }
+        this.clearSelection();
+        this.reload();
+        this._announce(`${count} item${count === 1 ? "" : "s"} deleted`);
+      } catch (err) {
+        window.dz?.toast("Network error during delete.", "error");
+      }
+    },
+
+    // ── HTMX reload with current state ────────────────────────────────────
     reload() {
       const target = document.getElementById(`${tableId}-body`);
       if (!target || typeof htmx === "undefined") return;
