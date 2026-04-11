@@ -175,6 +175,11 @@ document.addEventListener("alpine:init", () => {
 
     // ── Lifecycle ────────────────────────────────────────────────────────
     init() {
+      // Store root element reference — $el is contextual in event handlers
+      // (it becomes the clicked child), so we capture it here where it is
+      // guaranteed to be the x-data component root.
+      this._root = this.$el;
+
       this.applyColumnVisibility();
       this._applyStoredWidths();
 
@@ -336,8 +341,9 @@ document.addEventListener("alpine:init", () => {
 
     // ── Bulk select ───────────────────────────────────────────────────────
     toggleSelectAll(checked) {
+      const root = this._root || this.$el;
       if (checked) {
-        this.$el
+        root
           .querySelectorAll("[data-dz-row-id]")
           .forEach((row) =>
             this.selected.add(row.getAttribute("data-dz-row-id") || ""),
@@ -362,12 +368,15 @@ document.addEventListener("alpine:init", () => {
     },
 
     syncCheckboxes() {
-      this.$el.querySelectorAll("[data-dz-row-select]").forEach((input) => {
-        const id =
-          input.closest("[data-dz-row-id]")?.getAttribute("data-dz-row-id") ||
-          "";
-        /** @type {HTMLInputElement} */ (input).checked = this.selected.has(id);
-      });
+      (this._root || this.$el)
+        .querySelectorAll("[data-dz-row-select]")
+        .forEach((input) => {
+          const id =
+            input.closest("[data-dz-row-id]")?.getAttribute("data-dz-row-id") ||
+            "";
+          /** @type {HTMLInputElement} */ (input).checked =
+            this.selected.has(id);
+        });
     },
 
     // ── Inline edit ────────────────────────────────────────────────────────

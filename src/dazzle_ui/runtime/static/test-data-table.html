@@ -209,8 +209,8 @@
           <th data-dz-col="select" style="width:40px;">
             <input
               type="checkbox"
-              @change="toggleSelectAll($event.target.checked)"
-              :checked="bulkCount > 0 && bulkCount === $el.closest('table').querySelectorAll('[data-dz-row-id]').length"
+              id="dz-select-all"
+              @click="toggleSelectAll($el.checked)"
             />
           </th>
 

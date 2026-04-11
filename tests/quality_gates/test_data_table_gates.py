@@ -197,14 +197,20 @@ class TestDataTableIntegrationGates:
         # Click the select-all checkbox in the header
         select_all = browser_page.locator("thead input[type='checkbox']").first
         select_all.click()
-        browser_page.wait_for_timeout(100)
+        # Give Alpine time to settle — Set mutations need a full reactivity cycle
+        browser_page.wait_for_timeout(300)
 
-        count: int = browser_page.evaluate(
-            "Alpine.$data(document.querySelector('[x-data]')).bulkCount || 0"
+        # Read bulkCount and selected size in a single evaluate to avoid IPC race
+        state: dict = browser_page.evaluate(
+            "(function() {"
+            "  var d = Alpine.$data(document.querySelector('[x-data]'));"
+            "  return { bulkCount: d.bulkCount, selSize: d.selected.size };"
+            "})()"
         )
+        count = state.get("bulkCount", 0)
 
         # Clean up
         select_all.click()
-        browser_page.wait_for_timeout(50)
+        browser_page.wait_for_timeout(100)
 
         assert count > 0, f"Select-all checkbox did not select any rows (bulkCount={count})"
