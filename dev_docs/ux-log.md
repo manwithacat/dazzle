@@ -4,6 +4,25 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T16:35Z — Cycle 2
+
+**Selected row:** UX-013 (toast) — via loose interpretation of priority function.
+
+**Phases:**
+- **OBSERVE**: After Cycle 1, no rows strictly matched priority bucket 2 (`contract: MISSING` AND `impl: PENDING`). UX-004 BLOCKED, UX-005 status PENDING but work DONE. Remaining rows have either `impl: PARTIAL` (UX-006-008) or `impl: DONE` (UX-009-015). Applied loose interpretation: bucket 2 includes any PENDING + MISSING regardless of impl. Picked UX-013 (toast) as smallest scope for contract-only cycle.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/toast.md`. Linear aesthetic, server-emitted OOB fragments with client queue via `dzToast` Alpine. 5 quality gates covering auto-dismiss, stacking, pause-on-hover, level distinguishable, accessible aria-live.
+- **REFACTOR**: Rewrote `src/dazzle_ui/templates/fragments/toast.html` from 5 lines of DaisyUI (`alert alert-{level}`) to pure Tailwind with inline SVG icons per level, `border-l-4` accent in level colours, `hsl(var(--*))` design-system variables, aria-live polite/assertive by severity.
+- **QA Phase A**: SKIPPED (toast has no stable URL — OOB swap only).
+- **QA Phase B**: DEFERRED (event-triggered, needs a trigger flow).
+
+**Outcome:** UX-013 toast contract + fragment refactor done; dzToast Alpine unchanged; QA deferred.
+
+**Additional learnings (beyond Cycle 1):**
+5. **Priority function has gaps.** It defines `contract: MISSING and impl: PENDING` as bucket 2, but most remaining rows have `impl: PARTIAL` or `impl: DONE` after earlier cross-component work. The function should have explicit buckets for `MISSING + PARTIAL` and `MISSING + DONE` — the latter is actually fastest (just needs a contract written, no refactor).
+6. **The state machine doesn't track "work done, awaiting QA".** UX-005's status stayed PENDING even though contract + impl were DONE, because QA was deferred. A `READY_FOR_QA` state would be clearer, and the priority function could surface these rows as high priority when a running app becomes available.
+
+---
+
 ## 2026-04-12T16:24Z — Cycle 1
 
 **Selected row:** UX-005 (modal) — after BLOCKING UX-004 (form) for scope.
