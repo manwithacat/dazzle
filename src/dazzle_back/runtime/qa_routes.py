@@ -17,6 +17,8 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from dazzle_back.runtime.auth.magic_link import create_magic_link
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,7 +64,8 @@ def create_qa_routes() -> APIRouter:
         if user is None:
             raise HTTPException(status_code=404, detail="persona not provisioned")
 
-        token = auth_store.create_magic_link(
+        token = create_magic_link(
+            auth_store,
             user_id=str(user.id),
             ttl_seconds=60,  # short TTL — used immediately
             created_by="qa_panel",

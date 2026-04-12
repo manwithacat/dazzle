@@ -76,16 +76,19 @@ class TestQAMagicLinkGenerator:
         user = MagicMock()
         user.id = "user-abc-123"
         mock_auth_store.get_user_by_email = MagicMock(return_value=user)
-        mock_auth_store.create_magic_link = MagicMock(return_value="dev_token_xyz")
         with patch.dict(
             os.environ,
             {"DAZZLE_ENV": "development", "DAZZLE_QA_MODE": "1"},
             clear=False,
         ):
-            resp = client.post(
-                "/qa/magic-link",
-                json={"persona_id": "admin"},
-            )
+            with patch(
+                "dazzle_back.runtime.qa_routes.create_magic_link",
+                return_value="dev_token_xyz",
+            ):
+                resp = client.post(
+                    "/qa/magic-link",
+                    json={"persona_id": "admin"},
+                )
         assert resp.status_code == 200
         data = resp.json()
         assert data["url"] == "/auth/magic/dev_token_xyz"
@@ -95,11 +98,36 @@ class TestQAMagicLinkGenerator:
         user = MagicMock()
         user.id = "user-abc-123"
         mock_auth_store.get_user_by_email = MagicMock(return_value=user)
-        mock_auth_store.create_magic_link = MagicMock(return_value="tok")
         with patch.dict(
             os.environ,
             {"DAZZLE_ENV": "development", "DAZZLE_QA_MODE": "1"},
             clear=False,
         ):
-            client.post("/qa/magic-link", json={"persona_id": "accountant"})
+            with patch(
+                "dazzle_back.runtime.qa_routes.create_magic_link",
+                return_value="tok",
+            ):
+                client.post("/qa/magic-link", json={"persona_id": "accountant"})
         mock_auth_store.get_user_by_email.assert_called_once_with("accountant@example.test")
+
+    def test_create_magic_link_called_with_store_and_user_id(self, client, mock_auth_store):
+        """create_magic_link must be called with the auth_store as first arg and user_id kwarg."""
+        user = MagicMock()
+        user.id = "user-xyz"
+        mock_auth_store.get_user_by_email = MagicMock(return_value=user)
+        with patch.dict(
+            os.environ,
+            {"DAZZLE_ENV": "development", "DAZZLE_QA_MODE": "1"},
+            clear=False,
+        ):
+            with patch(
+                "dazzle_back.runtime.qa_routes.create_magic_link",
+                return_value="tok",
+            ) as mock_cml:
+                client.post("/qa/magic-link", json={"persona_id": "admin"})
+                # First positional arg must be the store
+                args, kwargs = mock_cml.call_args
+                assert args[0] is mock_auth_store
+                assert kwargs["user_id"] == "user-xyz"
+                assert kwargs["ttl_seconds"] == 60
+                assert kwargs["created_by"] == "qa_panel"
