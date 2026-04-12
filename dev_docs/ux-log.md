@@ -4,6 +4,29 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T18:28Z — Cycle 11
+
+**Selected row:** UX-010 (widget:datepicker) — second widget row, direct parallel to UX-009's TomSelect pattern.
+
+**Phases:**
+- **OBSERVE**: Bucket 2 empty. Picked UX-010 for momentum — same shape as UX-009 (vendored widget, MISSING+DONE with DaisyUI leakage on the template branch).
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-datepicker.md`. Covers both `picker` (single date/datetime) AND `range` (daterange) variants — they share Flatpickr and the CSS-override block, so one contract covers both efficiently. Progressive-enhancement model (native `<input type="text">` + bridge-managed Flatpickr). 5 quality gates (no DaisyUI on both branches, native fallback works, Flatpickr mounts after settle, unmounts before swap, required respected).
+- **REFACTOR**:
+  - `templates/macros/form_field.html`: rewrote both the `picker` and `range` branches to match form-field's chrome (wrapper, label, hint/error, aria-describedby wiring, required+aria-required, aria-invalid on server error).
+  - `runtime/static/css/design-system.css`: appended ~115-line Flatpickr override block — `.flatpickr-calendar`, `.flatpickr-month`, `.flatpickr-current-month`, `.flatpickr-prev/next-month`, `.flatpickr-weekday`, `.flatpickr-day` (default/hover/today/selected/inRange/disabled), `.flatpickr-day.startRange/endRange`, calendar arrow colour fixes, destructive border on `[aria-invalid="true"]`.
+  - dz-widget-registry.js Flatpickr registration unchanged.
+  - Both branches scope-scanned: 0 DaisyUI hits.
+- **QA Phase A**: DEFERRED — needs running app.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-010 contract + refactor done for both datepicker variants (picker + range); status READY_FOR_QA.
+
+**Pattern consolidation:** Cycle 10 introduced the "vendored widget" refactor pattern (CSS override block keyed to library class names, living in design-system.css). Cycle 11 confirms it works for a second library (Flatpickr) without modification. The template side is near-identical between cycles — the diff is just the data-dz-widget attribute name and any library-specific options. **The pattern generalises:** remaining vendored widget rows (UX-011 command-palette, UX-015 popover via Floating UI, UX-012 slide-over) will follow the same shape. Each cycle is ~200 lines of code, ~10-15 minutes of work.
+
+**Throughput observation:** Cycles 6–11 shipped 6 components in roughly 45 minutes. The cycle is settling into a predictable rhythm: OBSERVE (1 min), SPECIFY (5 min), REFACTOR (5-10 min), REPORT (2 min), Commit + push (1 min). The scope triage from the unblock cycle is keeping work tractable.
+
+---
+
 ## 2026-04-12T18:20Z — Cycle 10
 
 **Selected row:** UX-009 (widget:combobox) — first of the widget rows (UX-009..015 TomSelect/Flatpickr/Pickr/Quill wrappers).
