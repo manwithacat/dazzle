@@ -47,6 +47,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-027 | widget:file        | READY_FOR_QA | DONE     | DONE     | PENDING | support_tickets   | support_tickets,fieldtest_hub                                    | 1        | 2026-04-12 | dzFileUpload dropzone; Cycle 24 — template refactor + `<progress>` pseudo-element override |
 | UX-028 | widget:search_select | READY_FOR_QA | DONE    | DONE     | PENDING | contact_manager   | contact_manager,support_tickets                                  | 1        | 2026-04-12 | Dynamic search-select; Cycle 25 — **form_field.html now 100% DaisyUI-free** |
 | UX-029 | detail-view        | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | all                                                              | 1        | 2026-04-12 | Generic detail surface; Cycle 26 — pure Tailwind, 6 Jinja blocks preserved, 29 DaisyUI hits → 0 |
+| UX-030 | review-queue       | READY_FOR_QA | DONE     | DONE     | PENDING | support_tickets   | support_tickets                                                  | 1        | 2026-04-12 | Approval queue; Cycle 27 — action-style semantic mapping (primary/error/default), data-dz-progress CSS reuse |
 
 ## Exploration Findings
 
@@ -66,7 +67,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | PROP-026 | widget:money | dzMoney currency input (form_field money branch) | PROMOTED→UX-026 | 17 | Promoted in Cycle 23 |
 | PROP-027 | widget:file | dzFileUpload dropzone (form_field file branch) | PROMOTED→UX-027 | 17 | Promoted in Cycle 24 |
 | PROP-028 | widget:search_select | Dynamic search-select fragment (`fragments/search_select.html`) | PROMOTED→UX-028 | 17 | Promoted in Cycle 25 |
-| PROP-029 | review-queue | Approval/review queue component (`components/review_queue.html`) | PROPOSED | 17 | 36 DaisyUI hits; btn+card heavy. |
+| PROP-029 | review-queue | Approval/review queue component (`components/review_queue.html`) | PROMOTED→UX-030 | 17 | Promoted in Cycle 27 |
 | PROP-030 | detail-view | Generic detail surface (`components/detail_view.html`) | PROMOTED→UX-029 | 17 | Promoted in Cycle 26 |
 | PROP-031 | app-shell | Layout chrome — navbar/drawer (`layouts/app_shell.html`) | PROPOSED | 17 | 32 hits; navbar+drawer. Affects every page. |
 | PROP-032 | workspace-regions | 4 workspace region types (grid/list/kanban/tabbed_list) | PROPOSED | 17 | ~69 total hits across 4 files; likely decomposes into 4 sub-rows. |

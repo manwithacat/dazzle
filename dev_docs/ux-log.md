@@ -4,6 +4,69 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T20:46Z — Cycle 27
+
+**Selected row:** UX-030 (review-queue) — promoted from PROP-029 (36 DaisyUI hits, heaviest single file in the EX-001 scan).
+
+**Phases:**
+- **OBSERVE**: Picked review_queue as first customer of the Outlined Button Family pattern established by Cycle 26.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/review-queue.md`. Documents the workflow-specific nature of review_queue (sibling of detail-view but specialised for approval flows), the queue progress bar, the notes-required reveal pattern, and critically the **action button semantic mapping** — `action.style` (primary/error/success/warning) → token-driven button classes. 5 quality gates.
+- **REFACTOR**: Rewrote `templates/components/review_queue.html` (~150 LOC):
+  - Back/Previous/Next buttons: `btn btn-ghost btn-sm` → token-driven ghost
+  - Queue counter: `text-base-content/60` → `text-[12px] text-[hsl(var(--muted-foreground))]`
+  - Queue progress: `progress progress-primary w-24` → `<progress data-dz-progress class="w-24 h-1 rounded-[2px]" aria-hidden="true">` — uses the shared CSS override block
+  - Detail + actions + empty cards: `card bg-base-100 shadow-sm card-body` → `bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)] p-4`
+  - Definition list: same token-driven pattern as detail-view (divide + label/value tokens)
+  - Notes label: `label label-text label-text-alt text-error` → form-field label pattern with required marker
+  - Notes textarea: `textarea textarea-bordered` → form-field textarea token classes
+  - **Action button style mapping** via Jinja `{% if/elif %}` chain inside the class attribute:
+    - `action.style == 'primary'` → filled primary (`bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border-[hsl(var(--primary))] hover:brightness-110`)
+    - `action.style == 'error'` → outlined destructive
+    - default (success/warning/anything else) → outlined neutral
+  - Empty state "Return to list" button: `btn btn-primary btn-sm` → filled primary tokens
+  - Empty state icon: `text-4xl` → `text-[48px]`, title: `text-lg font-semibold` → `text-[16px] font-semibold`, body: `text-base-content/60` → `text-[13px] text-[hsl(var(--muted-foreground))]`
+  - All 4 Jinja blocks preserved (`review_header`, `review_nav`, `review_fields`, `review_actions`)
+  - Inline `<script>` notes-toggle handler preserved unchanged
+  - HTMX wiring preserved (`hx-put`, `hx-vals`, `hx-confirm`, `hx-target`, `hx-swap`, `hx-get`, `hx-push-url`)
+- `runtime/static/css/design-system.css`: extended the UX-027 progress override block to also match `progress[data-dz-progress]` (shared generic selector for progress bars across the app). No functional change for UX-027 — the existing `progress[data-dz-file-progress]` rules stay — just added a parallel selector for the new marker.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-030 contract + refactor done; status READY_FOR_QA.
+
+**New reusable idiom (logged): Semantic Style Mapping**
+
+When a template receives a semantic style hint from the server (e.g., `action.style = 'primary' | 'error' | 'warning' | 'success'`), the mapping from semantic → token classes should live in a Jinja `{% if/elif %}` chain inside the `class` attribute, NOT in a Python-level dictionary or macro. Reasons:
+
+1. Keeps the mapping visible inline where the button is rendered
+2. Avoids a separate macro file that has to be imported
+3. Lets future cycles add new semantic styles by adding a branch
+4. Works with the `--success`-token-missing gap (default branch covers success + warning)
+
+The pattern:
+```jinja
+<button class="h-8 px-3 rounded-[4px] border text-[13px] font-medium
+  {% if action.style == 'primary' %}
+    bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border-[hsl(var(--primary))] hover:brightness-110
+  {% elif action.style == 'error' %}
+    border-[hsl(var(--destructive))] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)]
+  {% else %}
+    border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]
+  {% endif %}"
+```
+
+Will reappear wherever dynamic action buttons are rendered.
+
+**Non-widget refactor progress:** 2 of 8 PROP rows complete. Remaining: app_shell, workspace_regions, auth_pages, base_layout, related_displays, reports_e2e_journey.
+
+**Next cycle candidate:** Two strong options:
+- **PROP-031 app_shell** (32 hits, layout chrome — navbar/drawer) — highest blast radius, affects every page
+- **PROP-035 related_displays** (33+ hits across 3 files) — works in tandem with detail-view's related-groups block
+
+Leaning toward **PROP-031 app_shell** because layout chrome blocks all cascading improvements. Alternatively **PROP-035 related_displays** for continuity with detail-view's related-groups block. Will decide on next cycle based on priority.
+
+---
+
 ## 2026-04-12T20:35Z — Cycle 26
 
 **Selected row:** UX-029 (detail-view) — first cycle beyond the form_field widget family. Promoted from PROP-030.
