@@ -36,7 +36,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-012 | slide-over         | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | contact_manager,support_tickets                                  | 1        | 2026-04-12 | dzSlideOver detail drawer; Cycle 13 — both templates pure Tailwind; .escape→.esc alias for semgrep compatibility |
 | UX-013 | toast              | NEEDS_HARNESS | DONE     | DONE     | PENDING | simple_task       | all                                                              | 1        | 2026-04-12 | contract + fragment refactor done; QA needs a test harness (OOB-emitted, no URL) |
 | UX-014 | confirm-dialog     | NEEDS_HARNESS | DONE     | DONE     | PENDING | contact_manager   | all                                                              | 1        | 2026-04-12 | dzConfirm; Cycle 14 — native <dialog> + destructive button, pure Tailwind; QA needs test harness (event-triggered) |
-| UX-015 | popover            | PENDING   | MISSING  | DONE     | PENDING | ops_dashboard     | ops_dashboard,fieldtest_hub                                      | 0        | —          | dzPopover (anchored to Floating UI)                  |
+| UX-015 | popover            | NEEDS_HARNESS | DONE     | DONE     | PENDING | ops_dashboard     | ops_dashboard,fieldtest_hub                                      | 1        | 2026-04-12 | dzPopover; Cycle 15 — pure Tailwind, x-anchor preserved, removed unused `content \| safe` path |
 
 ## Exploration Findings
 

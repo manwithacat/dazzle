@@ -1,15 +1,16 @@
 {# Popover — anchored floating content panel #}
+{# Contract: ~/.claude/skills/ux-architect/components/popover.md (UX-015) #}
 {# Parameters: trigger_text (str), position (str: top|bottom|left|right, default: bottom) #}
 {% set position = position | default('bottom') %}
 <div x-data="dzPopover" class="relative inline-block">
   {# Trigger #}
   <button @click="toggle()" type="button"
           :aria-expanded="open"
-          class="btn btn-ghost btn-sm">
+          class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
     {{ trigger_text | default('More') }}
   </button>
 
-  {# Content panel #}
+  {# Content panel — position via Alpine x-anchor (Floating UI under the hood) #}
   <div x-show="open"
        x-transition:enter="transition ease-out duration-150"
        x-transition:enter-start="opacity-0 scale-95"
@@ -19,9 +20,8 @@
        x-transition:leave-end="opacity-0 scale-95"
        x-anchor.{{ position }}="$el.previousElementSibling"
        role="dialog"
-       class="absolute z-50 mt-1 p-3 bg-base-100 border border-base-300 rounded-box shadow-lg min-w-48">
-    {% block popover_content %}
-    {{ content | safe if content else '' }}
-    {% endblock %}
+       class="absolute z-50 mt-1 p-3 min-w-48 bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)] text-[13px] text-[hsl(var(--foreground))]"
+       style="display: none">
+    {% block popover_content %}{% endblock %}
   </div>
 </div>

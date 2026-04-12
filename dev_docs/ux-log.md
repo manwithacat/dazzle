@@ -4,6 +4,40 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T18:58Z — Cycle 15
+
+**Selected row:** UX-015 (popover) — sixth and final widget row, closes out the vendored-widget and event-triggered-widget series.
+
+**Phases:**
+- **OBSERVE**: Bucket 2 empty. Picked UX-015 — last widget row before the backlog transitions to NEEDS_HARNESS/READY_FOR_QA only.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/popover.md`. Documents the anchored-panel model (Alpine `x-anchor` → Floating UI under the hood), click-outside dismissal, Esc handling, NO focus trap (popover ≠ modal). 5 quality gates including an explicit gate for removing the unused `content | safe` path.
+- **REFACTOR**:
+  - `templates/fragments/popover.html`: full rewrite. Replaced `btn btn-ghost btn-sm`, `bg-base-100`, `border-base-300`, `rounded-box`, `shadow-lg` with token-driven classes. Trigger button now matches form-chrome's ghost button idiom (`h-8 px-3 rounded-[4px]` etc). Panel uses a soft two-layer shadow `shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)]`.
+  - **Removed unused legacy code path:** `{{ content | safe if content else '' }}` inside the popover content block — a `| safe` fallback for passing pre-rendered HTML as a render kwarg. No templates/Python code referenced this path. Dropping it eliminates a latent XSS surface AND avoids the semgrep rule that would otherwise fire on `| safe`.
+  - Added `style="display: none"` for FOUC prevention before Alpine init (same pattern as command-palette and slide-over).
+  - `x-anchor.{position}` preserved — Alpine's anchor plugin handles viewport-aware positioning via Floating UI internally. No CSS override needed in design-system.css (unlike TomSelect/Flatpickr which have vendored library CSS).
+  - dzPopover Alpine component unchanged — open/toggle/show/hide/init preserved, including document-level Esc + click-outside listeners.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: **Marked NEEDS_HARNESS** — like modal/toast/confirm-dialog, popover is event-triggered with no stable URL that renders it in isolation. Fourth component in the NEEDS_HARNESS bucket.
+
+**Outcome:** UX-015 contract + refactor done; status NEEDS_HARNESS. **All widget rows (UX-009 through UX-015) are now complete.**
+
+**Milestone — backlog state:**
+
+| Category | Count | Rows |
+|---|---|---|
+| READY_FOR_QA | 12 | UX-001/002/003/004/006/007/008/009/010/011/012/016/017/018/019 (note: UX-004 is the aggregate) |
+| NEEDS_HARNESS | 4 | UX-005 (modal), UX-013 (toast), UX-014 (confirm-dialog), UX-015 (popover) |
+| PENDING bucket 2 | 0 | — |
+
+Adjusted: 15 unique component rows + 1 aggregate (UX-004) = 16 originally tracked. All have contracts. All have refactored implementations. The only remaining work is QA verification (needs running app) and the harness work for the 4 event-triggered components.
+
+**Next-cycle implication:** Cycle 16 will either pick up harness work for NEEDS_HARNESS rows (a meta-task: write test harness HTML files in the spirit of `test-dashboard.html`) or transition to EXPLORE mode per the spec's Step 6.
+
+**Pattern completion observation:** Cycles 6–15 shipped 10 component contracts + refactors in ~65 minutes. The /ux-cycle loop is working at the intended cadence. The form decomposition experiment (UX-004 → UX-016/017/018/019) and the widget row pattern both proved tractable. No cycle hit the 3-minute stagnation threshold.
+
+---
+
 ## 2026-04-12T18:51Z — Cycle 14
 
 **Selected row:** UX-014 (confirm-dialog) — fifth widget row; used across every example app for destructive-action confirmation.
