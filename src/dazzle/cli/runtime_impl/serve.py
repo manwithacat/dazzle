@@ -687,6 +687,11 @@ def serve_command(
     else:
         use_local_assets = local_assets
 
+    # #768 — QA mode: activate dev-persona provisioning when running locally
+    if local and not production:
+        os.environ["DAZZLE_QA_MODE"] = "1"
+        os.environ.setdefault("DAZZLE_ENV", "development")
+
     run_unified_server(
         appspec=appspec,
         ui_spec=ui_spec,
