@@ -1,67 +1,76 @@
-<div class="card bg-base-100 shadow-sm">
-  <div class="card-body p-3">
-    <h3 class="card-title text-sm">{{ title }}</h3>
-    <div class="stats stats-vertical lg:stats-horizontal shadow-sm">
-      {% for metric in metrics %}
-      <div class="stat">
-        <div class="stat-title">{{ metric.label }}</div>
-        <div class="stat-value text-lg">{{ metric.value }}</div>
-        {% if metric.description %}
-        <div class="stat-desc">{{ metric.description }}</div>
-        {% endif %}
-      </div>
-      {% endfor %}
+{# Metrics region — UX-035 adopter #6. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+  {# Metrics tiles grid #}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    {% for metric in metrics %}
+    <div class="p-3 rounded-[4px] bg-[hsl(var(--muted)/0.4)] border border-[hsl(var(--border))]">
+      <div class="text-[11px] text-[hsl(var(--muted-foreground))]">{{ metric.label }}</div>
+      <div class="text-[18px] font-semibold text-[hsl(var(--foreground))] mt-0.5">{{ metric.value }}</div>
+      {% if metric.description %}
+      <div class="text-[11px] text-[hsl(var(--muted-foreground))] mt-0.5">{{ metric.description }}</div>
+      {% endif %}
     </div>
-    {% if not metrics %}
-    <p class="text-sm opacity-50">{{ empty_message | default("No metrics available.") }}</p>
-    {% endif %}
-    {% if items and columns %}
-    <div class="divider my-1"></div>
-    <div class="overflow-x-auto">
-      <table class="table table-sm table-zebra">
-        <thead>
-          <tr>
-            {% for col in columns %}
-            <th>{{ col.label }}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for item in items %}
-          {% set attn = item.get("_attention") if item.get is defined else none %}
-          <tr class="{% if attn %}{% if attn.level == 'critical' %}bg-error/10{% elif attn.level == 'warning' %}bg-warning/10{% elif attn.level == 'notice' %}bg-info/10{% endif %} {% endif %}{% if action_url %}cursor-pointer hover{% endif %}"
-              {% if attn %}title="{{ attn.message }}"{% endif %}
-              {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
-              hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
-            {% for col in columns %}
-            <td>
-              {% if col.type == "badge" %}
-                <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
-              {% elif col.type == "bool" %}
-                {{ item[col.key] | bool_icon }}
-              {% elif col.type == "date" %}
-                {{ item[col.key] | dateformat }}
-              {% elif col.type == "currency" %}
-                {{ item[col.key] | currency }}
-              {% elif col.type == "ref" %}
-                {% set ref = item[col.key] %}
-                {% set display_name = item.get(col.key ~ "_display", "") %}
-                {% if ref is mapping %}
-                  {% set display_name = display_name or (ref | ref_display) %}
-                  {% if col.ref_route and ref.get("id") %}
-                    <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary" onclick="event.stopPropagation()">{{ display_name }}</a>
-                  {% else %}{{ display_name }}{% endif %}
-                {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
-              {% else %}
-                {{ item[col.key] | default("") | truncate_text }}
-              {% endif %}
-            </td>
-            {% endfor %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endif %}
+    {% endfor %}
   </div>
-</div>
+  {% if not metrics %}
+  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("No metrics available.") }}</p>
+  {% endif %}
+
+  {% if items and columns %}
+  <div class="h-px bg-[hsl(var(--border))] my-3"></div>
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-[hsl(var(--muted)/0.3)] border-b border-[hsl(var(--border))]">
+          {% for col in columns %}
+          <th class="text-left text-[12px] font-medium text-[hsl(var(--muted-foreground))] px-3 py-2 tracking-tight">{{ col.label }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        {% set attn = item.get("_attention") if item.get is defined else none %}
+        <tr class="border-b border-[hsl(var(--border))] last:border-0 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+          {% if attn %}
+            {% if attn.level == 'critical' %}bg-[hsl(var(--destructive)/0.08)]{% endif %}
+            {% if attn.level == 'warning' %}bg-[hsl(38_92%_50%/0.08)]{% endif %}
+            {% if attn.level == 'notice' %}bg-[hsl(var(--primary)/0.06)]{% endif %}
+          {% endif %}
+          {% if action_url %}cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]{% endif %}"
+            {% if attn %}title="{{ attn.message }}"{% endif %}
+            {% if action_url %}hx-get="{{ action_url | replace('{id}', item[action_id_field|default('id')]|string) }}"
+            hx-target="#dz-detail-drawer-content" hx-swap="innerHTML"{% endif %}>
+          {% for col in columns %}
+          <td class="text-[13px] text-[hsl(var(--foreground))] px-3 py-2">
+            {% if col.type == "badge" %}
+              <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+            {% elif col.type == "bool" %}
+              {{ item[col.key] | bool_icon }}
+            {% elif col.type == "date" %}
+              {{ item[col.key] | dateformat }}
+            {% elif col.type == "currency" %}
+              {{ item[col.key] | currency }}
+            {% elif col.type == "ref" %}
+              {% set ref = item[col.key] %}
+              {% set display_name = item.get(col.key ~ "_display", "") %}
+              {% if ref is mapping %}
+                {% set display_name = display_name or (ref | ref_display) %}
+                {% if col.ref_route and ref.get("id") %}
+                  <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}"
+                     class="text-[hsl(var(--primary))] hover:underline"
+                     onclick="event.stopPropagation()">{{ display_name }}</a>
+                {% else %}{{ display_name }}{% endif %}
+              {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}-{% endif %}
+            {% else %}
+              {{ item[col.key] | default("") | truncate_text }}
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+{% endcall %}
