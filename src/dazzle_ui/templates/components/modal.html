@@ -1,6 +1,7 @@
-{# General-purpose server-loaded modal — uses native <dialog> element #}
+{# General-purpose server-loaded modal — native <dialog> element, pure Tailwind. #}
+{# Contract: ~/.claude/skills/ux-architect/components/modal.md #}
 {# Parameters: modal_id (str, default: 'dz-modal'), title (str), size (str: sm|md|lg|xl, default: md) #}
-{# Usage: server returns this template via hx-get, then JS calls dialog.showModal() #}
+{# Usage: server returns this template via hx-get; caller triggers .showModal() on the element. #}
 {% set modal_id = modal_id | default('dz-modal') %}
 {% set size = size | default('md') %}
 {% set size_classes = {
@@ -9,27 +10,63 @@
   'lg': 'max-w-2xl',
   'xl': 'max-w-4xl',
 } %}
-<dialog id="{{ modal_id }}" class="modal">
-  <div class="modal-box {{ size_classes.get(size, 'max-w-lg') }}">
+<dialog
+  id="{{ modal_id }}"
+  aria-labelledby="{{ modal_id }}-title"
+  x-data
+  x-effect="document.body.style.overflow = $el.open ? 'hidden' : ''"
+  @close="document.body.style.overflow = ''"
+  class="p-0 bg-transparent backdrop:bg-black/50 backdrop:backdrop-blur-sm
+         transition-[opacity,transform] duration-[320ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+         open:opacity-100 open:scale-100
+         [&:not([open])]:opacity-0 [&:not([open])]:scale-95">
+  <div class="{{ size_classes.get(size, 'max-w-lg') }} w-full rounded-lg border border-[hsl(var(--border))]
+              bg-[hsl(var(--popover))] text-[hsl(var(--popover-foreground))]
+              shadow-[0_12px_24px_rgb(0_0_0/0.12),0_4px_8px_rgb(0_0_0/0.06)]">
     {% if title %}
-    <h3 class="text-lg font-bold">{{ title }}</h3>
+    <div class="flex items-center justify-between px-6 pt-6 pb-3">
+      <h3 id="{{ modal_id }}-title" class="text-lg font-semibold tracking-[-0.01em]">{{ title }}</h3>
+      <form method="dialog" class="m-0">
+        <button
+          type="submit"
+          aria-label="Close"
+          class="h-8 w-8 flex items-center justify-center rounded-[4px]
+                 text-[hsl(var(--muted-foreground))]
+                 hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
+                 transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+    {% else %}
+    {# No title — close button still present in top-right #}
+    <form method="dialog" class="absolute right-4 top-4 m-0">
+      <button
+        type="submit"
+        aria-label="Close"
+        class="h-8 w-8 flex items-center justify-center rounded-[4px]
+               text-[hsl(var(--muted-foreground))]
+               hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]
+               transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </form>
     {% endif %}
 
-    {# Close button #}
-    <form method="dialog" class="absolute right-4 top-4">
-      <button class="btn btn-ghost btn-sm btn-circle" aria-label="Close">&times;</button>
-    </form>
-
-    {# Content — caller fills this #}
-    <div class="py-4">
+    {# Body — caller fills this #}
+    <div class="px-6 py-4 max-h-[70vh] overflow-y-auto text-[13px] text-[hsl(var(--foreground))]">
       {% block modal_content %}
       {{ content | safe if content else '' }}
       {% endblock %}
     </div>
   </div>
 
-  {# Backdrop click to close #}
-  <form method="dialog" class="modal-backdrop">
-    <button aria-label="Close">close</button>
+  {# Backdrop click closes the dialog (native dialog semantics) #}
+  <form method="dialog" class="fixed inset-0 m-0 -z-10">
+    <button type="submit" class="w-full h-full cursor-default" aria-label="Close">&nbsp;</button>
   </form>
 </dialog>
