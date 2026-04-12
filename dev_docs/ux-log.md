@@ -4,6 +4,22 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T16:48Z — Cycle 4
+
+**Selected row:** UX-007 (search-input) — continuing retroactive documentation run.
+
+**Phases:**
+- **OBSERVE**: Priority: UX-007 and UX-008 remain in impl:PARTIAL+MISSING state (already restyled as part of UX-002). Picked UX-007.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/search-input.md`. Linear aesthetic, 5 quality gates (debounce, clear reset, clear visibility, focus ring, query in request URL).
+- **REFACTOR**: Already done as part of UX-002. No changes needed.
+- **QA**: DEFERRED — same as filter-bar (subset of data-table QA).
+
+**Outcome:** UX-007 retroactive contract documented; impl already DONE; QA deferred.
+
+**Cumulative state:** 4 cycles, 4 components spec-governed (modal, toast, filter-bar, search-input). Next cycle targets UX-008 (pagination) to finish the retroactive run, then widget wrappers.
+
+---
+
 ## 2026-04-12T16:41Z — Cycle 3
 
 **Selected row:** UX-006 (filter-bar) — fastest possible cycle (retroactive contract for already-refactored component).
