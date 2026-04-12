@@ -331,21 +331,22 @@
              {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
 
     {% elif field.type == "money" %}
-      {# Money widget: major-unit display input + hidden minor-unit value #}
+      {# UX-026: money widget — dzMoney Alpine, pure Tailwind chrome #}
+      {# Major-unit display input + hidden minor-unit value carrier       #}
       {% set minor_val = values.get(field.name ~ '_minor', '') if values else '' %}
       {% if field.extra.get('currency_fixed', true) %}
-      {# Pinned currency — static prefix symbol, Alpine dzMoney #}
+      {# Pinned currency — static prefix symbol #}
       <div x-data="dzMoney" data-dz-currency="{{ field.extra.currency_code }}"
            data-dz-scale="{{ field.extra.scale }}">
-        <div class="join w-full">
-          <span class="join-item btn btn-ghost no-animation pointer-events-none dz-money-prefix"
+        <div class="flex w-full">
+          <span class="h-8 inline-flex items-center px-3 bg-[hsl(var(--muted))] text-[13px] font-medium text-[hsl(var(--muted-foreground))] border border-r-0 border-[hsl(var(--border))] rounded-l-[4px] dz-money-prefix"
                 aria-hidden="true">
             {{ field.extra.symbol }}
           </span>
           <input type="text" inputmode="decimal" id="{{ field_id }}"
                  data-dazzle-field="{{ field.name }}"
                  x-model="displayValue" @input="onInput()" @blur="onBlur()"
-                 class="input input-bordered join-item w-full {% if error %}input-error{% endif %}"
+                 class="h-8 px-3 w-full bg-[hsl(var(--background))] text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] border {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %} rounded-r-[4px] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
                  placeholder="0.00"
                  aria-label="{{ field.label }} ({{ field.extra.currency_code }})"
                  {% if field.required %}required aria-required="true"{% endif %}
@@ -358,12 +359,12 @@
                value="{{ field.extra.currency_code }}" />
       </div>
       {% else %}
-      {# Unpinned currency — dropdown selector, Alpine dzMoney #}
+      {# Unpinned currency — dropdown selector #}
       <div x-data="dzMoney" data-dz-scale="{{ field.extra.scale }}">
-        <div class="join w-full">
+        <div class="flex w-full">
           <select name="{{ field.name }}_currency"
                   @change="onCurrencyChange($event)"
-                  class="select select-bordered join-item w-36"
+                  class="h-8 px-2 w-28 bg-[hsl(var(--background))] text-[13px] text-[hsl(var(--foreground))] border border-r-0 border-[hsl(var(--border))] rounded-l-[4px] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))]"
                   aria-label="Currency for {{ field.label }}">
             {% for opt in field.extra.get('currency_options', []) %}
             <option value="{{ opt.code }}" data-scale="{{ opt.scale }}"
@@ -376,7 +377,7 @@
           <input type="text" inputmode="decimal" id="{{ field_id }}"
                  data-dazzle-field="{{ field.name }}"
                  x-model="displayValue" @input="onInput()" @blur="onBlur()"
-                 class="input input-bordered join-item w-full {% if error %}input-error{% endif %}"
+                 class="h-8 px-3 w-full bg-[hsl(var(--background))] text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] border {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %} rounded-r-[4px] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
                  placeholder="0.00"
                  aria-label="{{ field.label }}"
                  {% if field.required %}required aria-required="true"{% endif %}

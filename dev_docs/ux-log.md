@@ -4,6 +4,34 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T20:07Z — Cycle 23
+
+**Selected row:** UX-026 (widget:money) — promoted from PROP-026.
+
+**Phases:**
+- **OBSERVE**: Picked PROP-026 per cycle 22's next-candidate note. Money is an Alpine-heavy branch but has no vendored library, so no new CSS override block is needed — just template refactor.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-money.md`. Documents both pinned (static prefix) and unpinned (currency dropdown) variants. Explicit "adjacent border collapse" pattern for the flex-based segmented control (replacing DaisyUI `join`). 5 quality gates.
+- **REFACTOR**: Rewrote both money variants in `form_field.html`:
+  - Replaced `<div class="join w-full">` with `<div class="flex w-full">` — explicit flex layout
+  - Pinned prefix span: `join-item btn btn-ghost no-animation` → token-driven `h-8 inline-flex items-center px-3 bg-[hsl(var(--muted))] text-[13px] font-medium text-[hsl(var(--muted-foreground))] border border-r-0 border-[hsl(var(--border))] rounded-l-[4px]`. The `border-r-0` is the border-collapse trick: the left item's right border is removed so the right item's left border carries the shared edge without doubling.
+  - Unpinned currency select: `select select-bordered join-item` → `h-8 px-2 w-28 bg-[hsl(var(--background))] border border-r-0 border-[hsl(var(--border))] rounded-l-[4px]`
+  - Amount input (both variants): `input input-bordered join-item input-error` → form-field base classes with `rounded-r-[4px]` and conditional destructive border via `{% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %}` (reusing the `{% set %}` variables from UX-017)
+  - dzMoney Alpine component unchanged — `displayValue`, `minorValue`, `onInput`, `onBlur`, `onCurrencyChange` all preserved. `data-dz-currency`, `data-dz-scale`, `dz-money-prefix` attributes preserved. Hidden `_minor` and `_currency` inputs preserved.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-026 contract + refactor done; status READY_FOR_QA.
+
+**Border-collapse pattern (new reusable idiom):** The flex-based segmented control pattern (replacing DaisyUI `join`) is now established for future cycles. The rule: **left item gets `rounded-l-[4px] rounded-r-none border-r-0`; right item gets `rounded-r-[4px] rounded-l-none` (default borders)**. Works for arbitrary-count segments by applying `border-r-0` to all-but-last and `rounded-*` variants to first and last. Can be wrapped in a `.dz-segmented` utility later if it's used enough.
+
+**Widget branch progress (form_field.html):** 10 of 11 branches refactored. Remaining: **file** (dzFileUpload dropzone), **search_select** (separate fragment file).
+
+**Vendored-widget CSS ledger unchanged** — UX-026 is zero-CSS because it uses only form-field tokens + Tailwind flex. Total cycle cost ~8 minutes.
+
+**Next cycle candidate:** **PROP-027 widget:file** — dzFileUpload dropzone. Uses DaisyUI `bg-base-200`, `btn-ghost btn-xs`, `border-base-300`, `progress progress-primary`. Medium complexity: template refactor + possibly a small CSS touch for the native `<progress>` element. No vendored library.
+
+---
+
 ## 2026-04-12T19:57Z — Cycle 22
 
 **Selected row:** UX-025 (widget:richtext) — promoted from PROP-024. Fourth vendored library.
