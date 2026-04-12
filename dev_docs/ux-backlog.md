@@ -53,6 +53,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-033 | base-layout        | READY_FOR_QA | DONE     | DONE     | PENDING | ops_dashboard     | all                                                              | 1        | 2026-04-12 | base.html; Cycle 30 — body bg-base-200 + toast toast-end + alert alert-* all token-driven |
 | UX-034 | report-e2e-journey | DONE        | DONE     | DONE     | PASS    | —                 | internal                                                         | 1        | 2026-04-12 | Cycle 31 — **out-of-scope for token governance**; standalone diagnostic report with own palette; 5/5 gates pass |
 | UX-035 | region-wrapper     | READY_FOR_QA | DONE     | PARTIAL  | PENDING | ops_dashboard     | all workspace regions                                            | 1        | 2026-04-12 | Shared `region_card` macro + grid.html canonical adopter; Cycle 32. **impl: PARTIAL** — 15 other region files still need macro adoption (future cycles) |
+| UX-036 | auth-page          | READY_FOR_QA | DONE     | PARTIAL  | PENDING | —                 | login,signup,forgot_password,reset_password,2fa_*                | 1        | 2026-04-12 | `auth_page_card` macro + login.html adopter; Cycle 33. **impl: PARTIAL** — 6 other auth files still need macro adoption |
 
 ## Exploration Findings
 
@@ -76,7 +77,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | PROP-030 | detail-view | Generic detail surface (`components/detail_view.html`) | PROMOTED→UX-029 | 17 | Promoted in Cycle 26 |
 | PROP-031 | app-shell | Layout chrome — navbar/drawer (`layouts/app_shell.html`) | PROMOTED→UX-031 | 17 | Promoted in Cycle 28 |
 | PROP-032 | workspace-regions | 4 workspace region types (grid/list/kanban/tabbed_list) | PROPOSED | 17 | ~69 total hits across 4 files; likely decomposes into 4 sub-rows. |
-| PROP-033 | auth-pages | 7 auth pages (login/signup/2fa_\*/forgot/reset) | PROPOSED | 17 | ~149 total hits; likely 2–3 shared auth-chrome contracts. |
+| PROP-033 | auth-pages | 7 auth pages (login/signup/2fa_\*/forgot/reset) | PROMOTED→UX-036 | 17 | Promoted in Cycle 33 |
 | PROP-034 | base-layout | Top-level HTML base (`base.html`) | PROMOTED→UX-033 | 17 | Promoted in Cycle 30 |
 | PROP-035 | related-displays | Related-entity display fragments (table/status-cards/file-list) | PROMOTED→UX-032 | 17 | Promoted in Cycle 29 |
 | PROP-036 | reports-e2e-journey | E2E journey report (`reports/e2e_journey.html`) | PROMOTED→UX-034 | 17 | Promoted in Cycle 31 |
