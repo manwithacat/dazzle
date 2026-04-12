@@ -411,6 +411,16 @@ class SiteOGMeta(BaseModel):
     og_type: str = "website"
 
 
+class QAPersonaCardContext(BaseModel):
+    """A single persona card in the QA mode landing panel (#768)."""
+
+    id: str
+    display_name: str
+    email: str
+    description: str
+    stories: list[str] = Field(default_factory=list)
+
+
 class SitePageContext(BaseModel):
     """Top-level context for site page templates."""
 
@@ -427,6 +437,7 @@ class SitePageContext(BaseModel):
     custom_css: bool = False
     is_authenticated: bool = False
     dashboard_url: str = "/app"
+    qa_personas: list[QAPersonaCardContext] = Field(default_factory=list)
 
 
 class SiteAuthContext(BaseModel):

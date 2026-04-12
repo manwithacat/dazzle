@@ -380,6 +380,20 @@ def create_site_page_routes(
                     # The generic /app fallback means no persona route matched,
                     # so show the landing page with auth-aware nav instead.
                     return RedirectResponse(url=dash_url, status_code=302)
+                # #768 — QA mode personas for landing page panel
+                qa_personas: list[dict] = []
+                qa_persona_list = getattr(request.app.state, "qa_personas", None)
+                if qa_persona_list:
+                    qa_personas = [
+                        {
+                            "id": p.persona_id,
+                            "display_name": p.display_name,
+                            "email": p.email,
+                            "description": p.description,
+                            "stories": p.stories,
+                        }
+                        for p in qa_persona_list
+                    ]
                 ctx = build_site_page_context(
                     sitespec,
                     r,
@@ -387,6 +401,7 @@ def create_site_page_routes(
                     custom_css=has_custom_css,
                     is_authenticated=is_authed,
                     dashboard_url=dash_url,
+                    qa_personas=qa_personas,
                 )
                 return HTMLResponse(content=render_site_page("site/page.html", ctx))
         else:
