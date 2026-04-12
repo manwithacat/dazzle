@@ -48,6 +48,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-028 | widget:search_select | READY_FOR_QA | DONE    | DONE     | PENDING | contact_manager   | contact_manager,support_tickets                                  | 1        | 2026-04-12 | Dynamic search-select; Cycle 25 — **form_field.html now 100% DaisyUI-free** |
 | UX-029 | detail-view        | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | all                                                              | 1        | 2026-04-12 | Generic detail surface; Cycle 26 — pure Tailwind, 6 Jinja blocks preserved, 29 DaisyUI hits → 0 |
 | UX-030 | review-queue       | READY_FOR_QA | DONE     | DONE     | PENDING | support_tickets   | support_tickets                                                  | 1        | 2026-04-12 | Approval queue; Cycle 27 — action-style semantic mapping (primary/error/default), data-dz-progress CSS reuse |
+| UX-031 | app-shell          | READY_FOR_QA | DONE     | DONE     | PENDING | ops_dashboard     | all                                                              | 1        | 2026-04-12 | Layout chrome; Cycle 28 — dropped DaisyUI drawer, Alpine-driven responsive drawer, converted logout to HTMX POST |
 
 ## Exploration Findings
 
@@ -69,7 +70,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | PROP-028 | widget:search_select | Dynamic search-select fragment (`fragments/search_select.html`) | PROMOTED→UX-028 | 17 | Promoted in Cycle 25 |
 | PROP-029 | review-queue | Approval/review queue component (`components/review_queue.html`) | PROMOTED→UX-030 | 17 | Promoted in Cycle 27 |
 | PROP-030 | detail-view | Generic detail surface (`components/detail_view.html`) | PROMOTED→UX-029 | 17 | Promoted in Cycle 26 |
-| PROP-031 | app-shell | Layout chrome — navbar/drawer (`layouts/app_shell.html`) | PROPOSED | 17 | 32 hits; navbar+drawer. Affects every page. |
+| PROP-031 | app-shell | Layout chrome — navbar/drawer (`layouts/app_shell.html`) | PROMOTED→UX-031 | 17 | Promoted in Cycle 28 |
 | PROP-032 | workspace-regions | 4 workspace region types (grid/list/kanban/tabbed_list) | PROPOSED | 17 | ~69 total hits across 4 files; likely decomposes into 4 sub-rows. |
 | PROP-033 | auth-pages | 7 auth pages (login/signup/2fa_\*/forgot/reset) | PROPOSED | 17 | ~149 total hits; likely 2–3 shared auth-chrome contracts. |
 | PROP-034 | base-layout | Top-level HTML base (`base.html`) | PROPOSED | 17 | 17 hits; link styles + global loading indicators. |
