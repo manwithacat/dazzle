@@ -1336,3 +1336,164 @@ input[aria-invalid="true"][type="hidden"] + .pcr-app,
 [data-dz-widget="colorpicker"] .pcr-trigger[aria-invalid="true"] {
   outline: 1px solid hsl(var(--destructive));
 }
+
+/* ── Quill token overrides (UX-025 widget:richtext, snow theme) ───────── */
+/* Linear-aesthetic override of vendor/quill.snow.css. Scoped to .ql-toolbar */
+/* + .ql-container so rules don't bleed into other parts of the app.         */
+.ql-toolbar.ql-snow {
+  background: hsl(var(--muted) / 0.3);
+  border: 0;
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 6px 8px;
+  font-family: inherit;
+}
+.ql-container.ql-snow {
+  background: hsl(var(--background));
+  border: 0;
+  border-radius: 0;
+  font-family: inherit;
+  font-size: 13px;
+  color: hsl(var(--foreground));
+  min-height: 120px;
+}
+.ql-editor {
+  padding: 12px;
+  color: hsl(var(--foreground));
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+  font-size: 13px;
+  left: 12px;
+}
+.ql-editor p,
+.ql-editor h1,
+.ql-editor h2,
+.ql-editor h3,
+.ql-editor ol,
+.ql-editor ul {
+  margin: 0 0 8px 0;
+}
+.ql-editor h1 { font-size: 20px; font-weight: 600; }
+.ql-editor h2 { font-size: 16px; font-weight: 600; }
+.ql-editor h3 { font-size: 14px; font-weight: 600; }
+.ql-editor ol,
+.ql-editor ul {
+  padding-left: 20px;
+}
+.ql-editor blockquote {
+  border-left: 3px solid hsl(var(--border));
+  padding: 4px 0 4px 12px;
+  color: hsl(var(--muted-foreground));
+  margin: 0 0 8px 0;
+}
+.ql-editor code,
+.ql-editor pre.ql-syntax {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 12px;
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+.ql-editor pre.ql-syntax {
+  padding: 8px 12px;
+  margin: 0 0 8px 0;
+}
+.ql-editor a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+/* Toolbar buttons */
+.ql-toolbar.ql-snow button {
+  width: 28px;
+  height: 28px;
+  padding: 4px;
+  border-radius: 3px;
+  transition: background-color 80ms cubic-bezier(0.2, 0, 0, 1);
+}
+.ql-toolbar.ql-snow button:hover {
+  background: hsl(var(--muted));
+}
+.ql-toolbar.ql-snow button .ql-stroke {
+  stroke: hsl(var(--muted-foreground));
+}
+.ql-toolbar.ql-snow button .ql-fill {
+  fill: hsl(var(--muted-foreground));
+}
+.ql-toolbar.ql-snow button:hover .ql-stroke {
+  stroke: hsl(var(--foreground));
+}
+.ql-toolbar.ql-snow button:hover .ql-fill {
+  fill: hsl(var(--foreground));
+}
+.ql-toolbar.ql-snow button.ql-active .ql-stroke,
+.ql-toolbar.ql-snow .ql-picker-label.ql-active .ql-stroke,
+.ql-toolbar.ql-snow button.ql-active .ql-fill,
+.ql-toolbar.ql-snow .ql-picker-label.ql-active .ql-fill {
+  stroke: hsl(var(--primary));
+  fill: hsl(var(--primary));
+}
+.ql-toolbar.ql-snow button.ql-active {
+  background: hsl(var(--primary) / 0.1);
+}
+
+/* Picker dropdowns (header size, colour, etc.) */
+.ql-toolbar.ql-snow .ql-picker-label {
+  color: hsl(var(--muted-foreground));
+  border: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 3px;
+}
+.ql-toolbar.ql-snow .ql-picker-label:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.ql-toolbar.ql-snow .ql-picker-options {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  padding: 4px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+}
+.ql-toolbar.ql-snow .ql-picker-options .ql-picker-item {
+  color: hsl(var(--foreground));
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.ql-toolbar.ql-snow .ql-picker-options .ql-picker-item:hover {
+  background: hsl(var(--muted));
+}
+.ql-toolbar.ql-snow .ql-picker-options .ql-picker-item.ql-selected {
+  color: hsl(var(--primary));
+}
+
+/* Link edit tooltip */
+.ql-snow .ql-tooltip {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  padding: 6px 8px;
+}
+.ql-snow .ql-tooltip input[type=text] {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 3px;
+  color: hsl(var(--foreground));
+  padding: 3px 6px;
+}
+.ql-snow .ql-tooltip a.ql-action,
+.ql-snow .ql-tooltip a.ql-remove {
+  color: hsl(var(--muted-foreground));
+}
+.ql-snow .ql-tooltip a.ql-action:hover {
+  color: hsl(var(--primary));
+}

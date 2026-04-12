@@ -42,6 +42,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-022 | widget:tags        | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | all                                                              | 1        | 2026-04-12 | TomSelect tags (create:true); Cycle 19 — template-only, zero CSS |
 | UX-023 | widget:slider      | READY_FOR_QA | DONE     | DONE     | PENDING | fieldtest_hub     | fieldtest_hub                                                    | 1        | 2026-04-12 | Native range input + dzRangeTooltip; Cycle 20 — pure Tailwind + scoped CSS override for ::slider-thumb/track |
 | UX-024 | widget:colorpicker | READY_FOR_QA | DONE     | DONE     | PENDING | fieldtest_hub     | fieldtest_hub                                                    | 1        | 2026-04-12 | Pickr wrapper; Cycle 21 — template refactor + prospective .pcr-app override in design-system.css |
+| UX-025 | widget:richtext    | READY_FOR_QA | DONE     | DONE     | PENDING | fieldtest_hub     | fieldtest_hub,support_tickets                                    | 1        | 2026-04-12 | Quill wrapper; Cycle 22 — template refactor + ~150-line .ql-snow override; also removed `\| safe` from editor div (bridge handles restore) |
 
 ## Exploration Findings
 
@@ -56,7 +57,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | PROP-021 | widget:multiselect | TomSelect multi-select wrapper (form_field multi_select branch) | PROMOTED→UX-021 | 17 | Promoted in Cycle 18 |
 | PROP-022 | widget:tags | TomSelect tags wrapper with create-on-the-fly (form_field tags branch) | PROMOTED→UX-022 | 17 | Promoted in Cycle 19 |
 | PROP-023 | widget:colorpicker | Pickr colour picker wrapper (form_field color branch) | PROMOTED→UX-024 | 17 | Promoted in Cycle 21 |
-| PROP-024 | widget:richtext | Quill editor wrapper (form_field rich_text branch) | PROPOSED | 17 | Needs CSS override for Quill's `.ql-*` classes + template refactor. |
+| PROP-024 | widget:richtext | Quill editor wrapper (form_field rich_text branch) | PROMOTED→UX-025 | 17 | Promoted in Cycle 22 |
 | PROP-025 | widget:slider | Native range input + dzRangeTooltip Alpine (form_field slider branch) | PROMOTED→UX-023 | 17 | Promoted in Cycle 20 |
 | PROP-026 | widget:money | dzMoney currency input (form_field money branch) | PROPOSED | 17 | Uses DaisyUI `join` + `btn-ghost` for prefix; pinned/unpinned variants. Alpine + Tailwind refactor. |
 | PROP-027 | widget:file | dzFileUpload dropzone (form_field file branch) | PROPOSED | 17 | Dropzone with drag-drop + preview; uses `btn-ghost` and `bg-base-200`. Alpine + Tailwind refactor. |

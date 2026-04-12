@@ -212,15 +212,30 @@
   </div>
 
   {% elif field.widget == "rich_text" %}
-  <label class="form-control w-full">
-    <div class="label"><span class="label-text">{{ field.label }}{% if field.required %} <span class="text-error">*</span>{% endif %}</span></div>
-    <div data-dz-widget="richtext" data-dz-options='{}'>
-      <input type="hidden" name="{{ field.name }}" value="{{ values.get(field.name, '') }}">
-      <div data-dz-editor>{{ values.get(field.name, '') | safe }}</div>
+  {# UX-025: richtext widget — Quill editor wrapper, pure Tailwind chrome #}
+  <div class="w-full space-y-1">
+    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+      {{ field.label }}
+      {% if field.required %}
+        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      {% endif %}
+    </label>
+    {% if field.hint %}
+    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+    {% endif %}
+    <div data-dz-widget="richtext" data-dz-options='{}'
+         class="border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} rounded-[4px] overflow-hidden bg-[hsl(var(--background))]">
+      <input type="hidden" id="field-{{ field.name }}" name="{{ field.name }}"
+             value="{{ values.get(field.name, '') }}"
+             {% if field.required %}required aria-required="true"{% endif %}
+             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}>
+      <div data-dz-editor></div>
     </div>
-    {% if field.hint %}<div class="label" id="hint-{{ field.name }}"><span class="label-text-alt text-base-content/60">{{ field.hint }}</span></div>{% endif %}
-    {% if errors.get(field.name) %}<div id="error-{{ field.name }}" class="label"><span class="label-text-alt text-error" role="alert">{{ errors[field.name] }}</span></div>{% endif %}
-  </label>
+    {% if errors.get(field.name) %}
+    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
+    {% endif %}
+  </div>
 
   {% elif field.widget == "slider" %}
   {# UX-023: slider widget — native <input type="range"> + dzRangeTooltip controller #}
