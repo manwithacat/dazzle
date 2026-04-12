@@ -4,6 +4,28 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T18:51Z — Cycle 14
+
+**Selected row:** UX-014 (confirm-dialog) — fifth widget row; used across every example app for destructive-action confirmation.
+
+**Phases:**
+- **OBSERVE**: Bucket 2 empty. Picked UX-014 — pure-Alpine widget with native `<dialog>` element, similar topology to UX-005 modal but narrower scope (fixed message+cancel+destructive-button layout).
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/confirm-dialog.md`. Covers the event-driven dispatch model (global `dz-confirm` listener), the URL/method security whitelist, the native `<dialog>` primitive, 5 quality gates. Explicit security contract section documents the URL regex sanitiser and method whitelist that already exists in dzConfirm's Alpine `init()`.
+- **REFACTOR**:
+  - `templates/components/alpine/confirm_dialog.html`: full rewrite. Replaced DaisyUI `modal`, `modal-box`, `modal-action`, `modal-backdrop`, `btn btn-ghost`, `btn btn-error`, `loading` (v0.1 had an ambiguous `:class="loading && 'loading'"` that relied on DaisyUI's loading spinner class).
+  - Native `<dialog>` + `::backdrop` pseudo-element styled via Tailwind `backdrop:` variant (`backdrop:bg-black/40 backdrop:backdrop-blur-sm`).
+  - Destructive button uses `hsl(var(--destructive))` tokens with an inline SVG spinner that appears via `x-show="loading"` (replaces the DaisyUI class-swap pattern).
+  - Cancel button appears BEFORE Confirm in DOM order so Tab+Enter lands on Cancel first (safety default, documented in the contract).
+  - dzConfirm Alpine component in `dz-alpine.js` unchanged — URL sanitiser regex (`/^\/[\w/\-?.=&%]+$/`) and method whitelist (delete/post/put/patch) preserved, as are all exposed members.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: **Marked NEEDS_HARNESS** — unlike form-chrome which is embedded in every form page (has stable URLs), the confirm dialog is event-triggered only (no stable URL that renders it in isolation). Matches the classification given to UX-005 modal and UX-013 toast during the Unblock Triage. Future harness work can cover all three event-triggered components together.
+
+**Outcome:** UX-014 contract + refactor done; status NEEDS_HARNESS (not READY_FOR_QA because there's no URL that renders the component in isolation).
+
+**Pattern observation (harness need):** Three components are now NEEDS_HARNESS (UX-005 modal, UX-013 toast, UX-014 confirm-dialog). These are all event-triggered widgets that don't appear on any landing page until something dispatches the trigger. The harness pattern from `test-dashboard.html` / `test-data-table.html` would work — a simple HTML file per component that includes the fragment, sets up some buttons to dispatch the events, and can be loaded via `dazzle serve --local`. This could be a separate UX-cycle task (e.g., UX-020 NEEDS_HARNESS harness-set) rather than per-component.
+
+---
+
 ## 2026-04-12T18:42Z — Cycle 13
 
 **Selected row:** UX-012 (slide-over) — fourth widget row; detail drawer used throughout contact_manager and support_tickets.
