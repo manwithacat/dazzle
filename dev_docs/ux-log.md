@@ -4,6 +4,22 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T22:28Z — Cycle 35
+
+**Selected row:** UX-035 continuation — kanban.html adopter (3/16).
+
+**Phases:** OBSERVE → REFACTOR → verify (SPECIFY skipped; REPORT this entry).
+
+**Refactor:** `templates/workspace/regions/kanban.html` — call `region_card(title)`; kanban columns use `bg-[hsl(var(--muted)/0.4)]` background; item cards use token-driven `bg-card border-border rounded-[4px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]` with hover variants; badge/ref/attention-level colours all token-driven; "Load all" button ghost-compact with `hx-target="closest [data-dz-region]"`.
+
+**Macro improvement (applies to all adopters):** Added `data-dz-region` attribute to the macro's outer div so HTMX `hx-target="closest [data-dz-region]"` works in any adopter without requiring per-file IDs. Free upgrade for grid + list too.
+
+**Progress:** Regions 3/16 (grid, list, kanban). Auth 1/7 (login).
+
+**Next cycle:** **tabbed_list.html** (9 hits, simpler — wraps multiple sub-lists). Continuation.
+
+---
+
 ## 2026-04-12T22:14Z — Cycle 34
 
 **Selected row:** UX-035 region-wrapper — continuing the adoption sweep. Not a new component; advancing impl:PARTIAL from 1/16 → 2/16.
