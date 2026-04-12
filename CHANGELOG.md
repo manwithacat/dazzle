@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.0] - 2026-04-12
+
+### Added
+- **ux-architect skill**: New Claude Code skill at `~/.claude/skills/ux-architect/` for constraint-based UI generation. 4-layer model: frozen token sheets, component contracts, interaction primitives, stack adapters. Linear aesthetic, 13 artefact files.
+- **Data table inline edit**: `PATCH /api/{entity}/{id}/field/{field_name}` endpoint for single-field updates. Compiler auto-populates `inline_editable` from field types (text, bool, enum, date). Phase-based editing: double-click to enter, Enter/Tab to commit, Esc to cancel, Tab advances to next editable cell.
+- **Data table bulk delete**: `POST /api/{entity}/bulk-delete` endpoint with scope-filtered ID list. Delete-only for v1; UI shows confirmation before executing.
+- **Data table column resize**: Client-only column width adjustment via pointer events and `<colgroup>`. Snaps to 8px increments, persisted to localStorage per table ID.
+- **Quality gate tests**: Playwright integration tests for dashboard (6 tests) and data table (9 tests). Static test harnesses serve mock data without backend. Catches DOM event wiring bugs that unit tests miss.
+
+### Changed
+- **Breaking**: Dashboard rewritten — SortableJS replaced with native pointer events + Alpine.js. 5-state save lifecycle (clean/dirty/saving/saved/error), undo stack (Cmd+Z), keyboard move/resize mode. `sortable.min.js` removed from vendor.
+- **Breaking**: All table templates rewritten to pure Tailwind — DaisyUI component classes (`btn`, `table`, `badge`, `dropdown`, `checkbox`, `rounded-box`, `bg-base-*`) removed from `filterable_table.html`, `table_rows.html`, `table_pagination.html`, `bulk_actions.html`, `search_input.html`, `filter_bar.html`, `inline_edit.html`. Colours use `design-system.css` HSL variables.
+- **Breaking**: `dzTable` Alpine component signature changed from `(tableId, endpoint, sortField, sortDir)` to `(tableId, endpoint, config)` where config is `{sortField, sortDir, inlineEditable, bulkActions, entityName}`.
+- `examples/` reorganised: internal tools and test fixtures moved to `fixtures/`. `_archive/` deleted. `examples/` now contains only working Dazzle apps (simple_task, contact_manager, support_tickets, ops_dashboard, fieldtest_hub).
+
+### Fixed
+- CI badge (red since 2026-03-30): `test_regions_still_load_without_sse` expected `hx-trigger="load"` but template uses `intersect once`. CI validation loops updated to include `fixtures/*/`.
+
+### Agent Guidance
+- **ux-architect skill**: When building or modifying dashboard, data table, or other spec-governed UI, invoke the `ux-architect` skill. Read token sheets and component contracts before writing code. Do not invent values outside the token sheet.
+- **DaisyUI phase-out**: New spec-governed components use pure Tailwind utilities. Existing non-governed templates may still use DaisyUI. Migrate incrementally as components get contracts.
+- **Inline edit field types**: Compiler determines editability from column type: text, bool, badge (enum), date are editable; pk, ref, computed, sensitive, money are not.
+- **examples/ vs fixtures/**: Real example apps in `examples/`, internal tools in `fixtures/`. CI validates both directories.
+
 ## [0.53.1] - 2026-03-30
 
 ### Fixed
