@@ -4,6 +4,40 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T20:35Z — Cycle 26
+
+**Selected row:** UX-029 (detail-view) — first cycle beyond the form_field widget family. Promoted from PROP-030.
+
+**Phases:**
+- **OBSERVE**: Main Components table had no bucket 2/3 rows after Cycle 25 closed out form_field.html. Eight PROP rows remained (PROP-029..036 covering non-widget templates). Picked PROP-030 detail_view over PROP-029 review_queue: detail_view is the generic reusable surface used by every detail/show page, review_queue is approval-workflow-specific. Higher leverage per cycle.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/detail-view.md`. Documents the header/transitions/external-links/integration-actions/fields/related-groups structure, the semantic `<dl>`/`<dt>`/`<dd>` definition list, field type formatters, outlined button family, and Jinja block preservation requirement. 5 quality gates.
+- **REFACTOR**: Rewrote `templates/components/detail_view.html` (~155 LOC):
+  - Removed 29 DaisyUI class occurrences: `btn btn-ghost btn-sm` (back), `btn btn-outline btn-sm` (edit, transitions, external links, integration actions), `btn btn-error btn-outline btn-sm` (delete), `card bg-base-100 shadow-sm`, `card-body`, `divide-y divide-base-200`, `text-base-content/70`, `link link-primary`
+  - Back button: ghost-style token-driven
+  - Edit + transitions + external + integration buttons: outlined primary family — all use the same `h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))]` base
+  - Delete button: outlined destructive — `border-[hsl(var(--destructive))] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)]`
+  - Card wrapper: `bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]` — uses the distinct `--card` token from design-system
+  - Field list divider: `divide-[hsl(var(--border))]`
+  - Field label: `text-[13px] font-medium text-[hsl(var(--muted-foreground))]`
+  - Field value: `text-[13px] text-[hsl(var(--foreground))]`
+  - File link: `text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1`
+  - All 6 Jinja blocks preserved (`detail_header`, `detail_transitions`, `detail_external_links`, `detail_integration_actions`, `detail_fields`, `detail_related_groups`) — downstream templates can still override them
+  - Back button inline JS (drawer-close + history-back + origin check) preserved
+  - Field type formatters preserved (`bool_icon`, `dateformat`, `currency`, `basename_or_url`, `humanize`, `ref_display`)
+  - HTMX wiring preserved on delete/transition/integration buttons
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-029 contract + refactor done; status READY_FOR_QA.
+
+**New pattern established — Outlined Button Family:** Detail-view introduced the "outlined button" aesthetic — the neutral button style used for action bars where multiple buttons sit side-by-side and the emphasis is on *what the button does* rather than any single button being the primary action. Base classes: `h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]`. Destructive variant swaps border + text to `hsl(var(--destructive))` + background hover to `bg-[hsl(var(--destructive)/0.1)]`. This pattern will reappear in review_queue, workspace region toolbars, and layout chrome.
+
+**Non-widget refactor progress:** 1 of 8 PROP rows complete. Remaining: review_queue, app_shell, workspace_regions, auth_pages, base_layout, related_displays, reports_e2e_journey.
+
+**Next cycle candidate:** **PROP-029 review_queue** — 36 hits (heaviest single file). Uses `btn`, `btn-sm`, `card`. Will benefit from the outlined-button family established here. Alternatively PROP-031 app_shell (32 hits, layout chrome — navbar + drawer) is more impactful but higher-risk (affects every page). Leaning toward review_queue first to build confidence with the new patterns.
+
+---
+
 ## 2026-04-12T20:25Z — Cycle 25
 
 **Selected row:** UX-028 (widget:search_select) — final widget row, last branch of `form_field.html`.

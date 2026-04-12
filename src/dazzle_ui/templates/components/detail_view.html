@@ -1,20 +1,24 @@
 {# Detail view component - displays entity fields as a definition list #}
+{# Contract: ~/.claude/skills/ux-architect/components/detail-view.md (UX-029) #}
 {% if detail %}
 <div class="{% if detail.related_groups %}max-w-5xl{% else %}max-w-3xl{% endif %}" data-dazzle-entity="{{ detail.entity_name }}">
   {# Header with actions #}
   {% block detail_header %}
   <div class="flex items-center justify-between mb-6">
     <div class="flex items-center gap-3">
-      <a href="{{ detail.back_url }}" class="btn btn-ghost btn-sm"
+      <a href="{{ detail.back_url }}"
+         class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
          onclick="var d=this.closest('#dz-detail-drawer');if(d&&window.dzDrawer){window.dzDrawer.close();return false}if(document.referrer&&new URL(document.referrer).origin===location.origin){history.back();return false}">&larr; Back</a>
-      <h2 class="text-2xl font-bold">{{ detail.title }}</h2>
+      <h2 class="text-[18px] font-semibold text-[hsl(var(--foreground))]">{{ detail.title }}</h2>
     </div>
     <div class="flex gap-2">
       {% if detail.edit_url %}
-      <a href="{{ detail.edit_url }}" class="btn btn-outline btn-sm" data-dazzle-action="{{ detail.entity_name }}.edit">Edit</a>
+      <a href="{{ detail.edit_url }}"
+         class="h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+         data-dazzle-action="{{ detail.entity_name }}.edit">Edit</a>
       {% endif %}
       {% if detail.delete_url %}
-      <button class="btn btn-error btn-outline btn-sm"
+      <button class="h-8 px-3 rounded-[4px] border border-[hsl(var(--destructive))] text-[13px] font-medium text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.1)] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
               data-dazzle-action="{{ detail.entity_name }}.delete"
               hx-delete="{{ detail.delete_url }}"
               hx-confirm="Delete this {{ detail.entity_name | lower }}?"
@@ -32,7 +36,7 @@
   {% if detail.transitions %}
   <div class="flex gap-2 mb-4" data-dazzle-transitions="{{ detail.entity_name }}">
     {% for transition in detail.transitions %}
-    <button class="btn btn-outline btn-sm"
+    <button class="h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
             data-dazzle-action="{{ detail.entity_name }}.transition.{{ transition.to_state }}"
             hx-put="{{ transition.api_url }}"
             hx-vals='{"{{ detail.status_field }}": "{{ transition.to_state }}"}'
@@ -52,7 +56,7 @@
   <div class="flex gap-2 mb-4" data-dazzle-external-links="{{ detail.entity_name }}">
     {% for link in detail.external_link_actions %}
     <a href="{{ link.url }}" {% if link.new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}
-       class="btn btn-outline btn-sm"
+       class="h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
        data-dazzle-action="{{ detail.entity_name }}.external.{{ link.name }}">
       {{ link.label }}
     </a>
@@ -66,7 +70,7 @@
   {% if detail.integration_actions %}
   <div class="flex gap-2 mb-4" data-dazzle-integration-actions="{{ detail.entity_name }}">
     {% for action in detail.integration_actions %}
-    <button class="btn btn-outline btn-sm"
+    <button class="h-8 px-3 rounded-[4px] border border-[hsl(var(--border))] text-[13px] font-medium text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
             data-dazzle-action="{{ detail.entity_name }}.integration.{{ action.integration_name }}.{{ action.mapping_name }}"
             hx-post="{{ action.api_url }}"
             hx-target="body"
@@ -81,15 +85,15 @@
 
   {# Detail card #}
   {% block detail_fields %}
-  <div class="card bg-base-100 shadow-sm">
-    <div class="card-body">
-      <dl class="divide-y divide-base-200">
+  <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]">
+    <div class="p-4">
+      <dl class="divide-y divide-[hsl(var(--border))]">
         {% for field in detail.fields %}
         {% if field.visible | default(true) %}
         {% set value = detail.item.get(field.name, "") %}
         <div class="py-3 sm:grid sm:grid-cols-3 sm:gap-4">
-          <dt class="text-sm font-medium text-base-content/70">{{ field.label }}</dt>
-          <dd class="mt-1 text-sm sm:col-span-2 sm:mt-0">
+          <dt class="text-[13px] font-medium text-[hsl(var(--muted-foreground))]">{{ field.label }}</dt>
+          <dd class="mt-1 text-[13px] text-[hsl(var(--foreground))] sm:col-span-2 sm:mt-0">
             {% if field.type == "badge" %}
               {% include 'fragments/status_badge.html' %}
             {% elif field.type == "bool" or field.type == "checkbox" %}
@@ -100,8 +104,9 @@
               {{ value | currency(field.extra.get('currency_code', 'GBP') if field.extra else 'GBP') }}
             {% elif field.type == "file" %}
               {% if value %}
-              <a href="{{ value }}" target="_blank" rel="noopener" class="link link-primary inline-flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <a href="{{ value }}" target="_blank" rel="noopener"
+                 class="text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 {{ value | basename_or_url }}
@@ -136,7 +141,7 @@
   {% for group in detail.related_groups %}
   <div class="mt-6" data-dazzle-related-group="{{ group.group_id }}">
     {% if detail.related_groups | length > 1 or not group.is_auto %}
-    <h3 class="text-lg font-semibold mb-3">{{ group.label }}</h3>
+    <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))] mb-3">{{ group.label }}</h3>
     {% endif %}
 
     {% if group.display == "status_cards" %}
