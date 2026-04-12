@@ -1,6 +1,6 @@
 {# Command palette — spotlight-style search and action launcher (Cmd+K) #}
-{# Parameters: actions (list of {label: str, url: str, group: str|None, icon: str|None}) as JSON #}
-{# Actions can also be loaded via data-dz-actions attribute on the element #}
+{# Contract: ~/.claude/skills/ux-architect/components/command-palette.md (UX-011) #}
+{# Parameters: actions (list of {label, url, group?, icon?, handler?}) as JSON #}
 <div x-data="dzCommandPalette"
      data-dz-actions='{{ actions | tojson if actions else "[]" }}'
      x-show="open"
@@ -12,56 +12,69 @@
      x-transition:leave-end="opacity-0"
      @keydown.escape="close()"
      class="fixed inset-0 z-50 flex items-start justify-center pt-[20vh]"
-     role="dialog" aria-modal="true" aria-label="Command palette">
+     role="dialog" aria-modal="true" aria-label="Command palette"
+     style="display: none">
 
   {# Backdrop #}
   <div class="fixed inset-0 bg-black/40" @click="close()"></div>
 
-  {# Palette #}
-  <div class="relative w-full max-w-lg bg-base-100 rounded-box shadow-2xl border border-base-300 overflow-hidden"
+  {# Palette card #}
+  <div class="relative w-full max-w-lg bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-[8px] shadow-[0_20px_40px_rgb(0_0_0/0.2),0_2px_8px_rgb(0_0_0/0.08)] overflow-hidden"
        @keydown="onKeyDown($event)">
 
-    {# Search input #}
-    <div class="flex items-center gap-2 px-4 py-3 border-b border-base-300">
-      <svg class="w-5 h-5 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    {# Search input row #}
+    <div class="flex items-center gap-2 px-4 py-3 border-b border-[hsl(var(--border))]">
+      <svg class="w-4 h-4 shrink-0 text-[hsl(var(--muted-foreground))]" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
       </svg>
       <input x-ref="searchInput" x-model="query" type="text"
              placeholder="Type a command..."
-             class="input input-ghost w-full focus:outline-none"
+             class="w-full bg-transparent text-[14px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none"
              role="combobox" aria-expanded="true" aria-controls="palette-results"
-             aria-activedescendant="">
+             :aria-activedescendant="filtered.length ? ('palette-item-' + selectedIndex) : ''">
     </div>
 
     {# Results #}
-    <ul id="palette-results" class="max-h-64 overflow-y-auto p-2" role="listbox">
+    <ul id="palette-results" class="max-h-[320px] overflow-y-auto p-1.5" role="listbox">
       <template x-for="(action, idx) in filtered" :key="action.label">
         <li :id="'palette-item-' + idx"
-            :class="idx === selectedIndex ? 'bg-primary/10 text-primary' : 'hover:bg-base-200'"
+            :class="idx === selectedIndex
+              ? 'bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))]'
+              : 'hover:bg-[hsl(var(--muted))]'"
             @click="select(action)"
             @mouseenter="selectedIndex = idx"
             role="option"
             :aria-selected="idx === selectedIndex"
-            class="flex items-center gap-3 px-3 py-2 rounded cursor-pointer transition-colors">
+            class="flex items-center gap-3 px-3 py-2 rounded-[4px] cursor-pointer transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
           <template x-if="action.icon">
-            <i :data-lucide="action.icon" class="w-4 h-4"></i>
+            <i :data-lucide="action.icon" class="w-4 h-4 shrink-0" aria-hidden="true"></i>
           </template>
-          <div>
-            <div class="text-sm font-medium" x-text="action.label"></div>
-            <div class="text-xs text-base-content/50" x-text="action.group || ''" x-show="action.group"></div>
+          <div class="min-w-0">
+            <div class="text-[13px] font-medium text-[hsl(var(--foreground))] truncate" x-text="action.label"></div>
+            <div class="text-[12px] text-[hsl(var(--muted-foreground))] truncate"
+                 x-text="action.group || ''" x-show="action.group"></div>
           </div>
         </li>
       </template>
-      <li x-show="filtered.length === 0" class="px-3 py-6 text-center text-sm text-base-content/50">
+      <li x-show="filtered.length === 0" class="px-3 py-6 text-center text-[13px] italic text-[hsl(var(--muted-foreground))]">
         No results found
       </li>
     </ul>
 
-    {# Footer #}
-    <div class="flex items-center gap-4 px-4 py-2 border-t border-base-300 text-xs text-base-content/40">
-      <span><kbd class="kbd kbd-xs">↑↓</kbd> Navigate</span>
-      <span><kbd class="kbd kbd-xs">↵</kbd> Select</span>
-      <span><kbd class="kbd kbd-xs">esc</kbd> Close</span>
+    {# Footer — keyboard hints #}
+    <div class="flex items-center gap-4 px-4 py-2 border-t border-[hsl(var(--border))] text-[12px] text-[hsl(var(--muted-foreground))]">
+      <span class="inline-flex items-center gap-1">
+        <kbd class="h-5 px-1.5 inline-flex items-center rounded-[3px] border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[10px] font-mono text-[hsl(var(--muted-foreground))]">↑↓</kbd>
+        Navigate
+      </span>
+      <span class="inline-flex items-center gap-1">
+        <kbd class="h-5 px-1.5 inline-flex items-center rounded-[3px] border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[10px] font-mono text-[hsl(var(--muted-foreground))]">↵</kbd>
+        Select
+      </span>
+      <span class="inline-flex items-center gap-1">
+        <kbd class="h-5 px-1.5 inline-flex items-center rounded-[3px] border border-[hsl(var(--border))] bg-[hsl(var(--muted))] text-[10px] font-mono text-[hsl(var(--muted-foreground))]">esc</kbd>
+        Close
+      </span>
     </div>
   </div>
 </div>

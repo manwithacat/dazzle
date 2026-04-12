@@ -4,6 +4,27 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T18:35Z — Cycle 12
+
+**Selected row:** UX-011 (command-palette) — third widget row; high-visibility Cmd+K spotlight.
+
+**Phases:**
+- **OBSERVE**: Bucket 2 empty. Picked UX-011 for user impact — Cmd+K is a feature users notice immediately.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/command-palette.md`. Documents the overlay + backdrop + card + search + listbox + footer structure. 5 quality gates (no DaisyUI, dzCommandPalette signature preserved, global Cmd+K listener, arrow keys navigate without moving focus, backdrop closes).
+- **REFACTOR**:
+  - `templates/fragments/command_palette.html`: full rewrite. Replaced DaisyUI `bg-base-100` / `rounded-box` / `border-base-300` (×3) / `input input-ghost` / `hover:bg-base-200` / `text-base-content/*` (×5) / `kbd kbd-xs` (×3) / `bg-primary/10 text-primary` with token-driven classes. Two-layer card shadow via arbitrary Tailwind `shadow-[0_20px_40px_rgb(0_0_0/0.2),0_2px_8px_rgb(0_0_0/0.08)]`. Card radius `rounded-[8px]` (larger than inline controls to feel dialog-grade).
+  - **Side fix (v0.1 bug):** `aria-activedescendant` was previously a static empty string. Now wired via Alpine `:aria-activedescendant="filtered.length ? ('palette-item-' + selectedIndex) : ''"` so screen readers announce the highlighted item as the user arrows through the list.
+  - **Minor fix:** added `style="display: none"` to the root overlay so it doesn't flash visible before Alpine initialises (FOUC prevention).
+  - `dz-alpine.js` dzCommandPalette component unchanged — all 10 exposed members (open/query/selectedIndex/actions/filtered/toggle/close/select/onKeyDown/init) preserved.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-011 contract + refactor done; status READY_FOR_QA. Side-benefit: fixed an accessibility bug (empty aria-activedescendant) that predates this cycle.
+
+**Pattern observation:** Cycle 12 is a "no-library widget" refactor — unlike UX-009/010 which had vendored libraries (TomSelect, Flatpickr), command-palette is pure Alpine + Tailwind. That made this cycle simpler: no CSS override block in design-system.css, just a template rewrite. Most remaining widget rows are in this same category (confirm-dialog, popover is Floating UI so needs a small override, slide-over is pure Alpine). **Refined estimate:** pure-Alpine widgets are ~150 LOC/cycle; vendored widgets are ~200 LOC/cycle.
+
+---
+
 ## 2026-04-12T18:28Z — Cycle 11
 
 **Selected row:** UX-010 (widget:datepicker) — second widget row, direct parallel to UX-009's TomSelect pattern.
