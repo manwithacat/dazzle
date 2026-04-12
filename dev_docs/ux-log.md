@@ -4,6 +4,51 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T20:15Z — Cycle 24
+
+**Selected row:** UX-027 (widget:file) — promoted from PROP-027.
+
+**Phases:**
+- **OBSERVE**: Picked PROP-027. Most DOM-complex widget remaining (two swap-visible states, drag/drop, progress, error display).
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-file.md`. Documents the two-state model (empty dropzone + filled preview), the label-wrapped hidden file input for keyboard accessibility, and the scoped `<progress>` pseudo-element override needed for a native progress bar. 5 quality gates.
+- **REFACTOR**:
+  - `templates/macros/form_field.html` file branch: rewrote both the preview card and the dropzone label to pure Tailwind tokens. Replaced:
+    - `bg-base-200` → `bg-[hsl(var(--muted))]` (preview card, dropzone hover)
+    - `text-success` → inline green hex `text-[hsl(142_76%_36%)]` (project lacks a `--success` CSS var — logged as v0.2 open question to add one)
+    - `btn btn-ghost btn-xs` → token-driven ghost button `h-6 w-6 rounded-[4px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]`
+    - `border-base-300` → `border-[hsl(var(--border))]` (dropzone border)
+    - `border-primary` → `border-[hsl(var(--primary))]` (dragging state)
+    - `bg-base-200/50` → `bg-[hsl(var(--muted)/0.5)]` (dragging background)
+    - `text-base-content/40` → `text-[hsl(var(--muted-foreground)/0.6)]` (dropzone icon)
+    - `text-base-content/60` → `text-[hsl(var(--muted-foreground))]` (dropzone label)
+    - `progress progress-primary` → plain `<progress data-dz-file-progress>` + CSS override
+    - `text-error` → `text-[hsl(var(--destructive))]` (client-side error message)
+  - Added `aria-invalid` + `aria-describedby` to the hidden input (form-field chrome integration)
+  - Added `role="alert"` to the client-side error message
+  - Removed `hover:border-primary` redundancy (dragging state handles it via Alpine binding)
+  - `runtime/static/css/design-system.css`: appended scoped `<progress>` override block for `progress[data-dz-file-progress]` covering `::-webkit-progress-bar`, `::-webkit-progress-value`, `::-moz-progress-bar`. 4px height, muted track, primary fill, 120ms width transition.
+  - dzFileUpload Alpine component unchanged — `hasFile`, `filename`, `uploading`, `dragging`, `error`, `onDrop`, `selectFile`, `clear` all preserved. `data-dz-file`, `data-dz-file-input`, `data-dz-file-value` attributes preserved.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-027 contract + refactor + scoped `<progress>` override done; status READY_FOR_QA.
+
+**🎉 Widget branch progress: 10 of 11 branches refactored** — form_field.html's core is now almost fully token-driven. The only remaining branch is `field.source` (search_select fragment, tracked by PROP-028) which lives in a separate file.
+
+**Form-field.html DaisyUI audit (remaining):**
+The only remaining DaisyUI tokens in `templates/macros/form_field.html` are inside the `{% elif field.source %}` branch at lines 35-42, which delegates to `fragments/search_select.html` for the widget itself. PROP-028 covers both.
+
+**v0.2 scope identified:** The file upload widget's success checkmark uses an inline green hex `hsl(142 76% 36%)` because the project design system doesn't yet expose a `--success` CSS variable. Adding `--success` + `--success-foreground` to `design-system.css` would:
+- Let `widget:file` reference `hsl(var(--success))` instead of the inline hex
+- Unblock future success-toast and status-badge work that would benefit from the same token
+- Match the pattern already used by `--primary` / `--destructive`
+
+Logged as an open question in the contract — not blocking for UX-027 READY_FOR_QA.
+
+**Next cycle candidate:** **PROP-028 widget:search_select** — final widget row. Lives in `fragments/search_select.html` (separate file). After this cycle, form_field.html will be 100% DaisyUI-free.
+
+---
+
 ## 2026-04-12T20:07Z — Cycle 23
 
 **Selected row:** UX-026 (widget:money) — promoted from PROP-026.

@@ -1497,3 +1497,29 @@ input[aria-invalid="true"][type="hidden"] + .pcr-app,
 .ql-snow .ql-tooltip a.ql-action:hover {
   color: hsl(var(--primary));
 }
+
+/* ── File upload progress bar (UX-027 widget:file) ───────────────────── */
+/* Scoped to progress[data-dz-file-progress] so generic <progress> elements */
+/* elsewhere keep their browser-default appearance.                          */
+progress[data-dz-file-progress] {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: hsl(var(--muted));
+}
+progress[data-dz-file-progress]::-webkit-progress-bar {
+  background: hsl(var(--muted));
+  border-radius: 2px;
+}
+progress[data-dz-file-progress]::-webkit-progress-value {
+  background: hsl(var(--primary));
+  border-radius: 2px;
+  transition: width 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+progress[data-dz-file-progress]::-moz-progress-bar {
+  background: hsl(var(--primary));
+  border-radius: 2px;
+}

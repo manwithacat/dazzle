@@ -410,20 +410,24 @@
              {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
 
     {% elif field.type == "file" %}
-      {# File upload: Alpine dzFileUpload component #}
+      {# UX-027: file upload — Alpine dzFileUpload, pure Tailwind chrome #}
       <div x-data="dzFileUpload" data-dz-file="{{ field.name }}" class="dz-file-upload"
            {% if value %}x-init="hasFile = true; filename = '{{ value | default('', true) | basename_or_url }}'"{% endif %}>
         <input type="hidden" name="{{ field.name }}" id="{{ field_id }}"
                data-dazzle-field="{{ field.name }}" data-dz-file-value
-               value="{{ value | default('', true) }}" />
+               value="{{ value | default('', true) }}"
+               {% if error %}aria-invalid="true"{% endif %}
+               {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %} />
         {# File preview (shown when file exists) #}
-        <div x-show="hasFile" class="flex items-center gap-2 p-3 bg-base-200 rounded-lg mb-2">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div x-show="hasFile" class="flex items-center gap-2 p-3 mb-2 rounded-[4px] bg-[hsl(var(--muted))]">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-[hsl(142_76%_36%)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span class="text-sm truncate" x-text="filename"></span>
-          <button type="button" @click="clear()" class="btn btn-ghost btn-xs ml-auto" aria-label="Remove file">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <span class="text-[13px] truncate text-[hsl(var(--foreground))]" x-text="filename"></span>
+          <button type="button" @click="clear()"
+                  class="h-6 w-6 inline-flex items-center justify-center rounded-[4px] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] ml-auto transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+                  aria-label="Remove file">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -433,27 +437,26 @@
                @dragover.prevent="dragging = true"
                @dragleave="dragging = false"
                @drop="onDrop($event)"
-               :class="dragging && 'border-primary bg-base-200/50'"
-               class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-base-300 rounded-lg cursor-pointer hover:border-primary hover:bg-base-200/50 transition-colors">
+               :class="dragging && 'border-[hsl(var(--primary))] bg-[hsl(var(--muted)/0.5)]'"
+               class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[hsl(var(--border))] rounded-[6px] cursor-pointer hover:bg-[hsl(var(--muted)/0.5)] transition-colors duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
           <div class="flex flex-col items-center justify-center pt-5 pb-6">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2 text-[hsl(var(--muted-foreground)/0.6)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            <p class="text-sm text-base-content/60">Click to upload or drag and drop</p>
+            <p class="text-[13px] text-[hsl(var(--muted-foreground))]">Click to upload or drag and drop</p>
           </div>
           <input type="file" class="hidden" data-dz-file-input
                  @change="selectFile($event)"
                  accept="{{ field.extra.get('accept', '*/*') }}"
                  {% if field.extra.get('capture') %}capture="{{ field.extra.capture }}"{% endif %}
-                 {% if field.required and not value %}required aria-required="true"{% endif %}
-                 {% if error %}aria-invalid="true"{% endif %} />
+                 {% if field.required and not value %}required aria-required="true"{% endif %} />
         </label>
         {# Upload progress #}
         <div x-show="uploading" class="mt-2">
-          <progress class="progress progress-primary w-full"></progress>
+          <progress data-dz-file-progress class="w-full h-1 rounded-[2px]" max="100"></progress>
         </div>
-        {# Error message #}
-        <div x-show="error" class="text-error text-sm mt-1" x-text="error"></div>
+        {# Client-side error message (file-too-large, etc.) — distinct from server errors #}
+        <p x-show="error" class="text-[12px] text-[hsl(var(--destructive))] mt-1" x-text="error" role="alert"></p>
       </div>
 
     {% else %}
