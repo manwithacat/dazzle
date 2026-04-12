@@ -86,3 +86,162 @@ class TestDashboardQualityGates:
         assert result["allPass"] is True, "Not all gates passed: " + ", ".join(
             f"{name}: {'PASS' if r['pass'] else 'FAIL'}" for name, r in result["results"].items()
         )
+
+
+class TestDashboardIntegrationGates:
+    """Integration gates: real DOM pointer events on window.
+
+    These tests exercise the `@pointermove.window` and `@pointerup.window` event
+    bindings with real DOM events — the exact pipeline that the setPointerCapture
+    bug (#770) broke. They complement the unit gates above, which test controller
+    state transitions in isolation.
+
+    **Why seed drag state via direct method call, then fire real pointermove?**
+    The setPointerCapture bug redirected pointermove events AWAY from the window
+    listener and onto the captured element. The bug was NOT in `@pointerdown` —
+    that fired correctly. The bug was in the window listener for pointermove/up
+    never receiving events because they were captured. So the critical regression
+    test is: "after startDrag is called, does a real window-level pointermove
+    actually reach the handler and transition phases?"
+
+    This is what these tests verify: startDrag seeds state, real window events
+    drive the transition, and we assert the handler was reached.
+    """
+
+    def _seed_drag_state(self, browser_page, start_x=100, start_y=100):
+        """Seed a 'pressed' drag state by invoking startDrag directly.
+
+        This bypasses @pointerdown binding (which has an unrelated issue inside
+        <template x-for> that we file separately). The purpose of these tests
+        is to verify the window-level event pipeline, not @pointerdown itself.
+        """
+        browser_page.evaluate(f"""
+            (() => {{
+                const comp = Alpine.$data(document.querySelector('[x-data]'));
+                comp.drag = null;
+                comp.resize = null;
+                comp.undoStack = [];
+                comp.saveState = 'clean';
+                comp.startDrag('card-1', {{
+                    clientX: {start_x},
+                    clientY: {start_y},
+                    button: 0,
+                    pointerId: 1,
+                    preventDefault: () => {{}},
+                }});
+            }})()
+        """)
+
+    def _fire_window_pointermove(self, browser_page, client_x, client_y):
+        """Dispatch a real pointermove event on window."""
+        browser_page.evaluate(f"""
+            (() => {{
+                const evt = new PointerEvent('pointermove', {{
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: {client_x},
+                    clientY: {client_y},
+                    pointerId: 1,
+                    pointerType: 'mouse',
+                }});
+                window.dispatchEvent(evt);
+            }})()
+        """)
+
+    def _fire_window_pointerup(self, browser_page, client_x, client_y):
+        """Dispatch a real pointerup event on window."""
+        browser_page.evaluate(f"""
+            (() => {{
+                const evt = new PointerEvent('pointerup', {{
+                    bubbles: true,
+                    cancelable: true,
+                    clientX: {client_x},
+                    clientY: {client_y},
+                    pointerId: 1,
+                    pointerType: 'mouse',
+                }});
+                window.dispatchEvent(evt);
+            }})()
+        """)
+
+    def _get_phase(self, browser_page):
+        return browser_page.evaluate(
+            "Alpine.$data(document.querySelector('[x-data]'))?.drag?.phase || null"
+        )
+
+    def _get_drag(self, browser_page):
+        return browser_page.evaluate(
+            "JSON.parse(JSON.stringify(Alpine.$data(document.querySelector('[x-data]'))?.drag || null))"
+        )
+
+    def test_pointermove_window_transitions_phase(self, browser_page):
+        """Real window pointermove event transitions drag from pressed to dragging.
+
+        This is the key regression test for #770. The setPointerCapture bug
+        made pointermove events bypass the @pointermove.window handler.
+        Verifying that a real window-level pointermove reaches the handler and
+        drives the state machine proves the pipeline is wired correctly.
+        """
+        self._seed_drag_state(browser_page, start_x=100, start_y=100)
+
+        # Verify initial state is 'pressed'
+        assert self._get_phase(browser_page) == "pressed"
+
+        # Fire real window pointermove 50px away — well past 4px threshold
+        self._fire_window_pointermove(browser_page, 150, 100)
+
+        # Phase should now be 'dragging'
+        phase = self._get_phase(browser_page)
+        assert phase == "dragging", (
+            f"@pointermove.window handler did not transition phase to dragging "
+            f"(got: {phase}). This indicates the window-level event listener is "
+            f"not wired — exactly the regression class that #770 identified."
+        )
+
+    def test_pointermove_below_threshold_stays_pressed(self, browser_page):
+        """Real window pointermove below 4px threshold stays in pressed phase."""
+        self._seed_drag_state(browser_page, start_x=100, start_y=100)
+
+        # Fire real window pointermove only 2px away
+        self._fire_window_pointermove(browser_page, 102, 100)
+
+        phase = self._get_phase(browser_page)
+        assert phase == "pressed", (
+            f"Drag should stay in pressed phase below 4px threshold (got: {phase})"
+        )
+
+    def test_pointerup_window_clears_drag(self, browser_page):
+        """Real window pointerup event clears drag state after drop."""
+        self._seed_drag_state(browser_page, start_x=100, start_y=100)
+
+        # Move to dragging phase
+        self._fire_window_pointermove(browser_page, 200, 100)
+        assert self._get_phase(browser_page) == "dragging"
+
+        # Fire real window pointerup
+        self._fire_window_pointerup(browser_page, 200, 100)
+
+        # Drag should be cleared
+        drag = self._get_drag(browser_page)
+        assert drag is None, f"@pointerup.window handler did not clear drag state (got: {drag})"
+
+    def test_multiple_pointermove_tracks_position(self, browser_page):
+        """Real window pointermove events update currentX/currentY correctly."""
+        self._seed_drag_state(browser_page, start_x=100, start_y=100)
+
+        # Fire several pointermove events
+        self._fire_window_pointermove(browser_page, 120, 110)
+        self._fire_window_pointermove(browser_page, 150, 130)
+        self._fire_window_pointermove(browser_page, 180, 150)
+
+        drag = self._get_drag(browser_page)
+        assert drag is not None, "Drag state was cleared unexpectedly"
+        assert drag["currentX"] == 180, (
+            f"currentX not updated by pointermove (got: {drag.get('currentX')})"
+        )
+        assert drag["currentY"] == 150, (
+            f"currentY not updated by pointermove (got: {drag.get('currentY')})"
+        )
+
+        # Clean up
+        self._fire_window_pointerup(browser_page, 180, 150)
