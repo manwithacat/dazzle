@@ -4,6 +4,18 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T22:44Z — Cycle 36
+
+**Selected row:** UX-035 continuation — tabbed_list.html adopter (4/16).
+
+**Refactor:** Replaced DaisyUI `tabs tabs-bordered` + `tab tab-active` pattern with a flex-based ARIA tab switcher (`role="tablist"`, `role="tab"`). Tab active state via inline `onclick` class manipulation (preserves the vanilla JS tab-switcher from the original — HTMX doesn't drive this). Lazy-load spinners replaced `loading loading-spinner loading-sm` with an inline animating SVG. Empty state: `text-sm opacity-50` → `text-[13px] text-[hsl(var(--muted-foreground))]`.
+
+**Progress:** Regions 4/16. Auth 1/7. Remaining region files: metrics (14), timeline (10), tree (9), activity_feed (8), bar_chart (9), progress (8), detail (8), heatmap (6), funnel_chart (5), diagram (5), queue (17), tab_data (4), metrics.
+
+**Next cycle:** metrics.html or queue.html (tied for heaviest remaining at ~14-17 hits).
+
+---
+
 ## 2026-04-12T22:28Z — Cycle 35
 
 **Selected row:** UX-035 continuation — kanban.html adopter (3/16).
