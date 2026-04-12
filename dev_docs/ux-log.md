@@ -4,6 +4,23 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T18:12Z — Cycle 9
+
+**Selected row:** UX-019 (form-validation) — last of the UX-004 decomposition.
+
+**Phases:**
+- **OBSERVE**: Bucket 2 remains empty (form sub-rows exhaust it). Picked UX-019 (PENDING, MISSING, PARTIAL). Note: this cycle also clears the UX-004 aggregate tracker.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/form-validation.md`. Contract is orchestration-only: documents the three layered validation mechanisms (HTML5 native → `dzWizard.validateStage` → server 422/5xx swap), declares the server contract (422 with `form_errors` list + `field_errors` dict), names explicit v0.2 scope (per-blur validation, cross-field, async uniqueness). 5 quality gates (required-blocks-submit, stage-advance-blocks, server-summary-renders, per-field-errors-render, aria-describedby-wires-correctly).
+- **REFACTOR**: **No code changes.** The layered model is already fully implemented across UX-016 (form-chrome, `hx-target-422="#form-errors"`), UX-017 (form-field, `aria-invalid` + error paragraph + `aria-describedby` wiring), UX-018 (form-wizard, `validateStage` + `reportValidity`), and HTML5 native. Verified all 5 gates are satisfied by existing code via inspection. impl: PARTIAL → DONE reflects that the orchestration is now explicit, documented, and load-bearing for v0.2 design decisions.
+- **QA Phase A**: DEFERRED — needs running app.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-019 contract-only cycle done; status READY_FOR_QA. **UX-004 (form) aggregate tracker upgraded from BLOCKED_ON to READY_FOR_QA** — all four sub-rows (UX-016/017/018/019) are now complete. The form decomposition experiment is a success: a single row that was too large to attempt in one cycle became four tractable rows that completed in four consecutive cycles (6, 7, 8, 9) taking roughly 25 minutes total.
+
+**Meta-learning (decomposition pattern):** UX-004 → UX-016/017/018/019 was classified by the unblock-triage taxonomy as TOO_LARGE with clear sub-boundaries. The decomposition was cheap (10 minutes) and unblocked 4 cycles of progress. Key insight: the sub-boundaries weren't arbitrary — they matched the file structure already present in the codebase (`components/form.html`, `macros/form_field.html`, `fragments/form_stepper.html`, dzWizard in `dz-alpine.js`). When looking for decomposition opportunities, the existing code structure is the strongest signal. **New heuristic for scope triage**: before marking a row BLOCKED for size, run `ls -1 <component-family>/` and count files — N files → likely N sub-rows.
+
+---
+
 ## 2026-04-12T18:04Z — Cycle 8
 
 **Selected row:** UX-018 (form-wizard) — third sibling of the UX-004 decomposition; MISSING+DONE shape (contract only, no state machine work).
