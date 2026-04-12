@@ -4,6 +4,24 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T16:41Z — Cycle 3
+
+**Selected row:** UX-006 (filter-bar) — fastest possible cycle (retroactive contract for already-refactored component).
+
+**Phases:**
+- **OBSERVE**: Priority scan found UX-006/007/008 as impl:PARTIAL (already restyled as part of UX-002). Picked UX-006 as the first. This is the optimal row shape for the current loop state — no refactor work, just contract writing.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/filter-bar.md`. Linear aesthetic, server-driven with client-held transient input state, 5 quality gates (text debounce, select immediacy, multi-filter includes, async ref options, empty-value clears).
+- **REFACTOR**: Verified zero DaisyUI classes remain — already done as part of UX-002 data-table rebuild.
+- **QA**: DEFERRED — filter-bar is only rendered inside a data-table on a list page. Its QA is a subset of the data-table QA (which is itself pending a running app for UX-002 verification).
+
+**Outcome:** UX-006 filter-bar contract documented; impl already DONE; QA deferred.
+
+**Pattern observation:** UX-007 (search-input) and UX-008 (pagination) are in exactly the same state — impl:PARTIAL from the UX-002 rebuild, just needing contracts. These will be the next 2 fastest cycles if picked. The loop is effectively **documenting what was already done** for these rows, which is valuable but not new work.
+
+**Learning 7:** The backlog should distinguish "retroactive documentation" from "new work". After a multi-component refactor (like UX-002 which touched filter-bar, search-input, pagination), the derived rows should be seeded as `contract: DRAFT, impl: DONE` so the cycle knows they only need contract writing. Currently they're seeded as `contract: MISSING, impl: PARTIAL` which looks ambiguous.
+
+---
+
 ## 2026-04-12T16:35Z — Cycle 2
 
 **Selected row:** UX-013 (toast) — via loose interpretation of priority function.
