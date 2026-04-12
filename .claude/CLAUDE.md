@@ -102,6 +102,15 @@ surface task_list "Tasks":
 
 Use `revoked_at = null` for literal null filters, `!=` for not-equals. Each `scope:` rule needs a matching `permit:` rule and a `for:` clause naming the personas.
 
+## UX Improvement Loop
+
+Dazzle has an autonomous UX improvement loop at `/ux-cycle`. It iterates over the backlog in `dev_docs/ux-backlog.md`, applies ux-architect contracts to components that lack them, refactors code to match, and validates via agent-driven Playwright QA against example apps. See `docs/superpowers/specs/2026-04-12-ux-cycle-design.md` for the full design.
+
+**Common invocations:**
+- `/ux-cycle` — one cycle
+- `/loop 30m /ux-cycle` — recurring with 30-min intervals
+- `/loop /ux-cycle` — self-paced
+
 ## Extending
 
 ### Adding DSL Constructs

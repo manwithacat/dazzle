@@ -9,6 +9,9 @@ imports and code duplication.
 from __future__ import annotations
 
 import logging
+import re
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from ..core import AgentTool
@@ -344,4 +347,173 @@ def make_query_dsl_tool(appspec: AppSpec) -> AgentTool:
             },
         },
         handler=query_dsl,
+    )
+
+
+# =============================================================================
+# Component Contract Parser (for /ux-cycle)
+# =============================================================================
+
+
+@dataclass
+class QualityGate:
+    """A single testable behaviour from a ux-architect component contract."""
+
+    id: str  # snake_case identifier derived from description, e.g. "drag_threshold"
+    description: str  # the full gate text from the contract
+
+
+@dataclass
+class ComponentContract:
+    """Parsed structure of a ux-architect component contract markdown file."""
+
+    component_name: str
+    quality_gates: list[QualityGate]
+    anatomy: list[str] = field(default_factory=list)
+    primitives: list[str] = field(default_factory=list)
+
+
+def _derive_gate_id(description: str) -> str:
+    """Derive a snake_case id from a gate description.
+
+    Takes the parenthesised label if present, otherwise the first few
+    meaningful words. Always lowercase, always a valid identifier.
+    """
+    # Prefer parenthesised label: "... (drag threshold)" → "drag_threshold"
+    paren_match = re.search(r"\(([^)]+)\)", description)
+    if paren_match:
+        label = paren_match.group(1).strip()
+    else:
+        # Fall back to first 3 meaningful words
+        words = re.findall(r"[A-Za-z]+", description)[:3]
+        label = " ".join(words)
+
+    # Normalise to snake_case
+    label = label.lower()
+    label = re.sub(r"[^a-z0-9]+", "_", label)
+    label = label.strip("_")
+    return label or "unnamed_gate"
+
+
+def _extract_section(content: str, heading: str) -> str | None:
+    """Extract the text of a ## heading section from markdown content.
+
+    Returns everything after the `## heading` line until the next `## ` heading
+    or end of file. Returns None if the heading is not found.
+    """
+    # Match "## Heading" or "## Heading (optional suffix)"
+    pattern = rf"^## {re.escape(heading)}.*?\n(.*?)(?=\n## |\Z)"
+    match = re.search(pattern, content, re.MULTILINE | re.DOTALL)
+    return match.group(1) if match else None
+
+
+def _parse_numbered_list(section_text: str) -> list[str]:
+    """Parse a numbered list from a markdown section, returning raw item text.
+
+    Handles items that span multiple lines (continues until next number or blank line).
+    """
+    items: list[str] = []
+    current: list[str] = []
+
+    for line in section_text.splitlines():
+        # Match "1. text" or "2. text"
+        numbered_match = re.match(r"^\d+\.\s+(.+)", line)
+        if numbered_match:
+            if current:
+                items.append(" ".join(current).strip())
+                current = []
+            current.append(numbered_match.group(1))
+        elif current and line.strip() and not line.startswith("#"):
+            # Continuation of previous item
+            current.append(line.strip())
+        elif not line.strip() and current:
+            # Blank line ends the current item
+            items.append(" ".join(current).strip())
+            current = []
+
+    if current:
+        items.append(" ".join(current).strip())
+
+    return items
+
+
+def _parse_bullet_list(section_text: str) -> list[str]:
+    """Parse a bullet list, extracting the first `backtick token` from each item.
+
+    Used for anatomy (`- \\`grid-root\\` — container`) and primitives
+    (`- \\`drag-and-drop\\``).
+    """
+    items: list[str] = []
+    for line in section_text.splitlines():
+        line = line.strip()
+        if not line.startswith("-"):
+            continue
+        # Extract first `token` if present
+        token_match = re.search(r"`([^`]+)`", line)
+        if token_match:
+            items.append(token_match.group(1))
+    return items
+
+
+def parse_component_contract(path: Path) -> ComponentContract:
+    """Parse a ux-architect component contract markdown file.
+
+    Extracts:
+    - Component name (from filename without extension)
+    - Quality gates (from ``## Quality Gates`` numbered list)
+    - Anatomy parts (from ``## Anatomy`` bullet list)
+    - Interaction primitives (from ``## Primitives invoked`` bullet list)
+
+    Raises:
+        FileNotFoundError: if the file does not exist
+        ValueError: if the file does not contain a Quality Gates section
+    """
+    if not path.exists():
+        raise FileNotFoundError(f"Component contract not found: {path}")
+
+    content = path.read_text()
+    component_name = path.stem
+
+    # Quality Gates (required)
+    gates_section = _extract_section(content, "Quality Gates")
+    if gates_section is None:
+        raise ValueError(f"Contract at {path} has no '## Quality Gates' section")
+    gate_descriptions = _parse_numbered_list(gates_section)
+    if not gate_descriptions:
+        raise ValueError(f"Contract at {path} has a Quality Gates section but no numbered items")
+
+    # Disambiguate duplicate ids by appending an index
+    quality_gates: list[QualityGate] = []
+    seen_ids: dict[str, int] = {}
+    for desc in gate_descriptions:
+        base_id = _derive_gate_id(desc)
+        count = seen_ids.get(base_id, 0)
+        seen_ids[base_id] = count + 1
+        gate_id = base_id if count == 0 else f"{base_id}_{count + 1}"
+        quality_gates.append(QualityGate(id=gate_id, description=desc))
+
+    # Anatomy (optional)
+    anatomy: list[str] = []
+    anatomy_section = _extract_section(content, "Anatomy")
+    if anatomy_section:
+        anatomy = _parse_bullet_list(anatomy_section)
+
+    # Primitives (optional — may be labelled "Primitives invoked" or just in a
+    # bullet under a different heading, or as a front-matter bold line like
+    # "**Primitives invoked:** Drag-and-drop, Resize")
+    primitives: list[str] = []
+    primitives_section = _extract_section(content, "Primitives invoked")
+    if primitives_section:
+        primitives = _parse_bullet_list(primitives_section)
+    if not primitives:
+        # Fall back to front-matter inline form: **Primitives invoked:** val1, val2
+        fm_match = re.search(r"\*\*Primitives invoked:\*\*\s*(.+)", content, re.IGNORECASE)
+        if fm_match:
+            primitives = [p.strip() for p in fm_match.group(1).split(",") if p.strip()]
+
+    return ComponentContract(
+        component_name=component_name,
+        quality_gates=quality_gates,
+        anatomy=anatomy,
+        primitives=primitives,
     )
