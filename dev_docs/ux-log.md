@@ -4,6 +4,40 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T21:24Z — Cycle 30
+
+**Selected row:** UX-033 (base-layout) — promoted from PROP-034. Small scope, continuing layout chrome work after Cycle 28's app-shell.
+
+**Phases:**
+- **OBSERVE**: Picked PROP-034 for scope pacing. 17 DaisyUI hits, small file, high reach (every page inherits this template).
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/base-layout.md`. Scope carve-out: the contract documents base.html's role as the outermost Jinja template, the framework containers (dzToast, dzToastContainer, dz-modal-slot, dz-dynamic-assets, dz-page-announcer), the CSRF injection script, `_htmx_partial` mode, and conditional vendor asset loading. **Does NOT remove the DaisyUI framework import** — that's a higher-order decision requiring a full template audit and CSS migration. 5 quality gates.
+- **REFACTOR**: Edited `src/dazzle_ui/templates/base.html`:
+  - **Body background:** `bg-base-200` → `bg-[hsl(var(--background))]`. Inherits light/dark mode automatically via the CSS variable.
+  - **Client dzToast container:** `class="toast toast-end toast-top"` → `class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"`. Tailwind fixed positioning replaces DaisyUI's `toast` positioning class.
+  - **dzToast item template (Alpine `:class` binding):** `'alert alert-' + t.type + (t.leaving ? ' dz-toast-leave' : '')` → full token-driven expression with a 4-branch `t.type` conditional mapping `success`/`error`/`warning`/info to `border-l-*` colours (inline hex for `success` = `hsl(142 76% 36%)` and `warning` = `hsl(38 92% 50%)` since design-system.css doesn't yet have `--success` or `--warning` tokens). Base classes: `flex items-center gap-2 px-3 py-2 rounded-[4px] border border-[hsl(var(--border))] border-l-4 bg-[hsl(var(--popover))] text-[13px] text-[hsl(var(--popover-foreground))] shadow-[0_4px_12px_rgb(0_0_0/0.08)] pointer-events-auto cursor-pointer`.
+  - **HTMX OOB toast container:** same positioning classes as dzToast. Server-emitted toast markup is covered by UX-013 toast contract and already token-driven.
+  - **Framework containers preserved:** `#dz-toast`, `#dz-toast-container`, `#dz-modal-slot`, `#dz-dynamic-assets`, `#dz-page-announcer` all still present with their IDs and aria attributes.
+  - **`hx-boost` + `hx-ext` attributes preserved** on the body.
+  - **All 4 Jinja blocks preserved** (`title`, `head_extra`, `body`, `scripts_extra`).
+  - **CSRF injection script preserved** at the `<head>` level — reads `dazzle_csrf` cookie and sets `X-CSRF-Token` header on all HTMX requests.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-033 contract + refactor done; status READY_FOR_QA.
+
+**Scope note (logged):** base.html still imports DaisyUI's framework CSS at the `<head>` level (either bundled or via CDN fallback). **This is intentional.** Removing the framework import would break any remaining template that still uses DaisyUI classes — even though UX-009..032 have systematically refactored most of them, there are still PROP rows untouched (auth_pages, workspace_regions, reports_e2e_journey) plus potentially templates outside the scanner's path. A full framework removal should be a dedicated cycle after all non-widget PROP rows are refactored AND a full-repo `grep` shows zero DaisyUI tokens.
+
+**v0.2 open questions accumulating:**
+- Add `--success`, `--success-foreground`, `--warning`, `--warning-foreground` CSS variables to `design-system.css` — would clean up inline hex usages in widget:file, toast, and base-layout
+- Deprecate the DaisyUI CDN fallback; require `_tailwind_bundled = True` always
+- Full-repo `dazzle ux audit --strict` command to identify any remaining DaisyUI leakage across templates, CSS, and generated code
+
+**Non-widget refactor progress:** 5 of 8 PROP rows complete. Remaining: workspace_regions (4 sub-files, 69 hits), auth_pages (7 sub-files, 149 hits), reports_e2e_journey (18 hits).
+
+**Next cycle candidate:** **PROP-036 reports_e2e_journey** (18 hits) — smallest remaining non-widget PROP, report surface with badge/card/steps patterns. Medium complexity. Alternatively **PROP-033 auth_pages** which is the largest cluster and would benefit from the decomposition heuristic (7 sub-rows) — but its complexity (auth flows, 2FA enrollment) warrants careful scope. Leaning toward PROP-036 for smaller scope pacing.
+
+---
+
 ## 2026-04-12T21:12Z — Cycle 29
 
 **Selected row:** UX-032 (related-displays) — promoted from PROP-035. Covers 3 fragment files in one cycle (shared data shape + shared tokens).

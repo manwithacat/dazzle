@@ -102,15 +102,24 @@
   {% block head_extra %}{% endblock %}
 </head>
 {% endif %}
-<body class="min-h-screen bg-base-200" style="font-family: var(--font-sans)" hx-boost="true" hx-ext="morph,preload,response-targets,loading-states,remove-me,class-tools,multi-swap,path-deps">
+<body class="min-h-screen bg-[hsl(var(--background))]" style="font-family: var(--font-sans)" hx-boost="true" hx-ext="morph,preload,response-targets,loading-states,remove-me,class-tools,multi-swap,path-deps">
   {% block body %}
   {% endblock %}
 
-  {# Toast notifications — Alpine dzToast component #}
-  <div id="dz-toast" class="toast toast-end toast-top" aria-live="polite"
+  {# Toast notifications — Alpine dzToast component (UX-033 / UX-013 tokens) #}
+  <div id="dz-toast"
+       class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"
+       aria-live="polite"
        x-data="dzToast">
     <template x-for="t in toasts" :key="t.id">
-      <div :class="'alert alert-' + t.type + (t.leaving ? ' dz-toast-leave' : '')"
+      <div :class="[
+             'flex items-center gap-2 px-3 py-2 rounded-[4px] border border-[hsl(var(--border))] border-l-4 bg-[hsl(var(--popover))] text-[13px] text-[hsl(var(--popover-foreground))] shadow-[0_4px_12px_rgb(0_0_0/0.08)] pointer-events-auto cursor-pointer',
+             t.type === 'success' ? 'border-l-[hsl(142_76%_36%)]' :
+             t.type === 'error' ? 'border-l-[hsl(var(--destructive))]' :
+             t.type === 'warning' ? 'border-l-[hsl(38_92%_50%)]' :
+             'border-l-[hsl(var(--primary))]',
+             t.leaving && 'dz-toast-leave'
+           ]"
            @click="dismiss(t.id)">
         <span x-text="t.message"></span>
       </div>
@@ -118,7 +127,9 @@
   </div>
 
   {# Toast container for HTMX OOB-driven toasts (remove-me auto-dismiss) #}
-  <div id="dz-toast-container" class="toast toast-end toast-top" aria-live="polite"></div>
+  <div id="dz-toast-container"
+       class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none"
+       aria-live="polite"></div>
 
   {# Modal slot for server-loaded modals #}
   <div id="dz-modal-slot"></div>
