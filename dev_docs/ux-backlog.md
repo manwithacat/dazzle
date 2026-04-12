@@ -43,10 +43,25 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 
 | id     | kind                | description                                                | status    | source_cycle | notes |
 |--------|---------------------|------------------------------------------------------------|-----------|--------------|-------|
-| _(none yet — populated by EXPLORE mode)_ | | | | | |
+| EX-001 | coverage-gap        | 82 template files still contain DaisyUI class tokens. The original backlog (UX-001..019) only covered ~20 "core" component files. Remaining 62 files span widget branches, workspace regions, site/auth pages, layout chrome, fragments, and reports. | OPEN | 17 | Top findings recorded as PROP-021..036. Full list ranked by hit count in ux-log.md cycle 17 entry. |
 
 ## Proposed Components
 
 | id      | component_name | description                                              | status    | source_cycle | notes |
 |---------|----------------|----------------------------------------------------------|-----------|--------------|-------|
-| _(none yet — populated by EXPLORE strategy A)_ | | | | | |
+| PROP-021 | widget:multiselect | TomSelect multi-select wrapper (form_field multi_select branch) | PROPOSED | 17 | CSS already aligned by UX-009 override; template-only refactor. Fast. |
+| PROP-022 | widget:tags | TomSelect tags wrapper with create-on-the-fly (form_field tags branch) | PROPOSED | 17 | CSS already aligned by UX-009 override; template-only refactor. Fast. |
+| PROP-023 | widget:colorpicker | Pickr colour picker wrapper (form_field color branch) | PROPOSED | 17 | Needs new vendored-widget CSS override (Pickr's `.pcr-*` classes) + template refactor. |
+| PROP-024 | widget:richtext | Quill editor wrapper (form_field rich_text branch) | PROPOSED | 17 | Needs CSS override for Quill's `.ql-*` classes + template refactor. |
+| PROP-025 | widget:slider | Native range input + dzRangeTooltip Alpine (form_field slider branch) | PROPOSED | 17 | No vendored library; pure Alpine + Tailwind refactor. |
+| PROP-026 | widget:money | dzMoney currency input (form_field money branch) | PROPOSED | 17 | Uses DaisyUI `join` + `btn-ghost` for prefix; pinned/unpinned variants. Alpine + Tailwind refactor. |
+| PROP-027 | widget:file | dzFileUpload dropzone (form_field file branch) | PROPOSED | 17 | Dropzone with drag-drop + preview; uses `btn-ghost` and `bg-base-200`. Alpine + Tailwind refactor. |
+| PROP-028 | widget:search_select | Dynamic search-select fragment (`fragments/search_select.html`) | PROPOSED | 17 | May share contract with UX-009 combobox family; verify scope. |
+| PROP-029 | review-queue | Approval/review queue component (`components/review_queue.html`) | PROPOSED | 17 | 36 DaisyUI hits; btn+card heavy. |
+| PROP-030 | detail-view | Generic detail surface (`components/detail_view.html`) | PROPOSED | 17 | 29 hits; btn-outline, btn-sm pattern. Used by non-table detail surfaces. |
+| PROP-031 | app-shell | Layout chrome — navbar/drawer (`layouts/app_shell.html`) | PROPOSED | 17 | 32 hits; navbar+drawer. Affects every page. |
+| PROP-032 | workspace-regions | 4 workspace region types (grid/list/kanban/tabbed_list) | PROPOSED | 17 | ~69 total hits across 4 files; likely decomposes into 4 sub-rows. |
+| PROP-033 | auth-pages | 7 auth pages (login/signup/2fa_\*/forgot/reset) | PROPOSED | 17 | ~149 total hits; likely 2–3 shared auth-chrome contracts. |
+| PROP-034 | base-layout | Top-level HTML base (`base.html`) | PROPOSED | 17 | 17 hits; link styles + global loading indicators. |
+| PROP-035 | related-displays | Related-entity display fragments (table/status-cards/file-list) | PROPOSED | 17 | 33+ hits across 3 variants; shared layout contract likely. |
+| PROP-036 | reports-e2e-journey | E2E journey report (`reports/e2e_journey.html`) | PROPOSED | 17 | 18 hits; badge/card/steps. Standalone report surface. |

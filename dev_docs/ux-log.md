@@ -4,6 +4,65 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T19:13Z — Cycle 17 (EXPLORE, static variant)
+
+**Mode:** EXPLORE — no PENDING bucket 2/3 rows remain; backlog is fully refactored per Cycle 16.
+
+**Explore counter:** 0 → 1 (budget cap 30)
+
+**Strategy:** `MISSING_CONTRACTS` (odd-numbered explore cycle → Strategy A)
+
+**Deviation from spec:** The canonical strategy dispatches `build_ux_explore_mission` via DazzleAgent with a Playwright observer pointing at a running example app. No running app is available in this cycle's environment, so that dispatch would stagnate. Instead, ran a **static variant** of MISSING_CONTRACTS: scanned `src/dazzle_ui/templates/**/*.html` for DaisyUI token leakage and cross-referenced against existing ux-architect contracts in `~/.claude/skills/ux-architect/components/`.
+
+**Scanner:** Python script counting occurrences of 60+ DaisyUI tokens (`btn*`, `alert*`, `modal*`, `card*`, `input*`, `textarea*`, `select*`, `checkbox*`, `label-text*`, `bg-base-*`, `text-base-content*`, `rounded-box`, `steps*`, `menu*`, `navbar*`, `badge*`, `join*`, `tab*`, `dropdown*`, `divider*`, `drawer*`, `link*`, `progress*`, `kbd*`, `loading`) across all template files.
+
+**Findings:**
+
+- **82 template files** still contain DaisyUI class tokens. The original UX-001..019 backlog covered ~20 "core" component files. Remaining **62 files** span six categories:
+  1. **Widget branches inside form_field.html** (8 items) — multi_select, tags, color, rich_text, slider, money, file, search_select. Explicitly out of scope for UX-009/010/017 per those contracts' carve-outs. Top file: form_field.html (69 hits).
+  2. **Workspace regions** (4 items) — grid, list, kanban, tabbed_list. Total ~69 hits.
+  3. **Site/auth pages** (7 items) — login, signup, forgot_password, reset_password, 2fa_setup, 2fa_settings, 2fa_challenge. Total ~149 hits — the heaviest cluster.
+  4. **Core components missing from backlog** — review_queue (36 hits), detail_view (29 hits).
+  5. **Layout chrome** — app_shell.html (32 hits), base.html (17 hits).
+  6. **Fragments + reports** — related_table_group (19), related_status_cards (14), experience/_content (22), reports/e2e_journey (18).
+
+**Top 20 ranked (hit count × file):**
+
+| Rank | File | Hits | Top tokens |
+|---|---|---|---|
+| 1 | macros/form_field.html | 69 | label-text, label-text-alt, text-base-content |
+| 2 | components/review_queue.html | 36 | btn, btn-sm, card |
+| 3 | layouts/app_shell.html | 32 | btn, btn-ghost, btn-sm |
+| 4 | components/detail_view.html | 29 | btn, btn-sm, btn-outline |
+| 5 | site/auth/2fa_setup.html | 28 | btn, text-base-content, alert |
+| 6 | site/auth/2fa_settings.html | 27 | btn, btn-sm, btn-primary |
+| 7 | site/auth/signup.html | 23 | label-text, form-control, input-bordered |
+| 8 | experience/_content.html | 22 | btn, steps, loading |
+| 9 | workspace/regions/tabbed_list.html | 21 | tabs, tab, tab-active |
+| 10 | fragments/related_table_group.html | 19 | tabs, tab, badge |
+| 11 | site/auth/2fa_challenge.html | 19 | btn, label-text, btn-primary |
+| 12 | site/auth/login.html | 18 | label-text, form-control, input-bordered |
+| 13 | reports/e2e_journey.html | 18 | badge, card, steps |
+| 14 | base.html | 17 | link, loading, bg-base-200 |
+| 15 | workspace/regions/list.html | 17 | btn, btn-xs, drawer-content |
+| 16 | workspace/regions/kanban.html | 17 | bg-base-100, card, card-body |
+| 17 | site/auth/reset_password.html | 17 | label-text, form-control, input-bordered |
+| 18 | site/auth/forgot_password.html | 16 | alert, btn, btn-primary |
+| 19 | fragments/related_status_cards.html | 14 | text-base-content, badge, tabs |
+| 20 | workspace/regions/grid.html | 14 | card, card-body, card-title |
+
+**Recorded:**
+- `EX-001` exploration finding: coverage-gap summary (82 files still leak, backlog covered ~20)
+- 16 `PROP-021..036` proposed component rows in the "Proposed Components" table, covering the top findings
+
+**Size implication:** The v0 backlog (15 rows) was a modest slice of the actual work. The full ux-architect adoption surface is ~3x larger. The form decomposition heuristic from the unblock triage applies here too: PROP-032 (workspace-regions) should decompose into 4 sub-rows, PROP-033 (auth-pages) into 2–3 shared-chrome sub-rows.
+
+**Outcome:** 1 edge-case finding, 16 proposed components. EXPLORE budget: 1/30.
+
+**Next cycle:** Now that bucket 2 has new work again (via the PROP-021..028 widget proposals that can be promoted to backlog rows), Cycle 18 should pick one. **Strongest candidate: PROP-021 widget:multiselect** — fastest possible shape (CSS already aligned from UX-009's `.ts-wrapper.multi` override, template-only refactor needed).
+
+---
+
 ## 2026-04-12T19:05Z — Cycle 16
 
 **Selected row:** UX-020 (widget-harness-set) — new backlog row added this cycle to unblock the four NEEDS_HARNESS event-triggered widgets.
