@@ -4,6 +4,36 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T19:48Z — Cycle 21
+
+**Selected row:** UX-024 (widget:colorpicker) — promoted from PROP-023.
+
+**Phases:**
+- **OBSERVE**: Picked PROP-023 to open the Pickr vendored-widget pattern. First new library CSS override block since Cycle 11 (Flatpickr).
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-colorpicker.md`. Documents the hidden-input + swatch-trigger pattern (Pickr attaches to the `.pcr-trigger` div, writes on Save to the adjacent hidden input). Prospective CSS override contract covering the `nano` theme's full class family so future Pickr variants inherit the tokens. 5 quality gates.
+- **REFACTOR**:
+  - `templates/macros/form_field.html` color branch: rewrote to match form-field chrome. Kept the `pcr-trigger` class on the swatch (mandatory — Pickr's mount selector). Added `aria-label` on the swatch, `required aria-required="true"` + `aria-invalid` + `aria-describedby` wiring on the hidden input. Removed `rounded-btn`, `border-base-300`, `text-base-content/60`, `form-control`, `label-text*`.
+  - `runtime/static/css/design-system.css`: appended ~95-line Pickr override block scoped to `.pcr-app`. Covers: panel background/border/shadow/radius, interaction row with border-top separator, `.pcr-interaction input` matching form-field chrome, `.pcr-type` toggle buttons (active state in muted), `.pcr-save` primary button, `.pcr-cancel`/`.pcr-clear` ghost buttons, `.pcr-swatches` grid with border separator, `.pcr-color-preview` 1px outline.
+  - `dz-widget-registry.js` Pickr registration unchanged — mount/unmount lifecycle was already correct (uses `destroyAndRemove()`).
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-024 contract + refactor + CSS override done; status READY_FOR_QA.
+
+**Vendored-widget CSS family ledger:**
+
+| Library | First cycle | Override block (design-system.css) | Covers variants |
+|---|---|---|---|
+| Tom Select | 10 | ~70 LOC, `.ts-wrapper`, `.ts-dropdown`, `.ts-control > .item` | combobox, multiselect, tags (3 cycles) |
+| Flatpickr | 11 | ~115 LOC, `.flatpickr-calendar` + day/month/week | datepicker picker + range (1 cycle) |
+| Pickr | 21 | ~95 LOC, `.pcr-app` + interaction/swatches | colorpicker (1 cycle so far) |
+
+Total override CSS: ~280 LOC across 3 vendored libraries. Compact compared to the per-library vendor CSS files (Tom Select: ~4KB, Flatpickr: ~7KB, Pickr nano: ~6KB minified).
+
+**Next cycle candidate:** **PROP-024 widget:richtext** — Quill editor wrapper. Quill is the fourth vendored library and by far the largest in DOM footprint (full WYSIWYG toolbar with `.ql-*` class family). Will be the heaviest remaining widget cycle — estimate ~150 lines of CSS override to cover the toolbar, editor area, modals, and tooltips.
+
+---
+
 ## 2026-04-12T19:38Z — Cycle 20
 
 **Selected row:** UX-023 (widget:slider) — promoted from PROP-025 (Cycle 17 EXPLORE finding).

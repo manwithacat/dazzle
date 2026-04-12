@@ -1242,3 +1242,97 @@ input[type="range"][data-dz-slider]:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ── Pickr token overrides (UX-024 widget:colorpicker) ────────────────── */
+/* Linear-aesthetic override of vendor/pickr.css (nano theme). Scoped to   */
+/* .pcr-app so the rules don't leak into non-Pickr elements.                */
+.pcr-app {
+  background: hsl(var(--popover));
+  color: hsl(var(--popover-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.06);
+  font-family: inherit;
+  padding: 12px;
+}
+.pcr-app .pcr-selection .pcr-color-preview {
+  border-radius: 3px;
+  border: 1px solid hsl(var(--border));
+}
+.pcr-app .pcr-selection .pcr-color-chooser,
+.pcr-app .pcr-selection .pcr-color-opacity {
+  margin-inline-start: 8px;
+}
+.pcr-app .pcr-interaction {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid hsl(var(--border));
+}
+.pcr-app .pcr-interaction input,
+.pcr-app .pcr-interaction .pcr-result {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 3px;
+  color: hsl(var(--foreground));
+  font-size: 12px;
+  font-family: ui-monospace, Menlo, monospace;
+  padding: 4px 8px;
+  height: 26px;
+}
+.pcr-app .pcr-interaction input:focus,
+.pcr-app .pcr-interaction .pcr-result:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+  border-color: hsl(var(--ring));
+}
+.pcr-app .pcr-interaction .pcr-type.active,
+.pcr-app .pcr-interaction .pcr-type:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.pcr-app .pcr-interaction .pcr-type {
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 3px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.pcr-app .pcr-interaction .pcr-save {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border: 1px solid hsl(var(--primary));
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: filter 80ms cubic-bezier(0.2, 0, 0, 1);
+}
+.pcr-app .pcr-interaction .pcr-save:hover {
+  filter: brightness(1.1);
+}
+.pcr-app .pcr-interaction .pcr-cancel,
+.pcr-app .pcr-interaction .pcr-clear {
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.pcr-app .pcr-swatches {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid hsl(var(--border));
+}
+.pcr-app .pcr-swatches > button {
+  border: 1px solid hsl(var(--border));
+  border-radius: 3px;
+  margin: 2px;
+}
+/* Error state propagation via the hidden input */
+input[aria-invalid="true"][type="hidden"] + .pcr-app,
+[data-dz-widget="colorpicker"] .pcr-trigger[aria-invalid="true"] {
+  outline: 1px solid hsl(var(--destructive));
+}
