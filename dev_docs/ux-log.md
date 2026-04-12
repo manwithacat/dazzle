@@ -4,6 +4,54 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T21:48Z — Cycle 32
+
+**Selected row:** UX-035 (region-wrapper) — promoted from PROP-032 workspace_regions, but reframed as a **shared macro + canonical adopter** pattern rather than a 4-file sub-decomposition.
+
+**Phases:**
+- **OBSERVE**: On inspection, PROP-032's "4 sub-files" description was incomplete — there are actually **16 workspace region files** in `templates/workspace/regions/`, not 4. The EX-001 scan only caught the heaviest ones. A full scan of all 16 files revealed **every single one uses the identical `card bg-base-100 shadow-sm` + `card-body p-3` + `card-title text-sm` outer wrapper**. This is a DRY violation at the template level, not a styling-only issue.
+- **Scope decision (macro extraction):** Rather than 16 independent refactor cycles, extract the shared wrapper into a Jinja macro and refactor one canonical adopter (`grid.html`) this cycle. Future cycles become single-file `{% call region_card(title) %}...{% endcall %}` adoptions — estimated 3-5 minutes per file.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/region-wrapper.md`. Documents the `region_card(title)` macro pattern, the inner item card tokens (for regions that render item cards like grid.html), and the attention-level accent mapping (`critical`/`warning`/`notice` → border-l colours). 5 quality gates.
+- **REFACTOR**:
+  - **Created `templates/macros/region_wrapper.html`** with a `region_card(title)` macro. Macro shell: `<div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)]"> <div class="p-3"> [optional h3 title] {{ caller() }} </div></div>`. Usage via `{% from 'macros/region_wrapper.html' import region_card %}` + `{% call region_card(title) %}...{% endcall %}`.
+  - **Rewrote `grid.html`** as the canonical first adopter:
+    - Outer wrapper: `card bg-base-100 shadow-sm` + `card-body p-3` + `card-title text-sm` → `{% call region_card(title) %}`
+    - Inner item card: `card card-compact bg-base-200 border-error/-warning/-info hover:bg-base-300` → token-driven `bg-card border border-border rounded-[4px] p-3` with attention accent via `border-l-4 border-l-[hsl(var(--destructive))|hsl(38 92% 50%)|hsl(var(--primary))]`. Clickable variant: `cursor-pointer hover:border-[hsl(var(--primary)/0.5)]`.
+    - Badge columns: `badge badge-sm` → semantic badge pattern with `badge_class` filter
+    - Ref links: `link link-hover link-primary` → `text-[hsl(var(--primary))] hover:underline`
+    - Field rows: `text-xs` + `opacity-60` → `text-[12px] text-[hsl(var(--muted-foreground))]`
+    - Preserved HTMX item-card wiring, `_attention` attention-level logic, `{% include "fragments/empty_state.html" %}`
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-035 contract + macro + grid.html adopter done; status **READY_FOR_QA with impl:PARTIAL** — the macro ships, the first adopter ships, but 15 region files still need to be migrated to `{% call region_card(title) %}`. This is intentional: the macro is the "component" this cycle ships; the adoption sweep is follow-up work.
+
+**New reusable pattern (logged): Shared Jinja Macro for Repeated Wrappers**
+
+When N template files share the identical outer wrapper markup, extract the wrapper into a Jinja macro using `{% macro %}` + `{{ caller() }}` pattern. Usage is `{% call macro_name(args) %}...inner content...{% endcall %}`. Benefits:
+- Single source of truth for the wrapper chrome
+- Future styling updates touch one file (the macro) instead of N files
+- Each adopter file becomes smaller and focuses on its distinguishing inner content
+- Deduplicates the same-ness while preserving each file's identity
+
+Pattern alternatives considered and rejected:
+- **16 separate cycles:** too slow, too repetitive, high risk of drift
+- **One cycle refactoring all 16 files without a macro:** would duplicate the same wrapper change 16 times; violates DRY
+- **Single cycle refactoring all 16 files through the macro:** conceptually the cleanest, but violates "one component per cycle"
+
+The chosen path (macro + 1 canonical adopter + 15 follow-ups) respects both DRY AND the cycle discipline rule.
+
+**Follow-up tracking:** The remaining 15 region files (list, kanban, tabbed_list, metrics, timeline, tree, activity_feed, bar_chart, funnel_chart, heatmap, progress, queue, tab_data, detail, diagram) should each become a tiny cycle that just replaces the outer wrapper with the macro call. These could be added as PROP-037..PROP-051 rows, or batched as a single "region-adopter-sweep" cycle in a later session — leaving that decision to the next cycle's OBSERVE phase.
+
+**Non-widget refactor progress:** 7 of 8 PROP rows complete (PROP-032 is partially complete via UX-035). Remaining: **PROP-033 auth_pages** only.
+
+**Next cycle candidate:**
+- **PROP-033 auth_pages** (7 files, ~149 total hits) — the last remaining PROP from the EX-001 scan. Decomposable into shared auth-chrome sub-rows (login, signup, forgot_password, reset_password share one chrome; 2fa_setup, 2fa_settings, 2fa_challenge share another). Alternative: apply the macro-extraction pattern from this cycle — extract an `auth_page_card` macro + refactor login.html as the canonical first adopter, leave the other 6 for follow-up.
+
+Leaning toward the macro-extraction pattern again for auth_pages — it worked well for regions.
+
+---
+
 ## 2026-04-12T21:35Z — Cycle 31
 
 **Selected row:** UX-034 (report-e2e-journey) — promoted from PROP-036.
