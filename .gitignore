@@ -109,3 +109,7 @@ dev_docs/
 .claude/projects/
 .claude/scheduled_tasks.lock
 .superpowers/
+
+# /ux-cycle ephemeral state
+.dazzle/signals/
+.dazzle/ux-cycle.lock
