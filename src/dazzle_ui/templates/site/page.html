@@ -21,6 +21,10 @@
   {% else %}
   <div class="dz-loading">Loading...</div>
   {% endif %}
+  {# QA Personas section — #768 — only rendered when dev personas are provisioned #}
+  {% if qa_personas %}
+    {% include 'site/sections/qa_personas.html' %}
+  {% endif %}
 </main>
 
 {% include "site/includes/footer.html" %}
