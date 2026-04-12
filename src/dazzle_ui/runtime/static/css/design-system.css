@@ -1170,3 +1170,75 @@ input[aria-invalid="true"][data-dz-widget="datepicker"],
 input[aria-invalid="true"][data-dz-widget="daterange"] {
   border-color: hsl(var(--destructive));
 }
+
+/* ── Range slider token overrides (UX-023 widget:slider) ──────────────── */
+/* Scoped to input[type="range"][data-dz-slider] so generic ranges elsewhere */
+/* keep their browser-default appearance.                                    */
+input[type="range"][data-dz-slider] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  height: 16px; /* enough room for the thumb */
+  padding: 0;
+}
+input[type="range"][data-dz-slider]:focus { outline: none; }
+
+/* Track — WebKit / Blink */
+input[type="range"][data-dz-slider]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: hsl(var(--muted));
+  border-radius: 2px;
+  border: 0;
+}
+/* Track — Gecko */
+input[type="range"][data-dz-slider]::-moz-range-track {
+  height: 4px;
+  background: hsl(var(--muted));
+  border-radius: 2px;
+  border: 0;
+}
+
+/* Thumb — WebKit / Blink */
+input[type="range"][data-dz-slider]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  border: 0;
+  cursor: pointer;
+  margin-top: -6px; /* (thumb - track) / 2 = (16 - 4) / 2 = 6 */
+  transition: filter 80ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 80ms cubic-bezier(0.2, 0, 0, 1);
+}
+input[type="range"][data-dz-slider]::-webkit-slider-thumb:hover {
+  filter: brightness(1.05);
+}
+input[type="range"][data-dz-slider]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.4);
+}
+
+/* Thumb — Gecko */
+input[type="range"][data-dz-slider]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: hsl(var(--primary));
+  border: 0;
+  cursor: pointer;
+  transition: filter 80ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 80ms cubic-bezier(0.2, 0, 0, 1);
+}
+input[type="range"][data-dz-slider]::-moz-range-thumb:hover {
+  filter: brightness(1.05);
+}
+input[type="range"][data-dz-slider]:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.4);
+}
+
+input[type="range"][data-dz-slider]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

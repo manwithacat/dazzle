@@ -4,6 +4,45 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T19:38Z — Cycle 20
+
+**Selected row:** UX-023 (widget:slider) — promoted from PROP-025 (Cycle 17 EXPLORE finding).
+
+**Phases:**
+- **OBSERVE**: Chose PROP-025 over PROP-023 (colorpicker, Pickr) because slider is the fastest remaining shape. Alternating between fast and slow cycles keeps the loop cadence predictable.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-slider.md`. Documents the native `<input type="range">` model, the pseudo-element CSS override requirement (WebKit + Gecko), and the `range-tooltip` controller for the live value readout. Explicit note that native range inputs cannot be styled with Tailwind utilities alone — the override MUST live in `design-system.css` and is scoped to `input[type="range"][data-dz-slider]` so generic ranges elsewhere keep browser defaults. 5 quality gates.
+- **REFACTOR**:
+  - `templates/macros/form_field.html` slider branch: rewrote to match form-field chrome pattern (wrapper, label, hint/error, aria-describedby). Added missing `required aria-required="true"` and `aria-invalid`. Added `data-dz-slider` attribute as the CSS hook. Added `aria-hidden="true"` to the value readout span (screen readers already announce the native range input's value).
+  - `runtime/static/css/design-system.css`: appended ~70-line override block for `input[type="range"][data-dz-slider]`. Reset `-webkit-appearance` and Gecko equivalent, styled `::-webkit-slider-runnable-track` / `::-moz-range-track` with muted background + 4px height, styled `::-webkit-slider-thumb` / `::-moz-range-thumb` with primary background + 16px circle + margin-top for vertical centering (WebKit needs `-6px` because it positions thumb absolutely; Gecko centers automatically). Focus ring via `:focus::-*-thumb { box-shadow: 0 0 0 2px hsl(var(--ring) / 0.4) }`. Hover brightness filter.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-023 contract + refactor done; status READY_FOR_QA.
+
+**Cross-browser note:** The `margin-top: -6px` on WebKit's thumb is required for vertical centering (track is 4px, thumb is 16px, offset is -(16-4)/2 = -6). Gecko centers the thumb automatically on a 16px line-box, so no margin adjustment needed. If future cycles change the track height or thumb size, the WebKit margin must be recomputed.
+
+**Widget branch progress (form_field.html):**
+
+| Branch | Status |
+|---|---|
+| `combobox` | ✅ UX-009 (Cycle 10) |
+| `multi_select` | ✅ UX-021 (Cycle 18) |
+| `tags` | ✅ UX-022 (Cycle 19) |
+| `picker` (date/datetime) | ✅ UX-010 (Cycle 11) |
+| `range` (daterange) | ✅ UX-010 (Cycle 11) |
+| `color` | ⏳ PROP-023 — next |
+| `rich_text` | ⏳ PROP-024 |
+| `slider` | ✅ UX-023 (Cycle 20) |
+| `money` | ⏳ PROP-026 |
+| `file` | ⏳ PROP-027 |
+| `field.source` (search_select) | ⏳ PROP-028 |
+
+**7 of 11 form-field widget branches now refactored.** Remaining: color, rich_text, money, file, search_select.
+
+**Next cycle candidate:** **PROP-023 widget:colorpicker** (Pickr) — slowest remaining widget cycle, but opens the pattern for Pickr's `.pcr-*` vendored class family.
+
+---
+
 ## 2026-04-12T19:30Z — Cycle 19
 
 **Selected row:** UX-022 (widget:tags) — promoted from PROP-022 (Cycle 17 EXPLORE finding).

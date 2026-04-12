@@ -207,18 +207,36 @@
   </label>
 
   {% elif field.widget == "slider" %}
-  <label class="form-control w-full">
-    <div class="label"><span class="label-text">{{ field.label }}{% if field.required %} <span class="text-error">*</span>{% endif %}</span></div>
+  {# UX-023: slider widget — native <input type="range"> + dzRangeTooltip controller #}
+  <div class="w-full space-y-1">
+    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+      {{ field.label }}
+      {% if field.required %}
+        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      {% endif %}
+    </label>
+    {% if field.hint %}
+    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+    {% endif %}
     <div data-dz-widget="range-tooltip" class="flex items-center gap-3">
-      <input type="range" name="{{ field.name }}"
-             min="{{ field.extra.min | default(0) }}" max="{{ field.extra.max | default(100) }}" step="{{ field.extra.step | default(1) }}"
+      <input id="field-{{ field.name }}" name="{{ field.name }}" type="range"
+             data-dz-slider
+             min="{{ field.extra.min | default(0) }}"
+             max="{{ field.extra.max | default(100) }}"
+             step="{{ field.extra.step | default(1) }}"
              value="{{ values.get(field.name, field.default or '50') }}"
-             class="range range-primary w-full">
-      <span data-dz-range-value class="text-sm font-mono min-w-8 text-right">{{ values.get(field.name, field.default or '50') }}</span>
+             {% if field.required %}required aria-required="true"{% endif %}
+             {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
+             class="w-full">
+      <span data-dz-range-value
+            class="text-[12px] font-mono text-[hsl(var(--foreground))] min-w-8 text-right"
+            aria-hidden="true">{{ values.get(field.name, field.default or '50') }}</span>
     </div>
-    {% if field.hint %}<div class="label" id="hint-{{ field.name }}"><span class="label-text-alt text-base-content/60">{{ field.hint }}</span></div>{% endif %}
-    {% if errors.get(field.name) %}<div id="error-{{ field.name }}" class="label"><span class="label-text-alt text-error" role="alert">{{ errors[field.name] }}</span></div>{% endif %}
-  </label>
+    {% if errors.get(field.name) %}
+    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
+    {% endif %}
+  </div>
 
   {% else %}
     {# Standard fields: label above #}
