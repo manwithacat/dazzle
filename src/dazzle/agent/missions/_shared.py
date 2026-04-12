@@ -499,11 +499,17 @@ def parse_component_contract(path: Path) -> ComponentContract:
         anatomy = _parse_bullet_list(anatomy_section)
 
     # Primitives (optional — may be labelled "Primitives invoked" or just in a
-    # bullet under a different heading)
+    # bullet under a different heading, or as a front-matter bold line like
+    # "**Primitives invoked:** Drag-and-drop, Resize")
     primitives: list[str] = []
     primitives_section = _extract_section(content, "Primitives invoked")
     if primitives_section:
         primitives = _parse_bullet_list(primitives_section)
+    if not primitives:
+        # Fall back to front-matter inline form: **Primitives invoked:** val1, val2
+        fm_match = re.search(r"\*\*Primitives invoked:\*\*\s*(.+)", content, re.IGNORECASE)
+        if fm_match:
+            primitives = [p.strip() for p in fm_match.group(1).split(",") if p.strip()]
 
     return ComponentContract(
         component_name=component_name,
