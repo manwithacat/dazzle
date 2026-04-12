@@ -4,6 +4,35 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T19:30Z — Cycle 19
+
+**Selected row:** UX-022 (widget:tags) — promoted from PROP-022 (Cycle 17 EXPLORE finding).
+
+**Phases:**
+- **OBSERVE**: Bucket 2 still empty in the Components table. Promoted PROP-022 → UX-022. Third widget variant in the Tom Select family.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-tags.md`. Sibling to UX-009 combobox and UX-021 multi-select. Key difference: underlying element is `<input type="text">` (not `<select>`), value is a single comma-separated string, and Tom Select runs with `create: true` so users can add unknown values. 5 quality gates.
+- **REFACTOR**: Rewrote the `{% elif field.widget == "tags" %}` branch of `form_field.html` to match the UX-021 multi-select pattern. Preserved `<input type="text">`, `value` (comma-separated), and `data-dz-options='{"create":true,"plugins":["remove_button"]}'`. Added `required aria-required="true"` (v0.1 had only `aria-required`), proper `aria-describedby` wiring, `aria-invalid` + conditional destructive border.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Zero-CSS repeat:** Same as Cycle 18 — UX-009's override block already covers `.ts-wrapper.multi .ts-control > .item` pills which the tags variant uses identically. No CSS changes needed.
+
+**Outcome:** UX-022 contract + refactor done; status READY_FOR_QA. **Third Tom Select family variant shipped in four consecutive Tom Select cycles** (UX-009 → UX-021 → UX-022, all share the same ~70-line override block written in Cycle 10).
+
+**Family summary (Tom Select variants):**
+
+| Row | Variant | Shape | Prospective CSS reuse? |
+|---|---|---|---|
+| UX-009 | combobox (single select, closed values) | template + ~70 lines CSS override | — (first in family, wrote the override) |
+| UX-021 | multiselect (multi, closed values, `remove_button`) | template only | ✓ reused UX-009 override |
+| UX-022 | tags (multi, open values, `create:true`) | template only | ✓ reused UX-009 override |
+
+**Throughput:** Cycles 18+19 = 2 cycles, ~16 minutes total, 2 widgets shipped. The prospective-CSS pattern yielded ~50% time savings on cycles 18/19 compared to cycle 10 (which had to author the override block).
+
+**Next cycle candidate:** **PROP-023 widget:colorpicker** — first cycle to need a NEW vendored-widget CSS override block (Pickr). Will be the slowest of the remaining widget-branch rows. Alternatively, **PROP-025 widget:slider** — pure Alpine (no vendored library), template-only.
+
+---
+
 ## 2026-04-12T19:22Z — Cycle 18
 
 **Selected row:** UX-021 (widget:multiselect) — **first cycle to consume a PROP row** from the Cycle 17 explore findings. Promoted from PROP-021 in the same move.
