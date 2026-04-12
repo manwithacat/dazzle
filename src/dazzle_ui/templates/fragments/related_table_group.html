@@ -1,17 +1,19 @@
 {# Table group — Alpine tab switching within a related group #}
+{# Contract: ~/.claude/skills/ux-architect/components/related-displays.md (UX-032) #}
 {% set first_tab_id = group.tabs[0].tab_id if group.tabs else '' %}
 <div x-data="{ activeTab: '{{ first_tab_id }}' }">
   {% if group.tabs | length > 1 %}
-  <div class="tabs tabs-bordered" role="tablist">
+  <div class="flex border-b border-[hsl(var(--border))]" role="tablist">
     {% for tab in group.tabs %}
     {% if tab.visible | default(true) %}
-    <button class="tab"
-            :class="activeTab === '{{ tab.tab_id }}' && 'tab-active'"
+    <button type="button"
+            class="px-3 py-2 text-[13px] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] -mb-px border-b-2 border-transparent inline-flex items-center"
+            :class="activeTab === '{{ tab.tab_id }}' && 'border-[hsl(var(--primary))] text-[hsl(var(--foreground))] font-medium'"
             role="tab"
             :aria-selected="activeTab === '{{ tab.tab_id }}'"
             @click="activeTab = '{{ tab.tab_id }}'">
       {{ tab.label }}
-      <span class="badge badge-sm ml-1">{{ tab.total }}</span>
+      <span class="ml-1 inline-flex items-center px-1.5 h-4 rounded-[3px] bg-[hsl(var(--muted))] text-[11px] text-[hsl(var(--muted-foreground))]">{{ tab.total }}</span>
     </button>
     {% endif %}
     {% endfor %}
@@ -21,64 +23,62 @@
   {% for tab in group.tabs %}
   {% if tab.visible | default(true) %}
   <div {% if group.tabs | length > 1 %}x-show="activeTab === '{{ tab.tab_id }}'"{% endif %} role="tabpanel">
-    <div class="card bg-base-100 shadow-sm mt-2">
-      <div class="card-body p-0">
-        {% if tab.create_url %}
-        <div class="flex justify-end p-3 pb-0">
-          <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}{% if tab.filter_type_field %}&amp;{{ tab.filter_type_field }}={{ tab.filter_type_value }}{% endif %}"
-             class="btn btn-primary btn-sm"
-             data-dazzle-action="{{ tab.entity_name }}.create">
-            + New {{ tab.label }}
-          </a>
-        </div>
-        {% endif %}
+    <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_1px_3px_rgb(0_0_0/0.04)] overflow-hidden mt-2">
+      {% if tab.create_url %}
+      <div class="flex justify-end p-3 pb-0">
+        <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}{% if tab.filter_type_field %}&amp;{{ tab.filter_type_field }}={{ tab.filter_type_value }}{% endif %}"
+           class="h-7 px-2.5 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[12px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] inline-flex items-center"
+           data-dazzle-action="{{ tab.entity_name }}.create">
+          + New {{ tab.label }}
+        </a>
+      </div>
+      {% endif %}
 
-        <div class="overflow-x-auto">
-          <table class="table table-zebra w-full" data-entity="{{ tab.entity_name }}">
-            <thead>
-              <tr>
-                {% for col in tab.columns %}
-                <th scope="col">{{ col.label }}</th>
-                {% endfor %}
-              </tr>
-            </thead>
-            <tbody>
-              {% if tab.rows %}
-              {% for item in tab.rows %}
-              <tr class="hover cursor-pointer"
-                  {% if tab.detail_url_template %}
-                  hx-get="{{ tab.detail_url_template.replace('{id}', item.id | string) }}"
-                  hx-push-url="true"
-                  hx-target="body"
-                  hx-swap="innerHTML"
-                  {% endif %}>
-                {% for col in tab.columns %}
-                <td>
-                  {% if col.type == "badge" %}
-                    <span class="badge {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
-                  {% elif col.type == "bool" %}
-                    {{ item[col.key] | bool_icon }}
-                  {% elif col.type == "date" %}
-                    {{ item[col.key] | dateformat }}
-                  {% elif col.type == "currency" %}
-                    {{ item[col.key] | currency(col.currency_code or "GBP") }}
-                  {% else %}
-                    {{ item[col.key] | default("") | truncate_text }}
-                  {% endif %}
-                </td>
-                {% endfor %}
-              </tr>
+      <div class="overflow-x-auto">
+        <table class="w-full" data-entity="{{ tab.entity_name }}">
+          <thead>
+            <tr class="bg-[hsl(var(--muted)/0.3)] border-b border-[hsl(var(--border))]">
+              {% for col in tab.columns %}
+              <th scope="col" class="text-left text-[12px] font-medium text-[hsl(var(--muted-foreground))] px-4 py-2 tracking-tight">{{ col.label }}</th>
               {% endfor %}
-              {% else %}
-              <tr>
-                <td colspan="{{ tab.columns | length }}" class="text-center py-8 text-base-content/50">
-                  No {{ tab.label | lower }} found.
-                </td>
-              </tr>
-              {% endif %}
-            </tbody>
-          </table>
-        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {% if tab.rows %}
+            {% for item in tab.rows %}
+            <tr class="border-b border-[hsl(var(--border))] last:border-0 hover:bg-[hsl(var(--muted)/0.5)] cursor-pointer transition-colors duration-[80ms]"
+                {% if tab.detail_url_template %}
+                hx-get="{{ tab.detail_url_template.replace('{id}', item.id | string) }}"
+                hx-push-url="true"
+                hx-target="body"
+                hx-swap="innerHTML"
+                {% endif %}>
+              {% for col in tab.columns %}
+              <td class="text-[13px] text-[hsl(var(--foreground))] px-4 py-2.5">
+                {% if col.type == "badge" %}
+                  <span class="inline-flex items-center px-2 h-5 rounded-[3px] text-[11px] font-medium {{ item[col.key] | badge_class }}">{{ item[col.key] | default("") }}</span>
+                {% elif col.type == "bool" %}
+                  {{ item[col.key] | bool_icon }}
+                {% elif col.type == "date" %}
+                  {{ item[col.key] | dateformat }}
+                {% elif col.type == "currency" %}
+                  {{ item[col.key] | currency(col.currency_code or "GBP") }}
+                {% else %}
+                  {{ item[col.key] | default("") | truncate_text }}
+                {% endif %}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="{{ tab.columns | length }}" class="text-center py-8 text-[13px] text-[hsl(var(--muted-foreground))]">
+                No {{ tab.label | lower }} found.
+              </td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>

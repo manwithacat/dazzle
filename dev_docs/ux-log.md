@@ -4,6 +4,54 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T21:12Z — Cycle 29
+
+**Selected row:** UX-032 (related-displays) — promoted from PROP-035. Covers 3 fragment files in one cycle (shared data shape + shared tokens).
+
+**Phases:**
+- **OBSERVE**: Picked PROP-035 for continuity with UX-029 detail-view's `related_groups` block. Decomposition-versus-single-row decision: the 3 fragments (related_table_group, related_status_cards, related_file_list) share the same `group.tabs[]` data shape, the same "+ New" create button, the same click-to-detail HTMX wiring, and the same card tokens. Decomposing would produce three near-identical contracts — one contract is more maintainable.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/related-displays.md`. Covers all three variants in one document with variant-specific anatomy sections. Documents the token-driven tab switcher pattern (replacing DaisyUI `tabs tabs-bordered tab tab-active`), the filled-primary create button micro-pattern (shared across all 3), the zebra-less semantic table pattern, the responsive card grid, and the file list rows. 5 quality gates.
+- **REFACTOR** (3 files):
+  - `related_table_group.html` — replaced DaisyUI `tabs tabs-bordered` with a flex-based tab switcher using ARIA tab pattern (role=tablist/tab/tabpanel). Tab buttons use `-mb-px border-b-2 border-transparent` with `:class` swapping to `border-[hsl(var(--primary))]` when active. Tab counter badge replaces `badge badge-sm` with an inline `px-1.5 h-4 rounded-[3px] bg-[hsl(var(--muted))]` pill. Table card uses detail-view's card tokens. Table itself removed `table table-zebra` — now plain `<table class="w-full">` with explicit header/body row styles (border-b between rows; hover on body rows). Badge column cells use the semantic badge pattern (token base + `badge_class` filter for semantic colour). Empty state uses muted-foreground + text-[13px].
+  - `related_status_cards.html` — replaced `card bg-base-100 shadow-sm border border-base-200` with `bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] p-3 hover:shadow-[0_2px_8px_rgb(0_0_0/0.06)]`. Primary text / secondary text use `text-[13px]` / `text-[12px]` token-driven classes. Status badge uses the same semantic pattern as table_group. Create button uses the shared filled-primary micro-pattern.
+  - `related_file_list.html` — replaced `divide-base-200 border-base-200 bg-base-100 hover:bg-base-200/50 text-base-content/*` with token-driven equivalents. File icon colour via `text-[hsl(var(--muted-foreground)/0.6)]`. All row/date text in form-field-matching tokens.
+- All three preserve:
+  - HTMX `hx-get` + `hx-push-url` click-to-detail wiring
+  - `badge_class` filter for semantic badge colours (table_group, status_cards only — file_list has no badges)
+  - `detail.item.get('id', '')` query parameter injection on create URLs
+  - Alpine `activeTab` state (table_group only)
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-032 contract + 3 fragment refactors done; status READY_FOR_QA. All 3 related-display variants now share the same token vocabulary as detail-view.
+
+**New reusable micro-pattern (logged): Filled Primary Button**
+
+```
+class="h-7 px-2.5 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]
+       text-[12px] font-medium hover:brightness-110
+       transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]
+       inline-flex items-center"
+```
+
+Slightly smaller than the outlined button family (h-7 vs h-8, text-[12px] vs text-[13px]) — used for secondary-emphasis affirmative actions like "+ New {entity}" inside contextual cards. Differs from the Outlined Button Family (used for row-level actions) and the form-chrome Primary (used for final submits). Three button families now in the vocabulary:
+
+| Pattern | Height | Text | Use |
+|---|---|---|---|
+| Form-chrome primary | h-8 | text-[13px] | Final submit action, e.g., form Save |
+| Outlined (neutral / destructive) | h-8 | text-[13px] | Action bar with multiple peers (detail-view) |
+| Filled primary (compact) | h-7 | text-[12px] | Secondary affirmative inside cards ("+ New") |
+
+**Non-widget refactor progress:** 4 of 8 PROP rows complete. Remaining: workspace_regions, auth_pages, base_layout, reports_e2e_journey.
+
+**Next cycle candidate:** Two strong options:
+- **PROP-034 base_layout** (17 hits, `base.html` — top-level HTML base) — medium complexity, touches the same chrome level as app-shell but focuses on link styles + global loading indicators
+- **PROP-032 workspace_regions** (~69 hits across 4 files: grid/list/kanban/tabbed_list) — decomposable into 4 sub-rows
+
+Leaning toward **PROP-034 base_layout** for smaller scope + continuing the layout chrome work.
+
+---
+
 ## 2026-04-12T20:58Z — Cycle 28
 
 **Selected row:** UX-031 (app-shell) — highest-blast-radius refactor in the entire ux-cycle loop. Every page in every app extends this layout.

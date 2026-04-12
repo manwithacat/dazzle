@@ -1,15 +1,16 @@
 {# File list — compact rows for document/evidence entities #}
+{# Contract: ~/.claude/skills/ux-architect/components/related-displays.md (UX-032) #}
 {% for tab in group.tabs %}
 {% if tab.visible | default(true) %}
 <div class="mb-4">
   {% if group.tabs | length > 1 %}
-  <h4 class="text-sm font-medium text-base-content/70 mb-2">{{ tab.label }}</h4>
+  <h4 class="text-[13px] font-medium text-[hsl(var(--muted-foreground))] mb-2">{{ tab.label }}</h4>
   {% endif %}
 
   {% if tab.create_url %}
   <div class="flex justify-end mb-2">
     <a href="{{ tab.create_url }}?{{ tab.filter_field }}={{ detail.item.get('id', '') }}"
-       class="btn btn-primary btn-sm"
+       class="h-7 px-2.5 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[12px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)] inline-flex items-center"
        data-dazzle-action="{{ tab.entity_name }}.create">
       + New {{ tab.label }}
     </a>
@@ -17,37 +18,37 @@
   {% endif %}
 
   {% if tab.rows %}
-  <div class="divide-y divide-base-200 border border-base-200 rounded-lg bg-base-100">
+  <div class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-[6px] divide-y divide-[hsl(var(--border))] overflow-hidden">
     {% for item in tab.rows %}
-    <div class="flex items-center gap-3 px-4 py-3 hover:bg-base-200/50 cursor-pointer"
+    <div class="flex items-center gap-3 px-4 py-3 hover:bg-[hsl(var(--muted)/0.5)] cursor-pointer transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
          {% if tab.detail_url_template %}
          hx-get="{{ tab.detail_url_template.replace('{id}', item.id | string) }}"
          hx-push-url="true"
          hx-target="body"
          hx-swap="innerHTML"
          {% endif %}>
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/40 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-[hsl(var(--muted-foreground)/0.6)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
       </svg>
       <div class="min-w-0 flex-1">
         {% for col in tab.columns[:2] %}
         {% if loop.first %}
-        <p class="text-sm font-medium truncate">{{ item[col.key] | default("—") }}</p>
+        <p class="text-[13px] font-medium text-[hsl(var(--foreground))] truncate">{{ item[col.key] | default("—") }}</p>
         {% else %}
-        <p class="text-xs text-base-content/50">{{ item[col.key] | default("") }}</p>
+        <p class="text-[12px] text-[hsl(var(--muted-foreground))] truncate">{{ item[col.key] | default("") }}</p>
         {% endif %}
         {% endfor %}
       </div>
       {% for col in tab.columns if col.type == "date" %}
       {% if loop.first %}
-      <span class="text-xs text-base-content/50 shrink-0">{{ item[col.key] | dateformat }}</span>
+      <span class="text-[12px] text-[hsl(var(--muted-foreground))] shrink-0">{{ item[col.key] | dateformat }}</span>
       {% endif %}
       {% endfor %}
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <p class="text-center py-6 text-base-content/50">No {{ tab.label | lower }} found.</p>
+  <p class="text-center py-6 text-[13px] text-[hsl(var(--muted-foreground))]">No {{ tab.label | lower }} found.</p>
   {% endif %}
 </div>
 {% endif %}

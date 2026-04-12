@@ -49,6 +49,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-029 | detail-view        | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | all                                                              | 1        | 2026-04-12 | Generic detail surface; Cycle 26 — pure Tailwind, 6 Jinja blocks preserved, 29 DaisyUI hits → 0 |
 | UX-030 | review-queue       | READY_FOR_QA | DONE     | DONE     | PENDING | support_tickets   | support_tickets                                                  | 1        | 2026-04-12 | Approval queue; Cycle 27 — action-style semantic mapping (primary/error/default), data-dz-progress CSS reuse |
 | UX-031 | app-shell          | READY_FOR_QA | DONE     | DONE     | PENDING | ops_dashboard     | all                                                              | 1        | 2026-04-12 | Layout chrome; Cycle 28 — dropped DaisyUI drawer, Alpine-driven responsive drawer, converted logout to HTMX POST |
+| UX-032 | related-displays   | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | contact_manager,support_tickets                                  | 1        | 2026-04-12 | 3 fragments refactored; Cycle 29 — tabs via ARIA pattern, status cards, file list; all share detail-view's card tokens |
 
 ## Exploration Findings
 
@@ -74,5 +75,5 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | PROP-032 | workspace-regions | 4 workspace region types (grid/list/kanban/tabbed_list) | PROPOSED | 17 | ~69 total hits across 4 files; likely decomposes into 4 sub-rows. |
 | PROP-033 | auth-pages | 7 auth pages (login/signup/2fa_\*/forgot/reset) | PROPOSED | 17 | ~149 total hits; likely 2–3 shared auth-chrome contracts. |
 | PROP-034 | base-layout | Top-level HTML base (`base.html`) | PROPOSED | 17 | 17 hits; link styles + global loading indicators. |
-| PROP-035 | related-displays | Related-entity display fragments (table/status-cards/file-list) | PROPOSED | 17 | 33+ hits across 3 variants; shared layout contract likely. |
+| PROP-035 | related-displays | Related-entity display fragments (table/status-cards/file-list) | PROMOTED→UX-032 | 17 | Promoted in Cycle 29 |
 | PROP-036 | reports-e2e-journey | E2E journey report (`reports/e2e_journey.html`) | PROPOSED | 17 | 18 hits; badge/card/steps. Standalone report surface. |
