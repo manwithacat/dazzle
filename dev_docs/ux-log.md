@@ -4,6 +4,30 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T16:51Z — Cycle 5
+
+**Selected row:** UX-008 (pagination) — final row in the retroactive run.
+
+**Phases:**
+- **OBSERVE**: Priority scan picked UX-008, last of the `MISSING + PARTIAL` rows touched during UX-002.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/pagination.md`. Linear aesthetic, server-authoritative state, 5 quality gates (filter preservation, active visual, prev/next disabling, row count math, bulk count override).
+- **REFACTOR**: Already done as part of UX-002.
+- **QA**: DEFERRED.
+
+**Outcome:** UX-008 retroactive contract documented.
+
+**End of retroactive run.** Backlog now has:
+- 3 DONE rows (UX-001/002/003 dashboard/table/card — awaiting QA)
+- 1 DONE+refactor row (UX-005 modal — awaiting QA)
+- 1 DONE+refactor row (UX-013 toast — awaiting QA)
+- 3 retroactively documented (UX-006/007/008 — awaiting QA)
+- 1 BLOCKED row (UX-004 form — needs decomposition)
+- 7 remaining `MISSING + DONE` widget/standalone rows (UX-009-015)
+
+Next cycle will shift from "retroactive documentation" to "contract writing for already-implemented vendor widgets". UX-009 (widget:combobox) is the first.
+
+---
+
 ## 2026-04-12T16:48Z — Cycle 4
 
 **Selected row:** UX-007 (search-input) — continuing retroactive documentation run.
