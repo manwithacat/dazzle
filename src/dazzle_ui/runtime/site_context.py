@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from dazzle_ui.runtime.template_context import (
+    QAPersonaCardContext,
     Site404Context,
     SiteAuthContext,
     SiteCTAContext,
@@ -106,6 +107,7 @@ def build_site_page_context(
     custom_css: bool = False,
     is_authenticated: bool = False,
     dashboard_url: str = "/app",
+    qa_personas: list[dict[str, Any]] | None = None,
 ) -> SitePageContext:
     """Build a SitePageContext from sitespec data and page data.
 
@@ -116,6 +118,7 @@ def build_site_page_context(
         custom_css: Include project-level custom CSS.
         is_authenticated: Whether the current user is authenticated.
         dashboard_url: URL to the user's dashboard/workspace.
+        qa_personas: Optional list of QA persona dicts (populated in dev/QA mode).
 
     Returns:
         SitePageContext ready for template rendering.
@@ -160,6 +163,8 @@ def build_site_page_context(
 
     og_meta = _build_og_meta(product_name, page_title, page_description)
 
+    persona_cards = [QAPersonaCardContext(**p) for p in (qa_personas or [])]
+
     return SitePageContext(
         product_name=product_name,
         page_title=page_title,
@@ -174,6 +179,7 @@ def build_site_page_context(
         custom_css=custom_css,
         is_authenticated=is_authenticated,
         dashboard_url=dashboard_url,
+        qa_personas=persona_cards,
     )
 
 

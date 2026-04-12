@@ -223,6 +223,44 @@ def run_unified_server(
     builder = DazzleBackendApp(appspec, config=server_config)
     app = builder.build()
 
+    # #768 — QA mode setup: provision dev personas and mount dev-gated routes
+    if (
+        os.environ.get("DAZZLE_QA_MODE") == "1"
+        and getattr(app.state, "auth_store", None) is not None
+    ):
+        from dazzle.cli.runtime_impl.dev_personas import provision_dev_personas
+
+        try:
+            provisioned = provision_dev_personas(appspec, app.state.auth_store)
+        except Exception as err:
+            provisioned = []
+            print(f"[Dazzle] Warning: dev persona provisioning failed: {err}")
+
+        if provisioned:
+            # Stash on app.state for the landing page renderer
+            app.state.qa_personas = provisioned
+
+            # Dynamically mount the dev-gated qa_router
+            try:
+                from dazzle_back.runtime.qa_routes import create_qa_routes
+
+                app.include_router(create_qa_routes())
+            except Exception as err:
+                print(f"[Dazzle] Warning: failed to mount QA routes: {err}")
+
+            # Print startup banner
+            print()
+            print("WARNING: QA MODE ACTIVE")
+            print("  Dev-only endpoint /qa/magic-link is mounted.")
+            print("  Any request can create a session for any provisioned persona.")
+            print("  This mode is ONLY intended for local QA testing.")
+            print("  Never expose this server to untrusted networks.")
+            print()
+            print(f"Dev Personas ({len(provisioned)})")
+            for p in provisioned:
+                print(f"  {p.display_name:<20} -> {p.email}")
+            print()
+
     # Build theme CSS (unique to unified server path)
     theme_css = ""
     try:

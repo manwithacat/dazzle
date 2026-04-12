@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **QA Mode (#768):** `dazzle serve --local` now auto-provisions a dev user for each DSL persona and renders a QA Personas section on the landing page. Testers click "Log in as X" to explore the app as any persona via magic links. Dev-gated generator endpoint `POST /qa/magic-link` is mounted only when `DAZZLE_ENV=development` + `DAZZLE_QA_MODE=1`. A general-purpose `GET /auth/magic/{token}` consumer endpoint is mounted unconditionally for production email-based passwordless login.
+- **Magic link consumer endpoint:** `GET /auth/magic/{token}` — production-safe, general-purpose. Validates via existing `validate_magic_link` primitive (one-time use, expiry-gated), creates a session, and redirects to `?next=` (same-origin only) or `/`. Suitable for email-based passwordless login, account recovery, and dev QA mode.
+
+### Changed
+- **`auth_store` on `app.state`:** The auth subsystem now stashes `auth_store` on `app.state.auth_store` during startup. Route handlers can access the auth store without dependency injection gymnastics. Existing routes that receive auth_store via constructor are unchanged.
+
+### Agent Guidance
+- **QA Mode workflow**: When building or modifying example apps for human QA testing, the landing page renders a dev-only Personas panel with "Log in as X" buttons. The flow uses real magic links (no auth backdoor). Persona emails follow `{persona_id}@example.test`. Passwords are not set — magic-link login only. See `docs/superpowers/specs/2026-04-12-qa-mode-design.md` for the full security model.
+- **`dazzle serve --local` env flags**: When `--local` is active, the CLI sets `DAZZLE_QA_MODE=1` and `DAZZLE_ENV=development` before uvicorn starts. Dev-only routes should double-check both flags at request time (defense in depth).
+
 ## [0.54.0] - 2026-04-12
 
 ### Added

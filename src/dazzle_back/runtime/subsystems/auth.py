@@ -48,6 +48,16 @@ class AuthSubsystem:
         )
         ctx.app.include_router(auth_router)
 
+        # Stash auth_store on app.state for routes that need it
+        # (magic link consumer, qa_routes, etc.)
+        ctx.app.state.auth_store = ctx.auth_store
+
+        # Mount the magic link consumer router (general-purpose, production-safe)
+        from dazzle_back.runtime.auth.magic_link_routes import create_magic_link_routes
+
+        magic_link_router = create_magic_link_routes()
+        ctx.app.include_router(magic_link_router)
+
         # 2FA routes
         twofa_router = create_2fa_routes(
             ctx.auth_store,
