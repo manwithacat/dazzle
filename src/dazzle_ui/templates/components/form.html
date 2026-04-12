@@ -1,4 +1,5 @@
-{# Form component — HTMX form submission, Alpine dzWizard for multi-step #}
+{# Form chrome — HTMX form submission, Alpine dzWizard for multi-step #}
+{# Contract: ~/.claude/skills/ux-architect/components/form-chrome.md (UX-016) #}
 {% from 'macros/form_field.html' import render_field %}
 
 {% if form %}
@@ -6,11 +7,11 @@
   {# Header #}
   {% block form_header %}
   <div class="flex items-center justify-between mb-6">
-    <h2 class="text-2xl font-bold">{{ form.title }}</h2>
+    <h2 class="text-[20px] font-semibold text-[hsl(var(--foreground))]">{{ form.title }}</h2>
   </div>
   {% endblock form_header %}
 
-  {# Stepper indicator for multi-section forms #}
+  {# Stepper indicator for multi-section forms (UX-018 form-wizard) #}
   {% if form.sections %}
     {% include 'fragments/form_stepper.html' %}
   {% endif %}
@@ -25,20 +26,20 @@
         hx-target-5*="#form-errors"
         hx-headers='{"Content-Type": "application/json"}'
         hx-ext="json-enc"
-        class="space-y-4">
+        class="space-y-4 htmx-request:opacity-60 htmx-request:pointer-events-none transition-opacity duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
 
     {# Form errors area (swapped by HTMX on validation failure) #}
     <div id="form-errors">
       {% include 'fragments/form_errors.html' %}
     </div>
 
-    {# Fields — sectioned (wizard) or flat #}
+    {# Fields — sectioned (wizard) or flat (delegated to UX-017 form-field) #}
     {% block form_fields %}
     {% if form.sections %}
       {% for section in form.sections %}
       <div data-dz-stage="{{ loop.index0 }}"
            x-show="isCurrent({{ loop.index0 }})">
-        <h3 class="text-lg font-semibold mb-3">{{ section.title }}</h3>
+        <h3 class="text-[14px] font-semibold text-[hsl(var(--foreground))] mb-3">{{ section.title }}</h3>
         {% for field in section.fields %}
           {{ render_field(field, form.initial_values) }}
         {% endfor %}
@@ -54,30 +55,41 @@
     {# Actions — wizard nav or standard submit #}
     {% block form_actions %}
     {% if form.sections %}
-    <div class="flex gap-3 pt-4">
-      <button type="button" class="btn btn-ghost" x-show="step > 0" @click="prev()">
+    <div class="flex gap-3 pt-4 border-t border-[hsl(var(--border))]">
+      <button type="button"
+              class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              x-show="step > 0" @click="prev()">
         Back
       </button>
-      <button type="button" class="btn btn-primary" x-show="step < total - 1" @click="next()">
+      <button type="button"
+              class="h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              x-show="step < total - 1" @click="next()">
         Next
       </button>
-      <button type="submit" class="btn btn-primary" x-show="step === total - 1"
+      <button type="submit"
+              class="h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
+              x-show="step === total - 1"
               data-dazzle-action="{{ form.entity_name }}.save"
-              data-loading-class="loading"
               data-loading-disable>
         {% if form.mode == "edit" %}Save{% else %}Create{% endif %}
       </button>
-      <a href="{{ form.cancel_url }}" class="btn btn-ghost">Cancel</a>
+      <a href="{{ form.cancel_url }}"
+         class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        Cancel
+      </a>
     </div>
     {% else %}
-    <div class="flex gap-3 pt-4">
-      <button type="submit" class="btn btn-primary"
+    <div class="flex gap-3 pt-4 border-t border-[hsl(var(--border))]">
+      <button type="submit"
+              class="h-8 px-3 rounded-[4px] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] text-[13px] font-medium hover:brightness-110 transition-[filter] duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
               data-dazzle-action="{{ form.entity_name }}.save"
-              data-loading-class="loading"
               data-loading-disable>
         {% if form.mode == "edit" %}Save{% else %}Create{% endif %}
       </button>
-      <a href="{{ form.cancel_url }}" class="btn btn-ghost">Cancel</a>
+      <a href="{{ form.cancel_url }}"
+         class="h-8 px-3 rounded-[4px] text-[13px] font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] inline-flex items-center transition-colors duration-[80ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
+        Cancel
+      </a>
     </div>
     {% endif %}
     {% endblock form_actions %}

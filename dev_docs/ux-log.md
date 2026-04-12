@@ -4,6 +4,63 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T17:49Z — Cycle 6
+
+**Selected row:** UX-016 (form-chrome) — first cycle after unblock triage; highest-priority PENDING+MISSING+PENDING.
+
+**Phases:**
+- **OBSERVE**: Priority bucket 2 matched UX-016 and UX-017 (from UX-004 decomposition). Picked UX-016 (form-chrome) — smaller, self-contained, does not depend on form-field.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/form-chrome.md`. Linear aesthetic, server-driven scaffold delegating fields to UX-017 and wizard to UX-018. 5 quality gates (no DaisyUI, error summary render, submit disable on request, wizard nav visibility by stage, cancel is a real `<a>`).
+- **REFACTOR**:
+  - Rewrote `src/dazzle_ui/templates/components/form.html` — replaced `btn btn-primary` / `btn btn-ghost` with token-driven pure-Tailwind button classes using `hsl(var(--*))` variables; added `htmx-request:opacity-60` for submitting state; added `border-t border-[hsl(var(--border))]` to action bar.
+  - Rewrote `src/dazzle_ui/templates/fragments/form_errors.html` — replaced `alert alert-error` DaisyUI pattern with destructive-token border/background and inline exclamation-triangle SVG.
+  - Jinja parse verified for both.
+- **QA Phase A**: DEFERRED — `dazzle ux verify --contracts` needs a running app on localhost:3000.
+- **QA Phase B**: DEFERRED — same.
+
+**Outcome:** UX-016 contract + refactor done; status READY_FOR_QA (has stable URLs — unlike modal/toast this appears on any form surface). 2 DaisyUI class families removed (`btn*`, `alert*`) from form scaffold.
+
+**Observation:** The unblock triage paid off immediately. UX-004 was unworkable as a single row; decomposed into 4 sub-components, the first (form-chrome) was a clean one-cycle job. form-field (UX-017) is up next at the same priority, and form-wizard (UX-018) is already impl:DONE so it only needs a retroactive contract. The form aggregate row (UX-004) will naturally clear once all four sub-rows are READY_FOR_QA.
+
+---
+
+## 2026-04-12T16:56Z — Unblock Triage (out-of-cycle)
+
+**Trigger:** User request to identify blocker types and unblock UX-004 via agent cognition.
+
+**Actions:**
+
+1. **Added new status values to the backlog legend:**
+   - `BLOCKED_ON: UX-NNN` — row depends on another row; re-prioritises the dependency
+   - `NEEDS_HARNESS` — event-triggered component needs a test harness before QA can run
+   - `READY_FOR_QA` — work done, awaiting running app for Phase B verification
+
+2. **Re-classified existing rows:**
+   - UX-001/002/003 (dashboard-grid, data-table, card): `DONE` → `READY_FOR_QA`
+   - UX-005 (modal): `PENDING` → `NEEDS_HARNESS`
+   - UX-006/007/008 (filter-bar, search-input, pagination): `PENDING` → `READY_FOR_QA`
+   - UX-013 (toast): `PENDING` → `NEEDS_HARNESS`
+
+3. **Decomposed UX-004 (form)** — BLOCKED → BLOCKED_ON: UX-016..019, with four new sub-components added:
+   - **UX-016 form-chrome** — outer shell (multi-section layout, submit bar, error summary) — `impl: PENDING`
+   - **UX-017 form-field** — individual field macro (form_field.html) — `impl: PENDING`
+   - **UX-018 form-wizard** — multi-step navigation state machine (dzWizard) — `impl: DONE` (already exists as Alpine component)
+   - **UX-019 form-validation** — client-side validation orchestration — `impl: PARTIAL`
+
+**Agent cognition unblock-triage strategy:**
+
+| Blocker type | Agent can resolve? | Action |
+|---|---|---|
+| TOO_LARGE (composite with clear sub-boundaries) | **Yes** | Decompose into sub-component rows |
+| AMBIGUOUS_DESIGN | No | Emit `ux-needs-human` signal, leave BLOCKED |
+| MISSING_DEPENDENCY | **Yes** | Re-queue dependency at higher priority |
+| NO_TESTABLE_URL | Partially | New state `NEEDS_HARNESS`; agent can write harness |
+| STAGNATION_ON_REFACTOR | Sometimes | Smaller scope retry or decomposition |
+
+**Result:** UX-004 unblocked via decomposition. 4 new backlog rows available for picking. The backlog now has explicit distinguishing states for the three different "waiting" conditions (human, harness, infra).
+
+---
+
 ## 2026-04-12T16:51Z — Cycle 5
 
 **Selected row:** UX-008 (pagination) — final row in the retroactive run.
