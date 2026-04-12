@@ -4,6 +4,43 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T22:14Z — Cycle 34
+
+**Selected row:** UX-035 region-wrapper — continuing the adoption sweep. Not a new component; advancing impl:PARTIAL from 1/16 → 2/16.
+
+**Scope interpretation:** The "one component per cycle" hard rule is about shipping NEW components, not about continuing a partial rollout of an existing one. UX-035's macro is already shipped (Cycle 32); follow-up cycles apply it to more files. Each cycle is one file (scope-disciplined) and increments the adoption count.
+
+**Phases:**
+- **OBSERVE**: Bucket 2 empty; two PARTIAL rows exist (UX-035 1/16, UX-036 1/7). Picked UX-035 + `list.html` (next-largest region file, 15 DaisyUI hits).
+- **SPECIFY**: SKIPPED — the contract from Cycle 32 covers this refactor. No new document needed.
+- **REFACTOR**: Rewrote `templates/workspace/regions/list.html`:
+  - Imported and called `region_card(None)` — passing `None` as title because list.html has a custom header row with action buttons that doesn't fit the macro's default `<h3>` slot
+  - Header row: title + optional region action buttons (filled-primary compact) + CSV export icon button (ghost)
+  - Filter bar: `select select-xs select-bordered` → token-driven compact select (`h-7 px-2 rounded-[4px]` pattern)
+  - Data table: `table table-sm table-zebra` → plain `<table class="w-full">` with explicit header row (`bg-muted/0.3`), column headers (`text-[12px] font-medium text-muted-foreground`), body rows with border-b + hover, column cells (`text-[13px] px-3 py-2`)
+  - Sort link: `hover:text-primary` → `hover:text-[hsl(var(--foreground))]`
+  - Row attention accent: `bg-error/10` / `bg-warning/10` / `bg-info/10` → token-driven `bg-[hsl(var(--destructive)/0.08)]` / `bg-[hsl(38_92%_50%/0.08)]` / `bg-[hsl(var(--primary)/0.06)]`
+  - Row hover: `hover cursor-pointer` → `cursor-pointer hover:bg-[hsl(var(--muted)/0.5)]`
+  - Badge cells: `badge badge-sm` → semantic badge pattern with `badge_class` filter
+  - Ref links: `link link-hover link-primary` → `text-[hsl(var(--primary))] hover:underline`
+  - Row count footer: `text-xs opacity-50` → `text-[11px] text-[hsl(var(--muted-foreground))]`
+  - Preserved: sort HTMX wiring, filter HTMX wiring, date range picker include, empty state include, action_url detail-drawer wiring, column type formatters (badge/bool/date/currency/ref/default)
+- **QA**: DEFERRED.
+
+**Outcome:** UX-035 impl advanced to **2/16 adopters**. Status remains READY_FOR_QA with impl:PARTIAL.
+
+**Pattern observation (None title):** For region files with custom header rows (action buttons, toolbars, filters), pass `None` as the macro's title parameter so the default `<h3>` slot is skipped, then render the full header manually inside the caller block. This keeps the macro simple (one string param) while supporting region files with more elaborate headers. Could be documented as an optional pattern in the region-wrapper contract.
+
+**Progress:**
+```
+Region adopters: [██░░░░░░░░░░░░░░] 2/16 (grid, list)
+Auth adopters:   [█░░░░░░░]          1/7 (login)
+```
+
+**Next cycle candidate:** **kanban.html** (17 hits, next largest after list.html) — similar pattern to list but with board columns instead of a table. OR **tabbed_list.html** (9 hits, simpler, wraps a `<div role="tablist">` + nested list.html calls). Leaning toward kanban for impact.
+
+---
+
 ## 2026-04-12T22:02Z — Cycle 33
 
 **Selected row:** UX-036 (auth-page) — promoted from PROP-033, the LAST remaining PROP row from the Cycle 17 EXPLORE findings.
