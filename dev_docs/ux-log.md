@@ -4,6 +4,30 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T19:22Z — Cycle 18
+
+**Selected row:** UX-021 (widget:multiselect) — **first cycle to consume a PROP row** from the Cycle 17 explore findings. Promoted from PROP-021 in the same move.
+
+**Phases:**
+- **OBSERVE**: Main Components table has no bucket 2/3 rows, but Proposed Components table has 16 PROP-021..036 from Cycle 17. Promoted PROP-021 (widget:multiselect) to the main table as UX-021 — shortest estimated cycle since CSS was already aligned by UX-009's `.ts-wrapper.multi` override block. Marked the PROP row as `PROMOTED→UX-021`.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-multiselect.md`. Sibling to UX-009 combobox — shares Tom Select library, CSS override block, bridge registration, and form-field chrome. Contract explicitly notes "No new CSS in `design-system.css`" because UX-009's override was prospectively written to cover `.ts-wrapper.multi` and `.ts-control > .item` pills.
+- **REFACTOR**: Rewrote the `{% elif field.widget == "multi_select" %}` branch of `form_field.html` to match the pattern established by UX-009 combobox: form-field chrome wrapper, token-driven label with destructive required marker, hint/error paragraphs using `text-[12px]`, conditional `border-[hsl(var(--destructive))]`, proper `aria-describedby` wiring, `required aria-required="true"` (v0.1 had only `aria-required`). Preserved `multiple` attribute and `data-dz-options='{"plugins":["remove_button"]}'`.
+- **QA Phase A**: DEFERRED — needs running app.
+- **QA Phase B**: DEFERRED.
+
+**Zero-CSS payoff:** UX-009's override block was written prospectively to include `.ts-wrapper.multi` and `.ts-control > .item` because the contract author recognised multi-select would be a future row. Cycle 18's CSS footprint is 0 lines — only template edits. This is the fastest observed cycle shape for a vendored-widget row (only rivalled by retroactive-contract-only cycles like UX-018 form-wizard — but even that had a stepper template to refactor).
+
+**Outcome:** UX-021 contract + refactor done; status READY_FOR_QA. **First cycle to consume an EXPLORE-mode PROP row** — confirms the EXPLORE → promote → ship pipeline works end-to-end.
+
+**Pattern observation (prospective CSS):** The prospective-override pattern (writing CSS overrides for future widget variants in the same family) saves work across cycles. Applying the same idea:
+- UX-022 widget:tags will benefit from the same UX-009 override (Tom Select with `create: true`)
+- UX-023 widget:colorpicker will need a new override block for Pickr's `.pcr-*` classes — but that override could be written to anticipate future Pickr variants (Pickr supports multiple UI modes)
+- Future Quill, Flatpickr date-range-picker, etc. — always look at "what variants does this library support" when writing the first override
+
+**Next-cycle candidate:** Strong match is **PROP-022 widget:tags** — same Tom Select family, same CSS override (already covers the `.create` state), template-only refactor.
+
+---
+
 ## 2026-04-12T19:13Z — Cycle 17 (EXPLORE, static variant)
 
 **Mode:** EXPLORE — no PENDING bucket 2/3 rows remain; backlog is fully refactored per Cycle 16.

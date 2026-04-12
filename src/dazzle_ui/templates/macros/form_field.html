@@ -75,22 +75,34 @@
   </div>
 
   {% elif field.widget == "multi_select" %}
-  <label class="form-control w-full" for="field-{{ field.name }}">
-    <div class="label"><span class="label-text">{{ field.label }}{% if field.required %} <span class="text-error">*</span>{% endif %}</span></div>
+  {# UX-021: multiselect widget — TomSelect with remove_button plugin, pure Tailwind chrome #}
+  <div class="w-full space-y-1">
+    <label for="field-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+      {{ field.label }}
+      {% if field.required %}
+        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      {% endif %}
+    </label>
+    {% if field.hint %}
+    <p id="hint-{{ field.name }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+    {% endif %}
     <select id="field-{{ field.name }}" name="{{ field.name }}"
             data-dz-widget="multiselect"
             data-dz-options='{"plugins":["remove_button"]}'
             multiple
             {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
-            {% if field.required %}aria-required="true"{% endif %}
-            class="input input-bordered w-full">
+            {% if field.required %}required aria-required="true"{% endif %}
+            {% if errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %}
+            class="w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border {% if errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]">
       {% for opt in field.options %}
       <option value="{{ opt.value }}" {% if opt.value|string in (values.get(field.name) or []) %}selected{% endif %}>{{ opt.label }}</option>
       {% endfor %}
     </select>
-    {% if field.hint %}<div class="label" id="hint-{{ field.name }}"><span class="label-text-alt text-base-content/60">{{ field.hint }}</span></div>{% endif %}
-    {% if errors.get(field.name) %}<div id="error-{{ field.name }}" class="label"><span class="label-text-alt text-error" role="alert">{{ errors[field.name] }}</span></div>{% endif %}
-  </label>
+    {% if errors.get(field.name) %}
+    <p id="error-{{ field.name }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ errors[field.name] }}</p>
+    {% endif %}
+  </div>
 
   {% elif field.widget == "tags" %}
   <label class="form-control w-full" for="field-{{ field.name }}">

@@ -38,6 +38,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-014 | confirm-dialog     | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | all                                                              | 1        | 2026-04-12 | dzConfirm; Cycle 14 — native <dialog> + destructive button; unblocked by UX-020 harness (Cycle 16) |
 | UX-015 | popover            | READY_FOR_QA | DONE     | DONE     | PENDING | ops_dashboard     | ops_dashboard,fieldtest_hub                                      | 1        | 2026-04-12 | dzPopover; Cycle 15 — pure Tailwind, x-anchor preserved; unblocked by UX-020 harness (Cycle 16) |
 | UX-020 | widget-harness-set | DONE      | DONE     | DONE     | PASS    | —                 | UX-005,UX-013,UX-014,UX-015                                      | 1        | 2026-04-12 | Cycle 16 — static/test-event-widgets.html; unblocks 4 NEEDS_HARNESS rows; 5/5 gates pass |
+| UX-021 | widget:multiselect | READY_FOR_QA | DONE     | DONE     | PENDING | contact_manager   | contact_manager,support_tickets,fieldtest_hub                    | 1        | 2026-04-12 | TomSelect multi-select; Cycle 18 — template-only refactor, zero CSS (UX-009 override covers `.ts-wrapper.multi`) |
 
 ## Exploration Findings
 
@@ -49,7 +50,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 
 | id      | component_name | description                                              | status    | source_cycle | notes |
 |---------|----------------|----------------------------------------------------------|-----------|--------------|-------|
-| PROP-021 | widget:multiselect | TomSelect multi-select wrapper (form_field multi_select branch) | PROPOSED | 17 | CSS already aligned by UX-009 override; template-only refactor. Fast. |
+| PROP-021 | widget:multiselect | TomSelect multi-select wrapper (form_field multi_select branch) | PROMOTED→UX-021 | 17 | Promoted in Cycle 18 |
 | PROP-022 | widget:tags | TomSelect tags wrapper with create-on-the-fly (form_field tags branch) | PROPOSED | 17 | CSS already aligned by UX-009 override; template-only refactor. Fast. |
 | PROP-023 | widget:colorpicker | Pickr colour picker wrapper (form_field color branch) | PROPOSED | 17 | Needs new vendored-widget CSS override (Pickr's `.pcr-*` classes) + template refactor. |
 | PROP-024 | widget:richtext | Quill editor wrapper (form_field rich_text branch) | PROPOSED | 17 | Needs CSS override for Quill's `.ql-*` classes + template refactor. |
