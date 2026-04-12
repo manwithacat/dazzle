@@ -39,6 +39,46 @@ from .ports import (
 from .production import configure_production_logging, validate_production_env
 
 
+def _load_dotenv(project_root: Path) -> list[str]:
+    """Load environment variables from ``<project_root>/.env`` if it exists.
+
+    Uses a stdlib-only parser to avoid adding a python-dotenv dependency.
+    Only sets variables that are not already in ``os.environ`` (existing
+    shell exports take precedence over .env values).
+
+    Returns the list of variable names loaded (for logging).
+    """
+    env_file = project_root / ".env"
+    if not env_file.exists():
+        return []
+
+    loaded: list[str] = []
+    try:
+        content = env_file.read_text()
+    except OSError:
+        return []
+
+    for raw_line in content.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Strip optional `export ` prefix
+        if line.startswith("export "):
+            line = line[len("export ") :].strip()
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.strip()
+        # Strip surrounding quotes if present
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        if key and key not in os.environ:
+            os.environ[key] = value
+            loaded.append(key)
+    return loaded
+
+
 def _validate_infrastructure() -> tuple[str, str]:
     """Validate that required infrastructure env vars are set.
 
@@ -65,7 +105,7 @@ def _validate_infrastructure() -> tuple[str, str]:
         typer.echo("Dazzle requires PostgreSQL + Redis infrastructure.", err=True)
         typer.echo(f"Missing environment variables: {', '.join(missing)}", err=True)
         typer.echo("", err=True)
-        typer.echo("Set them in .env or export before running:", err=True)
+        typer.echo("Set them in .env (loaded automatically) or export before running:", err=True)
         typer.echo("  export DATABASE_URL=postgresql://localhost:5432/dazzle_dev", err=True)
         typer.echo("  export REDIS_URL=redis://localhost:6379/0", err=True)
         typer.echo("", err=True)
@@ -199,6 +239,13 @@ def serve_command(
     # Resolve project path from manifest
     manifest_path = Path(manifest).resolve()
     project_root = manifest_path.parent
+
+    # Load .env file from project root if present (#769).
+    # Populates os.environ for DATABASE_URL, REDIS_URL, and other config.
+    # Existing shell exports take precedence (setdefault semantics).
+    _dotenv_loaded = _load_dotenv(project_root)
+    if _dotenv_loaded:
+        typer.echo(f"Loaded .env ({len(_dotenv_loaded)} vars): {', '.join(_dotenv_loaded)}")
 
     # Load manifest to get auth config and project name
     mf = None
