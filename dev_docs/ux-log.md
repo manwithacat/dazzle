@@ -4,6 +4,30 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T18:04Z — Cycle 8
+
+**Selected row:** UX-018 (form-wizard) — third sibling of the UX-004 decomposition; MISSING+DONE shape (contract only, no state machine work).
+
+**Phases:**
+- **OBSERVE**: Bucket 2 (MISSING+PENDING) empty. Loose interpretation: picked the fastest remaining shape — UX-018 is MISSING+DONE (dzWizard Alpine component already exists). On inspection, discovered `templates/fragments/form_stepper.html` still uses DaisyUI `steps`/`step-primary`, so this was more than a pure retroactive doc — included a stepper refactor.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/form-wizard.md`. Documents the existing dzWizard state machine (step/total/next/prev/goToStep/validateStage/isActive/isCurrent), specifies the stepper visual as pure Tailwind, 5 quality gates (no DaisyUI stepper classes, dzWizard signature preserved, advance blocked on required field, backward-jump unconditional, active state via Alpine binding).
+- **REFACTOR**: Rewrote `src/dazzle_ui/templates/fragments/form_stepper.html`:
+  - Replaced DaisyUI `steps steps-horizontal` + `step step-primary` with pure flex layout: `<ol>` + `<li>` + bubble span + title span + connector span
+  - Bubbles use `rounded-full h-6 w-6` with Alpine `:class` switching between muted bordered and primary-filled
+  - Added inline SVG checkmark for completed stages (`step > N`) via `<template x-if>`
+  - Connector line is `flex-1 h-px` with Alpine `:class` tinting based on `isActive(N+1)`
+  - Added `role="list"` + `aria-label="Form progress"` and dynamic `:aria-current="isCurrent(N) ? 'step' : false"`
+  - sr-only span with `x-text` announcing "completed/current/pending" per step
+  - dzWizard Alpine component in `dz-alpine.js` **unchanged** — signature and behaviour preserved
+- **QA Phase A**: DEFERRED — needs running app.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-018 contract + stepper refactor done; status READY_FOR_QA. Three of the four UX-004 sub-components are now READY_FOR_QA. Only UX-019 form-validation remains from the form decomposition.
+
+**Pattern observation:** This cycle was classified as MISSING+DONE but on inspection had meaningful refactor work (the stepper fragment). Pure retroactive-doc cycles are rarer than the backlog seeding suggested — most "impl DONE" components still have some peripheral template/fragment that wasn't touched by the original refactor. The lesson: SPECIFY should always include a quick `grep -E 'btn|alert|steps|form-control|label-text|input-bordered' <relevant files>` to spot DaisyUI leakage before declaring impl:DONE.
+
+---
+
 ## 2026-04-12T17:57Z — Cycle 7
 
 **Selected row:** UX-017 (form-field) — sibling of UX-016 from the UX-004 decomposition.
