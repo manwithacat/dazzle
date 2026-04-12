@@ -45,6 +45,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | UX-025 | widget:richtext    | READY_FOR_QA | DONE     | DONE     | PENDING | fieldtest_hub     | fieldtest_hub,support_tickets                                    | 1        | 2026-04-12 | Quill wrapper; Cycle 22 — template refactor + ~150-line .ql-snow override; also removed `\| safe` from editor div (bridge handles restore) |
 | UX-026 | widget:money       | READY_FOR_QA | DONE     | DONE     | PENDING | support_tickets   | support_tickets,fieldtest_hub                                    | 1        | 2026-04-12 | dzMoney (pinned + unpinned); Cycle 23 — flex group replaces DaisyUI `join`, adjacent borders collapse via border-r-0 |
 | UX-027 | widget:file        | READY_FOR_QA | DONE     | DONE     | PENDING | support_tickets   | support_tickets,fieldtest_hub                                    | 1        | 2026-04-12 | dzFileUpload dropzone; Cycle 24 — template refactor + `<progress>` pseudo-element override |
+| UX-028 | widget:search_select | READY_FOR_QA | DONE    | DONE     | PENDING | contact_manager   | contact_manager,support_tickets                                  | 1        | 2026-04-12 | Dynamic search-select; Cycle 25 — **form_field.html now 100% DaisyUI-free** |
 
 ## Exploration Findings
 
@@ -63,7 +64,7 @@ Persistent backlog for `/ux-cycle`. Each row is a UX component that should come 
 | PROP-025 | widget:slider | Native range input + dzRangeTooltip Alpine (form_field slider branch) | PROMOTED→UX-023 | 17 | Promoted in Cycle 20 |
 | PROP-026 | widget:money | dzMoney currency input (form_field money branch) | PROMOTED→UX-026 | 17 | Promoted in Cycle 23 |
 | PROP-027 | widget:file | dzFileUpload dropzone (form_field file branch) | PROMOTED→UX-027 | 17 | Promoted in Cycle 24 |
-| PROP-028 | widget:search_select | Dynamic search-select fragment (`fragments/search_select.html`) | PROPOSED | 17 | May share contract with UX-009 combobox family; verify scope. |
+| PROP-028 | widget:search_select | Dynamic search-select fragment (`fragments/search_select.html`) | PROMOTED→UX-028 | 17 | Promoted in Cycle 25 |
 | PROP-029 | review-queue | Approval/review queue component (`components/review_queue.html`) | PROPOSED | 17 | 36 DaisyUI hits; btn+card heavy. |
 | PROP-030 | detail-view | Generic detail surface (`components/detail_view.html`) | PROPOSED | 17 | 29 hits; btn-outline, btn-sm pattern. Used by non-table detail surfaces. |
 | PROP-031 | app-shell | Layout chrome — navbar/drawer (`layouts/app_shell.html`) | PROPOSED | 17 | 32 hits; navbar+drawer. Affects every page. |

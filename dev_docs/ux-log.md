@@ -4,6 +4,61 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T20:25Z — Cycle 25
+
+**Selected row:** UX-028 (widget:search_select) — final widget row, last branch of `form_field.html`.
+
+**Phases:**
+- **OBSERVE**: Promoted PROP-028. Scope spans two files: the `{% elif field.source %}` wrapper branch in `form_field.html` (label block + include), and the actual widget DOM in `fragments/search_select.html`.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-search-select.md`. Documents the ARIA combobox pattern (input with popup listbox variant per ARIA 1.2), HTMX debounced search wiring, the two-input carrier pattern (hidden input = form value, visible input = search query + display), and the click-to-select responsibility split (widget defines the interface; server's result template emits click wiring). 5 quality gates.
+- **REFACTOR**:
+  - `templates/macros/form_field.html` `field.source` branch: replaced `class="label"` + `label-text` + `text-error` with token-driven label + destructive marker. Added hint paragraph rendering (was missing!) and error paragraph rendering (was missing!) — these improvements align search_select with UX-017's chrome pattern. Previously search_select had NO hint or error display — a pre-existing UX gap now fixed.
+  - `templates/fragments/search_select.html`: full rewrite of the fragment. Replaced `input input-bordered` with form-field base classes (including conditional destructive border). Replaced `loading loading-spinner loading-sm` with inline animating SVG + `animate-spin`. Replaced dropdown `bg-base-100 border border-base-300 rounded-box shadow-lg` with `bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)]`. Replaced empty state `text-base-content/50` with `text-[hsl(var(--muted-foreground))]`. Added `pr-8` to the input (space for the spinner). Added `required`/`aria-required`/`aria-invalid`/`aria-describedby` wiring on the hidden input.
+  - `x-cloak` preserved on the dropdown for FOUC prevention.
+  - HTMX wiring preserved exactly: `hx-get`, `hx-trigger`, `hx-target`, `hx-indicator`, `hx-params`, `hx-vals`.
+- **QA Phase A**: DEFERRED.
+- **QA Phase B**: DEFERRED.
+
+**🎉 HISTORIC MILESTONE — form_field.html is 100% DaisyUI-free.**
+
+Ran a full-file audit against a 40-token DaisyUI blacklist (form-control, input-bordered, textarea-bordered, select-bordered, checkbox-primary, label-text[-alt], text-base-content, text-error, input/textarea/select-error, btn families, alert families, modal families, card families, rounded-box/btn, join, tabs, bg-base-*, border-base-*, loading spinner, progress progress-primary). Zero hits.
+
+The journey:
+- **Cycle 10** (UX-009 combobox): 69 DaisyUI hits across the file
+- **Cycle 11** (UX-010 datepicker): both picker + range variants
+- **Cycle 18** (UX-021 multiselect): zero-CSS thanks to UX-009's prospective override
+- **Cycle 19** (UX-022 tags): zero-CSS thanks to UX-009's prospective override
+- **Cycle 20** (UX-023 slider): native range-input pseudo-element overrides
+- **Cycle 21** (UX-024 colorpicker): Pickr override block
+- **Cycle 22** (UX-025 richtext): Quill override block (largest)
+- **Cycle 23** (UX-026 money): flex-based segmented control replaces DaisyUI `join`
+- **Cycle 24** (UX-027 file): `<progress>` pseudo-element override
+- **Cycle 25** (UX-028 search_select): **final branch**
+
+**Side-benefit:** UX-028 also fixed a pre-existing UX gap — the `field.source` branch had no hint or error paragraph rendering at all. Now it has both, matching the rest of form-field's chrome.
+
+**Widget branch progress: 11 of 11 complete.** ✅
+
+**Outcome:** UX-028 contract + template + fragment refactor done; status READY_FOR_QA.
+
+**Vendored-widget CSS ledger (final form):**
+
+| Library | Cycle | Override LOC | Variants shipped |
+|---|---|---|---|
+| Tom Select | 10 | ~70 | combobox, multiselect, tags (3) |
+| Flatpickr | 11 | ~115 | datepicker, daterange (2) |
+| Pickr | 21 | ~95 | colorpicker (1) |
+| Quill | 22 | ~150 | richtext (1) |
+| Native range | 20 | ~70 | slider (1) |
+| Native progress | 24 | ~25 | file-upload progress (1) |
+| **Total** | **—** | **~525** | **9 widget variants** |
+
+**Alpine-only widgets (no CSS override, template-only):** form-chrome, form-field (core), form-wizard, modal, toast, filter-bar, search-input, pagination, dashboard-grid, data-table, card, command-palette, slide-over, confirm-dialog, popover, money, search-select
+
+**Next cycle candidate:** Back to EXPLORE mode — main Components table has no bucket 2/3 rows. Remaining PROP rows are PROP-029..036 (review_queue, detail_view, app_shell, workspace_regions, auth_pages, base_layout, related_displays, reports_e2e_journey). These are all non-widget templates with heavy DaisyUI leakage. Next cycle should promote PROP-029 (review_queue) or PROP-030 (detail_view) — both are core components with ~30 DaisyUI hits each.
+
+---
+
 ## 2026-04-12T20:15Z — Cycle 24
 
 **Selected row:** UX-027 (widget:file) — promoted from PROP-027.

@@ -31,17 +31,21 @@
     </label>
 
   {% elif field.source %}
-    {# Search-select: dynamic search with autofill #}
-    <label class="label" for="search-input-{{ field.name }}">
-      <span class="label-text">
-        {{ field.label }}
-        {% if field.required %}
-          <span class="text-error" aria-hidden="true">*</span>
-          <span class="sr-only">(required)</span>
-        {% endif %}
-      </span>
+    {# UX-028: search-select dynamic search with autofill #}
+    <label for="search-input-{{ field.name }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+      {{ field.label }}
+      {% if field.required %}
+        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      {% endif %}
     </label>
+    {% if field.hint is defined and field.hint %}
+    <p id="{{ hint_id }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">{{ field.hint }}</p>
+    {% endif %}
     {% include "fragments/search_select.html" %}
+    {% if error %}
+    <p id="{{ error_id }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">{{ error }}</p>
+    {% endif %}
 
   {# ── Vendored widget overrides (Phase 4) ─────────────────────────── #}
   {% elif field.widget == "combobox" %}

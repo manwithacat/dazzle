@@ -1,5 +1,6 @@
 {# Search-select fragment — debounced search with dropdown results, Alpine state #}
-{# ARIA combobox pattern for screen reader accessibility. #}
+{# Contract: ~/.claude/skills/ux-architect/components/widget-search-select.md (UX-028) #}
+{# ARIA combobox pattern (ARIA 1.2 — input with popup listbox variant).            #}
 
 {# Resolve initial value for edit mode: ref objects have display names #}
 {% set init_id = "" %}
@@ -13,14 +14,17 @@
 {% endif %}
 
 <div class="relative w-full" x-data="{ open: false }">
-  {# Hidden input stores the selected value #}
+  {# Hidden input — form submission carrier #}
   <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}"
-         data-dazzle-field="{{ field.name }}" value="{{ init_id }}" />
+         data-dazzle-field="{{ field.name }}"
+         value="{{ init_id }}"
+         {% if field.required %}required aria-required="true"{% endif %}
+         {% if errors and errors.get(field.name) %}aria-invalid="true" aria-describedby="error-{{ field.name }}{% if field.hint %} hint-{{ field.name }}{% endif %}"{% elif field.hint %}aria-describedby="hint-{{ field.name }}"{% endif %} />
 
-  {# Visible search input with HTMX debounced search #}
+  {# Visible search input with HTMX debounced search — ARIA combobox role #}
   <input type="text"
          id="search-input-{{ field.name }}"
-         class="input input-bordered w-full"
+         class="w-full h-8 pl-3 pr-8 rounded-[4px] bg-[hsl(var(--background))] border {% if errors and errors.get(field.name) %}border-[hsl(var(--destructive))]{% else %}border-[hsl(var(--border))]{% endif %} text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
          placeholder="{{ field.placeholder or ('Search ' + field.label + '...') }}"
          autocomplete="off"
          role="combobox"
@@ -38,21 +42,25 @@
          @focus="open = true"
          @blur="setTimeout(() => { open = false }, 200)" />
 
-  {# Loading indicator #}
-  <span id="search-spinner-{{ field.name }}" class="htmx-indicator absolute right-3 top-3"
+  {# Loading indicator — HTMX toggles htmx-indicator visibility automatically #}
+  <span id="search-spinner-{{ field.name }}"
+        class="htmx-indicator absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[hsl(var(--muted-foreground))]"
         role="status" aria-label="Searching">
-    <span class="loading loading-spinner loading-sm" aria-hidden="true"></span>
+    <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+    </svg>
   </span>
 
-  {# Dropdown results container #}
+  {# Dropdown results container — HTMX swap target #}
   <div id="search-results-{{ field.name }}"
        x-show="open"
        x-cloak
        role="listbox"
        aria-label="{{ field.label }} suggestions"
-       class="absolute z-50 w-full mt-1 bg-base-100 border border-base-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+       class="absolute z-50 w-full mt-1 max-h-60 overflow-y-auto bg-[hsl(var(--popover))] border border-[hsl(var(--border))] rounded-[6px] shadow-[0_4px_12px_rgb(0_0_0/0.08),0_1px_3px_rgb(0_0_0/0.06)]">
     {# Empty state shown before any search #}
-    <div class="p-3 text-sm text-base-content/50" role="option" aria-disabled="true">
+    <div class="px-3 py-3 text-[13px] text-[hsl(var(--muted-foreground))]" role="option" aria-disabled="true">
       Type at least {{ field.source.min_chars }} characters to search...
     </div>
   </div>
