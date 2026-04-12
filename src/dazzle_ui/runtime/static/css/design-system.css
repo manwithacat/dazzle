@@ -973,3 +973,75 @@ a, button, .btn, input, select, textarea, .card, .menu li a {
     color: hsl(var(--muted-foreground));
   }
 }
+
+/* ── Tom Select token overrides (UX-009 widget:combobox) ───────────────── */
+/* Linear-aesthetic override of vendor/tom-select.css. Targets the library's  */
+/* generated class names to align with hsl(var(--*)) design tokens.           */
+.ts-wrapper.single .ts-control,
+.ts-wrapper.multi .ts-control {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+  color: hsl(var(--foreground));
+  box-shadow: none;
+  transition: box-shadow 120ms cubic-bezier(0.2, 0, 0, 1),
+              border-color 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+.ts-wrapper.single.focus .ts-control,
+.ts-wrapper.multi.focus .ts-control {
+  border-color: hsl(var(--ring));
+  box-shadow: 0 0 0 1px hsl(var(--ring));
+}
+.ts-wrapper.single.disabled .ts-control,
+.ts-wrapper.multi.disabled .ts-control {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.ts-wrapper .ts-control > input::placeholder,
+.ts-wrapper .ts-control .placeholder {
+  color: hsl(var(--muted-foreground));
+}
+.ts-dropdown {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  color: hsl(var(--foreground));
+  margin-top: 4px;
+  font-size: 13px;
+}
+.ts-dropdown .option {
+  padding: 6px 12px;
+  color: hsl(var(--foreground));
+}
+.ts-dropdown .active {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+.ts-dropdown .selected {
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+}
+.ts-dropdown .no-results {
+  padding: 8px 12px;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+/* Error state — mirrors aria-invalid on the underlying <select> */
+.ts-wrapper[aria-invalid="true"] .ts-control,
+select[aria-invalid="true"] + .ts-wrapper .ts-control {
+  border-color: hsl(var(--destructive));
+}
+/* Multi-select pills (used by multiselect/tags — out of scope for UX-009 but */
+/* included so the other widgets inherit the tokens without extra work).       */
+.ts-wrapper.multi .ts-control > .item {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
+  border-radius: 3px;
+  padding: 0 6px;
+  font-size: 12px;
+}

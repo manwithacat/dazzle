@@ -4,6 +4,29 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T18:20Z — Cycle 10
+
+**Selected row:** UX-009 (widget:combobox) — first of the widget rows (UX-009..015 TomSelect/Flatpickr/Pickr/Quill wrappers).
+
+**Phases:**
+- **OBSERVE**: Bucket 2 empty after the form decomposition completed. Picked UX-009 as the first widget row. MISSING+DONE shape; applied Cycle 8's learning — grepped the combobox branch before declaring impl:DONE and found full DaisyUI leakage.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/widget-combobox.md`. Documents the progressive-enhancement model: native `<select>` with `data-dz-widget="combobox"`, bridge mounts TomSelect on `htmx:afterSettle`, unmounts on `htmx:beforeSwap`. Declares a CSS-override contract that targets Tom Select's generated `.ts-wrapper`/`.ts-control`/`.ts-dropdown` class names — v0.1-authorised because the library is vendored. 5 quality gates (no DaisyUI in branch, native fallback works without JS, TS mounts after settle, TS unmounts before swap, required attribute respected).
+- **REFACTOR**:
+  - `templates/macros/form_field.html` combobox branch: rewrote the wrapper to match form-field's pattern — `<div class="w-full space-y-1">`, token-driven label with destructive required marker, hint/error paragraphs using `text-[12px] text-[hsl(var(--muted-foreground|destructive))]`, `aria-describedby` wiring that combines hint + error IDs, `required aria-required="true"` attribute now correctly emitted (was previously just `aria-required`), `aria-invalid="true"` on server error.
+  - `runtime/static/css/design-system.css`: appended ~70 lines of Tom Select token overrides targeting `.ts-wrapper.single|.multi .ts-control`, `.ts-dropdown .option/.active/.selected`, focus ring via `box-shadow`, destructive border on `[aria-invalid="true"]`. Also styled multi-select pills (for multiselect/tags which are separate rows) so they inherit the tokens without extra work.
+  - `dz-widget-registry.js` and `dz-component-bridge.js` unchanged — mount/unmount lifecycle was already correct.
+  - Scope-accurate scanner: 0 DaisyUI hits in the combobox branch.
+- **QA Phase A**: DEFERRED — needs running app.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-009 contract + refactor done; status READY_FOR_QA.
+
+**Pattern observation (shared CSS override):** This cycle introduced a pattern that will apply to all vendored widget rows (UX-010 Flatpickr, UX-011 command-palette, UX-015 popover): the Dazzle-owned token overrides live in `design-system.css`, keyed to the library's own class names. The library CSS files (`vendor/tom-select.css`, etc.) stay as-is — we don't fork them. This is the cleanest boundary: vendored code stays vendored, and the aesthetic layer lives exactly where the design tokens do. Future widget cycles should just append an override block per widget.
+
+**Unexpected win:** The Tom Select override block also styles `multiselect` and `tags` widgets (UX future rows) because they share the same `.ts-wrapper.multi` class family. Those rows now need template refactoring only — the CSS is already aligned. Should reduce their cycle cost significantly.
+
+---
+
 ## 2026-04-12T18:12Z — Cycle 9
 
 **Selected row:** UX-019 (form-validation) — last of the UX-004 decomposition.
