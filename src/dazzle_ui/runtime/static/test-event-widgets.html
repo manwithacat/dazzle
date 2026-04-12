@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Widget Test Harness (UX-020)</title>
+  <style>
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 240 10% 3.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 240 10% 3.9%;
+      --primary: 240 5.9% 10%;
+      --primary-foreground: 0 0% 98%;
+      --muted: 240 4.8% 95.9%;
+      --muted-foreground: 240 3.8% 46.1%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 240 5.9% 90%;
+      --ring: 240 5.9% 10%;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      padding: 24px;
+      padding-bottom: 64px;
+    }
+    h1 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    h2 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    p { font-size: 13px; color: hsl(var(--muted-foreground)); margin-bottom: 12px; }
+    section { margin-bottom: 32px; max-width: 720px; }
+    hr { border: 0; border-top: 1px solid hsl(var(--border)); margin: 24px 0; }
+    button {
+      font: inherit;
+      cursor: pointer;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 4px;
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      font-size: 13px;
+      font-weight: 500;
+      margin-right: 8px;
+      transition: background-color 80ms cubic-bezier(0.2,0,0,1);
+    }
+    button:hover { background: hsl(var(--muted)); }
+    button.primary {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+      border-color: hsl(var(--primary));
+    }
+    button.primary:hover { filter: brightness(1.1); }
+    button.destructive {
+      background: hsl(var(--destructive));
+      color: hsl(var(--destructive-foreground));
+      border-color: hsl(var(--destructive));
+    }
+    button.destructive:hover { filter: brightness(1.1); }
+    .hint { font-size: 12px; color: hsl(var(--muted-foreground)); font-style: italic; }
+
+    /* Modal (UX-005) — native <dialog> */
+    dialog { border: 0; padding: 0; background: transparent; }
+    dialog::backdrop { background: rgb(0 0 0 / 0.4); backdrop-filter: blur(2px); }
+    .modal-card {
+      background: hsl(var(--popover));
+      color: hsl(var(--popover-foreground));
+      border: 1px solid hsl(var(--border));
+      border-radius: 6px;
+      box-shadow: 0 20px 40px rgb(0 0 0 / 0.2), 0 2px 8px rgb(0 0 0 / 0.08);
+      max-width: 32rem;
+      width: 100%;
+      padding: 20px;
+    }
+    .modal-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .modal-card .body { font-size: 13px; color: hsl(var(--muted-foreground)); margin-bottom: 20px; }
+    .modal-card form[method="dialog"] { display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* Toast (UX-013) */
+    .toast-root {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 24rem;
+    }
+    .toast {
+      background: hsl(var(--popover));
+      color: hsl(var(--popover-foreground));
+      border: 1px solid hsl(var(--border));
+      border-left-width: 4px;
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 16rem;
+    }
+    .toast.success { border-left-color: hsl(142 76% 36%); }
+    .toast.error { border-left-color: hsl(var(--destructive)); }
+    .toast.info { border-left-color: hsl(var(--primary)); }
+
+    /* Confirm dialog (UX-014) styles inherit the dialog + modal-card */
+
+    /* Popover (UX-015) */
+    .popover-container { position: relative; display: inline-block; }
+    .popover-panel {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      margin-top: 4px;
+      min-width: 12rem;
+      padding: 12px;
+      background: hsl(var(--popover));
+      color: hsl(var(--popover-foreground));
+      border: 1px solid hsl(var(--border));
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.08), 0 1px 3px rgb(0 0 0 / 0.06);
+      font-size: 13px;
+      z-index: 50;
+    }
+    [x-cloak] { display: none !important; }
+
+    #test-status {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #111; color: #eee;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-family: ui-monospace, Menlo, monospace;
+      z-index: 100;
+    }
+    #test-status .pass { color: #4cb782; font-weight: 600; }
+  </style>
+  <script defer src="vendor/alpine.min.js"></script>
+  <script defer src="vendor/htmx.min.js"></script>
+  <script defer src="js/dz-alpine.js"></script>
+</head>
+<body>
+  <h1>Event Widget Test Harness</h1>
+  <p>
+    Standalone harness for the four event-triggered widgets. Each section hosts one widget
+    with trigger buttons and a description of expected behaviour. Use this page for manual QA
+    and as the target for agent-driven QA missions (UX-005, UX-013, UX-014, UX-015).
+  </p>
+
+  <!-- ─────── MODAL (UX-005) ─────── -->
+  <section id="modal-section">
+    <h2>Modal (UX-005)</h2>
+    <p>Native &lt;dialog&gt; primitive. Expect: Esc closes, backdrop click closes, focus returns to the trigger.</p>
+    <button class="primary" onclick="document.getElementById('harness-modal').showModal()">Open modal</button>
+    <span class="hint">Native &lt;dialog&gt; — no custom JS needed to open.</span>
+
+    <dialog id="harness-modal">
+      <div class="modal-card">
+        <h3>Modal Title</h3>
+        <div class="body">
+          This is the modal body. Content can be arbitrary HTML. Press Esc to close, click outside
+          the card to close (backdrop), or use the Close button.
+        </div>
+        <form method="dialog">
+          <button type="submit">Cancel</button>
+          <button type="submit" class="primary">Confirm</button>
+        </form>
+      </div>
+    </dialog>
+  </section>
+
+  <hr>
+
+  <!-- ─────── TOAST (UX-013) ─────── -->
+  <section id="toast-section">
+    <h2>Toast (UX-013)</h2>
+    <p>Server-emitted OOB fragments with client queue. Expect: auto-dismiss, pause on hover, stackable, level-coloured border.</p>
+    <button onclick="spawnToast('success', 'Saved successfully')">Success toast</button>
+    <button onclick="spawnToast('error', 'Something went wrong')">Error toast</button>
+    <button onclick="spawnToast('info', 'FYI — new feature available')">Info toast</button>
+    <span class="hint">Toasts stack in the top-right and auto-dismiss after 5s.</span>
+
+    <div class="toast-root" id="toast-root" aria-live="polite" aria-atomic="false"></div>
+    <script>
+      function spawnToast(level, message) {
+        const root = document.getElementById('toast-root');
+        const el = document.createElement('div');
+        el.className = 'toast ' + level;
+        el.setAttribute('role', level === 'error' ? 'alert' : 'status');
+        el.textContent = message;
+        root.appendChild(el);
+        setTimeout(() => el.remove(), 5000);
+      }
+    </script>
+  </section>
+
+  <hr>
+
+  <!-- ─────── CONFIRM DIALOG (UX-014) ─────── -->
+  <section id="confirm-section">
+    <h2>Confirm Dialog (UX-014)</h2>
+    <p>Event-driven destructive confirm. Expect: native &lt;dialog&gt; opens, destructive button, Cancel first in DOM order.</p>
+    <button class="destructive"
+            onclick="document.dispatchEvent(new CustomEvent('dz-confirm', { detail: { message: 'Permanently delete this item? This action cannot be undone.', action: '/noop', method: 'delete' }, bubbles: true }))">
+      Trigger destructive confirm
+    </button>
+    <span class="hint">Uses global dz-confirm event listener (dzConfirm.init()).</span>
+
+    <div x-data="dzConfirm">
+      <dialog x-ref="dialog">
+        <div class="modal-card">
+          <h3>Confirm Action</h3>
+          <div class="body" x-text="message"></div>
+          <form method="dialog">
+            <button type="button" @click="cancel()">Cancel</button>
+            <button type="button" class="destructive" @click="confirm()" :disabled="loading">
+              <span x-text="loading ? 'Working...' : 'Confirm'"></span>
+            </button>
+          </form>
+        </div>
+      </dialog>
+    </div>
+  </section>
+
+  <hr>
+
+  <!-- ─────── POPOVER (UX-015) ─────── -->
+  <section id="popover-section">
+    <h2>Popover (UX-015)</h2>
+    <p>Anchored floating panel. Expect: click trigger opens, click-outside closes, Esc closes, no focus trap.</p>
+
+    <div x-data="dzPopover" class="popover-container">
+      <button @click="toggle()" :aria-expanded="open">More options</button>
+      <div x-show="open" x-cloak class="popover-panel" role="dialog">
+        <div><strong>Popover content</strong></div>
+        <div style="margin-top: 6px; color: hsl(var(--muted-foreground));">
+          Arbitrary HTML here. Click outside to close.
+        </div>
+      </div>
+    </div>
+    <span class="hint">x-anchor plugin not loaded in harness — positioning uses plain CSS.</span>
+  </section>
+
+  <div id="test-status">
+    <span class="pass">HARNESS READY</span> — Click triggers above to exercise each widget.
+  </div>
+</body>
+</html>
