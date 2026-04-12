@@ -4,6 +4,33 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-12T17:57Z — Cycle 7
+
+**Selected row:** UX-017 (form-field) — sibling of UX-016 from the UX-004 decomposition.
+
+**Phases:**
+- **OBSERVE**: Bucket 2 (PENDING+MISSING+PENDING) matched UX-017 only. Picked.
+- **SPECIFY**: Wrote `~/.claude/skills/ux-architect/components/form-field.md`. Explicit scope carve-out: covers `text`, `textarea`, `select`, `number`, `email`, `date`, `datetime`, `checkbox`; explicitly excludes rich widgets (`combobox`, `multi_select`, `tags`, `picker`, `range`, `color`, `rich_text`, `slider`, `money`, `file`, search-select). 5 quality gates (no DaisyUI on core branches, required-marker a11y, error→aria-invalid+destructive border, hint→aria-describedby wiring, checkbox label wraps input).
+- **REFACTOR**: Edited `src/dazzle_ui/templates/macros/form_field.html`:
+  - Wrapper: `<div class="form-control w-full has-error">` → `<div class="w-full space-y-1">`
+  - Checkbox: `label cursor-pointer justify-start gap-3` → `inline-flex items-center gap-2`, `checkbox checkbox-primary` → `h-4 w-4 rounded-[3px] accent-[hsl(var(--primary))]`, `label-text` → plain span
+  - Standard label: `<label class="label">...<span class="label-text">` → `<label class="block text-[13px] font-medium text-[hsl(var(--foreground))]">`. Required marker `text-error` → `text-[hsl(var(--destructive))]`
+  - Hint: `label-text-alt text-base-content/60` → `text-[12px] text-[hsl(var(--muted-foreground))]`
+  - Input base: pulled into a `{% set base_input %}` reusable variable for text/select/date/datetime/number/email
+  - Textarea: token-driven with `min-h-24 resize-y px-3 py-2`
+  - Error paragraph: `label-text-alt text-error` → `text-[12px] text-[hsl(var(--destructive))]`
+  - `input-error`/`textarea-error`/`select-error` modifier class replaced with conditional `border-[hsl(var(--destructive))]` via Jinja ternary
+  - Widget branches (combobox, multi_select, tags, picker, range, color, rich_text, slider, money, file, search-select) intentionally **untouched** — tracked by UX-009..015
+  - Jinja parses OK; scope-accurate DaisyUI scan finds 0 hits in UX-017-scoped branches.
+- **QA Phase A**: DEFERRED — needs running localhost:3000.
+- **QA Phase B**: DEFERRED.
+
+**Outcome:** UX-017 contract + core-branch refactor done; status READY_FOR_QA. Second sub-component from the UX-004 decomposition is now clear. Next: UX-018 form-wizard (impl already DONE → retroactive contract only, single-phase cycle).
+
+**Scoping observation:** UX-017 is a good example of *scope-aware* refactoring inside a shared macro. The `form_field.html` macro has 11 widget branches that all inherit the outer wrapper. Attempting a full DaisyUI purge would have forced me into rewriting TomSelect, Flatpickr, Pickr, Quill, and FileUpload markup — each of which has its own specialized UX concerns already captured by UX-009..015. The contract explicitly declares "widget branches are out of scope" and the quality gates enforce this carve-out via a scope-accurate scanner. This is the pattern future cycles should reach for when a row's code is embedded inside a larger shared file.
+
+---
+
 ## 2026-04-12T17:49Z — Cycle 6
 
 **Selected row:** UX-016 (form-chrome) — first cycle after unblock triage; highest-priority PENDING+MISSING+PENDING.

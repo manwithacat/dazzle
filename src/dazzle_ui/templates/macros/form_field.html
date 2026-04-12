@@ -1,5 +1,9 @@
 {# Form field macros - renders the appropriate input for each field type #}
-{# Accessible version: aria-required, aria-invalid, aria-describedby #}
+{# Contract: ~/.claude/skills/ux-architect/components/form-field.md (UX-017) #}
+{# Core branches: pure Tailwind + design-system variables. #}
+{# Widget branches (combobox, multi_select, tags, picker, range, color,   #}
+{# rich_text, slider, money, file, search-select) retain their own markup #}
+{# and are out of scope for UX-017 — tracked by UX-009..015.              #}
 
 {% macro render_field(field, values={}, errors={}) %}
 {% set value = values.get(field.name, field.default) if values else field.default %}
@@ -8,19 +12,22 @@
 {% set error_id = "error-" ~ field.name %}
 {% set hint_id = "hint-" ~ field.name if field.hint is defined and field.hint else "" %}
 {% set described_by = ([error_id] if error else []) + ([hint_id] if hint_id else []) %}
+{% set base_input = "w-full h-8 px-3 rounded-[4px] bg-[hsl(var(--background))] border text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]" %}
+{% set border_idle = "border-[hsl(var(--border))]" %}
+{% set border_error = "border-[hsl(var(--destructive))]" %}
 
-<div class="form-control w-full {% if error %}has-error{% endif %}">
+<div class="w-full space-y-1">
   {% if field.type == "checkbox" %}
-    {# Checkbox: label is inline #}
-    <label class="label cursor-pointer justify-start gap-3">
+    {# Checkbox: label wraps input + text (inline row) #}
+    <label class="inline-flex items-center gap-2 cursor-pointer text-[13px] text-[hsl(var(--foreground))]">
       <input type="checkbox" name="{{ field.name }}"
              id="{{ field_id }}"
              data-dazzle-field="{{ field.name }}"
-             class="checkbox checkbox-primary"
+             class="h-4 w-4 rounded-[3px] accent-[hsl(var(--primary))]"
              {% if error %}aria-invalid="true"{% endif %}
              {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %}
              {% if value %}checked{% endif %} />
-      <span class="label-text">{{ field.label }}</span>
+      <span>{{ field.label }}</span>
     </label>
 
   {% elif field.source %}
@@ -155,18 +162,16 @@
 
   {% else %}
     {# Standard fields: label above #}
-    <label class="label" for="{{ field_id }}">
-      <span class="label-text">
-        {{ field.label }}
-        {% if field.required %}
-          <span class="text-error" aria-hidden="true">*</span>
-          <span class="sr-only">(required)</span>
-        {% endif %}
-      </span>
+    <label for="{{ field_id }}" class="block text-[13px] font-medium text-[hsl(var(--foreground))]">
+      {{ field.label }}
+      {% if field.required %}
+        <span class="text-[hsl(var(--destructive))]" aria-hidden="true">*</span>
+        <span class="sr-only">(required)</span>
+      {% endif %}
     </label>
 
     {% if field.hint is defined and field.hint %}
-    <p id="{{ hint_id }}" class="label-text-alt text-base-content/60 mb-1">
+    <p id="{{ hint_id }}" class="text-[12px] text-[hsl(var(--muted-foreground))]">
       {{ field.hint }}
     </p>
     {% endif %}
@@ -174,7 +179,7 @@
     {% if field.type == "textarea" %}
       <textarea id="{{ field_id }}" name="{{ field.name }}"
                 data-dazzle-field="{{ field.name }}"
-                class="textarea textarea-bordered w-full {% if error %}textarea-error{% endif %}"
+                class="w-full px-3 py-2 min-h-24 resize-y rounded-[4px] bg-[hsl(var(--background))] border {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %} text-[13px] text-[hsl(var(--foreground))] placeholder:text-[hsl(var(--muted-foreground))] focus:outline-none focus:ring-1 focus:ring-[hsl(var(--ring))] transition-[box-shadow,border-color] duration-[120ms] [transition-timing-function:cubic-bezier(0.2,0,0,1)]"
                 placeholder="{{ field.placeholder }}"
                 {% if field.required %}required aria-required="true"{% endif %}
                 {% if error %}aria-invalid="true"{% endif %}
@@ -184,7 +189,7 @@
     {% elif field.type == "select" %}
       <select id="{{ field_id }}" name="{{ field.name }}"
               data-dazzle-field="{{ field.name }}"
-              class="select select-bordered w-full {% if error %}select-error{% endif %}"
+              class="{{ base_input }} {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %}"
               {% if field.required %}required aria-required="true"{% endif %}
               {% if error %}aria-invalid="true"{% endif %}
               {% if described_by %}aria-describedby="{{ described_by | join(' ') }}"{% endif %}>
@@ -201,7 +206,7 @@
     {% elif field.type == "date" %}
       <input id="{{ field_id }}" type="date" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
-             class="input input-bordered w-full {% if error %}input-error{% endif %}"
+             class="{{ base_input }} {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %}"
              value="{{ value | default('', true) }}"
              {% if field.required %}required aria-required="true"{% endif %}
              {% if error %}aria-invalid="true"{% endif %}
@@ -210,7 +215,7 @@
     {% elif field.type == "datetime" %}
       <input id="{{ field_id }}" type="datetime-local" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
-             class="input input-bordered w-full {% if error %}input-error{% endif %}"
+             class="{{ base_input }} {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %}"
              value="{{ value | default('', true) }}"
              {% if field.required %}required aria-required="true"{% endif %}
              {% if error %}aria-invalid="true"{% endif %}
@@ -277,7 +282,7 @@
     {% elif field.type == "number" %}
       <input id="{{ field_id }}" type="number" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
-             class="input input-bordered w-full {% if error %}input-error{% endif %}"
+             class="{{ base_input }} {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
              {% if field.required %}required aria-required="true"{% endif %}
@@ -287,7 +292,7 @@
     {% elif field.type == "email" %}
       <input id="{{ field_id }}" type="email" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
-             class="input input-bordered w-full {% if error %}input-error{% endif %}"
+             class="{{ base_input }} {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
              {% if field.required %}required aria-required="true"{% endif %}
@@ -345,7 +350,7 @@
       {# Default: text input #}
       <input id="{{ field_id }}" type="text" name="{{ field.name }}"
              data-dazzle-field="{{ field.name }}"
-             class="input input-bordered w-full {% if error %}input-error{% endif %}"
+             class="{{ base_input }} {% if error %}{{ border_error }}{% else %}{{ border_idle }}{% endif %}"
              value="{{ value | default('', true) }}"
              placeholder="{{ field.placeholder }}"
              {% if field.required %}required aria-required="true"{% endif %}
@@ -355,7 +360,7 @@
   {% endif %}
 
   {% if error %}
-  <p id="{{ error_id }}" class="label-text-alt text-error mt-1" role="alert">
+  <p id="{{ error_id }}" class="text-[12px] text-[hsl(var(--destructive))] mt-1" role="alert">
     {{ error }}
   </p>
   {% endif %}
