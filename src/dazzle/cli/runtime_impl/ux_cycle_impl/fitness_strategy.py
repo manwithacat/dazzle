@@ -78,7 +78,6 @@ async def run_fitness_strategy(
         for persona_id in personas_to_run:
             persona_context: Any = None
             persona_page: Any
-            close_context_after: bool = False
 
             try:
                 if persona_id is None:
@@ -88,7 +87,6 @@ async def run_fitness_strategy(
                     # Named persona — fresh context, login, then continue
                     persona_context = await bundle.browser.new_context(base_url=handle.site_url)
                     persona_page = await persona_context.new_page()
-                    close_context_after = True
                     await _login_as_persona(
                         page=persona_page,
                         persona_id=persona_id,
@@ -117,7 +115,11 @@ async def run_fitness_strategy(
             except Exception as e:  # noqa: BLE001 — recording the error is the point
                 outcomes.append((persona_id, _BlockedRunResult(error=str(e))))
             finally:
-                if close_context_after and persona_context is not None:
+                # persona_context is None for the anonymous case (bundle.context is
+                # owned by the outer bundle.close()) and non-None when we created
+                # a fresh context for a named persona — close those even if new_page
+                # or _login_as_persona raised before the engine ran.
+                if persona_context is not None:
                     await persona_context.close()
 
     finally:

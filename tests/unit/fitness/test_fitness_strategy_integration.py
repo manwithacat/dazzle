@@ -1050,3 +1050,28 @@ async def test_aggregate_outcomes_multi_persona_format() -> None:
     assert outcome.findings_count == 3
     # degraded OR-reduced
     assert outcome.degraded is True
+
+
+@pytest.mark.asyncio
+async def test_aggregate_outcomes_handles_blocked_result() -> None:
+    """_aggregate_outcomes works with _BlockedRunResult stand-ins (not just MagicMock).
+
+    Locks in the duck-typed contract between _BlockedRunResult and the
+    aggregator: if a future change renames a FitnessRunResult field, the
+    stand-in must keep up or this test catches the drift.
+    """
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        _aggregate_outcomes,
+        _BlockedRunResult,
+    )
+
+    outcome = _aggregate_outcomes(
+        [
+            ("admin", _BlockedRunResult(error="boom")),
+        ]
+    )
+
+    # Single-persona format (1 outcome) — no brackets in summary
+    assert outcome.degraded is True
+    assert outcome.findings_count == 0
+    assert "blocked" in outcome.summary  # _BlockedRunResult's run_id is "blocked"
