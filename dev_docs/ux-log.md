@@ -4,6 +4,12 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T04:57Z — Cycle 47 — EXPLORE deferred
+
+Counter 5 → 6. No state change since Cycle 42.
+
+---
+
 ## 2026-04-13T04:47Z — Cycle 46 — EXPLORE deferred
 
 Counter 4 → 5. No state change since Cycle 42. See Cycle 43 for reasoning.
