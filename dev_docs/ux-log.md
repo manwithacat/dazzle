@@ -1849,6 +1849,51 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 116 — 2026-04-13 — UX-016 form-chrome → qa:FAIL (72 findings) + simple_task bootstrapped — **BOOTSTRAP SWEEP COMPLETE**
+
+**Row:** UX-016 form-chrome (canonical: simple_task)
+**Outcome:** Fourth row advanced. `qa: PENDING → FAIL`, 72 findings, `degraded=False`. Walker actually engaged with the form this time — its mission plan included a concrete `{"action": "type", "target": "#field-title", "value": "Set up automated testing pipeline"}` action, which is the walker working as designed (modulo the LLM prose-before-JSON parse issue from cycle 110 bug #5).
+
+### Priority-function note
+
+UX-004 `form` is technically higher-priority than UX-016 but it's an **aggregate row** with no own contract file (the backlog notes "cleared by completion of UX-016/017/018/019"). Picked UX-016 form-chrome as the first real simple_task-canonical row with a runnable contract. UX-004 will transition naturally when all its children have been verified.
+
+### What ran
+
+- Bootstrapped `simple_task`: wrote `examples/simple_task/.env`, ran one Mode A launch to provision 3 dev personas (`admin`, `manager`, `member`).
+- Phase B against `form-chrome.md` (anchor `/app/task/create`) with `personas=["admin", "manager"]`.
+- admin: run `4f7fec57-af0c-4e87-a493-b93dd63c7604`, 37 findings
+- manager: run `6e07e35a-39b8-4fcc-b0ec-8166d61d4739`, 35 findings
+
+### Walker quality: the best run yet
+
+The mission prose explicitly shows the walker engaging productively: it identified the form, recognized that as admin it could create a task, and planned `type` actions against specific `#field-title` selectors. This is qualitatively different from cycle 115 (where both personas hit 404 pages) or cycle 113 (where admin bounced on 403). The form-chrome run produced the cleanest walker transcripts of any cycle so far.
+
+### Example app coverage — **COMPLETE** 🎯
+
+| Example | Status | Rows unblocked |
+|---------|--------|----|
+| support_tickets | ✅ cycle 110 | 5 |
+| ops_dashboard | ✅ cycle 113 | 5 |
+| contact_manager | ✅ cycle 114 | 11 |
+| fieldtest_hub | ✅ cycle 115 | 3 |
+| simple_task | ✅ cycle 116 | 2 |
+
+**26 of 35 READY_FOR_QA rows now have running infra** (74% direct-match; the remaining 9 rows have `applies` to bootstrapped examples even if their `canonical` isn't). Every future cycle can pick any row and run Phase B without a bootstrap detour.
+
+### Cumulative row advancement tally
+
+| Cycle | Row | Canonical | Findings | Notable |
+|-------|-----|-----------|----------|---------|
+| 113 | UX-001 dashboard-grid | ops_dashboard | 46 | admin 403 inconsistency |
+| 114 | UX-002 data-table | contact_manager | 20 | cleanest structural run |
+| 115 | UX-023 widget:slider | fieldtest_hub | 114 | anchor 404 — contract vs DSL drift |
+| 116 | UX-016 form-chrome | simple_task | 72 | walker engaged properly, first `type` action observed |
+
+Total: **4 rows advanced**, **5 examples bootstrapped**, **252 findings produced** across 8 persona-runs.
+
+---
+
 ## Cycle 115 — 2026-04-13 — UX-023 widget:slider → qa:FAIL (114 findings, anchor 404) + fieldtest_hub bootstrapped
 
 **Row:** UX-023 widget:slider (canonical: fieldtest_hub)
