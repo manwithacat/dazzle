@@ -12,7 +12,13 @@ import subprocess
 import time
 
 import pytest
-from playwright.sync_api import sync_playwright
+
+# Skip the whole module if playwright isn't installed (the unit test job in
+# CI doesn't install it). This is a static-harness browser test that still
+# runs wherever playwright is available.
+pytest.importorskip("playwright.sync_api")
+
+from playwright.sync_api import sync_playwright  # noqa: E402
 
 
 @pytest.fixture(scope="module")
