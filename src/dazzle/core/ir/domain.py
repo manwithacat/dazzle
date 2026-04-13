@@ -18,6 +18,7 @@ from .conditions import ConditionExpr
 from .eventing import PublishSpec
 from .fields import FieldModifier, FieldSpec
 from .invariant import InvariantSpec
+from .lifecycle import LifecycleSpec
 from .location import SourceLocation
 from .seed import SeedTemplateSpec
 from .state_machine import StateMachineSpec
@@ -306,6 +307,8 @@ class EntitySpec(BaseModel):
     # v0.34.0: Bulk import/export
     bulk: BulkConfig | None = None
     state_machine: StateMachineSpec | None = None
+    # ADR-0020: Lifecycle evidence predicates (orthogonal to state_machine)
+    lifecycle: LifecycleSpec | None = None
     examples: list[ExampleRecord] = Field(default_factory=list)
     # v0.18.0: Event publishing
     publishes: list[PublishSpec] = Field(default_factory=list)

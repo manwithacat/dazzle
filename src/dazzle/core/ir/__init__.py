@@ -352,6 +352,13 @@ from .ledgers import (
     ValidationRule,
 )
 
+# Lifecycle (ADR-0020)
+from .lifecycle import (
+    LifecycleSpec,
+    LifecycleStateSpec,
+    LifecycleTransitionSpec,
+)
+
 # LLM - Large Language Model (v0.21.0 - Issue #33)
 from .llm import (
     AI_JOB_FIELDS,
@@ -931,6 +938,10 @@ __all__ = [
     "NotExpr",
     "InvariantExpr",
     "InvariantSpec",
+    # Lifecycle (ADR-0020)
+    "LifecycleSpec",
+    "LifecycleStateSpec",
+    "LifecycleTransitionSpec",
     # Personas (v0.8.5)
     "PersonaSpec",
     # Triples (v0.50.0 IR Triple Enrichment)
