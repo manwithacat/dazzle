@@ -13,8 +13,9 @@ import re
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
-from dazzle.fitness.models import EvidenceEmbedded, Finding
+from dazzle.fitness.models import EvidenceEmbedded, Finding, RowChange
 
 _HEADER = """# Fitness Backlog
 
@@ -122,26 +123,30 @@ def read_backlog_findings(path: Path) -> list[Finding]:
     for m in _ENVELOPE_BLOCK_RE.finditer(text):
         try:
             payload = json.loads(m.group("payload"))
-        except json.JSONDecodeError:
+            findings.append(_payload_to_finding(payload))
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError):
             continue
-        findings.append(_payload_to_finding(payload))
     return findings
 
 
 def _payload_to_finding(payload: dict[str, object]) -> Finding:
     """Reconstruct a Finding from the JSON envelope payload."""
-    ev = payload["evidence_embedded"]
-    assert isinstance(ev, dict)
+    # Cast to dict[str, Any] — if ev is not a dict, .get() raises AttributeError which
+    # propagates to the caller's except clause and the block is skipped.
+    ev: dict[str, Any] = payload["evidence_embedded"]  # type: ignore[assignment]
     evidence = EvidenceEmbedded(
         expected_ledger_step=ev.get("expected_ledger_step") or {},
-        diff_summary=ev.get("diff_summary") or [],
+        diff_summary=[
+            RowChange(**entry) if isinstance(entry, dict) else entry
+            for entry in (ev.get("diff_summary") or [])
+        ],
         transcript_excerpt=ev.get("transcript_excerpt") or [],
     )
-    created_str = payload["created"]
-    assert isinstance(created_str, str)
+    # may raise ValueError/TypeError — caller catches
+    created = datetime.fromisoformat(payload["created"])  # type: ignore[arg-type]
     return Finding(
         id=str(payload["id"]),
-        created=datetime.fromisoformat(created_str),
+        created=created,
         run_id=str(payload["run_id"]),
         cycle=payload.get("cycle"),  # type: ignore[arg-type]
         axis=payload["axis"],  # type: ignore[arg-type]
