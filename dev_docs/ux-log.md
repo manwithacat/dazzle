@@ -1249,3 +1249,21 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Follow-on:** this cycle also keeps the tactic of inlining semantic HSL (red/amber/green) pending the `--success/--warning/--destructive-subtle` token landing. Destructive already exists; success and warning are still missing.
 
 ---
+
+## Cycle 38 — 2026-04-13 — detail.html (UX-035 adopter #14)
+
+**Row:** UX-035 region-wrapper
+**Phases:** REFACTOR only
+
+**Actions:**
+- Refactored `src/dazzle_ui/templates/workspace/regions/detail.html` to use `region_card` macro
+- Definition list labels → uppercase tracking-wide muted labels (Linear-adjacent)
+- Badge wrapper span: removed `badge badge-sm`, kept `{{ item[col.key] | badge_class }}` filter output for now (follow-up: `badge_class` filter still returns DaisyUI classes like `badge-success`, so this is a latent coupling — needs a parallel token-driven filter)
+- Ref link: `link link-hover link-primary` → `text-[hsl(var(--primary))] hover:underline`
+- Body text: `text-sm`/`opacity-60`/`opacity-50` → token scales
+
+**Outcome:** 14/16 adopters complete. 2 remaining: funnel_chart, tab_data.
+
+**Follow-up:** `badge_class` Jinja filter (in `src/dazzle_ui/runtime/server_impl/templates.py` or similar) currently maps status values to `badge-success`/`badge-warning`/`badge-error` class names. Needs a parallel filter (or inline renaming) to emit token-based classes. Deferred — not blocking this cycle's outcome.
+
+---

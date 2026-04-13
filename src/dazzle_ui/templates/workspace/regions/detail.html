@@ -1,36 +1,35 @@
-<div class="card bg-base-100 shadow-sm">
-  <div class="card-body p-3">
-    <h3 class="card-title text-sm">{{ title }}</h3>
-    {% if item %}
-    <dl class="grid grid-cols-2 gap-2">
-      {% for col in columns %}
-      <dt class="text-xs font-semibold opacity-60">{{ col.label }}</dt>
-      <dd class="text-sm">
-        {% if col.type == "badge" %}
-          <span class="badge badge-sm {{ item[col.key] | badge_class }}">{{ item[col.key] | default("—") }}</span>
-        {% elif col.type == "bool" %}
-          {{ item[col.key] | bool_icon }}
-        {% elif col.type == "date" %}
-          {{ item[col.key] | dateformat }}
-        {% elif col.type == "currency" %}
-          {{ item[col.key] | currency }}
-        {% elif col.type == "ref" %}
-          {% set ref = item[col.key] %}
-          {% set display_name = item.get(col.key ~ "_display", "") %}
-          {% if ref is mapping %}
-            {% set display_name = display_name or (ref | ref_display) %}
-            {% if col.ref_route and ref.get("id") %}
-              <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="link link-hover link-primary">{{ display_name }}</a>
-            {% else %}{{ display_name }}{% endif %}
-          {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}—{% endif %}
-        {% else %}
-          {{ item[col.key] | default("—") }}
-        {% endif %}
-      </dd>
-      {% endfor %}
-    </dl>
-    {% else %}
-    <p class="text-sm opacity-50">{{ empty_message | default("No record selected.") }}</p>
-    {% endif %}
-  </div>
-</div>
+{# Detail region — UX-035 adopter #14. #}
+{% from 'macros/region_wrapper.html' import region_card %}
+{% call region_card(title) %}
+  {% if item %}
+  <dl class="grid grid-cols-2 gap-2">
+    {% for col in columns %}
+    <dt class="text-[11px] font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">{{ col.label }}</dt>
+    <dd class="text-[13px] text-[hsl(var(--foreground))]">
+      {% if col.type == "badge" %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium border {{ item[col.key] | badge_class }}">{{ item[col.key] | default("—") }}</span>
+      {% elif col.type == "bool" %}
+        {{ item[col.key] | bool_icon }}
+      {% elif col.type == "date" %}
+        {{ item[col.key] | dateformat }}
+      {% elif col.type == "currency" %}
+        {{ item[col.key] | currency }}
+      {% elif col.type == "ref" %}
+        {% set ref = item[col.key] %}
+        {% set display_name = item.get(col.key ~ "_display", "") %}
+        {% if ref is mapping %}
+          {% set display_name = display_name or (ref | ref_display) %}
+          {% if col.ref_route and ref.get("id") %}
+            <a href="{{ col.ref_route | replace('{id}', ref.get('id', '')|string) }}" class="text-[hsl(var(--primary))] hover:underline">{{ display_name }}</a>
+          {% else %}{{ display_name }}{% endif %}
+        {% elif display_name %}{{ display_name }}{% elif ref %}{{ ref }}{% else %}—{% endif %}
+      {% else %}
+        {{ item[col.key] | default("—") }}
+      {% endif %}
+    </dd>
+    {% endfor %}
+  </dl>
+  {% else %}
+  <p class="text-[13px] text-[hsl(var(--muted-foreground))]">{{ empty_message | default("No record selected.") }}</p>
+  {% endif %}
+{% endcall %}
