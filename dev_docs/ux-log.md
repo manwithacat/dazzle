@@ -4,6 +4,24 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T03:32Z — Cycle 38
+
+**Selected row:** UX-036 continuation — forgot_password.html adopter (3/7).
+
+**Refactor:** Adopted `auth_page_card` macro. Dropped DaisyUI tokens: `card`, `bg-base-100`, `card-body`, `card-title`, `form-control`, `label`/`label-text`, `input input-bordered`, `btn btn-primary`, `link link-primary`, `alert alert-error`, `alert alert-success`, `bg-base-200`, plus legacy `dz-auth-container`/`dz-auth-card`/`dz-auth-logo`/`dz-auth-switch`. Subtitle paragraph preserved inside the caller block (muted-foreground tone). The `#dz-auth-success` alert — unique to this flow and not provided by the macro — preserved with Tailwind HSL classes that mirror the macro's `#dz-auth-error` style but use `--primary` tones instead of `--destructive`. One email field + submit button use the same field grammar as login/signup adopters. Dropped `method="POST"` (JS handler via `_forgot_password_script.html` drives submission).
+
+**Phase A:** N/A — auth pages not in example-app contract surface. Verified by grep-sweep: zero DaisyUI tokens remain.
+
+**Phase B:** Deferred — no running-app cycle for auth pages yet.
+
+**Progress:** Auth 3/7. Remaining: reset_password, 2fa_challenge, 2fa_setup, 2fa_settings.
+
+**Next cycle:** reset_password.html (similar shape to forgot_password — has `#dz-auth-success` alert and two password fields).
+
+**Note on v1.0.1 work:** In parallel with this cycle the session shipped 10 commits of fitness v1.0.1 wiring (`a71390b9`..`577dcaa0`) — PgSnapshotSource adapter, strategy lifecycle hooks via dazzle.qa.server, async `_build_engine` composition root with Playwright teardown. 73/73 fitness unit tests green. Independent of UX-036 adoption work.
+
+---
+
 ## 2026-04-13T02:38Z — Cycle 37
 
 **Selected row:** UX-036 continuation — signup.html adopter (2/7).
