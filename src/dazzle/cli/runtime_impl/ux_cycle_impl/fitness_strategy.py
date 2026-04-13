@@ -46,42 +46,86 @@ async def run_fitness_strategy(
     example_app: str,
     project_root: Path,
     component_contract_path: Path | None = None,
+    personas: list[str] | None = None,
 ) -> StrategyOutcome:
-    """Run one fitness cycle against ``example_app`` and return a summary.
+    """Run one fitness cycle per persona and return an aggregated outcome.
 
-    Owns the example-app subprocess lifecycle via try/finally, so teardown
-    runs even if the engine raises. Also owns the Playwright bundle lifecycle
-    in v1.0.3+ — the browser is launched once and torn down in the outer
-    finally, regardless of how many personas run against it.
+    When ``personas`` is None, runs a single anonymous cycle (v1.0.2
+    behavior) using the Playwright bundle's original context and page.
+
+    When ``personas`` is a non-empty list, loops once per persona:
+        1. Create a fresh ``browser.new_context()`` for cookie isolation.
+        2. Call ``_login_as_persona`` to authenticate via the QA mode
+           magic-link flow (#768).
+        3. Build a per-persona ``FitnessEngine`` via ``_build_engine``
+           (which navigates to the contract anchor if one is present).
+        4. Run the engine. Record outcome or BLOCKED stand-in on failure.
+        5. Close the fresh context.
+
+    Per-persona failures are recorded as BLOCKED outcomes but do not abort
+    the loop — other personas continue to run. The strategy owns bundle
+    teardown in the outer finally so the shared browser is always released.
     """
     example_root = _resolve_example_root(example_app=example_app, project_root=project_root)
     handle = await _launch_example_app(example_root=example_root)
     bundle: Any = None
+    outcomes: list[tuple[str | None, Any]] = []
     try:
         bundle = await _setup_playwright(base_url=handle.site_url)
-        engine = await _build_engine(
-            example_root=example_root,
-            handle=handle,
-            bundle=bundle,
-            component_contract_path=component_contract_path,
-        )
-        result = await engine.run()
+
+        personas_to_run: list[str | None] = list(personas) if personas else [None]
+
+        for persona_id in personas_to_run:
+            persona_context: Any = None
+            persona_page: Any
+            close_context_after: bool = False
+
+            try:
+                if persona_id is None:
+                    # Anonymous — reuse the bundle's original context/page
+                    persona_page = bundle.page
+                else:
+                    # Named persona — fresh context, login, then continue
+                    persona_context = await bundle.browser.new_context(base_url=handle.site_url)
+                    persona_page = await persona_context.new_page()
+                    close_context_after = True
+                    await _login_as_persona(
+                        page=persona_page,
+                        persona_id=persona_id,
+                        api_url=handle.api_url,
+                    )
+
+                # Build a persona-local bundle view so _build_engine uses the
+                # right page. We reuse the bundle dataclass but with the
+                # per-persona context/page swapped in.
+                persona_bundle = _PlaywrightBundle(
+                    playwright=bundle.playwright,
+                    browser=bundle.browser,
+                    context=persona_context or bundle.context,
+                    page=persona_page,
+                )
+
+                engine = await _build_engine(
+                    example_root=example_root,
+                    handle=handle,
+                    bundle=persona_bundle,
+                    component_contract_path=component_contract_path,
+                )
+                result = await engine.run()
+                outcomes.append((persona_id, result))
+
+            except Exception as e:  # noqa: BLE001 — recording the error is the point
+                outcomes.append((persona_id, _BlockedRunResult(error=str(e))))
+            finally:
+                if close_context_after and persona_context is not None:
+                    await persona_context.close()
+
     finally:
         if bundle is not None:
             await bundle.close()
         _stop_example_app(handle)
 
-    summary = (
-        f"fitness run {result.run_metadata.get('run_id')}: "
-        f"{len(result.findings)} findings, "
-        f"independence={result.independence_jaccard:.3f}"
-    )
-    return StrategyOutcome(
-        strategy="FITNESS",
-        summary=summary,
-        degraded=result.profile.degraded,
-        findings_count=len(result.findings),
-    )
+    return _aggregate_outcomes(outcomes)
 
 
 def _resolve_example_root(example_app: str, project_root: Path) -> Path:
@@ -111,6 +155,94 @@ async def _launch_example_app(example_root: Path) -> AppConnection:
 def _stop_example_app(handle: AppConnection) -> None:
     """Terminate the example-app subprocess owned by ``handle`` (no-op if external)."""
     handle.stop()
+
+
+@dataclass
+class _BlockedProfile:
+    """Stand-in profile for a blocked run — always degraded."""
+
+    degraded: bool = True
+
+
+@dataclass
+class _BlockedRunResult:
+    """Stand-in result for a persona whose engine construction or run raised.
+
+    Shaped to match the subset of FitnessRunResult fields that
+    _aggregate_outcomes reads, so the aggregator does not need to distinguish
+    blocked from normal results.
+    """
+
+    error: str
+
+    @property
+    def findings(self) -> list[Any]:
+        return []
+
+    @property
+    def profile(self) -> Any:
+        return _BlockedProfile()
+
+    @property
+    def independence_jaccard(self) -> float:
+        return 0.0
+
+    @property
+    def run_metadata(self) -> dict[str, Any]:
+        return {"run_id": "blocked", "error": self.error}
+
+
+def _aggregate_outcomes(outcomes: list[tuple[str | None, Any]]) -> StrategyOutcome:
+    """Reduce a list of (persona_id, FitnessRunResult) pairs to one StrategyOutcome.
+
+    Single-persona format (len(outcomes) == 1):
+        "fitness run r1: N findings, independence=X.XXX"
+
+    Multi-persona format:
+        "fitness run [admin:r_admin, editor:r_editor]: N findings total "
+        "(admin=a, editor=e), independence=Y.YYY (max)"
+
+    ``degraded`` is OR-reduced. ``findings_count`` is summed.
+    """
+    if not outcomes:
+        return StrategyOutcome(
+            strategy="FITNESS",
+            summary="fitness run: no personas ran",
+            degraded=True,
+            findings_count=0,
+        )
+
+    total_findings = sum(len(result.findings) for _, result in outcomes)
+    any_degraded = any(result.profile.degraded for _, result in outcomes)
+
+    if len(outcomes) == 1:
+        _, result = outcomes[0]
+        summary = (
+            f"fitness run {result.run_metadata.get('run_id')}: "
+            f"{len(result.findings)} findings, "
+            f"independence={result.independence_jaccard:.3f}"
+        )
+    else:
+        run_ids = ", ".join(
+            f"{persona or 'anon'}:{result.run_metadata.get('run_id')}"
+            for persona, result in outcomes
+        )
+        per_persona_counts = ", ".join(
+            f"{persona or 'anon'}={len(result.findings)}" for persona, result in outcomes
+        )
+        max_independence = max(result.independence_jaccard for _, result in outcomes)
+        summary = (
+            f"fitness run [{run_ids}]: "
+            f"{total_findings} findings total ({per_persona_counts}), "
+            f"independence={max_independence:.3f} (max)"
+        )
+
+    return StrategyOutcome(
+        strategy="FITNESS",
+        summary=summary,
+        degraded=any_degraded,
+        findings_count=total_findings,
+    )
 
 
 async def _login_as_persona(page: Any, persona_id: str, api_url: str) -> None:

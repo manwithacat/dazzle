@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -24,6 +25,8 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
         )
     )
     fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    fake_bundle = MagicMock()
+    fake_bundle.close = AsyncMock()
 
     with (
         patch(
@@ -33,6 +36,10 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
         ) as mock_stop,
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=AsyncMock(return_value=fake_bundle),
+        ),
         patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
             new=AsyncMock(return_value=fake_engine),
@@ -48,8 +55,13 @@ async def test_fitness_strategy_calls_engine_run(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> None:
-    """Lifecycle teardown must run even when the engine raises."""
+async def test_fitness_strategy_records_blocked_outcome_on_engine_failure(tmp_path: Path) -> None:
+    """Lifecycle teardown must run even when the engine raises.
+
+    v1.0.3 Task 4: engine run failures are caught and recorded as BLOCKED
+    outcomes rather than propagated. The strategy still tears down the
+    bundle and subprocess, and returns a degraded StrategyOutcome.
+    """
     from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
         run_fitness_strategy,
     )
@@ -57,6 +69,8 @@ async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> N
     fake_engine = MagicMock()
     fake_engine.run = AsyncMock(side_effect=RuntimeError("boom"))
     fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+    fake_bundle = MagicMock()
+    fake_bundle.close = AsyncMock()
 
     with (
         patch(
@@ -67,14 +81,22 @@ async def test_fitness_strategy_stops_app_on_engine_failure(tmp_path: Path) -> N
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"
         ) as mock_stop,
         patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=AsyncMock(return_value=fake_bundle),
+        ),
+        patch(
             "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
             new=AsyncMock(return_value=fake_engine),
         ),
-        pytest.raises(RuntimeError, match="boom"),
     ):
-        await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
+        outcome = await run_fitness_strategy(example_app="support_tickets", project_root=tmp_path)
 
+    # Teardown still fires
     mock_stop.assert_called_once_with(fake_handle)
+    fake_bundle.close.assert_awaited_once()
+    # Engine failure produces a degraded BLOCKED outcome (not a raised exception)
+    assert outcome.degraded is True
+    assert outcome.findings_count == 0
 
 
 @pytest.mark.asyncio
@@ -716,3 +738,315 @@ async def test_login_as_persona_does_not_false_positive_on_login_substring() -> 
         persona_id="admin",
         api_url="http://localhost:8000",
     )
+
+
+@pytest.mark.asyncio
+async def test_run_fitness_strategy_multi_persona_creates_fresh_context_per_persona(
+    tmp_path: Path,
+) -> None:
+    """Each named persona gets a fresh browser.new_context(). The shared browser is reused."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        run_fitness_strategy,
+    )
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    fake_engine = MagicMock()
+    fake_engine.run = AsyncMock(
+        return_value=MagicMock(
+            findings=[],
+            profile=MagicMock(degraded=False),
+            independence_jaccard=0.5,
+            run_metadata={"run_id": "rX"},
+        )
+    )
+
+    fresh_contexts: list[Any] = []
+
+    async def _fake_new_context(**kwargs: Any) -> Any:
+        new_ctx = MagicMock()
+        new_ctx.new_page = AsyncMock(return_value=MagicMock(url="http://localhost:3000/"))
+        new_ctx.close = AsyncMock()
+        fresh_contexts.append(new_ctx)
+        return new_ctx
+
+    fake_bundle = MagicMock()
+    fake_bundle.browser = MagicMock()
+    fake_bundle.browser.new_context = AsyncMock(side_effect=_fake_new_context)
+    fake_bundle.close = AsyncMock()
+
+    async def _fake_setup(base_url: str) -> Any:
+        return fake_bundle
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
+            new=AsyncMock(return_value=fake_handle),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_fake_setup,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
+            new=AsyncMock(return_value=fake_engine),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._login_as_persona",
+            new=AsyncMock(),
+        ) as mock_login,
+    ):
+        outcome = await run_fitness_strategy(
+            example_app="support_tickets",
+            project_root=tmp_path,
+            personas=["admin", "editor", "viewer"],
+        )
+
+    # Three fresh contexts were created (one per named persona)
+    assert len(fresh_contexts) == 3
+    # Each context had close() awaited
+    for ctx in fresh_contexts:
+        ctx.close.assert_awaited_once()
+    # _login_as_persona called three times, one per persona
+    assert mock_login.await_count == 3
+    # Outcome summary contains all three persona IDs
+    assert "admin" in outcome.summary
+    assert "editor" in outcome.summary
+    assert "viewer" in outcome.summary
+
+
+@pytest.mark.asyncio
+async def test_run_fitness_strategy_single_anonymous_run_backwards_compat(
+    tmp_path: Path,
+) -> None:
+    """personas=None runs a single anonymous cycle using the original bundle context."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        run_fitness_strategy,
+    )
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    fake_engine = MagicMock()
+    fake_engine.run = AsyncMock(
+        return_value=MagicMock(
+            findings=[],
+            profile=MagicMock(degraded=False),
+            independence_jaccard=0.0,
+            run_metadata={"run_id": "r1"},
+        )
+    )
+
+    fake_bundle = MagicMock()
+    fake_bundle.browser = MagicMock()
+    fake_bundle.browser.new_context = AsyncMock()
+    fake_bundle.close = AsyncMock()
+
+    async def _fake_setup(base_url: str) -> Any:
+        return fake_bundle
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
+            new=AsyncMock(return_value=fake_handle),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_fake_setup,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
+            new=AsyncMock(return_value=fake_engine),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._login_as_persona",
+            new=AsyncMock(),
+        ) as mock_login,
+    ):
+        outcome = await run_fitness_strategy(
+            example_app="support_tickets",
+            project_root=tmp_path,
+            personas=None,
+        )
+
+    # No fresh context (browser.new_context never called)
+    fake_bundle.browser.new_context.assert_not_awaited()
+    # No login (personas=None means anonymous)
+    mock_login.assert_not_awaited()
+    # Outcome summary is single-persona format (no bracketed list)
+    assert "[" not in outcome.summary
+    assert "r1" in outcome.summary
+
+
+@pytest.mark.asyncio
+async def test_run_fitness_strategy_continues_on_persona_failure(tmp_path: Path) -> None:
+    """One persona's engine failure produces BLOCKED outcome; other personas still run."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        run_fitness_strategy,
+    )
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    # Two-engine sequence: first raises, second returns a happy result
+    happy_result = MagicMock(
+        findings=[],
+        profile=MagicMock(degraded=False),
+        independence_jaccard=0.0,
+        run_metadata={"run_id": "r_happy"},
+    )
+    raising_engine = MagicMock()
+    raising_engine.run = AsyncMock(side_effect=RuntimeError("boom"))
+    happy_engine = MagicMock()
+    happy_engine.run = AsyncMock(return_value=happy_result)
+
+    fake_bundle = MagicMock()
+    fake_bundle.browser = MagicMock()
+    fake_bundle.browser.new_context = AsyncMock(
+        side_effect=lambda **kw: MagicMock(
+            new_page=AsyncMock(return_value=MagicMock(url="http://localhost:3000/")),
+            close=AsyncMock(),
+        )
+    )
+    fake_bundle.close = AsyncMock()
+
+    async def _fake_setup(base_url: str) -> Any:
+        return fake_bundle
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
+            new=AsyncMock(return_value=fake_handle),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_fake_setup,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
+            new=AsyncMock(side_effect=[raising_engine, happy_engine]),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._login_as_persona",
+            new=AsyncMock(),
+        ),
+    ):
+        outcome = await run_fitness_strategy(
+            example_app="support_tickets",
+            project_root=tmp_path,
+            personas=["failing", "happy"],
+        )
+
+    # Both engines were asked to run
+    raising_engine.run.assert_awaited_once()
+    happy_engine.run.assert_awaited_once()
+    # Outcome has both personas in summary
+    assert "failing" in outcome.summary
+    assert "happy" in outcome.summary
+    # degraded is True because one failed
+    assert outcome.degraded is True
+
+
+@pytest.mark.asyncio
+async def test_run_fitness_strategy_closes_bundle_on_engine_construction_failure(
+    tmp_path: Path,
+) -> None:
+    """If _build_engine raises (e.g. DATABASE_URL unset), bundle is still torn down."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import (
+        run_fitness_strategy,
+    )
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    fake_bundle = MagicMock()
+    fake_bundle.browser = MagicMock()
+    fake_bundle.close = AsyncMock()
+
+    async def _fake_setup(base_url: str) -> Any:
+        return fake_bundle
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._launch_example_app",
+            new=AsyncMock(return_value=fake_handle),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._stop_example_app"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_fake_setup,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._build_engine",
+            new=AsyncMock(side_effect=RuntimeError("DATABASE_URL env var must be set")),
+        ),
+    ):
+        outcome = await run_fitness_strategy(
+            example_app="support_tickets",
+            project_root=tmp_path,
+            personas=None,
+        )
+
+    # Bundle was closed even though _build_engine raised
+    fake_bundle.close.assert_awaited_once()
+    # The single BLOCKED persona outcome was recorded
+    assert outcome.findings_count == 0
+    assert outcome.degraded is True
+
+
+@pytest.mark.asyncio
+async def test_aggregate_outcomes_single_persona_format() -> None:
+    """_aggregate_outcomes produces the single-persona v1.0.2 summary format."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import _aggregate_outcomes
+
+    single_result = MagicMock(
+        findings=[],
+        profile=MagicMock(degraded=False),
+        independence_jaccard=0.42,
+        run_metadata={"run_id": "r1"},
+    )
+
+    outcome = _aggregate_outcomes([(None, single_result)])
+
+    assert outcome.strategy == "FITNESS"
+    assert "r1" in outcome.summary
+    assert "independence=0.420" in outcome.summary
+    # single-persona should NOT wrap in brackets
+    assert "[" not in outcome.summary
+    assert outcome.degraded is False
+    assert outcome.findings_count == 0
+
+
+@pytest.mark.asyncio
+async def test_aggregate_outcomes_multi_persona_format() -> None:
+    """_aggregate_outcomes produces the bracketed multi-persona summary format."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import _aggregate_outcomes
+
+    admin_result = MagicMock(
+        findings=[1, 2],  # 2 findings
+        profile=MagicMock(degraded=False),
+        independence_jaccard=0.3,
+        run_metadata={"run_id": "r_admin"},
+    )
+    editor_result = MagicMock(
+        findings=[1],  # 1 finding
+        profile=MagicMock(degraded=True),
+        independence_jaccard=0.8,
+        run_metadata={"run_id": "r_editor"},
+    )
+
+    outcome = _aggregate_outcomes(
+        [
+            ("admin", admin_result),
+            ("editor", editor_result),
+        ]
+    )
+
+    # Multi-persona summary is bracketed, contains both run IDs
+    assert "[" in outcome.summary
+    assert "admin" in outcome.summary
+    assert "editor" in outcome.summary
+    # Findings sum
+    assert outcome.findings_count == 3
+    # degraded OR-reduced
+    assert outcome.degraded is True
