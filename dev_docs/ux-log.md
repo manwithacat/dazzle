@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 125 — 2026-04-13 — UX-009 widget:combobox → qa:FAIL (20 findings)
+
+**Row:** UX-009 widget:combobox (canonical: contact_manager)
+**Outcome:** `qa: PENDING → FAIL`, 20 findings (admin=10, user=10), degraded=False. Walker engaged with `/app/contact/create` and planned a real `click button:has-text("Create")` action — form submission depth reached. Attempts 1 → 2. Run IDs: admin=1407c944-3314-41cb-9d3f-54280e068b62, user=f132f230-9505-44d1-a2dc-edca70da9627.
+
+**Observation — TomSelect wrapper not reaching quality gates:** combobox contract references the TomSelect vendored runtime. Walker didn't surface any TomSelect-specific findings in the 20 returned — either the gates didn't trip on the interactive select (good), or the walker's assertions didn't reach TS-specific DOM (possible). Worth revisiting after the investigator subsystem ships and can inspect per-finding detail.
+
+**Walker JSON parse bug #5:** two more warnings, same prose-before-JSON shape.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 125   | UX-009 widget:combobox | admin, user | 20 (10+10) | FAIL |
+
+---
+
 ## Cycle 124 — 2026-04-13 — UX-019 form-validation → qa:FAIL (97 findings)
 
 **Row:** UX-019 form-validation (canonical: support_tickets)
