@@ -174,6 +174,19 @@ class FitnessEngine:
         backlog_path.parent.mkdir(parents=True, exist_ok=True)
         upsert_findings(backlog_path, findings)
 
+        log_path = self._project_root / "dev_docs" / "fitness-log.md"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        if not log_path.exists():
+            log_path.write_text("# Fitness Log\n\n")
+        line = (
+            f"- {now.isoformat()} run={run_id} "
+            f"independence_jaccard={jaccard:.3f} "
+            f"findings={len(findings)} "
+            f"degraded={profile.degraded}\n"
+        )
+        with log_path.open("a") as f:
+            f.write(line)
+
         return FitnessRunResult(
             pass1_run_count=len(pass1_results),
             findings=findings,
