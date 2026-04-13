@@ -1849,6 +1849,39 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 110 — 2026-04-13 — **FIRST REAL PHASE B RUN** against form-field / support_tickets
+
+**Outcome:** `FITNESS / fitness run 4a6b35ff-2835-4f2e-b0d0-3803c26447a2: 49 findings, independence=0.000` — degraded=False. The first successful end-to-end Phase B in the project's history.
+
+### What ran
+- Target contract: `form-field.md` (5 quality gates) against `support_tickets` (canonical)
+- personas=None (anonymous) after the admin persona run was blocked by a pre-existing bcrypt bug (see below)
+- Mode A launched `dazzle serve --local` in a subprocess bound to `http://localhost:3969`, health-checked `/docs`, yielded AppConnection, torn down cleanly after
+- 49 fitness findings written to `examples/support_tickets/dev_docs/fitness-backlog.md` — all Pass 2a story_drift / coverage / medium severity / "No matching story found"
+
+### Bugs discovered + fixed this cycle
+1. **Stale runtime.json race** — `ModeRunner._poll_runtime_file` could read a prior serve run's ports before the new subprocess overwrote the file, then hand them to the health check which timed out against a dead URL. Fix (`dda03724`): delete any pre-existing runtime.json before launching the subprocess.
+2. **Unified-mode api_port fiction** — `serve.py` wrote runtime.json with an allocated `api_port` (e.g. 8969) even though `run_unified_server` only binds `ui_port` (e.g. 3969). `AppConnection.api_url` pointed at a dead port. Fix (`dda03724`): collapse `api_port` onto `ui_port` before `write_runtime_file` when we're in unified mode (not `--backend-only`, not `--ui-only`).
+3. **Retired LLM model hardcode** — default `LLMAPIClient` model was `claude-3-5-sonnet-20241022`, which 404's from the Anthropic API as of late 2025. Fix (`a425f8ec`): default to `claude-sonnet-4-6`.
+
+### Bugs discovered but NOT fixed this cycle
+4. **Dev persona provisioner bcrypt bug** — `Warning: failed to provision dev persona 'admin': 'NoneType' object has no attribute 'encode'` (same for customer/agent/manager). Dev personas never get created, so `_login_as_persona` via QA magic-link gets 403 Forbidden. Blocked the `personas=["admin"]` variant of Phase B. Pre-existing; will need a dedicated investigation of `dev_personas.py`.
+5. **Walker action parse error on Claude 4.6 responses** — `Failed to parse action: Expecting value: line 1 column 1`. The mission prompt expects strict JSON output but Claude 4.6 sometimes returns conversational prose before the JSON. Pre-existing prompt/mission alignment issue.
+6. **`fitness-log.md` only 3 lines** — log file looks mostly empty; the findings all landed in `fitness-backlog.md`. Unclear if this is intentional or a logging gap.
+7. **6 pre-existing template test failures** in `test_phase2_fragments.py`, `test_phase3_fragments.py`, `test_workspace_routes.py` — assertions still look for DaisyUI classes (`alert-success`, `modal-backdrop`, `link-primary`, `timeline`) that earlier UX cycles refactored away to Tailwind tokens. Blocking CI's Python Tests job but unrelated to this e2e work.
+
+### Infrastructure set up this cycle
+- `createdb dazzle_support_tickets` — new Postgres database for support_tickets example
+- `examples/support_tickets/.env` — `DATABASE_URL=postgresql://localhost:5432/dazzle_support_tickets` + `REDIS_URL=redis://localhost:6379/0`. Gitignored per `examples/*/.env` pattern.
+- `dazzle serve --local` auto-created 14 tables in the new DB (Ticket, User, Comment, DeployHistory, framework tables) via DSL entity metadata — no explicit migration was needed
+
+### Utility evaluation
+The e2e environment strategy works architecturally. Mode A launches real subprocesses, reads the correct runtime.json, health-checks successfully, and tears down cleanly. The fitness strategy refactor (Tasks 7+8) correctly decoupled subprocess lifecycle from engine execution. Phase B produced structured findings from a real running app for the first time.
+
+Remaining blockers for **practical** Phase B usefulness are bugs 4 (persona login) and 5 (walker prompt), not the e2e infrastructure itself. Fixing both would unblock full multi-persona contract walks.
+
+---
+
 ## Cycle 109 — 2026-04-13 — meta: runbook updated for new run_fitness_strategy signature
 
 **Outcome:** The 15-task e2e environment strategy implementation is complete (21 commits on top of v0.54.4 bump). `run_fitness_strategy` now takes an `AppConnection` from `ModeRunner` instead of owning subprocess launch itself, so `.claude/commands/ux-cycle.md`'s Phase B code snippet was stale — its example still called `run_fitness_strategy(example_app="...", project_root=...)` which no longer exists. Updated the runbook to use the new `async with ModeRunner(...) as conn: await run_fitness_strategy(conn, example_root=..., ...)` pattern, including the new `project_root`=example_root semantic (example app directory, not repo root) and the precondition note about `.env` config.
