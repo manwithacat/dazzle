@@ -1774,3 +1774,11 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Follow-up:** `badge_class` Jinja filter (in `src/dazzle_ui/runtime/server_impl/templates.py` or similar) currently maps status values to `badge-success`/`badge-warning`/`badge-error` class names. Needs a parallel filter (or inline renaming) to emit token-based classes. Deferred — not blocking this cycle's outcome.
 
 ---
+
+## Cycle 97 — 2026-04-13 — exhausted (sticky, post-v0.54.3/bump)
+
+**Outcome:** No actionable row; cycle released. Priority function matches nothing: all 35 non-blocked rows are `READY_FOR_QA` (gated on running-app Phase B), UX-035 is `PARTIAL` with attempts=14 (over the limit), and there are no `REGRESSION` / `PENDING` / `DRAFT` rows. EXPLORE skipped via the "last 5 explore cycles produced 0 findings" escape hatch (92–96 all `exhausted (sticky)`). Explore counter 6 → 7. No backlog mutation.
+
+**Blocker:** The Phase B e2e environment strategy (Mode A building block) is still in design — until `run_fitness_strategy` can spin up a real example app against a real Postgres/Redis, the 35 `READY_FOR_QA` rows cannot advance.
+
+---
