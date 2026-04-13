@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.1] - 2026-04-13
+
 ### Added
 - **QA Mode (#768):** `dazzle serve --local` now auto-provisions a dev user for each DSL persona and renders a QA Personas section on the landing page. Testers click "Log in as X" to explore the app as any persona via magic links. Dev-gated generator endpoint `POST /qa/magic-link` is mounted only when `DAZZLE_ENV=development` + `DAZZLE_QA_MODE=1`. A general-purpose `GET /auth/magic/{token}` consumer endpoint is mounted unconditionally for production email-based passwordless login.
 - **Magic link consumer endpoint:** `GET /auth/magic/{token}` — production-safe, general-purpose. Validates via existing `validate_magic_link` primitive (one-time use, expiry-gated), creates a session, and redirects to `?next=` (same-origin only) or `/`. Suitable for email-based passwordless login, account recovery, and dev QA mode.
@@ -29,9 +31,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   when missing; v1.1 will make this fatal.
 - **/ux-cycle:** new `Strategy.FITNESS` — rotates alongside MISSING_CONTRACTS
   and EDGE_CASES.
+- **Fitness v1.0.1 — real `_build_engine` wiring.** Replaces the
+  `NotImplementedError` stub in
+  `src/dazzle/cli/runtime_impl/ux_cycle_impl/fitness_strategy.py` with the
+  full async composition root: loads `AppSpec` + `FitnessConfig` from the
+  example project, constructs `PostgresBackend` from `DATABASE_URL`
+  (wrapped in the new `PgSnapshotSource` adapter), instantiates
+  `LLMAPIClient`, spins up a headless Chromium `_PlaywrightBundle` via a
+  separate `_setup_playwright` helper, builds a `DazzleAgent` with
+  `PlaywrightObserver` + `PlaywrightExecutor`, and returns an
+  `_EngineProxy` whose `run()` tears down Playwright even if the engine
+  raises. Example-app subprocess lifecycle owned by `run_fitness_strategy`
+  via `try/finally` delegating to `dazzle.qa.server.connect_app` +
+  `wait_for_ready`.
+- **`PgSnapshotSource` adapter** at
+  `src/dazzle/fitness/pg_snapshot_source.py` — sync `SnapshotSource`
+  protocol implementation over `PostgresBackend.connection()` using
+  `psycopg.sql.Identifier` for safe SQL composition.
+- **Unblocked e2e smoke test:**
+  `tests/e2e/fitness/test_support_tickets_fitness.py::test_support_tickets_fitness_cycle_completes`
+  now exercises `run_fitness_strategy` end-to-end when `DATABASE_URL` is
+  set, asserting `StrategyOutcome` shape and that `fitness-log.md` +
+  `fitness-backlog.md` are written.
 
 ### Changed
 - **`auth_store` on `app.state`:** The auth subsystem now stashes `auth_store` on `app.state.auth_store` during startup. Route handlers can access the auth store without dependency injection gymnastics. Existing routes that receive auth_store via constructor are unchanged.
+- **UX-036 auth-page series complete — all 7 `site/auth/` templates under macro governance.** Every template in `src/dazzle_ui/templates/site/auth/` now consumes the `auth_page_card` macro from `macros/auth_page_wrapper.html`. Dropped DaisyUI tokens across the series: `card`/`card-body`/`card-title`, `form-control`/`label-text`/`input-bordered`, `btn-primary`/`btn-outline`/`btn-ghost`/`btn-error`/`btn-sm`, `alert-error`/`alert-success`/`alert-warning`, `bg-base-*`, `divider`, `link-primary`/`link-secondary`, `badge badge-lg badge-outline`. Pure Tailwind replacements use HSL CSS variables from `design-system.css`. Inline JS in `2fa_settings.html` and `2fa_setup.html` extracts button class strings into named constants (`BTN_PRIMARY` / `BTN_DESTRUCTIVE` / `BTN_OUTLINE`, `RECOVERY_CODE_CLASSES`) so future tweaks touch one place. Submission handlers now all use CSRF-header-based JS fetches; `method="POST"` removed from form tags.
 
 ### Agent Guidance
 - **QA Mode workflow**: When building or modifying example apps for human QA testing, the landing page renders a dev-only Personas panel with "Log in as X" buttons. The flow uses real magic links (no auth backdoor). Persona emails follow `{persona_id}@example.test`. Passwords are not set — magic-link login only. See `docs/superpowers/specs/2026-04-12-qa-mode-design.md` for the full security model.

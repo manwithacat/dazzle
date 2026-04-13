@@ -381,7 +381,7 @@ def create_site_page_routes(
                     # so show the landing page with auth-aware nav instead.
                     return RedirectResponse(url=dash_url, status_code=302)
                 # #768 — QA mode personas for landing page panel
-                qa_personas: list[dict] = []
+                qa_personas: list[dict[str, Any]] = []
                 qa_persona_list = getattr(request.app.state, "qa_personas", None)
                 if qa_persona_list:
                     qa_personas = [

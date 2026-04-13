@@ -107,16 +107,16 @@ def _persona_display_name(persona: Any) -> str:
     """Return the persona's display name. Uses label, falls back to id."""
     label = getattr(persona, "label", None)
     if label:
-        return label
+        return str(label)
     persona_id = getattr(persona, "id", "unknown")
-    return persona_id.replace("_", " ").title()
+    return str(persona_id).replace("_", " ").title()
 
 
 def _derive_description(persona: Any) -> str:
     """Return persona description from DSL or a sensible fallback."""
     description = getattr(persona, "description", None)
     if description:
-        return description
+        return str(description)
     return "Test persona — explore the app with this role's permissions"
 
 
