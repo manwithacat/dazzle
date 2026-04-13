@@ -80,6 +80,28 @@ entity Ticket "Support Ticket":
     resolved -> in_progress
     closed -> open: role(manager)
 
+  # Lifecycle: progress evaluator ordering + evidence predicates (ADR-0020)
+  lifecycle:
+    status_field: status
+    states:
+      - open        (order: 0)
+      - in_progress (order: 1)
+      - resolved    (order: 2)
+      - closed      (order: 3)
+    transitions:
+      - from: open
+        to: in_progress
+        evidence: assigned_to != null
+        role: agent
+      - from: in_progress
+        to: resolved
+        evidence: resolution != null
+        role: agent
+      - from: resolved
+        to: closed
+        evidence: true
+        role: agent
+
   # Invariants for data integrity
   invariant: status != resolved or resolution != null
   invariant: status != closed or resolution != null
