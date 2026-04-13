@@ -35,7 +35,7 @@ class ProposedFix:
 
     file_path: str  # repo-relative
     line_range: tuple[int, int] | None
-    diff: str  # unified diff anchored to file_path
+    diff: str  # unified diff anchored to file_path; empty ("") when loaded from disk via load_proposal
     rationale: str  # one or two sentences; ≥1 char
     confidence: float  # 0.0..1.0
 
@@ -90,6 +90,10 @@ def _validate(proposal: Proposal, dazzle_root: Path) -> None:
     """Apply all validation rules. Raises ProposalValidationError on any failure."""
     if not proposal.fixes:
         raise ProposalValidationError("fixes must be non-empty")
+    if not _CLUSTER_ID_RE.match(proposal.cluster_id):
+        raise ProposalValidationError(
+            f"cluster_id must match ^CL-[0-9a-f]{{8,}}$, got {proposal.cluster_id!r}"
+        )
     if len(proposal.alternatives_considered) > 5:
         raise ProposalValidationError(
             f"alternatives_considered: max 5 entries, got {len(proposal.alternatives_considered)}"
@@ -101,10 +105,6 @@ def _validate(proposal: Proposal, dazzle_root: Path) -> None:
     if len(proposal.rationale) < 20:
         raise ProposalValidationError(
             f"rationale too short (min 20 chars, got {len(proposal.rationale)})"
-        )
-    if not _CLUSTER_ID_RE.match(proposal.cluster_id):
-        raise ProposalValidationError(
-            f"cluster_id must match ^CL-[0-9a-f]{{8,}}$, got {proposal.cluster_id!r}"
         )
     if not (0.0 <= proposal.overall_confidence <= 1.0):
         raise ProposalValidationError(
@@ -274,7 +274,13 @@ def write_blocked_artefact(
     case_file_text: str,
     transcript: str,
 ) -> Path:
-    """Write a .dazzle/fitness-proposals/_blocked/<cluster_id>.md artefact."""
+    """Write a .dazzle/fitness-proposals/_blocked/<cluster_id>.md artefact.
+
+    Overwrites any existing blocked artefact for this cluster — the file
+    represents the latest attempt, not a history. This is intentional:
+    a cluster that blocks twice in a row should show the most recent
+    transcript, not leave a stale record from an earlier run.
+    """
     directory = _blocked_dir(dazzle_root)
     directory.mkdir(parents=True, exist_ok=True)
     path = directory / f"{cluster_id}.md"

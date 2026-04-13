@@ -103,6 +103,20 @@ def test_save_proposal_happy_path(tmp_path: Path) -> None:
     assert loaded.status == "proposed"
     assert len(loaded.fixes) == 1
     assert loaded.fixes[0].file_path == "src/foo.py"
+    # Full round-trip coverage for all remaining Proposal fields
+    assert loaded.created == proposal.created
+    assert loaded.investigator_run_id == proposal.investigator_run_id
+    assert loaded.rationale == proposal.rationale
+    assert loaded.verification_plan == proposal.verification_plan
+    assert loaded.alternatives_considered == proposal.alternatives_considered
+    assert loaded.evidence_paths == proposal.evidence_paths
+    assert loaded.tool_calls_summary == proposal.tool_calls_summary
+    # Per-fix field round-trip
+    assert loaded.fixes[0].line_range == (10, 15)
+    assert loaded.fixes[0].confidence == 0.85
+    assert loaded.fixes[0].rationale == "add the missing thing"
+    # Intentional: diff text is in the body, not the frontmatter
+    assert loaded.fixes[0].diff == ""
 
 
 def test_save_proposal_rejects_empty_fixes(tmp_path: Path) -> None:
