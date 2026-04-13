@@ -1848,3 +1848,13 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 **Outcome:** Unchanged. Explore counter 17 → 18.
 
 ---
+
+## Cycle 109 — 2026-04-13 — meta: runbook updated for new run_fitness_strategy signature
+
+**Outcome:** The 15-task e2e environment strategy implementation is complete (21 commits on top of v0.54.4 bump). `run_fitness_strategy` now takes an `AppConnection` from `ModeRunner` instead of owning subprocess launch itself, so `.claude/commands/ux-cycle.md`'s Phase B code snippet was stale — its example still called `run_fitness_strategy(example_app="...", project_root=...)` which no longer exists. Updated the runbook to use the new `async with ModeRunner(...) as conn: await run_fitness_strategy(conn, example_root=..., ...)` pattern, including the new `project_root`=example_root semantic (example app directory, not repo root) and the precondition note about `.env` config.
+
+**Work done this cycle:** runbook-only edit at `.claude/commands/ux-cycle.md` Phase B section. No backlog row advanced (still sticky against READY_FOR_QA rows — actually running Phase B against a live example app is the next step after the user approves the updated approach).
+
+**Next unblock:** the next `/ux-cycle` invocation can now actually execute Phase B against one of the 35 `READY_FOR_QA` rows using the updated snippet — provided `examples/<canonical>/.env` has `DATABASE_URL`/`REDIS_URL` set and Postgres/Redis are reachable.
+
+---

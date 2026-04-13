@@ -63,52 +63,78 @@ If this fails, mark `qa: FAIL`, note the failures in the row's `notes`, and skip
 
 **Phase B — Fitness-engine contract walk (slow, only if Phase A passes AND the contract has quality gates):**
 
-Phase B now routes through the fitness engine instead of hand-rolling an
-agent dispatch. The strategy owns the example-app subprocess, the
-Playwright bundle, and the ledger; Phase B just hands it the component
-contract path and reads the aggregated outcome:
+Phase B now routes through the fitness engine. Subprocess lifecycle is owned
+by `dazzle.e2e.runner.ModeRunner` (v0.54.4+); the fitness strategy takes an
+`AppConnection` from the runner and runs the engine against it:
 
 ```python
 from pathlib import Path
 from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import run_fitness_strategy
+from dazzle.e2e.modes import get_mode
+from dazzle.e2e.runner import ModeRunner
 
+dazzle_root = Path("/Volumes/SSD/Dazzle")
+example_root = dazzle_root / "examples" / "<canonical>"
 contract_path = Path.home() / ".claude/skills/ux-architect/components/<component>.md"
 
 # For in-app components (data-table, detail-view, dashboard, etc.):
 # pass an explicit persona list matching the DSL personas that should see
-# the component. The strategy iterates once per persona, logging in via
-# QA mode magic-link (#768) between iterations.
-outcome = await run_fitness_strategy(
-    example_app="<canonical>",
-    project_root=Path("/Volumes/SSD/Dazzle"),  # Dazzle repo root
-    component_contract_path=contract_path,
-    personas=["admin", "agent", "customer"],  # or None for anonymous
-)
+# the component. The ModeRunner auto-sets QA flags when personas is
+# non-empty so the magic-link login flow (#768) works.
+async with ModeRunner(
+    mode_spec=get_mode("a"),
+    project_root=example_root,
+    personas=["admin", "agent", "customer"],
+    db_policy="preserve",
+) as conn:
+    outcome = await run_fitness_strategy(
+        conn,
+        example_root=example_root,
+        component_contract_path=contract_path,
+        personas=["admin", "agent", "customer"],
+    )
 
 # For public/anonymous components (auth pages, landing pages):
 # pass personas=None (or omit) to run a single anonymous cycle.
-# outcome = await run_fitness_strategy(
-#     example_app="<canonical>",
-#     project_root=Path("/Volumes/SSD/Dazzle"),
-#     component_contract_path=contract_path,
+# async with ModeRunner(
+#     mode_spec=get_mode("a"),
+#     project_root=example_root,
 #     personas=None,
-# )
+#     db_policy="preserve",
+# ) as conn:
+#     outcome = await run_fitness_strategy(
+#         conn,
+#         example_root=example_root,
+#         component_contract_path=contract_path,
+#         personas=None,
+#     )
 ```
 
-The fitness engine's Pass 1 will parse the contract and call the new
+The fitness engine's Pass 1 parses the contract and calls the
 `walk_contract` mission — one ledger step per quality gate, with each
 gate description recorded as EXPECT and the current DOM snapshot recorded
 as OBSERVE. Findings flow through the normal engine pipeline and land in
 `dev_docs/fitness-backlog.md` under the example app.
 
-v1.0.3 ships multi-persona fan-out. When `personas` is a non-empty list,
-the strategy runs one cycle per persona inside a single subprocess
-lifetime — the Playwright browser is launched once, and each persona
-gets a fresh `browser.new_context()` for cookie isolation. Per-persona
-failures (login rejected, engine crashed, anchor navigation failed)
-produce BLOCKED outcomes but do not abort the loop — remaining personas
-still run. The aggregated `StrategyOutcome` sums per-persona findings
-and surfaces the max independence score across all personas.
+`ModeRunner` owns subprocess lifecycle: acquires PID lock at
+`<example>/.dazzle/mode_a.lock` with 15-min TTL safety net, launches
+`dazzle serve --local`, polls `.dazzle/runtime.json` for the deterministic
+hashed ports, health-checks `/docs`, yields the `AppConnection`, and
+tears down cleanly on exit (or on exception, with log tail printed to
+stderr). The strategy no longer owns any of this — its only job is
+running the engine against whatever URL the runner hands over.
+
+Multi-persona fan-out runs one cycle per persona inside a single
+subprocess lifetime. The Playwright browser is launched once, and each
+persona gets a fresh `browser.new_context()` for cookie isolation.
+Per-persona failures (login rejected, engine crashed, anchor navigation
+failed) produce BLOCKED outcomes but do not abort the loop — remaining
+personas still run. The aggregated `StrategyOutcome` sums per-persona
+findings and surfaces the max independence score across all personas.
+
+**Precondition:** the example app needs `DATABASE_URL` + `REDIS_URL`
+reachable (set in `examples/<canonical>/.env` or exported in the shell).
+See `docs/reference/e2e-environment.md` for details.
 
 The row's `qa` field becomes:
 - `PASS` if `outcome.degraded is False` and `outcome.findings_count == 0`
