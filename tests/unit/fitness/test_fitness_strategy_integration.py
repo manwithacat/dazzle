@@ -248,3 +248,21 @@ async def test_build_engine_raises_when_database_url_unset(
             example_root=example_root,
             handle=MagicMock(site_url="http://x", api_url="http://y"),
         )
+
+
+@pytest.mark.asyncio
+async def test_engine_proxy_tears_down_playwright_on_engine_failure() -> None:
+    """_EngineProxy.run() must close the Playwright bundle even when engine.run() raises."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import _EngineProxy
+
+    fake_engine = MagicMock()
+    fake_engine.run = AsyncMock(side_effect=RuntimeError("engine exploded"))
+    fake_bundle = MagicMock()
+    fake_bundle.close = AsyncMock()
+
+    proxy = _EngineProxy(engine=fake_engine, bundle=fake_bundle)
+
+    with pytest.raises(RuntimeError, match="engine exploded"):
+        await proxy.run()
+
+    fake_bundle.close.assert_awaited_once()
