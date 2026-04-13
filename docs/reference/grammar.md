@@ -1878,6 +1878,53 @@ entity Node "Node":
 | `edges` | yes | — | the edge entity (must declare `graph_edge:`) |
 | `display` | no | — | field used as the node label |
 
+### Lifecycle (Agent-Led Fitness)
+
+#### `lifecycle:` (on entity)
+
+Declares an entity's progress lifecycle for fitness evaluation. Ordered states + evidence predicates distinguish motion (status changes) from work (valid progress through the lifecycle). Orthogonal to the auto-derived `state_machine` (which handles runtime mechanics like triggers and guards).
+
+```dsl
+entity Ticket "Support Ticket":
+  id: uuid pk
+  status: enum[open, in_progress, resolved, closed] = open
+  assigned_to: ref User optional
+  resolution: text optional
+
+  lifecycle:
+    status_field: status
+    states:
+      - open        (order: 0)
+      - in_progress (order: 1)
+      - resolved    (order: 2)
+      - closed      (order: 3)
+    transitions:
+      - from: open
+        to: in_progress
+        evidence: assigned_to != null
+        role: agent
+      - from: in_progress
+        to: resolved
+        evidence: resolution != null
+        role: agent
+      - from: resolved
+        to: closed
+        evidence: true
+        role: agent
+```
+
+| Property | Required | Description |
+|----------|----------|-------------|
+| `status_field` | yes | field name holding the current state (usually an enum) |
+| `states` | yes | ordered list of lifecycle states, each tagged `(order: N)` |
+| `transitions` | yes | list of allowed progress transitions |
+| `transitions[].from` | yes | source state identifier |
+| `transitions[].to` | yes | destination state identifier |
+| `transitions[].evidence` | yes | predicate that must hold for the transition to count as real progress (`true` means no evidence required) |
+| `transitions[].role` / `roles` | no | persona(s) authorised to drive the transition |
+
+See [ADR-0020](../adr/ADR-0020-lifecycle-evidence-predicates.md) for the design rationale and the relationship to `state_machine`.
+
 ### v0.25.0 Constructs
 
 ```dsl
