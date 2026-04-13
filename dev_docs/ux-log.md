@@ -1849,6 +1849,23 @@ Next cycle will shift from "retroactive documentation" to "contract writing for 
 
 ---
 
+## Cycle 123 — 2026-04-13 — UX-018 form-wizard → qa:FAIL (24 findings)
+
+**Row:** UX-018 form-wizard (canonical: contact_manager)
+**Outcome:** `qa: PENDING → FAIL`, 24 findings (admin=10, user=14), degraded=False. Walker engaged with `/app/contact/create` form and planned real `type` actions on `#field-company` and `#field-email` — good signal that the wizard contract's anchor is accessible and interactive for both personas. Attempts 1 → 2. Run IDs: admin=9afdcfa9-a803-48f2-85a7-894ea288fe58, user=da49401f-b99b-4673-9978-c54529aa6954.
+
+**Env preload:** reused the `/tmp/ux_cycle_123.py` harness pattern (preload `.env` into `os.environ` before importing the strategy) from cycle 122. Works cleanly.
+
+**Walker JSON parse bug #5 still present:** two "Expecting value: line 1 column 1" warnings on this run, same prose-before-JSON shape as cycle 122. Non-blocking.
+
+**Row advancement tally append:**
+
+| Cycle | Row | Personas | Findings | Outcome |
+|-------|-----|----------|----------|---------|
+| 123   | UX-018 form-wizard | admin, user | 24 (10+14) | FAIL |
+
+---
+
 ## Cycle 122 — 2026-04-13 — UX-017 form-field → qa:FAIL (99 findings), DATABASE_URL env quirk
 
 **Row:** UX-017 form-field (canonical: support_tickets)
