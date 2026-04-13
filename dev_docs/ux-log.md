@@ -4,6 +4,12 @@ Append-only log of `/ux-cycle` cycles. Each cycle writes one section.
 
 ---
 
+## 2026-04-13T13:37Z — Cycle 88 — exhausted (sticky)
+
+No state change. v0.54.2 just shipped (commit `b7432a6b`, tag `v0.54.2` pushed); fitness v1.0.2 contract walker is now released.
+
+---
+
 ## 2026-04-13T13:18Z — Cycle 87 — exhausted (sticky)
 
 No state change since Cycle 48. v1.0.2 contract walker shipped (commits `7049362c`..`9d64f6ac`); 80/80 fitness tests green. Phase B of this very cycle file now references the new `run_fitness_strategy(component_contract_path=...)` snippet — the irony gap is closed in code but Phase B itself is still skipped here because no row is in a state that triggers it.
