@@ -161,20 +161,23 @@ async def _build_engine(example_root: Path, handle: Any) -> Any:
     llm = LLMAPIClient()
 
     bundle = await _setup_playwright(base_url=handle.site_url)
+    try:
+        agent = DazzleAgent(
+            observer=PlaywrightObserver(page=bundle.page),
+            executor=PlaywrightExecutor(page=bundle.page),
+        )
 
-    agent = DazzleAgent(
-        observer=PlaywrightObserver(page=bundle.page),
-        executor=PlaywrightExecutor(page=bundle.page),
-    )
-
-    engine = FitnessEngine(
-        project_root=example_root,
-        config=config,
-        app_spec=app_spec,
-        spec_md_path=example_root / "SPEC.md",
-        agent=agent,
-        executor=PlaywrightExecutor(page=bundle.page),
-        snapshot_source=snapshot_source,
-        llm=llm,
-    )
+        engine = FitnessEngine(
+            project_root=example_root,
+            config=config,
+            app_spec=app_spec,
+            spec_md_path=example_root / "SPEC.md",
+            agent=agent,
+            executor=PlaywrightExecutor(page=bundle.page),
+            snapshot_source=snapshot_source,
+            llm=llm,
+        )
+    except BaseException:
+        await bundle.close()
+        raise
     return _EngineProxy(engine=engine, bundle=bundle)

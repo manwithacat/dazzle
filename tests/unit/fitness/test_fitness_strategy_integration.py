@@ -266,3 +266,50 @@ async def test_engine_proxy_tears_down_playwright_on_engine_failure() -> None:
         await proxy.run()
 
     fake_bundle.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_build_engine_closes_bundle_when_engine_constructor_raises(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If FitnessEngine.__init__ raises after Playwright is up, the bundle must still close."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+    (example_root / "SPEC.md").write_text("# spec\n")
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://stub")
+
+    fake_bundle = MagicMock()
+    fake_bundle.page = MagicMock()
+    fake_bundle.close = AsyncMock()
+
+    async def _fake_setup(base_url: str):
+        return fake_bundle
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_project_appspec",
+            return_value=MagicMock(entities=[], stories=[], personas=[]),
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.load_fitness_config",
+            return_value=MagicMock(),
+        ),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.PostgresBackend"),
+        patch("dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.LLMAPIClient"),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy._setup_playwright",
+            new=_fake_setup,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.FitnessEngine",
+            side_effect=RuntimeError("engine init exploded"),
+        ),
+        pytest.raises(RuntimeError, match="engine init exploded"),
+    ):
+        handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+        await fitness_strategy._build_engine(example_root=example_root, handle=handle)
+
+    fake_bundle.close.assert_awaited_once()
