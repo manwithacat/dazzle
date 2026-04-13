@@ -14,7 +14,7 @@ from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from pathlib import Path
 
-from dazzle.fitness.models import Finding
+from dazzle.fitness.models import EvidenceEmbedded, Finding
 
 _HEADER = """# Fitness Backlog
 
@@ -98,3 +98,64 @@ def upsert_findings(path: Path, findings: list[Finding]) -> None:
         envelope_part = envelope_part.rstrip("\n") + "\n\n" + _finding_envelope(f)
 
     path.write_text(table_part + "\n" + envelope_part.lstrip("\n"))
+
+
+_ENVELOPE_BLOCK_RE = re.compile(
+    r"^### (?P<id>\S+)\s*\n+```json\n(?P<payload>.*?)\n```",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def read_backlog_findings(path: Path) -> list[Finding]:
+    """Parse the envelope blocks in a fitness-backlog.md file into Finding objects.
+
+    Only returns findings whose envelope block contains a valid JSON payload.
+    Table-only rows with no matching envelope are ignored — those indicate
+    the file was partially written or manually edited and cannot be
+    reconstructed losslessly.
+    """
+    if not path.exists():
+        return []
+
+    text = path.read_text()
+    findings: list[Finding] = []
+    for m in _ENVELOPE_BLOCK_RE.finditer(text):
+        try:
+            payload = json.loads(m.group("payload"))
+        except json.JSONDecodeError:
+            continue
+        findings.append(_payload_to_finding(payload))
+    return findings
+
+
+def _payload_to_finding(payload: dict[str, object]) -> Finding:
+    """Reconstruct a Finding from the JSON envelope payload."""
+    ev = payload["evidence_embedded"]
+    assert isinstance(ev, dict)
+    evidence = EvidenceEmbedded(
+        expected_ledger_step=ev.get("expected_ledger_step") or {},
+        diff_summary=ev.get("diff_summary") or [],
+        transcript_excerpt=ev.get("transcript_excerpt") or [],
+    )
+    created_str = payload["created"]
+    assert isinstance(created_str, str)
+    return Finding(
+        id=str(payload["id"]),
+        created=datetime.fromisoformat(created_str),
+        run_id=str(payload["run_id"]),
+        cycle=payload.get("cycle"),  # type: ignore[arg-type]
+        axis=payload["axis"],  # type: ignore[arg-type]
+        locus=payload["locus"],  # type: ignore[arg-type]
+        severity=payload["severity"],  # type: ignore[arg-type]
+        persona=str(payload["persona"]),
+        capability_ref=str(payload["capability_ref"]),
+        expected=str(payload["expected"]),
+        observed=str(payload["observed"]),
+        evidence_embedded=evidence,
+        disambiguation=bool(payload.get("disambiguation", False)),
+        low_confidence=bool(payload.get("low_confidence", False)),
+        status=payload["status"],  # type: ignore[arg-type]
+        route=payload["route"],  # type: ignore[arg-type]
+        fix_commit=payload.get("fix_commit"),  # type: ignore[arg-type]
+        alternative_fix=payload.get("alternative_fix"),  # type: ignore[arg-type]
+    )
