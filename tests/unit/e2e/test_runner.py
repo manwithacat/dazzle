@@ -40,23 +40,28 @@ def _write_runtime_file(project_root: Path, ui_port: int = 8981, api_port: int =
     )
 
 
-@pytest.fixture
-def fake_popen(monkeypatch: pytest.MonkeyPatch) -> list[MagicMock]:
-    """Patch subprocess.Popen to record instances.
+def _make_fake_popen_factory(
+    instances: list[MagicMock],
+    *,
+    project_root: Path | None = None,
+    write_runtime_on_start: bool = True,
+) -> Any:
+    """Build a subprocess.Popen replacement for ModeRunner tests.
 
-    Each fake Popen:
-      - Starts with poll() returning None (alive).
-      - After terminate() is called, poll() returns 0 (exited).
-      - wait() returns 0.
+    When ``write_runtime_on_start`` is True (default), the factory writes
+    a valid ``.dazzle/runtime.json`` to ``project_root`` each time Popen is
+    called — mirroring what a real ``dazzle serve`` subprocess does shortly
+    after startup. This matters because ``ModeRunner.__aenter__`` deletes
+    any pre-existing runtime.json before launching (to avoid the stale-
+    ports race from cycle 110), so tests that rely on the file being
+    present have to regenerate it *after* Popen is called, not before.
     """
-    instances: list[MagicMock] = []
 
     def factory(*args: Any, **kwargs: Any) -> MagicMock:
         fake = MagicMock()
         fake.pid = 4242 + len(instances)
         fake.args_received = args
         fake.kwargs = kwargs
-        # poll returns None until terminate() is called
         state = {"terminated": False}
 
         def _poll() -> int | None:
@@ -77,8 +82,41 @@ def fake_popen(monkeypatch: pytest.MonkeyPatch) -> list[MagicMock]:
         fake.kill.side_effect = _kill
         fake.wait.side_effect = _wait
         instances.append(fake)
+
+        if write_runtime_on_start and project_root is not None:
+            _write_runtime_file(project_root)
+
         return fake
 
+    return factory
+
+
+@pytest.fixture
+def fake_popen(monkeypatch: pytest.MonkeyPatch, project_root: Path) -> list[MagicMock]:
+    """Patch subprocess.Popen — each call writes a fresh runtime.json.
+
+    Use this for tests that want the happy-path behavior (Popen started,
+    runtime.json written, poll succeeds). Tests that want a timeout
+    should use ``fake_popen_silent`` instead.
+    """
+    instances: list[MagicMock] = []
+    factory = _make_fake_popen_factory(
+        instances, project_root=project_root, write_runtime_on_start=True
+    )
+    monkeypatch.setattr("dazzle.e2e.runner.subprocess.Popen", factory)
+    return instances
+
+
+@pytest.fixture
+def fake_popen_silent(monkeypatch: pytest.MonkeyPatch, project_root: Path) -> list[MagicMock]:
+    """Patch subprocess.Popen without writing runtime.json.
+
+    Use this for tests that need to trigger RuntimeFileTimeoutError.
+    """
+    instances: list[MagicMock] = []
+    factory = _make_fake_popen_factory(
+        instances, project_root=project_root, write_runtime_on_start=False
+    )
     monkeypatch.setattr("dazzle.e2e.runner.subprocess.Popen", factory)
     return instances
 
@@ -206,12 +244,12 @@ class TestModeRunnerFailurePaths:
     async def test_raises_runtime_file_timeout(
         self,
         project_root: Path,
-        fake_popen: list[MagicMock],
+        fake_popen_silent: list[MagicMock],
         fake_wait_for_ready: AsyncMock,
         monkeypatch: pytest.MonkeyPatch,
         killpg_recorder: list[int],
     ) -> None:
-        # Don't write runtime.json — triggers timeout
+        # fake_popen_silent does NOT write runtime.json — triggers timeout
         monkeypatch.setattr("dazzle.e2e.runner.RUNTIME_POLL_BUDGET_SECONDS", 0.2)
         monkeypatch.setattr("dazzle.e2e.runner.RUNTIME_POLL_INTERVAL_SECONDS", 0.05)
 
