@@ -28,6 +28,11 @@ class ModeSpec:
     name: ModeName
     description: str
     db_policy_default: DbPolicy
+    # Typed as frozenset[str], not frozenset[DbPolicy]: frozenset of a
+    # Literal type has fragile covariance behavior under mypy — tuple
+    # literal constructors infer narrowly and the frozenset widens,
+    # triggering false-positive type errors at usage sites. Keeping str
+    # accepts the minor looseness trade for a cleaner call surface.
     db_policies_allowed: frozenset[str]
     qa_flag_policy: QaFlagPolicy
     log_output: LogOutput
@@ -62,10 +67,13 @@ MODE_REGISTRY: tuple[ModeSpec, ...] = (MODE_A,)
 def get_mode(name: str) -> ModeSpec:
     """Return the ModeSpec named `name`.
 
-    Raises UnknownModeError if no mode matches.
+    Input is normalized (stripped + lowercased) so CLI flags like
+    ``--mode=A`` or trailing whitespace don't produce confusing
+    UnknownModeError failures. Raises UnknownModeError if no mode matches.
     """
+    normalized = name.strip().lower()
     for spec in MODE_REGISTRY:
-        if spec.name == name:
+        if spec.name == normalized:
             return spec
     raise UnknownModeError(
         f"Unknown mode {name!r}. Available modes: {', '.join(m.name for m in MODE_REGISTRY)}"

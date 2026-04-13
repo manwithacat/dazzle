@@ -50,3 +50,9 @@ class TestGetMode:
         for name in ("b", "c", "d"):
             with pytest.raises(UnknownModeError):
                 get_mode(name)
+
+    def test_normalizes_input_whitespace_and_case(self) -> None:
+        """Trailing whitespace and uppercase should be normalized."""
+        assert get_mode("A").name == "a"
+        assert get_mode("  a  ").name == "a"
+        assert get_mode("\ta\n").name == "a"
