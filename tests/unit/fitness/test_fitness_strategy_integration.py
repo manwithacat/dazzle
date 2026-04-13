@@ -130,6 +130,32 @@ async def test_launch_example_app_raises_on_health_timeout(tmp_path: Path) -> No
     fake_handle.stop.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_launch_example_app_stops_handle_on_wait_exception(tmp_path: Path) -> None:
+    """If wait_for_ready raises, the handle must be torn down before the exception propagates."""
+    from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
+
+    example_root = tmp_path / "examples" / "support_tickets"
+    example_root.mkdir(parents=True)
+
+    fake_handle = MagicMock(site_url="http://localhost:3000", api_url="http://localhost:8000")
+
+    with (
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.connect_app",
+            return_value=fake_handle,
+        ),
+        patch(
+            "dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy.wait_for_ready",
+            new=AsyncMock(side_effect=OSError("connection refused")),
+        ),
+        pytest.raises(OSError, match="connection refused"),
+    ):
+        await fitness_strategy._launch_example_app(example_root=example_root)
+
+    fake_handle.stop.assert_called_once()
+
+
 def test_stop_example_app_calls_handle_stop() -> None:
     from dazzle.cli.runtime_impl.ux_cycle_impl import fitness_strategy
 
