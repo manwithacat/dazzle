@@ -74,11 +74,25 @@ from dazzle.cli.runtime_impl.ux_cycle_impl.fitness_strategy import run_fitness_s
 
 contract_path = Path.home() / ".claude/skills/ux-architect/components/<component>.md"
 
+# For in-app components (data-table, detail-view, dashboard, etc.):
+# pass an explicit persona list matching the DSL personas that should see
+# the component. The strategy iterates once per persona, logging in via
+# QA mode magic-link (#768) between iterations.
 outcome = await run_fitness_strategy(
     example_app="<canonical>",
     project_root=Path("/Volumes/SSD/Dazzle"),  # Dazzle repo root
     component_contract_path=contract_path,
+    personas=["admin", "agent", "customer"],  # or None for anonymous
 )
+
+# For public/anonymous components (auth pages, landing pages):
+# pass personas=None (or omit) to run a single anonymous cycle.
+# outcome = await run_fitness_strategy(
+#     example_app="<canonical>",
+#     project_root=Path("/Volumes/SSD/Dazzle"),
+#     component_contract_path=contract_path,
+#     personas=None,
+# )
 ```
 
 The fitness engine's Pass 1 will parse the contract and call the new
@@ -87,13 +101,23 @@ gate description recorded as EXPECT and the current DOM snapshot recorded
 as OBSERVE. Findings flow through the normal engine pipeline and land in
 `dev_docs/fitness-backlog.md` under the example app.
 
-Aggregate results across personas (v1.0.2 runs a single fitness cycle
-per component; multi-persona fan-out is v1.0.3 work). The row's `qa`
-field becomes:
+v1.0.3 ships multi-persona fan-out. When `personas` is a non-empty list,
+the strategy runs one cycle per persona inside a single subprocess
+lifetime — the Playwright browser is launched once, and each persona
+gets a fresh `browser.new_context()` for cookie isolation. Per-persona
+failures (login rejected, engine crashed, anchor navigation failed)
+produce BLOCKED outcomes but do not abort the loop — remaining personas
+still run. The aggregated `StrategyOutcome` sums per-persona findings
+and surfaces the max independence score across all personas.
+
+The row's `qa` field becomes:
 - `PASS` if `outcome.degraded is False` and `outcome.findings_count == 0`
 - `FAIL` if `outcome.findings_count > 0`
-- `BLOCKED` if the strategy raised (subprocess failed to start, engine
-  construction raised, Playwright bundle couldn't spin up)
+- `BLOCKED` if the strategy itself raised (subprocess failed to start,
+  Playwright bundle couldn't spin up, all personas failed). Note that
+  per-persona failures within a multi-persona run are absorbed into
+  `outcome.degraded=True` and `outcome.findings_count=0` for that persona;
+  the strategy only raises when there is nothing useful to return.
 
 ### Step 5: REPORT
 
